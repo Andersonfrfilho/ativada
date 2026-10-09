@@ -202,28 +202,49 @@ type AuthenticatedUser = {
   `sub` e da resolução do usuário (§d). Objeto congelado (`createAuthenticatedUser`), inclusive o array
   de papéis. Tipo, fábrica e `USER_ROLE` moram em `apps/api-crypto/src/authentication/`.
 - **Como chega ao use case:** parâmetro explícito. A rota recebe `authenticatedUser` do middleware e
-  chama o use case com `createOwnerScope(authenticatedUser.userId)` (recurso de usuário) ou com o
-  próprio `authenticatedUser` (perfil, sessão). **Proibido** global, singleton por requisição,
+  chama o use case com o `scope` que a resolução do usuário devolveu (`resolveUserBySubject` →
+  `{ userId, scope }`, recurso de usuário) ou com o próprio `authenticatedUser` (perfil, sessão). **Proibido** global, singleton por requisição,
   `AsyncLocalStorage` ou leitura implícita de contexto.
-- **`userId` vem só do token — mecanismo real.** `UserId` é tipo nominal; a cunhagem
-  (`userIdFromDatabase`) é **interna** ao pacote `@crypto/database` e só é chamada por funções do próprio
-  pacote (a futura `resolveUserBySubject(subject)` da T0.7 e o mapeamento de linha do worker). Uma app
-  não consegue fabricar `UserId` porque, ao mesmo tempo:
-  1. o `package.json` do pacote declara `"exports": { ".": "./src/index.ts" }` — subcaminho não resolve;
-  2. o índice público (`packages/database/src/index.ts`) exporta só os tipos `UserId`, `OwnerScope` e
-     `AccountId`, `createOwnerScope`, `parseAccountId` e os erros; **não** exporta `userIdFromDatabase`,
-     `ownerCondition`, schema/tabelas nem o cliente cru (contrato `test/database.contract.test.ts` prende
-     a lista exata de exportações em tempo de execução);
-  3. o ESLint em `apps/*/src` proíbe importar `drizzle-orm`, `drizzle-orm/*`, `drizzle-kit`, `SQL`/`sql`
-     de `bun`, `@crypto/database/*` e qualquer caminho para `packages/`; proíbe `Bun.SQL`, asserção de
-     tipo (`@typescript-eslint/consistent-type-assertions` com `assertionStyle: 'never'`, sem exceções
-     nomeadas — `as const` é sempre aceito pela regra) e *type guard* que produza `UserId`, `OwnerScope`
-     ou `AccountId`; mantém `no-unsafe-assignment` e `no-unsafe-argument` como erro (um `any` não vira
-     `UserId`); e liga `noInlineConfig`, para que `eslint-disable` não desligue nada disso nas apps;
-  4. reforço, não defesa única: `test/ownership.contract.test.ts` reprova `userIdFromDatabase`,
-     `as UserId` e `as OwnerScope` em qualquer `src/` fora de `packages/database`, e
-     `test/app-import-boundary.contract.test.ts` grava arquivos-sonda em `apps/api-crypto/src` e confere
-     que o lint reprova cada proibição acima (e aceita a superfície pública).
+- **`userId` vem só do token — defesa em camadas, sem afirmar impossibilidade.** `UserId` é tipo nominal
+  e o escopo de dono (`OwnerScope`) só nasce dentro de `@crypto/database`. Nada abaixo é uma prova de
+  que nenhuma app, jamais, alcance o banco ou fabrique um `UserId`: são três camadas, cada uma com o
+  que ela cobre e o que não cobre.
+  1. **Tipo e runtime (a camada que não depende de lint).** O `package.json` do pacote declara
+     `"exports": { ".": "./src/index.ts" }`, então subcaminho não resolve. O índice público
+     (`packages/database/src/index.ts`) exporta só os **tipos** `UserId` e `OwnerScope`, mais
+     `AccountId`, `parseAccountId` e `InvalidUserIdError`; **não** exporta `createOwnerScope`,
+     `userIdFromDatabase`, `ownerCondition`, schema/tabelas nem o cliente cru (`test/database.contract.test.ts`
+     prende a lista exata de exportações em tempo de execução e reprova se `createOwnerScope` voltar ao
+     índice). A app só recebe um `OwnerScope`/`UserId` **como retorno de função do pacote**: a T0.7
+     expõe `resolveUserBySubject(subject)`, e a recomendação deste ADR é que ela devolva
+     `{ userId, scope }` já com o escopo construído lá dentro, de modo que nem `createOwnerScope`
+     precise sair do pacote. O limite honesto: o tipo nominal é compile-time; um valor produzido por
+     código que contorne o compilador (import dinâmico de caminho relativo, `Bun.SQL` direto) não passa
+     por ele, e é para isso que existe a camada 2.
+  2. **Lint de `apps/*/src` como lista de bloqueio** (`noInlineConfig` ligado, então `eslint-disable`
+     não desliga nada). É lista de bloqueio, não de permissão: cada brecha conhecida foi fechada por
+     uma sonda em `test/app-import-boundary.contract.test.ts`, que grava arquivos em
+     `apps/api-crypto/src` e confere que o ESLint os reprova. Fechadas: importar `drizzle-orm`,
+     `drizzle-orm/*`, `drizzle-kit`, `@crypto/database/*` e qualquer caminho para `packages/`;
+     `import()` dinâmico nas apps de backend (`api`, `worker`, `cron`; o frontend o usa em
+     `React.lazy` e não depende de `@crypto/database`, o que um contrato lê no `package.json`);
+     `Bun.SQL`/`Bun.sql` por membro, por índice (`Bun['SQL']`), por `globalThis.Bun`, por
+     desestruturação (`const { SQL } = Bun`) e por apelido (`const runtime = Bun`); `import` default
+     ou namespace de `bun` e os nomes `SQL`/`sql`; asserção de tipo
+     (`consistent-type-assertions` com `assertionStyle: 'never'`; `as const` é aceito); *type guard*
+     que produza `UserId`, `OwnerScope` ou `AccountId`; sobrecarga ou tipo de função cujo retorno
+     declarado seja um desses três (fecha `function mint(v: string): UserId; function mint(v: string): unknown`);
+     e `no-unsafe-assignment`/`no-unsafe-argument` como erro. A regra de fonte também cobre `.tsx`,
+     `.mts` e `.cts`, e um contrato reprova qualquer `.js`, `.mjs`, `.cjs`, `.jsx`, `.mts` ou `.cts`
+     em `apps/*/src` (a stack é TypeScript em 100%). Brechas **conhecidas e não fechadas**:
+     passar o global `Bun` como argumento de função ou guardá-lo em estrutura maior e acessá-lo
+     depois, `eval`/`Function`, `require` dinâmico via `module`, e qualquer padrão que ainda não
+     virou sonda. Toda brecha nova achada vira sonda primeiro, regra depois.
+  3. **Contratos negativos por rota** (§e): para cada rota de recurso de usuário, o harness prova que
+     outro usuário recebe `404` indistinguível de UUID inexistente. É a camada que pega o filtro de dono
+     errado **dentro** do pacote, onde as duas anteriores não olham.
+  Reforço adicional, não camada: `test/ownership.contract.test.ts` reprova `userIdFromDatabase`,
+  `as UserId` e `as OwnerScope` em qualquer `src/` fora de `packages/database`.
   Nenhum schema de entrada declara campo `userId`; o `.strict()` dos schemas Zod faz um `userId` no
   corpo virar `400`.
 - **Por que o tipo fica em `packages/database` e não num `packages/auth`:** a garantia depende de que só
@@ -250,7 +271,7 @@ type AuthenticatedUser = {
 
 E-mail não é coluna. **Resolução por requisição — leitura primeiro, escrita só na primeira vez**
 (`resolveUserBySubject(subject)` em `@crypto/database`, T0.7, única função pública que devolve
-`UserId`):
+`UserId`; **recomendação:** devolve `{ userId, scope }`, com o `OwnerScope` construído dentro do pacote):
 
 ```sql
 SELECT id, deleted_at, blocked_at FROM users WHERE keycloak_sub = $1;
@@ -274,9 +295,11 @@ O **rate limit por `sub` vem antes** dessa consulta (§g): um token válido em l
 
 - `UserId` — `string` com marca nominal; cunhado só por `userIdFromDatabase` (UUID em minúsculas, senão
   `InvalidUserIdError`), **interno** ao pacote (§c).
-- `OwnerScope` — `{ readonly ownerUserId: UserId }` com marca nominal; só `createOwnerScope(userId)` cria,
-  congelado. Um objeto montado à mão não é `OwnerScope`, mesmo com `UserId` legítimo. Público: a app
-  precisa dele para chamar repositórios, e ele só aceita um `UserId` que a app não sabe fabricar.
+- `OwnerScope` — `{ readonly ownerUserId: UserId }` com marca nominal; só `createOwnerScope(userId)`
+  cria, congelado, e essa função é **interna ao pacote** (não está no índice público). Um objeto montado
+  à mão não é `OwnerScope`, mesmo com `UserId` legítimo. O **tipo** é público, porque a app precisa
+  nomeá-lo nas assinaturas; o **valor** a app só recebe como retorno de função do pacote
+  (`resolveUserBySubject` → `{ userId, scope }`).
 - `ownerCondition(scope, tabela.userId)` — devolve o `SQL` `"tabela"."user_id" = $1` do Drizzle; interno.
 
 **Entrada de repositórios para as apps.** As apps nunca recebem o cliente Drizzle nem as tabelas. Na
@@ -305,8 +328,8 @@ métodos recebem `OwnerScope`. Qualquer nova exportação pública passa pelo co
    `<RESOURCE>_NOT_FOUND` (`STRATEGY_NOT_FOUND`, `RUN_NOT_FOUND`, `GOAL_NOT_FOUND`, …), **o mesmo** para
    "recurso de outro dono" e "UUID inexistente", com a mesma mensagem e a mesma consulta (sem caminho de
    tempo diferente). UUID malformado no path também responde esse `404`.
-7. O worker opera em nome do dono com `createOwnerScope(row.userId)`, onde `row.userId` veio da linha
-   lida dentro do pacote. Não existe "escopo de sistema" que enxergue todos os donos dentro de um
+7. O worker opera em nome do dono com o escopo que uma função do pacote devolve junto da linha
+   (`(runId, scope)`, construído lá dentro a partir de `row.userId`), nunca com `createOwnerScope`. Não existe "escopo de sistema" que enxergue todos os donos dentro de um
    repositório de recurso; a leitura que lista as simulações ativas de um par é uma consulta própria do
    worker, que devolve `(runId, userId)` e filtra conta apagada ou bloqueada (`deleted_at IS NULL`,
    `blocked_at IS NULL`).
@@ -415,6 +438,11 @@ de dono), com três categorias disjuntas:
 | `price_alerts` | owned | sim | apaga |
 | `user_assets` | owned | sim | apaga (dado financeiro pessoal) |
 | `telegram_link_codes` | owned | não (segredo transitório) | apaga |
+| `exchange_credentials` (spec 002) | owned | sim, sem `ciphertext`/`iv` (só `exchange`, `environment`, `last4`, datas) | apaga (revoga na corretora antes, se possível) |
+| `execution_sessions` (spec 002) | owned | sim | apaga |
+| `exchange_orders` (spec 002) | owned | sim | apaga (`user_id` denormalizado) |
+| `exchange_fills` (spec 002) | owned | sim | apaga (`user_id` denormalizado) |
+| `reconciliations` (spec 002) | owned | sim | apaga (`user_id` denormalizado) |
 | `audit_events` | pseudonymized | sim (as do próprio usuário como ator ou alvo, sem IP de terceiros) | `actor_user_id`, `target_id` e `ip` viram `NULL` onde apontam para o usuário; ação, tipos e data ficam |
 | `users` | shared (à parte) | sim (preferências) | passos abaixo |
 
@@ -429,8 +457,9 @@ exportação por hora por usuário.
    em seguida, fora da requisição.
 2. Apaga o usuário no Keycloak pelo `crypto-api-service` (derruba sessões e refresh) e grava
    `identity_deleted_at = now()`.
-3. Numa transação: `DELETE` em cada tabela de `OWNED_TABLES`, das filhas para os pais, sempre
-   `WHERE user_id = $owner`; pseudonimiza `PSEUDONYMIZED_TABLES`; anula `display_name` e
+3. Numa transação: `DELETE` em cada tabela de `OWNED_TABLES`, das filhas para os pais (da spec 002:
+   `exchange_fills`, `exchange_orders`, `reconciliations`, `execution_sessions`, `exchange_credentials`,
+   antes das tabelas da spec 001 que elas referenciem), sempre `WHERE user_id = $owner`; pseudonimiza `PSEUDONYMIZED_TABLES`; anula `display_name` e
    `telegram_chat_id`, `limits` volta ao padrão; grava `data_purged_at = now()`.
 4. Rotina do cron: para cada linha com `deleted_at` e `identity_deleted_at IS NULL`, **refaz o passo 2**;
    com `data_purged_at IS NULL`, **refaz o passo 3**; remove a linha de `users` **só** quando as duas
@@ -475,7 +504,7 @@ cron grava `ip = NULL`. A linha fica 2 anos e então é apagada. Índices: `(act
 
 `POST /v1/admin/execution/kill-all` (papel `admin`, `acr ≥ 2`) **só grava um sinal global** de desarme e
 um `audit_events` (`execution.kill_all`). Quem cancela as ordens e desarma é o **processo executor**, que
-lê o sinal e, para cada sessão armada, age com `createOwnerScope(row.userId)` — o mesmo padrão do worker
+lê o sinal e, para cada sessão armada, age com o escopo devolvido pelo pacote junto da linha — o mesmo padrão do worker
 (§e regra 7). A resposta é **só agregada** (quantas sessões desarmadas, quantas falhas), sem saldo,
 ordens ou ids. É **proibido** `kill/:userId` ou qualquer rota admin que receba id de usuário e atue sobre
 a execução dele.

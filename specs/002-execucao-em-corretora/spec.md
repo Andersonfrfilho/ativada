@@ -73,7 +73,7 @@ Aumentar teto é decisão humana registrada.
   usuário** e desarma.
 - Kill switch global do administrador (`POST /v1/admin/execution/kill-all`): **só grava um sinal global**
   e audita; quem cancela as ordens e desarma é o processo executor, sessão a sessão, com
-  `createOwnerScope(row.userId)`, igual ao worker. A resposta é só agregada (quantos desarmados, quantas
+  o escopo que o pacote devolve com a linha, igual ao worker. A resposta é só agregada (quantos desarmados, quantas
   falhas), sem saldo, ordens ou ids. Não arma ninguém de volta. **Proibido** `kill/:userId` ou qualquer
   rota admin que receba id de usuário e atue sobre a execução dele (ADR 0001 §j).
 - Zerar posições é opcional e desligado por padrão.

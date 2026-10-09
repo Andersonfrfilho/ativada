@@ -39,8 +39,14 @@ e só decide **se e como** executar.
 | `exchange_credentials` | `id uuid`, `user_id`, `exchange`, `environment` (`testnet`/`live`), `ciphertext`, `iv`, `key_version`, `last4`, `can_withdraw bool`, `ip_restricted bool`, `checked_at`, `revoked_at` |
 | `execution_sessions` | `id uuid`, `user_id`, `mode varchar`, `armed_at`, `disarmed_at`, `disarm_reason`, `limits jsonb`, `armed_by` |
 | `exchange_orders` | `id uuid`, `user_id`, `session_id`, `signal_id` (único), `client_order_id` (único), `exchange_order_id`, `side`, `price`, `quantity`, `status`, `sent_at`, `raw_response jsonb` |
-| `exchange_fills` | `id uuid`, `exchange_order_id`, `price`, `quantity`, `fee`, `fee_asset`, `usdt_brl numeric`, `value_brl numeric`, `filled_at` |
-| `reconciliations` | `id uuid`, `session_id`, `checked_at`, `diff jsonb`, `status` |
+| `exchange_fills` | `id uuid`, `user_id`, `exchange_order_id`, `price`, `quantity`, `fee`, `fee_asset`, `usdt_brl numeric`, `value_brl numeric`, `filled_at` |
+| `reconciliations` | `id uuid`, `user_id`, `session_id`, `checked_at`, `diff jsonb`, `status` |
+
+Todas as tabelas acima são de dono: `user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT`,
+entram em `OWNED_TABLES` (ADR 0001 §h) e na exclusão de conta. Filhas referenciam o pai por FK composta
+`(parent_id, user_id) → parent(id, user_id)`: `exchange_orders.session_id` → `execution_sessions`,
+`exchange_fills.exchange_order_id` → `exchange_orders` e `reconciliations.session_id` →
+`execution_sessions`, cada pai com `UNIQUE (id, user_id)`.
 
 A trilha de auditoria usa a tabela `audit_events` da spec 001, com o esquema único do ADR 0001 §i
 (`actor_user_id` nulo, `actor_kind`, `target_kind`, `target_id`, `action`, `ip` com retenção de 90 dias,
