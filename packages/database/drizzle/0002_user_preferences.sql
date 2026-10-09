@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "alert_telegram_enabled" boolean DEFAULT true NOT NULL;

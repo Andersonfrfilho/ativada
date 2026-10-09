@@ -18,8 +18,9 @@ export function buildSuccessResponse(result: RouteResult): Response {
 }
 
 export function buildErrorResponse(error: AppError): Response {
+  const detailsField = error.details.length > 0 ? { details: error.details } : {};
   return Response.json(
-    { error: { code: error.code, message: error.message } },
+    { error: { code: error.code, message: error.message, ...detailsField } },
     {
       status: error.status,
       headers: { ...error.headers, [HTTP_HEADER.CACHE_CONTROL]: NO_STORE_CACHE_CONTROL },

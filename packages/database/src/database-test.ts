@@ -3,6 +3,7 @@ import { MIGRATIONS_FOLDER } from './database.constant.js';
 import { closeDatabase, openDatabase, type DatabaseHandle } from './database-handle.js';
 import { applyMigrations } from './migrate.js';
 import { readDatabaseUrl } from './read-database-url.js';
+import { checkProfileRepository } from './profile-checks.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
 import { resolveUserBySubject } from './users/resolve-user-by-subject.js';
 import { USER_RESOLUTION_STATUS } from './users/user-resolution.constant.js';
@@ -72,6 +73,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkConcurrentResolution(handle, client);
     await checkDeletedAccount(handle, client);
     await checkBlockedAccount(handle, client);
+    await checkProfileRepository({ handle, assertCondition, reportCheck });
   } finally {
     await client.close();
     await closeDatabase(handle);

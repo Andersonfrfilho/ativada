@@ -8,6 +8,7 @@ const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
 const USERS_MIGRATION_GLOB = 'packages/database/drizzle/*_users.sql';
 const SUBJECT_MAX_LENGTH = 255;
 const EXPECTED_COLUMNS: readonly string[] = [
+  'alert_telegram_enabled',
   'blocked_at',
   'created_at',
   'data_purged_at',

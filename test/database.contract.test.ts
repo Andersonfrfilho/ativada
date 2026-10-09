@@ -10,9 +10,13 @@ const ROLLBACK_SUFFIX = '.rollback.sql';
 const MIGRATION_FILE_PATTERN = /^\d{4}_.+\.sql$/;
 const CREATE_ENUM_TYPE_PATTERN = /CREATE\s+TYPE[^;]*\bAS\s+ENUM\b/i;
 const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
+  'DISPLAY_CURRENCY',
+  'DISPLAY_NAME_MAX_LENGTH',
   'InvalidUserIdError',
+  'TIMEZONE_MAX_LENGTH',
   'USER_RESOLUTION_STATUS',
   'closeDatabase',
+  'createProfileRepository',
   'openDatabase',
   'parseAccountId',
   'pingDatabase',

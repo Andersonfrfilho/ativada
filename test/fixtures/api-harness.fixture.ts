@@ -42,6 +42,7 @@ export type HarnessOptions = {
   readonly deletedSubjects?: readonly string[];
   readonly blockedSubjects?: readonly string[];
   readonly resolverFailure?: Error;
+  readonly userIdsBySubject?: Readonly<Record<string, string>>;
   readonly routeFactory?: (verifyAccessToken: AccessTokenVerifier) => readonly Route[];
   readonly getKeyOverride?: Parameters<typeof createAccessTokenVerifier>[0]['getKey'];
 };
@@ -124,7 +125,7 @@ export async function createApiHarness(options: HarnessOptions = {}): Promise<Ap
     if (options.blockedSubjects?.includes(subject)) {
       return Promise.resolve({ status: USER_RESOLUTION_STATUS.BLOCKED });
     }
-    const userId = userIdFromDatabase(TEST_USER_ID_TEXT);
+    const userId = userIdFromDatabase(options.userIdsBySubject?.[subject] ?? TEST_USER_ID_TEXT);
     return Promise.resolve({
       status: USER_RESOLUTION_STATUS.ACTIVE,
       userId,

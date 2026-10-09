@@ -1,11 +1,18 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { closeDatabase, openDatabase, pingDatabase, resolveUserBySubject } from '@crypto/database';
+import {
+  closeDatabase,
+  createProfileRepository,
+  openDatabase,
+  pingDatabase,
+  resolveUserBySubject,
+} from '@crypto/database';
 
 import { createAccessTokenVerifier } from './authentication/access-token-verifier.js';
 import { createRemoteKeyResolver } from './authentication/remote-key-resolver.js';
 import type { Environment } from './environment.js';
 import { createRequestHandler, type RequestHandler } from './http/create-request-handler.js';
 import type { Logger } from './logging/logger.js';
+import { createGetProfileUseCase, createUpdateProfileUseCase } from './profile/profile.use-case.js';
 import { createRateLimiter } from './rate-limit/rate-limiter.js';
 import { createSessionRouteDependencies } from './session/create-session-routes-dependencies.js';
 import { createStreamTicketStore } from './stream/stream-ticket-store.js';
@@ -25,6 +32,7 @@ export type CreateApplicationParams = {
 export function createApplication(params: CreateApplicationParams): Application {
   const { environment, logger } = params;
   const database = openDatabase(environment.DATABASE_URL);
+  const profileRepository = createProfileRepository(database);
   const verifyAccessToken = createAccessTokenVerifier({
     settings: {
       issuer: environment.KEYCLOAK_ISSUER,
@@ -37,6 +45,10 @@ export function createApplication(params: CreateApplicationParams): Application 
     routes: createApiRoutes({
       checkDatabase: () => pingDatabase(database),
       session: createSessionRouteDependencies({ environment, verifyAccessToken }),
+      profile: {
+        getProfile: createGetProfileUseCase(profileRepository),
+        updateProfile: createUpdateProfileUseCase(profileRepository),
+      },
       streamTicketStore: createStreamTicketStore({ now: () => Date.now() }),
     }),
     verifyAccessToken,

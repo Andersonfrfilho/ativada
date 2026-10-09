@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { createProfileRoutes, type ProfileRouteDependencies } from '../profile/profile.routes.js';
 import type { Route } from '../router/route.types.js';
 import { createSessionRoutes, type SessionRouteDependencies } from '../session/session.routes.js';
 import type { StreamTicketStore } from '../stream/stream-ticket-store.js';
@@ -7,6 +8,7 @@ import { createHealthRoutes, type HealthRouteDependencies } from './health.route
 
 export type ApiRouteDependencies = HealthRouteDependencies & {
   readonly session: SessionRouteDependencies;
+  readonly profile: ProfileRouteDependencies;
   readonly streamTicketStore: StreamTicketStore;
 };
 
@@ -14,6 +16,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
   return [
     ...createHealthRoutes(dependencies),
     ...createSessionRoutes(dependencies.session),
+    ...createProfileRoutes(dependencies.profile),
     ...createStreamTicketRoutes(dependencies.streamTicketStore),
   ];
 }

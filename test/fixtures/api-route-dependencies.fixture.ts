@@ -14,6 +14,7 @@ export function buildApiRouteDependencies(
       endSession: notUsed,
       allowedOrigins: new Set(),
     },
+    profile: { getProfile: notUsed, updateProfile: notUsed },
     streamTicketStore: createStreamTicketStore({ now: () => Date.now() }),
   };
 }
