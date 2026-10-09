@@ -5,6 +5,7 @@ import { applyMigrations } from '../src/migrate.js';
 import { readDatabaseUrl } from '../src/read-database-url.js';
 import { checkPendingQueue, checkPurge, checkRemoveAndRetention } from './account-purge-checks.js';
 import { checkAdminRepositories } from './admin-checks.js';
+import { checkAuditRetention, checkBlockedAccounts } from './cron-repository-checks.js';
 import { checkExport, checkMarkDeleted, seedLifecycleOwners } from './account-lifecycle-checks.js';
 import { checkProfileRepository } from './profile-checks.js';
 import { checkTelegramLink, checkTelegramRaces } from './telegram-checks.js';
@@ -88,6 +89,8 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkPendingQueue(lifecycle);
     await checkPurge(lifecycle, owners);
     await checkRemoveAndRetention(lifecycle, owners);
+    await checkBlockedAccounts(lifecycle);
+    await checkAuditRetention(lifecycle);
   } finally {
     await client.close();
     await closeDatabase(handle);
