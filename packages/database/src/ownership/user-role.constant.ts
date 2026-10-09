@@ -1,0 +1,7 @@
+// Copyright (c) 2026 Ada Technology. All rights reserved.
+export const USER_ROLE = {
+  USER: 'user',
+  ADMIN: 'admin',
+} as const;
+
+export type UserRole = (typeof USER_ROLE)[keyof typeof USER_ROLE];
