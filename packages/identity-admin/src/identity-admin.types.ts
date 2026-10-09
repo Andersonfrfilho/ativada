@@ -26,6 +26,7 @@ export type IdentityAdminClient = {
   readonly hasCredentials: (userId: string) => Promise<IdentityOutcome<boolean>>;
   readonly sendInvitation: (userId: string) => Promise<IdentityOutcome<undefined>>;
   readonly readEffectiveRoles: (userId: string) => Promise<IdentityOutcome<readonly string[]>>;
+  readonly readEnabled: (userId: string) => Promise<IdentityOutcome<boolean>>;
   readonly readEmail: (userId: string) => Promise<IdentityOutcome<string | undefined>>;
   readonly setEnabled: (params: SetEnabledParams) => Promise<IdentityOutcome<undefined>>;
 };

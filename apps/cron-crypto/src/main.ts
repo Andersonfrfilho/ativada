@@ -1,38 +1,32 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { closeDatabase, openDatabase, readPostgresErrorCode } from '@crypto/database';
+import { closeDatabase, openDatabase } from '@crypto/database';
 import { runWithEnvironment } from '@crypto/environment';
 
-import { createProductionPurgeTask } from './accounts/create-purge-deleted-accounts-task.js';
-import { EXIT_CODE, NO_ERROR_CODE, type ExitCode } from './cron.constant.js';
+import { createProductionTasks } from './create-production-tasks.js';
+import { type ExitCode } from './cron.constant.js';
 import { loadEnvironment, type Environment } from './environment.js';
 import { WORKSPACE_NAME } from './index.js';
 import { createCronLogger } from './logging/cron-logger.js';
+import { runCronTasks } from './run-cron-tasks.js';
 
-async function purgeDeletedAccounts(environment: Environment): Promise<ExitCode> {
+async function runAllTasks(environment: Environment): Promise<ExitCode> {
   const logger = createCronLogger({
     appName: WORKSPACE_NAME,
     write: (line) => process.stdout.write(line),
   });
   const database = openDatabase(environment.DATABASE_URL);
   try {
-    const summary = await createProductionPurgeTask({ environment, database, logger })();
-    logger.info('purge-deleted-accounts finished', { env: environment.ENV, ...summary });
-    return summary.failures > 0 ? EXIT_CODE.FAILURE : EXIT_CODE.SUCCESS;
-  } catch (error: unknown) {
-    const errorName = error instanceof Error ? error.name : 'UnknownError';
-    const errorCode = readPostgresErrorCode(error) ?? NO_ERROR_CODE;
-    logger.error('purge-deleted-accounts failed', { env: environment.ENV, errorName, errorCode });
-    return EXIT_CODE.FAILURE;
+    return await runCronTasks(createProductionTasks({ environment, database, logger }), logger);
   } finally {
     await closeDatabase(database);
   }
 }
 
 async function execute(environment: Environment): Promise<void> {
-  process.exitCode = await purgeDeletedAccounts(environment);
+  process.exitCode = await runAllTasks(environment);
 }
 
-// execute nunca rejeita: purgeDeletedAccounts captura o erro e devolve o código de saída.
+// execute nunca rejeita: runCronTasks captura o erro de cada tarefa e devolve o código de saída.
 runWithEnvironment({
   appName: WORKSPACE_NAME,
   load: loadEnvironment,

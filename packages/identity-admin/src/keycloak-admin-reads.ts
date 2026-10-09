@@ -6,14 +6,18 @@ import type { IdentityAdminClient } from './identity-admin.types.js';
 import type { IdentityHttp } from './identity-http.js';
 import { parseOutcome } from './identity-outcome.js';
 
-const userSchema = z.looseObject({ id: z.string().min(1), email: z.string().optional() });
+const userSchema = z.looseObject({
+  id: z.string().min(1),
+  email: z.string().optional(),
+  enabled: z.boolean().optional(),
+});
 const userListSchema = z.array(userSchema);
 const credentialListSchema = z.array(z.looseObject({ id: z.string() }));
 const roleListSchema = z.array(z.looseObject({ name: z.string() }));
 
 export type IdentityReads = Pick<
   IdentityAdminClient,
-  'findUserByEmail' | 'hasCredentials' | 'readEffectiveRoles' | 'readEmail'
+  'findUserByEmail' | 'hasCredentials' | 'readEffectiveRoles' | 'readEmail' | 'readEnabled'
 >;
 
 export function userPath(userId: string): string {
@@ -54,6 +58,13 @@ export function createIdentityReads(http: IdentityHttp): IdentityReads {
           return parsed.success ? { value: parsed.data.map((role) => role.name) } : undefined;
         },
       ),
+    readEnabled: async (userId) =>
+      parseOutcome(await http({ method: HTTP_METHOD.GET, path: userPath(userId) }), (body) => {
+        const parsed = userSchema.safeParse(body);
+        return parsed.success && parsed.data.enabled !== undefined
+          ? { value: parsed.data.enabled }
+          : undefined;
+      }),
     readEmail: async (userId) =>
       parseOutcome(await http({ method: HTTP_METHOD.GET, path: userPath(userId) }), (body) => {
         const parsed = userSchema.safeParse(body);

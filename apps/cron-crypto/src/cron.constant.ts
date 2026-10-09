@@ -6,7 +6,10 @@ const MILLISECONDS_PER_DAY = 24 * MILLISECONDS_PER_HOUR;
 export const ACCOUNT_REMOVAL_GRACE_PERIOD_MILLISECONDS = 24 * MILLISECONDS_PER_HOUR;
 // ADR 0001 §i: o IP da trilha de auditoria vive 90 dias.
 export const AUDIT_IP_RETENTION_MILLISECONDS = 90 * MILLISECONDS_PER_DAY;
+// ADR 0001 §i: a linha de audit_events vive 2 anos (730 dias) e então é apagada.
+export const AUDIT_EVENT_RETENTION_MILLISECONDS = 730 * MILLISECONDS_PER_DAY;
 export const PENDING_ACCOUNTS_BATCH_LIMIT = 100;
+export const BLOCKED_ACCOUNTS_BATCH_LIMIT = 100;
 export const ACCOUNT_PARALLELISM = 10;
 
 export const EXIT_CODE = {
@@ -22,4 +25,10 @@ export const PURGE_STEP = {
   IDENTITY_DELETION: 'identity_deletion',
   DATA_PURGE: 'data_purge',
   ROW_REMOVAL: 'row_removal',
+} as const;
+
+export const TASK_NAME = {
+  PURGE_DELETED_ACCOUNTS: 'purge-deleted-accounts',
+  RECONCILE_BLOCKED_ACCOUNTS: 'reconcile-blocked-accounts',
+  EXPIRE_AUDIT_EVENTS: 'expire-audit-events',
 } as const;

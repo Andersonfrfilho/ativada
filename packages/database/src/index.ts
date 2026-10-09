@@ -35,6 +35,17 @@ export type {
   AccountExportAuditEvents,
   ExportRow,
 } from './account/account-export.types.js';
+export {
+  createBlockedAccountRepository,
+  type BlockedAccount,
+  type BlockedAccountRepository,
+  type BlockedAccountsPage,
+  type ListBlockedAccountsParams,
+} from './account/blocked-account.repository.js';
+export {
+  createAuditRetentionRepository,
+  type AuditRetentionRepository,
+} from './audit/audit-retention.repository.js';
 export { AUDIT_ACTOR_KIND, type AuditActorKind } from './audit/audit-event.constant.js';
 export {
   createAuditEventRepository,
