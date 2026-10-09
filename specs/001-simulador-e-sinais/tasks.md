@@ -160,3 +160,66 @@ Pare e pergunte antes de: migration destrutiva, dependência fora das listadas n
 Ao terminar a fase: rode o gate completo (make check), escreva em evidence.md o resumo da fase
 (tasks fechadas, testes, pendências) e PARE. Não comece a fase seguinte.
 ```
+
+### Prompt completo (Fase 0b à Fase 6)
+
+Uma única execução para terminar a spec. A sessão que o roda deve estar em `sonnet` (`/model sonnet`):
+ela só orquestra, e as tasks 🧠 vão para `opus` por subagente. Pode ser interrompido e rodado de novo
+com o mesmo texto: ele retoma da primeira task sem linha em `evidence.md`.
+
+```text
+/oh-my-claudecode:autopilot Execute a spec specs/001-simulador-e-sinais/ INTEIRA, da Fase 0b à Fase 6,
+no repositório ~/Documents/personal/crypto-paper-trader. A Fase 0 já está feita (commits 468a391 a 6f80710).
+
+RETOMADA: antes de qualquer coisa leia CLAUDE.md, docs/spec/constitution.md, spec.md, plan.md, tasks.md e
+evidence.md. A tabela de evidence.md e o git log dizem o que já fechou; comece na primeira task sem linha
+de evidência. Se o contexto for compactado, releia só esses arquivos. Você é o ORQUESTRADOR: não escreve
+código de produção, delega cada task a um subagente executor com o model= da tabela abaixo, confere o
+resultado por conta própria (reexecuta os gates, não confia só no relatório) e registra.
+
+ORDEM E MODELOS (uma task por vez, na ordem do tasks.md):
+- Fase 0b → T0.5 🧠 opus (valide com architect antes de implementar); T0.6–T0.9 sonnet
+- Fase 1 → sonnet
+- Fase 2 → T2.1 🧠 opus (valide com architect); T2.2–T2.6 sonnet
+- Fase 3, 4, 4b → sonnet
+- Fase 5 → sonnet; T5.2–T5.7 comparam a tela com docs/preview/dashboard.html
+- Fase 6 → T6.1–T6.2 sonnet; revisão final com code-reviewer sonnet e security-reviewer
+
+CADA TASK FECHA COM: teste de contrato escrito ANTES da implementação (vermelho primeiro); bun run
+typecheck, lint e format:check; testes da área; make migration-test quando houver migration (toda migration
+com .rollback.sql); commit isolado com caminhos explícitos e Co-Authored-By; uma linha em evidence.md com
+comando, contagem de testes e hash. Quando a task cria regra, prove por mutação (quebre de propósito e veja
+o teste falhar). Confira o git log antes de registrar: relatório de subagente não é evidência.
+
+FIM DE CADA FASE: rode make check e make migration-test, peça revisão ao code-reviewer (sonnet), escreva o
+resumo da fase em evidence.md, atualize plan.md/CLAUDE.md se a estrutura mudou, commite e SIGA para a
+próxima fase sem parar (a menos que caia num ponto de parada abaixo).
+
+ESCALADA: gate falhou 2x no mesmo modelo → refaça no próximo (haiku→sonnet→opus) e registre em evidence.md.
+Falhou de novo em opus → PARE e reporte o erro literal e o que tentou.
+
+DEPENDÊNCIAS: só as nomeadas em CLAUDE.md, plan.md ou tasks.md (Bun, TypeScript, Zod, Drizzle, decimal.js,
+trading-signals, React 19, Vite, Playwright e o que a Fase 0 já instalou). Gráficos em SVG à mão, como no
+preview, sem biblioteca de gráfico. Qualquer outra → PARE e pergunte.
+
+DADOS EXTERNOS: pode chamar SÓ endpoints públicos de leitura da Binance (candles) e do Fear & Greed, com
+parcimônia e respeitando o limite de peso. Testes usam respostas gravadas, nunca a rede. Telegram: use
+servidor HTTP falso nos testes; não peça nem use token real.
+
+PONTOS DE PARADA OBRIGATÓRIOS (pare, escreva o estado em evidence.md e reporte):
+1. T0.5 e T2.1: depois que o architect validar, mostre o resumo da decisão e CONTINUE (não espere), mas
+   registre a decisão em evidence.md.
+2. Qualquer [NEEDS CLARIFICATION], migration destrutiva, ou decisão que contrarie a constituição.
+3. T6.3 (simulação ao vivo de 72 h): inicie a simulação, registre como acompanhar e PARE. Ela precisa de 72 h
+   de relógio e não cabe numa execução. O relatório é feito numa nova execução ("só T6.3 relatório").
+4. T6.4: gate humano. NUNCA decida pelo responsável; escreva o relatório do walk-forward e a pendência
+   regulatória e PARE.
+
+PROIBIDO (você e os subagentes): git reset, git commit --amend, git stash, git push, deploy, criar conta ou
+chave em corretora, enviar ordem de compra ou venda, usar chave de API real, apagar volumes ou bancos que
+não sejam os descartáveis do projeto, tocar em containers de outros projetos (transportada-*, socraticode-*).
+UI: verifique por texto (read_page, console, rede); screenshot só uma vez, como prova final na T6.1.
+
+SAÍDA FINAL: tabela de fases com tasks fechadas, testes, commits, escaladas, pendências e o que depende de
+um humano (T6.3 relatório e T6.4). Ao terminar ou parar, feche o modo (/oh-my-claudecode:cancel desta sessão).
+```
