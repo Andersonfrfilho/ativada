@@ -40,6 +40,7 @@ const REQUIRED_MAKE_TARGETS: readonly string[] = [
   'ps',
   'check',
   'identity-test',
+  'session-test',
 ];
 const CHECK_COMMANDS: readonly string[] = [
   'bun run format:check',

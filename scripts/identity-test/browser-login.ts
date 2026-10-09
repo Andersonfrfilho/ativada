@@ -20,6 +20,7 @@ export type StartLoginParams = {
   readonly environment: IdentityEnvironment;
   readonly pkce: PkcePair | undefined;
   readonly acrValues?: string;
+  readonly clientId?: string;
 };
 
 export function createPkcePair(): PkcePair {
@@ -76,6 +77,7 @@ export async function startLogin(params: StartLoginParams): Promise<LoginStep> {
     query['code_challenge_method'] = 'S256';
   }
   if (params.acrValues !== undefined) query['acr_values'] = params.acrValues;
+  if (params.clientId !== undefined) query['client_id'] = params.clientId;
   const result = await sendRequest({ url: buildAuthorizationUrl(params.environment, query) });
   return classify(result, collectCookies(result, ''));
 }
