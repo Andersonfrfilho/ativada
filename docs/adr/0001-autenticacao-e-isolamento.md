@@ -402,6 +402,27 @@ papel `admin` (só à mão no Keycloak). **Não bloqueia a si mesmo** (`409 CANN
   (`POST /v1/runs`, `POST /v1/goals/evaluate`) → por `sub`, 20/min; rotas de sessão (`/v1/session*`) e
   tickets de stream → por IP, 10/min; convite (`POST /v1/admin/invitations`) → por ator, 10/h; sem token
   → por IP, 30/min. Excedido → `429 RATE_LIMITED` com `Retry-After`.
+- **O que o código faz de fato (T0.9b):** sem token, ou com cabeçalho fora do formato `Bearer x.y.z` (ou maior
+  que o teto), o IP é cobrado **antes** de qualquer verificação e o `jwtVerify` nem roda. Token bem formado
+  mas inválido paga o custo da verificação local (assinatura contra a JWKS em cache, sem rede) e só depois é
+  cobrado no IP: o formato não distingue um token forjado de um legítimo, e cobrar antes puniria quem
+  renova. `503` de infraestrutura (JWKS inalcançável) **não** cobra o IP: a falha é nossa, não do cliente.
+- **Memória do limitador (T0.9b):** um mapa por política, cada um com teto próprio (`maxTrackedKeys`), de
+  modo que uma enxurrada de chaves novas numa política não despeja o bucket ativo de outra. O despejo é LRU
+  de verdade (usar a chave a move para o fim; na falta de vaga saem primeiro os ociosos, cuja janela já
+  passou, e só então o menos recente). A chave de IP agrega IPv6 por **/64** (`2001:db8:1:2::/64`) e trata
+  `::ffff:a.b.c.d` como o IPv4; o endereço completo segue para a auditoria. `/v1/health` tem política
+  própria de 600/min por IP, para um monitor não ser derrubado pelo limite genérico de 30/min. Tickets de
+  stream, deduplicação de refresh e tentativas por chat usam o mesmo mapa com teto injetável.
+- **Cota cobrada no sucesso (T0.9b):** a exportação (1 por hora) confere a cota antes (`peek`), roda, e só
+  então gasta (`consume`); uma segunda exportação do mesmo dono enquanto a primeira roda responde `429`.
+  Falha do Keycloak (`503`) não gasta a cota.
+- **Produção exige configuração explícita (T0.9b):** com `ENV=production`, API e cron recusam subir se
+  `TRUSTED_PROXY_HOPS` faltar (sem default; use 1 ou mais atrás de proxy e 0 só com a API exposta direto),
+  se qualquer URL (issuer, JWKS, token, logout, Admin API, Telegram, redirects, origens CORS) não for
+  `https:`, se `DATABASE_URL` não trouxer `sslmode=require` (ou `verify-ca`/`verify-full`), se um segredo
+  tiver menos de 32 caracteres ou se algum valor trouxer `_dev_only`/`_test_only`. A mensagem nomeia a
+  variável e nunca o valor. Em dev e test nada muda.
 - **Login:** a senha é digitada no Keycloak, não na API; o limite duro do login é o *brute force
   detection* do realm (§a) mais o limite de 10/min por IP nas rotas de sessão.
 - **Tetos de RF00b:** valores em `users.limits`. Cobrança no use case que cria a execução, dentro de uma
@@ -778,7 +799,7 @@ virar. Aceito: o `401` é só mais tardio e a exportação não vaza nada.
 | Janela de `auth_time` | Idade máxima de 5 min mais a tolerância de 10 s do `jose`; `auth_time` até 10 s no futuro é aceito, além disso e ausente são recusados. A rota recebe `authenticationTime` no contexto |
 | Passo 1 | Grava a auditoria (`account.deletion_requested`, ator e alvo = a conta, IP) **antes** de `deleted_at`: se a marca falhar a pessoa repete; depois dela não há como repetir. O logout no Keycloak é melhor esforço (o passo 2 apaga o usuário de qualquer forma). Não há execuções ao vivo nem WebSocket ainda: o ponto de extensão (parar simulações, fechar `4403`) fica no `delete-account.use-case.ts` |
 | Forma da exportação | Envelope `{ data }` num JSON só, não em fluxo (as tabelas atuais são pequenas; a cota de 1 por hora limita o custo). Quando entrarem tabelas grandes (`fills`, `equity_points`), a exportação precisa virar fluxo. A consulta roda numa transação com `statement_timeout` de 15 s |
-| Conteúdo | `users`: perfil, preferências, chat do Telegram (é dado da própria pessoa), datas; **sem** `id` nem `keycloak_sub`. E-mail lido do Keycloak (`null` se estiver fora do ar, para não gastar a cota). `telegram_link_codes` sai **sem o hash** (o ADR dizia não exportar; a task pediu exportar sem o hash). `audit_events`: como ator (com o IP da própria pessoa) e como alvo (sem o ator e sem o IP de terceiros) |
+| Conteúdo | `users`: perfil, preferências, chat do Telegram (é dado da própria pessoa), datas; **sem** `id` nem `keycloak_sub`. E-mail lido do Keycloak (com ele fora do ar a exportação responde `503 IDENTITY_PROVIDER_UNAVAILABLE` e **não** gasta a cota: sair com `null` entregaria uma exportação incompleta, e a cota só é cobrada no sucesso, §g). `telegram_link_codes` sai **sem o hash** (o ADR dizia não exportar; a task pediu exportar sem o hash). `audit_events`: como ator (com o IP da própria pessoa) e como alvo (sem o ator e sem o IP de terceiros) |
 | Registro | `OWNED_TABLES` ganha dois companheiros declarativos, `OWNED_TABLE_EXPORTS` (colunas exportadas ou motivo da exclusão) e `OWNED_TABLE_DELETION_ORDER` (filhas antes dos pais), e `PSEUDONYMIZED_TABLES` ganha `PSEUDONYMIZATION_STEPS`. O contrato reprova tabela de dono sem passo de exportação, sem passo de exclusão, fora da ordem das FKs ou com coluna secreta exportada; a purga recusa rodar (`OwnedTableWithoutDeletionStepError`) se o registro e a ordem divergirem |
 | Passos 2 e 3 independentes | O cron tenta o passo 3 mesmo quando o 2 falhou (Keycloak fora do ar não segura a obrigação de apagar os dados); a linha só sai com os dois. Cada conta falha isolada e a execução sai com `1` se alguma ficou pendente |
 | Carência | Parâmetro `gracePeriodMilliseconds` da tarefa; o `main.ts` usa a constante de 24 h e o `lgpd-test` zera só no processo de teste |
@@ -787,6 +808,21 @@ virar. Aceito: o `401` é só mais tardio e a exportação não vaza nada.
 | Env do cron | Ganha `KEYCLOAK_TOKEN_URL`, `KEYCLOAK_ADMIN_API_URL`, `KEYCLOAK_SERVICE_CLIENT_ID` e `KEYCLOAK_SERVICE_CLIENT_SECRET` (Zod). O contrato "o cron sobe e sai 0 com env válido" deixou de valer: ele agora fala com o banco e sai `1` se não o alcança |
 | Cookie de refresh | `DELETE /v1/me` não apaga o cookie `__Host-crypto_refresh` (a rota é autenticada por Bearer, sem o cabeçalho CSRF das rotas de sessão); o painel chama `DELETE /v1/session` em seguida, e o Keycloak já encerrou a sessão |
 | Reautenticação no teste real | O `lgpd-test` faz login novo e por isso nunca exercita `auth_time` antigo (esperar 5 min por execução é caro); a recusa por `auth_time` ausente, velho e futuro está nos contratos |
+
+### p) Ajustes da T0.9b (revisão de código e de segurança da Fase 0b)
+
+| Ponto | Decisão |
+|---|---|
+| Fila de purga | `listAccountsPendingPurge` filtra no SQL (`identity_deleted_at IS NULL OR data_purged_at IS NULL OR deleted_at <= agora - carência`) e pagina por cursor `(deleted_at truncado a ms, id)`; o cron percorre **todas** as páginas, em lotes de 10 contas, e a falha de uma não derruba o lote. Contas concluídas que só esperam a carência e contas que falham sempre deixam de ocupar a cabeça da fila. Os microssegundos do Postgres sumiriam no `Date` do JS: ordem e cursor truncam igual (provado em `make database-test`, onde a versão sem truncar repete a mesma conta) |
+| Token da service account | Uma troca por vez: a `Promise` em voo é compartilhada e limpa no `finally` (50 chamadas simultâneas, 1 troca); falha não é lembrada. A listagem de contas lê e-mails em lotes de 10 |
+| 404 do Keycloak | Só vale "usuário não existe" com o corpo `{"error":"User not found"}`; 404 sem ele (realm ou URL errados) é indisponibilidade e **não** grava `identity_deleted_at`. O cron confere `GET /users?max=1` antes de começar e recusa rodar (`IdentityRealmUnavailableError`) se a Admin API responder 404 |
+| Webhook do Telegram | Update que não é `/start <código>` (texto longo, foto, formato inesperado) responde `200 { received: true }` sem agir; `400` só para JSON inválido. O Telegram reentrega o que não for 2xx |
+| Races do vínculo | Emissão de código em `INSERT … ON CONFLICT (user_id) DO UPDATE`; vínculo do chat por `UPDATE` condicional dentro de um savepoint, e a violação `23505` de `telegram_chat_id` é o resultado "recusado" (conta como tentativa), nunca `500` |
+| Logs | Erro de banco registra só `name` (`DatabaseError`), o `code` do Postgres e o `traceId`: a mensagem do `DrizzleQueryError` carrega os parâmetros (PII). O cron registra o SQLSTATE e o id opaco da conta |
+| Logout | `DELETE /v1/session` com o Keycloak fora responde `503 SESSION_UNAVAILABLE` **e** expira o cookie. Contrapartida aceita: sem o cookie o navegador não consegue repetir a revogação, e o refresh vive no Keycloak até expirar (30 min) |
+| Servidor | `Bun.serve` com `development: false` e `error` que devolve o envelope `500` genérico, sem pilha. `development: false` não tem prova por teste (com o `error` presente o resultado é o mesmo); é defesa em profundidade |
+
+**Desvios**: o `development: false` fica sem contrato próprio; a deduplicação de refresh passou a tratar a entrada vencida como ausente no ato (antes a varredura a removia).
 
 ## Alternativas rejeitadas
 
