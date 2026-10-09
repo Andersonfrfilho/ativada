@@ -12,6 +12,8 @@ import { signTestToken } from './fixtures/token-signing.fixture.js';
 
 const HEALTH_PATH = '/v1/health';
 const ADMIN_HEALTH_PATH = '/v1/admin/health';
+const MONITOR_ADDRESS = '203.0.113.71';
+const OTHER_MONITOR_ADDRESS = '203.0.113.72';
 const ADMIN_CLAIMS = { realm_access: { roles: ['user', 'admin'] }, acr: '2' };
 
 let harness: ApiHarness;
@@ -34,10 +36,14 @@ afterAll(async () => {
   await harness.stop();
 });
 
-function sendToProduction(path: string, method = 'GET'): Promise<Response> {
+function sendToProduction(
+  path: string,
+  method = 'GET',
+  socketAddress = '203.0.113.9',
+): Promise<Response> {
   return productionHarnessRouter({
     request: new Request(`http://api.test${path}`, { method }),
-    socketAddress: '203.0.113.9',
+    socketAddress,
     traceId: 'trace-health',
   });
 }
@@ -47,6 +53,22 @@ describe('GET /v1/health', () => {
     const response = await sendToProduction(HEALTH_PATH);
     expect(response.status).toBe(200);
     expect(await response.json()).toStrictEqual({ data: { status: 'ok' } });
+  });
+});
+
+describe('GET /v1/health under monitoring', () => {
+  test('answers a monitor polling far above the generic unauthenticated limit', async () => {
+    for (let poll = 0; poll < 200; poll += 1) {
+      expect((await sendToProduction(HEALTH_PATH, 'GET', MONITOR_ADDRESS)).status).toBe(200);
+    }
+  });
+
+  test('is not starved by the unauthenticated bucket of the same address', async () => {
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      await sendToProduction('/v1/me', 'GET', OTHER_MONITOR_ADDRESS);
+    }
+    expect((await sendToProduction('/v1/me', 'GET', OTHER_MONITOR_ADDRESS)).status).toBe(429);
+    expect((await sendToProduction(HEALTH_PATH, 'GET', OTHER_MONITOR_ADDRESS)).status).toBe(200);
   });
 });
 

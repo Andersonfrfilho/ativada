@@ -11,10 +11,12 @@ export type RateLimitPolicy = {
   readonly limit: number;
   readonly windowMilliseconds: number;
   readonly keyScope: RateLimitKeyScope;
+  readonly maxTrackedKeys: number;
 };
 
 const ONE_MINUTE_MILLISECONDS = 60_000;
 const ONE_HOUR_MILLISECONDS = 3_600_000;
+const DEFAULT_MAX_TRACKED_KEYS = 10_000;
 
 export const RATE_LIMIT_POLICY = {
   ACCOUNT_EXPORT: {
@@ -22,56 +24,78 @@ export const RATE_LIMIT_POLICY = {
     limit: 1,
     windowMilliseconds: ONE_HOUR_MILLISECONDS,
     keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
   AUTHENTICATED_USER: {
     name: 'authenticated-user',
     limit: 120,
     windowMilliseconds: ONE_MINUTE_MILLISECONDS,
     keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
   EXECUTION_CREATION: {
     name: 'execution-creation',
     limit: 20,
     windowMilliseconds: ONE_MINUTE_MILLISECONDS,
     keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
   ADMIN_INVITATION: {
     name: 'admin-invitation',
     limit: 10,
     windowMilliseconds: ONE_HOUR_MILLISECONDS,
     keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
   SESSION_CLIENT_ADDRESS: {
     name: 'session-client-address',
     limit: 10,
     windowMilliseconds: ONE_MINUTE_MILLISECONDS,
     keyScope: RATE_LIMIT_KEY_SCOPE.CLIENT_ADDRESS,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
   STREAM_TICKET_CLIENT_ADDRESS: {
     name: 'stream-ticket-client-address',
     limit: 10,
     windowMilliseconds: ONE_MINUTE_MILLISECONDS,
     keyScope: RATE_LIMIT_KEY_SCOPE.CLIENT_ADDRESS,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
   TELEGRAM_LINK_CODE_ISSUE: {
     name: 'telegram-link-code-issue',
     limit: 10,
     windowMilliseconds: ONE_HOUR_MILLISECONDS,
     keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
   TELEGRAM_WEBHOOK_CLIENT_ADDRESS: {
     name: 'telegram-webhook-client-address',
     limit: 300,
     windowMilliseconds: ONE_MINUTE_MILLISECONDS,
     keyScope: RATE_LIMIT_KEY_SCOPE.CLIENT_ADDRESS,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
+  },
+  HEALTH_CLIENT_ADDRESS: {
+    name: 'health-client-address',
+    limit: 600,
+    windowMilliseconds: ONE_MINUTE_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.CLIENT_ADDRESS,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
   UNAUTHENTICATED_CLIENT_ADDRESS: {
     name: 'unauthenticated-client-address',
     limit: 30,
     windowMilliseconds: ONE_MINUTE_MILLISECONDS,
     keyScope: RATE_LIMIT_KEY_SCOPE.CLIENT_ADDRESS,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
 } as const satisfies Readonly<Record<string, RateLimitPolicy>>;
 
-export const MAX_TRACKED_RATE_LIMIT_KEYS = 10_000;
+export const RATE_LIMIT_CHARGE = {
+  BEFORE_HANDLER: 'before-handler',
+  AFTER_SUCCESS: 'after-success',
+} as const;
+
+export type RateLimitCharge = (typeof RATE_LIMIT_CHARGE)[keyof typeof RATE_LIMIT_CHARGE];
+
 export const UNKNOWN_CLIENT_ADDRESS = 'unknown';

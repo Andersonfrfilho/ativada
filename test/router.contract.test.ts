@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
 import { RouteDeclarationError } from '../apps/api-crypto/src/router/route-declaration.error.js';
 import { ROUTE_ACCESS } from '../apps/api-crypto/src/router/route-access.constant.js';
+import { createRateLimiter } from '../apps/api-crypto/src/rate-limit/rate-limiter.js';
 import { createRouter } from '../apps/api-crypto/src/router/create-router.js';
 import { createRouteTable } from '../apps/api-crypto/src/router/route-table.js';
 import type { Route } from '../apps/api-crypto/src/router/route.types.js';
@@ -110,7 +111,7 @@ describe('global exception filter', () => {
         routes: [failingRoute],
         verifyAccessToken: () => Promise.reject(failure),
         resolveUser: () => Promise.reject(failure),
-        rateLimiter: { consume: () => ({ isAllowed: true }) },
+        rateLimiter: createRateLimiter({ now: () => 0 }),
         trustedProxyHops: 0,
         reportUnexpectedError: (error, traceId) =>
           failingHarness.reportedErrors.push([error, traceId]),

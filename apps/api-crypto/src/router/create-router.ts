@@ -1,7 +1,15 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { runWithDeferredCharge } from '../rate-limit/deferred-rate-limit-charge.js';
 import { enforceRateLimit } from '../rate-limit/enforce-rate-limit.js';
-import { RATE_LIMIT_POLICY } from '../rate-limit/rate-limit-policy.constant.js';
-import { resolveClientAddress } from '../rate-limit/resolve-client-address.js';
+import {
+  RATE_LIMIT_CHARGE,
+  RATE_LIMIT_KEY_SCOPE,
+  RATE_LIMIT_POLICY,
+} from '../rate-limit/rate-limit-policy.constant.js';
+import {
+  resolveClientAddress,
+  toRateLimitAddressKey,
+} from '../rate-limit/resolve-client-address.js';
 import { toErrorResponse } from '../shared/http/exception-filter.js';
 import { HTTP_HEADER } from '../shared/http/http.constant.js';
 import { buildSuccessResponse, type RouteResult } from '../shared/http/response-envelope.js';
@@ -34,6 +42,7 @@ export type RouterRequest = {
 export type Router = (routerRequest: RouterRequest) => Promise<Response>;
 
 type DispatchParams = {
+  readonly inFlightChargeKeys: Set<string>;
   readonly routeTable: RouteTable;
   readonly dependencies: RouterDependencies;
   readonly routerRequest: RouterRequest;
@@ -54,7 +63,7 @@ async function runRoute(
     enforceRateLimit({
       rateLimiter: params.dependencies.rateLimiter,
       policy: route.rateLimitPolicy ?? RATE_LIMIT_POLICY.UNAUTHENTICATED_CLIENT_ADDRESS,
-      key: clientAddress,
+      key: toRateLimitAddressKey(clientAddress),
     });
     return route.handler({ request, traceId, clientAddress, pathParams });
   }
@@ -64,7 +73,23 @@ async function runRoute(
     clientAddress,
     dependencies: params.dependencies,
   });
-  return route.handler({ request, traceId, clientAddress, pathParams, ...authentication });
+  const context = { request, traceId, clientAddress, pathParams, ...authentication };
+  const { rateLimitPolicy } = route;
+  if (rateLimitPolicy === undefined || route.rateLimitCharge !== RATE_LIMIT_CHARGE.AFTER_SUCCESS) {
+    return route.handler(context);
+  }
+  const isSubjectScoped = rateLimitPolicy.keyScope === RATE_LIMIT_KEY_SCOPE.SUBJECT;
+  return runWithDeferredCharge(
+    {
+      rateLimiter: params.dependencies.rateLimiter,
+      policy: rateLimitPolicy,
+      key: isSubjectScoped
+        ? authentication.authenticatedUser.keycloakSubject
+        : toRateLimitAddressKey(clientAddress),
+      inFlightKeys: params.inFlightChargeKeys,
+    },
+    () => route.handler(context),
+  );
 }
 
 async function dispatch(params: DispatchParams): Promise<Response> {
@@ -79,9 +104,10 @@ async function dispatch(params: DispatchParams): Promise<Response> {
 
 export function createRouter(dependencies: RouterDependencies): Router {
   const routeTable = createRouteTable(dependencies.routes);
+  const inFlightChargeKeys = new Set<string>();
   return async (routerRequest) => {
     try {
-      return await dispatch({ routeTable, dependencies, routerRequest });
+      return await dispatch({ inFlightChargeKeys, routeTable, dependencies, routerRequest });
     } catch (error: unknown) {
       return toErrorResponse({
         error,

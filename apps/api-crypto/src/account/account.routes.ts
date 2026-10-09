@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { RATE_LIMIT_POLICY } from '../rate-limit/rate-limit-policy.constant.js';
+import { RATE_LIMIT_CHARGE, RATE_LIMIT_POLICY } from '../rate-limit/rate-limit-policy.constant.js';
 import { ME_PATH } from '../profile/profile.constant.js';
 import { ROUTE_ACCESS } from '../router/route-access.constant.js';
 import type { Route } from '../router/route.types.js';
@@ -26,6 +26,7 @@ export function createAccountRoutes(dependencies: AccountRouteDependencies): rea
       path: ME_EXPORT_PATH,
       access: ROUTE_ACCESS.USER,
       rateLimitPolicy: RATE_LIMIT_POLICY.ACCOUNT_EXPORT,
+      rateLimitCharge: RATE_LIMIT_CHARGE.AFTER_SUCCESS,
       handler: async ({ scope, authenticatedUser }): Promise<RouteResult> => {
         const document = await dependencies.exportAccount({
           scope,

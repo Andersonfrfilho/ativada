@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { createRecencyMap } from '../shared/collections/recency-map.js';
 import {
   CHAT_BLOCK_MILLISECONDS,
   CHAT_FAILURE_LIMIT,
@@ -10,6 +11,7 @@ export type ChatAttemptLimiter = {
   readonly isBlocked: (chatId: string) => boolean;
   readonly recordFailure: (chatId: string) => void;
   readonly recordSuccess: (chatId: string) => void;
+  readonly trackedChatCount: () => number;
 };
 
 type ChatRecord = {
@@ -20,24 +22,16 @@ type ChatRecord = {
 
 export function createChatAttemptLimiter(options: {
   readonly now: () => number;
+  readonly maximumEntries?: number;
 }): ChatAttemptLimiter {
-  const records = new Map<string, ChatRecord>();
-
-  function evictIfFull(nowMilliseconds: number): void {
-    if (records.size < MAX_TRACKED_CHATS) return;
-    for (const [chatId, record] of records) {
-      const isIdle =
-        nowMilliseconds - record.windowStartedAtMilliseconds >= CHAT_FAILURE_WINDOW_MILLISECONDS;
-      if (isIdle && record.blockedUntilMilliseconds <= nowMilliseconds) records.delete(chatId);
-    }
-    const oldestChatId = records.keys().next().value;
-    if (records.size >= MAX_TRACKED_CHATS && oldestChatId !== undefined) {
-      records.delete(oldestChatId);
-    }
-  }
+  const records = createRecencyMap<ChatRecord>({
+    maximumEntries: options.maximumEntries ?? MAX_TRACKED_CHATS,
+    isIdle: (record) =>
+      options.now() - record.windowStartedAtMilliseconds >= CHAT_FAILURE_WINDOW_MILLISECONDS &&
+      record.blockedUntilMilliseconds <= options.now(),
+  });
 
   function startRecord(chatId: string, nowMilliseconds: number): ChatRecord {
-    evictIfFull(nowMilliseconds);
     const record = {
       windowStartedAtMilliseconds: nowMilliseconds,
       failures: 0,
@@ -65,5 +59,6 @@ export function createChatAttemptLimiter(options: {
     recordSuccess: (chatId): void => {
       records.delete(chatId);
     },
+    trackedChatCount: (): number => records.size(),
   };
 }

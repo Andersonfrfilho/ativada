@@ -2,7 +2,9 @@
 import { randomBytes } from 'node:crypto';
 
 import type { UserId } from '@crypto/database';
+import { MILLISECONDS_PER_SECOND } from '@crypto/environment';
 
+import { createRecencyMap } from '../shared/collections/recency-map.js';
 import { hashSecret } from '../shared/crypto/hash-secret.js';
 import {
   MAX_PENDING_STREAM_TICKETS,
@@ -23,6 +25,7 @@ export type StreamTicketStore = {
 export type StreamTicketStoreOptions = {
   readonly now: () => number;
   readonly timeToLiveMilliseconds?: number;
+  readonly maximumEntries?: number;
 };
 
 type PendingTicket = {
@@ -30,29 +33,19 @@ type PendingTicket = {
   readonly expiresAtMilliseconds: number;
 };
 
-const MILLISECONDS_PER_SECOND = 1000;
-
 export function createStreamTicketStore(options: StreamTicketStoreOptions): StreamTicketStore {
   const timeToLive = options.timeToLiveMilliseconds ?? STREAM_TICKET_TIME_TO_LIVE_MILLISECONDS;
-  const pendingTickets = new Map<string, PendingTicket>();
-
-  function evict(nowMilliseconds: number): void {
-    for (const [key, pending] of pendingTickets) {
-      if (pending.expiresAtMilliseconds <= nowMilliseconds) pendingTickets.delete(key);
-    }
-    const oldestKey = pendingTickets.keys().next().value;
-    if (pendingTickets.size >= MAX_PENDING_STREAM_TICKETS && oldestKey !== undefined) {
-      pendingTickets.delete(oldestKey);
-    }
-  }
+  const nowMilliseconds = options.now;
+  const pendingTickets = createRecencyMap<PendingTicket>({
+    maximumEntries: options.maximumEntries ?? MAX_PENDING_STREAM_TICKETS,
+    isIdle: (pending) => pending.expiresAtMilliseconds <= nowMilliseconds(),
+  });
 
   function issueTicket(userId: UserId): IssuedStreamTicket {
-    const nowMilliseconds = options.now();
-    evict(nowMilliseconds);
     const ticket = randomBytes(STREAM_TICKET_BYTES).toString('base64url');
     pendingTickets.set(hashSecret(ticket), {
       userId,
-      expiresAtMilliseconds: nowMilliseconds + timeToLive,
+      expiresAtMilliseconds: nowMilliseconds() + timeToLive,
     });
     return { ticket, expiresInSeconds: timeToLive / MILLISECONDS_PER_SECOND };
   }

@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { RATE_LIMIT_POLICY } from '../rate-limit/rate-limit-policy.constant.js';
 import { ROUTE_ACCESS } from '../router/route-access.constant.js';
 import type { Route } from '../router/route.types.js';
 import { HTTP_METHOD, HTTP_STATUS } from '../shared/http/http.constant.js';
@@ -20,6 +21,7 @@ export function createHealthRoutes(dependencies: HealthRouteDependencies): reado
       method: HTTP_METHOD.GET,
       path: HEALTH_PATH,
       access: ROUTE_ACCESS.PUBLIC,
+      rateLimitPolicy: RATE_LIMIT_POLICY.HEALTH_CLIENT_ADDRESS,
       handler: () =>
         Promise.resolve({ status: HTTP_STATUS.OK, data: { status: HEALTH_STATUS.OK } }),
     },

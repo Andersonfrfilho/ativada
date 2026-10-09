@@ -24,10 +24,12 @@ import {
 import type { VerifiedAccessToken } from '../authentication/token-claims.schema.js';
 import { enforceRateLimit } from '../rate-limit/enforce-rate-limit.js';
 import {
+  RATE_LIMIT_CHARGE,
   RATE_LIMIT_KEY_SCOPE,
   RATE_LIMIT_POLICY,
 } from '../rate-limit/rate-limit-policy.constant.js';
 import type { RateLimiter } from '../rate-limit/rate-limiter.js';
+import { toRateLimitAddressKey } from '../rate-limit/resolve-client-address.js';
 import type { ProtectedRoute } from './route.types.js';
 
 export type AuthenticationPipelineDependencies = {
@@ -57,7 +59,7 @@ function chargeClientAddress(
   enforceRateLimit({
     rateLimiter: dependencies.rateLimiter,
     policy: RATE_LIMIT_POLICY.UNAUTHENTICATED_CLIENT_ADDRESS,
-    key: address,
+    key: toRateLimitAddressKey(address),
   });
 }
 
@@ -83,12 +85,13 @@ function enforceRouteRateLimits(params: AuthenticateRouteRequestParams, subject:
   const { rateLimiter } = params.dependencies;
   enforceRateLimit({ rateLimiter, policy: RATE_LIMIT_POLICY.AUTHENTICATED_USER, key: subject });
   const { rateLimitPolicy } = params.route;
-  if (rateLimitPolicy === undefined) return;
+  const isDeferred = params.route.rateLimitCharge === RATE_LIMIT_CHARGE.AFTER_SUCCESS;
+  if (rateLimitPolicy === undefined || isDeferred) return;
   const isSubjectScoped = rateLimitPolicy.keyScope === RATE_LIMIT_KEY_SCOPE.SUBJECT;
   enforceRateLimit({
     rateLimiter,
     policy: rateLimitPolicy,
-    key: isSubjectScoped ? subject : params.clientAddress,
+    key: isSubjectScoped ? subject : toRateLimitAddressKey(params.clientAddress),
   });
 }
 

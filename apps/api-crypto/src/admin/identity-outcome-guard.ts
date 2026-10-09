@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { IDENTITY_OUTCOME, type IdentityOutcome } from '@crypto/identity-admin';
 
-import { IdentityProviderUnavailableError } from './admin.error.js';
+import { IdentityProviderUnavailableError } from '../shared/errors/identity-provider-unavailable.error.js';
 
 export function requireValue<TValue>(outcome: IdentityOutcome<TValue>): TValue {
   if (outcome.status === IDENTITY_OUTCOME.OK) return outcome.value;

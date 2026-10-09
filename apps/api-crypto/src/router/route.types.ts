@@ -3,7 +3,7 @@ import type { OwnerScope } from '@crypto/database';
 
 import type { AuthenticatedUser } from '../authentication/authenticated-user.js';
 import type { AuthenticationLevel } from '../authentication/authentication.constant.js';
-import type { RateLimitPolicy } from '../rate-limit/rate-limit-policy.constant.js';
+import type { RateLimitCharge, RateLimitPolicy } from '../rate-limit/rate-limit-policy.constant.js';
 import type { HttpMethod } from '../shared/http/http.constant.js';
 import type { RouteResult } from '../shared/http/response-envelope.js';
 import { ROUTE_ACCESS, type ProtectedRouteAccess } from './route-access.constant.js';
@@ -26,6 +26,7 @@ type RouteBase = {
   readonly method: HttpMethod;
   readonly path: string;
   readonly rateLimitPolicy?: RateLimitPolicy;
+  readonly rateLimitCharge?: RateLimitCharge;
 };
 
 export type PublicRoute = RouteBase & {

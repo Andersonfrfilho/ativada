@@ -169,12 +169,29 @@ describe('GET /v1/me/export', () => {
     expect((await exportAs(OWNER_A.subject)).status).toBe(200);
   });
 
-  test('still exports, with a null e-mail, when the identity provider is down', async () => {
+  test('answers 503 when the e-mail cannot be read from the identity provider', async () => {
     harness.keycloak.admin.failing.add(ADMIN_OPERATION.READ_USER);
     const response = await exportAs(OWNER_A.subject);
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as { data: { account: Record<string, unknown> } };
-    expect(body.data.account['email']).toBeNull();
+    expect(response.status).toBe(503);
+    const body = (await response.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('IDENTITY_PROVIDER_UNAVAILABLE');
+  });
+
+  test('a failed export does not spend the hourly quota; the successful one does', async () => {
+    harness.keycloak.admin.failing.add(ADMIN_OPERATION.READ_USER);
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      expect((await exportAs(OWNER_A.subject)).status).toBe(503);
+    }
+    harness.keycloak.admin.failing.clear();
+    expect((await exportAs(OWNER_A.subject)).status).toBe(200);
+    expect((await exportAs(OWNER_A.subject)).status).toBe(429);
+  });
+
+  test('two exports at the same time cannot both run inside one quota', async () => {
+    const statuses = (
+      await Promise.all([exportAs(OWNER_A.subject), exportAs(OWNER_A.subject)])
+    ).map((response) => response.status);
+    expect(statuses.sort()).toStrictEqual([200, 429]);
   });
 
   test('keeps the e-mail, the chat and the display name out of the logs', async () => {
