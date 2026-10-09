@@ -4,6 +4,7 @@ import { closeDatabase, openDatabase, type DatabaseHandle } from './database-han
 import { applyMigrations } from './migrate.js';
 import { readDatabaseUrl } from './read-database-url.js';
 import { checkProfileRepository } from './profile-checks.js';
+import { checkTelegramLink } from './telegram-checks.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
 import { resolveUserBySubject } from './users/resolve-user-by-subject.js';
 import { USER_RESOLUTION_STATUS } from './users/user-resolution.constant.js';
@@ -74,6 +75,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkDeletedAccount(handle, client);
     await checkBlockedAccount(handle, client);
     await checkProfileRepository({ handle, assertCondition, reportCheck });
+    await checkTelegramLink({ handle, client, assertCondition, reportCheck });
   } finally {
     await client.close();
     await closeDatabase(handle);

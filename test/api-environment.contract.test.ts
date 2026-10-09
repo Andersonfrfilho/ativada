@@ -128,4 +128,48 @@ describe('api-crypto environment (authentication, CORS and proxies)', () => {
       }),
     ).toThrow(EnvironmentError);
   });
+
+  test('Telegram settings are optional and the API base URL has a default', async () => {
+    const base = await readEnvironmentFile('env.test');
+    delete base['TELEGRAM_BOT_TOKEN'];
+    delete base['TELEGRAM_WEBHOOK_SECRET'];
+    delete base['TELEGRAM_API_BASE_URL'];
+    const environment = parseEnvironment(environmentSchema, base);
+    expect(environment.TELEGRAM_BOT_TOKEN).toBeUndefined();
+    expect(environment.TELEGRAM_WEBHOOK_SECRET).toBeUndefined();
+    expect(environment.TELEGRAM_API_BASE_URL).toBe('https://api.telegram.org');
+  });
+
+  test.each(['TELEGRAM_BOT_TOKEN', 'TELEGRAM_WEBHOOK_SECRET'])(
+    'fails at boot when only %s is set',
+    async (kept) => {
+      const base = await readEnvironmentFile('env.test');
+      const dropped =
+        kept === 'TELEGRAM_BOT_TOKEN' ? 'TELEGRAM_WEBHOOK_SECRET' : 'TELEGRAM_BOT_TOKEN';
+      delete base[dropped];
+      expect(parseEnvironment.bind(undefined, environmentSchema, base)).toThrow(EnvironmentError);
+    },
+  );
+
+  test.each(['short', 'has space in the secret value', 'x'.repeat(257)])(
+    'rejects TELEGRAM_WEBHOOK_SECRET=%p',
+    async (value) => {
+      const base = await readEnvironmentFile('env.test');
+      expect(
+        parseEnvironment.bind(undefined, environmentSchema, {
+          ...base,
+          TELEGRAM_WEBHOOK_SECRET: value,
+        }),
+      ).toThrow(EnvironmentError);
+    },
+  );
+
+  test('the committed environment files carry only fake Telegram values', async () => {
+    for (const fileName of ['env.dev', 'env.test']) {
+      const values = await readEnvironmentFile(fileName);
+      expect(values['TELEGRAM_BOT_TOKEN']).toContain('FAKE');
+      expect(values['TELEGRAM_WEBHOOK_SECRET']).toContain('fake');
+      expect(values['TELEGRAM_API_BASE_URL']?.startsWith('http://127.0.0.1:')).toBe(true);
+    }
+  });
 });

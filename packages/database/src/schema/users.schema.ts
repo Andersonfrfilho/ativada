@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { sql } from 'drizzle-orm';
 import {
   boolean,
   jsonb,
@@ -35,5 +36,10 @@ export const users = pgTable(
     identityDeletedAt: timestamp('identity_deleted_at', { withTimezone: true }),
     dataPurgedAt: timestamp('data_purged_at', { withTimezone: true }),
   },
-  (table) => [uniqueIndex('users_keycloak_sub_unique').on(table.keycloakSubject)],
+  (table) => [
+    uniqueIndex('users_keycloak_sub_unique').on(table.keycloakSubject),
+    uniqueIndex('users_telegram_chat_id_unique')
+      .on(table.telegramChatId)
+      .where(sql`${table.telegramChatId} is not null`),
+  ],
 );

@@ -15,6 +15,7 @@ export function buildApiRouteDependencies(
       allowedOrigins: new Set(),
     },
     profile: { getProfile: notUsed, updateProfile: notUsed },
+    telegram: { unlinkTelegram: notUsed, issueLinkCode: undefined, webhook: undefined },
     streamTicketStore: createStreamTicketStore({ now: () => Date.now() }),
   };
 }

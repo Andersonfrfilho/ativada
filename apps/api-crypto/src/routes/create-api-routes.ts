@@ -2,6 +2,10 @@
 import { createProfileRoutes, type ProfileRouteDependencies } from '../profile/profile.routes.js';
 import type { Route } from '../router/route.types.js';
 import { createSessionRoutes, type SessionRouteDependencies } from '../session/session.routes.js';
+import {
+  createTelegramRoutes,
+  type TelegramRouteDependencies,
+} from '../telegram/telegram.routes.js';
 import type { StreamTicketStore } from '../stream/stream-ticket-store.js';
 import { createStreamTicketRoutes } from '../stream/stream-ticket.routes.js';
 import { createHealthRoutes, type HealthRouteDependencies } from './health.routes.js';
@@ -9,6 +13,7 @@ import { createHealthRoutes, type HealthRouteDependencies } from './health.route
 export type ApiRouteDependencies = HealthRouteDependencies & {
   readonly session: SessionRouteDependencies;
   readonly profile: ProfileRouteDependencies;
+  readonly telegram: TelegramRouteDependencies;
   readonly streamTicketStore: StreamTicketStore;
 };
 
@@ -17,6 +22,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     ...createHealthRoutes(dependencies),
     ...createSessionRoutes(dependencies.session),
     ...createProfileRoutes(dependencies.profile),
+    ...createTelegramRoutes(dependencies.telegram),
     ...createStreamTicketRoutes(dependencies.streamTicketStore),
   ];
 }

@@ -14,6 +14,10 @@ const SENSITIVE_VALUES: Readonly<Record<string, string>> = {
   cookie: '__Host-crypto_refresh=refresh-secreto',
   'set-cookie': '__Host-crypto_refresh=outro-refresh',
   secret: 'segredo-do-cliente',
+  chatId: '555000111',
+  chat_id: '555000222',
+  telegramChatId: '555000333',
+  botToken: '123456789:token-do-bot',
 };
 
 function captureLines(): { readonly lines: string[]; readonly write: (line: string) => void } {

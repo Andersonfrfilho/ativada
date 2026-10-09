@@ -13,6 +13,7 @@ import type { Environment } from './environment.js';
 import { createRequestHandler, type RequestHandler } from './http/create-request-handler.js';
 import type { Logger } from './logging/logger.js';
 import { createGetProfileUseCase, createUpdateProfileUseCase } from './profile/profile.use-case.js';
+import { createTelegramRouteDependencies } from './telegram/create-telegram-route-dependencies.js';
 import { createRateLimiter } from './rate-limit/rate-limiter.js';
 import { createSessionRouteDependencies } from './session/create-session-routes-dependencies.js';
 import { createStreamTicketStore } from './stream/stream-ticket-store.js';
@@ -49,6 +50,12 @@ export function createApplication(params: CreateApplicationParams): Application 
         getProfile: createGetProfileUseCase(profileRepository),
         updateProfile: createUpdateProfileUseCase(profileRepository),
       },
+      telegram: createTelegramRouteDependencies({
+        environment,
+        database,
+        logger,
+        now: () => Date.now(),
+      }),
       streamTicketStore: createStreamTicketStore({ now: () => Date.now() }),
     }),
     verifyAccessToken,

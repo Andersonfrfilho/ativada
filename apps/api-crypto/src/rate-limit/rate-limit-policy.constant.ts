@@ -14,6 +14,7 @@ export type RateLimitPolicy = {
 };
 
 const ONE_MINUTE_MILLISECONDS = 60_000;
+const ONE_HOUR_MILLISECONDS = 3_600_000;
 
 export const RATE_LIMIT_POLICY = {
   AUTHENTICATED_USER: {
@@ -37,6 +38,18 @@ export const RATE_LIMIT_POLICY = {
   STREAM_TICKET_CLIENT_ADDRESS: {
     name: 'stream-ticket-client-address',
     limit: 10,
+    windowMilliseconds: ONE_MINUTE_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.CLIENT_ADDRESS,
+  },
+  TELEGRAM_LINK_CODE_ISSUE: {
+    name: 'telegram-link-code-issue',
+    limit: 10,
+    windowMilliseconds: ONE_HOUR_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+  },
+  TELEGRAM_WEBHOOK_CLIENT_ADDRESS: {
+    name: 'telegram-webhook-client-address',
+    limit: 300,
     windowMilliseconds: ONE_MINUTE_MILLISECONDS,
     keyScope: RATE_LIMIT_KEY_SCOPE.CLIENT_ADDRESS,
   },

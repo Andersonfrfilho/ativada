@@ -20,3 +20,14 @@ export {
 } from './users/display-currency.constant.js';
 export { createProfileRepository, type ProfileRepository } from './users/profile.repository.js';
 export type { ProfilePatch, ProfileRecord } from './users/profile.types.js';
+export { LINK_OUTCOME, type LinkOutcome } from './telegram/telegram-link.constant.js';
+export {
+  createTelegramLinkConsumer,
+  type ConsumeLinkCodeParams,
+  type TelegramLinkConsumer,
+} from './telegram/telegram-link-consumer.js';
+export {
+  createTelegramLinkRepository,
+  type IssueLinkCodeParams,
+  type TelegramLinkRepository,
+} from './telegram/telegram-link.repository.js';

@@ -16,7 +16,7 @@ export const SENSITIVE_KEYS: ReadonlySet<string> = new Set([
   'secret',
 ]);
 
-export const SENSITIVE_KEY_FRAGMENTS: readonly string[] = ['secret', 'password', 'token'];
+export const SENSITIVE_KEY_FRAGMENTS: readonly string[] = ['secret', 'password', 'token', 'chatid'];
 
 export const LOG_LEVEL = {
   DEBUG: 'debug',

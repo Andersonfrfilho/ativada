@@ -9,6 +9,11 @@ const ORIGIN_LIST_EXPECTATION =
 const URL_LIST_EXPECTATION = 'lista de URLs http:// ou https:// separadas por vírgula';
 const TEXT_LIST_EXPECTATION = 'lista de textos separados por vírgula';
 const PROXY_HOPS_EXPECTATION = 'inteiro entre 0 e 10';
+const TELEGRAM_SECRET_EXPECTATION = 'texto de 16 a 256 caracteres A-Z, a-z, 0-9, _ ou -';
+const TELEGRAM_PAIR_EXPECTATION =
+  'TELEGRAM_BOT_TOKEN e TELEGRAM_WEBHOOK_SECRET devem ser definidos juntos ou omitidos juntos';
+const TELEGRAM_SECRET_PATTERN = /^[A-Za-z0-9_-]{16,256}$/;
+const DEFAULT_TELEGRAM_API_BASE_URL = 'https://api.telegram.org';
 const DEFAULT_API_HOST = '127.0.0.1';
 const MAX_TRUSTED_PROXY_HOPS = 10;
 
@@ -50,32 +55,44 @@ const urlListSchema = z
   .transform(splitCommaSeparatedList)
   .pipe(z.array(httpUrlSchema).min(1, { error: URL_LIST_EXPECTATION }));
 
-export const environmentSchema = z.object({
-  ENV: z.enum(['dev', 'test', 'production'], { error: 'dev, test ou production' }),
-  DATABASE_URL: postgresUrlSchema,
-  API_HOST: nonEmptyTextSchema.default(DEFAULT_API_HOST),
-  API_PORT: z.coerce
-    .number({ error: API_PORT_EXPECTATION })
-    .int({ error: API_PORT_EXPECTATION })
-    .min(1024, { error: API_PORT_EXPECTATION })
-    .max(65535, { error: API_PORT_EXPECTATION }),
-  KEYCLOAK_ISSUER: httpUrlSchema,
-  KEYCLOAK_JWKS_URL: httpUrlSchema,
-  KEYCLOAK_TOKEN_URL: httpUrlSchema,
-  KEYCLOAK_LOGOUT_URL: httpUrlSchema,
-  KEYCLOAK_SESSION_CLIENT_ID: nonEmptyTextSchema,
-  KEYCLOAK_SESSION_CLIENT_SECRET: nonEmptyTextSchema,
-  SESSION_ALLOWED_REDIRECT_URIS: urlListSchema,
-  API_AUDIENCE: nonEmptyTextSchema,
-  AUTHORIZED_PARTIES: textListSchema,
-  CORS_ALLOWED_ORIGINS: originListSchema,
-  TRUSTED_PROXY_HOPS: z.coerce
-    .number({ error: PROXY_HOPS_EXPECTATION })
-    .int({ error: PROXY_HOPS_EXPECTATION })
-    .min(0, { error: PROXY_HOPS_EXPECTATION })
-    .max(MAX_TRUSTED_PROXY_HOPS, { error: PROXY_HOPS_EXPECTATION })
-    .default(0),
-});
+export const environmentSchema = z
+  .object({
+    ENV: z.enum(['dev', 'test', 'production'], { error: 'dev, test ou production' }),
+    DATABASE_URL: postgresUrlSchema,
+    API_HOST: nonEmptyTextSchema.default(DEFAULT_API_HOST),
+    API_PORT: z.coerce
+      .number({ error: API_PORT_EXPECTATION })
+      .int({ error: API_PORT_EXPECTATION })
+      .min(1024, { error: API_PORT_EXPECTATION })
+      .max(65535, { error: API_PORT_EXPECTATION }),
+    KEYCLOAK_ISSUER: httpUrlSchema,
+    KEYCLOAK_JWKS_URL: httpUrlSchema,
+    KEYCLOAK_TOKEN_URL: httpUrlSchema,
+    KEYCLOAK_LOGOUT_URL: httpUrlSchema,
+    KEYCLOAK_SESSION_CLIENT_ID: nonEmptyTextSchema,
+    KEYCLOAK_SESSION_CLIENT_SECRET: nonEmptyTextSchema,
+    SESSION_ALLOWED_REDIRECT_URIS: urlListSchema,
+    API_AUDIENCE: nonEmptyTextSchema,
+    AUTHORIZED_PARTIES: textListSchema,
+    CORS_ALLOWED_ORIGINS: originListSchema,
+    TRUSTED_PROXY_HOPS: z.coerce
+      .number({ error: PROXY_HOPS_EXPECTATION })
+      .int({ error: PROXY_HOPS_EXPECTATION })
+      .min(0, { error: PROXY_HOPS_EXPECTATION })
+      .max(MAX_TRUSTED_PROXY_HOPS, { error: PROXY_HOPS_EXPECTATION })
+      .default(0),
+    TELEGRAM_BOT_TOKEN: nonEmptyTextSchema.max(256).optional(),
+    TELEGRAM_WEBHOOK_SECRET: z
+      .string({ error: TELEGRAM_SECRET_EXPECTATION })
+      .regex(TELEGRAM_SECRET_PATTERN, { error: TELEGRAM_SECRET_EXPECTATION })
+      .optional(),
+    TELEGRAM_API_BASE_URL: httpUrlSchema.default(DEFAULT_TELEGRAM_API_BASE_URL),
+  })
+  .refine(
+    (values) =>
+      (values.TELEGRAM_BOT_TOKEN === undefined) === (values.TELEGRAM_WEBHOOK_SECRET === undefined),
+    { error: TELEGRAM_PAIR_EXPECTATION, path: ['TELEGRAM_WEBHOOK_SECRET'] },
+  );
 
 export type Environment = z.infer<typeof environmentSchema>;
 
