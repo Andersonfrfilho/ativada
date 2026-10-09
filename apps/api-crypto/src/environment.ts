@@ -1,14 +1,13 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { parseEnvironment, z } from '@crypto/environment';
+import { parseEnvironment, postgresUrlSchema, z } from '@crypto/environment';
 
-const DATABASE_URL_EXPECTATION = 'URL postgres:// ou postgresql://';
 const API_PORT_EXPECTATION = 'inteiro entre 1024 e 65535';
 const NON_EMPTY_TEXT_EXPECTATION = 'texto não vazio';
 const DEFAULT_API_HOST = '127.0.0.1';
 
 export const environmentSchema = z.object({
   ENV: z.enum(['dev', 'test', 'production'], { error: 'dev, test ou production' }),
-  DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/, error: DATABASE_URL_EXPECTATION }),
+  DATABASE_URL: postgresUrlSchema,
   API_HOST: z
     .string({ error: NON_EMPTY_TEXT_EXPECTATION })
     .min(1, { error: NON_EMPTY_TEXT_EXPECTATION })

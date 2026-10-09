@@ -1,6 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
-import { EnvironmentError, parseEnvironment, z } from '../packages/environment/src/index.js';
+import {
+  EnvironmentError,
+  parseEnvironment,
+  postgresUrlSchema,
+  z,
+} from '../packages/environment/src/index.js';
 import { loadEnvironment as loadFrontendEnvironment } from '../apps/frontend-crypto/src/environment.js';
 
 const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
@@ -164,5 +169,27 @@ describe('frontend environment', () => {
 describe('environment access is confined to environment modules', () => {
   test('no source file reads process.env or import.meta.env outside the allowed modules', async () => {
     expect(await listEnvironmentViolations()).toEqual([]);
+  });
+});
+
+describe('postgres URL schema is shared', () => {
+  test('accepts postgres:// and postgresql:// URLs', () => {
+    expect(postgresUrlSchema.safeParse('postgres://u:p@127.0.0.1:5432/db').success).toBe(true);
+    expect(postgresUrlSchema.safeParse('postgresql://u:p@h/db').success).toBe(true);
+  });
+
+  test('rejects other protocols and non-URLs', () => {
+    expect(postgresUrlSchema.safeParse('mysql://x/y').success).toBe(false);
+    expect(postgresUrlSchema.safeParse('abc').success).toBe(false);
+  });
+
+  test('no app environment module repeats the postgres URL rule', async () => {
+    const glob = new Bun.Glob('apps/*/src/environment.ts');
+    const offenders: string[] = [];
+    for await (const relativePath of glob.scan({ cwd: REPOSITORY_ROOT })) {
+      const text = await Bun.file(`${REPOSITORY_ROOT}${relativePath}`).text();
+      if (text.includes('postgresql') || text.includes('postgres://')) offenders.push(relativePath);
+    }
+    expect(offenders).toEqual([]);
   });
 });

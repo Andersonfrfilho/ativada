@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { parseEnvironment, z } from '@crypto/environment';
+import { parseEnvironment, postgresUrlSchema, z } from '@crypto/environment';
 
 const DATABASE_URL_SCHEMA = z.object({
-  DATABASE_URL: z.string({ error: 'texto não vazio' }).min(1, { error: 'texto não vazio' }),
+  DATABASE_URL: postgresUrlSchema,
 });
 
 export function readDatabaseUrl(): string {
