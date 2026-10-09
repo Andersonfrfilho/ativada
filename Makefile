@@ -6,7 +6,7 @@ export
 COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
 
-.PHONY: help bootstrap config up down ps check migration-test
+.PHONY: help bootstrap config up down ps check migration-test identity-test identity-logs
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -23,8 +23,8 @@ config: ## Valida o ambiente, a versão do Bun e o compose
 up: ## Sobe a infraestrutura e espera ficar saudável
 	$(COMPOSE) up -d --wait
 
-down: ## Derruba os containers da infraestrutura
-	$(COMPOSE) down
+down: ## Derruba os containers (DOWN_FLAGS=--volumes apaga os dados)
+	$(COMPOSE) down $(DOWN_FLAGS)
 
 ps: ## Mostra o estado dos containers
 	$(COMPOSE) ps
@@ -41,3 +41,13 @@ migration-test: ## Aplica e desfaz as migrations num Postgres de teste descartá
 	$(MAKE) up ENV=test && bun --env-file=envs/env.test run --cwd packages/database db:migration-test || status=$$?; \
 	$(MAKE) down ENV=test; \
 	exit $$status
+
+identity-test: ## Verifica realm, permissões e reuso de refresh num Keycloak de teste descartável
+	set -a; . envs/env.test; set +a; \
+	status=0; \
+	$(MAKE) up ENV=test && bun --env-file=envs/env.test run scripts/identity-test.ts || status=$$?; \
+	$(MAKE) down ENV=test DOWN_FLAGS=--volumes; \
+	exit $$status
+
+identity-logs: ## Segue os logs do Keycloak do ambiente atual
+	$(COMPOSE) logs -f keycloak
