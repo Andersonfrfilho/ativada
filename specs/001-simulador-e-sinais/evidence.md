@@ -11,6 +11,10 @@ Escalada de modelo e decisões humanas também entram aqui.
 | T0.3 | 2026-10-09 | `make check`, `make migration-test` | verdes; 32 testes; `migration-test: OK (1 migrations aplicadas e desfeitas)`. Mutação: migration com rollback vazio reprovada com "rollback deixou tabelas em public: probe" | `56b57cc` |
 | T0.4 | 2026-10-09 | `make check`, `make migration-test`, boot de cada app | verdes; 44 testes. Boot com env vazio: exit 1 e lista `ENV`, `DATABASE_URL`; com `envs/env.dev`: exit 0. Valor secreto não aparece na mensagem. Mutação: `process.env` em `apps/*/src` reprovado pelo lint | `8efe304` |
 | T0.4b | 2026-10-09 | `make check`, `make migration-test` | verdes; 47 testes. Schema da URL do Postgres extraído para `@crypto/environment`, removendo 3 cópias | `e1f8545` |
+| T0.5 🧠 | 2026-10-09 | `make check` | verde; 56 testes. ADR 0001 (autenticação e isolamento) + tipos `UserId`/`OwnerScope`/`AuthenticatedUser` + harness de contrato negativo. Executor `opus`; validado por `architect` (opus): **APROVADO COM AJUSTES**, 6 obrigatórios | `0439c5e` |
+| T0.5b | 2026-10-09 | `make check`, `make migration-test` | verdes; 86 testes. Ajustes obrigatórios do arquiteto: superfície pública de `@crypto/database` fechada, upsert de `users` sem escrita por requisição, `undefined` e 404 idêntico, estados de exclusão de conta, `audit_events` único, obrigações do realm. Mutações: import de `drizzle-orm` e `as UserId` em app reprovados; `LIST_IGNORES_OWNER` reprova o harness | `e21793b`, `4fefbff`, `84b4bed` |
+| T0.5c | 2026-10-09 | `make check`, `make migration-test` | verdes; 108 testes. Recheca do arquiteto achou 4 brechas (import dinâmico, `Bun.sql`, overload que devolve `UserId`, extensões `.tsx/.mts/.js`); cada uma fechada com sonda de lint. `createOwnerScope` saiu do índice público. Mutação combinada em app reprovada (5 erros) | `46ee9bc`, `fb3ee8f` |
+| docs | 2026-10-09 | `bun run format:check` | RF16 (tempo real), T4.7 e T5.8 adicionados após pedido do responsável: o painel deve atualizar preços, plano, ativos, saldo e alertas ao vivo | `0f62262` |
 
 Cada gate foi reexecutado pelo orquestrador (não só lido do relatório do subagente) antes de registrar.
 
@@ -35,6 +39,13 @@ Modelo: todas em `executor model=haiku`. **Nenhuma escalada** de modelo foi nece
 - `import.meta.env` do frontend tipa pelo `@types/bun`; reconferir o tipo quando o Vite entrar (Fase 5).
 - Portas em uso por este projeto: Postgres 56432 (dev) e 56433 (test); API reservada 56101 e 56102.
 - Próxima fase: **Fase 0b — Contas e login**, com a T0.5 🧠 em `opus`. Não iniciada.
+
+## Fase 0b — decisões e desvios
+
+1. **Biblioteca JOSE:** `jose` 6.2.12, escolhida no ADR 0001 e agora nomeada em `plan.md` (D9); será instalada na T0.7 com versão exata. Web Crypto puro foi rejeitado (caminho de bypass de autenticação por nossa conta).
+2. **Aceite da T0.5:** o `tasks.md` pedia "contrato negativo de exemplo (vermelho)", mas teste vermelho commitado quebraria `make check`. Entregue como harness verde com mutação embutida (o harness reprova 5 repositórios com defeito).
+3. **`createOwnerScope` não é público:** o escopo só nasce dentro de `@crypto/database`; a T0.7 entrega `resolveUserBySubject` → `{ userId, scope }`. O lint é segunda camada, com brechas conhecidas e fechadas por sonda; as ainda abertas (`Bun` passado como argumento, `eval`, `require` dinâmico) estão no ADR.
+4. **Tempo real (pedido do responsável):** RF16. Preços não passam pelo banco: a API mantém um stream de ticker da Binance e publica por pub/sub do `Bun.serve`.
 
 ## Decisões humanas
 
