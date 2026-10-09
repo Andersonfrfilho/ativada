@@ -1,9 +1,17 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createAccessTokenVerifier } from '../../apps/api-crypto/src/authentication/access-token-verifier.js';
+import {
+  createAccessTokenVerifier,
+  type AccessTokenVerifier,
+} from '../../apps/api-crypto/src/authentication/access-token-verifier.js';
 import { createRemoteKeyResolver } from '../../apps/api-crypto/src/authentication/remote-key-resolver.js';
 import type { UserResolver } from '../../apps/api-crypto/src/authentication/resolve-authenticated-user.js';
 import { RATE_LIMIT_POLICY } from '../../apps/api-crypto/src/rate-limit/rate-limit-policy.constant.js';
 import { createRateLimiter } from '../../apps/api-crypto/src/rate-limit/rate-limiter.js';
+import { createLogger } from '../../apps/api-crypto/src/logging/logger.js';
+import {
+  createRequestHandler,
+  type RequestHandler,
+} from '../../apps/api-crypto/src/http/create-request-handler.js';
 import { createRouter, type Router } from '../../apps/api-crypto/src/router/create-router.js';
 import { ROUTE_ACCESS } from '../../apps/api-crypto/src/router/route-access.constant.js';
 import type { Route } from '../../apps/api-crypto/src/router/route.types.js';
@@ -26,6 +34,8 @@ export const PUBLIC_PATH = '/v1/test/public';
 export const EXECUTION_PATH = '/v1/test/execution';
 export const SESSION_PATH = '/v1/test/session';
 export const REQUEST_ORIGIN = 'http://harness.test';
+export const ALLOWED_ORIGIN = 'http://panel.test';
+export const FOREIGN_ORIGIN = 'http://evil.test';
 
 export type HarnessOptions = {
   readonly trustedProxyHops?: number;
@@ -47,15 +57,29 @@ export type ApiHarness = {
   readonly jwks: JwksTestServer;
   readonly key: TestSigningKey;
   readonly router: Router;
+  readonly handler: RequestHandler;
+  readonly verifyAccessToken: AccessTokenVerifier;
+  readonly resolveUser: UserResolver;
+  readonly logLines: string[];
   readonly routes: readonly Route[];
   readonly reportedErrors: unknown[];
   readonly resolvedSubjects: string[];
+  readonly sendThroughHandler: (params: SendParams) => Promise<Response>;
   readonly clock: { advance: (milliseconds: number) => void };
   readonly send: (params: SendParams) => Promise<Response>;
   readonly stop: () => Promise<void>;
 };
 
 const TEST_USER_ID_TEXT = '0192f3a1-7c4e-7b2a-9d3f-5e6a7b8c9d0e';
+
+function buildRequest(params: SendParams): Request {
+  const headers = new Headers(params.headers);
+  if (params.token !== undefined) headers.set('Authorization', `Bearer ${params.token}`);
+  return new Request(`${REQUEST_ORIGIN}${params.path}`, {
+    method: params.method ?? HTTP_METHOD.GET,
+    headers,
+  });
+}
 
 function buildTestRoutes(): readonly Route[] {
   const handler = (): Promise<{ status: number; data: unknown }> =>
@@ -105,32 +129,49 @@ export async function createApiHarness(options: HarnessOptions = {}): Promise<Ap
     });
   };
   const routes = buildTestRoutes();
+  const verifyAccessToken = createAccessTokenVerifier({
+    settings: {
+      issuer: TEST_ISSUER,
+      audience: TEST_AUDIENCE,
+      authorizedParties: [TEST_AUTHORIZED_PARTY],
+    },
+    getKey:
+      options.getKeyOverride ??
+      createRemoteKeyResolver({
+        jwksUrl: jwks.url,
+        timeoutMilliseconds: 300,
+        cooldownMilliseconds: 50,
+      }),
+  });
   const router = createRouter({
     routes,
-    verifyAccessToken: createAccessTokenVerifier({
-      settings: {
-        issuer: TEST_ISSUER,
-        audience: TEST_AUDIENCE,
-        authorizedParties: [TEST_AUTHORIZED_PARTY],
-      },
-      getKey:
-        options.getKeyOverride ??
-        createRemoteKeyResolver({
-          jwksUrl: jwks.url,
-          timeoutMilliseconds: 300,
-          cooldownMilliseconds: 50,
-        }),
-    }),
+    verifyAccessToken,
     resolveUser,
     rateLimiter: createRateLimiter({ now: () => nowMilliseconds }),
     trustedProxyHops: options.trustedProxyHops ?? 0,
     reportUnexpectedError: (error) => reportedErrors.push(error),
   });
 
+  const logLines: string[] = [];
+  const handler = createRequestHandler({
+    router,
+    corsAllowedOrigins: [ALLOWED_ORIGIN],
+    logger: createLogger({
+      appName: 'api-crypto',
+      write: (line: string): void => void logLines.push(line),
+    }),
+  });
+
   return {
     jwks,
     key,
     router,
+    handler,
+    verifyAccessToken,
+    resolveUser,
+    logLines,
+    sendThroughHandler: (params: SendParams): Promise<Response> =>
+      handler(buildRequest(params), params.socketAddress ?? '203.0.113.7'),
     routes,
     reportedErrors,
     resolvedSubjects,
@@ -139,18 +180,12 @@ export async function createApiHarness(options: HarnessOptions = {}): Promise<Ap
         nowMilliseconds += milliseconds;
       },
     },
-    send: (params: SendParams): Promise<Response> => {
-      const headers = new Headers(params.headers);
-      if (params.token !== undefined) headers.set('Authorization', `Bearer ${params.token}`);
-      return router({
-        request: new Request(`${REQUEST_ORIGIN}${params.path}`, {
-          method: params.method ?? HTTP_METHOD.GET,
-          headers,
-        }),
+    send: (params: SendParams): Promise<Response> =>
+      router({
+        request: buildRequest(params),
         socketAddress: params.socketAddress ?? '203.0.113.7',
         traceId: 'trace-test',
-      });
-    },
+      }),
     stop: (): Promise<void> => jwks.stop(),
   };
 }

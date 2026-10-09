@@ -6,9 +6,12 @@ import {
   postgresUrlSchema,
   z,
 } from '../packages/environment/src/index.js';
+import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
 import { loadEnvironment as loadFrontendEnvironment } from '../apps/frontend-crypto/src/environment.js';
 
 const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
+const LONG_RUNNING_APPLICATION = 'api-crypto';
+const LISTENING_MESSAGE = '"message":"listening"';
 const ENVIRONMENT_ERROR_PREFIX = 'Variáveis de ambiente inválidas';
 const SERVER_APPLICATIONS: readonly string[] = ['api-crypto', 'worker-crypto', 'cron-crypto'];
 const ENVIRONMENT_EXEMPT_FILES: readonly string[] = [
@@ -40,16 +43,18 @@ function captureError(action: () => unknown): unknown {
   return undefined;
 }
 
-async function readEnvironmentFile(fileName: string): Promise<Record<string, string>> {
-  const content = await Bun.file(`${REPOSITORY_ROOT}envs/${fileName}`).text();
-  const entries: [string, string][] = [];
-  for (const rawLine of content.split('\n')) {
-    const line = rawLine.trim();
-    if (line.length === 0 || line.startsWith('#')) continue;
-    const separatorIndex = line.indexOf('=');
-    entries.push([line.slice(0, separatorIndex), line.slice(separatorIndex + 1)]);
+async function collectOutput(
+  stream: ReadableStream<Uint8Array>,
+  onChunk: (text: string) => void,
+): Promise<string> {
+  const decoder = new TextDecoder();
+  let text = '';
+  for await (const chunk of stream) {
+    const decoded = decoder.decode(chunk, { stream: true });
+    text += decoded;
+    onChunk(text);
   }
-  return Object.fromEntries(entries);
+  return text;
 }
 
 async function runServerApplication(
@@ -62,8 +67,11 @@ async function runServerApplication(
     stdout: 'pipe',
     stderr: 'pipe',
   });
+  const isLongRunning = applicationName === LONG_RUNNING_APPLICATION;
   const [stdout, stderr] = await Promise.all([
-    new Response(child.stdout).text(),
+    collectOutput(child.stdout, (text) => {
+      if (isLongRunning && text.includes(LISTENING_MESSAGE)) child.kill('SIGTERM');
+    }),
     new Response(child.stderr).text(),
   ]);
   const exitCode = await child.exited;
@@ -143,7 +151,7 @@ describe('server applications fail at boot without environment', () => {
   );
 
   test.each([...SERVER_APPLICATIONS])(
-    '%s boots with a valid env and logs one JSON info line',
+    '%s boots with a valid env, logs JSON info and exits 0 (the API after SIGTERM)',
     async (applicationName) => {
       const testEnvironment = await readEnvironmentFile('env.test');
       const result = await runServerApplication(applicationName, testEnvironment);
