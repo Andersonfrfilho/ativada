@@ -6,6 +6,18 @@ const REALM_FILE = 'realm/crypto-paper-trader-realm.json';
 const REALM_NAME = 'crypto-paper-trader';
 const SERVICE_CLIENT_ID = 'crypto-api-service';
 const PLACEHOLDER_PATTERN = /\$\{([A-Z0-9_]+)\}/g;
+const REQUIRED_EVENT_TYPES: readonly string[] = [
+  'LOGIN',
+  'LOGIN_ERROR',
+  'UPDATE_PASSWORD',
+  'UPDATE_TOTP',
+  'REMOVE_TOTP',
+  'CODE_TO_TOKEN_ERROR',
+  'REFRESH_TOKEN_ERROR',
+  'LOGOUT',
+];
+const NOTIFIED_EVENT_TYPES: readonly string[] = ['UPDATE_PASSWORD', 'UPDATE_TOTP', 'REMOVE_TOTP'];
+const EVENT_RETENTION_SECONDS = 7_776_000;
 const SECRET_ENVIRONMENT_KEYS: readonly string[] = [
   'KEYCLOAK_ADMIN_PASSWORD',
   'KEYCLOAK_SESSION_CLIENT_SECRET',
@@ -35,12 +47,14 @@ type RealmClient = {
   readonly protocolMappers?: readonly ProtocolMapper[];
   readonly authorizationSettings?: {
     readonly policies?: readonly AuthorizationPolicy[];
+    readonly resources?: readonly { readonly name: string; readonly type: string }[];
   };
 };
 
 type AuthorizationPolicy = {
   readonly name: string;
   readonly type: string;
+  readonly logic?: string;
   readonly config?: Readonly<Record<string, string>>;
 };
 
@@ -85,6 +99,18 @@ type RealmRepresentation = {
   readonly otpPolicyPeriod: number;
   readonly otpPolicyLookAheadWindow: number;
   readonly adminPermissionsEnabled: boolean;
+  readonly eventsEnabled?: boolean;
+  readonly eventsExpiration?: number;
+  readonly enabledEventTypes?: readonly string[];
+  readonly eventsListeners?: readonly string[];
+  readonly adminEventsEnabled?: boolean;
+  readonly adminEventsDetailsEnabled?: boolean;
+  readonly groups?: readonly {
+    readonly id?: string;
+    readonly name: string;
+    readonly realmRoles?: readonly string[];
+  }[];
+  readonly scopeMappings?: readonly { readonly client: string }[];
   readonly browserFlow: string;
   readonly browserSecurityHeaders: Readonly<Record<string, string>>;
   readonly smtpServer: Readonly<Record<string, string>>;
@@ -301,14 +327,23 @@ describe('realm: papéis e segundo fator', () => {
 });
 
 describe('realm: clientes', () => {
-  test('crypto-panel is public, Authorization Code with PKCE S256 only', async () => {
-    const client = findClient(await readRealm(), 'crypto-panel');
-    expect(client.publicClient).toBe(true);
-    expect(client.standardFlowEnabled).toBe(true);
-    expect(client.implicitFlowEnabled).toBe(false);
+  test('crypto-panel does not exist: the token handler uses crypto-session', async () => {
+    const realm = await readRealm();
+    expect(realm.clients.map((client) => client.clientId)).not.toContain('crypto-panel');
+    expect(realm.scopeMappings?.map((mapping) => mapping.client)).not.toContain('crypto-panel');
+  });
+
+  test('admin-cli has no password grant, so a password alone never mints a token', async () => {
+    const client = findClient(await readRealm(), 'admin-cli');
     expect(client.directAccessGrantsEnabled).toBe(false);
+    expect(client.standardFlowEnabled).toBe(false);
     expect(client.serviceAccountsEnabled).toBe(false);
-    expect(client.attributes?.['pkce.code.challenge.method']).toBe('S256');
+  });
+
+  test('no client of the realm enables the direct access (password) grant', async () => {
+    for (const client of (await readRealm()).clients) {
+      expect(client.directAccessGrantsEnabled ?? false).toBe(false);
+    }
   });
 
   test('crypto-api only serves as audience, with every flow off', async () => {
@@ -341,7 +376,7 @@ describe('realm: clientes', () => {
     expect(client.secret).toBe('${KEYCLOAK_SERVICE_CLIENT_SECRET}');
   });
 
-  test.each(['crypto-panel', 'crypto-session'])(
+  test.each(['crypto-session'])(
     '%s adds crypto-api to the access token audience',
     async (clientId) => {
       const client = findClient(await readRealm(), clientId);
@@ -375,6 +410,35 @@ describe('realm: clientes', () => {
   });
 });
 
+describe('realm: eventos e aviso ao titular', () => {
+  test('records the security events for a fixed number of days', async () => {
+    const realm = await readRealm();
+    expect(realm.eventsEnabled).toBe(true);
+    expect(realm.eventsExpiration).toBe(EVENT_RETENTION_SECONDS);
+    for (const eventType of REQUIRED_EVENT_TYPES) {
+      expect(realm.enabledEventTypes).toContain(eventType);
+    }
+  });
+
+  test('records admin events without the representation (it would carry the e-mail)', async () => {
+    const realm = await readRealm();
+    expect(realm.adminEventsEnabled).toBe(true);
+    expect(realm.adminEventsDetailsEnabled).toBe(false);
+  });
+
+  test('sends the e-mail listener alongside the jboss-logging one', async () => {
+    const realm = await readRealm();
+    expect(realm.eventsListeners).toContain('email');
+    expect(realm.eventsListeners).toContain('jboss-logging');
+  });
+
+  test('the compose limits the e-mail listener to password and TOTP changes', async () => {
+    const compose = await readRepositoryText('compose.yaml');
+    const included = /--spi-events-listener--email--include-events=([A-Z_,]+)/.exec(compose);
+    expect(included?.[1]?.split(',').sort()).toEqual([...NOTIFIED_EVENT_TYPES].sort());
+  });
+});
+
 describe('realm: permissões finas da service account', () => {
   test('enables fine-grained admin permissions', async () => {
     expect((await readRealm()).adminPermissionsEnabled).toBe(true);
@@ -388,6 +452,41 @@ describe('realm: permissões finas da service account', () => {
     expect(JSON.parse(clientPolicy?.config?.['clients'] ?? '[]')).toEqual([SERVICE_CLIENT_ID]);
     expect(permission?.config?.['defaultResourceType']).toBe('Users');
     expect(JSON.parse(permission?.config?.['scopes'] ?? '[]')).toEqual(['manage', 'view']);
+  });
+
+  test('the admin role is held through the admins group', async () => {
+    const group = (await readRealm()).groups?.find((candidate) => candidate.name === 'admins');
+    expect(group?.realmRoles).toEqual(['admin']);
+    expect(group?.id).toBeDefined();
+  });
+
+  test('denies crypto-api-service manage on the admins group members (FGAP v2, unanimous)', async () => {
+    const realm = await readRealm();
+    const groupId = realm.groups?.find((candidate) => candidate.name === 'admins')?.id;
+    const settings = findClient(realm, 'admin-permissions').authorizationSettings;
+    const denial = settings?.policies?.find(
+      (policy) => policy.name === 'crypto-api-service-cannot-manage-admins',
+    );
+    const negation = settings?.policies?.find(
+      (policy) => policy.name === 'not-crypto-api-service-policy',
+    );
+    expect(negation?.logic).toBe('NEGATIVE');
+    expect(JSON.parse(negation?.config?.['clients'] ?? '[]')).toEqual([SERVICE_CLIENT_ID]);
+    expect(JSON.parse(denial?.config?.['resources'] ?? '[]')).toEqual([groupId]);
+    expect(denial?.config?.['defaultResourceType']).toBe('Groups');
+    expect((JSON.parse(denial?.config?.['scopes'] ?? '[]') as string[]).sort()).toEqual([
+      'manage',
+      'manage-members',
+    ]);
+    expect(JSON.parse(denial?.config?.['applyPolicies'] ?? '[]')).toEqual([negation?.name]);
+    expect(settings?.resources?.map((resource) => resource.name)).toContain(groupId);
+  });
+
+  test('keeps the unanimous decision strategy that makes the denial win', async () => {
+    const settings = findClient(await readRealm(), 'admin-permissions').authorizationSettings;
+    expect((settings as { decisionStrategy?: string } | undefined)?.decisionStrategy).toBe(
+      'UNANIMOUS',
+    );
   });
 
   test('gives the service account no realm-management role', async () => {

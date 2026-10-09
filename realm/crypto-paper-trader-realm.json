@@ -92,64 +92,9 @@
         "user",
         "admin"
       ]
-    },
-    {
-      "client": "crypto-panel",
-      "roles": [
-        "user",
-        "admin"
-      ]
     }
   ],
   "clients": [
-    {
-      "clientId": "crypto-panel",
-      "enabled": true,
-      "protocol": "openid-connect",
-      "consentRequired": false,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "standardFlowEnabled": true,
-      "serviceAccountsEnabled": false,
-      "publicClient": true,
-      "bearerOnly": false,
-      "frontchannelLogout": false,
-      "fullScopeAllowed": false,
-      "redirectUris": [
-        "${KEYCLOAK_PANEL_ORIGIN}/auth/callback"
-      ],
-      "webOrigins": [
-        "${KEYCLOAK_PANEL_ORIGIN}"
-      ],
-      "defaultClientScopes": [
-        "web-origins",
-        "acr",
-        "profile",
-        "roles",
-        "basic",
-        "email"
-      ],
-      "optionalClientScopes": [],
-      "attributes": {
-        "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "${KEYCLOAK_PANEL_ORIGIN}/"
-      },
-      "protocolMappers": [
-        {
-          "name": "audience-crypto-api",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-audience-mapper",
-          "consentRequired": false,
-          "config": {
-            "included.client.audience": "crypto-api",
-            "id.token.claim": "false",
-            "access.token.claim": "true",
-            "introspection.token.claim": "true",
-            "lightweight.claim": "false"
-          }
-        }
-      ]
-    },
     {
       "clientId": "crypto-api",
       "enabled": true,
@@ -269,9 +214,60 @@
               "scopes": "[\"manage\",\"view\"]",
               "applyPolicies": "[\"crypto-api-service-policy\"]"
             }
+          },
+          {
+            "name": "not-crypto-api-service-policy",
+            "type": "client",
+            "logic": "NEGATIVE",
+            "decisionStrategy": "UNANIMOUS",
+            "config": {
+              "clients": "[\"crypto-api-service\"]"
+            }
+          },
+          {
+            "name": "crypto-api-service-cannot-manage-admins",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "UNANIMOUS",
+            "config": {
+              "defaultResourceType": "Groups",
+              "resources": "[\"5b6f0c1e-7d3a-4c5e-9a0b-2f1d8e6c4a73\"]",
+              "scopes": "[\"manage\",\"manage-members\"]",
+              "applyPolicies": "[\"not-crypto-api-service-policy\"]"
+            }
+          }
+        ],
+        "resources": [
+          {
+            "name": "5b6f0c1e-7d3a-4c5e-9a0b-2f1d8e6c4a73",
+            "type": "Groups",
+            "scopes": [
+              {
+                "name": "manage"
+              },
+              {
+                "name": "manage-members"
+              }
+            ]
           }
         ]
       }
+    },
+    {
+      "clientId": "admin-cli",
+      "name": "${client_admin-cli}",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "bearerOnly": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "frontchannelLogout": false,
+      "redirectUris": [],
+      "webOrigins": []
     }
   ],
   "authenticationFlows": [
@@ -1194,5 +1190,35 @@
     "pt-BR",
     "en"
   ],
-  "defaultLocale": "pt-BR"
+  "defaultLocale": "pt-BR",
+  "eventsEnabled": true,
+  "eventsExpiration": 7776000,
+  "enabledEventTypes": [
+    "LOGIN",
+    "LOGIN_ERROR",
+    "UPDATE_PASSWORD",
+    "UPDATE_TOTP",
+    "REMOVE_TOTP",
+    "CODE_TO_TOKEN_ERROR",
+    "REFRESH_TOKEN_ERROR",
+    "LOGOUT"
+  ],
+  "eventsListeners": [
+    "jboss-logging",
+    "email"
+  ],
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": false,
+  "groups": [
+    {
+      "id": "5b6f0c1e-7d3a-4c5e-9a0b-2f1d8e6c4a73",
+      "name": "admins",
+      "path": "/admins",
+      "realmRoles": [
+        "admin"
+      ],
+      "attributes": {},
+      "subGroups": []
+    }
+  ]
 }

@@ -112,7 +112,7 @@ export async function checkServiceAccount(context: IdentityContext): Promise<voi
   }
 
   const invitation = await sendRequest({
-    url: `${adminUrl}/users/${created.id}/execute-actions-email?lifespan=${ACTION_LIFESPAN_SECONDS}&client_id=crypto-panel&redirect_uri=${encodeURIComponent(buildPanelRedirectUri(environment))}`,
+    url: `${adminUrl}/users/${created.id}/execute-actions-email?lifespan=${ACTION_LIFESPAN_SECONDS}&client_id=crypto-session&redirect_uri=${encodeURIComponent(buildPanelRedirectUri(environment))}`,
     method: 'PUT',
     token: serviceToken,
     json: ['UPDATE_PASSWORD'],

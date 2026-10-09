@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { checkAccountConsoleStepUp } from './identity-test/check-account-console.js';
+import { checkKeycloakEvents } from './identity-test/check-events.js';
 import { checkClientFlows } from './identity-test/check-clients.js';
 import { checkDiscovery, waitForRealm } from './identity-test/check-discovery.js';
 import {
@@ -7,6 +9,7 @@ import {
   checkPlainUserLogin,
 } from './identity-test/check-login.js';
 import { measureRefreshReuse } from './identity-test/check-refresh-reuse.js';
+import { checkServiceAccountCannotTakeOverAdmin } from './identity-test/check-service-account-admin-target.js';
 import { checkServiceAccount } from './identity-test/check-service-account.js';
 import { createCleanupStack } from './identity-test/cleanup-stack.js';
 import type { IdentityContext } from './identity-test/identity-context.js';
@@ -41,11 +44,14 @@ async function assertNoTestResidue(context: IdentityContext): Promise<void> {
 async function runChecks(context: IdentityContext): Promise<void> {
   await waitForRealm(context.environment);
   await checkDiscovery(context);
+  await checkAccountConsoleStepUp(context);
   await checkClientFlows(context);
   await checkPlainUserLogin(context);
   await checkAdminWithoutOtp(context);
   await checkAdminStepUp(context);
   await checkServiceAccount(context);
+  await checkServiceAccountCannotTakeOverAdmin(context);
+  await checkKeycloakEvents(context);
   await measureRefreshReuse(context);
 }
 

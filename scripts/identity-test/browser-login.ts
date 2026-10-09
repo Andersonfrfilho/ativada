@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { createHash, randomBytes } from 'node:crypto';
 import type { IdentityEnvironment } from './identity-environment.js';
-import { buildRealmUrl, PANEL_CLIENT_ID } from './keycloak-client.js';
+import { buildRealmUrl, SESSION_CLIENT_ID } from './keycloak-client.js';
 import { sendRequest, type HttpResult } from './http-client.js';
 import { IdentityTestError } from './identity-test.error.js';
 
@@ -21,6 +21,8 @@ export type StartLoginParams = {
   readonly pkce: PkcePair | undefined;
   readonly acrValues?: string;
   readonly clientId?: string;
+  readonly redirectUri?: string;
+  readonly keycloakAction?: string;
 };
 
 export function createPkcePair(): PkcePair {
@@ -37,7 +39,7 @@ export function buildAuthorizationUrl(
   parameters: Readonly<Record<string, string>>,
 ): string {
   const query = new URLSearchParams({
-    client_id: PANEL_CLIENT_ID,
+    client_id: SESSION_CLIENT_ID,
     redirect_uri: buildPanelRedirectUri(environment),
     response_type: 'code',
     scope: 'openid',
@@ -78,6 +80,8 @@ export async function startLogin(params: StartLoginParams): Promise<LoginStep> {
   }
   if (params.acrValues !== undefined) query['acr_values'] = params.acrValues;
   if (params.clientId !== undefined) query['client_id'] = params.clientId;
+  if (params.keycloakAction !== undefined) query['kc_action'] = params.keycloakAction;
+  if (params.redirectUri !== undefined) query['redirect_uri'] = params.redirectUri;
   const result = await sendRequest({ url: buildAuthorizationUrl(params.environment, query) });
   return classify(result, collectCookies(result, ''));
 }
@@ -85,6 +89,7 @@ export async function startLogin(params: StartLoginParams): Promise<LoginStep> {
 export async function submitLoginForm(
   page: Extract<LoginStep, { kind: 'page' }>,
   fields: Readonly<Record<string, string>>,
+  stopAtPrefix?: string,
 ): Promise<LoginStep> {
   const action = FORM_ACTION_PATTERN.exec(page.html)?.[1]?.replaceAll('&amp;', '&');
   if (action === undefined) throw new IdentityTestError('página de login sem formulário');
@@ -93,7 +98,11 @@ export async function submitLoginForm(
   cookies = collectCookies(result, cookies);
   const keycloakOrigin = new URL(action).origin;
   let location = result.headers.get('location');
-  while (location !== null && new URL(location).origin === keycloakOrigin) {
+  while (
+    location !== null &&
+    new URL(location).origin === keycloakOrigin &&
+    !(stopAtPrefix !== undefined && location.startsWith(stopAtPrefix))
+  ) {
     result = await sendRequest({ url: location, cookies });
     cookies = collectCookies(result, cookies);
     location = result.headers.get('location');

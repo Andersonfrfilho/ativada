@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { listSubjectsTo } from '../identity-test/mailpit-client.js';
 import { buildAdminUrl, fetchServiceAccountToken } from '../identity-test/keycloak-client.js';
 import { sendRequest } from '../identity-test/http-client.js';
 import { assertCondition } from '../identity-test/identity-test.error.js';
@@ -12,6 +13,7 @@ import {
   type TestActors,
 } from './admin-test-context.js';
 import { readData, readErrorCode } from './api-request.js';
+import { waitForPasswordChangedNotice } from './check-password-notice.js';
 import { invite } from './check-invitation.js';
 import { findKeycloakUserByEmail } from './keycloak-reads.js';
 
@@ -82,7 +84,9 @@ export async function checkResend(
     'convidado pendente recriado; link anterior invalidado; link novo válido',
   );
 
+  const subjectsBefore = await listSubjectsTo(environment, email);
   assertCondition(await setPasswordThroughLink(environment, newLink), 'não concluiu o convite');
+  await waitForPasswordChangedNotice(environment, { address: email, subjectsBefore });
   const afterAcceptance = await invite(context, { actors, email });
   assertCondition(
     afterAcceptance.status === 409,

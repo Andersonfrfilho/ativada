@@ -2,11 +2,9 @@
 import { buildAuthorizationUrl, createPkcePair } from './browser-login.js';
 import type { IdentityContext } from './identity-context.js';
 import { reportStep } from './identity-context.js';
-import { PANEL_CLIENT_ID, requestTokenGrant } from './keycloak-client.js';
+import { requestTokenGrant, SESSION_CLIENT_ID } from './keycloak-client.js';
 import { parseJsonRecord, readText, sendRequest } from './http-client.js';
 import { assertCondition } from './identity-test.error.js';
-
-const SESSION_CLIENT_ID = 'crypto-session';
 
 async function readTokenError(
   context: IdentityContext,
@@ -27,13 +25,24 @@ export async function checkClientFlows(context: IdentityContext): Promise<void> 
   const { environment } = context;
   const passwordGrant = await readTokenError(context, {
     grant_type: 'password',
-    client_id: PANEL_CLIENT_ID,
+    client_id: SESSION_CLIENT_ID,
     username: 'nobody',
     password: 'nothing',
   });
   assertCondition(
     passwordGrant.error === 'unauthorized_client',
-    `direct grant em crypto-panel: ${passwordGrant.error}`,
+    `direct grant em crypto-session: ${passwordGrant.error}`,
+  );
+
+  const adminCliGrant = await readTokenError(context, {
+    grant_type: 'password',
+    client_id: 'admin-cli',
+    username: 'nobody',
+    password: 'nothing',
+  });
+  assertCondition(
+    adminCliGrant.error === 'unauthorized_client',
+    `direct grant em admin-cli do realm: ${adminCliGrant.error}`,
   );
 
   const sessionCredentials = await readTokenError(context, {
@@ -50,10 +59,10 @@ export async function checkClientFlows(context: IdentityContext): Promise<void> 
     context,
     buildAuthorizationUrl(environment, { response_type: 'token' }),
   );
-  assertCondition(implicitRefused, 'crypto-panel aceitou o fluxo implícito');
+  assertCondition(implicitRefused, 'crypto-session aceitou o fluxo implícito');
 
   const withoutPkce = await isAuthorizationRefused(context, buildAuthorizationUrl(environment, {}));
-  assertCondition(withoutPkce, 'crypto-panel aceitou Code sem PKCE');
+  assertCondition(withoutPkce, 'crypto-session aceitou Code sem PKCE');
 
   const plainPkce = await isAuthorizationRefused(
     context,
@@ -62,7 +71,7 @@ export async function checkClientFlows(context: IdentityContext): Promise<void> 
       code_challenge_method: 'plain',
     }),
   );
-  assertCondition(plainPkce, 'crypto-panel aceitou PKCE plain');
+  assertCondition(plainPkce, 'crypto-session aceitou PKCE plain');
 
   const withPkce = createPkcePair();
   const accepted = await sendRequest({
@@ -77,6 +86,6 @@ export async function checkClientFlows(context: IdentityContext): Promise<void> 
   );
   reportStep(
     'clientes',
-    'direct grant, implicit, Code sem PKCE e PKCE plain recusados; Code + S256 abre o login',
+    'direct grant (crypto-session e admin-cli), implicit, Code sem PKCE e PKCE plain recusados; Code + S256 abre o login',
   );
 }

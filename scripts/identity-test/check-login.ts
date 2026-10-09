@@ -10,7 +10,7 @@ import {
 } from './browser-login.js';
 import type { IdentityContext } from './identity-context.js';
 import { reportStep } from './identity-context.js';
-import { decodeTokenPayload, PANEL_CLIENT_ID, requestTokenGrant } from './keycloak-client.js';
+import { decodeTokenPayload, requestTokenGrant, SESSION_CLIENT_ID } from './keycloak-client.js';
 import { parseJsonRecord, readString, type JsonRecord } from './http-client.js';
 import { assertCondition, IdentityTestError } from './identity-test.error.js';
 import { generateTotpCode, millisecondsUntilNextPeriod } from './totp.js';
@@ -70,7 +70,8 @@ async function exchangeCode(
 ): Promise<JsonRecord> {
   const result = await requestTokenGrant(context.environment, {
     grant_type: 'authorization_code',
-    client_id: PANEL_CLIENT_ID,
+    client_id: SESSION_CLIENT_ID,
+    client_secret: context.environment.sessionClientSecret,
     code: readAuthorizationCode(location),
     redirect_uri: buildPanelRedirectUri(context.environment),
     code_verifier: pkce.verifier,
@@ -97,7 +98,7 @@ export async function checkPlainUserLogin(context: IdentityContext): Promise<voi
   assertCondition(outcome.kind === 'redirect', 'usuário comum não deveria receber OTP');
   const claims = await exchangeCode(context, outcome.location, pkce);
   const roles = readRealmRoles(claims);
-  assertCondition(claims['azp'] === PANEL_CLIENT_ID, `azp: ${String(claims['azp'])}`);
+  assertCondition(claims['azp'] === SESSION_CLIENT_ID, `azp: ${String(claims['azp'])}`);
   assertCondition(String(claims['aud']).includes('crypto-api'), `aud: ${String(claims['aud'])}`);
   assertCondition(roles.includes('user') && !roles.includes('admin'), `papéis: ${roles.join(',')}`);
   assertCondition(!roles.includes('offline_access'), 'token com offline_access');

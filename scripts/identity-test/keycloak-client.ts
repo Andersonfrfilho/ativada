@@ -9,7 +9,7 @@ import {
   type JsonRecord,
 } from './http-client.js';
 
-export const PANEL_CLIENT_ID = 'crypto-panel';
+export const SESSION_CLIENT_ID = 'crypto-session';
 export const SERVICE_CLIENT_ID = 'crypto-api-service';
 
 export function buildRealmUrl(environment: IdentityEnvironment): string {

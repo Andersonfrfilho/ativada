@@ -37,3 +37,12 @@ export async function waitForMailTo(
   }
   throw new IdentityTestError(`nenhum e-mail para ${address} chegou ao Mailpit`);
 }
+
+export async function listSubjectsTo(
+  environment: IdentityEnvironment,
+  address: string,
+): Promise<readonly string[]> {
+  return (await listMessages(environment))
+    .filter((message) => mailIsAddressedTo(message, address))
+    .map((message) => (isJsonRecord(message) ? readText(message, 'Subject') : ''));
+}

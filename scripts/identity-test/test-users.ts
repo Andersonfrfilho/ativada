@@ -8,6 +8,7 @@ import { assertCondition } from './identity-test.error.js';
 export const TEST_USER_PASSWORD = 'Identity-Test-Pass-2026!';
 export const TEST_OTP_SECRET = 'identity-test-otp-secret';
 export const TEST_USER_PREFIX = 'identity-test-';
+export const ADMINS_GROUP_NAME = 'admins';
 
 export type TestUser = {
   readonly id: string;
@@ -33,21 +34,27 @@ export async function deleteUserById(
   });
 }
 
-async function mapAdminRole(environment: IdentityEnvironment, userId: string): Promise<void> {
+async function joinAdminsGroup(environment: IdentityEnvironment, userId: string): Promise<void> {
   const adminToken = await fetchMasterAdminToken(environment);
-  const roleResult = await sendRequest({
-    url: `${buildAdminUrl(environment)}/roles/admin`,
+  const groups = await sendRequest({
+    url: `${buildAdminUrl(environment)}/groups?search=${ADMINS_GROUP_NAME}&exact=true`,
     token: adminToken,
   });
-  const mapped = await sendRequest({
-    url: `${buildAdminUrl(environment)}/users/${userId}/role-mappings/realm`,
+  const groupId = readString(parseJsonRecord({ ...groups, text: firstElement(groups.text) }), 'id');
+  const joined = await sendRequest({
+    url: `${buildAdminUrl(environment)}/users/${userId}/groups/${groupId}`,
+    method: 'PUT',
     token: adminToken,
-    json: [parseJsonRecord(roleResult)],
   });
   assertCondition(
-    mapped.status === 204,
-    `mapear admin com o administrador mestre: ${mapped.status}`,
+    joined.status === 204,
+    `entrar no grupo admins com o administrador mestre: ${joined.status}`,
   );
+}
+
+function firstElement(jsonText: string): string {
+  const parsed: unknown = JSON.parse(jsonText);
+  return JSON.stringify(Array.isArray(parsed) ? parsed[0] : undefined);
 }
 
 function buildCredentials(kind: CreateTestUserParams['kind']): readonly unknown[] {
@@ -97,6 +104,6 @@ export async function createTestUser(params: CreateTestUserParams): Promise<Test
   assertCondition(typeof first === 'object' && first !== null, `${username} não encontrado`);
   const userId = readString(first as JsonRecord, 'id');
   cleanup.register(`apagar ${username}`, () => deleteUserById(environment, userId));
-  if (kind !== 'user') await mapAdminRole(environment, userId);
+  if (kind !== 'user') await joinAdminsGroup(environment, userId);
   return { id: userId, username, email };
 }

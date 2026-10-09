@@ -7,6 +7,7 @@ export type HttpRequest = {
   readonly json?: unknown;
   readonly form?: Readonly<Record<string, string>>;
   readonly cookies?: string;
+  readonly accept?: string;
 };
 
 export type HttpResult = {
@@ -25,6 +26,7 @@ export async function sendRequest(request: HttpRequest): Promise<HttpResult> {
   const headers = new Headers();
   if (request.token !== undefined) headers.set('authorization', `Bearer ${request.token}`);
   if (request.cookies !== undefined) headers.set('cookie', request.cookies);
+  if (request.accept !== undefined) headers.set('accept', request.accept);
   let body: string | undefined;
   if (request.json !== undefined) {
     headers.set('content-type', 'application/json');
