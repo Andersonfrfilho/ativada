@@ -1,0 +1,24 @@
+name: ${PROJECT_NAME}-${ENV}
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: ${PROJECT_NAME}-${ENV}-postgres
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT}:5432'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
+    name: ${PROJECT_NAME}-${ENV}-postgres-data
