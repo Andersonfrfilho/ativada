@@ -108,7 +108,7 @@ refresh token nem o segredo do cliente.
    a segunda chamada com o mesmo refresh recebe o mesmo resultado, sem ir ao Keycloak de novo.
 4. `DELETE /v1/session` faz logout no Keycloak e apaga o cookie.
 5. As três rotas de sessão exigem `Origin` na lista de origens permitidas e o cabeçalho
-   `X-Requested-With: crypto-panel` (defesa de CSRF além do `SameSite=Strict`), respondem com
+   `X-Requested-With: fetch` (defesa de CSRF além do `SameSite=Strict`; valor fixado na T0.7b), respondem com
    `Cache-Control: no-store`, e nunca registram o corpo nem o cookie em log.
 6. **Topologia:** painel e API na **mesma origem**, com proxy em `/v1` (Vite em dev, borda quando
    publicado), porque o cookie `__Host-` com `SameSite=Strict` não atravessa origens. Se algum ambiente
@@ -650,6 +650,40 @@ senão, CORS com `credentials` e origem exata.
 **Portas (127.0.0.1).** dev: Keycloak 56180, Mailpit SMTP 56125 e UI 56126. teste: Keycloak 56181,
 Mailpit SMTP 56127 e UI 56128. Console do Keycloak: `http://127.0.0.1:<porta>/admin/` com
 `KEYCLOAK_ADMIN_USER` / `KEYCLOAK_ADMIN_PASSWORD` do `envs/`.
+
+### m) Resultados e desvios da T0.7b
+
+Implementação em `apps/api-crypto/src/session/` (rotas, cliente do endpoint de token do Keycloak,
+deduplicação) e `apps/api-crypto/src/stream/` (ticket). Provas: contratos contra um Keycloak falso
+(`test/session-*.contract.test.ts`, `test/stream-ticket.contract.test.ts`) e `make session-test`
+contra o Keycloak 26.8.0 de teste.
+
+**Deduplicação do refresh — medida.** Com a deduplicação, duas chamadas paralelas a
+`/v1/session/refresh` com o mesmo cookie dão **200 e 200**, com o mesmo access token e o mesmo
+`Set-Cookie`, e uma só troca no Keycloak. Com a deduplicação removida (mutação), o mesmo teste contra o
+Keycloak real dá **200 e 401**: a segunda troca reusa o refresh já rotacionado, que o Keycloak recusa (§l).
+O resultado de uma troca fica na memória por 10 s (chave: SHA-256 do refresh); falha do Keycloak
+(rede/5xx) não é retida, para que a nova tentativa chegue a ele.
+
+**Decisões que o ADR não fixava**
+
+| Ponto | Decisão |
+|---|---|
+| Cabeçalho CSRF | `X-Requested-With: fetch` (o texto anterior dizia `crypto-panel`); ausente ou diferente, ou `Origin` fora da allowlist do CORS, é `403 CSRF_REJECTED` nas três rotas |
+| Resposta do Keycloak | `400` na troca ou no refresh = recusa (`400 AUTHORIZATION_CODE_REJECTED` no login; `401 SESSION_ENDED` e cookie apagado no refresh). Rede, timeout, 5xx, `401 invalid_client` (configuração errada) ou corpo ilegível = `503 SESSION_UNAVAILABLE`, cookie mantido |
+| Refresh sem cookie, ou com valor fora do formato de token | `401 SESSION_ENDED` com o cookie apagado, sem ir ao Keycloak |
+| Token que a API recusaria | O access token devolvido passa pelo verificador da T0.7 (inclui `email_verified`). Recusado: o refresh recém-emitido é revogado, `401 INVALID_ACCESS_TOKEN`, sem cookie. JWKS fora do ar no login: `503 AUTHENTICATION_UNAVAILABLE`, refresh revogado |
+| JWKS fora do ar no refresh | O Keycloak já rotacionou o refresh. A API responde `503` **e regrava o cookie** com o refresh novo; sem isso a tentativa seguinte reusaria o antigo e derrubaria a sessão |
+| `DELETE /v1/session` | Revoga no Keycloak (`400` = já morto, conta como feito) e apaga o cookie: `204`, idempotente (sem cookie também). Keycloak inalcançável: `503` e cookie mantido, para o usuário poder tentar de novo em vez de achar que saiu |
+| Ticket do stream | `201`, 32 bytes de CSPRNG (256 bits), 30 s, guardado só o SHA-256, uso único; política de rate limit própria (10/min por IP), separada da de login |
+| `redirectUri` | Igualdade exata com `SESSION_ALLOWED_REDIRECT_URIS`; corpo `strict`, `codeVerifier` com 43 a 128 caracteres RFC 7636; mensagens de erro nunca ecoam valor |
+
+**Env novo da API (validado no boot):** `KEYCLOAK_TOKEN_URL`, `KEYCLOAK_LOGOUT_URL`,
+`KEYCLOAK_SESSION_CLIENT_ID`, `KEYCLOAK_SESSION_CLIENT_SECRET`, `SESSION_ALLOWED_REDIRECT_URIS`.
+
+**Pendente.** O consumo do ticket no handshake do WebSocket (`consumeTicket`) entra na T4.4/T4.7; aqui
+estão a função e o contrato (uso único, expirado, inexistente). Dois pontos em memória (deduplicação e
+tickets) valem para uma instância da API (§g).
 
 ## Alternativas rejeitadas
 

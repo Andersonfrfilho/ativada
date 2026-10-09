@@ -1,7 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 export const HTTP_STATUS = {
   OK: 200,
+  CREATED: 201,
   NO_CONTENT: 204,
+  BAD_REQUEST: 400,
   FORBIDDEN: 403,
   UNAUTHORIZED: 401,
   NOT_FOUND: 404,
@@ -26,9 +28,12 @@ export const HTTP_HEADER = {
   ALLOW: 'Allow',
   AUTHORIZATION: 'Authorization',
   CACHE_CONTROL: 'Cache-Control',
+  COOKIE: 'Cookie',
   FORWARDED_FOR: 'X-Forwarded-For',
   ORIGIN: 'Origin',
+  REQUESTED_WITH: 'X-Requested-With',
   RETRY_AFTER: 'Retry-After',
+  SET_COOKIE: 'Set-Cookie',
   TRACE_ID: 'X-Trace-Id',
   VARY: 'Vary',
   WWW_AUTHENTICATE: 'WWW-Authenticate',

@@ -7,6 +7,8 @@ import type { Environment } from './environment.js';
 import { createRequestHandler, type RequestHandler } from './http/create-request-handler.js';
 import type { Logger } from './logging/logger.js';
 import { createRateLimiter } from './rate-limit/rate-limiter.js';
+import { createSessionRouteDependencies } from './session/create-session-routes-dependencies.js';
+import { createStreamTicketStore } from './stream/stream-ticket-store.js';
 import { createRouter } from './router/create-router.js';
 import { createApiRoutes } from './routes/create-api-routes.js';
 
@@ -23,16 +25,21 @@ export type CreateApplicationParams = {
 export function createApplication(params: CreateApplicationParams): Application {
   const { environment, logger } = params;
   const database = openDatabase(environment.DATABASE_URL);
+  const verifyAccessToken = createAccessTokenVerifier({
+    settings: {
+      issuer: environment.KEYCLOAK_ISSUER,
+      audience: environment.API_AUDIENCE,
+      authorizedParties: environment.AUTHORIZED_PARTIES,
+    },
+    getKey: createRemoteKeyResolver({ jwksUrl: environment.KEYCLOAK_JWKS_URL }),
+  });
   const router = createRouter({
-    routes: createApiRoutes({ checkDatabase: () => pingDatabase(database) }),
-    verifyAccessToken: createAccessTokenVerifier({
-      settings: {
-        issuer: environment.KEYCLOAK_ISSUER,
-        audience: environment.API_AUDIENCE,
-        authorizedParties: environment.AUTHORIZED_PARTIES,
-      },
-      getKey: createRemoteKeyResolver({ jwksUrl: environment.KEYCLOAK_JWKS_URL }),
+    routes: createApiRoutes({
+      checkDatabase: () => pingDatabase(database),
+      session: createSessionRouteDependencies({ environment, verifyAccessToken }),
+      streamTicketStore: createStreamTicketStore({ now: () => Date.now() }),
     }),
+    verifyAccessToken,
     resolveUser: (subject) => resolveUserBySubject(database, subject),
     rateLimiter: createRateLimiter({ now: () => Date.now() }),
     trustedProxyHops: environment.TRUSTED_PROXY_HOPS,

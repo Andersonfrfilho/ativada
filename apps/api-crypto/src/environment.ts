@@ -6,6 +6,7 @@ const NON_EMPTY_TEXT_EXPECTATION = 'texto não vazio';
 const URL_EXPECTATION = 'URL http:// ou https://';
 const ORIGIN_LIST_EXPECTATION =
   'lista de origens exatas separadas por vírgula (https://host[:porta], sem caminho nem barra final)';
+const URL_LIST_EXPECTATION = 'lista de URLs http:// ou https:// separadas por vírgula';
 const TEXT_LIST_EXPECTATION = 'lista de textos separados por vírgula';
 const PROXY_HOPS_EXPECTATION = 'inteiro entre 0 e 10';
 const DEFAULT_API_HOST = '127.0.0.1';
@@ -44,6 +45,11 @@ const originListSchema = z
       .min(1, { error: ORIGIN_LIST_EXPECTATION }),
   );
 
+const urlListSchema = z
+  .string({ error: URL_LIST_EXPECTATION })
+  .transform(splitCommaSeparatedList)
+  .pipe(z.array(httpUrlSchema).min(1, { error: URL_LIST_EXPECTATION }));
+
 export const environmentSchema = z.object({
   ENV: z.enum(['dev', 'test', 'production'], { error: 'dev, test ou production' }),
   DATABASE_URL: postgresUrlSchema,
@@ -55,6 +61,11 @@ export const environmentSchema = z.object({
     .max(65535, { error: API_PORT_EXPECTATION }),
   KEYCLOAK_ISSUER: httpUrlSchema,
   KEYCLOAK_JWKS_URL: httpUrlSchema,
+  KEYCLOAK_TOKEN_URL: httpUrlSchema,
+  KEYCLOAK_LOGOUT_URL: httpUrlSchema,
+  KEYCLOAK_SESSION_CLIENT_ID: nonEmptyTextSchema,
+  KEYCLOAK_SESSION_CLIENT_SECRET: nonEmptyTextSchema,
+  SESSION_ALLOWED_REDIRECT_URIS: urlListSchema,
   API_AUDIENCE: nonEmptyTextSchema,
   AUTHORIZED_PARTIES: textListSchema,
   CORS_ALLOWED_ORIGINS: originListSchema,

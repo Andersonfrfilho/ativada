@@ -5,6 +5,7 @@ import { createApiRoutes } from '../apps/api-crypto/src/routes/create-api-routes
 import { createRouter } from '../apps/api-crypto/src/router/create-router.js';
 import { createRateLimiter } from '../apps/api-crypto/src/rate-limit/rate-limiter.js';
 import { ROUTE_ACCESS } from '../apps/api-crypto/src/router/route-access.constant.js';
+import { buildApiRouteDependencies } from './fixtures/api-route-dependencies.fixture.js';
 import { createApiHarness, type ApiHarness } from './fixtures/api-harness.fixture.js';
 import { sweepProtectedRoutesWithoutToken } from './fixtures/route-sweep.fixture.js';
 import { signTestToken } from './fixtures/token-signing.fixture.js';
@@ -18,7 +19,7 @@ let productionHarnessRouter: ReturnType<typeof createRouter>;
 
 beforeAll(async () => {
   harness = await createApiHarness();
-  const routes = createApiRoutes({ checkDatabase: () => Promise.resolve(true) });
+  const routes = createApiRoutes(buildApiRouteDependencies(() => Promise.resolve(true)));
   productionHarnessRouter = createRouter({
     routes,
     verifyAccessToken: () => Promise.reject(new Error('not used')),
@@ -50,7 +51,7 @@ describe('GET /v1/health', () => {
 });
 
 describe('GET /v1/admin/health', () => {
-  const routes = createApiRoutes({ checkDatabase: () => Promise.resolve(true) });
+  const routes = createApiRoutes(buildApiRouteDependencies(() => Promise.resolve(true)));
 
   test('is declared as an admin route', () => {
     const route = routes.find((candidate) => candidate.path === ADMIN_HEALTH_PATH);
@@ -73,9 +74,9 @@ describe('admin health through the full authentication pipeline', () => {
   ): Promise<Response> {
     const databaseHarness = await createApiHarness();
     try {
-      const productionRoutes = createApiRoutes({
-        checkDatabase: () => Promise.resolve(databaseIsUp),
-      });
+      const productionRoutes = createApiRoutes(
+        buildApiRouteDependencies(() => Promise.resolve(databaseIsUp)),
+      );
       const router = createRouter({
         routes: productionRoutes,
         verifyAccessToken: databaseHarness.verifyAccessToken,

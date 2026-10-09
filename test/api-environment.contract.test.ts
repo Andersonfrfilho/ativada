@@ -13,6 +13,14 @@ const AUTHENTICATION_VARIABLES: readonly string[] = [
   'CORS_ALLOWED_ORIGINS',
 ];
 
+const SESSION_VARIABLES: readonly string[] = [
+  'KEYCLOAK_TOKEN_URL',
+  'KEYCLOAK_LOGOUT_URL',
+  'KEYCLOAK_SESSION_CLIENT_ID',
+  'KEYCLOAK_SESSION_CLIENT_SECRET',
+  'SESSION_ALLOWED_REDIRECT_URIS',
+];
+
 describe('api-crypto environment (authentication, CORS and proxies)', () => {
   test.each(['env.dev', 'env.test'])('%s satisfies the schema', async (fileName) => {
     const environment = parseEnvironment(environmentSchema, await readEnvironmentFile(fileName));
@@ -81,5 +89,43 @@ describe('api-crypto environment (authentication, CORS and proxies)', () => {
     expect(
       parseEnvironment(environmentSchema, { ...base, TRUSTED_PROXY_HOPS: '2' }).TRUSTED_PROXY_HOPS,
     ).toBe(2);
+  });
+
+  test.each([...SESSION_VARIABLES])('fails at boot when %s is missing', async (variable) => {
+    const base = await readEnvironmentFile('env.test');
+    delete base[variable];
+    const error = ((): unknown => {
+      try {
+        parseEnvironment(environmentSchema, base);
+      } catch (caught) {
+        return caught;
+      }
+      return undefined;
+    })();
+    expect(error).toBeInstanceOf(EnvironmentError);
+    expect((error as EnvironmentError).issues.join('\n')).toContain(variable);
+  });
+
+  test('parses the session settings, including the list of redirect URIs', async () => {
+    const base = await readEnvironmentFile('env.test');
+    const environment = parseEnvironment(environmentSchema, {
+      ...base,
+      SESSION_ALLOWED_REDIRECT_URIS: 'https://a.example.com/cb , https://b.example.com/cb,',
+    });
+    expect(environment.SESSION_ALLOWED_REDIRECT_URIS).toStrictEqual([
+      'https://a.example.com/cb',
+      'https://b.example.com/cb',
+    ]);
+    expect(environment.KEYCLOAK_SESSION_CLIENT_ID).toBe('crypto-session');
+  });
+
+  test.each(['', 'not-a-url', ' , '])('rejects SESSION_ALLOWED_REDIRECT_URIS=%p', async (value) => {
+    const base = await readEnvironmentFile('env.test');
+    expect(
+      parseEnvironment.bind(undefined, environmentSchema, {
+        ...base,
+        SESSION_ALLOWED_REDIRECT_URIS: value,
+      }),
+    ).toThrow(EnvironmentError);
   });
 });

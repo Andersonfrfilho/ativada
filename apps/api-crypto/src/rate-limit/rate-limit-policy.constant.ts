@@ -34,6 +34,12 @@ export const RATE_LIMIT_POLICY = {
     windowMilliseconds: ONE_MINUTE_MILLISECONDS,
     keyScope: RATE_LIMIT_KEY_SCOPE.CLIENT_ADDRESS,
   },
+  STREAM_TICKET_CLIENT_ADDRESS: {
+    name: 'stream-ticket-client-address',
+    limit: 10,
+    windowMilliseconds: ONE_MINUTE_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.CLIENT_ADDRESS,
+  },
   UNAUTHENTICATED_CLIENT_ADDRESS: {
     name: 'unauthenticated-client-address',
     limit: 30,

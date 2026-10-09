@@ -42,6 +42,7 @@ export type HarnessOptions = {
   readonly deletedSubjects?: readonly string[];
   readonly blockedSubjects?: readonly string[];
   readonly resolverFailure?: Error;
+  readonly routeFactory?: (verifyAccessToken: AccessTokenVerifier) => readonly Route[];
   readonly getKeyOverride?: Parameters<typeof createAccessTokenVerifier>[0]['getKey'];
 };
 
@@ -51,6 +52,7 @@ export type SendParams = {
   readonly token?: string;
   readonly headers?: Readonly<Record<string, string>>;
   readonly socketAddress?: string;
+  readonly body?: string;
 };
 
 export type ApiHarness = {
@@ -78,6 +80,7 @@ function buildRequest(params: SendParams): Request {
   return new Request(`${REQUEST_ORIGIN}${params.path}`, {
     method: params.method ?? HTTP_METHOD.GET,
     headers,
+    ...(params.body === undefined ? {} : { body: params.body }),
   });
 }
 
@@ -128,7 +131,6 @@ export async function createApiHarness(options: HarnessOptions = {}): Promise<Ap
       scope: createOwnerScope(userId),
     });
   };
-  const routes = buildTestRoutes();
   const verifyAccessToken = createAccessTokenVerifier({
     settings: {
       issuer: TEST_ISSUER,
@@ -143,6 +145,7 @@ export async function createApiHarness(options: HarnessOptions = {}): Promise<Ap
         cooldownMilliseconds: 50,
       }),
   });
+  const routes = [...buildTestRoutes(), ...(options.routeFactory?.(verifyAccessToken) ?? [])];
   const router = createRouter({
     routes,
     verifyAccessToken,
