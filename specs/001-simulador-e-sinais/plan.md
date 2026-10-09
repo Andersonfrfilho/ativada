@@ -20,6 +20,7 @@
 | `packages/strategy-engine` | Puro, sem I/O: indicadores, votos, regime, risco, corretora simulada, métricas, walk-forward |
 | `packages/database` | Drizzle (driver `Bun.sql`), schema, migrations com `rollback.sql` obrigatório, cliente; usado por API, worker e cron |
 | `packages/environment` | Validação Zod do ambiente (`parseEnvironment`, `runWithEnvironment`, `postgresUrlSchema`); lista todas as variáveis inválidas e nunca imprime valores |
+| `packages/identity-admin` | Cliente da Admin API do Keycloak (service account `crypto-api-service`): convidar, bloquear, apagar e encerrar sessões de usuário; compartilhado pela API e pelo cron, porque uma app não importa código de outra (ADR 0001 §h) |
 | `apps/cron-crypto` | One-shot agendado: backfill de candles, correção de lacunas, Fear & Greed |
 | `apps/worker-crypto` | Consome o stream de klines; no candle fechado, avalia as simulações ativas, grava e notifica |
 | `apps/api-crypto` | `Bun.serve`: REST, WebSocket para o painel, backtest e walk-forward em `worker_thread` |

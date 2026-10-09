@@ -19,6 +19,7 @@
       "dependencies": {
         "@crypto/database": "workspace:*",
         "@crypto/environment": "workspace:*",
+        "@crypto/identity-admin": "workspace:*",
         "jose": "6.2.12",
       },
     },
@@ -61,6 +62,13 @@
         "zod": "^4.6.5",
       },
     },
+    "packages/identity-admin": {
+      "name": "@crypto/identity-admin",
+      "version": "0.0.0",
+      "dependencies": {
+        "@crypto/environment": "workspace:*",
+      },
+    },
     "packages/strategy-engine": {
       "name": "@crypto/strategy-engine",
       "version": "0.0.0",
@@ -80,6 +88,8 @@
     "@crypto/environment": ["@crypto/environment@workspace:packages/environment"],
 
     "@crypto/frontend-crypto": ["@crypto/frontend-crypto@workspace:apps/frontend-crypto"],
+
+    "@crypto/identity-admin": ["@crypto/identity-admin@workspace:packages/identity-admin"],
 
     "@crypto/strategy-engine": ["@crypto/strategy-engine@workspace:packages/strategy-engine"],
 

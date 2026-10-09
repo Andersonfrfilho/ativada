@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@crypto/environment';
 
-import { HTTP_STATUS } from '../shared/http/http.constant.js';
+import { HTTP_STATUS } from './identity-http.constant.js';
 import {
   CLIENT_CREDENTIALS_GRANT,
   IDENTITY_REQUEST_TIMEOUT_MILLISECONDS,

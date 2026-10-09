@@ -7,9 +7,9 @@ import {
 } from '../../apps/api-crypto/src/admin/block-account.use-case.js';
 import { createInviteUserUseCase } from '../../apps/api-crypto/src/admin/invite-user.use-case.js';
 import { createListAccountsUseCase } from '../../apps/api-crypto/src/admin/list-accounts.use-case.js';
-import { createIdentityHttp } from '../../apps/api-crypto/src/identity-admin/identity-http.js';
-import { createKeycloakAdminClient } from '../../apps/api-crypto/src/identity-admin/keycloak-admin-client.js';
-import { createServiceAccountTokenProvider } from '../../apps/api-crypto/src/identity-admin/service-account-token.js';
+import { createIdentityHttp } from '../../packages/identity-admin/src/identity-http.js';
+import { createKeycloakAdminClient } from '../../packages/identity-admin/src/keycloak-admin-client.js';
+import { createServiceAccountTokenProvider } from '../../packages/identity-admin/src/service-account-token.js';
 import { createProfileRoutes } from '../../apps/api-crypto/src/profile/profile.routes.js';
 import {
   createGetProfileUseCase,

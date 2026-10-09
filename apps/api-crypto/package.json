@@ -6,6 +6,7 @@
   "dependencies": {
     "@crypto/database": "workspace:*",
     "@crypto/environment": "workspace:*",
+    "@crypto/identity-admin": "workspace:*",
     "jose": "6.2.12"
   }
 }

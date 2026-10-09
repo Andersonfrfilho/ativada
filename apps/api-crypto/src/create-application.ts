@@ -12,6 +12,7 @@ import { createAccessTokenVerifier } from './authentication/access-token-verifie
 import { createRemoteKeyResolver } from './authentication/remote-key-resolver.js';
 import type { Environment } from './environment.js';
 import { createRequestHandler, type RequestHandler } from './http/create-request-handler.js';
+import { createIdentityAdmin } from './identity/create-identity-admin.js';
 import type { Logger } from './logging/logger.js';
 import { createGetProfileUseCase, createUpdateProfileUseCase } from './profile/profile.use-case.js';
 import { createTelegramRouteDependencies } from './telegram/create-telegram-route-dependencies.js';
@@ -35,6 +36,7 @@ export function createApplication(params: CreateApplicationParams): Application 
   const { environment, logger } = params;
   const database = openDatabase(environment.DATABASE_URL);
   const profileRepository = createProfileRepository(database);
+  const identity = createIdentityAdmin({ environment, now: () => Date.now() });
   const verifyAccessToken = createAccessTokenVerifier({
     settings: {
       issuer: environment.KEYCLOAK_ISSUER,
@@ -57,7 +59,7 @@ export function createApplication(params: CreateApplicationParams): Application 
         logger,
         now: () => Date.now(),
       }),
-      admin: createAdminRouteDependencies({ environment, database, now: () => Date.now() }),
+      admin: createAdminRouteDependencies({ identity, database }),
       streamTicketStore: createStreamTicketStore({ now: () => Date.now() }),
     }),
     verifyAccessToken,

@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { IDENTITY_OUTCOME } from '../identity-admin/identity-admin.constant.js';
-import type { IdentityOutcome } from '../identity-admin/identity-admin.types.js';
+import { IDENTITY_OUTCOME, type IdentityOutcome } from '@crypto/identity-admin';
+
 import { IdentityProviderUnavailableError } from './admin.error.js';
 
 export function requireValue<TValue>(outcome: IdentityOutcome<TValue>): TValue {

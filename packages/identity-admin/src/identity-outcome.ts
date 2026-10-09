@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { HTTP_STATUS } from '../shared/http/http.constant.js';
+import { HTTP_STATUS } from './identity-http.constant.js';
 import { IDENTITY_OUTCOME } from './identity-admin.constant.js';
 import type { IdentityOutcome } from './identity-admin.types.js';
 import type { IdentityResponse } from './identity-http.js';

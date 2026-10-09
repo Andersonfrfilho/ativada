@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { HTTP_HEADER, HTTP_STATUS, type HttpMethod } from '../shared/http/http.constant.js';
+import { AUTHORIZATION_HEADER, HTTP_STATUS, type HttpMethod } from './identity-http.constant.js';
 import { IDENTITY_REQUEST_TIMEOUT_MILLISECONDS } from './identity-admin.constant.js';
 import type { ServiceAccountTokenProvider } from './service-account-token.js';
 
@@ -31,7 +31,7 @@ export function createIdentityHttp(settings: IdentityHttpSettings): IdentityHttp
       const response = await fetch(`${baseUrl}${request.path}`, {
         method: request.method,
         headers: {
-          [HTTP_HEADER.AUTHORIZATION]: `Bearer ${token}`,
+          [AUTHORIZATION_HEADER]: `Bearer ${token}`,
           ...(request.json === undefined ? {} : { 'Content-Type': 'application/json' }),
         },
         ...(request.json === undefined ? {} : { body: JSON.stringify(request.json) }),

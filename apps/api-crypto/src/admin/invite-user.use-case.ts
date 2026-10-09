@@ -1,8 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { AdminAccountRepository } from '@crypto/database';
+import {
+  IDENTITY_OUTCOME,
+  type IdentityAdminClient,
+  type IdentityUser,
+} from '@crypto/identity-admin';
 
-import { IDENTITY_OUTCOME } from '../identity-admin/identity-admin.constant.js';
-import type { IdentityAdminClient, IdentityUser } from '../identity-admin/identity-admin.types.js';
 import type { AdminActor } from './admin-actor.js';
 import type { AdminAuditRecorder } from './admin-audit-recorder.js';
 import { AUDIT_ACTION, AUDIT_TARGET_KIND } from './admin.constant.js';

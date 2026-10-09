@@ -4,9 +4,8 @@ import type {
   AdminAccountRecord,
   AdminAccountRepository,
 } from '@crypto/database';
+import { IDENTITY_OUTCOME, type IdentityAdminClient } from '@crypto/identity-admin';
 
-import { IDENTITY_OUTCOME } from '../identity-admin/identity-admin.constant.js';
-import type { IdentityAdminClient } from '../identity-admin/identity-admin.types.js';
 import { encodeAccountCursor } from './account-cursor.js';
 
 export type ListAccountsInput = {

@@ -7,6 +7,7 @@ export const ADMIN_OPERATION = {
   LOOKUP: 'lookup',
   CREATE: 'create',
   DELETE: 'delete',
+  LOGOUT: 'logout',
   CREDENTIALS: 'credentials',
   SEND_INVITATION: 'send-invitation',
   ROLES: 'roles',
@@ -63,6 +64,7 @@ function parseRequest(method: string, path: string): ParsedRequest | undefined {
   if (userId === undefined) return { operation: method === 'POST' ? 'create' : 'lookup', userId };
   const operationByTail: Readonly<Record<string, AdminOperation>> = {
     credentials: 'credentials',
+    logout: 'logout',
     'execute-actions-email': 'send-invitation',
     'role-mappings/realm/composite': 'roles',
   };
@@ -122,6 +124,9 @@ export function createFakeKeycloakAdmin(options: { readonly events: string[] }):
       case 'delete':
         users.delete(parsed.userId ?? '');
         options.events.push(`keycloak:delete:${parsed.userId}`);
+        return new Response(null, { status: 204 });
+      case 'logout':
+        options.events.push(`keycloak:logout:${parsed.userId}`);
         return new Response(null, { status: 204 });
       case 'credentials':
         return Response.json(

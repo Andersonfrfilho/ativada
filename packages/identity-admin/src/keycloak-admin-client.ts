@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@crypto/environment';
 
-import { HTTP_METHOD, HTTP_STATUS } from '../shared/http/http.constant.js';
+import { HTTP_METHOD, HTTP_STATUS } from './identity-http.constant.js';
 import { INVITATION_ACTIONS, INVITATION_LIFESPAN_SECONDS } from './identity-admin.constant.js';
 import type { IdentityAdminClient, IdentityOutcome, IdentityUser } from './identity-admin.types.js';
 import type { IdentityHttp, IdentityResponse } from './identity-http.js';
@@ -10,8 +10,8 @@ import { createIdentityReads, userPath } from './keycloak-admin-reads.js';
 
 export type KeycloakAdminClientSettings = {
   readonly http: IdentityHttp;
-  readonly invitationClientId: string;
-  readonly invitationRedirectUri: string;
+  readonly invitationClientId?: string;
+  readonly invitationRedirectUri?: string;
 };
 
 const representationSchema = z.record(z.string(), z.unknown());
@@ -73,6 +73,19 @@ async function sendActionsEmail(
   return emptyOutcome(response, HTTP_STATUS.NO_CONTENT);
 }
 
+async function sendConfiguredInvitation(
+  settings: KeycloakAdminClientSettings,
+  userId: string,
+): Promise<IdentityOutcome<undefined>> {
+  const { invitationClientId, invitationRedirectUri } = settings;
+  if (invitationClientId === undefined || invitationRedirectUri === undefined) return UNAVAILABLE;
+  return sendActionsEmail(settings.http, {
+    userId,
+    clientId: invitationClientId,
+    redirectUri: invitationRedirectUri,
+  });
+}
+
 export function createKeycloakAdminClient(
   settings: KeycloakAdminClientSettings,
 ): IdentityAdminClient {
@@ -85,12 +98,12 @@ export function createKeycloakAdminClient(
         await http({ method: HTTP_METHOD.DELETE, path: userPath(userId) }),
         HTTP_STATUS.NO_CONTENT,
       ),
-    sendInvitation: (userId) =>
-      sendActionsEmail(http, {
-        userId,
-        clientId: settings.invitationClientId,
-        redirectUri: settings.invitationRedirectUri,
-      }),
+    logoutUser: async (userId) =>
+      emptyOutcome(
+        await http({ method: HTTP_METHOD.POST, path: `${userPath(userId)}/logout` }),
+        HTTP_STATUS.NO_CONTENT,
+      ),
+    sendInvitation: (userId) => sendConfiguredInvitation(settings, userId),
     setEnabled: (params) => updateEnabled(http, params),
   };
 }

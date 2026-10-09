@@ -2,10 +2,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import { createAdminAuditRecorder } from '../apps/api-crypto/src/admin/admin-audit-recorder.js';
-import { IDENTITY_OUTCOME } from '../apps/api-crypto/src/identity-admin/identity-admin.constant.js';
-import { createIdentityHttp } from '../apps/api-crypto/src/identity-admin/identity-http.js';
-import { createKeycloakAdminClient } from '../apps/api-crypto/src/identity-admin/keycloak-admin-client.js';
-import { createServiceAccountTokenProvider } from '../apps/api-crypto/src/identity-admin/service-account-token.js';
+import { IDENTITY_OUTCOME } from '../packages/identity-admin/src/identity-admin.constant.js';
+import { createIdentityHttp } from '../packages/identity-admin/src/identity-http.js';
+import { createKeycloakAdminClient } from '../packages/identity-admin/src/keycloak-admin-client.js';
+import { createServiceAccountTokenProvider } from '../packages/identity-admin/src/service-account-token.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
 import {
   FAKE_SERVICE_CLIENT_ID,
@@ -83,6 +83,7 @@ describe('Keycloak admin client', () => {
       client.findUserByEmail('a@example.test'),
       client.createUser('a@example.test'),
       client.deleteUser('x'),
+      client.logoutUser('x'),
       client.hasCredentials('x'),
       client.sendInvitation('x'),
       client.readEffectiveRoles('x'),
@@ -100,6 +101,14 @@ describe('Keycloak admin client', () => {
     );
     await client.createUser('dup@example.test');
     expect((await client.createUser('dup@example.test')).status).toBe(IDENTITY_OUTCOME.CONFLICT);
+  });
+
+  test('logs the user out of every session and answers not_found for unknown users', async () => {
+    const client = createClient();
+    keycloak.admin.seedUser({ id: 'known-user', email: 'known@example.test' });
+    expect((await client.logoutUser('known-user')).status).toBe(IDENTITY_OUTCOME.OK);
+    expect((await client.logoutUser('missing')).status).toBe(IDENTITY_OUTCOME.NOT_FOUND);
+    expect(keycloak.admin.callsOf('logout')).toHaveLength(2);
   });
 
   test('encodes the user id in the path so it cannot reach another resource', async () => {

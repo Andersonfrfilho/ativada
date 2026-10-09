@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@crypto/environment';
 
-import { HTTP_METHOD } from '../shared/http/http.constant.js';
+import { HTTP_METHOD } from './identity-http.constant.js';
 import type { IdentityAdminClient } from './identity-admin.types.js';
 import type { IdentityHttp } from './identity-http.js';
 import { parseOutcome } from './identity-outcome.js';
