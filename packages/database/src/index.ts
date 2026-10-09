@@ -2,6 +2,22 @@
 // Superfície pública de @crypto/database: só o que as apps podem usar (ADR 0001 §c e §e).
 export { parseAccountId, type AccountId } from './admin/admin-account-id.js';
 export {
+  createAdminAccountRepository,
+  type AdminAccountRepository,
+} from './admin/admin-account.repository.js';
+export type {
+  AccountPage,
+  AccountPageCursor,
+  AdminAccountRecord,
+  ListAccountsParams,
+} from './admin/admin-account.types.js';
+export { AUDIT_ACTOR_KIND, type AuditActorKind } from './audit/audit-event.constant.js';
+export {
+  createAuditEventRepository,
+  type AuditEventInput,
+  type AuditEventRepository,
+} from './audit/audit-event.repository.js';
+export {
   closeDatabase,
   openDatabase,
   pingDatabase,

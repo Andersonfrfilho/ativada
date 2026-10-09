@@ -16,6 +16,12 @@ export function buildApiRouteDependencies(
     },
     profile: { getProfile: notUsed, updateProfile: notUsed },
     telegram: { unlinkTelegram: notUsed, issueLinkCode: undefined, webhook: undefined },
+    admin: {
+      inviteUser: notUsed,
+      listAccounts: notUsed,
+      blockAccount: notUsed,
+      unblockAccount: notUsed,
+    },
     streamTicketStore: createStreamTicketStore({ now: () => Date.now() }),
   };
 }

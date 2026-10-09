@@ -29,6 +29,12 @@ export const RATE_LIMIT_POLICY = {
     windowMilliseconds: ONE_MINUTE_MILLISECONDS,
     keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
   },
+  ADMIN_INVITATION: {
+    name: 'admin-invitation',
+    limit: 10,
+    windowMilliseconds: ONE_HOUR_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+  },
   SESSION_CLIENT_ADDRESS: {
     name: 'session-client-address',
     limit: 10,

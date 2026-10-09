@@ -11,6 +11,8 @@ import { ROUTE_ACCESS, type ProtectedRouteAccess } from './route-access.constant
 export type PublicRouteContext = {
   readonly request: Request;
   readonly traceId: string;
+  readonly clientAddress: string;
+  readonly pathParams: Readonly<Record<string, string>>;
 };
 
 export type ProtectedRouteContext = PublicRouteContext & {

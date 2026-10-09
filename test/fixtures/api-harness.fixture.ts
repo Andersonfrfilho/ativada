@@ -42,6 +42,7 @@ export type HarnessOptions = {
   readonly deletedSubjects?: readonly string[];
   readonly blockedSubjects?: readonly string[];
   readonly resolverFailure?: Error;
+  readonly resolveUser?: UserResolver;
   readonly userIdsBySubject?: Readonly<Record<string, string>>;
   readonly routeFactory?: (verifyAccessToken: AccessTokenVerifier) => readonly Route[];
   readonly getKeyOverride?: Parameters<typeof createAccessTokenVerifier>[0]['getKey'];
@@ -116,22 +117,24 @@ export async function createApiHarness(options: HarnessOptions = {}): Promise<Ap
   const resolvedSubjects: string[] = [];
   const reportedErrors: unknown[] = [];
   let nowMilliseconds = Date.now();
-  const resolveUser: UserResolver = (subject) => {
-    resolvedSubjects.push(subject);
-    if (options.resolverFailure !== undefined) return Promise.reject(options.resolverFailure);
-    if (options.deletedSubjects?.includes(subject)) {
-      return Promise.resolve({ status: USER_RESOLUTION_STATUS.DELETED });
-    }
-    if (options.blockedSubjects?.includes(subject)) {
-      return Promise.resolve({ status: USER_RESOLUTION_STATUS.BLOCKED });
-    }
-    const userId = userIdFromDatabase(options.userIdsBySubject?.[subject] ?? TEST_USER_ID_TEXT);
-    return Promise.resolve({
-      status: USER_RESOLUTION_STATUS.ACTIVE,
-      userId,
-      scope: createOwnerScope(userId),
+  const resolveUser: UserResolver =
+    options.resolveUser ??
+    ((subject): ReturnType<UserResolver> => {
+      resolvedSubjects.push(subject);
+      if (options.resolverFailure !== undefined) return Promise.reject(options.resolverFailure);
+      if (options.deletedSubjects?.includes(subject)) {
+        return Promise.resolve({ status: USER_RESOLUTION_STATUS.DELETED });
+      }
+      if (options.blockedSubjects?.includes(subject)) {
+        return Promise.resolve({ status: USER_RESOLUTION_STATUS.BLOCKED });
+      }
+      const userId = userIdFromDatabase(options.userIdsBySubject?.[subject] ?? TEST_USER_ID_TEXT);
+      return Promise.resolve({
+        status: USER_RESOLUTION_STATUS.ACTIVE,
+        userId,
+        scope: createOwnerScope(userId),
+      });
     });
-  };
   const verifyAccessToken = createAccessTokenVerifier({
     settings: {
       issuer: TEST_ISSUER,

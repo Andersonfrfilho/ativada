@@ -7,6 +7,7 @@ import {
   resolveUserBySubject,
 } from '@crypto/database';
 
+import { createAdminRouteDependencies } from './admin/create-admin-route-dependencies.js';
 import { createAccessTokenVerifier } from './authentication/access-token-verifier.js';
 import { createRemoteKeyResolver } from './authentication/remote-key-resolver.js';
 import type { Environment } from './environment.js';
@@ -56,6 +57,7 @@ export function createApplication(params: CreateApplicationParams): Application 
         logger,
         now: () => Date.now(),
       }),
+      admin: createAdminRouteDependencies({ environment, database, now: () => Date.now() }),
       streamTicketStore: createStreamTicketStore({ now: () => Date.now() }),
     }),
     verifyAccessToken,

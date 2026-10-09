@@ -10,7 +10,12 @@ import {
   type AuthenticationPipelineDependencies,
 } from './authenticate-route-request.js';
 import { ROUTE_ACCESS } from './route-access.constant.js';
-import { ROUTE_LOOKUP_KIND, createRouteTable, type RouteTable } from './route-table.js';
+import {
+  ROUTE_LOOKUP_KIND,
+  createRouteTable,
+  type PathParams,
+  type RouteTable,
+} from './route-table.js';
 import { MethodNotAllowedError, RouteNotFoundError } from './routing.error.js';
 import type { Route } from './route.types.js';
 
@@ -34,7 +39,11 @@ type DispatchParams = {
   readonly routerRequest: RouterRequest;
 };
 
-async function runRoute(params: DispatchParams, route: Route): Promise<RouteResult> {
+async function runRoute(
+  params: DispatchParams,
+  route: Route,
+  pathParams: PathParams,
+): Promise<RouteResult> {
   const { request, traceId, socketAddress } = params.routerRequest;
   const clientAddress = resolveClientAddress({
     socketAddress,
@@ -47,7 +56,7 @@ async function runRoute(params: DispatchParams, route: Route): Promise<RouteResu
       policy: route.rateLimitPolicy ?? RATE_LIMIT_POLICY.UNAUTHENTICATED_CLIENT_ADDRESS,
       key: clientAddress,
     });
-    return route.handler({ request, traceId });
+    return route.handler({ request, traceId, clientAddress, pathParams });
   }
   const authentication = await authenticateRouteRequest({
     route,
@@ -55,7 +64,7 @@ async function runRoute(params: DispatchParams, route: Route): Promise<RouteResu
     clientAddress,
     dependencies: params.dependencies,
   });
-  return route.handler({ request, traceId, ...authentication });
+  return route.handler({ request, traceId, clientAddress, pathParams, ...authentication });
 }
 
 async function dispatch(params: DispatchParams): Promise<Response> {
@@ -65,7 +74,7 @@ async function dispatch(params: DispatchParams): Promise<Response> {
   if (lookup.kind === ROUTE_LOOKUP_KIND.METHOD_NOT_ALLOWED) {
     throw new MethodNotAllowedError(lookup.allowedMethods);
   }
-  return buildSuccessResponse(await runRoute(params, lookup.route));
+  return buildSuccessResponse(await runRoute(params, lookup.route, lookup.pathParams));
 }
 
 export function createRouter(dependencies: RouterDependencies): Router {

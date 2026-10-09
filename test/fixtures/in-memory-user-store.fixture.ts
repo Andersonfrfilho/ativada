@@ -17,12 +17,20 @@ export type StoredUser = {
   timezone: string;
   alertTelegramEnabled: boolean;
   telegramChatId: string | undefined;
+  blockedAt: Date | undefined;
+  deletedAt: Date | undefined;
   readonly createdAt: Date;
+};
+
+export type SeedUserParams = {
+  readonly id: string;
+  readonly subject: string;
+  readonly createdAt?: Date;
 };
 
 export type InMemoryUserStore = {
   readonly users: Map<UserId, StoredUser>;
-  readonly seedUser: (params: { readonly id: string; readonly subject: string }) => StoredUser;
+  readonly seedUser: (params: SeedUserParams) => StoredUser;
   readonly profiles: ProfileRepository;
 };
 
@@ -56,7 +64,7 @@ export function createInMemoryUserStore(): InMemoryUserStore {
 
   return {
     users,
-    seedUser: ({ id, subject }): StoredUser => {
+    seedUser: ({ id, subject, createdAt }): StoredUser => {
       const stored: StoredUser = {
         id: userIdFromDatabase(id),
         keycloakSubject: subject,
@@ -65,7 +73,9 @@ export function createInMemoryUserStore(): InMemoryUserStore {
         timezone: 'America/Sao_Paulo',
         alertTelegramEnabled: true,
         telegramChatId: undefined,
-        createdAt: new Date('2026-10-01T12:00:00.000Z'),
+        blockedAt: undefined,
+        deletedAt: undefined,
+        createdAt: createdAt ?? new Date('2026-10-01T12:00:00.000Z'),
       };
       users.set(stored.id, stored);
       return stored;

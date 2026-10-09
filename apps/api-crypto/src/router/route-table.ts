@@ -9,8 +9,14 @@ export const ROUTE_LOOKUP_KIND = {
   NOT_FOUND: 'not-found',
 } as const;
 
+export type PathParams = Readonly<Record<string, string>>;
+
 export type RouteLookup =
-  | { readonly kind: typeof ROUTE_LOOKUP_KIND.FOUND; readonly route: Route }
+  | {
+      readonly kind: typeof ROUTE_LOOKUP_KIND.FOUND;
+      readonly route: Route;
+      readonly pathParams: PathParams;
+    }
   | {
       readonly kind: typeof ROUTE_LOOKUP_KIND.METHOD_NOT_ALLOWED;
       readonly allowedMethods: readonly string[];
@@ -20,6 +26,14 @@ export type RouteLookup =
 export type RouteTable = {
   readonly routes: readonly Route[];
   readonly find: (method: string, path: string) => RouteLookup;
+};
+
+const PATH_PARAM_PREFIX = ':';
+const NO_PATH_PARAMS: PathParams = Object.freeze({});
+
+type PatternRoute = {
+  readonly segments: readonly string[];
+  readonly route: Route;
 };
 
 const DECLARED_ACCESS_VALUES: readonly string[] = Object.values(ROUTE_ACCESS);
@@ -41,10 +55,48 @@ function assertRouteDeclaration(route: Route): void {
   }
 }
 
+function splitPath(path: string): readonly string[] {
+  return path.split('/').slice(1);
+}
+
+function matchPattern(
+  segments: readonly string[],
+  pathSegments: readonly string[],
+): PathParams | undefined {
+  if (segments.length !== pathSegments.length) return undefined;
+  const pathParams: Record<string, string> = {};
+  for (const [index, segment] of segments.entries()) {
+    const pathSegment = pathSegments[index] ?? '';
+    if (!segment.startsWith(PATH_PARAM_PREFIX)) {
+      if (segment !== pathSegment) return undefined;
+      continue;
+    }
+    if (pathSegment.length === 0) return undefined;
+    pathParams[segment.slice(PATH_PARAM_PREFIX.length)] = pathSegment;
+  }
+  return pathParams;
+}
+
+function isPattern(path: string): boolean {
+  return path.includes(`/${PATH_PARAM_PREFIX}`);
+}
+
 export function createRouteTable(routes: readonly Route[]): RouteTable {
   const routesByPath = new Map<string, Map<string, Route>>();
+  const patternRoutes: PatternRoute[] = [];
   for (const route of routes) {
     assertRouteDeclaration(route);
+    if (isPattern(route.path)) {
+      if (
+        patternRoutes.some(
+          (entry) => entry.route.method === route.method && entry.route.path === route.path,
+        )
+      ) {
+        throw new RouteDeclarationError(`${describeRoute(route)} declarada duas vezes`);
+      }
+      patternRoutes.push({ segments: splitPath(route.path), route });
+      continue;
+    }
     const routesByMethod = routesByPath.get(route.path) ?? new Map<string, Route>();
     if (routesByMethod.has(route.method)) {
       throw new RouteDeclarationError(`${describeRoute(route)} declarada duas vezes`);
@@ -53,9 +105,24 @@ export function createRouteTable(routes: readonly Route[]): RouteTable {
     routesByPath.set(route.path, routesByMethod);
   }
 
+  function findPattern(method: string, path: string): RouteLookup {
+    const pathSegments = splitPath(path);
+    const allowedMethods: string[] = [];
+    for (const entry of patternRoutes) {
+      const pathParams = matchPattern(entry.segments, pathSegments);
+      if (pathParams === undefined) continue;
+      if (entry.route.method === method) {
+        return { kind: ROUTE_LOOKUP_KIND.FOUND, route: entry.route, pathParams };
+      }
+      allowedMethods.push(entry.route.method);
+    }
+    if (allowedMethods.length === 0) return { kind: ROUTE_LOOKUP_KIND.NOT_FOUND };
+    return { kind: ROUTE_LOOKUP_KIND.METHOD_NOT_ALLOWED, allowedMethods };
+  }
+
   function find(method: string, path: string): RouteLookup {
     const routesByMethod = routesByPath.get(path);
-    if (routesByMethod === undefined) return { kind: ROUTE_LOOKUP_KIND.NOT_FOUND };
+    if (routesByMethod === undefined) return findPattern(method, path);
     const route = routesByMethod.get(method);
     if (route === undefined) {
       return {
@@ -63,7 +130,7 @@ export function createRouteTable(routes: readonly Route[]): RouteTable {
         allowedMethods: [...routesByMethod.keys()],
       };
     }
-    return { kind: ROUTE_LOOKUP_KIND.FOUND, route };
+    return { kind: ROUTE_LOOKUP_KIND.FOUND, route, pathParams: NO_PATH_PARAMS };
   }
 
   return { routes, find };

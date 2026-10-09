@@ -27,6 +27,12 @@ function collectDetails(error: z.ZodError): readonly ErrorDetail[] {
   return [...unique.values()];
 }
 
+export function parseWithSchema<TOutput>(input: unknown, schema: z.ZodType<TOutput>): TOutput {
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) throw new RequestValidationError(collectDetails(parsed.error));
+  return parsed.data;
+}
+
 export async function readValidatedBody<TOutput>(
   request: Request,
   schema: z.ZodType<TOutput>,
@@ -37,7 +43,5 @@ export async function readValidatedBody<TOutput>(
       { field: BODY_FIELD, reason: VALIDATION_REASON.INVALID_JSON },
     ]);
   }
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) throw new RequestValidationError(collectDetails(parsed.error));
-  return parsed.data;
+  return parseWithSchema(body, schema);
 }

@@ -3,6 +3,7 @@ import { MIGRATIONS_FOLDER } from './database.constant.js';
 import { closeDatabase, openDatabase, type DatabaseHandle } from './database-handle.js';
 import { applyMigrations } from './migrate.js';
 import { readDatabaseUrl } from './read-database-url.js';
+import { checkAdminRepositories } from './admin-checks.js';
 import { checkProfileRepository } from './profile-checks.js';
 import { checkTelegramLink } from './telegram-checks.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
@@ -76,6 +77,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkBlockedAccount(handle, client);
     await checkProfileRepository({ handle, assertCondition, reportCheck });
     await checkTelegramLink({ handle, client, assertCondition, reportCheck });
+    await checkAdminRepositories({ handle, client, assertCondition, reportCheck });
   } finally {
     await client.close();
     await closeDatabase(handle);

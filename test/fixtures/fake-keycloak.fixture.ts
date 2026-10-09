@@ -8,6 +8,14 @@ export const FAKE_KEYCLOAK_MODE = {
 
 export type FakeKeycloakMode = (typeof FAKE_KEYCLOAK_MODE)[keyof typeof FAKE_KEYCLOAK_MODE];
 
+import {
+  FAKE_SERVICE_CLIENT_ID,
+  FAKE_SERVICE_CLIENT_SECRET,
+  FAKE_SERVICE_TOKEN,
+  createFakeKeycloakAdmin,
+  type FakeKeycloakAdmin,
+} from './fake-keycloak-admin.fixture.js';
+
 export const FAKE_CLIENT_ID = 'crypto-session';
 export const FAKE_CLIENT_SECRET = 'fake-client-secret-value';
 export const FAKE_VALID_CODE = 'fake-valid-code-value';
@@ -25,6 +33,9 @@ export type FakeKeycloakRequest = {
 export type FakeKeycloak = {
   readonly tokenUrl: string;
   readonly logoutUrl: string;
+  readonly adminApiUrl: string;
+  readonly admin: FakeKeycloakAdmin;
+  readonly events: string[];
   readonly setMode: (mode: FakeKeycloakMode) => void;
   readonly requests: () => readonly FakeKeycloakRequest[];
   readonly countRequests: (grantType: string) => number;
@@ -34,6 +45,7 @@ export type FakeKeycloak = {
 
 export type FakeKeycloakOptions = {
   readonly issueAccessToken: () => Promise<string>;
+  readonly events?: string[];
 };
 
 function jsonError(error: string, status: number): Response {
@@ -88,10 +100,21 @@ function createGrantEndpoints(options: FakeKeycloakOptions): {
 
 export function startFakeKeycloak(options: FakeKeycloakOptions): FakeKeycloak {
   let mode: FakeKeycloakMode = FAKE_KEYCLOAK_MODE.OK;
+  const events = options.events ?? [];
+  const admin = createFakeKeycloakAdmin({ events });
   const received: FakeKeycloakRequest[] = [];
   const { handleToken, handleLogout } = createGrantEndpoints(options);
 
+  function respondToServiceAccount(form: FormFields): Response {
+    const isValid =
+      form['client_id'] === FAKE_SERVICE_CLIENT_ID &&
+      form['client_secret'] === FAKE_SERVICE_CLIENT_SECRET;
+    if (!isValid) return jsonError('invalid_client', 401);
+    return Response.json({ access_token: FAKE_SERVICE_TOKEN, expires_in: 60 });
+  }
+
   async function respond(path: string, form: FormFields): Promise<Response> {
+    if (form['grant_type'] === 'client_credentials') return respondToServiceAccount(form);
     if (form['client_id'] !== FAKE_CLIENT_ID || form['client_secret'] !== FAKE_CLIENT_SECRET) {
       return jsonError('invalid_client', 401);
     }
@@ -106,6 +129,7 @@ export function startFakeKeycloak(options: FakeKeycloakOptions): FakeKeycloak {
     port: 0,
     async fetch(request): Promise<Response> {
       const path = new URL(request.url).pathname;
+      if (path.startsWith('/admin/')) return admin.handle(request);
       const form = Object.fromEntries(new URLSearchParams(await request.text()));
       received.push({ path, form });
       return respond(path, form);
@@ -115,6 +139,9 @@ export function startFakeKeycloak(options: FakeKeycloakOptions): FakeKeycloak {
   return {
     tokenUrl: `http://127.0.0.1:${server.port}/token`,
     logoutUrl: `http://127.0.0.1:${server.port}/logout`,
+    adminApiUrl: `http://127.0.0.1:${server.port}/admin`,
+    admin,
+    events,
     setMode: (nextMode): void => {
       mode = nextMode;
     },

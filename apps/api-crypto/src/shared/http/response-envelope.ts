@@ -6,6 +6,7 @@ import { HTTP_HEADER, HTTP_STATUS, NO_STORE_CACHE_CONTROL } from './http.constan
 export type RouteResult = {
   readonly status: number;
   readonly data?: unknown;
+  readonly pagination?: unknown;
   readonly headers?: Readonly<Record<string, string>>;
 };
 
@@ -14,7 +15,11 @@ const INTERNAL_ERROR_MESSAGE = 'Erro interno. Tente novamente em instantes.';
 export function buildSuccessResponse(result: RouteResult): Response {
   const headers = { ...result.headers, [HTTP_HEADER.CACHE_CONTROL]: NO_STORE_CACHE_CONTROL };
   if (result.status === HTTP_STATUS.NO_CONTENT) return new Response(null, { status: 204, headers });
-  return Response.json({ data: result.data }, { status: result.status, headers });
+  const paginationField = result.pagination === undefined ? {} : { pagination: result.pagination };
+  return Response.json(
+    { data: result.data, ...paginationField },
+    { status: result.status, headers },
+  );
 }
 
 export function buildErrorResponse(error: AppError): Response {

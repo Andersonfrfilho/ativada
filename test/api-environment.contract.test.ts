@@ -21,6 +21,12 @@ const SESSION_VARIABLES: readonly string[] = [
   'SESSION_ALLOWED_REDIRECT_URIS',
 ];
 
+const IDENTITY_ADMIN_VARIABLES: readonly string[] = [
+  'KEYCLOAK_ADMIN_API_URL',
+  'KEYCLOAK_SERVICE_CLIENT_ID',
+  'KEYCLOAK_SERVICE_CLIENT_SECRET',
+];
+
 describe('api-crypto environment (authentication, CORS and proxies)', () => {
   test.each(['env.dev', 'env.test'])('%s satisfies the schema', async (fileName) => {
     const environment = parseEnvironment(environmentSchema, await readEnvironmentFile(fileName));
@@ -127,6 +133,20 @@ describe('api-crypto environment (authentication, CORS and proxies)', () => {
         SESSION_ALLOWED_REDIRECT_URIS: value,
       }),
     ).toThrow(EnvironmentError);
+  });
+
+  test.each([...IDENTITY_ADMIN_VARIABLES])('fails at boot when %s is missing', async (variable) => {
+    const base = await readEnvironmentFile('env.test');
+    delete base[variable];
+    expect(parseEnvironment.bind(undefined, environmentSchema, base)).toThrow(EnvironmentError);
+  });
+
+  test('the service account settings point at the crypto-api-service client', async () => {
+    const environment = parseEnvironment(environmentSchema, await readEnvironmentFile('env.test'));
+    expect(environment.KEYCLOAK_SERVICE_CLIENT_ID).toBe('crypto-api-service');
+    expect(environment.KEYCLOAK_ADMIN_API_URL.endsWith('/admin/realms/crypto-paper-trader')).toBe(
+      true,
+    );
   });
 
   test('Telegram settings are optional and the API base URL has a default', async () => {
