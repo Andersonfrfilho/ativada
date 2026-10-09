@@ -18,6 +18,8 @@ type ProbeCase = {
   readonly name: string;
   readonly body: string;
   readonly expectedRule: string | undefined;
+  readonly directory?: string;
+  readonly extension?: string;
 };
 
 const PROBE_CASES: readonly ProbeCase[] = [
@@ -73,13 +75,109 @@ const PROBE_CASES: readonly ProbeCase[] = [
   },
   {
     name: 'public-surface-allowed',
-    body: "import { createOwnerScope, type UserId } from '@crypto/database';\nexport const PROBE = createOwnerScope;\nexport type ProbeUserId = UserId;\nexport const PROBE_NAME = 'probe' as const;",
+    body: "import { parseAccountId, type OwnerScope, type UserId } from '@crypto/database';\nexport const PROBE = parseAccountId;\nexport type ProbeScope = OwnerScope;\nexport type ProbeUserId = UserId;\nexport const PROBE_NAME = 'probe' as const;",
+    expectedRule: undefined,
+  },
+  {
+    name: 'dynamic-import-relative',
+    body: "export async function loadClient(): Promise<unknown> {\n  return import('../../../packages/database/src/database-client.js');\n}",
+    expectedRule: RESTRICTED_SYNTAX_RULE,
+  },
+  {
+    name: 'dynamic-import-worker',
+    directory: 'apps/worker-crypto/src',
+    body: "export async function loadClient(): Promise<unknown> {\n  return import('../../../packages/database/src/database-client.js');\n}",
+    expectedRule: RESTRICTED_SYNTAX_RULE,
+  },
+  {
+    name: 'dynamic-import-cron',
+    directory: 'apps/cron-crypto/src',
+    body: "export async function loadClient(): Promise<unknown> {\n  return import('../../../packages/database/src/database-client.js');\n}",
+    expectedRule: RESTRICTED_SYNTAX_RULE,
+  },
+  {
+    name: 'dynamic-import-frontend-allowed',
+    directory: 'apps/frontend-crypto/src',
+    body: "export async function loadLazyModule(): Promise<unknown> {\n  return import('./environment.js');\n}",
+    expectedRule: undefined,
+  },
+  {
+    name: 'bun-sql-lowercase-member',
+    body: 'export const PROBE: unknown = Bun.sql;',
+    expectedRule: RESTRICTED_SYNTAX_RULE,
+  },
+  {
+    name: 'bun-sql-computed-member',
+    body: "export const PROBE: unknown = Bun['SQL'];",
+    expectedRule: RESTRICTED_SYNTAX_RULE,
+  },
+  {
+    name: 'bun-sql-destructuring',
+    body: 'const { SQL } = Bun;\nexport const PROBE: unknown = SQL;',
+    expectedRule: RESTRICTED_SYNTAX_RULE,
+  },
+  {
+    name: 'bun-sql-alias',
+    body: 'const runtime = Bun;\nexport const PROBE: unknown = runtime.sql;',
+    expectedRule: RESTRICTED_SYNTAX_RULE,
+  },
+  {
+    name: 'bun-sql-globalthis',
+    body: 'export const PROBE: unknown = globalThis.Bun.SQL;',
+    expectedRule: RESTRICTED_SYNTAX_RULE,
+  },
+  {
+    name: 'bun-sql-globalthis-destructuring',
+    body: 'const { sql } = globalThis.Bun;\nexport const PROBE: unknown = sql;',
+    expectedRule: RESTRICTED_SYNTAX_RULE,
+  },
+  {
+    name: 'bun-default-import',
+    body: "import bunDefault from 'bun';\nexport const PROBE: unknown = bunDefault;",
+    expectedRule: RESTRICTED_IMPORTS_RULE,
+  },
+  {
+    name: 'bun-namespace-import',
+    body: "import * as bunNamespace from 'bun';\nexport const PROBE: unknown = bunNamespace;",
+    expectedRule: RESTRICTED_IMPORTS_RULE,
+  },
+  {
+    name: 'bun-named-import-allowed',
+    body: "import { file } from 'bun';\nexport const PROBE = file;",
+    expectedRule: undefined,
+  },
+  {
+    name: 'user-id-overload',
+    body: "import type { UserId } from '@crypto/database';\nexport function mintUserId(value: string): UserId;\nexport function mintUserId(value: string): unknown {\n  return value;\n}",
+    expectedRule: RESTRICTED_SYNTAX_RULE,
+  },
+  {
+    name: 'owner-scope-function-type',
+    body: "import type { OwnerScope } from '@crypto/database';\nexport type ScopeMinter = (value: string) => OwnerScope;",
+    expectedRule: RESTRICTED_SYNTAX_RULE,
+  },
+  {
+    name: 'account-id-class-overload',
+    body: "import type { AccountId } from '@crypto/database';\nexport class AccountMinter {\n  mint(value: string): AccountId;\n  mint(value: string): unknown {\n    return value;\n  }\n}",
+    expectedRule: RESTRICTED_SYNTAX_RULE,
+  },
+  {
+    name: 'user-id-passthrough-allowed',
+    body: "import type { UserId } from '@crypto/database';\nexport function readUserId(owner: { readonly userId: UserId }): UserId {\n  return owner.userId;\n}",
+    expectedRule: undefined,
+  },
+  {
+    name: 'tsx-valid-component',
+    extension: 'tsx',
+    directory: 'apps/frontend-crypto/src',
+    body: 'export function ProbeView(): unknown {\n  return <span>probe</span>;\n}',
     expectedRule: undefined,
   },
 ];
 
 function buildProbePath(probeCase: ProbeCase): string {
-  return `${PROBE_DIRECTORY}/${PROBE_PREFIX}${probeCase.name}.ts`;
+  const directory = probeCase.directory ?? PROBE_DIRECTORY;
+  return `${directory}/${PROBE_PREFIX}${probeCase.name}.${probeCase.extension ?? 'ts'}`;
 }
 
 const errorRulesByProbe = new Map<string, readonly string[]>();
@@ -113,6 +211,36 @@ async function lintProbes(): Promise<void> {
     errorRulesByProbe.set(result.filePath, [...new Set(errorRules)].sort());
   }
 }
+
+const FORBIDDEN_SOURCE_PATTERN = '**/*.{js,mjs,cjs,jsx,mts,cts}';
+const APPS_SOURCE_GLOB = 'apps/*/src';
+const FORBIDDEN_EXTENSION_PROBE = `${PROBE_DIRECTORY}/${PROBE_PREFIX}forbidden-extension.mts`;
+
+async function listForbiddenAppSourceFiles(): Promise<readonly string[]> {
+  const glob = new Bun.Glob(`${APPS_SOURCE_GLOB}/${FORBIDDEN_SOURCE_PATTERN}`);
+  const relativePaths: string[] = [];
+  for await (const relativePath of glob.scan({ cwd: REPOSITORY_ROOT })) {
+    relativePaths.push(relativePath);
+  }
+  return relativePaths.sort();
+}
+
+describe('apps source language (TypeScript only)', () => {
+  afterAll(() => rm(`${REPOSITORY_ROOT}${FORBIDDEN_EXTENSION_PROBE}`, { force: true }));
+
+  test('apps/*/src has no JavaScript or .mts/.cts files', async () => {
+    expect(await listForbiddenAppSourceFiles()).toStrictEqual([]);
+  });
+
+  test('probe: a .mts file under apps/*/src is detected', async () => {
+    await Bun.write(`${REPOSITORY_ROOT}${FORBIDDEN_EXTENSION_PROBE}`, `${COPYRIGHT_LINE}\n`);
+    try {
+      expect(await listForbiddenAppSourceFiles()).toStrictEqual([FORBIDDEN_EXTENSION_PROBE]);
+    } finally {
+      await rm(`${REPOSITORY_ROOT}${FORBIDDEN_EXTENSION_PROBE}`, { force: true });
+    }
+  });
+});
 
 describe('apps import boundary (lint)', () => {
   beforeAll(async () => {

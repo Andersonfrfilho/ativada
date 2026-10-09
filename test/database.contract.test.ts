@@ -9,11 +9,7 @@ const MIGRATIONS_DIRECTORY = `${DATABASE_PACKAGE_DIRECTORY}/drizzle`;
 const ROLLBACK_SUFFIX = '.rollback.sql';
 const MIGRATION_FILE_PATTERN = /^\d{4}_.+\.sql$/;
 const CREATE_ENUM_TYPE_PATTERN = /CREATE\s+TYPE[^;]*\bAS\s+ENUM\b/i;
-const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
-  'InvalidUserIdError',
-  'createOwnerScope',
-  'parseAccountId',
-];
+const PUBLIC_RUNTIME_EXPORTS: readonly string[] = ['InvalidUserIdError', 'parseAccountId'];
 
 type PackageManifest = {
   readonly name?: string;
@@ -58,6 +54,25 @@ describe('@crypto/database package', () => {
 
   test('the public entry point exports only the allowed runtime values', () => {
     expect(Object.keys(databasePublicSurface).sort()).toStrictEqual([...PUBLIC_RUNTIME_EXPORTS]);
+  });
+
+  test('the public entry point does not export the owner scope factory', async () => {
+    const source = await readRepositoryText(`${DATABASE_PACKAGE_DIRECTORY}/src/index.ts`);
+    expect(Object.keys(databasePublicSurface)).not.toContain('createOwnerScope');
+    expect(source).not.toMatch(/\bcreateOwnerScope\b/);
+    expect(source).toMatch(/export\s+type\s*\{[^}]*\bOwnerScope\b/);
+  });
+
+  test('the frontend does not depend on @crypto/database', async () => {
+    const manifest = JSON.parse(await readRepositoryText('apps/frontend-crypto/package.json')) as {
+      readonly dependencies?: Readonly<Record<string, string>>;
+      readonly devDependencies?: Readonly<Record<string, string>>;
+    };
+    const dependencyNames = [
+      ...Object.keys(manifest.dependencies ?? {}),
+      ...Object.keys(manifest.devDependencies ?? {}),
+    ];
+    expect(dependencyNames).not.toContain('@crypto/database');
   });
 
   test('the public entry point has no wildcard re-export', async () => {

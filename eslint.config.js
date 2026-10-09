@@ -16,16 +16,56 @@ const IMPORT_META_ENV_RESTRICTION = {
 // Fronteira das apps com o banco (ADR 0001 §e): só a superfície pública de @crypto/database.
 const DATABASE_BOUNDARY_MESSAGE =
   'Apps acessam o banco só pela superfície pública de @crypto/database (ADR 0001 §e).';
-const BUN_SQL_GLOBAL_RESTRICTION = {
-  selector: "MemberExpression[object.name='Bun'][property.name='SQL']",
-  message: DATABASE_BOUNDARY_MESSAGE,
+const BUN_SQL_PROPERTY = '/^(SQL|sql)$/';
+const BUN_GLOBAL_SELECTORS = [
+  "[object.name='Bun']",
+  "[object.object.name='globalThis'][object.property.name='Bun']",
+];
+const BUN_SQL_RESTRICTIONS = [
+  ...BUN_GLOBAL_SELECTORS.flatMap((objectSelector) => [
+    {
+      selector: `MemberExpression${objectSelector}[property.name=${BUN_SQL_PROPERTY}]`,
+      message: DATABASE_BOUNDARY_MESSAGE,
+    },
+    {
+      selector: `MemberExpression${objectSelector}[property.value=${BUN_SQL_PROPERTY}]`,
+      message: DATABASE_BOUNDARY_MESSAGE,
+    },
+  ]),
+  {
+    selector: "VariableDeclarator[init.name='Bun'], AssignmentExpression[right.name='Bun']",
+    message:
+      'Não guarde nem desestruture o global Bun: Bun.SQL é fronteira do banco (ADR 0001 §e).',
+  },
+  {
+    selector:
+      "VariableDeclarator[init.object.name='globalThis'][init.property.name='Bun'], AssignmentExpression[right.object.name='globalThis'][right.property.name='Bun']",
+    message:
+      'Não guarde nem desestruture o global Bun: Bun.SQL é fronteira do banco (ADR 0001 §e).',
+  },
+];
+const DYNAMIC_IMPORT_RESTRICTION = {
+  selector: 'ImportExpression',
+  message: 'Import dinâmico contorna a fronteira do banco; nas apps de backend só import estático.',
+};
+const OWNERSHIP_RETURN_TYPE_RESTRICTION = {
+  selector:
+    ':matches(TSDeclareFunction, TSFunctionType, TSEmptyBodyFunctionExpression, TSMethodSignature, TSCallSignatureDeclaration)[returnType.typeAnnotation.typeName.name=/^(UserId|OwnerScope|AccountId)$/]',
+  message:
+    'Sobrecarga ou tipo de função que devolve UserId, OwnerScope ou AccountId fabrica o valor (ADR 0001 §c).',
 };
 const OWNERSHIP_TYPE_GUARD_RESTRICTION = {
   selector: 'TSTypePredicate TSTypeReference[typeName.name=/^(UserId|OwnerScope|AccountId)$/]',
   message: 'UserId, OwnerScope e AccountId só nascem dentro de @crypto/database (ADR 0001 §c).',
 };
 const APP_DATABASE_IMPORT_RESTRICTION = {
-  paths: [{ name: 'bun', importNames: ['SQL', 'sql'], message: DATABASE_BOUNDARY_MESSAGE }],
+  paths: [
+    {
+      name: 'bun',
+      importNames: ['default', 'SQL', 'sql'],
+      message: DATABASE_BOUNDARY_MESSAGE,
+    },
+  ],
   patterns: [
     {
       group: ['drizzle-orm', 'drizzle-orm/*', 'drizzle-kit', 'drizzle-kit/*'],
@@ -35,7 +75,16 @@ const APP_DATABASE_IMPORT_RESTRICTION = {
     { group: ['**/packages/**'], message: 'Importe pacotes pelo nome público, nunca por caminho.' },
   ],
 };
-const APP_SYNTAX_RESTRICTIONS = [BUN_SQL_GLOBAL_RESTRICTION, OWNERSHIP_TYPE_GUARD_RESTRICTION];
+const APP_SYNTAX_RESTRICTIONS = [
+  ...BUN_SQL_RESTRICTIONS,
+  OWNERSHIP_TYPE_GUARD_RESTRICTION,
+  OWNERSHIP_RETURN_TYPE_RESTRICTION,
+];
+// O frontend não depende de @crypto/database; só ele usa import dinâmico (React.lazy).
+const BACKEND_SYNTAX_RESTRICTIONS = [...APP_SYNTAX_RESTRICTIONS, DYNAMIC_IMPORT_RESTRICTION];
+const BACKEND_APP_SOURCES = 'apps/{api,worker,cron}-crypto/src';
+const TYPESCRIPT_FILES = '**/*.{ts,tsx,mts,cts}';
+const APP_SOURCE_FILES = 'apps/*/src/**/*.{ts,tsx,mts,cts,js,mjs}';
 
 export default tseslint.config(
   {
@@ -46,7 +95,7 @@ export default tseslint.config(
     extends: [js.configs.recommended],
   },
   {
-    files: ['**/*.ts'],
+    files: [TYPESCRIPT_FILES],
     extends: [js.configs.recommended, ...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
@@ -67,7 +116,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/*/src/**/*.ts', 'apps/*/src/**/*.tsx'],
+    files: [APP_SOURCE_FILES],
     linterOptions: { noInlineConfig: true },
     rules: {
       'no-restricted-imports': ['error', APP_DATABASE_IMPORT_RESTRICTION],
@@ -85,6 +134,24 @@ export default tseslint.config(
     },
   },
   {
+    // JavaScript em apps/*/src é reprovado pelo contrato de teste; aqui só evita derrubar o ESLint.
+    files: ['apps/*/src/**/*.{js,mjs}'],
+    plugins: { '@typescript-eslint': tseslint.plugin },
+    extends: [tseslint.configs.disableTypeChecked],
+  },
+  {
+    files: [`${BACKEND_APP_SOURCES}/**/*.{ts,tsx,mts,cts,js,mjs}`],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        EXPORT_DEFAULT_RESTRICTION,
+        PROCESS_ENV_RESTRICTION,
+        IMPORT_META_ENV_RESTRICTION,
+        ...BACKEND_SYNTAX_RESTRICTIONS,
+      ],
+    },
+  },
+  {
     files: ['packages/*/src/**/environment.ts', 'packages/database/src/read-database-url.ts'],
     rules: {
       'no-restricted-syntax': ['error', EXPORT_DEFAULT_RESTRICTION],
@@ -94,6 +161,12 @@ export default tseslint.config(
     files: ['apps/*/src/environment.ts'],
     rules: {
       'no-restricted-syntax': ['error', EXPORT_DEFAULT_RESTRICTION, ...APP_SYNTAX_RESTRICTIONS],
+    },
+  },
+  {
+    files: [`${BACKEND_APP_SOURCES}/environment.ts`],
+    rules: {
+      'no-restricted-syntax': ['error', EXPORT_DEFAULT_RESTRICTION, ...BACKEND_SYNTAX_RESTRICTIONS],
     },
   },
   {
