@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@crypto/environment": "workspace:*"
+    "@crypto/database": "workspace:*",
+    "@crypto/environment": "workspace:*",
+    "@crypto/identity-admin": "workspace:*"
   }
 }

@@ -20,6 +20,7 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'closeDatabase',
   'createAccountDeletionRepository',
   'createAccountExportRepository',
+  'createAccountPurgeRepository',
   'createAdminAccountRepository',
   'createAuditEventRepository',
   'createProfileRepository',

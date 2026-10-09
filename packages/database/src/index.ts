@@ -16,6 +16,15 @@ export {
   type AccountDeletionRepository,
 } from './account/account-deletion.repository.js';
 export {
+  createAccountPurgeRepository,
+  type AccountPurgeRepository,
+} from './account/account-purge.repository.js';
+export type {
+  ListPendingAccountsParams,
+  PendingAccount,
+  RemoveUserRowParams,
+} from './account/account-purge.types.js';
+export {
   createAccountExportRepository,
   type AccountExportRepository,
 } from './account/account-export.repository.js';

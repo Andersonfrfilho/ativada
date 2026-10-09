@@ -14,7 +14,7 @@ Monorepo Bun (workspaces) em TypeScript estrito:
 ```
 apps/api-crypto/        Bun.serve — REST + WebSocket para o painel; backtest em worker_thread
 apps/worker-crypto/     consome o stream de candles da Binance, avalia estratégias, simula ordens
-apps/cron-crypto/       backfill de histórico e índice Fear & Greed
+apps/cron-crypto/       one-shot agendado: exclusão de contas (Keycloak + dados, ADR 0001 §h), backfill de histórico e índice Fear & Greed
 apps/frontend-crypto/   React 19 + Vite (PWA)
 packages/database/      Drizzle + migrations (cada uma com .rollback.sql) + cliente Bun.sql
 packages/environment/   validação Zod do env; `process.env` só em environment.ts (lint)

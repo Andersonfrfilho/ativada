@@ -13,7 +13,12 @@ const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
 const LONG_RUNNING_APPLICATION = 'api-crypto';
 const LISTENING_MESSAGE = '"message":"listening"';
 const ENVIRONMENT_ERROR_PREFIX = 'Variáveis de ambiente inválidas';
-const SERVER_APPLICATIONS: readonly string[] = ['api-crypto', 'worker-crypto', 'cron-crypto'];
+const CRON_APPLICATION = 'cron-crypto';
+const SERVER_APPLICATIONS: readonly string[] = ['api-crypto', 'worker-crypto', CRON_APPLICATION];
+const IDLE_APPLICATIONS: readonly string[] = SERVER_APPLICATIONS.filter(
+  (applicationName) => applicationName !== CRON_APPLICATION,
+);
+const UNREACHABLE_DATABASE_PASSWORD = 'SENHA_DO_BANCO_INALCANCAVEL';
 const ENVIRONMENT_EXEMPT_FILES: readonly string[] = [
   'packages/database/src/read-database-url.ts',
   'packages/database/drizzle.config.ts',
@@ -150,7 +155,7 @@ describe('server applications fail at boot without environment', () => {
     },
   );
 
-  test.each([...SERVER_APPLICATIONS])(
+  test.each([...IDLE_APPLICATIONS])(
     '%s boots with a valid env, logs JSON info and exits 0 (the API after SIGTERM)',
     async (applicationName) => {
       const testEnvironment = await readEnvironmentFile('env.test');
@@ -160,6 +165,32 @@ describe('server applications fail at boot without environment', () => {
       expect(result.stdout).toContain(`"app":"${applicationName}"`);
     },
   );
+});
+
+describe('cron application', () => {
+  test('with a valid env but an unreachable database it logs a JSON error, exits 1 and leaks no secret', async () => {
+    const testEnvironment = await readEnvironmentFile('env.test');
+    const result = await runServerApplication(CRON_APPLICATION, {
+      ...testEnvironment,
+      DATABASE_URL: `postgres://crypto:${UNREACHABLE_DATABASE_PASSWORD}@127.0.0.1:1/unreachable`,
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain('"level":"error"');
+    expect(result.stdout).toContain(`"app":"${CRON_APPLICATION}"`);
+    expect(result.stdout + result.stderr).not.toContain(UNREACHABLE_DATABASE_PASSWORD);
+    expect(result.stdout + result.stderr).not.toContain(
+      testEnvironment['KEYCLOAK_SERVICE_CLIENT_SECRET'] ?? 'unset',
+    );
+  });
+
+  test('requires the Keycloak service-account variables', async () => {
+    const testEnvironment = await readEnvironmentFile('env.test');
+    const { KEYCLOAK_SERVICE_CLIENT_SECRET: omittedSecret, ...withoutSecret } = testEnvironment;
+    const result = await runServerApplication(CRON_APPLICATION, withoutSecret);
+    expect(omittedSecret).toBeDefined();
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('KEYCLOAK_SERVICE_CLIENT_SECRET');
+  });
 });
 
 describe('frontend environment', () => {

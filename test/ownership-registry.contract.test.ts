@@ -11,6 +11,7 @@ import {
   getTableName,
   is,
 } from '../packages/database/node_modules/drizzle-orm/index.js';
+import { PSEUDONYMIZATION_STEPS } from '../packages/database/src/account/pseudonymization-steps.js';
 import {
   OWNED_TABLE_DELETION_ORDER,
   OWNED_TABLE_EXPORT_MODE,
@@ -164,5 +165,11 @@ describe('ownership registry — export and deletion steps (ADR 0001 §h)', () =
         expect(deletionOrder.indexOf(nameOf(table))).toBeLessThan(deletionOrder.indexOf(parent));
       }
     }
+  });
+
+  test('every pseudonymized table has exactly one pseudonymization step, and no other table does', () => {
+    expect(Object.keys(PSEUDONYMIZATION_STEPS).sort()).toStrictEqual(
+      [...pseudonymizedNames].sort(),
+    );
   });
 });
