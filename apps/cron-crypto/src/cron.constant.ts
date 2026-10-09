@@ -7,6 +7,7 @@ export const ACCOUNT_REMOVAL_GRACE_PERIOD_MILLISECONDS = 24 * MILLISECONDS_PER_H
 // ADR 0001 §i: o IP da trilha de auditoria vive 90 dias.
 export const AUDIT_IP_RETENTION_MILLISECONDS = 90 * MILLISECONDS_PER_DAY;
 export const PENDING_ACCOUNTS_BATCH_LIMIT = 100;
+export const ACCOUNT_PARALLELISM = 10;
 
 export const EXIT_CODE = {
   SUCCESS: 0,

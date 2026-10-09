@@ -1,9 +1,16 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { getTableName } from '../../packages/database/node_modules/drizzle-orm/index.js';
-import type { AccountPurgeRepository, PendingAccount } from '../../packages/database/src/index.js';
+import type {
+  AccountPurgeRepository,
+  PendingAccount,
+  PendingAccountCursor,
+  PendingAccountsPage,
+} from '../../packages/database/src/index.js';
 import { AccountNotDeletedError } from '../../packages/database/src/account/account-purge.error.js';
 import { createOwnerScope } from '../../packages/database/src/ownership/owner-scope.js';
-import { OWNED_TABLE_DELETION_ORDER } from '../../packages/database/src/ownership/ownership-registry.js';
+import {
+  OWNED_TABLE_DELETION_ORDER,
+  tableNameOf,
+} from '../../packages/database/src/ownership/ownership-registry.js';
 import { userIdFromDatabase, type UserId } from '../../packages/database/src/ownership/user-id.js';
 
 export type PurgeStoreAccount = {
@@ -38,7 +45,12 @@ export type InMemoryPurgeStore = {
   readonly accounts: Map<UserId, PurgeStoreAccount>;
   readonly ownedRows: OwnedRow[];
   readonly auditLog: PurgeStoreAuditEvent[];
-  readonly failures: { readonly purgeDataOnce: Set<UserId>; readonly removalOnce: Set<UserId> };
+  readonly failures: {
+    readonly purgeDataOnce: Set<UserId>;
+    readonly purgeDataAlways: Set<UserId>;
+    readonly removalOnce: Set<UserId>;
+  };
+  readonly stats: { peakConcurrentPurges: number };
   readonly clock: { now: () => number };
   readonly seedAccount: (params: SeedAccountParams) => PurgeStoreAccount;
   readonly seedOwnedRowsForEveryTable: (userId: UserId) => void;
@@ -57,6 +69,27 @@ function toPending(account: PurgeStoreAccount): PendingAccount[] {
   ];
 }
 
+// Espelha o WHERE e a ordem do repositório real; o SQL é provado em `make database-test`.
+function isActionable(account: PendingAccount, removableBefore: Date): boolean {
+  return (
+    account.identityDeletedAt === undefined ||
+    account.dataPurgedAt === undefined ||
+    account.deletedAt.getTime() <= removableBefore.getTime()
+  );
+}
+
+function isAfterCursor(account: PendingAccount, after: PendingAccountCursor | undefined): boolean {
+  if (after === undefined) return true;
+  const difference = account.deletedAt.getTime() - after.deletedAt.getTime();
+  return difference > 0 || (difference === 0 && account.scope.ownerUserId > after.id);
+}
+
+function compareByCursor(left: PendingAccount, right: PendingAccount): number {
+  const difference = left.deletedAt.getTime() - right.deletedAt.getTime();
+  if (difference !== 0) return difference;
+  return left.scope.ownerUserId < right.scope.ownerUserId ? -1 : 1;
+}
+
 export function createInMemoryPurgeStore(params: {
   readonly events: string[];
   readonly now: () => number;
@@ -64,7 +97,13 @@ export function createInMemoryPurgeStore(params: {
   const accounts = new Map<UserId, PurgeStoreAccount>();
   const ownedRows: OwnedRow[] = [];
   const auditLog: PurgeStoreAuditEvent[] = [];
-  const failures = { purgeDataOnce: new Set<UserId>(), removalOnce: new Set<UserId>() };
+  const failures = {
+    purgeDataOnce: new Set<UserId>(),
+    purgeDataAlways: new Set<UserId>(),
+    removalOnce: new Set<UserId>(),
+  };
+  const stats = { peakConcurrentPurges: 0 };
+  let concurrentPurges = 0;
   const { events, now } = params;
 
   function requireDeleted(id: UserId): PurgeStoreAccount {
@@ -83,22 +122,39 @@ export function createInMemoryPurgeStore(params: {
   }
 
   const repository: AccountPurgeRepository = {
-    listAccountsPendingPurge: ({ limit }): Promise<readonly PendingAccount[]> =>
-      Promise.resolve([...accounts.values()].flatMap(toPending).slice(0, limit)),
+    listAccountsPendingPurge: ({ limit, removableBefore, after }): Promise<PendingAccountsPage> => {
+      const accountsOfPage = [...accounts.values()]
+        .flatMap(toPending)
+        .filter(
+          (account) => isActionable(account, removableBefore) && isAfterCursor(account, after),
+        )
+        .sort(compareByCursor)
+        .slice(0, limit);
+      const last = accountsOfPage.at(-1);
+      const nextCursor =
+        accountsOfPage.length === limit && last !== undefined
+          ? { deletedAt: last.deletedAt, id: last.scope.ownerUserId }
+          : undefined;
+      return Promise.resolve({ accounts: accountsOfPage, nextCursor });
+    },
     markIdentityDeleted: (scope): Promise<void> => {
       const account = requireDeleted(scope.ownerUserId);
       account.identityDeletedAt ??= new Date(now());
       events.push(`database:identity-deleted:${account.id}`);
       return Promise.resolve();
     },
-    purgeAccountData: (scope): Promise<void> => {
+    purgeAccountData: async (scope): Promise<void> => {
       const account = requireDeleted(scope.ownerUserId);
-      if (failures.purgeDataOnce.delete(account.id)) {
-        return Promise.reject(new Error('purge failed on purpose'));
+      concurrentPurges += 1;
+      stats.peakConcurrentPurges = Math.max(stats.peakConcurrentPurges, concurrentPurges);
+      await Bun.sleep(1);
+      concurrentPurges -= 1;
+      if (failures.purgeDataAlways.has(account.id) || failures.purgeDataOnce.delete(account.id)) {
+        throw new Error('purge failed on purpose');
       }
       account.displayName = undefined;
       for (const table of OWNED_TABLE_DELETION_ORDER) {
-        const name = getTableName(table);
+        const name = tableNameOf(table);
         const remaining = ownedRows.filter(
           (row) => !(row.table === name && row.userId === account.id),
         );
@@ -108,7 +164,6 @@ export function createInMemoryPurgeStore(params: {
       pseudonymize(account.id);
       account.dataPurgedAt ??= new Date(now());
       events.push(`database:data-purged:${account.id}`);
-      return Promise.resolve();
     },
     removeUserRow: (scope, { deletedBefore }): Promise<boolean> => {
       const account = accounts.get(scope.ownerUserId);
@@ -142,6 +197,7 @@ export function createInMemoryPurgeStore(params: {
     ownedRows,
     auditLog,
     failures,
+    stats,
     clock: { now },
     seedAccount: (seed): PurgeStoreAccount => {
       const account: PurgeStoreAccount = {
@@ -157,7 +213,7 @@ export function createInMemoryPurgeStore(params: {
     },
     seedOwnedRowsForEveryTable: (userId): void => {
       for (const table of OWNED_TABLE_DELETION_ORDER) {
-        ownedRows.push({ table: getTableName(table), userId });
+        ownedRows.push({ table: tableNameOf(table), userId });
       }
     },
   };

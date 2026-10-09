@@ -13,3 +13,6 @@ export const IDENTITY_OUTCOME = {
 } as const;
 
 export const CLIENT_CREDENTIALS_GRANT = 'client_credentials';
+
+// Corpo que o Keycloak devolve quando o usuário não existe; 404 sem ele é realm ou URL errados.
+export const KEYCLOAK_USER_NOT_FOUND_ERROR = 'User not found';

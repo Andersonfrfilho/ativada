@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { getTableName } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 
 import { auditEvents } from '../schema/audit-events.schema.js';
@@ -48,3 +49,7 @@ export const PSEUDONYMIZED_TABLES: readonly PseudonymizedTable[] = [
 ];
 
 export const SHARED_TABLES: readonly PgTable[] = [users];
+
+export function tableNameOf(table: PgTable): string {
+  return getTableName(table);
+}

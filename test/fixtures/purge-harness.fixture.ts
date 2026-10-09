@@ -52,7 +52,7 @@ export type PurgeHarness = {
   readonly stop: () => Promise<void>;
 };
 
-export function createPurgeHarness(): PurgeHarness {
+export function createPurgeHarness(options: { readonly adminPath?: string } = {}): PurgeHarness {
   const events: string[] = [];
   const logLines: string[] = [];
   let nowMilliseconds = START_OF_TEST;
@@ -73,7 +73,7 @@ export function createPurgeHarness(): PurgeHarness {
   const task = createPurgeDeletedAccountsTask({
     repository: store.repository,
     identity: createKeycloakIdentityAdmin({
-      adminApiUrl: keycloak.adminApiUrl,
+      adminApiUrl: `${keycloak.adminApiUrl}${options.adminPath ?? ''}`,
       tokenUrl: keycloak.tokenUrl,
       clientId: FAKE_SERVICE_CLIENT_ID,
       clientSecret: FAKE_SERVICE_CLIENT_SECRET,

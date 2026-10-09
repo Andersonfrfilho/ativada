@@ -3,7 +3,7 @@ import { MIGRATIONS_FOLDER } from './database.constant.js';
 import { closeDatabase, openDatabase, type DatabaseHandle } from './database-handle.js';
 import { applyMigrations } from './migrate.js';
 import { readDatabaseUrl } from './read-database-url.js';
-import { checkPurge, checkRemoveAndRetention } from './account-purge-checks.js';
+import { checkPendingQueue, checkPurge, checkRemoveAndRetention } from './account-purge-checks.js';
 import { checkAdminRepositories } from './admin-checks.js';
 import { checkExport, checkMarkDeleted, seedLifecycleOwners } from './account-lifecycle-checks.js';
 import { checkProfileRepository } from './profile-checks.js';
@@ -84,6 +84,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     const owners = await seedLifecycleOwners(lifecycle);
     await checkExport(lifecycle, owners);
     await checkMarkDeleted(lifecycle, owners);
+    await checkPendingQueue(lifecycle);
     await checkPurge(lifecycle, owners);
     await checkRemoveAndRetention(lifecycle, owners);
   } finally {

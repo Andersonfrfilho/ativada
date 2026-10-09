@@ -1,13 +1,19 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { AccountPurgeRepository, PendingAccount } from '@crypto/database';
-import { IDENTITY_OUTCOME, type IdentityAdminClient } from '@crypto/identity-admin';
+import type {
+  AccountPurgeRepository,
+  PendingAccount,
+  PendingAccountCursor,
+} from '@crypto/database';
+import { IDENTITY_OUTCOME, mapInBatches, type IdentityAdminClient } from '@crypto/identity-admin';
 
 import {
+  ACCOUNT_PARALLELISM,
   AUDIT_IP_RETENTION_MILLISECONDS,
   PENDING_ACCOUNTS_BATCH_LIMIT,
   PURGE_STEP,
 } from '../cron.constant.js';
 import type { CronLogger } from '../logging/cron-logger.js';
+import { IdentityRealmUnavailableError } from './identity-realm-unavailable.error.js';
 
 export type PurgeDeletedAccountsDependencies = {
   readonly repository: AccountPurgeRepository;
@@ -67,11 +73,15 @@ async function runStep(
   dependencies: PurgeDeletedAccountsDependencies,
   params: { readonly step: string; readonly run: StepRun; readonly account: PendingAccount },
 ): Promise<boolean> {
+  const accountId = params.account.scope.ownerUserId;
   try {
-    return await params.run(params.account);
+    const isDone = await params.run(params.account);
+    if (!isDone)
+      dependencies.logger.error('purge step incomplete', { step: params.step, accountId });
+    return isDone;
   } catch (error: unknown) {
     const errorName = error instanceof Error ? error.name : 'UnknownError';
-    dependencies.logger.error('purge step failed', { step: params.step, errorName });
+    dependencies.logger.error('purge step failed', { step: params.step, errorName, accountId });
     return false;
   }
 }
@@ -129,17 +139,50 @@ function summarize(outcomes: readonly AccountOutcome[]): PurgeSummary {
   };
 }
 
-// Contas independentes entre si; processAccount nunca rejeita, então uma falha não derruba o lote.
+const FAILED_ACCOUNT_OUTCOME: AccountOutcome = {
+  wasIdentityDeleted: false,
+  wasDataPurged: false,
+  wasRowRemoved: false,
+  failures: 1,
+};
+
+async function processAllPages(
+  dependencies: PurgeDeletedAccountsDependencies,
+): Promise<readonly AccountOutcome[]> {
+  const removableBefore = new Date(dependencies.now() - dependencies.gracePeriodMilliseconds);
+  const outcomes: AccountOutcome[] = [];
+  let after: PendingAccountCursor | undefined;
+  do {
+    const page = await dependencies.repository.listAccountsPendingPurge({
+      limit: PENDING_ACCOUNTS_BATCH_LIMIT,
+      removableBefore,
+      after,
+    });
+    const settled = await mapInBatches(page.accounts, ACCOUNT_PARALLELISM, (account) =>
+      processAccount(dependencies, account),
+    );
+    outcomes.push(
+      ...settled.map((result) =>
+        result.status === 'fulfilled' ? result.value : FAILED_ACCOUNT_OUTCOME,
+      ),
+    );
+    after = page.nextCursor;
+  } while (after !== undefined);
+  return outcomes;
+}
+
+async function assertRealmExists(dependencies: PurgeDeletedAccountsDependencies): Promise<void> {
+  const realm = await dependencies.identity.verifyRealm();
+  if (realm.status === IDENTITY_OUTCOME.NOT_FOUND) throw new IdentityRealmUnavailableError();
+}
+
+// Contas independentes: a página é lida por cursor, em lotes, e a falha de uma não derruba as outras.
 export function createPurgeDeletedAccountsTask(
   dependencies: PurgeDeletedAccountsDependencies,
 ): PurgeDeletedAccountsTask {
   return async () => {
-    const accounts = await dependencies.repository.listAccountsPendingPurge({
-      limit: PENDING_ACCOUNTS_BATCH_LIMIT,
-    });
-    const outcomes = await Promise.all(
-      accounts.map((account) => processAccount(dependencies, account)),
-    );
+    await assertRealmExists(dependencies);
+    const outcomes = await processAllPages(dependencies);
     const auditIpsExpired = await expireAuditIps(dependencies);
     return { ...summarize(outcomes), auditIpsExpired };
   };

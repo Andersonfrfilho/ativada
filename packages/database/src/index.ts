@@ -22,6 +22,8 @@ export {
 export type {
   ListPendingAccountsParams,
   PendingAccount,
+  PendingAccountCursor,
+  PendingAccountsPage,
   RemoveUserRowParams,
 } from './account/account-purge.types.js';
 export {

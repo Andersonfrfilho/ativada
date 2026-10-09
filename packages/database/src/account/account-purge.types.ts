@@ -9,8 +9,20 @@ export type PendingAccount = {
   readonly dataPurgedAt: Date | undefined;
 };
 
+export type PendingAccountCursor = {
+  readonly deletedAt: Date;
+  readonly id: string;
+};
+
 export type ListPendingAccountsParams = {
   readonly limit: number;
+  readonly removableBefore: Date;
+  readonly after: PendingAccountCursor | undefined;
+};
+
+export type PendingAccountsPage = {
+  readonly accounts: readonly PendingAccount[];
+  readonly nextCursor: PendingAccountCursor | undefined;
 };
 
 export type RemoveUserRowParams = {

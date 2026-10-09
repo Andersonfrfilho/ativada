@@ -4,9 +4,10 @@ import type {
   AdminAccountRecord,
   AdminAccountRepository,
 } from '@crypto/database';
-import { IDENTITY_OUTCOME, type IdentityAdminClient } from '@crypto/identity-admin';
+import { IDENTITY_OUTCOME, mapInBatches, type IdentityAdminClient } from '@crypto/identity-admin';
 
 import { encodeAccountCursor } from './account-cursor.js';
+import { LIST_ACCOUNTS_BATCH_SIZE } from './admin.constant.js';
 
 export type ListAccountsInput = {
   readonly after: AccountPageCursor | undefined;
@@ -34,12 +35,15 @@ export type ListAccountsDependencies = {
   readonly identity: Pick<IdentityAdminClient, 'readEmail'>;
 };
 
-async function toAccountView(
+async function readEmail(
   identity: ListAccountsDependencies['identity'],
   record: AdminAccountRecord,
-): Promise<AccountView> {
+): Promise<string | undefined> {
   const outcome = await identity.readEmail(record.keycloakSubject);
-  const email = outcome.status === IDENTITY_OUTCOME.OK ? outcome.value : undefined;
+  return outcome.status === IDENTITY_OUTCOME.OK ? outcome.value : undefined;
+}
+
+function toAccountView(record: AdminAccountRecord, email: string | undefined): AccountView {
   return {
     id: record.id,
     createdAt: record.createdAt.toISOString(),
@@ -54,9 +58,13 @@ export function createListAccountsUseCase(
 ): ListAccountsUseCase {
   return async ({ after, limit }) => {
     const page = await dependencies.accounts.listAccounts({ after, limit });
-    const items = await Promise.all(
-      page.items.map((record) => toAccountView(dependencies.identity, record)),
+    const emails = await mapInBatches(page.items, LIST_ACCOUNTS_BATCH_SIZE, (record) =>
+      readEmail(dependencies.identity, record),
     );
+    const items = page.items.map((record, index) => {
+      const email = emails[index];
+      return toAccountView(record, email?.status === 'fulfilled' ? email.value : undefined);
+    });
     const lastRecord = page.items.at(-1);
     const nextCursor =
       page.hasMore && lastRecord !== undefined ? encodeAccountCursor(lastRecord) : null;

@@ -1,6 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { AccountNotDeletedError } from './account/account-purge.error.js';
-import { createAccountPurgeRepository } from './account/account-purge.repository.js';
+import {
+  createAccountPurgeRepository,
+  type AccountPurgeRepository,
+} from './account/account-purge.repository.js';
+import type { PendingAccountCursor } from './account/account-purge.types.js';
 import type { LifecycleCheckContext, LifecycleOwners } from './account-lifecycle-checks.js';
 
 const MILLISECONDS_PER_DAY = 86_400_000;
@@ -38,14 +42,69 @@ async function readAudit(client: Bun.SQL): Promise<readonly AuditRow[]> {
   return rows as readonly AuditRow[];
 }
 
+const MAX_QUEUE_PAGES = 50;
+const QUEUE_TIE_INSTANT = '2026-01-01 10:00:00.123456+00';
+
+type QueueSeed = { readonly subject: string; readonly deletedAt: string; readonly isDone: boolean };
+
+const QUEUE_SEEDS: readonly QueueSeed[] = [
+  { subject: 'subject-queue-ready', deletedAt: '2026-01-01 09:00:00+00', isDone: true },
+  { subject: 'subject-queue-waiting', deletedAt: 'now', isDone: true },
+  { subject: 'subject-queue-tie-1', deletedAt: QUEUE_TIE_INSTANT, isDone: false },
+  { subject: 'subject-queue-tie-2', deletedAt: QUEUE_TIE_INSTANT, isDone: false },
+  { subject: 'subject-queue-tie-3', deletedAt: QUEUE_TIE_INSTANT, isDone: false },
+];
+
+async function seedQueue(client: Bun.SQL): Promise<void> {
+  for (const seed of QUEUE_SEEDS) {
+    const doneAt = seed.isDone ? seed.deletedAt : null;
+    await client`INSERT INTO users (id, keycloak_sub, deleted_at, identity_deleted_at, data_purged_at)
+      VALUES (${Bun.randomUUIDv7()}, ${seed.subject}, ${seed.deletedAt}::timestamptz, ${doneAt}::timestamptz, ${doneAt}::timestamptz)`;
+  }
+}
+
+async function walkQueue(purge: AccountPurgeRepository): Promise<readonly string[]> {
+  const seen: string[] = [];
+  const removableBefore = new Date(Date.now() - MILLISECONDS_PER_DAY);
+  let after: PendingAccountCursor | undefined;
+  for (let pages = 0; pages < MAX_QUEUE_PAGES; pages += 1) {
+    const page = await purge.listAccountsPendingPurge({ limit: 1, removableBefore, after });
+    seen.push(...page.accounts.map((account) => account.keycloakSubject));
+    after = page.nextCursor;
+    if (after === undefined) break;
+  }
+  return seen.filter((subject) => subject.startsWith('subject-queue-'));
+}
+
+export async function checkPendingQueue(context: LifecycleCheckContext): Promise<void> {
+  const { handle, client, assertCondition, reportCheck } = context;
+  await seedQueue(client);
+  const seen = await walkQueue(createAccountPurgeRepository(handle));
+  const expected = QUEUE_SEEDS.map((seed) => seed.subject).filter(
+    (subject) => subject !== 'subject-queue-waiting',
+  );
+  assertCondition(
+    seen.length === expected.length && expected.every((subject) => seen.includes(subject)),
+    `a fila deve trazer cada conta acionável uma vez e pular a que só espera a carência: ${seen.join(',')}`,
+  );
+  await client`DELETE FROM users WHERE keycloak_sub LIKE 'subject-queue-%'`;
+  reportCheck(
+    'fila de purga: filtra no SQL, pagina por cursor (deleted_at, id) sem repetir nem pular',
+  );
+}
+
 export async function checkPurge(
   context: LifecycleCheckContext,
   owners: LifecycleOwners,
 ): Promise<void> {
   const { handle, client, assertCondition, reportCheck } = context;
   const purge = createAccountPurgeRepository(handle);
-  const pending = await purge.listAccountsPendingPurge({ limit: 100 });
-  const pendingSubjects = pending.map((account) => account.keycloakSubject);
+  const pending = await purge.listAccountsPendingPurge({
+    limit: 100,
+    removableBefore: new Date(Date.now() - MILLISECONDS_PER_DAY),
+    after: undefined,
+  });
+  const pendingSubjects = pending.accounts.map((account) => account.keycloakSubject);
   assertCondition(
     pendingSubjects.includes('subject-lifecycle-a') &&
       !pendingSubjects.includes('subject-lifecycle-b'),

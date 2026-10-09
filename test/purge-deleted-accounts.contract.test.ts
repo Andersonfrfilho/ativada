@@ -2,8 +2,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import { ACCOUNT_REMOVAL_GRACE_PERIOD_MILLISECONDS } from '../apps/cron-crypto/src/cron.constant.js';
-import { getTableName } from '../packages/database/node_modules/drizzle-orm/index.js';
-import { OWNED_TABLE_DELETION_ORDER } from '../packages/database/src/ownership/ownership-registry.js';
+import {
+  OWNED_TABLE_DELETION_ORDER,
+  tableNameOf,
+} from '../packages/database/src/ownership/ownership-registry.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
 import { ADMIN_OPERATION } from './fixtures/fake-keycloak-admin.fixture.js';
 import {
@@ -43,7 +45,7 @@ afterEach(async () => {
 });
 
 function eventsOf(id: string): readonly string[] {
-  return harness.events.filter((event) => event.endsWith(`:${id}`) || event.includes(`:${id}`));
+  return harness.events.filter((event) => event.includes(`:${id}`));
 }
 
 describe('purge-deleted-accounts — order and steps', () => {
@@ -70,7 +72,7 @@ describe('purge-deleted-accounts — order and steps', () => {
     const purged = harness.events
       .filter((event) => event.startsWith('database:purge:') && event.endsWith(`:${OLD}`))
       .map((event) => event.split(':')[2]);
-    expect(purged).toStrictEqual(OWNED_TABLE_DELETION_ORDER.map(getTableName));
+    expect(purged).toStrictEqual(OWNED_TABLE_DELETION_ORDER.map(tableNameOf));
     expect(harness.store.ownedRows.filter((row) => row.userId === OLD)).toHaveLength(0);
     expect(harness.store.ownedRows.filter((row) => row.userId === RECENT)).toHaveLength(0);
   });
@@ -262,6 +264,114 @@ describe('purge-deleted-accounts — logging', () => {
       'Personal Name',
     ]) {
       expect(log).not.toContain(personal);
+    }
+  });
+});
+
+const FAILING_ACCOUNT_COUNT = 100;
+const FRESH_ACCOUNT_COUNT = 5;
+const WAITING_ACCOUNT_COUNT = 150;
+const MAXIMUM_PARALLEL_ACCOUNTS = 10;
+
+function bulkId(prefix: string, index: number): string {
+  return `0192f3a1-7c4e-7b2a-${prefix}-${String(index).padStart(12, '0')}`;
+}
+
+function seedBulk(params: {
+  readonly prefix: string;
+  readonly count: number;
+  readonly deletedAt: Date;
+  readonly isDone?: boolean;
+}): readonly string[] {
+  const ids: string[] = [];
+  for (let index = 0; index < params.count; index += 1) {
+    const id = bulkId(params.prefix, index);
+    const subject = `subject-${params.prefix}-${index}`;
+    harness.keycloak.admin.seedUser({ id: subject, email: `${subject}@example.test` });
+    harness.store.seedAccount({
+      id,
+      subject,
+      deletedAt: params.deletedAt,
+      ...(params.isDone === true
+        ? { identityDeletedAt: params.deletedAt, dataPurgedAt: params.deletedAt }
+        : {}),
+    });
+    ids.push(id);
+  }
+  return ids;
+}
+
+describe('purge-deleted-accounts — queue without starvation', () => {
+  test('processes new accounts even when 100 older ones fail on every run and 150 only wait out the grace period', async () => {
+    const failingIds = seedBulk({
+      prefix: 'aaaa',
+      count: FAILING_ACCOUNT_COUNT,
+      deletedAt: new Date(START_OF_TEST - 40 * HOUR_MILLISECONDS),
+    });
+    for (const id of failingIds) harness.store.failures.purgeDataAlways.add(userIdFromDatabase(id));
+    seedBulk({
+      prefix: 'bbbb',
+      count: WAITING_ACCOUNT_COUNT,
+      deletedAt: new Date(START_OF_TEST - HOUR_MILLISECONDS),
+      isDone: true,
+    });
+    const freshIds = seedBulk({
+      prefix: 'cccc',
+      count: FRESH_ACCOUNT_COUNT,
+      deletedAt: new Date(START_OF_TEST - HOUR_MILLISECONDS / 2),
+    });
+    const summary = await harness.task();
+    for (const id of freshIds) {
+      const fresh = harness.store.accounts.get(userIdFromDatabase(id));
+      expect(fresh?.identityDeletedAt).toBeInstanceOf(Date);
+      expect(fresh?.dataPurgedAt).toBeInstanceOf(Date);
+    }
+    expect(summary.examined).toBe(2 + FAILING_ACCOUNT_COUNT + FRESH_ACCOUNT_COUNT);
+    expect(summary.failures).toBe(FAILING_ACCOUNT_COUNT);
+  });
+
+  test('works through at most ten accounts at a time', async () => {
+    seedBulk({
+      prefix: 'dddd',
+      count: 60,
+      deletedAt: new Date(START_OF_TEST - HOUR_MILLISECONDS),
+    });
+    await harness.task();
+    expect(harness.store.stats.peakConcurrentPurges).toBeGreaterThan(1);
+    expect(harness.store.stats.peakConcurrentPurges).toBeLessThanOrEqual(MAXIMUM_PARALLEL_ACCOUNTS);
+  });
+
+  test('logs the opaque id of the account that failed, never the subject', async () => {
+    harness.store.failures.purgeDataOnce.add(OLD);
+    await harness.task();
+    const log = harness.logLines.join('');
+    expect(log).toContain(OLD);
+    expect(log).not.toContain(ACCOUNT.DELETED_LONG_AGO.subject);
+  });
+});
+
+describe('purge-deleted-accounts — Keycloak 404', () => {
+  test('a 404 that is not "user not found" is an error, never "identity deleted"', async () => {
+    harness.keycloak.admin.behavior.hasBareNotFound = true;
+    harness.keycloak.admin.users.delete(ACCOUNT.DELETED_LONG_AGO.subject);
+    const summary = await harness.task();
+    expect(harness.store.accounts.get(OLD)?.identityDeletedAt).toBeUndefined();
+    expect(summary.failures).toBeGreaterThan(0);
+  });
+
+  test('refuses to start when the realm or the Admin API URL does not exist', async () => {
+    const wrong = createPurgeHarness({ adminPath: '/realms/missing' });
+    try {
+      wrong.store.seedAccount({
+        id: ACCOUNT.DELETED_LONG_AGO.id,
+        subject: ACCOUNT.DELETED_LONG_AGO.subject,
+        deletedAt: new Date(START_OF_TEST - 30 * HOUR_MILLISECONDS),
+      });
+      const failure = await wrong.task().catch((error: unknown) => error);
+      expect(failure).toMatchObject({ name: 'IdentityRealmUnavailableError' });
+      expect(wrong.store.accounts.get(OLD)?.identityDeletedAt).toBeUndefined();
+    } finally {
+      await wrong.stop();
     }
   });
 });

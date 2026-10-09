@@ -50,6 +50,21 @@ describe('service account token', () => {
     expect(keycloak.countRequests('client_credentials')).toBe(2);
   });
 
+  test('50 concurrent calls with an empty cache make a single token exchange', async () => {
+    const tokens = createTokens();
+    const results = await Promise.all(Array.from({ length: 50 }, () => tokens.getToken()));
+    expect(new Set(results).size).toBe(1);
+    expect(results[0]).toBeDefined();
+    expect(keycloak.countRequests('client_credentials')).toBe(1);
+  });
+
+  test('a failed exchange is not remembered: the next call tries again', async () => {
+    const tokens = createTokens('wrong-secret');
+    expect(await tokens.getToken()).toBeUndefined();
+    expect(await tokens.getToken()).toBeUndefined();
+    expect(keycloak.countRequests('client_credentials')).toBe(2);
+  });
+
   test('is undefined when Keycloak refuses the client', async () => {
     expect(await createTokens('wrong-secret').getToken()).toBeUndefined();
   });
@@ -101,6 +116,18 @@ describe('Keycloak admin client', () => {
     );
     await client.createUser('dup@example.test');
     expect((await client.createUser('dup@example.test')).status).toBe(IDENTITY_OUTCOME.CONFLICT);
+  });
+
+  test('a 404 without the "user not found" body is unavailable, never not_found', async () => {
+    const client = createClient();
+    keycloak.admin.behavior.hasBareNotFound = true;
+    expect((await client.deleteUser('missing')).status).toBe(IDENTITY_OUTCOME.UNAVAILABLE);
+    expect((await client.readEmail('missing')).status).toBe(IDENTITY_OUTCOME.UNAVAILABLE);
+    expect((await client.setEnabled({ userId: 'missing', isEnabled: true })).status).toBe(
+      IDENTITY_OUTCOME.UNAVAILABLE,
+    );
+    keycloak.admin.behavior.hasBareNotFound = false;
+    expect((await client.deleteUser('missing')).status).toBe(IDENTITY_OUTCOME.NOT_FOUND);
   });
 
   test('logs the user out of every session and answers not_found for unknown users', async () => {

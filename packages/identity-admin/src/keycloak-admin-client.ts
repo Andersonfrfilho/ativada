@@ -5,7 +5,14 @@ import { HTTP_METHOD, HTTP_STATUS } from './identity-http.constant.js';
 import { INVITATION_ACTIONS, INVITATION_LIFESPAN_SECONDS } from './identity-admin.constant.js';
 import type { IdentityAdminClient, IdentityOutcome, IdentityUser } from './identity-admin.types.js';
 import type { IdentityHttp, IdentityResponse } from './identity-http.js';
-import { CONFLICT, NOT_FOUND, UNAVAILABLE, emptyOutcome, ok } from './identity-outcome.js';
+import {
+  CONFLICT,
+  NOT_FOUND,
+  UNAVAILABLE,
+  emptyOutcome,
+  notFoundOutcome,
+  ok,
+} from './identity-outcome.js';
 import { createIdentityReads, userPath } from './keycloak-admin-reads.js';
 
 export type KeycloakAdminClientSettings = {
@@ -47,7 +54,7 @@ async function updateEnabled(
   const current = await http({ method: HTTP_METHOD.GET, path });
   const representation = representationSchema.safeParse(current?.body);
   if (current === undefined) return UNAVAILABLE;
-  if (current.status === HTTP_STATUS.NOT_FOUND) return NOT_FOUND;
+  if (current.status === HTTP_STATUS.NOT_FOUND) return notFoundOutcome(current);
   if (current.status !== HTTP_STATUS.OK || !representation.success) return UNAVAILABLE;
   const merged = { ...representation.data, enabled: params.isEnabled };
   return emptyOutcome(
@@ -86,6 +93,14 @@ async function sendConfiguredInvitation(
   });
 }
 
+// Qualquer 404 aqui é realm ou URL da Admin API errados: a rota /users existe em todo realm.
+async function verifyRealm(http: IdentityHttp): Promise<IdentityOutcome<undefined>> {
+  const response = await http({ method: HTTP_METHOD.GET, path: '/users?max=1' });
+  if (response === undefined) return UNAVAILABLE;
+  if (response.status === HTTP_STATUS.NOT_FOUND) return NOT_FOUND;
+  return response.status === HTTP_STATUS.OK ? ok(undefined) : UNAVAILABLE;
+}
+
 export function createKeycloakAdminClient(
   settings: KeycloakAdminClientSettings,
 ): IdentityAdminClient {
@@ -93,6 +108,7 @@ export function createKeycloakAdminClient(
   return {
     ...createIdentityReads(http),
     createUser: (email) => createInvitedUser(http, email),
+    verifyRealm: () => verifyRealm(http),
     deleteUser: async (userId) =>
       emptyOutcome(
         await http({ method: HTTP_METHOD.DELETE, path: userPath(userId) }),

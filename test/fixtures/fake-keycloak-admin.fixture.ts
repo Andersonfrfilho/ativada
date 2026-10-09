@@ -37,6 +37,7 @@ export type FakeKeycloakAdmin = {
   readonly calls: FakeAdminCall[];
   readonly failing: Set<AdminOperation>;
   readonly forbidden: Set<AdminOperation>;
+  readonly behavior: { hasBareNotFound: boolean };
   readonly seedUser: (params: SeedIdentityUser) => FakeIdentityUser;
   readonly callsOf: (operation: AdminOperation) => readonly FakeAdminCall[];
   readonly handle: (request: Request) => Promise<Response>;
@@ -86,6 +87,7 @@ export function createFakeKeycloakAdmin(options: { readonly events: string[] }):
   const calls: FakeAdminCall[] = [];
   const failing = new Set<AdminOperation>();
   const forbidden = new Set<AdminOperation>();
+  const behavior = { hasBareNotFound: false };
 
   function userRepresentation(user: FakeIdentityUser): Record<string, unknown> {
     return { id: user.id, username: user.email, email: user.email, enabled: user.enabled };
@@ -101,8 +103,11 @@ export function createFakeKeycloakAdmin(options: { readonly events: string[] }):
     if (failing.has(parsed.operation)) return Response.json({}, { status: 500 });
     if (forbidden.has(parsed.operation)) return Response.json({}, { status: 403 });
     const user = parsed.userId === undefined ? undefined : users.get(parsed.userId);
-    if (parsed.userId !== undefined && user === undefined)
-      return new Response(null, { status: 404 });
+    if (parsed.userId !== undefined && user === undefined) {
+      return Response.json(behavior.hasBareNotFound ? {} : { error: 'User not found' }, {
+        status: 404,
+      });
+    }
     switch (parsed.operation) {
       case 'lookup':
         return Response.json(
@@ -163,6 +168,7 @@ export function createFakeKeycloakAdmin(options: { readonly events: string[] }):
     calls,
     failing,
     forbidden,
+    behavior,
     seedUser: fakeSeed,
     callsOf: (operation) => calls.filter((call) => call.operation === operation),
     handle: async (request): Promise<Response> => {

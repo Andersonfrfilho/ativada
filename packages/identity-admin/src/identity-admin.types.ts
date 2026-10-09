@@ -20,6 +20,7 @@ export type SetEnabledParams = {
 export type IdentityAdminClient = {
   readonly findUserByEmail: (email: string) => Promise<IdentityOutcome<IdentityUser | undefined>>;
   readonly createUser: (email: string) => Promise<IdentityOutcome<IdentityUser>>;
+  readonly verifyRealm: () => Promise<IdentityOutcome<undefined>>;
   readonly deleteUser: (userId: string) => Promise<IdentityOutcome<undefined>>;
   readonly logoutUser: (userId: string) => Promise<IdentityOutcome<undefined>>;
   readonly hasCredentials: (userId: string) => Promise<IdentityOutcome<boolean>>;

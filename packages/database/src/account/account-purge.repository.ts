@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, asc, getTableName, isNotNull, lte, sql } from 'drizzle-orm';
+import { and, asc, getTableName, gt, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import type { BunSQLDatabase } from 'drizzle-orm/bun-sql';
 
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
@@ -19,6 +20,8 @@ import {
 import type {
   ListPendingAccountsParams,
   PendingAccount,
+  PendingAccountCursor,
+  PendingAccountsPage,
   RemoveUserRowParams,
 } from './account-purge.types.js';
 import { readUserIdColumn } from './owned-table-columns.js';
@@ -27,7 +30,7 @@ import { PSEUDONYMIZATION_STEPS } from './pseudonymization-steps.js';
 export type AccountPurgeRepository = {
   readonly listAccountsPendingPurge: (
     params: ListPendingAccountsParams,
-  ) => Promise<readonly PendingAccount[]>;
+  ) => Promise<PendingAccountsPage>;
   readonly markIdentityDeleted: (scope: OwnerScope) => Promise<void>;
   readonly purgeAccountData: (scope: OwnerScope) => Promise<void>;
   readonly removeUserRow: (scope: OwnerScope, params: RemoveUserRowParams) => Promise<boolean>;
@@ -53,10 +56,30 @@ function toPendingAccount(row: PendingRow): PendingAccount | undefined {
   };
 }
 
+// O Postgres guarda microssegundos e o Date do JS só milissegundos: a ordem e o cursor truncam igual.
+const DELETED_AT_MILLISECONDS = sql`date_trunc('milliseconds', ${users.deletedAt})`;
+
+function isActionable(removableBefore: Date): SQL | undefined {
+  return or(
+    isNull(users.identityDeletedAt),
+    isNull(users.dataPurgedAt),
+    lte(users.deletedAt, removableBefore),
+  );
+}
+
+function isAfterCursor(after: PendingAccountCursor | undefined): SQL | undefined {
+  if (after === undefined) return undefined;
+  const cursorInstant = sql`${after.deletedAt.toISOString()}::timestamptz`;
+  return or(
+    sql`${DELETED_AT_MILLISECONDS} > ${cursorInstant}`,
+    and(sql`${DELETED_AT_MILLISECONDS} = ${cursorInstant}`, gt(users.id, after.id)),
+  );
+}
+
 async function selectPending(
   database: BunSQLDatabase,
   params: ListPendingAccountsParams,
-): Promise<readonly PendingAccount[]> {
+): Promise<PendingAccountsPage> {
   const rows = await database
     .select({
       id: users.id,
@@ -66,10 +89,22 @@ async function selectPending(
       dataPurgedAt: users.dataPurgedAt,
     })
     .from(users)
-    .where(isNotNull(users.deletedAt))
-    .orderBy(asc(users.deletedAt), asc(users.id))
+    .where(
+      and(
+        isNotNull(users.deletedAt),
+        isActionable(params.removableBefore),
+        isAfterCursor(params.after),
+      ),
+    )
+    .orderBy(asc(DELETED_AT_MILLISECONDS), asc(users.id))
     .limit(params.limit);
-  return rows.flatMap((row) => toPendingAccount(row) ?? []);
+  const accounts = rows.flatMap((row) => toPendingAccount(row) ?? []);
+  const last = rows.at(-1);
+  const nextCursor =
+    rows.length === params.limit && last !== undefined && last.deletedAt !== null
+      ? { deletedAt: last.deletedAt, id: last.id }
+      : undefined;
+  return { accounts, nextCursor };
 }
 
 async function setIdentityDeleted(database: BunSQLDatabase, scope: OwnerScope): Promise<void> {

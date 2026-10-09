@@ -58,12 +58,23 @@ export function createServiceAccountTokenProvider(
   settings: ServiceAccountTokenSettings,
 ): ServiceAccountTokenProvider {
   let cached: CachedToken | undefined;
+  let exchangeInFlight: Promise<CachedToken | undefined> | undefined;
+
+  async function exchange(): Promise<CachedToken | undefined> {
+    try {
+      cached = await requestToken(settings);
+      return cached;
+    } finally {
+      exchangeInFlight = undefined;
+    }
+  }
+
   return {
     getToken: async (): Promise<string | undefined> => {
       if (cached !== undefined && cached.expiresAtMilliseconds > settings.now())
         return cached.value;
-      cached = await requestToken(settings);
-      return cached?.value;
+      exchangeInFlight ??= exchange();
+      return (await exchangeInFlight)?.value;
     },
     discardToken: (): void => {
       cached = undefined;

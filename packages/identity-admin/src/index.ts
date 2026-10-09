@@ -11,3 +11,4 @@ export type {
   IdentityUser,
   SetEnabledParams,
 } from './identity-admin.types.js';
+export { mapInBatches } from './map-in-batches.js';

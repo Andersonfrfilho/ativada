@@ -7,6 +7,7 @@ export const ACCOUNT_ID_PARAM = 'accountId';
 
 export const DEFAULT_ACCOUNT_PAGE_SIZE = 50;
 export const MAX_ACCOUNT_PAGE_SIZE = 100;
+export const LIST_ACCOUNTS_BATCH_SIZE = 10;
 export const EMAIL_MAX_LENGTH = 254;
 export const CURSOR_MAX_LENGTH = 200;
 
