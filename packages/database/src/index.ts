@@ -71,3 +71,4 @@ export {
   type IssueLinkCodeParams,
   type TelegramLinkRepository,
 } from './telegram/telegram-link.repository.js';
+export { isDatabaseError, readPostgresErrorCode } from './postgres-error-code.js';

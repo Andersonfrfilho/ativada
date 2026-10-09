@@ -3,6 +3,7 @@ export const REDACTED_VALUE = '[REDACTED]';
 export const TRUNCATED_VALUE = '[TRUNCATED]';
 export const CIRCULAR_VALUE = '[CIRCULAR]';
 export const MAX_LOG_DEPTH = 6;
+export const DATABASE_ERROR_LOG_NAME = 'DatabaseError';
 
 export const SENSITIVE_KEYS: ReadonlySet<string> = new Set([
   'email',

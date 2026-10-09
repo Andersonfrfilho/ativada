@@ -7,6 +7,7 @@ import {
   tableNameOf,
 } from '../packages/database/src/ownership/ownership-registry.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
+import { DATABASE_ERROR_PARAMETER } from './fixtures/in-memory-purge-store.fixture.js';
 import { ADMIN_OPERATION } from './fixtures/fake-keycloak-admin.fixture.js';
 import {
   ACCOUNT,
@@ -339,6 +340,15 @@ describe('purge-deleted-accounts — queue without starvation', () => {
     await harness.task();
     expect(harness.store.stats.peakConcurrentPurges).toBeGreaterThan(1);
     expect(harness.store.stats.peakConcurrentPurges).toBeLessThanOrEqual(MAXIMUM_PARALLEL_ACCOUNTS);
+  });
+
+  test('logs the Postgres code of a database failure, never its query or parameters', async () => {
+    harness.store.failures.databaseErrorOnce.add(OLD);
+    await harness.task();
+    const log = harness.logLines.join('');
+    expect(log).toContain('23505');
+    expect(log).not.toContain(DATABASE_ERROR_PARAMETER);
+    expect(log).not.toContain('Failed query');
   });
 
   test('logs the opaque id of the account that failed, never the subject', async () => {

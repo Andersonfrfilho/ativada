@@ -1,5 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { parseEnvironment, postgresUrlSchema, z } from '@crypto/environment';
+import {
+  checkProductionRules,
+  parseEnvironment,
+  postgresUrlSchema,
+  z,
+  type ProductionProfile,
+} from '@crypto/environment';
 
 const API_PORT_EXPECTATION = 'inteiro entre 1024 e 65535';
 const NON_EMPTY_TEXT_EXPECTATION = 'texto não vazio';
@@ -16,6 +22,29 @@ const TELEGRAM_SECRET_PATTERN = /^[A-Za-z0-9_-]{16,256}$/;
 const DEFAULT_TELEGRAM_API_BASE_URL = 'https://api.telegram.org';
 const DEFAULT_API_HOST = '127.0.0.1';
 const MAX_TRUSTED_PROXY_HOPS = 10;
+const DEFAULT_TRUSTED_PROXY_HOPS = 0;
+const PRODUCTION_PROXY_HOPS_REASON =
+  'obrigatória em produção (use 1 ou mais atrás de proxy; 0 só com a API exposta direto)';
+
+const PRODUCTION_PROFILE: ProductionProfile = {
+  urlVariables: [
+    'KEYCLOAK_ISSUER',
+    'KEYCLOAK_JWKS_URL',
+    'KEYCLOAK_TOKEN_URL',
+    'KEYCLOAK_LOGOUT_URL',
+    'KEYCLOAK_ADMIN_API_URL',
+    'TELEGRAM_API_BASE_URL',
+    'SESSION_ALLOWED_REDIRECT_URIS',
+    'CORS_ALLOWED_ORIGINS',
+  ],
+  secretVariables: [
+    'KEYCLOAK_SESSION_CLIENT_SECRET',
+    'KEYCLOAK_SERVICE_CLIENT_SECRET',
+    'TELEGRAM_BOT_TOKEN',
+    'TELEGRAM_WEBHOOK_SECRET',
+  ],
+  databaseUrlVariable: 'DATABASE_URL',
+};
 
 function splitCommaSeparatedList(value: string): string[] {
   return value
@@ -83,7 +112,7 @@ export const environmentSchema = z
       .int({ error: PROXY_HOPS_EXPECTATION })
       .min(0, { error: PROXY_HOPS_EXPECTATION })
       .max(MAX_TRUSTED_PROXY_HOPS, { error: PROXY_HOPS_EXPECTATION })
-      .default(0),
+      .optional(),
     TELEGRAM_BOT_TOKEN: nonEmptyTextSchema.max(256).optional(),
     TELEGRAM_WEBHOOK_SECRET: z
       .string({ error: TELEGRAM_SECRET_EXPECTATION })
@@ -95,7 +124,22 @@ export const environmentSchema = z
     (values) =>
       (values.TELEGRAM_BOT_TOKEN === undefined) === (values.TELEGRAM_WEBHOOK_SECRET === undefined),
     { error: TELEGRAM_PAIR_EXPECTATION, path: ['TELEGRAM_WEBHOOK_SECRET'] },
-  );
+  )
+  .superRefine((values, context) => {
+    checkProductionRules(values, PRODUCTION_PROFILE, context);
+    const isHopsMissing = values.TRUSTED_PROXY_HOPS === undefined;
+    if (values.ENV === 'production' && isHopsMissing) {
+      context.addIssue({
+        code: 'custom',
+        message: PRODUCTION_PROXY_HOPS_REASON,
+        path: ['TRUSTED_PROXY_HOPS'],
+      });
+    }
+  })
+  .transform((values) => ({
+    ...values,
+    TRUSTED_PROXY_HOPS: values.TRUSTED_PROXY_HOPS ?? DEFAULT_TRUSTED_PROXY_HOPS,
+  }));
 
 export type Environment = z.infer<typeof environmentSchema>;
 

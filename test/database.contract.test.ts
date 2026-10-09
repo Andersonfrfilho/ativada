@@ -26,9 +26,11 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'createProfileRepository',
   'createTelegramLinkConsumer',
   'createTelegramLinkRepository',
+  'isDatabaseError',
   'openDatabase',
   'parseAccountId',
   'pingDatabase',
+  'readPostgresErrorCode',
   'resolveUserBySubject',
 ];
 

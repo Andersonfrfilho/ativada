@@ -1,6 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { isDatabaseError, readPostgresErrorCode } from '@crypto/database';
+
 import {
   CIRCULAR_VALUE,
+  DATABASE_ERROR_LOG_NAME,
   MAX_LOG_DEPTH,
   REDACTED_VALUE,
   SENSITIVE_KEYS,
@@ -31,6 +34,9 @@ function redactEntries(
 }
 
 function describeError(error: Error, state: RedactionState): Record<string, unknown> {
+  if (isDatabaseError(error)) {
+    return { name: DATABASE_ERROR_LOG_NAME, code: readPostgresErrorCode(error) };
+  }
   return redactEntries(
     [
       ['name', error.name],

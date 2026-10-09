@@ -13,6 +13,9 @@ import {
 } from '../../packages/database/src/ownership/ownership-registry.js';
 import { userIdFromDatabase, type UserId } from '../../packages/database/src/ownership/user-id.js';
 
+export const DATABASE_ERROR_PARAMETER = 'chat-123';
+const DATABASE_ERROR_MESSAGE = `Failed query: update "users" set "telegram_chat_id" = $1\nparams: ${DATABASE_ERROR_PARAMETER}`;
+
 export type PurgeStoreAccount = {
   readonly id: UserId;
   readonly keycloakSubject: string;
@@ -48,6 +51,7 @@ export type InMemoryPurgeStore = {
   readonly failures: {
     readonly purgeDataOnce: Set<UserId>;
     readonly purgeDataAlways: Set<UserId>;
+    readonly databaseErrorOnce: Set<UserId>;
     readonly removalOnce: Set<UserId>;
   };
   readonly stats: { peakConcurrentPurges: number };
@@ -100,6 +104,7 @@ export function createInMemoryPurgeStore(params: {
   const failures = {
     purgeDataOnce: new Set<UserId>(),
     purgeDataAlways: new Set<UserId>(),
+    databaseErrorOnce: new Set<UserId>(),
     removalOnce: new Set<UserId>(),
   };
   const stats = { peakConcurrentPurges: 0 };
@@ -149,6 +154,9 @@ export function createInMemoryPurgeStore(params: {
       stats.peakConcurrentPurges = Math.max(stats.peakConcurrentPurges, concurrentPurges);
       await Bun.sleep(1);
       concurrentPurges -= 1;
+      if (failures.databaseErrorOnce.delete(account.id)) {
+        throw Object.assign(new Error(DATABASE_ERROR_MESSAGE), { cause: { errno: '23505' } });
+      }
       if (failures.purgeDataAlways.has(account.id) || failures.purgeDataOnce.delete(account.id)) {
         throw new Error('purge failed on purpose');
       }

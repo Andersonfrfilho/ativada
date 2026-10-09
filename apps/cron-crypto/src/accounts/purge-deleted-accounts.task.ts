@@ -1,8 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type {
-  AccountPurgeRepository,
-  PendingAccount,
-  PendingAccountCursor,
+import {
+  readPostgresErrorCode,
+  type AccountPurgeRepository,
+  type PendingAccount,
+  type PendingAccountCursor,
 } from '@crypto/database';
 import { IDENTITY_OUTCOME, mapInBatches, type IdentityAdminClient } from '@crypto/identity-admin';
 
@@ -10,6 +11,7 @@ import {
   ACCOUNT_PARALLELISM,
   AUDIT_IP_RETENTION_MILLISECONDS,
   PENDING_ACCOUNTS_BATCH_LIMIT,
+  NO_ERROR_CODE,
   PURGE_STEP,
 } from '../cron.constant.js';
 import type { CronLogger } from '../logging/cron-logger.js';
@@ -81,7 +83,13 @@ async function runStep(
     return isDone;
   } catch (error: unknown) {
     const errorName = error instanceof Error ? error.name : 'UnknownError';
-    dependencies.logger.error('purge step failed', { step: params.step, errorName, accountId });
+    const errorCode = readPostgresErrorCode(error) ?? NO_ERROR_CODE;
+    dependencies.logger.error('purge step failed', {
+      step: params.step,
+      errorName,
+      errorCode,
+      accountId,
+    });
     return false;
   }
 }

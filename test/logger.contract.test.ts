@@ -110,6 +110,51 @@ describe('structured logger', () => {
     expect(entry.error['stack']).toContain('TypeError');
   });
 
+  describe('database errors', () => {
+    const SECRET_PARAMETER = 'chat-123';
+
+    function createDatabaseError(): Error {
+      const driverError = Object.assign(
+        new Error(`duplicate key value, Key (telegram_chat_id)=(${SECRET_PARAMETER})`),
+        { errno: '23505' },
+      );
+      return Object.assign(
+        new Error(
+          `Failed query: update "users" set "telegram_chat_id" = $1\nparams: ${SECRET_PARAMETER}`,
+        ),
+        {
+          query: 'update "users" set "telegram_chat_id" = $1',
+          params: [SECRET_PARAMETER],
+          cause: driverError,
+        },
+      );
+    }
+
+    test('logs only the name, the Postgres code and the trace id', () => {
+      const { lines, logger } = createCapturedLogger();
+      logger.error('unexpected error', { traceId: 'trace-77', error: createDatabaseError() });
+      const output = lines.join('');
+      expect(output).not.toContain(SECRET_PARAMETER);
+      expect(output).not.toContain('Failed query');
+      const entry = JSON.parse(output) as { traceId: string; error: Record<string, unknown> };
+      expect(entry.traceId).toBe('trace-77');
+      expect(entry.error).toStrictEqual({ name: 'DatabaseError', code: '23505' });
+    });
+
+    test('also when the error is nested in another field', () => {
+      const { lines, logger } = createCapturedLogger();
+      logger.error('wrapped', { details: { failure: createDatabaseError() } });
+      expect(lines.join('')).not.toContain(SECRET_PARAMETER);
+    });
+
+    test('an ordinary error keeps its name, message and stack', () => {
+      const { lines, logger } = createCapturedLogger();
+      logger.error('plain', { error: new RangeError('out of range') });
+      const entry = JSON.parse(lines[0] ?? '') as { error: Record<string, string> };
+      expect(entry.error['message']).toBe('out of range');
+    });
+  });
+
   test('survives circular references and very deep objects', () => {
     const { lines, logger } = createCapturedLogger();
     const circular: Record<string, unknown> = { name: 'loop' };

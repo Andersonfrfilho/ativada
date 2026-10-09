@@ -16,6 +16,8 @@ export const EXIT_CODE = {
 
 export type ExitCode = (typeof EXIT_CODE)[keyof typeof EXIT_CODE];
 
+export const NO_ERROR_CODE = 'none';
+
 export const PURGE_STEP = {
   IDENTITY_DELETION: 'identity_deletion',
   DATA_PURGE: 'data_purge',

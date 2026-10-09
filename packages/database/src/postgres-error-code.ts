@@ -27,3 +27,21 @@ export function readPostgresErrorCode(error: unknown): string | undefined {
 export function isUniqueViolation(error: unknown): boolean {
   return readPostgresErrorCode(error) === UNIQUE_VIOLATION_SQLSTATE;
 }
+
+const DRIZZLE_FAILED_QUERY_PREFIX = 'Failed query:';
+
+function isDrizzleQueryFailure(error: object): boolean {
+  const { message } = error as { message?: unknown };
+  return typeof message === 'string' && message.startsWith(DRIZZLE_FAILED_QUERY_PREFIX);
+}
+
+// A mensagem e a `cause` de um erro de banco carregam o SQL e os parâmetros (PII): só o SQLSTATE sai.
+export function isDatabaseError(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth += 1) {
+    if (typeof current !== 'object' || current === null) return false;
+    if (readSqlState(current) !== undefined || isDrizzleQueryFailure(current)) return true;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return false;
+}
