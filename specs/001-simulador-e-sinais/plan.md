@@ -55,8 +55,8 @@ type EngineStep = (input: StepInput) => StepResult; // estado entra, estado sai 
 |---|---|
 | `candles` | `exchange`, `symbol`, `timeframe`, `open_time` (PK composta), `open/high/low/close/volume numeric` |
 | `sentiment_daily` | `date` PK, `fear_greed smallint` |
-| `users` | `id uuid`, `keycloak_sub varchar(255)` (único), `display_name`, `display_currency`, `timezone`, `telegram_chat_id` (nulo até vincular), `limits jsonb`, `created_at`, `updated_at`, `blocked_at`, `deleted_at`, `identity_deleted_at`, `data_purged_at` (ADR 0001 §d, §h) |
-| `telegram_link_codes` | `code` (hash), `user_id`, `expires_at`, `attempts` — vínculo do chat por código de uso único |
+| `users` | `id uuid`, `keycloak_sub varchar(255)` (único), `display_name`, `display_currency`, `timezone`, `telegram_chat_id` (nulo até vincular; único quando preenchido), `alert_telegram_enabled`, `limits jsonb`, `created_at`, `updated_at`, `blocked_at`, `deleted_at`, `identity_deleted_at`, `data_purged_at` (ADR 0001 §d, §h) |
+| `telegram_link_codes` | `id`, `user_id` (único), `code_hash` (único), `expires_at`, `attempts`, `created_at` — vínculo do chat por código de uso único; só o hash é guardado |
 | `strategies` | `id uuid`, `user_id`, `name`, `is_example bool`, `created_at` |
 | `strategy_versions` | `id uuid`, `user_id`, `strategy_id`, `version int`, `config jsonb` (validado por Zod), `created_at` |
 | `runs` | `id uuid`, `strategy_version_id`, `kind varchar` (`backtest`/`walk_forward`/`live_paper`), `symbol`, `timeframe`, `period_start/end`, `initial_balance numeric`, `fee_rate`, `slippage_rate`, `status varchar`, `metrics jsonb`, `last_candle_time` |
@@ -148,7 +148,8 @@ Limiar: compra ≥ +2, venda ≤ −2. Risco: stop 2×ATR, alvo 3×ATR, 1% por o
 | `GET` | `/v1/runs/:id/export.csv` | Registro completo |
 | `WS` | `/v1/stream` | Sinal, operação e saldo em tempo real — só do usuário do token |
 | `GET/PATCH` | `/v1/me` | Perfil e preferências |
-| `POST` | `/v1/me/telegram-link` | Gera código de vínculo do Telegram |
+| `POST/DELETE` | `/v1/me/telegram-link` | Gera código de vínculo do Telegram / desvincula o chat |
+| `POST` | `/v1/telegram/webhook` | Webhook do bot (público, protegido pelo segredo `X-Telegram-Bot-Api-Secret-Token`; só existe com segredo configurado) |
 | `GET` | `/v1/me/export` · `DELETE /v1/me` | LGPD: exportar e apagar a conta |
 | `POST` | `/v1/session` | Troca o código do login (PKCE) por access token; refresh em cookie `__Host-` (*token handler*) |
 | `POST` | `/v1/session/refresh` | Renova o access token pelo cookie, com rotação do refresh |

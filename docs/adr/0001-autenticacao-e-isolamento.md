@@ -685,6 +685,65 @@ O resultado de uma troca fica na memória por 10 s (chave: SHA-256 do refresh); 
 estão a função e o contrato (uso único, expirado, inexistente). Dois pontos em memória (deduplicação e
 tickets) valem para uma instância da API (§g).
 
+### n) Resultados e desvios da T0.8
+
+Implementação em `apps/api-crypto/src/{profile,telegram,identity-admin,admin}/` e, no pacote,
+`users/profile.repository.ts`, `telegram/*`, `admin/admin-account.repository.ts` e
+`audit/audit-event.repository.ts`. Migrations `0002` (preferência `alert_telegram_enabled`), `0003`
+(`telegram_link_codes` e índice único parcial do `telegram_chat_id`) e `0004` (`audit_events`, esquema único
+de §i), todas com rollback. Provas: contratos com Keycloak e Telegram falsos (`test/profile`, `telegram-*`,
+`admin-*`, `identity-admin`, `route-params`, `ownership-registry`), `make database-test` (repositórios no
+Postgres real) e `make admin-test` (Postgres, Keycloak 26.8.0 e Mailpit descartáveis).
+
+**Medições no Keycloak real** (saída literal em `make admin-test`):
+
+| Pergunta | Resultado |
+|---|---|
+| A service account lê os papéis de um usuário? | **Sim.** `GET /users/{id}/role-mappings/realm/composite` responde `200` com os papéis **efetivos** (padrão do realm e compostos: `offline_access`, `default-roles-…`, `user`, `uma_authorization` e `admin` quando atribuído à mão). `GET /roles/admin/users` responde `403`; `GET /users/{id}/credentials`, `GET /users?email=…&exact=true` e `GET /users/{id}` respondem `200`. A regra "não bloquear admin" usa os papéis efetivos |
+| O `execute-actions-email` respeita `lifespan` e as ações? | Sim. O link do e-mail leva um JWT de ação com `exp - iat = 86400` e `rqac = [VERIFY_EMAIL, UPDATE_PASSWORD]`, nada além disso (claims: `jti`, `nonce`, `eml`, `reduri`) |
+| Reenviar o e-mail invalida o link anterior? | **Não.** Duas chamadas seguidas a `execute-actions-email` geram dois links, e os dois abrem o formulário de senha |
+| O link de ação é de uso único? | **Não.** Depois de concluir `UPDATE_PASSWORD` com um link, o mesmo link e o anterior (nunca usado) continuam abrindo o formulário de senha e **trocam a senha** (conferido pela data da credencial) até expirar, em 24 h |
+| Apagar e recriar o convidado invalida os links? | Sim: o token aponta para o id do usuário apagado e o link deixa de oferecer a etapa de ação |
+
+**Decisão de convite.** Reenviar (`POST /v1/admin/invitations` para o mesmo e-mail) só é permitido a um
+convidado **provadamente pendente**: existe no Keycloak, `GET …/credentials` vazio **e** nenhuma linha em
+`users` com o id dele como `keycloak_sub`. Nesse caso a API apaga e recria o usuário no Keycloak e envia o
+convite novo (links antigos morrem; `isResend: true`). Conta com credencial ou com linha em `users` responde
+`409 ACCOUNT_ALREADY_ACTIVE` e não envia nada. Dúvida (Keycloak fora do ar) responde `503`.
+
+**Risco residual aceito até decisão humana.** Depois que a pessoa ativa a conta, os links do e-mail
+continuam válidos até 24 h e permitem trocar a senha de uma conta ativa (comportamento do Keycloak 26.8; a
+API não consegue revogar o `jti` pelo Admin API). Mitigações possíveis, nenhuma implementada: um
+authenticator/SPI que marque o `jti` como usado; reduzir `actionTokenGeneratedByAdminLifespan` (contraria o
+requisito de 24 h); avisar o titular por e-mail quando a senha mudar.
+
+**Desvios e decisões que o ADR não fixava**
+
+| Ponto | Decisão |
+|---|---|
+| Bloquear administrador | A API recusa bloquear **qualquer** conta com papel `admin` (`409 CANNOT_BLOCK_ADMIN`), o que contém o "último admin" de §f; `409 CANNOT_BLOCK_SELF` vale para a própria conta. Papéis ilegíveis (Keycloak fora do ar ou `403`) = `503 IDENTITY_PROVIDER_UNAVAILABLE` e nada é bloqueado. `LAST_ADMIN` não existe |
+| Ordem e falha parcial | Bloquear grava `blocked_at` no banco **antes** de desabilitar no Keycloak. Se o Keycloak falhar, o bloqueio do banco fica e a resposta é `202` com `isIdentityProviderSynced: false` (a ação é idempotente e repetível). Desbloquear faz o inverso (habilita no Keycloak e só então limpa o banco); falha do Keycloak = `503` e a conta segue bloqueada |
+| Conta apagada | `block`/`unblock` de conta com `deleted_at` respondem `404 ACCOUNT_NOT_FOUND`, igual a id inexistente ou mal formado |
+| Harness cross-owner | Nenhuma rota da T0.8 endereça um recurso de usuário por id (`/v1/me` é sempre o do token; o alvo admin é `AccountId`). O harness `expectOtherUserGetsNotFound` não se aplica; em seu lugar há contratos HTTP com dois usuários (B não lê nem altera A, `userId` no corpo vira `400`), a comparação `expectIndistinguishableNotFound` para `ACCOUNT_NOT_FOUND` e a varredura das rotas admin contra uma lista fechada de campos. O ponto que o harness cobriria ao chegar a primeira rota por id (T1.x) continua obrigatório |
+| Telegram | Tentativas por **chat** em memória (5 erros em 10 min bloqueiam o chat por 1 h; vale para uma instância, §g); por **código** no banco (`telegram_link_codes.attempts`, o código morre na 5ª recusa por conflito de chat). Um chat só vincula a um usuário (índice único parcial). `TELEGRAM_BOT_TOKEN` e `TELEGRAM_WEBHOOK_SECRET` são opcionais, mas só valem juntos; sem eles a rota do webhook não é registrada e `POST /v1/me/telegram-link` responde `503 FEATURE_DISABLED` (desvincular continua funcionando) |
+| Limites de taxa novos | Convite 10/h por administrador (§g); emissão de código do Telegram 10/h por usuário; webhook 300/min por IP |
+| Auditoria | Falha ao gravar `audit_events` depois do efeito colateral responde `500` (a ação já ocorreu; repetir é seguro). Vínculo do Telegram não gera evento nesta task |
+| Envelope | Erros de validação trazem `error.details: [{ field, reason }]` com todos os problemas de uma vez e **sem eco de valores** (campo desconhecido aparece como `(body)`); listas trazem `pagination` |
+| Roteador | Aceita segmentos `:param` no caminho e entrega `pathParams` e `clientAddress` ao handler (o IP vai para a auditoria) |
+| Contas listadas | `GET /v1/admin/accounts` lista linhas de `users`; convidados que ainda não entraram não aparecem (só existem no Keycloak) |
+
+**Defeitos de infraestrutura achados pela integração.** (a) Com `jsonb`, o driver `bun-sql` do Drizzle grava
+objeto como *string* JSON (jsonb do tipo `string`); o repositório de auditoria faz `${payload}::jsonb`, e o
+`database-test` confere `jsonb_typeof = 'object'`. (b) O cursor de listagem perdia a precisão de
+microssegundos do `created_at` (repetia a última linha de cada página); a ordenação e o cursor usam
+`date_trunc('milliseconds', created_at)`.
+
+**Ponto de extensão (T4.4/T4.7, não implementado).** Fechar com `4403` os sockets abertos de uma conta
+bloqueada entra em `apps/api-crypto/src/admin/block-account.use-case.ts`, logo depois de `markBlocked`
+(antes de sincronizar o Keycloak): um `AccountBlockedListener` injetado em `AccountStateDependencies` recebe o
+`AccountId` e o registro `userId → sockets` fecha as conexões. A conversão `AccountId → UserId` do registro
+fica no módulo de stream, nunca no repositório admin.
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
