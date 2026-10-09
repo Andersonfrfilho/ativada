@@ -1,0 +1,9 @@
+docs
+specs
+*.md
+bun.lock
+node_modules
+dist
+coverage
+realm
+.omc
