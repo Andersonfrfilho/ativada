@@ -22,10 +22,11 @@ Cada task fecha com: `bun run typecheck` + testes da área + commit isolado + ev
 | Task | O quê | Aceite |
 |---|---|---|
 | T0.5 🧠 | Desenho de autenticação e isolamento: realm Keycloak (clientes, papéis `user`/`admin`, TOTP do admin), formato do contexto autenticado, tipo de repositório com `userId` obrigatório (D11) | Revisão `architect`; contrato negativo de exemplo escrito (vermelho) |
-| T0.6 | Keycloak no `compose.yaml`, realm versionado em `realm/`, import idempotente | `make up` sobe com login funcionando |
-| T0.7 | Middleware da API: valida JWT pela JWKS, cria `users` no primeiro acesso, rate limit por usuário | Contrato: token inválido/expirado → 401; primeiro acesso cria um usuário só |
-| T0.8 | `/v1/me`, preferências, vínculo do Telegram por código, convite pelo admin | Contrato por rota |
-| T0.9 | LGPD: exportar e apagar conta | Integração: apagar remove dados do usuário e não toca nos de outro |
+| T0.5b 🧠 | Ajustes da revisão do `architect` (APROVADO COM AJUSTES): superfície pública fechada de `@crypto/database` + lint de fronteira nas apps, contexto autenticado sem e-mail na API, `AccountId` admin, harness com listagem e comparação de 404, ADR 0001 revisado | Gates verdes; mutações: import de Drizzle e `as UserId` numa app reprovados pelo lint, `LIST_IGNORES_OWNER` reprova o harness, `createOwnerScope` em arquivo `admin*` reprovado |
+| T0.6 | Keycloak no `compose.yaml`, realm versionado em `realm/`, import idempotente. Obrigações herdadas: ADR 0001 §k "T0.6" (TOTP `HmacSHA1`, LoA, `crypto-session` confidencial, service account sem mapear `admin`, Mailpit, mesma origem) | `make up` sobe com login funcionando; service account mapeando `admin` → `403`; reuso de refresh medido |
+| T0.7 | Middleware da API: valida JWT pela JWKS, resolve `users` no acesso, rate limit por usuário. Obrigações herdadas: ADR 0001 §k "T0.7" (classificação 401/503, roteador que nega por padrão, `acr ≥ 2` no admin, `jose` 6.2.12 exata, cabeçalhos) | Contrato: token inválido/expirado → 401; erro desconhecido → 503; rota não pública sem token → 401; dois primeiros acessos simultâneos → um usuário só |
+| T0.8 | `/v1/me`, preferências, vínculo do Telegram por código, convite e bloqueio pelo admin. Obrigações herdadas: ADR 0001 §k "T0.8" | Contrato por rota, com listagem e 404 indistinguível |
+| T0.9 | LGPD: exportar e apagar conta (`202`, colunas `identity_deleted_at`/`data_purged_at`, cron que refaz os passos 2 e 3 — ADR 0001 §h) | Integração: apagar remove dados do usuário, pseudonimiza `audit_events` e não toca nos de outro |
 
 ## Fase 1 — Dados de mercado
 
@@ -58,12 +59,12 @@ Cada task fecha com: `bun run typecheck` + testes da área + commit isolado + ev
 
 | Task | O quê | Aceite |
 |---|---|---|
-| T3.1 | Migrations `strategies`, `strategy_versions`, `runs`, `signals`, `orders`, `fills`, `positions`, `equity_points` | `make migration-test` verde |
+| T3.1 | Migrations `strategies`, `strategy_versions`, `runs`, `signals`, `orders`, `fills`, `positions`, `equity_points`, com `user_id` e FKs compostas (plan.md §3, ADR 0001 §e) | `make migration-test` verde; contrato do registro de tabelas |
 | T3.2 | Use case de backtest em `worker_thread`, gravando operações e métricas | RNF01: 2 anos em `1h` < 5 s; determinismo |
 | T3.3 | Walk-forward com grade limitada, progresso e alerta de overfitting | Contrato: série sintética com overfitting conhecido dispara o alerta |
 | T3.4 | Rotas REST da §6 do plano (exceto stream), OpenAPI e Scalar | Contrato por rota + **contrato negativo entre usuários por rota** + teste de que toda rota está no OpenAPI |
 | T3.5 | Estratégia de exemplo "Placar clássico" copiada para cada usuário novo (editável, `is_example`) | Usuário novo recebe a cópia uma vez só |
-| T3.6 | Fila de backtest/walk-forward com teto por usuário | Contrato: segundo walk-forward do mesmo usuário espera; o de outro usuário roda |
+| T3.6 | Fila de backtest/walk-forward com teto por usuário; walk-forward órfão vira `failed` no boot (ADR 0001 §k) | Contrato: segundo walk-forward do mesmo usuário espera; o de outro usuário roda |
 
 ## Fase 4 — Simulação ao vivo e alertas
 
@@ -71,10 +72,10 @@ Cada task fecha com: `bun run typecheck` + testes da área + commit isolado + ev
 
 | Task | O quê | Aceite |
 |---|---|---|
-| T4.1 | Worker avalia simulações ativas no candle fechado, retomando de `last_candle_time` | Integração: reinício no meio não duplica operação |
+| T4.1 | Worker avalia simulações ativas no candle fechado, retomando de `last_candle_time`; filtra conta apagada ou bloqueada e trata FK violada na exclusão como execução encerrada (ADR 0001 §k) | Integração: reinício no meio não duplica operação |
 | T4.2 | Teste de paridade backtest × ao vivo reproduzido | Mesmas operações, uma a uma |
 | T4.3 | Sobrevivência do saldo: piso e dobro, com tempo até cada um | Contrato |
-| T4.4 | `LISTEN/NOTIFY` → WebSocket `/v1/stream`, autenticado e filtrado pelo dono | Integração: sinal chega ao dono em < 10 s; outro usuário conectado não recebe |
+| T4.4 | `LISTEN/NOTIFY` → WebSocket `/v1/stream`, autenticado e filtrado pelo dono. Obrigações herdadas: ADR 0001 §e e §k (NOTIFY só `{ runId, kind, eventId }`, `Bun.SQL` com `LISTEN` confirmado, `Origin`, `4403`, renovação no socket) | Integração: sinal chega ao dono em < 10 s; outro usuário conectado não recebe |
 | T4.5 | Alerta no Telegram para o chat vinculado do dono, com motivo, stop, alvo e acerto histórico; sem repetição por candle | Contrato com servidor HTTP falso; token e chat nunca aparecem em log |
 | T4.6 | Exportação CSV do registro | Contrato: colunas e decimais |
 
@@ -99,7 +100,7 @@ Cada task fecha com: `bun run typecheck` + testes da área + commit isolado + ev
 
 | Task | O quê | Aceite |
 |---|---|---|
-| T5.1 | App React 19 + Vite PWA, layout, tema claro/escuro, aviso permanente de simulação, login pelo Keycloak (PKCE) e sessão | Build verde; aviso presente em todas as rotas; rota sem sessão leva ao login |
+| T5.1 | App React 19 + Vite PWA, layout, tema claro/escuro, aviso permanente de simulação, login pelo Keycloak (PKCE) e sessão pelo *token handler* (proxy em `/v1`, uma renovação por vez — ADR 0001 §a) | Build verde; aviso presente em todas as rotas; rota sem sessão leva ao login |
 | T5.1b | Tela de conta: preferências, vínculo do Telegram, exportar e apagar conta | E2E |
 | T5.2 | Visão geral (referência: `docs/preview/dashboard.html`) | Smoke Playwright com dados de seed |
 | T5.3 | Backtests: criar, listar, comparar versões | E2E |
