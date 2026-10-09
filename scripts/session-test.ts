@@ -2,10 +2,10 @@
 import { createAccessTokenVerifier } from '../apps/api-crypto/src/authentication/access-token-verifier.js';
 import { createRemoteKeyResolver } from '../apps/api-crypto/src/authentication/remote-key-resolver.js';
 import { checkDiscovery, waitForRealm } from './identity-test/check-discovery.js';
-import { createCleanupStack } from './identity-test/cleanup-stack.js';
+import { createCleanupStack, runCleanupReporting } from './identity-test/cleanup-stack.js';
 import type { IdentityContext } from './identity-test/identity-context.js';
 import { readIdentityEnvironment } from './identity-test/identity-environment.js';
-import { assertCondition, IdentityTestError } from './identity-test/identity-test.error.js';
+import { assertCondition } from './identity-test/identity-test.error.js';
 import {
   checkDefenses,
   endSession,
@@ -56,15 +56,13 @@ async function main(): Promise<void> {
     cleanup: createCleanupStack(),
   };
   const api = startApi();
-  let failure: Error | undefined;
+  identity.cleanup.register('parar a API', () => api.stop());
+  let cleanupFailures: readonly string[];
   try {
     await runChecks(identity, api);
-  } catch (error: unknown) {
-    failure = error instanceof Error ? error : new IdentityTestError(String(error));
+  } finally {
+    cleanupFailures = await runCleanupReporting(identity.cleanup);
   }
-  await api.stop();
-  const cleanupFailures = await identity.cleanup.runAll();
-  if (failure !== undefined) throw failure;
   assertCondition(cleanupFailures.length === 0, `limpeza falhou: ${cleanupFailures.join('; ')}`);
   console.log('session-test: OK');
 }

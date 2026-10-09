@@ -11,7 +11,7 @@ import {
 import { measureRefreshReuse } from './identity-test/check-refresh-reuse.js';
 import { checkServiceAccountCannotTakeOverAdmin } from './identity-test/check-service-account-admin-target.js';
 import { checkServiceAccount } from './identity-test/check-service-account.js';
-import { createCleanupStack } from './identity-test/cleanup-stack.js';
+import { createCleanupStack, runCleanupReporting } from './identity-test/cleanup-stack.js';
 import type { IdentityContext } from './identity-test/identity-context.js';
 import { reportStep } from './identity-test/identity-context.js';
 import { readIdentityEnvironment } from './identity-test/identity-environment.js';
@@ -60,14 +60,12 @@ async function main(): Promise<void> {
     environment: readIdentityEnvironment(),
     cleanup: createCleanupStack(),
   };
-  let failure: Error | undefined;
+  let cleanupFailures: readonly string[];
   try {
     await runChecks(context);
-  } catch (error: unknown) {
-    failure = error instanceof Error ? error : new IdentityTestError(String(error));
+  } finally {
+    cleanupFailures = await runCleanupReporting(context.cleanup);
   }
-  const cleanupFailures = await context.cleanup.runAll();
-  if (failure !== undefined) throw failure;
   if (cleanupFailures.length > 0)
     throw new IdentityTestError(`limpeza falhou: ${cleanupFailures.join('; ')}`);
   await assertNoTestResidue(context);

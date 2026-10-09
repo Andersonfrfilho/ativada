@@ -10,10 +10,10 @@ import { INVITEE_PREFIX } from './admin-test/admin-test.constant.js';
 import { startFakeTelegramServer } from './admin-test/check-telegram.js';
 import { deleteKeycloakUsersWithPrefix } from './admin-test/keycloak-reads.js';
 import { checkDiscovery, waitForRealm } from './identity-test/check-discovery.js';
-import { createCleanupStack } from './identity-test/cleanup-stack.js';
+import { createCleanupStack, runCleanupReporting } from './identity-test/cleanup-stack.js';
 import type { IdentityContext } from './identity-test/identity-context.js';
 import { readIdentityEnvironment } from './identity-test/identity-environment.js';
-import { assertCondition, IdentityTestError } from './identity-test/identity-test.error.js';
+import { assertCondition } from './identity-test/identity-test.error.js';
 import { startApi } from './session-test/start-api.js';
 import { checkDeletionStep1 } from './lgpd-test/check-delete.js';
 import { checkExports } from './lgpd-test/check-export.js';
@@ -54,23 +54,25 @@ async function main(): Promise<void> {
     cleanup: createCleanupStack(),
   };
   const adminUrl = readDatabaseUrl();
-  const temporary = await createTemporaryDatabase(adminUrl, TEMPORARY_DATABASE_PREFIX);
-  await applyMigrations({ databaseUrl: temporary.url, migrationsFolder: MIGRATIONS_FOLDER });
-  Bun.env['DATABASE_URL'] = temporary.url;
-  const api = startApi();
-  const sql = new Bun.SQL(temporary.url);
-  let failure: Error | undefined;
+  let cleanupFailures: readonly string[];
   try {
+    const temporary = await createTemporaryDatabase(adminUrl, TEMPORARY_DATABASE_PREFIX);
+    identity.cleanup.register('apagar o banco temporário', () =>
+      dropTemporaryDatabase(adminUrl, temporary.databaseName),
+    );
+    identity.cleanup.register('apagar convidados do Keycloak', () =>
+      deleteKeycloakUsersWithPrefix(identity.environment, INVITEE_PREFIX),
+    );
+    await applyMigrations({ databaseUrl: temporary.url, migrationsFolder: MIGRATIONS_FOLDER });
+    Bun.env['DATABASE_URL'] = temporary.url;
+    const api = startApi();
+    identity.cleanup.register('parar a API', () => api.stop());
+    const sql = new Bun.SQL(temporary.url);
+    identity.cleanup.register('fechar a conexão de teste', () => sql.close());
     await runChecks({ identity, api, sql, databaseUrl: temporary.url });
-  } catch (error: unknown) {
-    failure = error instanceof Error ? error : new IdentityTestError(String(error));
+  } finally {
+    cleanupFailures = await runCleanupReporting(identity.cleanup);
   }
-  await api.stop();
-  await sql.close();
-  await dropTemporaryDatabase(adminUrl, temporary.databaseName);
-  const cleanupFailures = await identity.cleanup.runAll();
-  await deleteKeycloakUsersWithPrefix(identity.environment, INVITEE_PREFIX);
-  if (failure !== undefined) throw failure;
   assertCondition(cleanupFailures.length === 0, `limpeza falhou: ${cleanupFailures.join('; ')}`);
   console.log('lgpd-test: OK');
 }

@@ -48,6 +48,21 @@ const CHECK_COMMANDS: readonly string[] = [
   'bun run typecheck',
   'bun test',
 ];
+const TEST_TARGETS: readonly string[] = [
+  'migration-test',
+  'database-test',
+  'identity-test',
+  'session-test',
+  'admin-test',
+  'lgpd-test',
+];
+const POSTGRES_ONLY_TEST_TARGETS: readonly string[] = ['migration-test', 'database-test'];
+const INTEGRATION_SCRIPTS: readonly string[] = [
+  'scripts/identity-test.ts',
+  'scripts/session-test.ts',
+  'scripts/admin-test.ts',
+  'scripts/lgpd-test.ts',
+];
 const LOCAL_LOOPBACK_PREFIX = '127.0.0.1:';
 const PROJECT_NAME_PREFIX = '${PROJECT_NAME}-${ENV}-';
 
@@ -269,6 +284,53 @@ describe('Makefile', () => {
     );
     expect(positions.every((position) => position >= 0)).toBe(true);
     expect([...positions].sort((first, second) => first - second)).toEqual(positions);
+  });
+});
+
+describe('Makefile: alvos *-test não deixam container órfão', () => {
+  test.each([...TEST_TARGETS])('%s tears the stack down with --volumes', async (target) => {
+    const recipe = readMakeRecipe(await readRepositoryText('Makefile'), target).join('\n');
+    expect(recipe).toMatch(/\$\(MAKE\) down ENV=test DOWN_FLAGS=--volumes/);
+  });
+
+  test.each([...TEST_TARGETS])('%s traps EXIT, INT and TERM', async (target) => {
+    const recipe = readMakeRecipe(await readRepositoryText('Makefile'), target).join('\n');
+    expect(recipe).toMatch(/trap [^;]*down[^;]*' EXIT/);
+    expect(recipe).toMatch(/trap [^;]*' INT/);
+    expect(recipe).toMatch(/trap [^;]*' TERM/);
+  });
+
+  test.each([...TEST_TARGETS])('%s stays inside ENV=test', async (target) => {
+    const recipe = readMakeRecipe(await readRepositoryText('Makefile'), target).join('\n');
+    expect(recipe).toContain('envs/env.test');
+    expect(recipe).not.toMatch(/ENV=dev/);
+  });
+
+  test.each([...POSTGRES_ONLY_TEST_TARGETS])('%s starts only postgres', async (target) => {
+    const recipe = readMakeRecipe(await readRepositoryText('Makefile'), target).join('\n');
+    expect(recipe).toContain('SERVICES=postgres');
+  });
+
+  test.each([...INTEGRATION_SCRIPTS])(
+    '%s cleans up in finally, not after a catch',
+    async (path) => {
+      const source = await readRepositoryText(path);
+      expect(source).toContain('finally');
+      expect(source).not.toMatch(/let failure/);
+    },
+  );
+});
+
+describe('Makefile: o ambiente global não mascara variável faltando', () => {
+  test('check runs bun test with a minimal environment (env -i)', async () => {
+    const recipe = readMakeRecipe(await readRepositoryText('Makefile'), 'check');
+    const testLine = recipe.find((line) => line.includes('bun test')) ?? '';
+    expect(testLine).toMatch(/env -i PATH="\$\$PATH" HOME="\$\$HOME" bun test/);
+  });
+
+  test('up warns about a realm newer than the Keycloak volume without failing', async () => {
+    const recipe = readMakeRecipe(await readRepositoryText('Makefile'), 'up').join('\n');
+    expect(recipe).toContain('scripts/check-realm-staleness.ts');
   });
 });
 

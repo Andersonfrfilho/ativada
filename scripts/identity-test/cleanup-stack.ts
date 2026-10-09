@@ -26,3 +26,10 @@ export function createCleanupStack(): CleanupStack {
     },
   };
 }
+
+// A limpeza roda em finally: imprime o que falhou (sem trocar o erro original) e devolve a lista.
+export async function runCleanupReporting(cleanup: CleanupStack): Promise<readonly string[]> {
+  const failures = await cleanup.runAll();
+  for (const failure of failures) console.error(`limpeza falhou: ${failure}`);
+  return failures;
+}

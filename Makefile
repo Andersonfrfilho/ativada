@@ -21,9 +21,10 @@ config: ## Valida o ambiente, a versão do Bun e o compose
 	$(COMPOSE) config --quiet
 
 up: ## Sobe a infraestrutura e espera ficar saudável (SERVICES=postgres limita os serviços)
+	@bun run scripts/check-realm-staleness.ts
 	$(COMPOSE) up -d --wait $(SERVICES)
 
-down: ## Derruba os containers (DOWN_FLAGS=--volumes apaga os dados)
+down: ## Derruba os containers (DOWN_FLAGS=--volumes apaga os dados, inclusive o realm importado do Keycloak)
 	$(COMPOSE) down $(DOWN_FLAGS)
 
 ps: ## Mostra o estado dos containers
@@ -33,49 +34,49 @@ check: ## Gate completo: formato, lint, tipos e testes
 	bun run format:check
 	bun run lint
 	bun run typecheck
-	bun test
+	env -i PATH="$$PATH" HOME="$$HOME" bun test
 
 migration-test: ## Aplica e desfaz as migrations num Postgres de teste descartável
 	set -a; . envs/env.test; set +a; \
-	status=0; \
-	$(MAKE) up ENV=test && bun --env-file=envs/env.test run --cwd packages/database db:migration-test || status=$$?; \
-	$(MAKE) down ENV=test; \
-	exit $$status
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run --cwd packages/database db:migration-test
 
 database-test: ## Prova a resolução concorrente de usuários num Postgres de teste descartável
 	set -a; . envs/env.test; set +a; \
-	status=0; \
-	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run --cwd packages/database db:database-test || status=$$?; \
-	$(MAKE) down ENV=test; \
-	exit $$status
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run --cwd packages/database db:database-test
 
 identity-test: ## Verifica realm, permissões e reuso de refresh num Keycloak de teste descartável
 	set -a; . envs/env.test; set +a; \
-	status=0; \
-	$(MAKE) up ENV=test && bun --env-file=envs/env.test run scripts/identity-test.ts || status=$$?; \
-	$(MAKE) down ENV=test DOWN_FLAGS=--volumes; \
-	exit $$status
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test && bun --env-file=envs/env.test run scripts/identity-test.ts
 
 session-test: ## Prova as rotas de sessão do token handler contra um Keycloak de teste descartável
 	set -a; . envs/env.test; set +a; \
-	status=0; \
-	$(MAKE) up ENV=test && bun --env-file=envs/env.test run scripts/session-test.ts || status=$$?; \
-	$(MAKE) down ENV=test DOWN_FLAGS=--volumes; \
-	exit $$status
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test && bun --env-file=envs/env.test run scripts/session-test.ts
 
 admin-test: ## Prova convite, bloqueio, auditoria e Telegram contra Postgres, Keycloak e Mailpit de teste descartáveis
 	set -a; . envs/env.test; set +a; \
-	status=0; \
-	$(MAKE) up ENV=test && bun --env-file=envs/env.test run scripts/admin-test.ts || status=$$?; \
-	$(MAKE) down ENV=test DOWN_FLAGS=--volumes; \
-	exit $$status
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test && bun --env-file=envs/env.test run scripts/admin-test.ts
 
 lgpd-test: ## Prova exportar e apagar a conta (API, cron, Postgres, Keycloak e Mailpit de teste descartáveis)
 	set -a; . envs/env.test; set +a; \
-	status=0; \
-	$(MAKE) up ENV=test && bun --env-file=envs/env.test run scripts/lgpd-test.ts || status=$$?; \
-	$(MAKE) down ENV=test DOWN_FLAGS=--volumes; \
-	exit $$status
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test && bun --env-file=envs/env.test run scripts/lgpd-test.ts
 
 identity-logs: ## Segue os logs do Keycloak do ambiente atual
 	$(COMPOSE) logs -f keycloak
