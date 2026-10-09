@@ -23,6 +23,8 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'createAccountPurgeRepository',
   'createAdminAccountRepository',
   'createAuditEventRepository',
+  'createAuditRetentionRepository',
+  'createBlockedAccountRepository',
   'createProfileRepository',
   'createTelegramLinkConsumer',
   'createTelegramLinkRepository',
