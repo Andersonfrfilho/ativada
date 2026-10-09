@@ -18,6 +18,8 @@
 | Peça | Papel |
 |---|---|
 | `packages/strategy-engine` | Puro, sem I/O: indicadores, votos, regime, risco, corretora simulada, métricas, walk-forward |
+| `packages/database` | Drizzle (driver `Bun.sql`), schema, migrations com `rollback.sql` obrigatório, cliente; usado por API, worker e cron |
+| `packages/environment` | Validação Zod do ambiente (`parseEnvironment`, `runWithEnvironment`, `postgresUrlSchema`); lista todas as variáveis inválidas e nunca imprime valores |
 | `apps/cron-crypto` | One-shot agendado: backfill de candles, correção de lacunas, Fear & Greed |
 | `apps/worker-crypto` | Consome o stream de klines; no candle fechado, avalia as simulações ativas, grava e notifica |
 | `apps/api-crypto` | `Bun.serve`: REST, WebSocket para o painel, backtest e walk-forward em `worker_thread` |

@@ -11,7 +11,7 @@ Cada task fecha com: `bun run typecheck` + testes da área + commit isolado + ev
 |---|---|---|
 | T0.0 | `git init`, `.gitignore` (node_modules, `.env*`, `envs/*.local`, `.omc/`), commit inicial só com a documentação | `git log` com um commit; `git status` limpo |
 | T0.1 | Monorepo Bun com workspaces (`apps/*`, `packages/*`), `tsconfig` estrito (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`), ESLint, Prettier | `bun run typecheck` e `bun run lint` verdes |
-| T0.2 | `compose.yaml` (Postgres) com bind em 127.0.0.1, `envs/env.dev` e `env.test`, `Makefile` com `PROJECT_NAME` (`bootstrap`, `up`, `down`, `check`, `migration-test`) | `make up && make check` verdes |
+| T0.2 | `compose.yaml` (Postgres) com bind em 127.0.0.1, `envs/env.dev` e `env.test`, `Makefile` com `PROJECT_NAME` (`bootstrap`, `config`, `up`, `down`, `ps`, `check`; o alvo `migration-test` nasce na T0.3) | `make up && make check` verdes |
 | T0.3 | Drizzle + migration inicial vazia + script de rollback | `make migration-test` verde |
 | T0.4 | Schema Zod do env em cada app, falha no boot se faltar variável | Teste: boot sem variável falha com mensagem clara |
 
