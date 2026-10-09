@@ -21,6 +21,7 @@
 | `packages/database` | Drizzle (driver `Bun.sql`), schema, migrations com `rollback.sql` obrigatório, cliente; usado por API, worker e cron |
 | `packages/environment` | Validação Zod do ambiente (`parseEnvironment`, `runWithEnvironment`, `postgresUrlSchema`); lista todas as variáveis inválidas e nunca imprime valores |
 | `packages/identity-admin` | Cliente da Admin API do Keycloak (service account `crypto-api-service`): convidar, bloquear, apagar e encerrar sessões de usuário; compartilhado pela API e pelo cron, porque uma app não importa código de outra (ADR 0001 §h) |
+| `packages/market-data` | Cliente REST de klines da Binance (`fetchKlines`, `fetchKlinesRange`): resposta validada com Zod, candle aberto descartado, controle de peso (`x-mbx-used-weight-1m`), 429/418 e backoff; compartilhado por cron e worker. Base `https://data-api.binance.vision` (host só de dados de mercado públicos, sem chave nem restrição de região, indicado pela documentação da Binance); `https://api.binance.com` é a alternativa e a base é parâmetro do cliente |
 | `apps/cron-crypto` | One-shot agendado: exclusão de contas (passos 2 e 3 e remoção da linha de `users`, ADR 0001 §h; retenção de 90 dias do IP da auditoria), backfill de candles, correção de lacunas, Fear & Greed |
 | `apps/worker-crypto` | Consome o stream de klines; no candle fechado, avalia as simulações ativas, grava e notifica |
 | `apps/api-crypto` | `Bun.serve`: REST, WebSocket para o painel, backtest e walk-forward em `worker_thread` |

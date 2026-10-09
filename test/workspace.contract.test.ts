@@ -12,6 +12,7 @@ const WORKSPACE_DIRECTORIES: readonly string[] = [
   'packages/database',
   'packages/environment',
   'packages/identity-admin',
+  'packages/market-data',
 ];
 const REQUIRED_COMPILER_OPTIONS: Readonly<Record<string, boolean>> = {
   strict: true,

@@ -71,6 +71,13 @@
         "@crypto/environment": "workspace:*",
       },
     },
+    "packages/market-data": {
+      "name": "@crypto/market-data",
+      "version": "0.0.0",
+      "dependencies": {
+        "@crypto/environment": "workspace:*",
+      },
+    },
     "packages/strategy-engine": {
       "name": "@crypto/strategy-engine",
       "version": "0.0.0",
@@ -92,6 +99,8 @@
     "@crypto/frontend-crypto": ["@crypto/frontend-crypto@workspace:apps/frontend-crypto"],
 
     "@crypto/identity-admin": ["@crypto/identity-admin@workspace:packages/identity-admin"],
+
+    "@crypto/market-data": ["@crypto/market-data@workspace:packages/market-data"],
 
     "@crypto/strategy-engine": ["@crypto/strategy-engine@workspace:packages/strategy-engine"],
 
