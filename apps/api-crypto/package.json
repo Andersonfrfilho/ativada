@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@crypto/database": "workspace:*",
-    "@crypto/environment": "workspace:*"
+    "@crypto/environment": "workspace:*",
+    "jose": "6.2.12"
   }
 }
