@@ -1,0 +1,995 @@
+<title>Vela — painel do usuário</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif&display=swap">
+<style>
+/* Layout: mesa de operação — menu lateral fixo, conteúdo em faixas (meta → números → gráfico+sinal → moedas → operações) */
+:root {
+  --bg: #F2F4F8; --surface: #FFFFFF; --surface-2: #EBEEF4; --sidebar: #E7EBF3; --line: #D8DEE9;
+  --ink: #10162A; --ink-2: #47516C; --ink-3: #7A849C;
+  --accent: #2541B2; --accent-soft: #E1E7FB; --on-accent: #FFFFFF;
+  --goal: #B4690E; --goal-soft: #FCEFD9;
+  --buy: #0B8459; --buy-soft: #DBF2E8; --sell: #C0353D; --sell-soft: #FBE3E4;
+  --warn: #8A5A00; --warn-soft: #FBF0D9; --bench: #8E97AC;
+  --font-display: "Instrument Serif", Georgia, serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0B0F1C; --surface: #131A2C; --surface-2: #1A2238; --sidebar: #0F1525; --line: #262F4B;
+  --ink: #E8ECF6; --ink-2: #A8B1C8; --ink-3: #75809B;
+  --accent: #8EA3FF; --accent-soft: #1E2954; --on-accent: #0B0F1C;
+  --goal: #F0B45A; --goal-soft: #33260F;
+  --buy: #41CC94; --buy-soft: #0E2D23; --sell: #FF7D83; --sell-soft: #3A191E;
+  --warn: #F2C26B; --warn-soft: #33270F; --bench: #6F7891; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0B0F1C; --surface: #131A2C; --surface-2: #1A2238; --sidebar: #0F1525; --line: #262F4B;
+  --ink: #E8ECF6; --ink-2: #A8B1C8; --ink-3: #75809B;
+  --accent: #8EA3FF; --accent-soft: #1E2954; --on-accent: #0B0F1C;
+  --goal: #F0B45A; --goal-soft: #33260F;
+  --buy: #41CC94; --buy-soft: #0E2D23; --sell: #FF7D83; --sell-soft: #3A191E;
+  --warn: #F2C26B; --warn-soft: #33270F; --bench: #6F7891; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 15px/1.55 var(--font-body); }
+h1, h2, h3, p { margin: 0; }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.label { font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+.pos { color: var(--buy); } .neg { color: var(--sell); } .muted { color: var(--ink-3); }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+.demo-bar { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; padding: 8px 16px; background: var(--ink); color: var(--bg); font-size: 13px; }
+.demo-bar button { border: 1px solid transparent; background: transparent; color: var(--bg); padding: 4px 12px; border-radius: 6px; cursor: pointer; opacity: .75; }
+.demo-bar button[aria-pressed="true"] { background: var(--bg); color: var(--ink); opacity: 1; }
+
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo b { font: 400 26px/1 var(--font-display); }
+
+/* login */
+.login { min-height: 88vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.login-art { background: var(--sidebar); padding: 48px; display: flex; flex-direction: column; justify-content: space-between; gap: 32px; border-right: 1px solid var(--line); }
+.login-art h2 { font: 400 44px/1.05 var(--font-display); max-width: 14ch; text-wrap: balance; }
+.login-art p { color: var(--ink-2); max-width: 42ch; margin-top: 14px; }
+.login-art svg { width: 100%; max-width: 460px; height: auto; }
+.login-form-wrap { display: grid; place-items: center; padding: 40px 16px; }
+.login-card { width: 100%; max-width: 380px; display: grid; gap: 18px; }
+.login-card h1 { font: 400 32px/1.1 var(--font-display); }
+.login-card > div > p { color: var(--ink-2); font-size: 14px; margin-top: 4px; }
+.field { display: grid; gap: 6px; }
+.field label { font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.field input, .field select { height: 42px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.field input:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+.btn { height: 42px; padding: 0 18px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.form-error { color: var(--sell); font-size: 13px; min-height: 1em; }
+.login-foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+.login-foot a { color: var(--accent); text-decoration: none; }
+.hint { display: flex; gap: 8px; font-size: 12.5px; color: var(--ink-3); border-top: 1px solid var(--line); padding-top: 14px; }
+@media (max-width: 820px) { .login { grid-template-columns: minmax(0, 1fr); } .login-art { display: none; } }
+
+/* shell */
+.shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100vh; }
+.sidebar { background: var(--sidebar); border-right: 1px solid var(--line); padding: 22px 14px; display: flex; flex-direction: column; gap: 26px; position: sticky; top: 0; height: 100vh; }
+.side-nav { display: grid; gap: 2px; }
+.side-nav button { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; color: var(--ink-2); cursor: pointer; font-size: 14px; }
+.side-nav button:hover { background: var(--surface-2); }
+.side-nav button[aria-current="page"] { background: var(--surface); color: var(--ink); font-weight: 500; box-shadow: inset 0 0 0 1px var(--line); }
+.side-nav button:focus-visible { outline: 2px solid var(--accent); }
+.side-nav svg { width: 18px; height: 18px; flex: none; }
+.side-user { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px; border-top: 1px solid var(--line); font-size: 14px; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-weight: 600; font-size: 13px; flex: none; }
+.side-user small { display: block; color: var(--ink-3); font-size: 12px; line-height: 1.2; }
+.main { min-width: 0; }
+.notice { background: var(--warn-soft); color: var(--warn); font-size: 13px; padding: 8px 28px; display: flex; gap: 8px; align-items: center; }
+.page { max-width: 1160px; padding-inline: 28px; padding-block: 28px 56px; display: grid; gap: 22px; }
+@media (max-width: 900px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; padding: 12px 16px; gap: 12px; }
+  .side-nav { display: flex; overflow-x: auto; flex-basis: 100%; order: 3; }
+  .side-nav button { white-space: nowrap; }
+  .side-user { margin: 0 0 0 auto; border: 0; padding: 0; }
+  .side-user .user-text { display: none; }
+  .page { padding-inline: 16px; }
+  .notice { padding-inline: 16px; }
+}
+
+.page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.page-head h1 { font: 400 36px/1.08 var(--font-display); text-wrap: balance; }
+.page-head p { color: var(--ink-2); margin-top: 4px; max-width: 70ch; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; min-width: 0; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.card h2 { font-size: 15px; font-weight: 600; }
+
+/* meta ativa */
+.goal { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px 22px 28px; position: relative; overflow: hidden; }
+.goal::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--goal); }
+.goal-title { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.pill { font: 600 11.5px/1 var(--font-body); letter-spacing: .07em; text-transform: uppercase; padding: 6px 9px; border-radius: 999px; }
+.pill.goal-pill { background: var(--goal-soft); color: var(--goal); }
+.pill.ok { background: var(--buy-soft); color: var(--buy); } .pill.late { background: var(--sell-soft); color: var(--sell); }
+.goal h2 { font: 400 30px/1.1 var(--font-display); margin-top: 10px; }
+.goal-sub { color: var(--ink-2); margin-top: 6px; font-size: 14px; }
+.track { position: relative; height: 12px; border-radius: 6px; background: var(--surface-2); margin-top: 22px; }
+.track-fill { position: absolute; inset: 0 auto 0 0; border-radius: 6px; background: var(--goal); }
+.track-time { position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--ink); }
+.track-legend { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--ink-3); margin-top: 8px; }
+.goal-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); border-radius: 10px; overflow: hidden; align-self: start; }
+.goal-stats div { background: var(--surface); padding: 12px 14px; display: grid; gap: 2px; }
+.goal-stats .num { font-size: 18px; font-weight: 500; }
+@media (max-width: 760px) { .goal { grid-template-columns: minmax(0, 1fr); } }
+
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.metric { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; min-width: 0; }
+.metric .value { font: 500 22px/1.2 var(--font-data); font-variant-numeric: tabular-nums; }
+.metric .sub { font-size: 12.5px; color: var(--ink-3); }
+
+.grid-main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 22px; align-items: start; }
+@media (max-width: 1040px) { .grid-main { grid-template-columns: minmax(0, 1fr); } }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2); }
+.legend i { display: inline-block; width: 16px; vertical-align: middle; margin-right: 6px; border-top: 2px solid var(--accent); }
+.legend i.bench { border-top: 2px dashed var(--bench); }
+.mk { display: inline-block; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; margin-right: 6px; vertical-align: middle; }
+.mk.b { border-bottom: 8px solid var(--buy); } .mk.s { border-top: 8px solid var(--sell); }
+svg.chart { width: 100%; height: auto; display: block; }
+svg.chart text { font: 11px var(--font-data); fill: var(--ink-3); }
+
+.signal { display: grid; gap: 14px; }
+.badge { font: 600 12px/1 var(--font-body); letter-spacing: .08em; padding: 7px 10px; border-radius: 6px; }
+.badge.buy { background: var(--buy-soft); color: var(--buy); } .badge.sell { background: var(--sell-soft); color: var(--sell); }
+.reasons { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; font-size: 13.5px; }
+.reasons li { padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.reasons li:last-child { border: 0; padding: 0; }
+.levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.levels div { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.levels .num { font-size: 13px; }
+.hit { font-size: 13px; color: var(--ink-2); border-left: 3px solid var(--accent); padding-left: 10px; }
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 620px; }
+th { text-align: left; font-weight: 500; color: var(--ink-3); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; padding: 0 10px 10px; border-bottom: 1px solid var(--line); }
+td { padding: 11px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+td.r, th.r { text-align: right; }
+tr:last-child td { border-bottom: 0; }
+.coin { display: flex; align-items: center; gap: 10px; }
+.coin-mark { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font: 600 10.5px var(--font-data); background: var(--surface-2); color: var(--ink-2); flex: none; }
+.coin small { display: block; color: var(--ink-3); font-size: 12px; }
+.state { font-size: 12px; font-weight: 600; letter-spacing: .03em; padding: 4px 8px; border-radius: 6px; white-space: nowrap; display: inline-block; }
+.state.in { background: var(--buy-soft); color: var(--buy); }
+.state.wait { background: var(--surface-2); color: var(--ink-2); }
+.state.near { background: var(--goal-soft); color: var(--goal); }
+.trigger { font-size: 13px; color: var(--ink-2); }
+.side { font-weight: 600; font-size: 12px; letter-spacing: .05em; }
+
+/* nova meta */
+.goal-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 14px; align-items: end; }
+@media (max-width: 900px) { .goal-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } .goal-form .btn { grid-column: 1 / -1; } }
+.input-suffix { position: relative; }
+.input-suffix input { width: 100%; padding-right: 34px; }
+.input-suffix span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-3); font-size: 14px; pointer-events: none; }
+.sentence { font: 400 26px/1.3 var(--font-display); color: var(--ink-2); text-wrap: balance; }
+.sentence b { color: var(--ink); font-weight: 400; border-bottom: 2px solid var(--goal); }
+.results { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; }
+.result { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 14px; min-width: 0; align-content: start; }
+.result.top { border-color: var(--goal); box-shadow: inset 0 0 0 1px var(--goal); }
+.result-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.rank { font: 400 15px var(--font-display); color: var(--ink-3); }
+.big { font: 500 40px/1 var(--font-data); font-variant-numeric: tabular-nums; }
+.compare { display: grid; gap: 6px; font-size: 12.5px; color: var(--ink-2); }
+.bar { height: 8px; border-radius: 4px; background: var(--surface-2); position: relative; overflow: hidden; }
+.bar span { position: absolute; inset: 0 auto 0 0; border-radius: 4px; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; font-size: 12px; color: var(--ink-3); }
+.facts div { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
+.facts .num { display: block; font-size: 15px; color: var(--ink); }
+.now { font-size: 13.5px; border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 6px; justify-items: start; }
+.now-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; }
+.plan { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; width: 100%; }
+.plan li { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 10px; align-items: start; font-size: 13.5px; }
+.plan b { font-weight: 600; }
+.plan .num { margin-left: 4px; }
+.plan small { display: block; color: var(--ink-3); font-size: 12.5px; line-height: 1.4; }
+.plan-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; }
+.plan-dot.buy { background: var(--accent); } .plan-dot.target { background: var(--buy); } .plan-dot.stop { background: var(--sell); }
+.plan-dot.signal { background: transparent; box-shadow: inset 0 0 0 2px var(--ink-3); } .plan-dot.deadline { background: var(--goal); border-radius: 2px; }
+.plan-chart { width: 100%; height: auto; display: block; }
+.plan-chart text { font: 10.5px var(--font-data); }
+.plan-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: center; }
+@media (max-width: 760px) { .plan-grid { grid-template-columns: minmax(0, 1fr); } }
+.plan-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bell { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; color: var(--ink-2); white-space: nowrap; }
+.bell:hover { border-color: var(--accent); color: var(--accent); }
+span.bell.on { cursor: default; background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.kind { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: var(--surface-2); color: var(--ink-2); }
+.kind.buy { background: var(--accent-soft); color: var(--accent); } .kind.target { background: var(--buy-soft); color: var(--buy); } .kind.stop { background: var(--sell-soft); color: var(--sell); }
+.inline-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 12px; align-items: end; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.inline-form .field input, .inline-form .field select { height: 38px; }
+.inline-form .btn { height: 38px; }
+@media (max-width: 700px) { .inline-form { grid-template-columns: minmax(0, 1fr); } }
+.switch { position: relative; display: inline-block; width: 34px; height: 20px; vertical-align: middle; }
+.switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.switch span { position: absolute; inset: 0; border-radius: 10px; background: var(--line); pointer-events: none; }
+.switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); transition: transform .15s; }
+.switch input:checked + span { background: var(--accent); }
+.switch input:checked + span::after { transform: translateX(14px); }
+.switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.icon-btn { border: 0; background: transparent; font-size: 18px; line-height: 1; padding: 2px 6px; cursor: pointer; color: var(--ink-3); vertical-align: middle; }
+.icon-btn:hover { color: var(--sell); }
+.rule { font-size: 12.5px; }
+.cell-stack { display: grid; gap: 4px; justify-items: start; }
+.quick { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.quick-item { all: unset; box-sizing: border-box; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; cursor: pointer; }
+.quick-item:hover { border-color: var(--accent); }
+.quick-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.quick-item .num { font-size: 16px; font-weight: 500; }
+.prices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; }
+.prices div { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; font-size: 12px; color: var(--ink-3); display: grid; grid-template-columns: auto 1fr; column-gap: 6px; align-items: center; }
+.prices .plan-dot { margin: 0; }
+.prices .num { grid-column: 1 / -1; font-size: 14px; color: var(--ink); }
+.more { width: 100%; }
+.more summary { cursor: pointer; font-size: 13px; color: var(--accent); padding: 4px 0; }
+.more[open] summary { margin-bottom: 10px; }
+.more .plan-chart { margin-bottom: 12px; }
+.caveat { font-size: 13px; color: var(--ink-2); background: var(--surface-2); border-radius: 10px; padding: 12px 14px; }
+
+.site-footer { border-top: 1px solid var(--line); padding: 16px; display: flex; gap: 10px; align-items: center; justify-content: center; font-size: 13px; color: var(--ink-3); background: var(--bg); }
+.site-footer img { object-fit: contain; }
+.site-footer a { color: var(--ink-2); }
+@media (prefers-reduced-motion: no-preference) { .track-fill, .bar span { transition: width .5s ease; } .side-nav button, .btn { transition: background .15s; } }
+</style>
+
+<div class="demo-bar" role="group" aria-label="Telas do protótipo">
+  <span>Protótipo com dados fictícios</span>
+  <button type="button" data-view="login" aria-pressed="false">Login</button>
+  <button type="button" data-view="dashboard" aria-pressed="true">Painel</button>
+  <button type="button" data-view="goal" aria-pressed="false">Nova meta</button>
+</div>
+
+<section id="view-login" class="login" hidden>
+  <div class="login-art">
+    <div class="logo">
+      <svg width="26" height="26" viewBox="0 0 28 28" aria-hidden="true"><rect x="6" y="9" width="5" height="12" rx="1" fill="var(--sell)"/><line x1="8.5" y1="4" x2="8.5" y2="25" stroke="var(--sell)" stroke-width="1.5"/><rect x="17" y="6" width="5" height="11" rx="1" fill="var(--buy)"/><line x1="19.5" y1="2" x2="19.5" y2="22" stroke="var(--buy)" stroke-width="1.5"/></svg>
+      <b>Vela</b>
+    </div>
+    <div>
+      <h2>Teste a estratégia antes de arriscar o dinheiro.</h2>
+      <p>Defina uma meta, veja quantas vezes cada estratégia chegou lá no histórico e acompanhe uma carteira fictícia com preço real.</p>
+    </div>
+    <svg viewBox="0 0 460 120" aria-hidden="true" id="login-candles"></svg>
+  </div>
+  <div class="login-form-wrap">
+    <form class="login-card" id="login-form" novalidate>
+      <div><h1>Entre na sua conta</h1><p>Suas metas, estratégias e alertas ficam só com você.</p></div>
+      <div class="field"><label for="login-email">E-mail</label><input id="login-email" type="email" autocomplete="username" placeholder="marina@exemplo.com.br"></div>
+      <div class="field"><label for="login-password">Senha</label><input id="login-password" type="password" autocomplete="current-password"></div>
+      <div class="form-error" id="login-error" role="alert"></div>
+      <button class="btn btn-primary" type="submit">Entrar</button>
+      <div class="login-foot"><a href="#view-login">Esqueci a senha</a><span class="muted">Acesso por convite</span></div>
+      <div class="hint"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="flex:none;margin-top:2px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Depois da senha, pedimos o código do seu app autenticador.</span></div>
+    </form>
+  </div>
+</section>
+
+<div class="shell" id="view-app">
+  <aside class="sidebar">
+    <div class="logo">
+      <svg width="24" height="24" viewBox="0 0 28 28" aria-hidden="true"><rect x="6" y="9" width="5" height="12" rx="1" fill="var(--sell)"/><line x1="8.5" y1="4" x2="8.5" y2="25" stroke="var(--sell)" stroke-width="1.5"/><rect x="17" y="6" width="5" height="11" rx="1" fill="var(--buy)"/><line x1="19.5" y1="2" x2="19.5" y2="22" stroke="var(--buy)" stroke-width="1.5"/></svg>
+      <b style="font-size:24px">Vela</b>
+    </div>
+    <nav class="side-nav" aria-label="Principal">
+      <button type="button" data-view="dashboard" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg>Painel</button>
+      <button type="button" data-view="goal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Nova meta</button>
+      <button type="button" data-view="assets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M16 15h2"/></svg>Seus ativos</button>
+      <button type="button" data-view="coins"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.5A6 6 0 1 1 9.5 15.5"/></svg>Moedas</button>
+      <button type="button" data-view="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/></svg>Alertas</button>
+      <button type="button" data-view="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>Histórico</button>
+    </nav>
+    <div class="side-user"><div class="avatar" aria-hidden="true">MA</div><div class="user-text">Marina Alves<small>Conta pessoal</small></div></div>
+  </aside>
+
+  <div class="main">
+    <div class="notice" role="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="flex:none"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Simulação com dinheiro fictício. Sinais e metas vêm de regras testadas no histórico e não são recomendação de investimento.</div>
+
+    <main class="page" id="view-dashboard">
+      <div class="page-head">
+        <div><h1>Boa tarde, Marina</h1><p>Sua carteira fictícia acompanha o preço real. Período do gráfico desde <span id="dash-start">—</span>.</p></div>
+        <button class="btn" type="button" data-view="goal">Nova meta</button>
+      </div>
+
+      <section class="goal" aria-labelledby="goal-title">
+        <div>
+          <div class="goal-title"><span class="pill goal-pill">Meta ativa</span><span class="pill" id="goal-pace">—</span></div>
+          <h2 id="goal-title">—</h2>
+          <p class="goal-sub" id="goal-sub">—</p>
+          <div class="track" aria-hidden="true"><div class="track-fill" id="goal-fill"></div><div class="track-time" id="goal-time"></div></div>
+          <div class="track-legend"><span id="goal-progress-text">—</span><span>marca preta: tempo decorrido</span></div>
+        </div>
+        <div class="goal-stats">
+          <div><span class="label">Resultado</span><span class="num" id="goal-result">—</span></div>
+          <div><span class="label">Falta</span><span class="num" id="goal-missing">—</span></div>
+          <div><span class="label">Dias restantes</span><span class="num" id="goal-days">—</span></div>
+          <div><span class="label">Chegou lá no histórico</span><span class="num" id="goal-history">—</span></div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="plan-title">
+        <div class="card-head"><h2 id="plan-title">Onde comprar e onde vender</h2><span class="label" id="plan-pair">—</span></div>
+        <div class="plan-grid">
+          <div id="plan-chart"></div>
+          <div id="plan-list"></div>
+        </div>
+        <p class="muted" style="font-size:12.5px;margin-top:12px">Os gatilhos são conferidos no fechamento de cada dia e a ordem simulada sai na abertura seguinte. Você recebe o alerta no painel e no Telegram.</p>
+      </section>
+      <section class="quick" aria-label="Atalhos">
+        <button type="button" class="quick-item" data-view="assets"><span class="label">Seus ativos</span><span class="num" id="quick-assets">—</span></button>
+        <button type="button" class="quick-item" data-view="alerts"><span class="label">Alertas ligados</span><span class="num" id="quick-alerts">—</span></button>
+        <button type="button" class="quick-item" data-view="coins"><span class="label">Perto de comprar</span><span class="num" id="quick-coins">—</span></button>
+        <button type="button" class="quick-item" data-view="history"><span class="label">Simulação em 90 dias</span><span class="num" id="quick-history">—</span></button>
+      </section>
+
+
+
+
+
+
+    </main>
+
+    <main class="page" id="view-goal" hidden>
+      <div class="page-head">
+        <div><h1>Nova meta</h1><p>Diga quanto quer ganhar e em quanto tempo. Testamos cada estratégia em cada moeda, em todas as janelas desse tamanho dos últimos 2 anos.</p></div>
+      </div>
+      <form class="card" id="goal-form" novalidate>
+        <div class="goal-form">
+          <div class="field"><label for="goal-target">Quero ganhar</label><div class="input-suffix"><input id="goal-target" type="number" min="0.5" max="50" step="0.5" value="3" inputmode="decimal"><span>%</span></div></div>
+          <div class="field"><label for="goal-horizon">Em até</label><select id="goal-horizon"><option value="7">7 dias</option><option value="14">14 dias</option><option value="30" selected>30 dias</option><option value="60">60 dias</option><option value="90">90 dias</option></select></div>
+          <div class="field"><label for="goal-loss">Perda máxima aceitável</label><div class="input-suffix"><input id="goal-loss" type="number" min="1" max="50" step="1" value="5" inputmode="decimal"><span>%</span></div></div>
+          <div class="field"><label for="goal-amount">Valor fictício</label><div class="input-suffix"><input id="goal-amount" type="number" min="100" step="100" value="10000" inputmode="numeric" style="padding-right:42px"><span>R$</span></div></div>
+          <button class="btn btn-primary" type="submit">Buscar estratégias</button>
+        </div>
+        <div class="form-error" id="goal-error" role="alert" style="margin-top:10px"></div>
+      </form>
+      <p class="sentence" id="goal-sentence">—</p>
+      <div class="results" id="goal-results"></div>
+      <p class="caveat"><b>Como ler:</b> "chegou à meta" é a fração das janelas do histórico em que a estratégia atingiu o ganho dentro do prazo sem passar da perda máxima. É frequência no passado, não garantia. Uma meta maior no mesmo prazo exige mais risco e aparece como mais janelas paradas no stop.</p>
+    </main>
+
+    <main class="page" id="view-assets" hidden>
+      <div class="page-head"><div><h1>Seus ativos</h1><p>As moedas que você tem de verdade, com o que a regra diz hoje e onde vender.</p></div></div>
+      <section class="card" aria-labelledby="assets-title">
+        <div class="card-head"><h2 id="assets-title">Carteira</h2><span class="label" id="assets-total">—</span></div>
+        <p class="muted" style="font-size:13px;margin-bottom:12px">Moedas que você tem de verdade, digitadas por você. Alvo e stop são calculados sobre o seu preço médio; a coluna Regra mostra o que a estratégia <span id="assets-strategy">—</span> diria hoje para cada moeda.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Moeda</th><th class="r">Quantidade</th><th class="r">Preço médio</th><th class="r">Agora</th><th class="r">Valor</th><th class="r">Resultado</th><th>Regra</th><th>Vender no alvo (+10%)</th><th>Stop (−8%)</th></tr></thead>
+          <tbody id="assets-body"></tbody>
+        </table></div>
+        <form class="inline-form" id="asset-form" novalidate>
+          <div class="field"><label for="asset-symbol">Moeda</label><select id="asset-symbol"></select></div>
+          <div class="field"><label for="asset-quantity">Quantidade</label><input id="asset-quantity" type="number" step="any" min="0" placeholder="0,5" inputmode="decimal"></div>
+          <div class="field"><label for="asset-price">Preço médio (US$)</label><input id="asset-price" type="number" step="any" min="0" placeholder="3200" inputmode="decimal"></div>
+          <button class="btn" type="submit">Adicionar ativo</button>
+        </form>
+        <div class="form-error" id="asset-error" role="alert"></div>
+      </section>
+    </main>
+
+    <main class="page" id="view-coins" hidden>
+      <div class="page-head"><div><h1>Moedas</h1><p>Situação de cada moeda na sua estratégia e o próximo gatilho de compra ou venda.</p></div></div>
+      <section class="card" aria-labelledby="watch-title">
+        <div class="card-head"><h2 id="watch-title">Moedas e momentos de compra e venda</h2><span class="label" id="watch-strategy">—</span></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Moeda</th><th class="r">Preço (US$)</th><th class="r">30 dias</th><th>Tendência</th><th>Situação</th><th>Próximo gatilho</th></tr></thead>
+          <tbody id="watchlist"></tbody>
+        </table></div>
+      </section>
+    </main>
+
+    <main class="page" id="view-alerts" hidden>
+      <div class="page-head"><div><h1>Alertas de preço</h1><p>Avisamos no painel e no Telegram quando o preço cruzar o valor.</p></div></div>
+      <section class="card" aria-labelledby="alerts-title">
+        <div class="card-head"><h2 id="alerts-title">Seus alertas</h2><span class="label" id="alerts-count">—</span></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Moeda</th><th>Tipo</th><th>Quando</th><th class="r">Valor</th><th class="r">Distância</th><th>Canais</th><th class="r">Ligado</th></tr></thead>
+          <tbody id="alerts-body"></tbody>
+        </table></div>
+        <form class="inline-form" id="alert-form" novalidate>
+          <div class="field"><label for="alert-symbol">Moeda</label><select id="alert-symbol"></select></div>
+          <div class="field"><label for="alert-direction">Quando</label><select id="alert-direction"><option value="above">Subir acima de</option><option value="below">Cair abaixo de</option></select></div>
+          <div class="field"><label for="alert-price">Valor (US$)</label><input id="alert-price" type="number" step="any" min="0" inputmode="decimal"></div>
+          <button class="btn" type="submit">Criar alerta</button>
+        </form>
+        <div class="form-error" id="alert-error" role="alert"></div>
+        <p class="muted" style="font-size:12.5px;margin-top:6px">Alerta de preço olha o preço a cada negociação, não espera o fechamento do dia. Dispara uma vez e fica desligado até você religar.</p>
+      </section>
+    </main>
+
+    <main class="page" id="view-history" hidden>
+      <div class="page-head"><div><h1>Histórico da simulação</h1><p>Como a sua estratégia se saiu nos últimos 90 dias, com dinheiro fictício.</p></div></div>
+      <section class="metrics" aria-label="Resumo dos últimos 90 dias">
+        <div class="metric"><span class="label">Saldo fictício</span><span class="value" id="m-equity">—</span><span class="sub" id="m-equity-sub">—</span></div>
+        <div class="metric"><span class="label">Comprar e segurar</span><span class="value" id="m-bench">—</span><span class="sub" id="m-bench-sub">—</span></div>
+        <div class="metric"><span class="label">Pior queda</span><span class="value neg" id="m-dd">—</span><span class="sub">do pico ao fundo</span></div>
+        <div class="metric"><span class="label">Operações</span><span class="value" id="m-trades">—</span><span class="sub" id="m-trades-sub">—</span></div>
+      </section>
+      <div class="grid-main">
+        <section class="card" aria-labelledby="chart-title">
+          <div class="card-head">
+            <h2 id="chart-title">Saldo nos últimos 90 dias</h2>
+            <div class="legend"><span><i></i>Sua estratégia</span><span><i class="bench"></i>Comprar e segurar</span><span><span class="mk b"></span>Compra</span><span><span class="mk s"></span>Venda</span></div>
+          </div>
+          <svg class="chart" id="chart" viewBox="0 0 720 300" role="img" aria-label="Saldo simulado comparado a comprar e segurar, com marcas de compra e venda"></svg>
+        </section>
+        <aside class="card signal" aria-labelledby="signal-title">
+          <div class="card-head" style="margin:0"><h2 id="signal-title">Último sinal</h2><span class="label" id="signal-time">—</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span class="badge" id="signal-badge">—</span><span class="num" id="signal-pair" style="font-size:15px">—</span></div>
+          <ul class="reasons" id="signal-reasons"></ul>
+          <div class="levels">
+            <div><span class="label">Preço</span><div class="num" id="lv-price">—</div></div>
+            <div><span class="label">Stop</span><div class="num neg" id="lv-stop">—</div></div>
+            <div><span class="label">Alvo</span><div class="num pos" id="lv-target">—</div></div>
+          </div>
+          <p class="hit" id="signal-hit">—</p>
+        </aside>
+      </div>
+      <section class="card" aria-labelledby="trades-title">
+        <div class="card-head"><h2 id="trades-title">Operações simuladas</h2><span class="label">taxa e slippage descontados</span></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Data</th><th>Lado</th><th class="r">Preço (US$)</th><th class="r">Resultado</th><th class="r">Saldo</th></tr></thead>
+          <tbody id="trades"></tbody>
+        </table></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <img alt="" aria-hidden="true" src="data:image/png;base64,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" width="22" height="22">
+  <span>© <span id="footer-year">2026</span> <a href="https://adatechnology.com.br" target="_blank" rel="noreferrer">Ada Technology</a> — Vela</span>
+</footer>
+
+<script>
+(function () {
+  const DAYS = 730, FEE = 0.0015, TODAY = Date.UTC(2026, 9, 9);
+  const COINS = [
+    { symbol: 'BTC', name: 'Bitcoin', start: 64000, seed: 31, vol: 0.026 },
+    { symbol: 'ETH', name: 'Ethereum', start: 3100, seed: 39, vol: 0.034 },
+    { symbol: 'SOL', name: 'Solana', start: 140, seed: 37, vol: 0.045 },
+    { symbol: 'BNB', name: 'BNB', start: 560, seed: 2, vol: 0.028 },
+    { symbol: 'XRP', name: 'XRP', start: 0.62, seed: 48, vol: 0.040 },
+  ];
+  const STRATEGIES = [
+    { id: 'classic', name: 'Placar clássico', short: 'Tendência por médias 9 × 21 com filtro de RSI' },
+    { id: 'breakout', name: 'Rompimento 20 dias', short: 'Compra na máxima de 20 dias, vende na mínima de 10' },
+    { id: 'reversion', name: 'Reversão RSI', short: 'Compra com RSI abaixo de 35, vende acima de 55' },
+    { id: 'hold', name: 'Comprar e segurar', short: 'A régua mínima: compra no início e segura' },
+  ];
+
+  function mulberry32(seed) { return function () { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  function ema(series, period) { const k = 2 / (period + 1); const out = []; series.forEach((v, i) => out.push(i === 0 ? v : v * k + out[i - 1] * (1 - k))); return out; }
+  function rsi(series, period) {
+    const values = new Array(series.length).fill(50), gains = [0], losses = [0]; let gain = 0, loss = 0;
+    for (let i = 1; i < series.length; i++) {
+      const change = series[i] - series[i - 1];
+      const up = Math.max(change, 0), down = Math.max(-change, 0);
+      if (i <= period) { gain += up / period; loss += down / period; } else { gain = (gain * (period - 1) + up) / period; loss = (loss * (period - 1) + down) / period; }
+      gains.push(gain); losses.push(loss);
+      if (i >= period) values[i] = loss === 0 ? 100 : 100 - 100 / (1 + gain / loss);
+    }
+    return { values, gains, losses };
+  }
+  function windowExtreme(series, day, length, pick) { let value = series[day - 1]; for (let i = day - length; i < day; i++) value = pick(value, series[i]); return value; }
+
+  COINS.forEach((coin) => {
+    const random = mulberry32(coin.seed); const closes = []; let price = coin.start, drift = 0;
+    for (let day = 0; day < DAYS; day++) {
+      if (day % 45 === 0) drift = (random() - 0.47) * 0.006;
+      price *= 1 + drift + (random() - 0.5) * 2 * coin.vol;
+      closes.push(price);
+    }
+    const strength = rsi(closes, 14);
+    coin.closes = closes; coin.fast = ema(closes, 9); coin.slow = ema(closes, 21);
+    coin.rsi = strength.values; coin.avgGain = strength.gains; coin.avgLoss = strength.losses;
+  });
+
+  function decide(strategyId, coin, day, holding) {
+    if (strategyId === 'hold') return holding ? null : 'buy';
+    if (day < 21) return null;
+    if (strategyId === 'classic') {
+      if (!holding && coin.fast[day] > coin.slow[day] && coin.rsi[day] < 70) return 'buy';
+      if (holding && coin.fast[day] < coin.slow[day]) return 'sell';
+    }
+    if (strategyId === 'breakout') {
+      if (!holding && coin.closes[day] > windowExtreme(coin.closes, day, 20, Math.max)) return 'buy';
+      if (holding && coin.closes[day] < windowExtreme(coin.closes, day, 10, Math.min)) return 'sell';
+    }
+    if (strategyId === 'reversion') {
+      if (!holding && coin.rsi[day] < 35) return 'buy';
+      if (holding && coin.rsi[day] > 55) return 'sell';
+    }
+    return null;
+  }
+
+  function run({ strategyId, coin, start, length, target, maxLoss }) {
+    let cash = 1, units = 0, pending = strategyId === 'hold' ? 'buy' : null, peak = 1, worst = 0, entry = 0;
+    const equity = [], trades = [];
+    for (let day = start; day < start + length; day++) {
+      const price = coin.closes[day];
+      if (pending === 'buy' && units === 0) { units = cash * (1 - FEE) / price; entry = cash; cash = 0; trades.push({ day, side: 'buy', price }); }
+      else if (pending === 'sell' && units > 0) { cash = units * price * (1 - FEE); trades.push({ day, side: 'sell', price, result: cash / entry - 1 }); units = 0; }
+      pending = null;
+      const value = cash + units * price; equity.push(value);
+      peak = Math.max(peak, value); worst = Math.min(worst, value / peak - 1);
+      if (target !== undefined && value >= 1 + target) return { outcome: 'hit', days: day - start + 1, final: value, worst, equity, trades, holding: units > 0 };
+      if (maxLoss !== undefined && value <= 1 - maxLoss) return { outcome: 'stop', days: day - start + 1, final: value, worst, equity, trades, holding: units > 0 };
+      pending = decide(strategyId, coin, day, units > 0);
+    }
+    return { outcome: 'none', days: length, final: equity[equity.length - 1], worst, equity, trades, holding: units > 0 };
+  }
+
+  function evaluate(strategyId, coin, target, horizon, maxLoss) {
+    let windows = 0, hits = 0, stops = 0; const hitDays = [];
+    for (let start = 30; start + horizon < DAYS; start += 2) {
+      const result = run({ strategyId, coin, start, length: horizon, target, maxLoss });
+      windows++;
+      if (result.outcome === 'hit') { hits++; hitDays.push(result.days); }
+      if (result.outcome === 'stop') stops++;
+    }
+    hitDays.sort((a, b) => a - b);
+    return { hitRate: hits / windows, stopRate: stops / windows, medianDays: hitDays.length ? hitDays[Math.floor(hitDays.length / 2)] : undefined, windows };
+  }
+
+  const money = (v) => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+  const usd = (v) => v.toLocaleString('pt-BR', v < 10 ? { minimumFractionDigits: 3, maximumFractionDigits: 3 } : { maximumFractionDigits: v < 1000 ? 2 : 0 });
+  const pct = (v, digits = 1) => (v >= 0 ? '+' : '−') + Math.abs(v * 100).toLocaleString('pt-BR', { minimumFractionDigits: digits, maximumFractionDigits: digits }) + '%';
+  const plainPct = (v) => Math.abs(v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
+  const share = (v) => Math.round(v * 100) + '%';
+  const dateOf = (day) => new Date(TODAY - (DAYS - 1 - day) * 86400000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+  const byId = (id) => document.getElementById(id);
+  const setText = (id, text) => { byId(id).textContent = text; };
+  const strategyOf = (id) => STRATEGIES.find((s) => s.id === id);
+  const ns = 'http://www.w3.org/2000/svg';
+  function svgAdd(svg, tag, attributes) { const node = document.createElementNS(ns, tag); for (const key in attributes) node.setAttribute(key, attributes[key]); svg.appendChild(node); return node; }
+
+  function triggerFor(strategyId, coin, holding) {
+    const last = DAYS - 1, price = coin.closes[last];
+    if (strategyId === 'classic') {
+      const gap = coin.fast[last] / coin.slow[last] - 1;
+      if (holding) return { text: `Vende se a média 9 cair abaixo da 21 (folga de ${plainPct(gap)})`, distance: 1 };
+      return gap < 0 ? { text: `Compra quando a média 9 passar a 21 (falta ${plainPct(gap)})`, distance: -gap } : { text: `Médias a favor; compra quando o RSI cair de ${Math.round(coin.rsi[last])} para menos de 70`, distance: 0.005 };
+    }
+    if (strategyId === 'breakout') {
+      if (holding) { const low = windowExtreme(coin.closes, DAYS, 10, Math.min); return { text: `Vende abaixo de US$ ${usd(low)} (${plainPct(low / price - 1)} abaixo)`, distance: 1 }; }
+      const high = windowExtreme(coin.closes, DAYS, 20, Math.max); return { text: `Compra acima de US$ ${usd(high)} (${plainPct(high / price - 1)} acima)`, distance: high / price - 1 };
+    }
+    if (strategyId === 'reversion') {
+      const value = Math.round(coin.rsi[last]);
+      return holding ? { text: `Vende com RSI acima de 55 (agora ${value})`, distance: 1 } : { text: `Compra com RSI abaixo de 35 (agora ${value})`, distance: Math.max(0, value - 35) / 100 };
+    }
+    return { text: 'Segura até o fim do prazo', distance: 1 };
+  }
+
+  const futureDate = (daysAhead) => new Date(TODAY + daysAhead * 86400000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+
+  function buyPointFor(strategyId, coin) {
+    const last = DAYS - 1, price = coin.closes[last];
+    if (strategyId === 'classic') {
+      const fastWeight = 2 / 10, slowWeight = 2 / 22;
+      const cross = ((1 - slowWeight) * coin.slow[last] - (1 - fastWeight) * coin.fast[last]) / (fastWeight - slowWeight);
+      const aboveCross = coin.fast[last] > coin.slow[last];
+      return aboveCross
+        ? { price, condition: `Médias já a favor: compra no próximo fechamento com RSI abaixo de 70 (agora ${Math.round(coin.rsi[last])})` }
+        : { price: cross, condition: `Fechar acima de US$ ${usd(cross)} faz a média 9 cruzar a 21 no próximo dia; esse preço cai a cada dia de alta e é recalculado no fechamento` };
+    }
+    if (strategyId === 'breakout') {
+      const high = windowExtreme(coin.closes, DAYS, 20, Math.max);
+      return { price: high, condition: `Fechamento diário acima de US$ ${usd(high)}, a máxima dos últimos 20 dias` };
+    }
+    if (strategyId === 'reversion') {
+      const drop = 13 * (coin.avgGain[last] * 65 / 35 - coin.avgLoss[last]);
+      const level = drop > 0 ? price - drop : price;
+      return { price: level, condition: `Fechamento diário abaixo de US$ ${usd(level)}: é onde o RSI cai para menos de 35` };
+    }
+    return { price, condition: 'Compra no próximo fechamento' };
+  }
+
+  function exitConditionFor(strategyId, coin) {
+    if (strategyId === 'classic') return 'Média 9 fechar abaixo da 21';
+    if (strategyId === 'breakout') return `Fechamento abaixo de US$ ${usd(windowExtreme(coin.closes, DAYS, 10, Math.min))}, a mínima de 10 dias`;
+    if (strategyId === 'reversion') return 'RSI fechar acima de 55';
+    return 'Nenhuma: segura até o prazo';
+  }
+
+  function planFor({ strategyId, coin, target, maxLoss, horizon, elapsed = 0 }) {
+    const lastPrice = coin.closes[DAYS - 1];
+    const goalRun = elapsed > 0 ? run({ strategyId, coin, start: DAYS - elapsed, length: elapsed }) : undefined;
+    const entry = goalRun?.holding ? goalRun.trades.filter((t) => t.side === 'buy').pop() : undefined;
+    const signalActive = !entry && run({ strategyId, coin, start: DAYS - 90, length: 90 }).holding;
+    const buy = entry ? { price: entry.price, condition: `Comprou em ${dateOf(entry.day)} a US$ ${usd(entry.price)}, dentro desta meta` }
+      : signalActive ? { price: lastPrice, condition: 'O sinal de compra já está ativo: compra no próximo fechamento, perto do preço atual' }
+      : buyPointFor(strategyId, coin);
+    return {
+      holding: Boolean(entry),
+      signalActive,
+      buyPrice: buy.price,
+      buyCondition: buy.condition,
+      targetPrice: buy.price * (1 + target) / (1 - FEE),
+      stopPrice: buy.price * (1 - maxLoss) / (1 - FEE),
+      exitCondition: exitConditionFor(strategyId, coin),
+      deadline: futureDate(horizon - elapsed),
+      lastPrice: coin.closes[DAYS - 1],
+    };
+  }
+
+  function alertButton(symbol, kind, price, lastPrice) {
+    const direction = price >= lastPrice ? 'above' : 'below';
+    const exists = alerts.some((a) => a.symbol === symbol && a.kind === kind && Math.abs(a.price / price - 1) < 1e-9);
+    return exists ? '<span class="bell on">Alerta ativo</span>'
+      : `<button type="button" class="bell" data-alert="${symbol}|${direction}|${price}|${kind}">Avisar</button>`;
+  }
+
+  function planList(plan, target, maxLoss, symbol) {
+    const distance = (price) => { const d = price / plan.lastPrice - 1; return `${d >= 0 ? '+' : '−'}${plainPct(d)} do preço atual`; };
+    const buyBell = plan.holding || plan.signalActive ? '' : alertButton(symbol, 'Compra', plan.buyPrice, plan.lastPrice);
+    return `<ol class="plan">
+      <li><span class="plan-dot buy"></span><div><div class="plan-row"><span><b>${plan.holding ? 'Compra feita' : 'Compra'}</b> <span class="num">US$ ${usd(plan.buyPrice)}</span></span>${buyBell}</div><small>${plan.buyCondition}${plan.holding || plan.signalActive ? '' : ' · ' + distance(plan.buyPrice)}</small></div></li>
+      <li><span class="plan-dot target"></span><div><div class="plan-row"><span><b>Vende no alvo</b> <span class="num">US$ ${usd(plan.targetPrice)}</span></span>${alertButton(symbol, 'Alvo', plan.targetPrice, plan.lastPrice)}</div><small>+${plainPct(target)} sobre a compra, já com taxas · ${distance(plan.targetPrice)}</small></div></li>
+      <li><span class="plan-dot stop"></span><div><div class="plan-row"><span><b>Vende no stop</b> <span class="num">US$ ${usd(plan.stopPrice)}</span></span>${alertButton(symbol, 'Stop', plan.stopPrice, plan.lastPrice)}</div><small>sua perda máxima de ${share(maxLoss)} · ${distance(plan.stopPrice)}</small></div></li>
+      <li><span class="plan-dot signal"></span><div><b>Vende antes, por sinal</b><small>${plan.exitCondition}</small></div></li>
+      <li><span class="plan-dot deadline"></span><div><b>Prazo final</b> <span class="num">${plan.deadline}</span><small>se nada disparar até lá, a meta encerra e mostra o resultado</small></div></li>
+    </ol>`;
+  }
+
+  function planChart(coin, plan) {
+    const W = 320, H = 120, right = 92, series = coin.closes.slice(DAYS - 60);
+    const levels = [['Alvo', plan.targetPrice, 'var(--buy)'], [plan.holding ? 'Entrada' : 'Compra', plan.buyPrice, 'var(--accent)'], ['Stop', plan.stopPrice, 'var(--sell)']];
+    const all = series.concat(levels.map((l) => l[1])), min = Math.min(...all), max = Math.max(...all), pad = (max - min) * 0.08;
+    const y = (v) => 8 + (1 - (v - (min - pad)) / (max - min + 2 * pad)) * (H - 16);
+    const x = (i) => (i / (series.length - 1)) * (W - right);
+    const line = series.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+    const labelY = levels.map((l) => y(l[1]));
+    for (let i = 1; i < labelY.length; i++) labelY[i] = Math.max(labelY[i], labelY[i - 1] + 13);
+    const guides = levels.map(([name, value, color], i) => `<line x1="0" x2="${W - right + 4}" y1="${y(value).toFixed(1)}" y2="${y(value).toFixed(1)}" stroke="${color}" stroke-width="1.2" stroke-dasharray="4 3"/><text x="${W - right + 8}" y="${(labelY[i] + 4).toFixed(1)}" fill="${color}">${name} ${usd(value)}</text>`).join('');
+    return `<svg class="plan-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Preço de ${coin.symbol} nos últimos 60 dias com as linhas de compra, alvo e stop">${guides}<path d="${line}" fill="none" stroke="var(--ink-2)" stroke-width="1.5" stroke-linejoin="round"/><circle cx="${x(series.length - 1).toFixed(1)}" cy="${y(series[series.length - 1]).toFixed(1)}" r="3" fill="var(--ink)"/></svg>`;
+  }
+
+  function sparkline(series) {
+    const min = Math.min(...series), max = Math.max(...series);
+    const points = series.map((v, i) => `${(i / (series.length - 1) * 96 + 2).toFixed(1)},${(26 - (v - min) / (max - min || 1) * 22).toFixed(1)}`).join(' ');
+    const color = series[series.length - 1] >= series[0] ? 'var(--buy)' : 'var(--sell)';
+    return `<svg width="100" height="30" viewBox="0 0 100 30" aria-hidden="true"><polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
+  }
+
+  function stateBadge(holding, distance) {
+    if (holding) return '<span class="state in">Comprado</span>';
+    if (distance < 0.01) return '<span class="state near">Perto da compra</span>';
+    return '<span class="state wait">Aguardando compra</span>';
+  }
+
+  function bestCombo(target, horizon, maxLoss) {
+    let best;
+    COINS.forEach((coin) => STRATEGIES.forEach((strategy) => {
+      if (strategy.id === 'hold') return;
+      const result = evaluate(strategy.id, coin, target, horizon, maxLoss);
+      if (!best || result.hitRate > best.hitRate) best = { strategyId: strategy.id, symbol: coin.symbol, hitRate: result.hitRate };
+    }));
+    return best;
+  }
+
+  const alerts = [
+    { id: 1, symbol: 'BTC', direction: 'below', price: 82000, kind: 'Manual', source: 'Você', enabled: true },
+  ];
+  let nextAlertId = 2;
+  function addAlert({ symbol, direction, price, kind, source }) {
+    if (alerts.some((a) => a.symbol === symbol && a.kind === kind && Math.abs(a.price / price - 1) < 1e-9)) return;
+    alerts.push({ id: nextAlertId++, symbol, direction, price, kind, source, enabled: true });
+  }
+  function renderAlerts() {
+    const rows = alerts.map((a) => {
+      const coin = COINS.find((c) => c.symbol === a.symbol), last = coin.closes[DAYS - 1], gap = a.price / last - 1;
+      const kindClass = a.kind === 'Compra' ? 'buy' : a.kind === 'Alvo' ? 'target' : a.kind === 'Stop' ? 'stop' : 'manual';
+      return `<tr>
+        <td><div class="coin"><span class="coin-mark">${a.symbol}</span><div>${coin.name}<small>${a.source}</small></div></div></td>
+        <td><span class="kind ${kindClass}">${a.kind}</span></td>
+        <td>${a.direction === 'above' ? 'Subir acima de' : 'Cair abaixo de'}</td>
+        <td class="num r">US$ ${usd(a.price)}</td>
+        <td class="num r ${gap >= 0 ? 'pos' : 'neg'}">${pct(gap)}</td>
+        <td class="muted">Painel · Telegram</td>
+        <td class="r"><label class="switch"><input type="checkbox" data-toggle="${a.id}" ${a.enabled ? 'checked' : ''} aria-label="Alerta de ${a.symbol} ligado"><span></span></label>
+          <button type="button" class="icon-btn" data-remove="${a.id}" aria-label="Remover alerta de ${a.symbol} em US$ ${usd(a.price)}">×</button></td>
+      </tr>`;
+    });
+    byId('alerts-body').innerHTML = rows.join('') || '<tr><td colspan="7" class="muted">Nenhum alerta. Crie um abaixo ou use o botão Avisar no plano.</td></tr>';
+    setText('alerts-count', `${alerts.filter((a) => a.enabled).length} ligados`);
+    setText('quick-alerts', String(alerts.filter((a) => a.enabled).length));
+  }
+
+  const BRL_PER_USD = 5.4, ASSET_TARGET = 0.10, ASSET_STOP = 0.08;
+  const assets = [
+    { symbol: 'BTC', quantity: 0.0215, averagePrice: 82300 },
+    { symbol: 'ETH', quantity: 0.8, averagePrice: 3620 },
+    { symbol: 'SOL', quantity: 6, averagePrice: 198 },
+  ];
+  function ruleFor(strategyId, coin) {
+    const state = run({ strategyId, coin, start: DAYS - 90, length: 90 });
+    const lastTrade = state.trades[state.trades.length - 1];
+    const firedToday = lastTrade && lastTrade.day >= DAYS - 2;
+    if (state.holding) return { text: firedToday ? 'Sinal de compra hoje' : 'Manter', className: 'state in', detail: triggerFor(strategyId, coin, true).text };
+    return { text: firedToday ? 'Sinal de venda hoje' : 'Regra diz ficar fora', className: 'state near', detail: 'Volta a comprar: ' + triggerFor(strategyId, coin, false).text.replace(/^Compra /, '') };
+  }
+  function renderAssets() {
+    let totalValue = 0, totalCost = 0;
+    const rows = assets.map((asset) => {
+      const coin = COINS.find((c) => c.symbol === asset.symbol), last = coin.closes[DAYS - 1];
+      const value = asset.quantity * last, cost = asset.quantity * asset.averagePrice, result = value / cost - 1;
+      totalValue += value; totalCost += cost;
+      const targetPrice = asset.averagePrice * (1 + ASSET_TARGET), stopPrice = asset.averagePrice * (1 - ASSET_STOP);
+      const rule = ruleFor(active.strategyId, coin);
+      return `<tr>
+        <td><div class="coin"><span class="coin-mark">${asset.symbol}</span><div>${coin.name}<small>${asset.symbol}/USDT</small></div></div></td>
+        <td class="num r">${asset.quantity.toLocaleString('pt-BR', { maximumFractionDigits: 6 })}</td>
+        <td class="num r">${usd(asset.averagePrice)}</td>
+        <td class="num r">${usd(last)}</td>
+        <td class="num r">${money(value * BRL_PER_USD)}</td>
+        <td class="num r ${result >= 0 ? 'pos' : 'neg'}">${pct(result)}</td>
+        <td><div class="cell-stack"><span class="${rule.className}">${rule.text}</span><span class="rule muted">${rule.detail}</span></div></td>
+        <td><div class="cell-stack"><span class="num">US$ ${usd(targetPrice)}</span>${last >= targetPrice ? '<span class="state in">Alvo atingido</span>' : alertButton(asset.symbol, 'Alvo do ativo', targetPrice, last)}</div></td>
+        <td><div class="cell-stack"><span class="num">US$ ${usd(stopPrice)}</span>${last <= stopPrice ? '<span class="state near">Stop atingido</span>' : alertButton(asset.symbol, 'Stop do ativo', stopPrice, last)}</div></td>
+      </tr>`;
+    });
+    byId('assets-body').innerHTML = rows.join('') || '<tr><td colspan="9" class="muted">Adicione as moedas que você tem para receber alertas sobre elas.</td></tr>';
+    const totalResult = totalCost ? totalValue / totalCost - 1 : 0;
+    setText('assets-total', assets.length ? `${money(totalValue * BRL_PER_USD)} · ${pct(totalResult)} sobre o custo` : '—');
+    setText('assets-strategy', strategyOf(active.strategyId).name);
+    setText('quick-assets', assets.length ? `${money(totalValue * BRL_PER_USD)} · ${pct(totalResult)}` : 'adicionar');
+  }
+
+  const initialBest = bestCombo(0.03, 30, 0.05);
+  const active = { strategyId: initialBest.strategyId, symbol: initialBest.symbol, target: 0.03, horizon: 30, maxLoss: 0.05, elapsed: 12, amount: 10000 };
+
+  function renderGoalCard(coin, strategy) {
+    const goalRun = run({ strategyId: active.strategyId, coin, start: DAYS - active.elapsed, length: active.elapsed, target: active.target, maxLoss: active.maxLoss });
+    const result = goalRun.final - 1, history = evaluate(active.strategyId, coin, active.target, active.horizon, active.maxLoss);
+    const progress = Math.max(0, Math.min(1, result / active.target)), timeShare = active.elapsed / active.horizon;
+    setText('goal-title', `${plainPct(active.target)} em ${active.horizon} dias · ${coin.symbol}/USDT`);
+    setText('goal-sub', `${strategy.name} · perda máxima de ${share(active.maxLoss)} · ${money(active.amount)} fictícios · dia ${active.elapsed} de ${active.horizon}`);
+    byId('goal-fill').style.width = (progress * 100).toFixed(1) + '%';
+    byId('goal-time').style.left = (timeShare * 100).toFixed(1) + '%';
+    setText('goal-progress-text', `${Math.round(progress * 100)}% do caminho até a meta`);
+    const status = goalRun.outcome === 'hit' ? ['Meta atingida', 'ok'] : goalRun.outcome === 'stop' ? ['Parou no stop', 'late'] : progress >= timeShare ? ['No ritmo', 'ok'] : ['Abaixo do ritmo', 'late'];
+    const pace = byId('goal-pace'); pace.textContent = status[0]; pace.className = 'pill ' + status[1];
+    setText('goal-result', `${pct(result)} · ${money(active.amount * goalRun.final)}`);
+    byId('goal-result').className = 'num ' + (result >= 0 ? 'pos' : 'neg');
+    setText('goal-missing', result >= active.target ? 'nada' : plainPct(active.target - result));
+    setText('goal-days', String(active.horizon - active.elapsed));
+    setText('goal-history', share(history.hitRate) + ' das vezes');
+    return history;
+  }
+
+  function renderChart(period, bench) {
+    const svg = byId('chart'); svg.innerHTML = '';
+    const W = 720, H = 300, left = 64, right = 12, top = 18, bottom = 34;
+    const all = period.equity.concat(bench).map((v) => v * active.amount);
+    const range = Math.max(...all) - Math.min(...all), step = range > 6000 ? 1000 : range > 2500 ? 500 : 250;
+    const min = Math.floor(Math.min(...all) / step) * step, max = Math.ceil(Math.max(...all) / step) * step;
+    const x = (i) => left + (i / 89) * (W - left - right), y = (v) => top + (1 - (v - min) / (max - min)) * (H - top - bottom);
+    for (let v = min; v <= max; v += step) {
+      svgAdd(svg, 'line', { x1: left, x2: W - right, y1: y(v), y2: y(v), stroke: 'var(--line)', 'stroke-width': 1 });
+      svgAdd(svg, 'text', { x: left - 8, y: y(v) + 4, 'text-anchor': 'end' }).textContent = (v / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + ' mil';
+    }
+    [0, 30, 60, 89].forEach((i) => { svgAdd(svg, 'text', { x: x(i), y: H - 10, 'text-anchor': i === 0 ? 'start' : i === 89 ? 'end' : 'middle' }).textContent = dateOf(DAYS - 90 + i); });
+    const path = (series) => series.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v * active.amount).toFixed(1)).join(' ');
+    svgAdd(svg, 'path', { d: path(period.equity) + ` L ${x(89)} ${H - bottom} L ${x(0)} ${H - bottom} Z`, fill: 'var(--accent-soft)', opacity: 0.55 });
+    svgAdd(svg, 'path', { d: path(bench), fill: 'none', stroke: 'var(--bench)', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' });
+    svgAdd(svg, 'path', { d: path(period.equity), fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2.2, 'stroke-linejoin': 'round' });
+    period.trades.forEach((t) => {
+      const i = t.day - (DAYS - 90), cx = x(i), cy = y(period.equity[i] * active.amount);
+      const points = t.side === 'buy' ? `${cx},${cy + 6} ${cx - 6},${cy + 16} ${cx + 6},${cy + 16}` : `${cx},${cy - 6} ${cx - 6},${cy - 16} ${cx + 6},${cy - 16}`;
+      svgAdd(svg, 'polygon', { points, fill: t.side === 'buy' ? 'var(--buy)' : 'var(--sell)' });
+    });
+    svgAdd(svg, 'circle', { cx: x(89), cy: y(period.final * active.amount), r: 4, fill: 'var(--accent)' });
+  }
+
+  function renderSignal(coin, period, history) {
+    const lastTrade = period.trades[period.trades.length - 1];
+    if (lastTrade) {
+      const isBuy = lastTrade.side === 'buy', atr = lastTrade.price * coin.vol;
+      setText('signal-time', dateOf(lastTrade.day) + ' · fechamento');
+      const badge = byId('signal-badge'); badge.textContent = isBuy ? 'COMPRA' : 'VENDA'; badge.className = 'badge ' + (isBuy ? 'buy' : 'sell');
+      setText('signal-pair', coin.symbol + '/USDT');
+      const reasons = {
+        classic: isBuy ? ['Média 9 acima da média 21', 'RSI abaixo de 70, sem esticar', 'Regime de tendência'] : ['Média 9 cruzou abaixo da 21', 'Tendência perdeu força'],
+        breakout: isBuy ? ['Fechou acima da máxima de 20 dias', 'Rompimento confirmado no fechamento'] : ['Fechou abaixo da mínima de 10 dias'],
+        reversion: isBuy ? ['RSI abaixo de 35: sobrevendido', 'Espera a volta à média'] : ['RSI acima de 55: voltou à média'],
+        hold: ['Compra no início do prazo'],
+      }[active.strategyId];
+      byId('signal-reasons').innerHTML = reasons.map((r) => `<li>${r}</li>`).join('');
+      setText('lv-price', 'US$ ' + usd(lastTrade.price));
+      setText('lv-stop', 'US$ ' + usd(isBuy ? lastTrade.price - 2 * atr : lastTrade.price + 2 * atr));
+      setText('lv-target', 'US$ ' + usd(isBuy ? lastTrade.price + 3 * atr : lastTrade.price - 3 * atr));
+    }
+    setText('signal-hit', `Com a sua meta, esta combinação chegou lá em ${share(history.hitRate)} das ${history.windows} janelas dos últimos 2 anos e parou no stop em ${share(history.stopRate)}.`);
+  }
+
+  function renderDashboard() {
+    const coin = COINS.find((c) => c.symbol === active.symbol), strategy = strategyOf(active.strategyId);
+    const history = renderGoalCard(coin, strategy);
+    setText('dash-start', dateOf(DAYS - 90));
+    const plan = planFor({ strategyId: active.strategyId, coin, target: active.target, maxLoss: active.maxLoss, horizon: active.horizon, elapsed: active.elapsed });
+    setText('plan-pair', `${strategy.name} · ${coin.symbol}/USDT · agora US$ ${usd(plan.lastPrice)}`);
+    byId('plan-chart').innerHTML = planChart(coin, plan);
+    if (!active.alertsSeeded) {
+      if (!plan.holding && !plan.signalActive) addAlert({ symbol: coin.symbol, direction: plan.buyPrice >= plan.lastPrice ? 'above' : 'below', price: plan.buyPrice, kind: 'Compra', source: 'Plano da meta' });
+      addAlert({ symbol: coin.symbol, direction: 'above', price: plan.targetPrice, kind: 'Alvo', source: 'Plano da meta' });
+      addAlert({ symbol: coin.symbol, direction: 'below', price: plan.stopPrice, kind: 'Stop', source: 'Plano da meta' });
+      active.alertsSeeded = true;
+    }
+    byId('plan-list').innerHTML = planList(plan, active.target, active.maxLoss, coin.symbol);
+    renderAlerts();
+    renderAssets();
+
+    const period = run({ strategyId: active.strategyId, coin, start: DAYS - 90, length: 90 });
+    const bench = coin.closes.slice(DAYS - 90).map((p) => p / coin.closes[DAYS - 90]);
+    setText('m-equity', money(active.amount * period.final)); byId('m-equity').className = 'value ' + (period.final >= 1 ? 'pos' : 'neg');
+    setText('m-equity-sub', pct(period.final - 1) + ' em 90 dias');
+    setText('m-bench', money(active.amount * bench[89])); setText('m-bench-sub', pct(bench[89] - 1) + ' · a régua mínima');
+    setText('m-dd', pct(period.worst));
+    const closed = period.trades.filter((t) => t.side === 'sell');
+    setText('m-trades', String(period.trades.length));
+    setText('m-trades-sub', closed.length ? `${closed.filter((t) => t.result > 0).length} de ${closed.length} vendas com lucro` : 'nenhuma venda ainda');
+    renderChart(period, bench);
+
+    let running = active.amount;
+    const rows = period.trades.map((t) => {
+      if (t.side === 'sell') running = running * (1 + t.result);
+      const isBuy = t.side === 'buy';
+      return `<tr><td class="num">${dateOf(t.day)}</td><td><span class="side" style="color:var(--${isBuy ? 'buy' : 'sell'})">${isBuy ? 'COMPRA' : 'VENDA'}</span></td><td class="num r">${usd(t.price)}</td>${isBuy ? '<td class="r muted">posição aberta</td>' : `<td class="num r ${t.result >= 0 ? 'pos' : 'neg'}">${pct(t.result)}</td>`}<td class="num r">${money(running)}</td></tr>`;
+    });
+    byId('trades').innerHTML = rows.reverse().join('') || '<tr><td colspan="5" class="muted">Nenhuma operação nos últimos 90 dias. A estratégia esperou o gatilho.</td></tr>';
+    renderSignal(coin, period, history);
+
+    setText('watch-strategy', strategy.name);
+    setText('quick-history', `${pct(period.final - 1)} · régua ${pct(bench[89] - 1)}`);
+    byId('watchlist').innerHTML = COINS.map((c) => {
+      const state = run({ strategyId: active.strategyId, coin: c, start: DAYS - 90, length: 90 });
+      const trigger = triggerFor(active.strategyId, c, state.holding);
+      const last = c.closes[DAYS - 1], change = last / c.closes[DAYS - 31] - 1;
+      return `<tr><td><div class="coin"><span class="coin-mark">${c.symbol}</span><div>${c.name}<small>${c.symbol}/USDT</small></div></div></td><td class="num r">${usd(last)}</td><td class="num r ${change >= 0 ? 'pos' : 'neg'}">${pct(change)}</td><td>${sparkline(c.closes.slice(DAYS - 30))}</td><td>${stateBadge(state.holding, trigger.distance)}</td><td class="trigger">${trigger.text}</td></tr>`;
+    }).join('');
+    const near = COINS.filter((c) => { const s = run({ strategyId: active.strategyId, coin: c, start: DAYS - 90, length: 90 }); return !s.holding && triggerFor(active.strategyId, c, false).distance < 0.01; });
+    setText('quick-coins', near.length ? near.map((c) => c.symbol).join(', ') : 'nenhuma');
+  }
+
+  function renderGoalResults() {
+    const target = Number(byId('goal-target').value) / 100, horizon = Number(byId('goal-horizon').value), maxLoss = Number(byId('goal-loss').value) / 100, amount = Number(byId('goal-amount').value);
+    byId('goal-sentence').innerHTML = `Quero ganhar <b>${plainPct(target)}</b> em até <b>${horizon} dias</b>, sem perder mais de <b>${share(maxLoss)}</b> de <b>${money(amount)}</b> fictícios.`;
+    const combos = [];
+    COINS.forEach((coin) => STRATEGIES.forEach((strategy) => combos.push({ coin, strategy, ...evaluate(strategy.id, coin, target, horizon, maxLoss) })));
+    const holdOf = (symbol) => combos.find((c) => c.coin.symbol === symbol && c.strategy.id === 'hold');
+    const ranked = combos.filter((c) => c.strategy.id !== 'hold').sort((a, b) => b.hitRate - a.hitRate || a.stopRate - b.stopRate).slice(0, 3);
+    byId('goal-results').innerHTML = ranked.map((combo, index) => {
+      const hold = holdOf(combo.coin.symbol);
+      const plan = planFor({ strategyId: combo.strategy.id, coin: combo.coin, target, maxLoss, horizon });
+      const nowBadge = plan.signalActive ? '<span class="state in">Sinal de compra ativo</span>' : '<span class="state wait">Aguardando o preço de compra</span>';
+      return `<article class="result${index === 0 ? ' top' : ''}">
+        <div class="result-head"><div><span class="rank">${index + 1}º lugar</span><h3 style="font-size:17px;font-weight:600">${combo.strategy.name} · ${combo.coin.symbol}</h3><p class="muted" style="font-size:13px">${combo.strategy.short}</p></div><span class="coin-mark">${combo.coin.symbol}</span></div>
+        <div><span class="big">${share(combo.hitRate)}</span> <span class="muted" style="font-size:13px">das janelas chegaram à meta</span></div>
+        <div class="compare">
+          <div class="bar" title="Esta estratégia"><span style="width:${(combo.hitRate * 100).toFixed(0)}%;background:var(--goal)"></span></div>
+          <div class="bar" title="Comprar e segurar"><span style="width:${(hold.hitRate * 100).toFixed(0)}%;background:var(--bench)"></span></div>
+          <span>Régua: comprar e segurar ${combo.coin.symbol} chegou em ${share(hold.hitRate)}</span>
+        </div>
+        <p class="muted" style="font-size:13px">Tempo típico <b class="num" style="color:var(--ink)">${combo.medianDays ? combo.medianDays + ' dias' : '—'}</b> · parou no stop em <b class="num" style="color:var(--ink)">${share(combo.stopRate)}</b></p>
+        <div class="now"><div class="now-head"><span class="label">Plano</span>${nowBadge}</div>
+          <div class="prices">
+            <div><span class="plan-dot buy"></span>Compra<span class="num">${usd(plan.buyPrice)}</span></div>
+            <div><span class="plan-dot target"></span>Alvo<span class="num">${usd(plan.targetPrice)}</span></div>
+            <div><span class="plan-dot stop"></span>Stop<span class="num">${usd(plan.stopPrice)}</span></div>
+          </div>
+          <details class="more"><summary>Ver plano completo</summary>${planChart(combo.coin, plan)}${planList(plan, target, maxLoss, combo.coin.symbol)}</details>
+        </div>
+        <button class="btn${index === 0 ? ' btn-primary' : ''}" type="button" data-start="${combo.strategy.id}|${combo.coin.symbol}">Simular com esta meta</button>
+      </article>`;
+    }).join('');
+    byId('goal-results').querySelectorAll('[data-start]').forEach((button) => button.addEventListener('click', () => {
+      const [strategyId, symbol] = button.dataset.start.split('|');
+      Object.assign(active, { strategyId, symbol, target, horizon, maxLoss, amount, elapsed: Math.min(12, horizon - 1) });
+      renderDashboard(); show('dashboard');
+    }));
+  }
+
+  function show(view) {
+    const isLogin = view === 'login';
+    byId('view-login').hidden = !isLogin; byId('view-app').hidden = isLogin;
+    document.querySelectorAll('main.page').forEach((page) => { page.hidden = page.id !== 'view-' + view; });
+    document.querySelectorAll('.demo-bar [data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+    document.querySelectorAll('.side-nav [data-view]').forEach((b) => { if (b.dataset.view === view) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+    window.scrollTo(0, 0);
+  }
+
+  const goalForm = byId('goal-form'), goalError = byId('goal-error');
+  goalForm.addEventListener('input', () => { goalError.textContent = ''; });
+  goalForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const target = Number(byId('goal-target').value), loss = Number(byId('goal-loss').value), amount = Number(byId('goal-amount').value);
+    if (!(target >= 0.5 && target <= 50)) { goalError.textContent = 'Digite uma meta entre 0,5% e 50%.'; byId('goal-target').focus(); return; }
+    if (!(loss >= 1 && loss <= 50)) { goalError.textContent = 'Digite uma perda máxima entre 1% e 50%.'; byId('goal-loss').focus(); return; }
+    if (!(amount >= 100)) { goalError.textContent = 'O valor fictício precisa ser de pelo menos R$ 100.'; byId('goal-amount').focus(); return; }
+    renderGoalResults();
+  });
+
+  const loginForm = byId('login-form'), email = byId('login-email'), password = byId('login-password'), loginError = byId('login-error');
+  [email, password].forEach((input) => input.addEventListener('input', () => { loginError.textContent = ''; }));
+  loginForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!email.value.includes('@')) { loginError.textContent = 'Digite um e-mail válido.'; email.focus(); return; }
+    if (!password.value) { loginError.textContent = 'Digite sua senha.'; password.focus(); return; }
+    show('dashboard');
+  });
+
+  const art = byId('login-candles'), artCloses = COINS[0].closes.slice(DAYS - 46);
+  const lo = Math.min(...artCloses), hi = Math.max(...artCloses), artY = (v) => 112 - (v - lo) / (hi - lo) * 104;
+  artCloses.forEach((close, i) => {
+    if (i === 0) return;
+    const open = artCloses[i - 1];
+    svgAdd(art, 'rect', { x: i * 10 - 4, y: Math.min(artY(open), artY(close)), width: 6, height: Math.max(1.5, Math.abs(artY(open) - artY(close))), rx: 1, fill: close >= open ? 'var(--buy)' : 'var(--sell)', opacity: 0.85 });
+  });
+
+  ['alert-symbol', 'asset-symbol'].forEach((id) => { byId(id).innerHTML = COINS.map((c) => `<option value="${c.symbol}">${c.symbol} · ${c.name}</option>`).join(''); });
+  function refreshAlertViews() {
+    renderAlerts(); renderAssets();
+    const coin = COINS.find((c) => c.symbol === active.symbol);
+    const plan = planFor({ strategyId: active.strategyId, coin, target: active.target, maxLoss: active.maxLoss, horizon: active.horizon, elapsed: active.elapsed });
+    byId('plan-list').innerHTML = planList(plan, active.target, active.maxLoss, coin.symbol);
+    if (byId('goal-results').innerHTML) renderGoalResults();
+  }
+  document.addEventListener('click', (event) => {
+    const nav = event.target.closest('[data-view]');
+    if (nav) { show(nav.dataset.view); return; }
+    const add = event.target.closest('[data-alert]');
+    if (add) {
+      const [symbol, direction, price, kind] = add.dataset.alert.split('|');
+      addAlert({ symbol, direction, price: Number(price), kind, source: kind.endsWith('do ativo') ? 'Seus ativos' : 'Plano da meta' });
+      refreshAlertViews(); return;
+    }
+    const remove = event.target.closest('[data-remove]');
+    if (remove) { const index = alerts.findIndex((a) => a.id === Number(remove.dataset.remove)); if (index >= 0) alerts.splice(index, 1); refreshAlertViews(); }
+  });
+  document.addEventListener('change', (event) => {
+    const toggle = event.target.closest('[data-toggle]');
+    if (!toggle) return;
+    const alert = alerts.find((a) => a.id === Number(toggle.dataset.toggle));
+    if (alert) { alert.enabled = toggle.checked; setText('alerts-count', `${alerts.filter((a) => a.enabled).length} ligados`); }
+  });
+
+  const alertForm = byId('alert-form'), alertError = byId('alert-error');
+  alertForm.addEventListener('input', () => { alertError.textContent = ''; });
+  alertForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const price = Number(byId('alert-price').value);
+    if (!(price > 0)) { alertError.textContent = 'Digite o valor do alerta em dólares.'; byId('alert-price').focus(); return; }
+    addAlert({ symbol: byId('alert-symbol').value, direction: byId('alert-direction').value, price, kind: 'Manual', source: 'Você' });
+    byId('alert-price').value = '';
+    refreshAlertViews();
+  });
+
+  const assetForm = byId('asset-form'), assetError = byId('asset-error');
+  assetForm.addEventListener('input', () => { assetError.textContent = ''; });
+  assetForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const quantity = Number(byId('asset-quantity').value), averagePrice = Number(byId('asset-price').value), symbol = byId('asset-symbol').value;
+    if (!(quantity > 0)) { assetError.textContent = 'Digite a quantidade que você tem.'; byId('asset-quantity').focus(); return; }
+    if (!(averagePrice > 0)) { assetError.textContent = 'Digite o preço médio que você pagou, em dólares.'; byId('asset-price').focus(); return; }
+    const existing = assets.find((a) => a.symbol === symbol);
+    if (existing) {
+      const totalQuantity = existing.quantity + quantity;
+      existing.averagePrice = (existing.quantity * existing.averagePrice + quantity * averagePrice) / totalQuantity;
+      existing.quantity = totalQuantity;
+    } else assets.push({ symbol, quantity, averagePrice });
+    byId('asset-quantity').value = ''; byId('asset-price').value = '';
+    renderAssets();
+  });
+
+  setText('footer-year', String(new Date().getFullYear()));
+  renderDashboard();
+  renderGoalResults();
+})();
+</script>
