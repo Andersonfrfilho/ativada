@@ -33,6 +33,23 @@ realm, permissões e reuso de refresh (resultados no ADR 0001 §l). Portas dev: 
 corretora próprios. Candles e sentimento são compartilhados. Preview da tela em
 `docs/preview/dashboard.html`.
 
+## Infraestrutura local e testes
+
+- **O import do realm não altera um realm existente.** Mudou `realm/*.json`? Aplique com
+  `make down DOWN_FLAGS=--volumes` e `make up` (apaga os dados do Keycloak daquele ambiente). `make up`
+  avisa quando o JSON é mais novo que o volume.
+- Alvos `*-test` (`migration-test`, `database-test`, `identity-test`, `session-test`, `admin-test`,
+  `lgpd-test`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
+  `TERM`: Ctrl-C não deixa container vivo. Dois deles ao mesmo tempo disputam o mesmo projeto; rode um por vez.
+- `make check` roda `bun test` com `env -i`: teste que precisa de variável a declara; o `export` do `env.dev`
+  não chega a ele.
+- Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
+  não tem `console`.
+- **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account
+  (ADR 0001 §q). Atribuir o papel direto, sem o grupo, deixa a conta sem essa proteção.
+- O cron (`apps/cron-crypto`) roda três tarefas em sequência e sai `1` se qualquer uma falhar:
+  `purge-deleted-accounts`, `reconcile-blocked-accounts`, `expire-audit-events`.
+
 ## Regras que não se negociam
 
 - **Nenhuma ordem real sem uma pessoa ligar o modo `live`.** A I.A. nunca arma o modo real, nunca

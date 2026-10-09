@@ -39,7 +39,7 @@ idempotente. `KC_HOSTNAME` fixo por ambiente, para que o `iss` não varie com o 
 |---|---|---|
 | `crypto-session` | **confidencial**, usado só pelo *token handler* da API | só `standardFlowEnabled`; `pkce.code.challenge.method = S256` obrigatório **e** segredo do cliente (`KEYCLOAK_SESSION_CLIENT_SECRET`, só na API, validado no boot); `implicitFlowEnabled`, `directAccessGrantsEnabled` e `serviceAccountsEnabled` desligados; `redirectUris` e `webOrigins` enumerados por ambiente (nunca `*`); `fullScopeAllowed = false`, com escopo restrito aos papéis `user` e `admin`; mapper *Audience* que inclui `crypto-api` no `aud` do access token. O navegador inicia o login com este `client_id`, mas quem troca o código é a API |
 | `crypto-api` | resource server | não inicia login (todos os fluxos desligados, sem segredo usado); existe só para ser o `aud` esperado pela API |
-| `crypto-api-service` | confidencial, só *service account* | usado pela API para o Admin API do Keycloak (convite, bloqueio, exclusão de conta). Permissões finas do Keycloak 26 (*fine-grained admin permissions* v2) restritas a **criar, desabilitar e apagar usuário e disparar `execute-actions-email`**; sem `map-roles`, sem `manage-realm`, sem `impersonation`. Segredo em env validado no boot (`KEYCLOAK_SERVICE_CLIENT_SECRET`), nunca em log. **Verificação obrigatória na T0.6:** a service account tenta mapear o papel de realm `admin` a um usuário e recebe `403` |
+| `crypto-api-service` | confidencial, só *service account* | usado pela API para o Admin API do Keycloak (convite, bloqueio, exclusão de conta). Permissões finas do Keycloak 26 (*fine-grained admin permissions* v2) restritas a **criar, desabilitar e apagar usuário e disparar `execute-actions-email`**; sem `map-roles`, sem `manage-realm`, sem `impersonation`. Segredo em env validado no boot (`KEYCLOAK_SERVICE_CLIENT_SECRET`), nunca em log. **Verificação obrigatória na T0.6:** a service account tenta mapear o papel de realm `admin` a um usuário e recebe `403`. **T0.9c:** os membros do grupo `admins` ficam fora do alcance dela (permissão negativa, §q) |
 
 **Papéis de realm:** `user` e `admin`. O papel padrão do realm (`default-roles-crypto-paper-trader`)
 contém `user`; `admin` é atribuído só à mão no Keycloak (nunca pela API). Os papéis somam: uma conta com
@@ -634,7 +634,7 @@ realm; **nenhum** papel de `realm-management`, nem `manage-users`):
 Por que `manage` não basta para mapear papel: no modelo v2 o mapeamento exige o escopo `map-roles` no
 usuário e `map-role` no papel, e nenhum dos dois foi concedido.
 
-**Segundo fator e `acr` (para T0.7).** Medido pelo fluxo de navegador real (Code + PKCE, `crypto-panel`):
+**Segundo fator e `acr` (para T0.7).** Medido pelo fluxo de navegador real (Code + PKCE, `crypto-panel`; o cliente foi removido na T0.9c e hoje o mesmo fluxo usa `crypto-session`, §q):
 
 - Usuário comum: entra só com senha, sem OTP, e o token traz `aud` com `crypto-api`, `azp = crypto-panel`,
   papéis `user` (sem `admin`, sem `offline_access`) e `acr = "password"`.
@@ -734,9 +734,9 @@ convite novo (links antigos morrem; `isResend: true`). Conta com credencial ou c
 
 **Risco residual aceito até decisão humana.** Depois que a pessoa ativa a conta, os links do e-mail
 continuam válidos até 24 h e permitem trocar a senha de uma conta ativa (comportamento do Keycloak 26.8; a
-API não consegue revogar o `jti` pelo Admin API). Mitigações possíveis, nenhuma implementada: um
-authenticator/SPI que marque o `jti` como usado; reduzir `actionTokenGeneratedByAdminLifespan` (contraria o
-requisito de 24 h); avisar o titular por e-mail quando a senha mudar.
+API não consegue revogar o `jti` pelo Admin API). Mitigações possíveis: um
+authenticator/SPI que marque o `jti` como usado (não implementada); reduzir `actionTokenGeneratedByAdminLifespan` (contraria o
+requisito de 24 h; não implementada); avisar o titular por e-mail quando a senha mudar (**implementada na T0.9c**, §q; o risco segue aceito, mas o titular fica sabendo).
 
 **Desvios e decisões que o ADR não fixava**
 
@@ -803,7 +803,7 @@ virar. Aceito: o `401` é só mais tardio e a exportação não vaza nada.
 | Registro | `OWNED_TABLES` ganha dois companheiros declarativos, `OWNED_TABLE_EXPORTS` (colunas exportadas ou motivo da exclusão) e `OWNED_TABLE_DELETION_ORDER` (filhas antes dos pais), e `PSEUDONYMIZED_TABLES` ganha `PSEUDONYMIZATION_STEPS`. O contrato reprova tabela de dono sem passo de exportação, sem passo de exclusão, fora da ordem das FKs ou com coluna secreta exportada; a purga recusa rodar (`OwnedTableWithoutDeletionStepError`) se o registro e a ordem divergirem |
 | Passos 2 e 3 independentes | O cron tenta o passo 3 mesmo quando o 2 falhou (Keycloak fora do ar não segura a obrigação de apagar os dados); a linha só sai com os dois. Cada conta falha isolada e a execução sai com `1` se alguma ficou pendente |
 | Carência | Parâmetro `gracePeriodMilliseconds` da tarefa; o `main.ts` usa a constante de 24 h e o `lgpd-test` zera só no processo de teste |
-| `audit_events` | Pseudonimizada na purga (`actor_user_id`, `target_id` do usuário e o IP quando ele é o ator); o IP de **qualquer** linha com mais de 90 dias é anulado pelo cron. **Não implementado**: apagar a linha após 2 anos (§i) |
+| `audit_events` | Pseudonimizada na purga (`actor_user_id`, `target_id` do usuário e o IP quando ele é o ator); o IP de **qualquer** linha com mais de 90 dias é anulado pelo cron. A exclusão da linha após 2 anos (§i) foi implementada na T0.9c (§q) |
 | Logs do cron | `createCronLogger` próprio e mínimo: só texto, número e booleano (o tipo impede objeto de erro, e-mail ou segredo); falha de passo registra o nome da etapa e o nome do erro |
 | Env do cron | Ganha `KEYCLOAK_TOKEN_URL`, `KEYCLOAK_ADMIN_API_URL`, `KEYCLOAK_SERVICE_CLIENT_ID` e `KEYCLOAK_SERVICE_CLIENT_SECRET` (Zod). O contrato "o cron sobe e sai 0 com env válido" deixou de valer: ele agora fala com o banco e sai `1` se não o alcança |
 | Cookie de refresh | `DELETE /v1/me` não apaga o cookie `__Host-crypto_refresh` (a rota é autenticada por Bearer, sem o cabeçalho CSRF das rotas de sessão); o painel chama `DELETE /v1/session` em seguida, e o Keycloak já encerrou a sessão |
@@ -823,6 +823,125 @@ virar. Aceito: o `401` é só mais tardio e a exportação não vaza nada.
 | Servidor | `Bun.serve` com `development: false` e `error` que devolve o envelope `500` genérico, sem pilha. `development: false` não tem prova por teste (com o `error` presente o resultado é o mesmo); é defesa em profundidade |
 
 **Desvios**: o `development: false` fica sem contrato próprio; a deduplicação de refresh passou a tratar a entrada vencida como ausente no ato (antes a varredura a removia).
+
+### q) Ajustes da T0.9c (revisão de segurança e de código da Fase 0b — Keycloak e infraestrutura)
+
+Medições feitas por `make identity-test` e `make admin-test` (Keycloak 26.8.0, Mailpit v1.31.4); a saída
+literal está nesses alvos.
+
+**Eventos do Keycloak (M4).** O realm grava `eventsEnabled: true`, `eventsExpiration: 7776000` (90 dias) e
+`enabledEventTypes` = `LOGIN`, `LOGIN_ERROR`, `UPDATE_PASSWORD`, `UPDATE_TOTP`, `REMOVE_TOTP`,
+`CODE_TO_TOKEN_ERROR`, `REFRESH_TOKEN_ERROR`, `LOGOUT`; `adminEventsEnabled: true` com
+`adminEventsDetailsEnabled: false` (o corpo do evento administrativo traria o e-mail). Ouvintes:
+`jboss-logging` e `email`.
+
+| Pergunta | Resultado |
+|---|---|
+| Senha errada gera `LOGIN_ERROR` consultável? | **Sim**: `GET /events?type=LOGIN_ERROR&user={id}` devolve 1 evento |
+| A service account lê eventos? | **Não**: `403`. A leitura é da conta de admin do realm (console ou, no teste, o administrador mestre); o código de produção não lê eventos |
+| Criar usuário gera evento administrativo? | **Sim**: `GET /admin-events?operationTypes=CREATE&resourceTypes=USER&resourcePath=users/{id}` devolve 1 evento, **sem** `representation` |
+
+**Aviso ao titular.** O ouvinte `email` do Keycloak envia o e-mail da conta quando a senha ou o TOTP mudam.
+Configuração: `--spi-events-listener--email--include-events=UPDATE_PASSWORD,UPDATE_TOTP,REMOVE_TOTP` no
+`command` do `compose.yaml` (opção de SPI do Keycloak, não variável de ambiente). `LOGIN_ERROR` ficou **de
+fora de propósito**: não há tipo de e-mail adequado no ouvinte, e avisar a cada senha errada deixaria um
+atacante disparar e-mail para a vítima. **Medido** (`make admin-test`): definir a senha pelo link de ação gera
+1 e-mail novo no Mailpit, assunto "Atualizar senha", corpo "Sua senha foi alterada em … de <IP>. Se não foi
+você, por favor, entre em contato com um administrador."; o IP do próprio titular aparece no corpo. Troca por
+chamada administrativa (`reset-password` da Admin API) não é evento de usuário e não gera o aviso. O link do
+convite continua **não sendo de uso único** (§n); o aviso torna o abuso visível ao titular.
+
+**MFA do admin pelo console da conta (M6).** Medido com um admin que fez login só com senha (LoA 1) no
+cliente `account-console`:
+
+| Tentativa | Resultado |
+|---|---|
+| `DELETE /realms/…/account/credentials/{id}` do TOTP | **`403`** "Insufficient level of authentication for removing credential of type 'otp'." |
+| `kc_action=CONFIGURE_TOTP` (cadastrar outro aparelho) | pede o **OTP existente** antes de abrir o cadastro (step-up do próprio Keycloak) |
+| `kc_action=UPDATE_PASSWORD` | **abre a troca de senha** só com a senha; a rota REST `POST /account/credentials/password` responde `405` |
+
+Conclusão: o segundo fator **não** se enfraquece só com a senha (remover e adicionar exigem o OTP), então não
+houve correção a fazer no console. Trocar a senha em LoA 1 fica permitido e **não dá acesso** às rotas
+admin (a API exige `acr ≥ 2`); fica registrado como risco aceito. O teste prende os três resultados.
+
+**Clientes padrão.** `admin-cli` do realm entra no JSON com `directAccessGrantsEnabled: false` (era o único
+cliente padrão com password grant ligado; a lista medida foi `account`, `account-console`, `admin-cli`,
+`admin-permissions`, `broker`, `realm-management`, `security-admin-console`). O contrato exige que nenhum
+cliente do realm ligue o password grant, e o `identity-test` prova a recusa (`unauthorized_client`). O
+administrador **mestre** (realm `master`) continua usando o `admin-cli` do realm dele só no teste e no
+console. O cliente `crypto-panel` foi **removido**: o token handler usa `crypto-session`, e o
+`identity-test` (Code + PKCE, `azp`, convite) passou a usá-lo, com o segredo do cliente na troca do código.
+
+**Service account contra contas admin (M5).** Medição **antes** da correção, com um usuário de papel `admin`
+e TOTP como alvo:
+
+| Tentativa da service account | Antes | Depois |
+|---|---|---|
+| `PUT /users/{admin}` alterando o e-mail | **204** | 403 |
+| `PUT /users/{admin}/reset-password` | **204** | 403 |
+| `DELETE /users/{admin}/credentials/{totp}` | **204** | 403 |
+| desabilitar / apagar o admin | (não medido antes) | 403 / 403 |
+| `PUT /users/{comum}/groups/{admins}` e `POST /users` com `groups: ["/admins"]` | (não medido antes) | 403 / 403 |
+
+Ou seja, **antes** a service account tomava uma conta admin (trocava a senha e removia o TOTP; o `acr ≥ 2`
+da API deixava de proteger). **Correção (FGAP v2, medida):** criar usuário exige `manage` no tipo `Users`,
+que vale para todos os usuários e não aceita exceção por condição. A saída foi a **negação**: o grupo
+`admins` (id fixo no JSON; carrega o papel `admin`) tem uma permissão de escopo `manage` e `manage-members`
+com uma política de cliente **NEGATIVE** para `crypto-api-service`. Com a estratégia de decisão
+`UNANIMOUS` do servidor de recursos, a negação vence a permissão de tipo. A service account continua
+criando, convidando, desabilitando e apagando usuários comuns e **lendo** todos (`view`). Tentativa de
+limitar o `manage` a um grupo `app-users` não serve: sem `manage` no tipo, `POST /users` responde `403`.
+
+Consequências e **PENDÊNCIAS DE DECISÃO**:
+
+1. **O papel `admin` só vale como proteção se vier pelo grupo `admins`.** Quem recebe o papel `admin`
+   diretamente (sem o grupo) não está coberto. Regra operacional: atribuir admin **sempre** entrando no
+   grupo `admins` (o grupo carrega o papel). O contrato prende o grupo e a negação; não há como o realm
+   proibir a atribuição direta. Alternativa a decidir: auditoria periódica (usuários com `admin` efetivo
+   fora do grupo) e alerta nos eventos administrativos de `role-mappings`.
+2. **A API não bloqueia, desabilita, apaga nem reenvia convite a um admin.** Bloquear admin já era recusado
+   (§n); novo: `DELETE /v1/me` de uma conta admin termina o passo 1 e o cron falha no passo 2 (`403`) a cada
+   execução, com a linha de `users` retida e `failures > 0`. Decidir: o admin que quer se apagar tira antes
+   o próprio grupo `admins` à mão, ou o cron passa a tratar `403` de admin como pendência manual.
+3. Rotação e auditoria como defesa em profundidade (abaixo).
+
+**Rotação do `KEYCLOAK_SERVICE_CLIENT_SECRET`.** O `--import-realm` não reaplica o segredo a um realm
+existente (§l), então mudar só o env **não** troca o segredo. Procedimento: (1) gerar o segredo novo (32+
+caracteres aleatórios); (2) no Keycloak, `PUT /admin/realms/<realm>/clients/<id>` com `secret` (ou
+*Credentials → Regenerate* no console) **e** atualizar o env da API e do cron; (3) reiniciar API e cron.
+**Medido:** depois do `PUT`, o segredo antigo responde `401` e o novo `200` no mesmo instante, sem janela de
+convivência; por isso trocar o env e o segredo do Keycloak na mesma manutenção, API e cron reiniciando em
+seguida (o provedor de token da API falha fechado e o painel vê `503` no intervalo). Quem exigir janela
+sem indisponibilidade usa a política de rotação de segredo de cliente do Keycloak (não habilitada aqui).
+Rotacionar também ao sair um operador com acesso ao segredo ou ao suspeitar de vazamento, e conferir os
+eventos administrativos (`USER`/`CREATE`, `UPDATE`, `DELETE` com `authDetails` da service account) no console.
+
+**Cron.** `main.ts` executa em sequência `purge-deleted-accounts`, `reconcile-blocked-accounts` e
+`expire-audit-events` (`runCronTasks`): uma tarefa que falha ou lança não impede as seguintes, e a saída é
+`1` se qualquer uma reportou `failures > 0` ou lançou, `0` caso contrário. O log traz o nome da tarefa, os
+contadores e, em erro, só o nome do erro e o SQLSTATE.
+
+| Tarefa | Decisão |
+|---|---|
+| `reconcile-blocked-accounts` | Lista as contas com `blocked_at` e sem `deleted_at` por cursor (`id`, páginas de 100) e, para cada uma (10 em paralelo), lê `enabled` no Keycloak: se estiver habilitado **e** o banco ainda marcar a conta como bloqueada (reconferido logo antes de escrever, para não desfazer um desbloqueio feito durante a execução), grava `enabled=false`. Idempotente (segunda execução: `disabled: 0`); usuário ausente no Keycloak conta como `missing`, não como falha; falha por conta é isolada e conta em `failures`, com o id opaco da conta no log. Janela residual: um desbloqueio entre a reconferência e a escrita (milissegundos) |
+| `expire-audit-events` | Apaga `audit_events` com `created_at` mais antigo que 730 dias (§i). **Desvio de leitura:** o pedido falava em "linhas pseudonimizadas", mas o §i diz que **a linha** fica 2 anos e é apagada; implementado como o §i (todas as linhas, pseudonimizadas ou não). Provado no Postgres real em `make database-test` (730 dias dentro/fora do limite) |
+
+**Makefile e compose.** `migration-test` sobe só o Postgres. Todo alvo `*-test` derruba com `--volumes` e
+usa `trap` para `EXIT`, `INT` e `TERM` (provado: `SIGINT` ao grupo de processos de `make database-test`
+durante a subida e de `make identity-test` durante a prova, `SIGTERM` ao `make`; em todos `docker ps -a`
+não lista container do projeto e os volumes `…-test-*` somem; saída `130`/`143`). Os scripts de integração
+limpam por uma pilha de limpeza em `finally` (API, conexão, banco temporário, usuários de teste), inclusive
+quando a falha vem antes de a API subir. `make check` roda `bun test` com `env -i PATH HOME`: o `export`
+global do `env.dev` no Makefile podia fazer um teste passar por variável que só existe na máquina de quem
+roda (medido: o teste-sonda passa com o export e falha com `env -i`; a suíte inteira passa nos dois, 621
+testes na medição). `make up` avisa (sem falhar) quando um `realm/*.json` é mais novo que o volume do
+Keycloak, porque o import não altera um realm existente; aplicar é `make down DOWN_FLAGS=--volumes` e `make up`.
+
+**Código de integração fora de `src`.** `*-checks`, `database-test`, `migration-test`,
+`temporary-database` e `rollback` moveram-se para `packages/database/test-support/` (scripts de integração
+podem imprimir). `no-console` passou a valer em `apps/*/src` e `packages/*/src`; um contrato prende que
+`src` não tem esses arquivos nem chamada a `console`. A superfície pública de `@crypto/database` ganhou
+só `createBlockedAccountRepository` e `createAuditRetentionRepository`.
 
 ## Alternativas rejeitadas
 
@@ -863,7 +982,7 @@ virar. Aceito: o `401` é só mais tardio e a exportação não vaza nada.
 | Rate limit, tickets do stream, deduplicação de refresh e registro de sockets em memória | Válido com uma instância; escalar exige ADR (Postgres/Redis) |
 | Access token roubado por XSS vale até 5 min | CSP sem `unsafe-inline`, token só em memória, vida curta; BFF reavaliado antes de abrir a clientes |
 | Keycloak fora do ar | Rotas respondem `503` quando a JWKS em cache expirar; login indisponível |
-| `crypto-api-service` comprometido gerencia usuários | Permissões finas mínimas, sem mapear papel (verificado na T0.6), segredo só em env, rotação documentada |
+| `crypto-api-service` comprometido gerencia usuários | Permissões finas mínimas, sem mapear papel (verificado na T0.6), **membros do grupo `admins` fora do alcance (T0.9c, §q)**, segredo só em env, rotação documentada em §q, eventos administrativos auditáveis |
 | Rotação de chave do Keycloak | Coberta pelo cooldown da JWKS; testar na T0.7 com JWKS falso servindo duas chaves |
 | Comportamento do Keycloak 26 ao reusar refresh | Medido na T0.6 (§k) |
 | `Bun.SQL` sem `LISTEN` | Conferido na Fase 3; ADR antes de dependência |
