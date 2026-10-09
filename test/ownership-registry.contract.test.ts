@@ -19,6 +19,7 @@ import {
   OWNED_TABLES,
   PSEUDONYMIZED_TABLES,
   SHARED_TABLES,
+  UNOWNED_PUBLIC_TABLES,
 } from '../packages/database/src/ownership/ownership-registry.js';
 import * as schema from '../packages/database/src/schema/index.js';
 
@@ -44,6 +45,7 @@ function columnNames(table: PgTable): readonly string[] {
 const ownedNames = OWNED_TABLES.map(nameOf);
 const pseudonymizedNames = PSEUDONYMIZED_TABLES.map((entry) => nameOf(entry.table));
 const sharedNames = SHARED_TABLES.map(nameOf);
+const unownedPublicNames = UNOWNED_PUBLIC_TABLES.map(nameOf);
 
 describe('ownership registry (ADR 0001 §h)', () => {
   test('every table with a user_id column is registered as owned', () => {
@@ -56,8 +58,8 @@ describe('ownership registry (ADR 0001 §h)', () => {
   test('every schema table is in exactly one category', () => {
     for (const table of schemaTables) {
       const name = nameOf(table);
-      const categories = [ownedNames, pseudonymizedNames, sharedNames].filter((names) =>
-        names.includes(name),
+      const categories = [ownedNames, pseudonymizedNames, sharedNames, unownedPublicNames].filter(
+        (names) => names.includes(name),
       );
       expect({ name, categories: categories.length }).toStrictEqual({ name, categories: 1 });
     }
@@ -65,7 +67,12 @@ describe('ownership registry (ADR 0001 §h)', () => {
 
   test('every registered table exists in the schema', () => {
     const known = schemaTables.map(nameOf);
-    for (const name of [...ownedNames, ...pseudonymizedNames, ...sharedNames]) {
+    for (const name of [
+      ...ownedNames,
+      ...pseudonymizedNames,
+      ...sharedNames,
+      ...unownedPublicNames,
+    ]) {
       expect(known).toContain(name);
     }
   });
@@ -84,6 +91,19 @@ describe('ownership registry (ADR 0001 §h)', () => {
         isRequired: true,
       });
       expect(references).toContainEqual({ column: USER_ID_COLUMN, target: USERS_TABLE });
+    }
+  });
+
+  test('tables declared as public without an owner have no user_id column', () => {
+    expect(unownedPublicNames.length).toBeGreaterThan(0);
+    for (const table of UNOWNED_PUBLIC_TABLES) {
+      expect({
+        table: nameOf(table),
+        hasUserId: columnNames(table).includes(USER_ID_COLUMN),
+      }).toStrictEqual({
+        table: nameOf(table),
+        hasUserId: false,
+      });
     }
   });
 

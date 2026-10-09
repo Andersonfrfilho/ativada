@@ -7,6 +7,8 @@ import { checkPendingQueue, checkPurge, checkRemoveAndRetention } from './accoun
 import { checkAdminRepositories } from './admin-checks.js';
 import { checkAuditRetention, checkBlockedAccounts } from './cron-repository-checks.js';
 import { checkExport, checkMarkDeleted, seedLifecycleOwners } from './account-lifecycle-checks.js';
+import { checkCandleRepository } from './candle-checks.js';
+import { checkSentimentRepository } from './sentiment-checks.js';
 import { checkProfileRepository } from './profile-checks.js';
 import { checkTelegramLink, checkTelegramRaces } from './telegram-checks.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
@@ -91,6 +93,8 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkRemoveAndRetention(lifecycle, owners);
     await checkBlockedAccounts(lifecycle);
     await checkAuditRetention(lifecycle);
+    await checkCandleRepository(lifecycle);
+    await checkSentimentRepository(lifecycle);
   } finally {
     await client.close();
     await closeDatabase(handle);

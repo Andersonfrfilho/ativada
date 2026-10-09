@@ -58,6 +58,23 @@ export {
   pingDatabase,
   type DatabaseHandle,
 } from './database-handle.js';
+export { createCandleRepository } from './candles/candle.repository.js';
+export type {
+  CandleRecord,
+  CandleRepository,
+  CandleRepositoryOptions,
+  CandleSeriesKey,
+  CandleTimeframe,
+  FindCandlesParams,
+  UpsertCandlesResult,
+} from './candles/candle.types.js';
+export { OpenCandleRejectedError } from './candles/open-candle-rejected.error.js';
+export { createSentimentRepository } from './sentiment/sentiment.repository.js';
+export type {
+  FearGreedEntry,
+  FindFearGreedParams,
+  SentimentRepository,
+} from './sentiment/sentiment.types.js';
 export { InvalidUserIdError } from './ownership/invalid-user-id.error.js';
 export type { OwnerScope } from './ownership/owner-scope.js';
 export type { UserId } from './ownership/user-id.js';

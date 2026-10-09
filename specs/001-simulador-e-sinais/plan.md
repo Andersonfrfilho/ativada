@@ -56,8 +56,8 @@ type EngineStep = (input: StepInput) => StepResult; // estado entra, estado sai 
 
 | Tabela | Campos principais |
 |---|---|
-| `candles` | `exchange`, `symbol`, `timeframe`, `open_time` (PK composta), `open/high/low/close/volume numeric` |
-| `sentiment_daily` | `date` PK, `fear_greed smallint` |
+| `candles` | `exchange`, `symbol`, `timeframe`, `open_time` bigint em ms (PK composta, cobre a leitura do mais recente), `close_time`, `open/high/low/close numeric(24,8)`, `volume numeric(32,8)`, `trade_count`, `created_at`; CHECK `close_time > open_time`, `high >= low`, `timeframe in ('15m','1h','4h','1d')`. Candle fechado é imutável (`ON CONFLICT DO NOTHING`); candle aberto (`close_time >= agora`) é rejeitado pelo repositório. Leitura por `[from, to)` |
+| `sentiment_daily` | `date` PK, `fear_greed smallint` (CHECK 0..100), `classification` varchar nulo, `created_at`; o valor do dia é atualizado (`DO UPDATE`) |
 | `users` | `id uuid`, `keycloak_sub varchar(255)` (único), `display_name`, `display_currency`, `timezone`, `telegram_chat_id` (nulo até vincular; único quando preenchido), `alert_telegram_enabled`, `limits jsonb`, `created_at`, `updated_at`, `blocked_at`, `deleted_at`, `identity_deleted_at`, `data_purged_at` (ADR 0001 §d, §h) |
 | `telegram_link_codes` | `id`, `user_id` (único), `code_hash` (único), `expires_at`, `attempts`, `created_at` — vínculo do chat por código de uso único; só o hash é guardado |
 | `strategies` | `id uuid`, `user_id`, `name`, `is_example bool`, `created_at` |

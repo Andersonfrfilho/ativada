@@ -2,6 +2,8 @@
 import { getTableName } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 
+import { candles } from '../schema/candles.schema.js';
+import { sentimentDaily } from '../schema/sentiment-daily.schema.js';
 import { auditEvents } from '../schema/audit-events.schema.js';
 import { telegramLinkCodes } from '../schema/telegram-link-codes.schema.js';
 import { users } from '../schema/users.schema.js';
@@ -49,6 +51,9 @@ export const PSEUDONYMIZED_TABLES: readonly PseudonymizedTable[] = [
 ];
 
 export const SHARED_TABLES: readonly PgTable[] = [users];
+
+// Dados públicos de mercado, sem dono e sem user_id (ADR 0001 §h): tabela sem dono nova entra aqui de propósito.
+export const UNOWNED_PUBLIC_TABLES: readonly PgTable[] = [candles, sentimentDaily];
 
 export function tableNameOf(table: PgTable): string {
   return getTableName(table);
