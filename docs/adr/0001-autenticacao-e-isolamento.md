@@ -30,7 +30,7 @@ restritivo.
 
 ### a) Realm Keycloak
 
-**Realm:** `crypto-paper-trader`, versionado em `realm/crypto-paper-trader.realm.json` (T0.6), import
+**Realm:** `crypto-paper-trader`, versionado em `realm/crypto-paper-trader-realm.json` (T0.6; o sufixo `-realm.json` é o que o `--import-realm` do Keycloak reconhece), import
 idempotente. `KC_HOSTNAME` fixo por ambiente, para que o `iss` não varie com o host de quem chama.
 
 **Clientes**
@@ -77,7 +77,7 @@ temporário (não permanente, para não virar negação de serviço contra a ví
 | `accessTokenLifespan` | 300 s (5 min; teto de RF00 é 15) |
 | `ssoSessionIdleTimeout` | 1800 s |
 | `ssoSessionMaxLifespan` | 36000 s (10 h) |
-| `revokeRefreshToken` | `true`, `refreshTokenMaxReuse = 0` (refresh rotativo). **A T0.6 mede** se o reuso de um refresh antigo derruba a sessão inteira ou só recusa aquela chamada, e registra o comportamento em `evidence.md`; a deduplicação de §b existe para que uma corrida legítima do próprio painel não caia nesse caso |
+| `revokeRefreshToken` | `true`, `refreshTokenMaxReuse = 0` (refresh rotativo). **A T0.6 mediu** o que o reuso de um refresh antigo causa (resultado em §l); a deduplicação de §b existe para que uma corrida legítima do próprio painel não caia nesse caso |
 | `offline_access` | removido do papel padrão; ninguém recebe refresh offline |
 
 **Claims usadas pela API:** `sub` (identidade estável), `email_verified` (precisa ser `true`),
@@ -575,6 +575,81 @@ Cada task abaixo só fecha com estes itens atendidos e provados (contrato ou ver
 - `email`, `telegram_chat_id`, `ticket`, `code`, `codeVerifier`, `authorization` e cookie são
   **redigidos no logger** (lista de chaves no próprio logger, não disciplina de quem escreve o log).
 - O log de acesso mascara a query string.
+
+### l) Resultados medidos da T0.6
+
+Medidos por `make identity-test` (Keycloak de teste descartável, `scripts/identity-test.ts`), contra
+**Keycloak 26.8.0** (`quay.io/keycloak/keycloak:26.8.0`, `start-dev --import-realm`) e **Mailpit v1.31.4**.
+Reproduzir: `make identity-test`; ao fim ele derruba a infra de teste e apaga o volume.
+
+**Reuso de refresh token** (`revokeRefreshToken = true`, `refreshTokenMaxReuse = 0`), medido com um
+cliente temporário com *direct grant*, criado e apagado pelo próprio teste:
+
+| Passo | Resultado |
+|---|---|
+| refresh #1 com o refresh original | `200`, refresh rotacionado (token novo diferente) |
+| refresh #2 com o refresh **original** de novo (reuso) | `400 invalid_grant`, "Maximum allowed refresh token reuse exceeded" |
+| refresh #3 com o refresh **novo** (o legítimo) logo depois | `400 invalid_grant`, "Session doesn't have required client" |
+| sessões SSO do usuário antes / depois do reuso / depois do #3 | 1 / 1 / 1 |
+
+Conclusão: o reuso **não recusa só a chamada**. Ele invalida a **sessão do cliente** (o vínculo entre a
+sessão SSO e aquele cliente), então o refresh novo também morre; a sessão SSO do usuário no Keycloak
+continua existindo. Consequência para T0.7: depois de um `400` no refresh o painel precisa refazer o
+Code + PKCE (silencioso enquanto a sessão SSO viver, com senha se ela tiver acabado), e a deduplicação
+por hash de ~10 s de §a continua obrigatória, porque duas abas ou uma corrida legítima do próprio painel
+cairiam exatamente neste caso.
+
+**Service account `crypto-api-service`** (permissões finas v2 do Keycloak 26.8: policy de cliente +
+permissão de escopo `manage` e `view` no tipo `Users`, definidas no cliente `admin-permissions` do
+realm; **nenhum** papel de `realm-management`, nem `manage-users`):
+
+| Tentativa | Resultado |
+|---|---|
+| mapear o papel de realm `admin` a um usuário | **`403`** |
+| criar usuário com `realmRoles: ["admin"]` no corpo | `201`, mas o corpo é ignorado: o usuário nasce só com o papel padrão |
+| ler o realm, listar clientes, alterar o realm | `403` nos três |
+| criar usuário, `execute-actions-email` (`lifespan` 86400), desabilitar, apagar | `201`, `204`, `204`, `204`; o e-mail chegou ao Mailpit |
+
+Por que `manage` não basta para mapear papel: no modelo v2 o mapeamento exige o escopo `map-roles` no
+usuário e `map-role` no papel, e nenhum dos dois foi concedido.
+
+**Segundo fator e `acr` (para T0.7).** Medido pelo fluxo de navegador real (Code + PKCE, `crypto-panel`):
+
+- Usuário comum: entra só com senha, sem OTP, e o token traz `aud` com `crypto-api`, `azp = crypto-panel`,
+  papéis `user` (sem `admin`, sem `offline_access`) e `acr = "password"`.
+- Admin **sem** credencial TOTP, com a ação `CONFIGURE_TOTP` pendente: o login para na tela de
+  configuração do TOTP. É assim que o convite do admin (T0.8) obriga o cadastro do segundo fator.
+- Admin **com** TOTP, login **sem** `acr_values`: entra sem OTP, com `acr = "password"`. Por isso o portão
+  do `/v1/admin/*` é o `acr` na API (§b), não o login.
+- Admin com `acr_values=2`: um único pedido de OTP (SHA-1, 6 dígitos, 30 s) e `acr = "2"`.
+- **O claim `acr` não é um número uniforme.** Nível 1 vem como o nome do mapa (`"password"`); nível 2 vem
+  como o valor que o cliente pediu (`"2"` ou `"mfa"`, conforme o `acr_values`). A T0.7 normaliza: aceita
+  `acr` em `{"2","mfa"}` como LoA 2 e trata o resto como LoA 1. O painel pede sempre `acr_values=2`.
+- Um subfluxo extra "OTP sempre para o papel `admin`" foi testado e **descartado**: ele pede o OTP no
+  login comum sem elevar o `acr`, e o step-up da API o pediria de novo (OTP duplo).
+
+**Import do realm.** `--import-realm` usa a estratégia `IGNORE_EXISTING`: subir de novo com o volume
+existente registra "Realm already exists. Import skipped" e não toca no realm. Consequência: **mudar o
+JSON não altera um realm já importado**; para reimportar, apague o volume
+(`make down DOWN_FLAGS=--volumes`). O `make identity-test` sempre parte de volume novo. Segredos
+(`KEYCLOAK_SESSION_CLIENT_SECRET`, `KEYCLOAK_SERVICE_CLIENT_SECRET`) e a origem do painel
+(`KEYCLOAK_PANEL_ORIGIN`) entram por substituição `${VAR}` no import; o JSON só tem os marcadores, e o
+compose falha (`:?`) se a variável faltar.
+
+**Detalhes do realm que a importação ensinou.** O papel padrão só recebe `user` se
+`default-roles-crypto-paper-trader` estiver em `roles.realm` com `composites` (o campo `defaultRole`
+sozinho deixa os padrões do Keycloak, inclusive `offline_access`); o contrato prende isso.
+O realm precisa listar **todos** os fluxos de autenticação (os nativos mais `browser-loa`), porque uma
+lista parcial impede o Keycloak de criar os nativos.
+
+**Safari e topologia (obrigação §k).** O cookie `__Host-crypto_refresh` com `Secure` em
+`http://localhost` funciona em Chromium e Firefox e **não no Safari**: em desenvolvimento com Safari, use
+HTTPS local. Painel e API ficam na **mesma origem** (proxy `/v1`), por causa de `SameSite=Strict`;
+senão, CORS com `credentials` e origem exata.
+
+**Portas (127.0.0.1).** dev: Keycloak 56180, Mailpit SMTP 56125 e UI 56126. teste: Keycloak 56181,
+Mailpit SMTP 56127 e UI 56128. Console do Keycloak: `http://127.0.0.1:<porta>/admin/` com
+`KEYCLOAK_ADMIN_USER` / `KEYCLOAK_ADMIN_PASSWORD` do `envs/`.
 
 ## Alternativas rejeitadas
 

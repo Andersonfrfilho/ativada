@@ -22,7 +22,10 @@ packages/strategy-engine/  indicadores, placar de votos, risco, corretora simula
                            o MESMO código roda no backtest e no ao vivo
 ```
 
-Postgres + Drizzle. Keycloak (OIDC) para login, realm em `realm/`. Docker Compose único na raiz.
+Postgres + Drizzle. Keycloak 26.8.0 (OIDC) para login, realm em `realm/`; Mailpit v1.31.4 como SMTP de dev.
+Docker Compose único na raiz. `make up` sobe Postgres, Keycloak e Mailpit; `make identity-test` verifica
+realm, permissões e reuso de refresh (resultados no ADR 0001 §l). Portas dev: Postgres 56432, Keycloak
+56180, Mailpit SMTP 56125 / UI 56126; teste: 56433, 56181, 56127 / 56128.
 `Makefile` com `PROJECT_NAME`. Env em `envs/`.
 
 **Multiusuário.** Cada usuário tem login, estratégias, simulações, alertas e (na spec 002) chave de
