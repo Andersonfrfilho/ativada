@@ -9,6 +9,7 @@
     "db:migration-test": "bun run src/migration-test.ts"
   },
   "dependencies": {
+    "@crypto/environment": "workspace:*",
     "drizzle-orm": "^0.45.4"
   },
   "devDependencies": {
