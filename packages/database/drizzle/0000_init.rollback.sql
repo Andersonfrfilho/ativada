@@ -1,0 +1,1 @@
+-- Rollback da migration inicial vazia: não há o que desfazer (no-op).

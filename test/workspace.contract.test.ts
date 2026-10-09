@@ -9,6 +9,7 @@ const WORKSPACE_DIRECTORIES: readonly string[] = [
   'apps/cron-crypto',
   'apps/frontend-crypto',
   'packages/strategy-engine',
+  'packages/database',
 ];
 const REQUIRED_COMPILER_OPTIONS: Readonly<Record<string, boolean>> = {
   strict: true,

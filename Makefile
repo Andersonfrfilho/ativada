@@ -6,7 +6,7 @@ export
 COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
 
-.PHONY: help bootstrap config up down ps check
+.PHONY: help bootstrap config up down ps check migration-test
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -34,3 +34,10 @@ check: ## Gate completo: formato, lint, tipos e testes
 	bun run lint
 	bun run typecheck
 	bun test
+
+migration-test: ## Aplica e desfaz as migrations num Postgres de teste descartável
+	set -a; . envs/env.test; set +a; \
+	status=0; \
+	$(MAKE) up ENV=test && bun --env-file=envs/env.test run --cwd packages/database db:migration-test || status=$$?; \
+	$(MAKE) down ENV=test; \
+	exit $$status

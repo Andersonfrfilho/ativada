@@ -31,4 +31,11 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ['packages/database/drizzle.config.ts'],
+    rules: {
+      'no-restricted-exports': 'off',
+      'no-restricted-syntax': 'off',
+    },
+  },
 );
