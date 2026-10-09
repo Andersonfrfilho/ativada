@@ -9,6 +9,7 @@ export const CLOCK_TOLERANCE_SECONDS = 10;
 export const MAX_TOKEN_AGE = '15m';
 export const BEARER_TOKEN_TYPE = 'Bearer';
 export const SUBJECT_MAX_LENGTH = 255;
+export const RECENT_AUTHENTICATION_MAX_AGE_SECONDS = 300;
 export const AUTHORIZATION_HEADER_MAX_LENGTH = 8192;
 
 export const WWW_AUTHENTICATE_BEARER = 'Bearer';

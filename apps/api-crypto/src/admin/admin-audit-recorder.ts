@@ -1,8 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { isIP } from 'node:net';
-
 import { AUDIT_ACTOR_KIND, type AuditEventRepository } from '@crypto/database';
 
+import { toAuditIp } from '../audit/audit-client-address.js';
 import type { AdminActor } from './admin-actor.js';
 import type { AuditAction } from './admin.constant.js';
 import { auditPayloadSchemas } from './audit-payload.schema.js';
@@ -26,7 +25,7 @@ export function createAdminAuditRecorder(repository: AuditEventRepository): Admi
       targetKind: event.targetKind,
       targetId: event.targetId,
       action: event.action,
-      ip: isIP(event.actor.clientAddress) === 0 ? undefined : event.actor.clientAddress,
+      ip: toAuditIp(event.actor.clientAddress),
       payload,
     });
   };

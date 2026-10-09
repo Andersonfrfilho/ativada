@@ -14,6 +14,7 @@ export function buildApiRouteDependencies(
       endSession: notUsed,
       allowedOrigins: new Set(),
     },
+    account: { exportAccount: notUsed, deleteAccount: notUsed },
     profile: { getProfile: notUsed, updateProfile: notUsed },
     telegram: { unlinkTelegram: notUsed, issueLinkCode: undefined, webhook: undefined },
     admin: {

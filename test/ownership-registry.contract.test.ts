@@ -6,8 +6,15 @@ import {
   PgTable,
   type AnyPgColumn,
 } from '../packages/database/node_modules/drizzle-orm/pg-core/index.js';
-import { getTableName, is } from '../packages/database/node_modules/drizzle-orm/index.js';
 import {
+  getTableColumns,
+  getTableName,
+  is,
+} from '../packages/database/node_modules/drizzle-orm/index.js';
+import {
+  OWNED_TABLE_DELETION_ORDER,
+  OWNED_TABLE_EXPORT_MODE,
+  OWNED_TABLE_EXPORTS,
   OWNED_TABLES,
   PSEUDONYMIZED_TABLES,
   SHARED_TABLES,
@@ -16,6 +23,8 @@ import * as schema from '../packages/database/src/schema/index.js';
 
 const USER_ID_COLUMN = 'user_id';
 const USERS_TABLE = 'users';
+const USER_ID_PROPERTY = 'userId';
+const SECRET_COLUMN_PATTERN = /hash|secret|token|ciphertext|password|^iv$/i;
 
 function isPgTable(value: unknown): value is PgTable {
   return is(value, PgTable);
@@ -91,7 +100,69 @@ describe('ownership registry (ADR 0001 §h)', () => {
     }
   });
 
-  test('telegram_link_codes is owned and is never exported (secret transient)', () => {
+  test('telegram_link_codes is owned and its export never carries the code hash', () => {
     expect(ownedNames).toContain('telegram_link_codes');
+    const step = OWNED_TABLE_EXPORTS.find((entry) => nameOf(entry.table) === 'telegram_link_codes');
+    expect(step?.mode).toBe(OWNED_TABLE_EXPORT_MODE.COLUMNS);
+    if (step?.mode === OWNED_TABLE_EXPORT_MODE.COLUMNS)
+      expect(step.columns).not.toContain('codeHash');
+  });
+
+  test('every owned table exposes the userId property the generic export and purge steps rely on', () => {
+    for (const table of OWNED_TABLES) {
+      const column = getTableColumns(table)[USER_ID_PROPERTY];
+      expect({ table: nameOf(table), column: column?.name }).toStrictEqual({
+        table: nameOf(table),
+        column: USER_ID_COLUMN,
+      });
+    }
+  });
+});
+
+describe('ownership registry — export and deletion steps (ADR 0001 §h)', () => {
+  const exportedNames = OWNED_TABLE_EXPORTS.map((step) => nameOf(step.table));
+  const deletionOrder = OWNED_TABLE_DELETION_ORDER.map(nameOf);
+
+  test('every owned table declares exactly one export step, and no other table does', () => {
+    expect([...exportedNames].sort()).toStrictEqual([...ownedNames].sort());
+  });
+
+  test('every owned table declares exactly one deletion step, and no other table does', () => {
+    expect([...deletionOrder].sort()).toStrictEqual([...ownedNames].sort());
+  });
+
+  test('an export step either lists existing columns or explains why the table is left out', () => {
+    for (const step of OWNED_TABLE_EXPORTS) {
+      if (step.mode === OWNED_TABLE_EXPORT_MODE.EXCLUDED) {
+        expect(step.reason.length).toBeGreaterThan(0);
+        continue;
+      }
+      const properties = Object.keys(getTableColumns(step.table));
+      expect(step.columns.length).toBeGreaterThan(0);
+      for (const column of step.columns) expect(properties).toContain(column);
+    }
+  });
+
+  test('the export never lists a secret column (hash, token, ciphertext, password)', () => {
+    for (const step of OWNED_TABLE_EXPORTS) {
+      if (step.mode !== OWNED_TABLE_EXPORT_MODE.COLUMNS) continue;
+      for (const column of step.columns) {
+        expect({
+          table: nameOf(step.table),
+          column,
+          isSecret: SECRET_COLUMN_PATTERN.test(column),
+        }).toStrictEqual({ table: nameOf(step.table), column, isSecret: false });
+      }
+    }
+  });
+
+  test('the deletion order puts every child before the owned table it references', () => {
+    for (const table of OWNED_TABLE_DELETION_ORDER) {
+      for (const key of getTableConfig(table).foreignKeys) {
+        const parent = getTableName(key.reference().foreignTable);
+        if (!ownedNames.includes(parent) || parent === nameOf(table)) continue;
+        expect(deletionOrder.indexOf(nameOf(table))).toBeLessThan(deletionOrder.indexOf(parent));
+      }
+    }
   });
 });

@@ -17,6 +17,12 @@ const ONE_MINUTE_MILLISECONDS = 60_000;
 const ONE_HOUR_MILLISECONDS = 3_600_000;
 
 export const RATE_LIMIT_POLICY = {
+  ACCOUNT_EXPORT: {
+    name: 'account-export',
+    limit: 1,
+    windowMilliseconds: ONE_HOUR_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+  },
   AUTHENTICATED_USER: {
     name: 'authenticated-user',
     limit: 120,

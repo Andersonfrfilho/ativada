@@ -11,6 +11,19 @@ export type {
   AdminAccountRecord,
   ListAccountsParams,
 } from './admin/admin-account.types.js';
+export {
+  createAccountDeletionRepository,
+  type AccountDeletionRepository,
+} from './account/account-deletion.repository.js';
+export {
+  createAccountExportRepository,
+  type AccountExportRepository,
+} from './account/account-export.repository.js';
+export type {
+  AccountExport,
+  AccountExportAuditEvents,
+  ExportRow,
+} from './account/account-export.types.js';
 export { AUDIT_ACTOR_KIND, type AuditActorKind } from './audit/audit-event.constant.js';
 export {
   createAuditEventRepository,

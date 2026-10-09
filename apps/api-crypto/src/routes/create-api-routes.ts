@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { createAccountRoutes, type AccountRouteDependencies } from '../account/account.routes.js';
 import { createAdminRoutes, type AdminRouteDependencies } from '../admin/admin.routes.js';
 import { createProfileRoutes, type ProfileRouteDependencies } from '../profile/profile.routes.js';
 import type { Route } from '../router/route.types.js';
@@ -13,6 +14,7 @@ import { createHealthRoutes, type HealthRouteDependencies } from './health.route
 
 export type ApiRouteDependencies = HealthRouteDependencies & {
   readonly session: SessionRouteDependencies;
+  readonly account: AccountRouteDependencies;
   readonly profile: ProfileRouteDependencies;
   readonly telegram: TelegramRouteDependencies;
   readonly admin: AdminRouteDependencies;
@@ -24,6 +26,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     ...createHealthRoutes(dependencies),
     ...createSessionRoutes(dependencies.session),
     ...createProfileRoutes(dependencies.profile),
+    ...createAccountRoutes(dependencies.account),
     ...createTelegramRoutes(dependencies.telegram),
     ...createAdminRoutes(dependencies.admin),
     ...createStreamTicketRoutes(dependencies.streamTicketStore),

@@ -73,6 +73,16 @@ export class MfaRequiredError extends DomainError {
   }
 }
 
+export class ReauthenticationRequiredError extends DomainError {
+  constructor() {
+    super({
+      code: AUTHENTICATION_ERROR_CODE.REAUTH_REQUIRED,
+      message: 'Confirme sua identidade entrando novamente.',
+      status: HTTP_STATUS.FORBIDDEN,
+    });
+  }
+}
+
 export class AuthenticationUnavailableError extends DomainError {
   constructor() {
     super({

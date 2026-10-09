@@ -19,6 +19,7 @@ export type ProtectedRouteContext = PublicRouteContext & {
   readonly authenticatedUser: AuthenticatedUser;
   readonly scope: OwnerScope;
   readonly authenticationLevel: AuthenticationLevel;
+  readonly authenticationTime: number | undefined;
 };
 
 type RouteBase = {

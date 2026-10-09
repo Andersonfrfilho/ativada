@@ -7,6 +7,7 @@ import {
   resolveUserBySubject,
 } from '@crypto/database';
 
+import { createAccountRouteDependencies } from './account/create-account-route-dependencies.js';
 import { createAdminRouteDependencies } from './admin/create-admin-route-dependencies.js';
 import { createAccessTokenVerifier } from './authentication/access-token-verifier.js';
 import { createRemoteKeyResolver } from './authentication/remote-key-resolver.js';
@@ -49,6 +50,7 @@ export function createApplication(params: CreateApplicationParams): Application 
     routes: createApiRoutes({
       checkDatabase: () => pingDatabase(database),
       session: createSessionRouteDependencies({ environment, verifyAccessToken }),
+      account: createAccountRouteDependencies({ database, identity, now: () => Date.now() }),
       profile: {
         getProfile: createGetProfileUseCase(profileRepository),
         updateProfile: createUpdateProfileUseCase(profileRepository),

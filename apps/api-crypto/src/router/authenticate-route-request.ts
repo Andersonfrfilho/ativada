@@ -47,6 +47,7 @@ export type RouteAuthentication = {
   readonly authenticatedUser: AuthenticatedUser;
   readonly scope: OwnerScope;
   readonly authenticationLevel: AuthenticationLevel;
+  readonly authenticationTime: number | undefined;
 };
 
 function chargeClientAddress(
@@ -106,5 +107,9 @@ export async function authenticateRouteRequest(
     resolveUser: params.dependencies.resolveUser,
     token,
   });
-  return { ...resolved, authenticationLevel: token.authenticationLevel };
+  return {
+    ...resolved,
+    authenticationLevel: token.authenticationLevel,
+    authenticationTime: token.authenticationTime,
+  };
 }

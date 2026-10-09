@@ -4,6 +4,7 @@ import { closeDatabase, openDatabase, type DatabaseHandle } from './database-han
 import { applyMigrations } from './migrate.js';
 import { readDatabaseUrl } from './read-database-url.js';
 import { checkAdminRepositories } from './admin-checks.js';
+import { checkExport, checkMarkDeleted, seedLifecycleOwners } from './account-lifecycle-checks.js';
 import { checkProfileRepository } from './profile-checks.js';
 import { checkTelegramLink } from './telegram-checks.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
@@ -78,6 +79,10 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkProfileRepository({ handle, assertCondition, reportCheck });
     await checkTelegramLink({ handle, client, assertCondition, reportCheck });
     await checkAdminRepositories({ handle, client, assertCondition, reportCheck });
+    const lifecycle = { handle, client, assertCondition, reportCheck };
+    const owners = await seedLifecycleOwners(lifecycle);
+    await checkExport(lifecycle, owners);
+    await checkMarkDeleted(lifecycle, owners);
   } finally {
     await client.close();
     await closeDatabase(handle);

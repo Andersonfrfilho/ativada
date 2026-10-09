@@ -30,6 +30,7 @@ export const HTTP_HEADER = {
   ALLOW: 'Allow',
   AUTHORIZATION: 'Authorization',
   CACHE_CONTROL: 'Cache-Control',
+  CONTENT_DISPOSITION: 'Content-Disposition',
   COOKIE: 'Cookie',
   FORWARDED_FOR: 'X-Forwarded-For',
   ORIGIN: 'Origin',

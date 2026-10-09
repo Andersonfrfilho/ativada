@@ -18,6 +18,8 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'TIMEZONE_MAX_LENGTH',
   'USER_RESOLUTION_STATUS',
   'closeDatabase',
+  'createAccountDeletionRepository',
+  'createAccountExportRepository',
   'createAdminAccountRepository',
   'createAuditEventRepository',
   'createProfileRepository',
