@@ -9,7 +9,8 @@
   "scripts": {
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun run src/migrate.ts",
-    "db:migration-test": "bun run src/migration-test.ts"
+    "db:migration-test": "bun run src/migration-test.ts",
+    "db:database-test": "bun run src/database-test.ts"
   },
   "dependencies": {
     "@crypto/environment": "workspace:*",

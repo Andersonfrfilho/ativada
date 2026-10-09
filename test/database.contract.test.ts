@@ -9,7 +9,15 @@ const MIGRATIONS_DIRECTORY = `${DATABASE_PACKAGE_DIRECTORY}/drizzle`;
 const ROLLBACK_SUFFIX = '.rollback.sql';
 const MIGRATION_FILE_PATTERN = /^\d{4}_.+\.sql$/;
 const CREATE_ENUM_TYPE_PATTERN = /CREATE\s+TYPE[^;]*\bAS\s+ENUM\b/i;
-const PUBLIC_RUNTIME_EXPORTS: readonly string[] = ['InvalidUserIdError', 'parseAccountId'];
+const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
+  'InvalidUserIdError',
+  'USER_RESOLUTION_STATUS',
+  'closeDatabase',
+  'openDatabase',
+  'parseAccountId',
+  'pingDatabase',
+  'resolveUserBySubject',
+];
 
 type PackageManifest = {
   readonly name?: string;
@@ -61,6 +69,15 @@ describe('@crypto/database package', () => {
     expect(Object.keys(databasePublicSurface)).not.toContain('createOwnerScope');
     expect(source).not.toMatch(/\bcreateOwnerScope\b/);
     expect(source).toMatch(/export\s+type\s*\{[^}]*\bOwnerScope\b/);
+  });
+
+  test('the database handle is opaque and exposes no client or table', () => {
+    const handle = databasePublicSurface.openDatabase(
+      'postgres://user:password@127.0.0.1:1/unreachable',
+    );
+    expect(Object.keys(handle)).toStrictEqual([]);
+    expect(Object.getOwnPropertySymbols(handle)).toStrictEqual([]);
+    expect(Object.isFrozen(handle)).toBe(true);
   });
 
   test('the frontend does not depend on @crypto/database', async () => {

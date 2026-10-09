@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { randomUUID } from 'node:crypto';
 import { MIGRATIONS_FOLDER, ROLLBACK_SUFFIX } from './database.constant.js';
 import { applyMigrations } from './migrate.js';
 import { applyRollbacks } from './rollback.js';
 import { readDatabaseUrl } from './read-database-url.js';
+import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
 
 const TEMPORARY_DATABASE_PREFIX = 'crypto_migration_';
 
@@ -41,35 +41,11 @@ async function listPublicTables(databaseUrl: string): Promise<string[]> {
   }
 }
 
-async function createTemporaryDatabase(
-  adminUrl: string,
-): Promise<{ readonly databaseName: string; readonly url: string }> {
-  const databaseName = `${TEMPORARY_DATABASE_PREFIX}${randomUUID().replaceAll('-', '')}`;
-  const admin = new Bun.SQL(adminUrl);
-  try {
-    await admin.unsafe(`CREATE DATABASE "${databaseName}"`);
-  } finally {
-    await admin.close();
-  }
-  const temporaryUrl = new URL(adminUrl);
-  temporaryUrl.pathname = `/${databaseName}`;
-  return { databaseName, url: temporaryUrl.toString() };
-}
-
-async function dropTemporaryDatabase(adminUrl: string, databaseName: string): Promise<void> {
-  const admin = new Bun.SQL(adminUrl);
-  try {
-    await admin.unsafe(`DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`);
-  } finally {
-    await admin.close();
-  }
-}
-
 async function runMigrationTest(adminUrl: string): Promise<number> {
   const migrationFileNames = await listMigrationFileNames(MIGRATIONS_FOLDER);
   if (migrationFileNames.length === 0) throw new Error('nenhuma migration encontrada');
 
-  const temporary = await createTemporaryDatabase(adminUrl);
+  const temporary = await createTemporaryDatabase(adminUrl, TEMPORARY_DATABASE_PREFIX);
   try {
     await applyMigrations({ databaseUrl: temporary.url, migrationsFolder: MIGRATIONS_FOLDER });
     const appliedCount = await countAppliedMigrations(temporary.url);
