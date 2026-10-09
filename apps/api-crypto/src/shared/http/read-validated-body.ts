@@ -33,15 +33,19 @@ export function parseWithSchema<TOutput>(input: unknown, schema: z.ZodType<TOutp
   return parsed.data;
 }
 
-export async function readValidatedBody<TOutput>(
-  request: Request,
-  schema: z.ZodType<TOutput>,
-): Promise<TOutput> {
+export async function readJsonBody(request: Request): Promise<unknown> {
   const body: unknown = await request.json().catch(() => undefined);
   if (body === undefined) {
     throw new RequestValidationError([
       { field: BODY_FIELD, reason: VALIDATION_REASON.INVALID_JSON },
     ]);
   }
-  return parseWithSchema(body, schema);
+  return body;
+}
+
+export async function readValidatedBody<TOutput>(
+  request: Request,
+  schema: z.ZodType<TOutput>,
+): Promise<TOutput> {
+  return parseWithSchema(await readJsonBody(request), schema);
 }

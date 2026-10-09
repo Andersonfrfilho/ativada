@@ -14,6 +14,7 @@ export const CHAT_OF_B = '700000002';
 export type WebhookCall = {
   readonly secret?: string | null;
   readonly body: unknown;
+  readonly rawBody?: string;
   readonly socketAddress?: string;
 };
 
@@ -47,7 +48,7 @@ export function callWebhook(harness: TelegramHarness, call: WebhookCall): Promis
       'Content-Type': 'application/json',
       ...(secret === null ? {} : { [WEBHOOK_HEADER]: secret }),
     },
-    body: JSON.stringify(call.body),
+    body: call.rawBody ?? JSON.stringify(call.body),
     socketAddress: call.socketAddress ?? '203.0.113.50',
   });
 }

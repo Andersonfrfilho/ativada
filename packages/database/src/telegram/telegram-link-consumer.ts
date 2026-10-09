@@ -1,8 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, eq, isNull, ne } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { BunSQLDatabase } from 'drizzle-orm/bun-sql';
 
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
+import { isUniqueViolation } from '../postgres-error-code.js';
 import { telegramLinkCodes } from '../schema/telegram-link-codes.schema.js';
 import { users } from '../schema/users.schema.js';
 import {
@@ -61,28 +62,31 @@ async function registerFailedAttempt(transaction: Transaction, code: PendingCode
     .where(eq(telegramLinkCodes.id, code.id));
 }
 
-async function isChatLinkedToAnotherUser(
-  transaction: Transaction,
-  params: { readonly chatId: string; readonly userId: string },
-): Promise<boolean> {
-  const rows = await transaction
-    .select({ id: users.id })
-    .from(users)
-    .where(and(eq(users.telegramChatId, params.chatId), ne(users.id, params.userId)))
-    .limit(1);
-  return rows.length > 0;
-}
+type ChatTarget = { readonly chatId: string; readonly userId: string };
 
-async function linkChatToUser(
-  transaction: Transaction,
-  params: { readonly chatId: string; readonly userId: string },
-): Promise<boolean> {
-  const rows = await transaction
-    .update(users)
-    .set({ telegramChatId: params.chatId, updatedAt: new Date() })
-    .where(and(eq(users.id, params.userId), isNull(users.deletedAt), isNull(users.blockedAt)))
-    .returning({ id: users.id });
-  return rows.length > 0;
+// Conditional UPDATE: a corrida entre dois donos pelo mesmo chat termina na unique de telegram_chat_id,
+// e essa violação é o resultado "recusado", num savepoint para a transação seguir viva.
+async function linkChatToUser(transaction: Transaction, target: ChatTarget): Promise<boolean> {
+  try {
+    return await transaction.transaction(async (savepoint) => {
+      const rows = await savepoint
+        .update(users)
+        .set({ telegramChatId: target.chatId, updatedAt: new Date() })
+        .where(
+          and(
+            eq(users.id, target.userId),
+            isNull(users.deletedAt),
+            isNull(users.blockedAt),
+            sql`not exists (select 1 from users as other where other.telegram_chat_id = ${target.chatId} and other.id <> ${target.userId})`,
+          ),
+        )
+        .returning({ id: users.id });
+      return rows.length > 0;
+    });
+  } catch (error: unknown) {
+    if (isUniqueViolation(error)) return false;
+    throw error;
+  }
 }
 
 async function redeemCode(
@@ -95,9 +99,10 @@ async function redeemCode(
     await discardCode(transaction, code.id);
     return LINK_OUTCOME.REJECTED;
   }
-  const target = { chatId: params.chatId, userId: code.userId };
-  const isConflict = await isChatLinkedToAnotherUser(transaction, target);
-  const isLinked = !isConflict && (await linkChatToUser(transaction, target));
+  const isLinked = await linkChatToUser(transaction, {
+    chatId: params.chatId,
+    userId: code.userId,
+  });
   if (!isLinked) {
     await registerFailedAttempt(transaction, code);
     return LINK_OUTCOME.REJECTED;

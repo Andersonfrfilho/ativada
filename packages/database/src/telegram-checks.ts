@@ -13,7 +13,10 @@ const SUBJECT_OF_A = 'subject-telegram-a';
 const SUBJECT_OF_B = 'subject-telegram-b';
 const CHAT_X = '710000001';
 const CHAT_Y = '710000002';
+const CHAT_Z = '710000003';
 const TEN_MINUTES_MILLISECONDS = 600_000;
+const RACE_ROUNDS = 10;
+const CONCURRENT_ISSUES = 10;
 
 export type TelegramCheckContext = {
   readonly handle: DatabaseHandle;
@@ -90,4 +93,51 @@ export async function checkTelegramLink(context: TelegramCheckContext): Promise<
   await links.unlink(scopeOfA);
   assertCondition((await readChat(client, SUBJECT_OF_A)) === null, 'unlink de A');
   reportCheck('telegram: chat de outro usuário é recusado; tentativas por código; desvincular');
+}
+
+export async function checkTelegramRaces(context: TelegramCheckContext): Promise<void> {
+  const { handle, client, assertCondition, reportCheck } = context;
+  const links = createTelegramLinkRepository(handle);
+  const consumer = createTelegramLinkConsumer(handle);
+  const scopeOfA = await resolveScope(handle, SUBJECT_OF_A);
+  const scopeOfB = await resolveScope(handle, SUBJECT_OF_B);
+  const expiresAt = new Date(Date.now() + TEN_MINUTES_MILLISECONDS);
+
+  const issues = await Promise.allSettled(
+    Array.from({ length: CONCURRENT_ISSUES }, (_, index) =>
+      links.issueCode(scopeOfA, { codeHash: hashOf(`RACE-ISSUE-${index}`), expiresAt }),
+    ),
+  );
+  assertCondition(
+    issues.every((issue) => issue.status === 'fulfilled'),
+    'emissões concorrentes do mesmo dono não podem falhar',
+  );
+  assertCondition((await countCodes(client)) === 1, 'um único código pendente por dono');
+
+  for (let round = 0; round < RACE_ROUNDS; round += 1) {
+    await links.issueCode(scopeOfA, { codeHash: hashOf(`RACE-A-${round}`), expiresAt });
+    await links.issueCode(scopeOfB, { codeHash: hashOf(`RACE-B-${round}`), expiresAt });
+    const outcomes = await Promise.allSettled([
+      consumer.consumeCode({
+        codeHash: hashOf(`RACE-A-${round}`),
+        chatId: CHAT_Z,
+        now: new Date(),
+      }),
+      consumer.consumeCode({
+        codeHash: hashOf(`RACE-B-${round}`),
+        chatId: CHAT_Z,
+        now: new Date(),
+      }),
+    ]);
+    const linked = outcomes.filter(
+      (outcome) => outcome.status === 'fulfilled' && outcome.value === LINK_OUTCOME.LINKED,
+    );
+    assertCondition(
+      outcomes.every((outcome) => outcome.status === 'fulfilled') && linked.length === 1,
+      `rodada ${round}: dois donos disputando o mesmo chat -> um vincula e o outro é recusado, sem erro`,
+    );
+    await links.unlink(scopeOfA);
+    await links.unlink(scopeOfB);
+  }
+  reportCheck('telegram: emissões e vínculos concorrentes terminam definidos, nunca em 23505');
 }

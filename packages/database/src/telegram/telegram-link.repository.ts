@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { BunSQLDatabase } from 'drizzle-orm/bun-sql';
 
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
@@ -17,22 +17,29 @@ export type TelegramLinkRepository = {
   readonly unlink: (scope: OwnerScope) => Promise<void>;
 };
 
+// Uma instrução só: delete + insert em duas deixava a emissão concorrente do mesmo dono violar a unique de user_id.
 async function replacePendingCode(
   database: BunSQLDatabase,
   scope: OwnerScope,
   params: IssueLinkCodeParams,
 ): Promise<void> {
-  await database.transaction(async (transaction) => {
-    await transaction
-      .delete(telegramLinkCodes)
-      .where(ownerCondition(scope, telegramLinkCodes.userId));
-    await transaction.insert(telegramLinkCodes).values({
+  await database
+    .insert(telegramLinkCodes)
+    .values({
       id: Bun.randomUUIDv7(),
       userId: scope.ownerUserId,
       codeHash: params.codeHash,
       expiresAt: params.expiresAt,
+    })
+    .onConflictDoUpdate({
+      target: telegramLinkCodes.userId,
+      set: {
+        codeHash: params.codeHash,
+        expiresAt: params.expiresAt,
+        attempts: 0,
+        createdAt: sql`now()`,
+      },
     });
-  });
 }
 
 async function removeLink(database: BunSQLDatabase, scope: OwnerScope): Promise<void> {

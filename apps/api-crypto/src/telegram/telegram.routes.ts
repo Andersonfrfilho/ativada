@@ -4,7 +4,7 @@ import { ROUTE_ACCESS } from '../router/route-access.constant.js';
 import type { Route } from '../router/route.types.js';
 import { FeatureDisabledError } from '../shared/errors/feature-disabled.error.js';
 import { HTTP_METHOD, HTTP_STATUS } from '../shared/http/http.constant.js';
-import { readValidatedBody } from '../shared/http/read-validated-body.js';
+import { readJsonBody } from '../shared/http/read-validated-body.js';
 import type { RouteResult } from '../shared/http/response-envelope.js';
 import type { HandleStartCommandUseCase } from './handle-start-command.use-case.js';
 import { TelegramWebhookRejectedError } from './telegram.error.js';
@@ -62,8 +62,9 @@ function createWebhookRoute(webhook: TelegramWebhookDependencies): Route {
       if (!isWebhookSecretValid(request.headers.get(WEBHOOK_SECRET_HEADER), webhook.secret)) {
         throw new TelegramWebhookRejectedError();
       }
-      const update = await readValidatedBody(request, telegramUpdateSchema);
-      const command = readStartCommand(update);
+      // O Telegram reentrega respostas não-2xx: só JSON inválido é 400, o resto de update é ignorado.
+      const update = telegramUpdateSchema.safeParse(await readJsonBody(request));
+      const command = update.success ? readStartCommand(update.data) : undefined;
       if (command !== undefined) await webhook.handleStartCommand(command);
       return { status: HTTP_STATUS.OK, data: { received: true } };
     },

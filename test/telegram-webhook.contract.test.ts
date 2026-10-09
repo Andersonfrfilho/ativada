@@ -169,8 +169,27 @@ describe('linking by code', () => {
     expect(harness.fakeTelegram.sentMessages).toHaveLength(0);
   });
 
-  test('rejects a body that is not valid for an update', async () => {
-    const response = await callWebhook(harness, { body: { message: { chat: 'x' } } });
+  test.each([
+    ['a message whose chat has an unexpected shape', { message: { chat: 'x' } }],
+    [
+      'a long text',
+      { message: { chat: { id: 5, type: 'private' }, text: `/start ${'A'.repeat(2_000)}` } },
+    ],
+    [
+      'a photo without text',
+      { message: { chat: { id: 5, type: 'private' }, photo: [{ file_id: 'abc' }] } },
+    ],
+    ['a text that is not a string', { message: { chat: { id: 5, type: 'private' }, text: 42 } }],
+    ['an array', []],
+  ])('answers 200 { received: true } and does nothing for %s', async (_description, body) => {
+    const response = await callWebhook(harness, { body });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toStrictEqual({ data: { received: true } });
+    expect(harness.fakeTelegram.sentMessages).toHaveLength(0);
+  });
+
+  test('answers 400 only when the body is not JSON', async () => {
+    const response = await callWebhook(harness, { body: undefined, rawBody: '{not json' });
     expect(response.status).toBe(400);
   });
 

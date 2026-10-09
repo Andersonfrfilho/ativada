@@ -7,7 +7,7 @@ import { checkPendingQueue, checkPurge, checkRemoveAndRetention } from './accoun
 import { checkAdminRepositories } from './admin-checks.js';
 import { checkExport, checkMarkDeleted, seedLifecycleOwners } from './account-lifecycle-checks.js';
 import { checkProfileRepository } from './profile-checks.js';
-import { checkTelegramLink } from './telegram-checks.js';
+import { checkTelegramLink, checkTelegramRaces } from './telegram-checks.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
 import { resolveUserBySubject } from './users/resolve-user-by-subject.js';
 import { USER_RESOLUTION_STATUS } from './users/user-resolution.constant.js';
@@ -79,6 +79,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkBlockedAccount(handle, client);
     await checkProfileRepository({ handle, assertCondition, reportCheck });
     await checkTelegramLink({ handle, client, assertCondition, reportCheck });
+    await checkTelegramRaces({ handle, client, assertCondition, reportCheck });
     await checkAdminRepositories({ handle, client, assertCondition, reportCheck });
     const lifecycle = { handle, client, assertCondition, reportCheck };
     const owners = await seedLifecycleOwners(lifecycle);
