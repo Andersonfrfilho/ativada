@@ -40,8 +40,11 @@ Um sistema que, sobre preço real de mercado:
 - Login por e-mail e senha via Keycloak (OIDC, fluxo Authorization Code + PKCE), com recuperação de
   senha e verificação de e-mail. Segundo fator (TOTP) disponível e obrigatório para administrador.
 - Access token curto (≤ 15 min) e refresh rotativo; refresh em cookie `HttpOnly`, nunca em
-  `localStorage`.
+  `localStorage`. A API faz o papel de *token handler* (troca o código do login e guarda o refresh no
+  cookie), com cliente confidencial no Keycloak (ADR 0001 §a).
 - Cadastro por convite na etapa 1 (o administrador convida); cadastro aberto fica para depois.
+- O administrador bloqueia e desbloqueia contas; conta bloqueada não acessa nada (`403`) e tem as
+  conexões em tempo real encerradas.
 - Cada usuário tem preferências próprias: moeda de exibição (R$/US$), fuso, canal de alerta
   (painel, Telegram) e o próprio chat do Telegram, vinculado por código de confirmação.
 
@@ -198,7 +201,8 @@ Toda decisão gravada conforme constituição §8, consultável por execução e
 4. Simulação ao vivo roda 72 h sem intervenção, sobrevive a um reinício e gera alertas.
 5. Painel mostra as quatro telas com dados reais da simulação.
 6. Contrato negativo para cada rota com recurso de usuário: o usuário B recebe `404` ao ler,
-   alterar, parar ou exportar o recurso do usuário A.
+   alterar, parar ou exportar o recurso do usuário A, a listagem de B não contém o recurso de A, e a
+   resposta é idêntica à de um recurso inexistente (mesmo status, código, mensagem e tamanho do corpo).
 7. Dois usuários com simulações ao vivo no mesmo par recebem só os próprios alertas.
 
 ## Pendência regulatória (não bloqueia o desenvolvimento)

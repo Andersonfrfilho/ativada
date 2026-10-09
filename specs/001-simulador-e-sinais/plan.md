@@ -40,13 +40,13 @@ type EngineStep = (input: StepInput) => StepResult; // estado entra, estado sai 
 | D2 | Postgres + Drizzle; candles em tabela com PK composta | Consulta por intervalo é o caso dominante |
 | D3 | `decimal.js` para dinheiro e quantidade | Constituição §6 |
 | D4 | Indicadores via `trading-signals` (TS nativo, mantido) — confirmar na T2.2 | Evitar reimplementar matemática; `technicalindicators` está sem manutenção |
-| D5 | Sem fila externa na etapa 1: o stream da Binance é a entrada do worker; worker→API por `LISTEN/NOTIFY` | Um usuário, local; RabbitMQ seria peso sem ganho |
+| D5 | Sem fila externa na etapa 1: o stream da Binance é a entrada do worker; worker→API por `LISTEN/NOTIFY` | Multiusuário, mas uma instância de API e um worker na etapa 1: o volume cabe no Postgres e RabbitMQ seria peso sem ganho. Mais de uma instância exige ADR (estado em memória da API: rate limit, tickets, sockets) |
 | D6 | Execução em `t+1` na abertura; stop antes do alvo no mesmo candle | Constituição §3 e §4 |
 | D7 | Saldo em USDT; exibição em R$ pela cotação USDT/BRL do momento | Pares cotados em USDT têm mais liquidez e histórico |
 | D8 | Telegram por Bot API direta (`fetch`), sem SDK | Dois métodos usados; dependência não se paga |
-| D9 | Keycloak (OIDC) para login, com realm versionado em `realm/`; a API valida o JWT pela JWKS | Senha, recuperação, verificação de e-mail e TOTP prontos; mesma pilha já usada no ecossistema |
+| D9 | Keycloak (OIDC) para login, com realm versionado em `realm/`; a API valida o JWT pela JWKS com a biblioteca `jose` na versão exata `6.2.12` (dependência prevista, instalada na T0.7) e faz o papel de *token handler* com cliente confidencial (ADR 0001) | Senha, recuperação, verificação de e-mail e TOTP prontos; mesma pilha já usada no ecossistema |
 | D10 | Tabela `users` local espelha o `sub` do Keycloak (criada no primeiro acesso) e guarda preferências | O domínio referencia `user_id` sem depender do Keycloak em cada consulta |
-| D11 | Autorização por objeto num único ponto: todo repositório de recurso de usuário recebe `userId` obrigatório no tipo | Esquecer o filtro vira erro de compilação, não vazamento |
+| D11 | Autorização por objeto num único ponto: todo método de repositório de recurso de usuário recebe `OwnerScope` como primeiro parâmetro; `UserId` só é cunhado dentro de `@crypto/database`, cuja superfície pública (`exports` só `.`) não expõe cunhagem, tabelas nem cliente cru, e o lint de `apps/*/src` proíbe Drizzle, `Bun.SQL`, subcaminhos do pacote e asserção de tipo (ADR 0001 §c) | Chamar repositório sem escopo de dono não compila, e a app não tem como fabricar o escopo nem consultar tabela sem ele; o contrato negativo por rota pega o filtro errado dentro do pacote |
 | D12 | Worker avalia todas as simulações ativas do par no mesmo candle e roteia alertas pelo dono | Um stream de mercado para todos (RNF06) |
 
 ## 3. Modelo de dados
@@ -55,22 +55,30 @@ type EngineStep = (input: StepInput) => StepResult; // estado entra, estado sai 
 |---|---|
 | `candles` | `exchange`, `symbol`, `timeframe`, `open_time` (PK composta), `open/high/low/close/volume numeric` |
 | `sentiment_daily` | `date` PK, `fear_greed smallint` |
-| `users` | `id uuid`, `keycloak_sub` (único), `display_name`, `display_currency`, `timezone`, `telegram_chat_id` (nulo até vincular), `limits jsonb`, `created_at`, `deleted_at` |
-| `telegram_link_codes` | `code` (hash), `user_id`, `expires_at` — vínculo do chat por código de uso único |
+| `users` | `id uuid`, `keycloak_sub varchar(255)` (único), `display_name`, `display_currency`, `timezone`, `telegram_chat_id` (nulo até vincular), `limits jsonb`, `created_at`, `updated_at`, `blocked_at`, `deleted_at`, `identity_deleted_at`, `data_purged_at` (ADR 0001 §d, §h) |
+| `telegram_link_codes` | `code` (hash), `user_id`, `expires_at`, `attempts` — vínculo do chat por código de uso único |
 | `strategies` | `id uuid`, `user_id`, `name`, `is_example bool`, `created_at` |
-| `strategy_versions` | `id uuid`, `strategy_id`, `version int`, `config jsonb` (validado por Zod), `created_at` |
+| `strategy_versions` | `id uuid`, `user_id`, `strategy_id`, `version int`, `config jsonb` (validado por Zod), `created_at` |
 | `runs` | `id uuid`, `strategy_version_id`, `kind varchar` (`backtest`/`walk_forward`/`live_paper`), `symbol`, `timeframe`, `period_start/end`, `initial_balance numeric`, `fee_rate`, `slippage_rate`, `status varchar`, `metrics jsonb`, `last_candle_time` |
 | `signals` | `id uuid`, `run_id`, `candle_time`, `action varchar`, `score numeric`, `votes jsonb`, `indicators jsonb`, `reason text` · único (`run_id`, `candle_time`) |
 | `orders` | `id uuid`, `run_id`, `signal_id`, `side`, `type`, `price`, `quantity`, `status`, `created_candle_time`, `expires_candle_time` |
-| `fills` | `id uuid`, `order_id`, `price`, `quantity`, `fee`, `filled_at` |
+| `fills` | `id uuid`, `user_id`, `order_id`, `price`, `quantity`, `fee`, `filled_at` |
 | `positions` | `id uuid`, `run_id`, `symbol`, `entry_price`, `quantity`, `stop_price`, `target_price`, `opened_at`, `closed_at`, `exit_reason` |
 | `equity_points` | `run_id`, `time`, `equity numeric`, `benchmark numeric` |
-| `walk_forward_windows` | `run_id`, `index`, `train_start/end`, `test_start/end`, `best_params jsonb`, `in_sample jsonb`, `out_of_sample jsonb` |
+| `walk_forward_windows` | `user_id`, `run_id`, `index`, `train_start/end`, `test_start/end`, `best_params jsonb`, `in_sample jsonb`, `out_of_sample jsonb` |
 | `alerts` | `id uuid`, `signal_id`, `channel`, `sent_at`, `status` |
+| `price_alerts` | `id uuid`, `user_id`, `symbol`, `direction`, `value numeric`, `origin`, `is_enabled`, `triggered_at` (RF14) |
+| `user_assets` | `id uuid`, `user_id`, `symbol`, `quantity numeric`, `average_price numeric` (RF15) |
+| `audit_events` | `id uuid`, `actor_user_id` (nulo), `actor_kind`, `target_kind`, `target_id`, `action`, `ip` (90 dias), `created_at`, `payload` sem PII — esquema único no ADR 0001 §i |
 
-`runs`, `signals`, `orders`, `positions`, `equity_points` e `alerts` também levam `user_id`
-(denormalizado de propósito: o filtro do dono não depende de join). Índices começam por `user_id`.
-`candles` e `sentiment_daily` não têm dono.
+Toda tabela de usuário leva `user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT`:
+`strategies`, `strategy_versions`, `runs`, `walk_forward_windows`, `signals`, `orders`, `fills`,
+`positions`, `equity_points`, `alerts`, `goals`, `price_alerts`, `user_assets` e `telegram_link_codes`
+(denormalizado de propósito: o filtro do dono não depende de join). Todo pai declara
+`UNIQUE (id, user_id)` e toda filha o referencia por FK composta `(parent_id, user_id)` — inclusive
+`runs.strategy_version_id`, `goals.run_id` e `goals.strategy_version_id` —, para que o banco recuse
+dono divergente do pai. Índices começam por `user_id`. `candles` e `sentiment_daily` não têm dono;
+`audit_events` é pseudonimizada na exclusão (ADR 0001 §h, §i).
 
 Sem ENUM nativo (VARCHAR), PK UUID v7. Toda migration com rollback.
 
@@ -126,10 +134,20 @@ Limiar: compra ≥ +2, venda ≤ −2. Risco: stop 2×ATR, alvo 3×ATR, 1% por o
 | `GET/PATCH` | `/v1/me` | Perfil e preferências |
 | `POST` | `/v1/me/telegram-link` | Gera código de vínculo do Telegram |
 | `GET` | `/v1/me/export` · `DELETE /v1/me` | LGPD: exportar e apagar a conta |
-| `POST` | `/v1/admin/invitations` | Convidar usuário (papel `admin`) |
+| `POST` | `/v1/session` | Troca o código do login (PKCE) por access token; refresh em cookie `__Host-` (*token handler*) |
+| `POST` | `/v1/session/refresh` | Renova o access token pelo cookie, com rotação do refresh |
+| `DELETE` | `/v1/session` | Logout no Keycloak e apaga o cookie |
+| `POST` | `/v1/stream/tickets` | Ticket de uso único (30 s) para o handshake do WebSocket |
+| `POST` | `/v1/admin/invitations` | Convidar usuário (papel `admin`, `acr ≥ 2`) |
+| `GET` | `/v1/admin/health` | Saúde do sistema, só números agregados |
+| `GET` | `/v1/admin/accounts` | Contas com dados mínimos (e-mail do Keycloak, estado, datas) |
+| `POST` | `/v1/admin/accounts/:accountId/block` · `/unblock` | Bloquear e desbloquear conta (nunca a si mesmo nem o último admin) |
 
-Toda rota exige Bearer token, exceto o health. O WebSocket autentica no handshake e reautentica
-quando o token expira. Recurso de outro usuário responde `404`.
+Toda rota declara `access` (`public`/`user`/`admin`) e o roteador nega por padrão; só o health e as
+rotas de sessão são públicas. `/v1/admin/*` exige `acr ≥ 2`. O WebSocket autentica no handshake pelo
+ticket, fecha no `exp` do token com `4401` a menos que o painel renove o token por mensagem dentro do
+socket, e fecha com `4403` quando a conta é bloqueada ou apagada. Recurso de outro usuário responde
+`404` com o mesmo `<RESOURCE>_NOT_FOUND` de recurso inexistente (ADR 0001 §e).
 
 Envelope `{ data }` / `{ error: { code, message } }`. OpenAPI gerado das rotas, servido com Scalar
 fora de produção.

@@ -48,7 +48,8 @@ percorrendo testnet → sombra → real pequeno, sempre com uma pessoa decidindo
   executor, no momento do uso.
 - Ao cadastrar e a cada armar, o sistema consulta as restrições da chave e **recusa** se ela permitir
   saque, ou se não tiver restrição de IP em `live`. A tela mostra o IP de saída a liberar.
-- Cadastrar, trocar ou remover chave exige reautenticação (senha + TOTP) e gera evento de auditoria.
+- Cadastrar, trocar ou remover chave exige reautenticação, definida como access token com `acr = 2`
+  (senha + TOTP) **e** `auth_time ≤ 5 min`, e gera evento de auditoria (ADR 0001 §b, §i).
 - TOTP é obrigatório para qualquer usuário que cadastre chave.
 
 ### RF04 — Tetos (circuit breaker)
@@ -67,10 +68,14 @@ Teto atingido → cancela ordens abertas, para de abrir posição, alerta no Tel
 Aumentar teto é decisão humana registrada.
 
 ### RF05 — Kill switch
-- `POST /v1/execution/kill` e comando `/stop` no Telegram (só do chat vinculado ao usuário):
-  cancela as ordens abertas **daquele usuário** e desarma.
-- Kill switch global do administrador: desarma todos os usuários e cancela as ordens abertas
-  (incidente na plataforma). Não arma ninguém de volta.
+- `POST /v1/execution/kill` e comando `/stop` no Telegram (só do chat vinculado ao usuário; o webhook
+  valida o `secret_token` do Telegram antes de ler o comando): cancela as ordens abertas **daquele
+  usuário** e desarma.
+- Kill switch global do administrador (`POST /v1/admin/execution/kill-all`): **só grava um sinal global**
+  e audita; quem cancela as ordens e desarma é o processo executor, sessão a sessão, com
+  `createOwnerScope(row.userId)`, igual ao worker. A resposta é só agregada (quantos desarmados, quantas
+  falhas), sem saldo, ordens ou ids. Não arma ninguém de volta. **Proibido** `kill/:userId` ou qualquer
+  rota admin que receba id de usuário e atue sobre a execução dele (ADR 0001 §j).
 - Zerar posições é opcional e desligado por padrão.
 - Responde em até 5 s e confirma o estado final consultando a corretora.
 
@@ -108,7 +113,7 @@ horário.
 | RNF01 | Do candle fechado à ordem enviada em menos de 3 s |
 | RNF02 | Queda de conexão nunca deixa ordem duplicada (prova por teste com falha injetada) |
 | RNF03 | Segredos redigidos no logger (`apiKey`, `secret`, `signature`, token do Telegram) |
-| RNF04 | Endpoints de execução só em 127.0.0.1 e com token de operador |
+| RNF04 | Rotas de execução na API exigem `Bearer` com `acr = 2` e `auth_time` recente (≤ 5 min) para armar, trocar chave e mudar teto; o processo executor não tem porta pública (escuta só em 127.0.0.1 ou nenhuma) e recebe comandos pelo banco |
 | RNF05 | O processo de execução é separado do da simulação; parar um não para o outro |
 | RNF06 | Falha na conta de um usuário (chave revogada, saldo insuficiente) não afeta a execução dos outros |
 | RNF07 | Toda rota de execução com contrato negativo entre usuários |

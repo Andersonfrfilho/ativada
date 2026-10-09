@@ -41,14 +41,17 @@ e só decide **se e como** executar.
 | `exchange_orders` | `id uuid`, `user_id`, `session_id`, `signal_id` (único), `client_order_id` (único), `exchange_order_id`, `side`, `price`, `quantity`, `status`, `sent_at`, `raw_response jsonb` |
 | `exchange_fills` | `id uuid`, `exchange_order_id`, `price`, `quantity`, `fee`, `fee_asset`, `usdt_brl numeric`, `value_brl numeric`, `filled_at` |
 | `reconciliations` | `id uuid`, `session_id`, `checked_at`, `diff jsonb`, `status` |
-| `audit_events` | `id uuid`, `actor`, `action`, `target`, `origin_ip`, `payload jsonb`, `created_at` |
+
+A trilha de auditoria usa a tabela `audit_events` da spec 001, com o esquema único do ADR 0001 §i
+(`actor_user_id` nulo, `actor_kind`, `target_kind`, `target_id`, `action`, `ip` com retenção de 90 dias,
+`payload` sem PII). Esta spec não a redefine; só acrescenta valores de `action` e `target_kind`.
 
 ## 4. API de execução
 
 | Método | Rota | Uso |
 |---|---|---|
-| `PUT/DELETE` | `/v1/me/exchange-credentials/:exchange` | Cadastrar/remover chave (reautenticação + TOTP; nunca devolve o segredo) |
-| `POST` | `/v1/admin/execution/kill-all` | Kill switch global (papel `admin`) |
+| `PUT/DELETE` | `/v1/me/exchange-credentials/:exchange` | Cadastrar/remover chave (`acr = 2` e `auth_time ≤ 5 min`; nunca devolve o segredo) |
+| `POST` | `/v1/admin/execution/kill-all` | Kill switch global (papel `admin`, `acr ≥ 2`): só grava o sinal global e audita; resposta agregada (ADR 0001 §j) |
 | `GET` | `/v1/execution/status` | Modo, armado, tetos, consumo do dia — do usuário do token |
 | `POST` | `/v1/execution/arm` | Arma (exige confirmação digitada) |
 | `POST` | `/v1/execution/disarm` | Desarma sem cancelar ordens |
