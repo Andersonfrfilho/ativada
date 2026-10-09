@@ -177,6 +177,23 @@ Toda decisão gravada conforme constituição §8, consultável por execução e
 - Ativos são dado pessoal financeiro: só o dono vê, entram na exportação e na exclusão de conta
   (RNF08) e nunca aparecem em log.
 
+### RF16 — Tempo real
+- O painel se atualiza **sozinho, sem recarregar**. O que muda ao vivo: preço e variação das moedas; a
+  distância do preço atual a cada gatilho do plano (compra, alvo, stop); valor em R$ e resultado de
+  Seus ativos; saldo e curva da simulação; progresso da meta; e o disparo de alertas de preço e de sinal.
+- Preços de mercado são dado público: a API mantém **uma** conexão com o stream de ticker da Binance
+  para todos os pares habilitados e repassa por WebSocket (canal `market:<par>`), igual para todos os
+  usuários autenticados. Eventos do usuário (sinal, operação, saldo, alerta) vão pelo canal
+  `user:<userId>`, só para o dono (ADR 0001).
+- No máximo **1 atualização por segundo por par** (agregação no servidor). O painel mostra a hora do
+  último preço e um selo "ao vivo"; sem mensagem há mais de 10 s, vira "sem dados há N s".
+- Falha de conexão: reconexão com espera crescente; ao reconectar, o painel rebusca o estado por REST
+  (nada fica errado por evento perdido). Sem WebSocket disponível, consulta a cada 15 s.
+- Os **preços** de compra, alvo e stop do plano não mudam a cada tick: o de compra é recalculado no
+  fechamento do candle e alvo e stop ficam fixos desde a compra. O que muda ao vivo é a **distância**
+  até eles, calculada no navegador a partir do preço recebido (sem ida ao servidor por tick).
+- Não é tempo real: backtests, walk-forward e o ranking da meta (calculados no histórico, em cache).
+
 ## Requisitos não funcionais
 
 | ID | Requisito |
@@ -189,6 +206,7 @@ Toda decisão gravada conforme constituição §8, consultável por execução e
 | RNF06 | Respeitar limites da API da Binance (peso por minuto) com backoff; um único stream de mercado serve todos os usuários |
 | RNF07 | Rate limit por usuário autenticado e mais duro no login |
 | RNF08 | LGPD: o usuário exporta e apaga a própria conta e os próprios dados |
+| RNF09 | Do preço na Binance ao painel: p95 abaixo de 2 s; um único stream de ticker serve todos os usuários |
 
 ## Critérios de aceite da spec
 

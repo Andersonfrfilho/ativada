@@ -118,6 +118,22 @@ Limiar: compra ≥ +2, venda ≤ −2. Risco: stop 2×ATR, alvo 3×ATR, 1% por o
 - Rotas: `POST /v1/goals/evaluate` (sem gravar, devolve o ranking), `POST /v1/goals` (inicia a
   simulação com meta), `GET /v1/goals`, `GET /v1/goals/:id`.
 
+## 5c. Tempo real (RF16)
+
+- **Preços não passam pelo banco.** A API abre UMA conexão com o stream combinado de ticker da Binance
+  (`<par>@miniTicker`) para os pares habilitados, com reconexão e espera exponencial, e repassa pelo
+  pub/sub nativo do `Bun.serve` (tópico `market:<PAR>`). Cada instância da API tem sua conexão; não há
+  `LISTEN/NOTIFY` para ticks (alta frequência e dado público).
+- Agregação no servidor: guarda o último tick por par e publica no máximo 1 vez por segundo por par.
+- Mensagem de mercado: `{ type: 'tick', symbol, price, change24h, at }`. Mensagens de usuário (sinal,
+  operação, saldo, alerta) seguem o canal `user:<userId>` do ADR 0001 (NOTIFY só com `runId`/`eventId`).
+- O WebSocket autentica por ticket de uso único (ADR 0001). O cliente assina `market:*` e `user:*`; o
+  servidor só aceita `user:` do próprio dono.
+- Cliente: hook `useLiveMarket` mantém o último preço por par, calcula distâncias, valor dos ativos e
+  progresso da meta no navegador, mostra o selo "ao vivo" / "sem dados há N s" e cai para polling
+  de 15 s quando o WebSocket não conecta. Ao reconectar, rebusca o estado por REST.
+- Alerta de preço (RF14) é avaliado no servidor a cada tick consolidado (o cliente nunca decide).
+
 ## 6. API (etapa 1)
 
 | Método | Rota | Uso |

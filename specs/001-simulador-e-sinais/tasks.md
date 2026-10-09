@@ -78,6 +78,7 @@ Cada task fecha com: `bun run typecheck` + testes da área + commit isolado + ev
 | T4.4 | `LISTEN/NOTIFY` → WebSocket `/v1/stream`, autenticado e filtrado pelo dono. Obrigações herdadas: ADR 0001 §e e §k (NOTIFY só `{ runId, kind, eventId }`, `Bun.SQL` com `LISTEN` confirmado, `Origin`, `4403`, renovação no socket) | Integração: sinal chega ao dono em < 10 s; outro usuário conectado não recebe |
 | T4.5 | Alerta no Telegram para o chat vinculado do dono, com motivo, stop, alvo e acerto histórico; sem repetição por candle | Contrato com servidor HTTP falso; token e chat nunca aparecem em log |
 | T4.6 | Exportação CSV do registro | Contrato: colunas e decimais |
+| T4.7 | Stream de ticker público da Binance na API: uma conexão, reconexão com espera exponencial, agregação de 1 atualização por segundo por par, pub/sub `market:<PAR>`, selo de dado velho; alerta de preço avaliado no tick | Contrato com servidor WebSocket falso: queda e retomada sem duplicar; 100 ticks em 1 s viram 1 publicação; p95 do tick ao assinante < 2 s no teste |
 
 ## Fase 4b — Metas
 
@@ -108,6 +109,7 @@ Cada task fecha com: `bun run typecheck` + testes da área + commit isolado + ev
 | T5.5 | Alertas: histórico e tempo real | E2E com WS |
 | T5.6 | Tela Nova meta e cartão de meta ativa no painel; lista de moedas com situação e próximo gatilho (referência: preview) | E2E: declarar meta → ranking → simular → cartão no painel |
 | T5.7 | Plano de operação com gráfico, quadro de alertas de preço e quadro Seus ativos (referência: preview) | E2E: Avisar no plano cria alerta; cadastrar ativo mostra valor, regra e alvo/stop |
+| T5.8 | Painel em tempo real (RF16): hook `useLiveMarket`, moedas, plano, ativos, alertas e saldo atualizando sozinhos, selo ao vivo / sem dados, polling de 15 s de reserva e rebusca ao reconectar | E2E com stream falso: preço muda na tela sem recarregar; derrubar o socket mostra "sem dados" e a volta corrige |
 
 ## Fase 6 — Revisão e fechamento
 
