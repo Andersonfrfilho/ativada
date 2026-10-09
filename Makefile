@@ -6,7 +6,7 @@ export
 COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
 
-.PHONY: help bootstrap config up down ps check migration-test database-test identity-test session-test admin-test identity-logs
+.PHONY: help bootstrap config up down ps check migration-test database-test identity-test session-test admin-test lgpd-test identity-logs
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -67,6 +67,13 @@ admin-test: ## Prova convite, bloqueio, auditoria e Telegram contra Postgres, Ke
 	set -a; . envs/env.test; set +a; \
 	status=0; \
 	$(MAKE) up ENV=test && bun --env-file=envs/env.test run scripts/admin-test.ts || status=$$?; \
+	$(MAKE) down ENV=test DOWN_FLAGS=--volumes; \
+	exit $$status
+
+lgpd-test: ## Prova exportar e apagar a conta (API, cron, Postgres, Keycloak e Mailpit de teste descartáveis)
+	set -a; . envs/env.test; set +a; \
+	status=0; \
+	$(MAKE) up ENV=test && bun --env-file=envs/env.test run scripts/lgpd-test.ts || status=$$?; \
 	$(MAKE) down ENV=test DOWN_FLAGS=--volumes; \
 	exit $$status
 

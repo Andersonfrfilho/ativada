@@ -744,6 +744,50 @@ bloqueada entra em `apps/api-crypto/src/admin/block-account.use-case.ts`, logo d
 `AccountId` e o registro `userId → sockets` fecha as conexões. A conversão `AccountId → UserId` do registro
 fica no módulo de stream, nunca no repositório admin.
 
+### o) Resultados e desvios da T0.9
+
+Implementação: `packages/identity-admin` (cliente do Keycloak, antes em `apps/api-crypto`),
+`apps/api-crypto/src/account/` (`GET /v1/me/export`, `DELETE /v1/me`), `packages/database/src/account/`
+(exportação, marca de exclusão e purga) e `apps/cron-crypto/src/accounts/` (tarefa `purge-deleted-accounts`).
+Provas: contratos com Keycloak falso e repositório em memória (`account-export`, `account-delete`,
+`purge-deleted-accounts`, `ownership-registry`), `make database-test` (repositórios no Postgres real) e
+`make lgpd-test` (API, cron, Postgres, Keycloak 26.8.0 e Mailpit descartáveis).
+
+**Medições** (saída literal em `make lgpd-test`):
+
+| Pergunta | Resultado |
+|---|---|
+| A service account encerra as sessões de um usuário? | **Sim.** `POST /users/{id}/logout` com `crypto-api-service` encerra a sessão: **1 → 0** sessões de A logo depois do `202` |
+| Os passos 2 e 3 rodam na requisição? | Não: depois do `202`, `deleted_at` está preenchido e `identity_deleted_at` e `data_purged_at` seguem nulos |
+| O cron na carência de 24 h | Apaga A no Keycloak (404 ao ler), purga os dados, anula `display_name`/`telegram_chat_id`, preenche as duas colunas e **mantém a linha** de `users` |
+| Segunda execução do cron | Idempotente: nada a refazer, saída `0` |
+| Remoção da linha | Só com as duas colunas preenchidas e passada a carência; `audit_events` com o mesmo número de linhas, nenhuma apontando para A |
+| Login de A depois | Recusado: o usuário não existe mais no Keycloak |
+| Exportação repetida | `429` com `Retry-After: 3600` |
+
+**A ordem do roteador tem uma consequência**: o rate limit por `sub` vem antes da resolução do usuário (§g).
+Uma conta apagada que já gastou a cota da exportação recebe `429` (não `401 ACCOUNT_DELETED`) até a hora
+virar. Aceito: o `401` é só mais tardio e a exportação não vaza nada.
+
+**Desvios e decisões que o ADR não fixava**
+
+| Ponto | Decisão |
+|---|---|
+| Pacote do cliente do Keycloak | `@crypto/identity-admin` (o cron refaz os passos 2 e 3 e uma app não importa código de outra). Ganha `logoutUser` e a fábrica `createKeycloakIdentityAdmin`; `invitationClientId`/`invitationRedirectUri` viraram opcionais (o cron não convida) |
+| Código de reautenticação | `403 REAUTH_REQUIRED`, como pediu a task; §b chama o mesmo caso de `REAUTHENTICATION_REQUIRED`. **Pendente de decisão**: unificar o nome antes da spec 002 (chave de corretora) |
+| Janela de `auth_time` | Idade máxima de 5 min mais a tolerância de 10 s do `jose`; `auth_time` até 10 s no futuro é aceito, além disso e ausente são recusados. A rota recebe `authenticationTime` no contexto |
+| Passo 1 | Grava a auditoria (`account.deletion_requested`, ator e alvo = a conta, IP) **antes** de `deleted_at`: se a marca falhar a pessoa repete; depois dela não há como repetir. O logout no Keycloak é melhor esforço (o passo 2 apaga o usuário de qualquer forma). Não há execuções ao vivo nem WebSocket ainda: o ponto de extensão (parar simulações, fechar `4403`) fica no `delete-account.use-case.ts` |
+| Forma da exportação | Envelope `{ data }` num JSON só, não em fluxo (as tabelas atuais são pequenas; a cota de 1 por hora limita o custo). Quando entrarem tabelas grandes (`fills`, `equity_points`), a exportação precisa virar fluxo. A consulta roda numa transação com `statement_timeout` de 15 s |
+| Conteúdo | `users`: perfil, preferências, chat do Telegram (é dado da própria pessoa), datas; **sem** `id` nem `keycloak_sub`. E-mail lido do Keycloak (`null` se estiver fora do ar, para não gastar a cota). `telegram_link_codes` sai **sem o hash** (o ADR dizia não exportar; a task pediu exportar sem o hash). `audit_events`: como ator (com o IP da própria pessoa) e como alvo (sem o ator e sem o IP de terceiros) |
+| Registro | `OWNED_TABLES` ganha dois companheiros declarativos, `OWNED_TABLE_EXPORTS` (colunas exportadas ou motivo da exclusão) e `OWNED_TABLE_DELETION_ORDER` (filhas antes dos pais), e `PSEUDONYMIZED_TABLES` ganha `PSEUDONYMIZATION_STEPS`. O contrato reprova tabela de dono sem passo de exportação, sem passo de exclusão, fora da ordem das FKs ou com coluna secreta exportada; a purga recusa rodar (`OwnedTableWithoutDeletionStepError`) se o registro e a ordem divergirem |
+| Passos 2 e 3 independentes | O cron tenta o passo 3 mesmo quando o 2 falhou (Keycloak fora do ar não segura a obrigação de apagar os dados); a linha só sai com os dois. Cada conta falha isolada e a execução sai com `1` se alguma ficou pendente |
+| Carência | Parâmetro `gracePeriodMilliseconds` da tarefa; o `main.ts` usa a constante de 24 h e o `lgpd-test` zera só no processo de teste |
+| `audit_events` | Pseudonimizada na purga (`actor_user_id`, `target_id` do usuário e o IP quando ele é o ator); o IP de **qualquer** linha com mais de 90 dias é anulado pelo cron. **Não implementado**: apagar a linha após 2 anos (§i) |
+| Logs do cron | `createCronLogger` próprio e mínimo: só texto, número e booleano (o tipo impede objeto de erro, e-mail ou segredo); falha de passo registra o nome da etapa e o nome do erro |
+| Env do cron | Ganha `KEYCLOAK_TOKEN_URL`, `KEYCLOAK_ADMIN_API_URL`, `KEYCLOAK_SERVICE_CLIENT_ID` e `KEYCLOAK_SERVICE_CLIENT_SECRET` (Zod). O contrato "o cron sobe e sai 0 com env válido" deixou de valer: ele agora fala com o banco e sai `1` se não o alcança |
+| Cookie de refresh | `DELETE /v1/me` não apaga o cookie `__Host-crypto_refresh` (a rota é autenticada por Bearer, sem o cabeçalho CSRF das rotas de sessão); o painel chama `DELETE /v1/session` em seguida, e o Keycloak já encerrou a sessão |
+| Reautenticação no teste real | O `lgpd-test` faz login novo e por isso nunca exercita `auth_time` antigo (esperar 5 min por execução é caro); a recusa por `auth_time` ausente, velho e futuro está nos contratos |
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |

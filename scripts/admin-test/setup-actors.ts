@@ -8,7 +8,7 @@ import { assertCondition } from '../identity-test/identity-test.error.js';
 
 type ActorKind = 'user' | 'admin-with-otp';
 
-async function createActor(
+export async function createActor(
   context: AdminTestContext,
   kind: ActorKind,
   acrValues: string | undefined,
