@@ -5,8 +5,10 @@ import type { UserId } from '../../packages/database/src/ownership/user-id.js';
 export const OWNER_FILTER_DEFECT = {
   NONE: 'none',
   READ_IGNORES_OWNER: 'read_ignores_owner',
+  LIST_IGNORES_OWNER: 'list_ignores_owner',
   RENAME_IGNORES_OWNER: 'rename_ignores_owner',
   STOP_WRITES_BEFORE_CHECK: 'stop_writes_before_check',
+  STOP_AFFECTS_EVERY_OWNER: 'stop_affects_every_owner',
 } as const;
 
 export type OwnerFilterDefect = (typeof OWNER_FILTER_DEFECT)[keyof typeof OWNER_FILTER_DEFECT];
@@ -32,6 +34,7 @@ export type RenameStrategyParams = {
 export type StrategyRepository = {
   readonly create: (scope: OwnerScope, name: string) => Promise<string>;
   readonly findById: (scope: OwnerScope, strategyId: string) => Promise<StrategyView | undefined>;
+  readonly list: (scope: OwnerScope) => Promise<readonly StrategyView[]>;
   readonly rename: (scope: OwnerScope, params: RenameStrategyParams) => Promise<boolean>;
   readonly stop: (scope: OwnerScope, strategyId: string) => Promise<boolean>;
 };
@@ -52,6 +55,10 @@ export function createInMemoryStrategyRepository(defect: OwnerFilterDefect): Str
     return strategies.get(strategyId);
   }
 
+  function stopEveryOwner(): void {
+    for (const stored of strategies.values()) stored.isStopped = true;
+  }
+
   return {
     create(scope, name): Promise<string> {
       const strategyId = crypto.randomUUID();
@@ -70,6 +77,13 @@ export function createInMemoryStrategyRepository(defect: OwnerFilterDefect): Str
           : findOwned(scope, strategyId);
       return Promise.resolve(stored === undefined ? undefined : toView(stored));
     },
+    list(scope): Promise<readonly StrategyView[]> {
+      const visible = [...strategies.values()].filter(
+        (stored) =>
+          defect === OWNER_FILTER_DEFECT.LIST_IGNORES_OWNER || stored.userId === scope.ownerUserId,
+      );
+      return Promise.resolve(visible.map(toView));
+    },
     rename(scope, params): Promise<boolean> {
       const stored =
         defect === OWNER_FILTER_DEFECT.RENAME_IGNORES_OWNER
@@ -86,6 +100,7 @@ export function createInMemoryStrategyRepository(defect: OwnerFilterDefect): Str
       }
       const stored = findOwned(scope, strategyId);
       if (stored === undefined) return Promise.resolve(false);
+      if (defect === OWNER_FILTER_DEFECT.STOP_AFFECTS_EVERY_OWNER) stopEveryOwner();
       stored.isStopped = true;
       return Promise.resolve(true);
     },

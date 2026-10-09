@@ -6,7 +6,6 @@ import {
   pgTable,
   uuid,
 } from '../packages/database/node_modules/drizzle-orm/pg-core/index.js';
-import { createAuthenticatedUser } from '../packages/database/src/ownership/authenticated-user.js';
 import { InvalidUserIdError } from '../packages/database/src/ownership/invalid-user-id.error.js';
 import {
   createOwnerScope,
@@ -14,7 +13,6 @@ import {
   type OwnerScope,
 } from '../packages/database/src/ownership/owner-scope.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
-import { USER_ROLE } from '../packages/database/src/ownership/user-role.constant.js';
 import {
   ACCESS_OUTCOME,
   expectOtherUserGetsNotFound,
@@ -55,6 +53,7 @@ function buildStrategyContract(defect: OwnerFilterDefect): CrossOwnerContract {
     otherUserScope: createRandomOwnerScope(),
     createResource: (scope) => repository.create(scope, 'Placar clássico'),
     readResource: (scope, strategyId) => repository.findById(scope, strategyId),
+    listResources: (scope) => repository.list(scope),
     attempts: {
       read: async (scope, strategyId) =>
         toOutcome((await repository.findById(scope, strategyId)) !== undefined),
@@ -72,10 +71,21 @@ describe('ownership contract', () => {
     await expectOtherUserGetsNotFound(buildStrategyContract(OWNER_FILTER_DEFECT.NONE));
   });
 
+  test('the harness treats null from readResource as not found', async () => {
+    const contract = buildStrategyContract(OWNER_FILTER_DEFECT.NONE);
+    const repositoryRead = contract.readResource;
+    await expectOtherUserGetsNotFound({
+      ...contract,
+      readResource: async (scope, strategyId) => (await repositoryRead(scope, strategyId)) ?? null,
+    });
+  });
+
   test.each([
     OWNER_FILTER_DEFECT.READ_IGNORES_OWNER,
+    OWNER_FILTER_DEFECT.LIST_IGNORES_OWNER,
     OWNER_FILTER_DEFECT.RENAME_IGNORES_OWNER,
     OWNER_FILTER_DEFECT.STOP_WRITES_BEFORE_CHECK,
+    OWNER_FILTER_DEFECT.STOP_AFFECTS_EVERY_OWNER,
   ])('the harness fails a repository whose defect is %s', async (defect) => {
     const failure = await captureFailure(
       expectOtherUserGetsNotFound(buildStrategyContract(defect)),
@@ -112,16 +122,8 @@ describe('ownership contract', () => {
     }
   });
 
-  test('authenticated user and owner scope are immutable', () => {
-    const authenticatedUser = createAuthenticatedUser({
-      userId: userIdFromDatabase(SAMPLE_USER_ID_TEXT),
-      keycloakSubject: 'keycloak-subject',
-      email: 'pessoa@example.com',
-      roles: [USER_ROLE.USER],
-    });
-    expect(Object.isFrozen(authenticatedUser)).toBe(true);
-    expect(Object.isFrozen(authenticatedUser.roles)).toBe(true);
-    expect(Object.isFrozen(createOwnerScope(authenticatedUser.userId))).toBe(true);
+  test('owner scope is immutable', () => {
+    expect(Object.isFrozen(createRandomOwnerScope())).toBe(true);
   });
 
   test('ownerCondition filters the user_id column by the scope owner', () => {

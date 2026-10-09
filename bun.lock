@@ -17,6 +17,7 @@
       "name": "@crypto/api-crypto",
       "version": "0.0.0",
       "dependencies": {
+        "@crypto/database": "workspace:*",
         "@crypto/environment": "workspace:*",
       },
     },

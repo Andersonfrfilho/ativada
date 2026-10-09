@@ -1,17 +1,25 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
+import * as databasePublicSurface from '../packages/database/src/index.js';
+
 const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
 const DATABASE_PACKAGE_DIRECTORY = 'packages/database';
 const MIGRATIONS_DIRECTORY = `${DATABASE_PACKAGE_DIRECTORY}/drizzle`;
 const ROLLBACK_SUFFIX = '.rollback.sql';
 const MIGRATION_FILE_PATTERN = /^\d{4}_.+\.sql$/;
 const CREATE_ENUM_TYPE_PATTERN = /CREATE\s+TYPE[^;]*\bAS\s+ENUM\b/i;
+const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
+  'InvalidUserIdError',
+  'createOwnerScope',
+  'parseAccountId',
+];
 
 type PackageManifest = {
   readonly name?: string;
   readonly private?: boolean;
   readonly type?: string;
+  readonly exports?: unknown;
 };
 
 async function readRepositoryText(relativePath: string): Promise<string> {
@@ -41,12 +49,20 @@ describe('@crypto/database package', () => {
     expect(manifest.type).toBe('module');
   });
 
-  test('src/index.ts exports createDatabaseClient', async () => {
+  test('package.json exposes only the root entry point', async () => {
+    const manifest = JSON.parse(
+      await readRepositoryText(`${DATABASE_PACKAGE_DIRECTORY}/package.json`),
+    ) as PackageManifest;
+    expect(manifest.exports).toStrictEqual({ '.': './src/index.ts' });
+  });
+
+  test('the public entry point exports only the allowed runtime values', () => {
+    expect(Object.keys(databasePublicSurface).sort()).toStrictEqual([...PUBLIC_RUNTIME_EXPORTS]);
+  });
+
+  test('the public entry point has no wildcard re-export', async () => {
     const source = await readRepositoryText(`${DATABASE_PACKAGE_DIRECTORY}/src/index.ts`);
-    const exportsCreateDatabaseClient =
-      /export\s+(?:async\s+)?function\s+createDatabaseClient\b/.test(source) ||
-      /export\s*\{[^}]*\bcreateDatabaseClient\b[^}]*\}/.test(source);
-    expect(exportsCreateDatabaseClient).toBe(true);
+    expect(source).not.toMatch(/export\s+\*/);
   });
 
   test('drizzle.config.ts targets the postgresql dialect', async () => {
