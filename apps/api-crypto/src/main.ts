@@ -22,6 +22,7 @@ function startApplication(environment: Environment): void {
     handler: application.handler,
     host: environment.API_HOST,
     port: environment.API_PORT,
+    reportUnexpectedError: (error) => logger.error('unexpected error', { error }),
   });
   logger.info('listening', { env: environment.ENV, host: environment.API_HOST, port: server.port });
   registerShutdownSignals(

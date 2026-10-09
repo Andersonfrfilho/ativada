@@ -38,7 +38,12 @@ async function readUntil(stream: ReadableStream<Uint8Array>, marker: string): Pr
 describe('Bun.serve wiring', () => {
   test('serves /v1/health over real HTTP with the security headers', async () => {
     harness = await createApiHarness();
-    server = startServer({ handler: harness.handler, host: '127.0.0.1', port: 0 });
+    server = startServer({
+      handler: harness.handler,
+      host: '127.0.0.1',
+      port: 0,
+      reportUnexpectedError: () => undefined,
+    });
     const response = await fetch(`http://127.0.0.1:${server.port}/v1/test/public`);
     expect(response.status).toBe(200);
     expect(await response.json()).toStrictEqual({ data: { reached: true } });
@@ -47,16 +52,50 @@ describe('Bun.serve wiring', () => {
 
   test('answers a protected route without token with 401 over real HTTP', async () => {
     harness = await createApiHarness();
-    server = startServer({ handler: harness.handler, host: '127.0.0.1', port: 0 });
+    server = startServer({
+      handler: harness.handler,
+      host: '127.0.0.1',
+      port: 0,
+      reportUnexpectedError: () => undefined,
+    });
     const response = await fetch(`http://127.0.0.1:${server.port}/v1/test/user`);
     expect(response.status).toBe(401);
   });
 
   test('binds only to the requested host', async () => {
     harness = await createApiHarness();
-    server = startServer({ handler: harness.handler, host: '127.0.0.1', port: 0 });
+    server = startServer({
+      handler: harness.handler,
+      host: '127.0.0.1',
+      port: 0,
+      reportUnexpectedError: () => undefined,
+    });
     const response = await fetch(`http://127.0.0.1:${server.port}/v1/missing`);
     expect(response.status).toBe(404);
+  });
+});
+
+describe('Bun.serve error handling', () => {
+  const SECRET_MESSAGE = 'segredo-que-nao-pode-vazar-na-resposta';
+
+  test('an error that escapes the handler becomes the generic 500 envelope, without stack', async () => {
+    const reported: unknown[] = [];
+    server = startServer({
+      handler: () => Promise.reject(new Error(SECRET_MESSAGE)),
+      host: '127.0.0.1',
+      port: 0,
+      reportUnexpectedError: (error) => void reported.push(error),
+    });
+    const response = await fetch(`http://127.0.0.1:${server.port}/v1/anything`);
+    const text = await response.text();
+    expect(response.status).toBe(500);
+    expect(response.headers.get('Content-Type')).toContain('application/json');
+    expect(JSON.parse(text)).toStrictEqual({
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno. Tente novamente em instantes.' },
+    });
+    expect(text).not.toContain(SECRET_MESSAGE);
+    expect(text).not.toContain('.ts');
+    expect(reported).toHaveLength(1);
   });
 });
 

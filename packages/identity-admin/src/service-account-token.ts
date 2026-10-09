@@ -1,11 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { z } from '@crypto/environment';
+import { MILLISECONDS_PER_SECOND, z } from '@crypto/environment';
 
-import { HTTP_STATUS } from './identity-http.constant.js';
+import { HTTP_METHOD, HTTP_STATUS } from './identity-http.constant.js';
 import {
   CLIENT_CREDENTIALS_GRANT,
   IDENTITY_REQUEST_TIMEOUT_MILLISECONDS,
-  MILLISECONDS_PER_SECOND,
   TOKEN_EXPIRY_MARGIN_SECONDS,
 } from './identity-admin.constant.js';
 
@@ -33,7 +32,7 @@ async function requestToken(
 ): Promise<CachedToken | undefined> {
   try {
     const response = await fetch(settings.tokenUrl, {
-      method: 'POST',
+      method: HTTP_METHOD.POST,
       body: new URLSearchParams({
         grant_type: CLIENT_CREDENTIALS_GRANT,
         client_id: settings.clientId,

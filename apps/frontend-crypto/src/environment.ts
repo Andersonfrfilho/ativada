@@ -1,10 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { parseEnvironment, z } from '@crypto/environment';
-
-const HTTP_URL_EXPECTATION = 'URL http:// ou https://';
+import { httpUrlSchema, parseEnvironment, z } from '@crypto/environment';
 
 export const environmentSchema = z.object({
-  VITE_API_URL: z.url({ protocol: /^https?$/, error: HTTP_URL_EXPECTATION }),
+  VITE_API_URL: httpUrlSchema,
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

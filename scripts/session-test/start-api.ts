@@ -23,6 +23,7 @@ export function startApi(): RunningApi {
     handler: application.handler,
     host: environment.API_HOST,
     port: environment.API_PORT,
+    reportUnexpectedError: (error) => logger.error('unexpected error', { error }),
   });
   return {
     environment,

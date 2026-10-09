@@ -1,8 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { OwnerScope, TelegramLinkRepository } from '@crypto/database';
+import { MILLISECONDS_PER_SECOND } from '@crypto/environment';
 
 import { generateLinkCode, hashLinkCode } from './link-code.js';
-import { LINK_CODE_TIME_TO_LIVE_SECONDS, MILLISECONDS_PER_SECOND } from './telegram.constant.js';
+import { LINK_CODE_TIME_TO_LIVE_SECONDS } from './telegram.constant.js';
 
 export type IssuedLinkCode = {
   readonly code: string;

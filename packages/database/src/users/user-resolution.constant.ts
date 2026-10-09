@@ -4,6 +4,3 @@ export const USER_RESOLUTION_STATUS = {
   DELETED: 'deleted',
   BLOCKED: 'blocked',
 } as const;
-
-export type UserResolutionStatus =
-  (typeof USER_RESOLUTION_STATUS)[keyof typeof USER_RESOLUTION_STATUS];

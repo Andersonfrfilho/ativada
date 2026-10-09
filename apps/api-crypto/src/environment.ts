@@ -1,6 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
   checkProductionRules,
+  environmentNameSchema,
+  httpUrlSchema,
+  nonEmptyTextSchema,
   parseEnvironment,
   postgresUrlSchema,
   z,
@@ -8,8 +11,6 @@ import {
 } from '@crypto/environment';
 
 const API_PORT_EXPECTATION = 'inteiro entre 1024 e 65535';
-const NON_EMPTY_TEXT_EXPECTATION = 'texto não vazio';
-const URL_EXPECTATION = 'URL http:// ou https://';
 const ORIGIN_LIST_EXPECTATION =
   'lista de origens exatas separadas por vírgula (https://host[:porta], sem caminho nem barra final)';
 const URL_LIST_EXPECTATION = 'lista de URLs http:// ou https:// separadas por vírgula';
@@ -19,6 +20,7 @@ const TELEGRAM_SECRET_EXPECTATION = 'texto de 16 a 256 caracteres A-Z, a-z, 0-9,
 const TELEGRAM_PAIR_EXPECTATION =
   'TELEGRAM_BOT_TOKEN e TELEGRAM_WEBHOOK_SECRET devem ser definidos juntos ou omitidos juntos';
 const TELEGRAM_SECRET_PATTERN = /^[A-Za-z0-9_-]{16,256}$/;
+
 const DEFAULT_TELEGRAM_API_BASE_URL = 'https://api.telegram.org';
 const DEFAULT_API_HOST = '127.0.0.1';
 const MAX_TRUSTED_PROXY_HOPS = 10;
@@ -59,12 +61,6 @@ function isExactOrigin(value: string): boolean {
   return parsed.origin === value && (parsed.protocol === 'http:' || parsed.protocol === 'https:');
 }
 
-const nonEmptyTextSchema = z
-  .string({ error: NON_EMPTY_TEXT_EXPECTATION })
-  .min(1, { error: NON_EMPTY_TEXT_EXPECTATION });
-
-const httpUrlSchema = z.url({ protocol: /^https?$/, error: URL_EXPECTATION });
-
 const textListSchema = z
   .string({ error: TEXT_LIST_EXPECTATION })
   .transform(splitCommaSeparatedList)
@@ -86,7 +82,7 @@ const urlListSchema = z
 
 export const environmentSchema = z
   .object({
-    ENV: z.enum(['dev', 'test', 'production'], { error: 'dev, test ou production' }),
+    ENV: environmentNameSchema,
     DATABASE_URL: postgresUrlSchema,
     API_HOST: nonEmptyTextSchema.default(DEFAULT_API_HOST),
     API_PORT: z.coerce

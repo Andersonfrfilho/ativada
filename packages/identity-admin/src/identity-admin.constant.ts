@@ -3,7 +3,6 @@ export const INVITATION_ACTIONS: readonly string[] = ['VERIFY_EMAIL', 'UPDATE_PA
 export const INVITATION_LIFESPAN_SECONDS = 86_400;
 export const IDENTITY_REQUEST_TIMEOUT_MILLISECONDS = 5_000;
 export const TOKEN_EXPIRY_MARGIN_SECONDS = 15;
-export const MILLISECONDS_PER_SECOND = 1_000;
 
 export const IDENTITY_OUTCOME = {
   OK: 'ok',

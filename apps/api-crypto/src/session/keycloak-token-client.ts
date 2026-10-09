@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@crypto/environment';
 
-import { HTTP_STATUS } from '../shared/http/http.constant.js';
+import { HTTP_METHOD, HTTP_STATUS } from '../shared/http/http.constant.js';
 import {
   KEYCLOAK_REQUEST_TIMEOUT_MILLISECONDS,
   OAUTH_FIELD,
@@ -65,7 +65,7 @@ async function postForm(
 ): Promise<Response | undefined> {
   try {
     return await fetch(url, {
-      method: 'POST',
+      method: HTTP_METHOD.POST,
       body: new URLSearchParams(form),
       signal: AbortSignal.timeout(KEYCLOAK_REQUEST_TIMEOUT_MILLISECONDS),
     });

@@ -16,6 +16,7 @@ import {
   readRefreshCookie,
 } from './session-cookie.js';
 import { SESSION_PATH, SESSION_REFRESH_PATH } from './session.constant.js';
+import { SessionUnavailableError } from './session.error.js';
 
 export type SessionRouteDependencies = {
   readonly createSession: CreateSessionUseCase;
@@ -35,6 +36,19 @@ function buildTokensResult(tokens: SessionTokens): RouteResult {
       }),
     },
   };
+}
+
+// Com o Keycloak fora o cookie sai do navegador mesmo assim; a resposta 503 pede para repetir a revogação.
+async function endSessionClearingCookie(
+  dependencies: SessionRouteDependencies,
+  refreshToken: string | undefined,
+): Promise<void> {
+  try {
+    await dependencies.endSession(refreshToken);
+  } catch (error: unknown) {
+    if (!(error instanceof SessionUnavailableError)) throw error;
+    throw new SessionUnavailableError({ [HTTP_HEADER.SET_COOKIE]: buildClearedRefreshCookie() });
+  }
 }
 
 type SessionHandler = (context: PublicRouteContext) => Promise<RouteResult>;
@@ -57,7 +71,7 @@ function createSessionHandlers(dependencies: SessionRouteDependencies): {
     },
     end: async ({ request }): Promise<RouteResult> => {
       assertCsrfProtection({ request, allowedOrigins });
-      await dependencies.endSession(readRefreshCookie(request));
+      await endSessionClearingCookie(dependencies, readRefreshCookie(request));
       return {
         status: HTTP_STATUS.NO_CONTENT,
         headers: { [HTTP_HEADER.SET_COOKIE]: buildClearedRefreshCookie() },

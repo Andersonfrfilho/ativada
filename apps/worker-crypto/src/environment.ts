@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { parseEnvironment, postgresUrlSchema, z } from '@crypto/environment';
+import { environmentNameSchema, parseEnvironment, postgresUrlSchema, z } from '@crypto/environment';
 
 export const environmentSchema = z.object({
-  ENV: z.enum(['dev', 'test', 'production'], { error: 'dev, test ou production' }),
+  ENV: environmentNameSchema,
   DATABASE_URL: postgresUrlSchema,
 });
 

@@ -14,7 +14,8 @@ const INTERNAL_ERROR_MESSAGE = 'Erro interno. Tente novamente em instantes.';
 
 export function buildSuccessResponse(result: RouteResult): Response {
   const headers = { ...result.headers, [HTTP_HEADER.CACHE_CONTROL]: NO_STORE_CACHE_CONTROL };
-  if (result.status === HTTP_STATUS.NO_CONTENT) return new Response(null, { status: 204, headers });
+  if (result.status === HTTP_STATUS.NO_CONTENT)
+    return new Response(null, { status: HTTP_STATUS.NO_CONTENT, headers });
   const paginationField = result.pagination === undefined ? {} : { pagination: result.pagination };
   return Response.json(
     { data: result.data, ...paginationField },

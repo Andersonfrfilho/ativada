@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { MILLISECONDS_PER_SECOND } from '@crypto/environment';
+
 import {
   CLOCK_TOLERANCE_SECONDS,
   RECENT_AUTHENTICATION_MAX_AGE_SECONDS,
@@ -9,8 +11,6 @@ export type RecentAuthenticationParams = {
   readonly authenticationTime: number | undefined;
   readonly nowMilliseconds: number;
 };
-
-const MILLISECONDS_PER_SECOND = 1_000;
 
 // auth_time ausente é recusa: sem a data do último login a API não prova que a pessoa acabou de entrar.
 export function assertRecentAuthentication(params: RecentAuthenticationParams): void {

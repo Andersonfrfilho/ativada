@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { HTTP_METHOD } from '../shared/http/http.constant.js';
+import { HTTP_METHOD, HTTP_STATUS } from '../shared/http/http.constant.js';
 import { buildErrorResponse } from '../shared/http/response-envelope.js';
 import {
   CORS_ALLOWED_HEADERS,
@@ -20,7 +20,7 @@ export function isPreflightRequest(request: Request): boolean {
 export function buildPreflightResponse(isOriginAllowed: boolean): Response {
   if (!isOriginAllowed) return buildErrorResponse(new OriginNotAllowedError());
   return new Response(null, {
-    status: 204,
+    status: HTTP_STATUS.NO_CONTENT,
     headers: {
       [CORS_HEADER.ALLOW_METHODS]: CORS_ALLOWED_METHODS,
       [CORS_HEADER.ALLOW_HEADERS]: CORS_ALLOWED_HEADERS,

@@ -54,7 +54,7 @@ describe('DELETE /v1/session', () => {
     expect(statuses).toStrictEqual([204, 204, 204]);
   });
 
-  test('answers 503 and keeps the cookie when Keycloak cannot revoke', async () => {
+  test('answers 503 but still clears the cookie when Keycloak cannot revoke, telling to try again', async () => {
     const refreshToken = await signIn(harness);
     harness.keycloak.setMode(FAKE_KEYCLOAK_MODE.SERVER_ERROR);
     const response = await callSession(harness, {
@@ -63,7 +63,10 @@ describe('DELETE /v1/session', () => {
       cookie: refreshToken,
     });
     expect(response.status).toBe(503);
-    expect(response.headers.get('Set-Cookie')).toBeNull();
+    expect(response.headers.get('Set-Cookie')).toContain('Max-Age=0');
+    const body = (await response.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe('SESSION_UNAVAILABLE');
+    expect(body.error.message).toContain('Tente novamente');
   });
 });
 
