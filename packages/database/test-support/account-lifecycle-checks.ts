@@ -1,14 +1,14 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createAccountDeletionRepository } from './account/account-deletion.repository.js';
-import { createAccountExportRepository } from './account/account-export.repository.js';
-import { AUDIT_ACTOR_KIND } from './audit/audit-event.constant.js';
-import { createAuditEventRepository } from './audit/audit-event.repository.js';
-import type { DatabaseHandle } from './database-handle.js';
-import type { OwnerScope } from './ownership/owner-scope.js';
-import { createTelegramLinkRepository } from './telegram/telegram-link.repository.js';
-import { resolveUserBySubject } from './users/resolve-user-by-subject.js';
-import { USER_RESOLUTION_STATUS } from './users/user-resolution.constant.js';
-import type { UserId } from './ownership/user-id.js';
+import { createAccountDeletionRepository } from '../src/account/account-deletion.repository.js';
+import { createAccountExportRepository } from '../src/account/account-export.repository.js';
+import { AUDIT_ACTOR_KIND } from '../src/audit/audit-event.constant.js';
+import { createAuditEventRepository } from '../src/audit/audit-event.repository.js';
+import type { DatabaseHandle } from '../src/database-handle.js';
+import type { OwnerScope } from '../src/ownership/owner-scope.js';
+import { createTelegramLinkRepository } from '../src/telegram/telegram-link.repository.js';
+import { resolveUserBySubject } from '../src/users/resolve-user-by-subject.js';
+import { USER_RESOLUTION_STATUS } from '../src/users/user-resolution.constant.js';
+import type { UserId } from '../src/ownership/user-id.js';
 
 export const LIFECYCLE_SUBJECT_A = 'subject-lifecycle-a';
 export const LIFECYCLE_SUBJECT_B = 'subject-lifecycle-b';

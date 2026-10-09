@@ -1,13 +1,16 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { createHash } from 'node:crypto';
 
-import type { DatabaseHandle } from './database-handle.js';
-import type { OwnerScope } from './ownership/owner-scope.js';
-import { createTelegramLinkConsumer } from './telegram/telegram-link-consumer.js';
-import { createTelegramLinkRepository } from './telegram/telegram-link.repository.js';
-import { LINK_OUTCOME, MAX_ATTEMPTS_PER_LINK_CODE } from './telegram/telegram-link.constant.js';
-import { resolveUserBySubject } from './users/resolve-user-by-subject.js';
-import { USER_RESOLUTION_STATUS } from './users/user-resolution.constant.js';
+import type { DatabaseHandle } from '../src/database-handle.js';
+import type { OwnerScope } from '../src/ownership/owner-scope.js';
+import { createTelegramLinkConsumer } from '../src/telegram/telegram-link-consumer.js';
+import { createTelegramLinkRepository } from '../src/telegram/telegram-link.repository.js';
+import {
+  LINK_OUTCOME,
+  MAX_ATTEMPTS_PER_LINK_CODE,
+} from '../src/telegram/telegram-link.constant.js';
+import { resolveUserBySubject } from '../src/users/resolve-user-by-subject.js';
+import { USER_RESOLUTION_STATUS } from '../src/users/user-resolution.constant.js';
 
 const SUBJECT_OF_A = 'subject-telegram-a';
 const SUBJECT_OF_B = 'subject-telegram-b';

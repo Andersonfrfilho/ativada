@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { MIGRATIONS_FOLDER, ROLLBACK_SUFFIX } from './database.constant.js';
-import { applyMigrations } from './migrate.js';
+import { MIGRATIONS_FOLDER, ROLLBACK_SUFFIX } from '../src/database.constant.js';
+import { applyMigrations } from '../src/migrate.js';
 import { applyRollbacks } from './rollback.js';
-import { readDatabaseUrl } from './read-database-url.js';
+import { readDatabaseUrl } from '../src/read-database-url.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
 
 const TEMPORARY_DATABASE_PREFIX = 'crypto_migration_';

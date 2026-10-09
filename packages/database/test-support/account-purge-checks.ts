@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { AccountNotDeletedError } from './account/account-purge.error.js';
+import { AccountNotDeletedError } from '../src/account/account-purge.error.js';
 import {
   createAccountPurgeRepository,
   type AccountPurgeRepository,
-} from './account/account-purge.repository.js';
-import type { PendingAccountCursor } from './account/account-purge.types.js';
+} from '../src/account/account-purge.repository.js';
+import type { PendingAccountCursor } from '../src/account/account-purge.types.js';
 import type { LifecycleCheckContext, LifecycleOwners } from './account-lifecycle-checks.js';
 
 const MILLISECONDS_PER_DAY = 86_400_000;

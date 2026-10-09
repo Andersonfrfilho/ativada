@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { join } from 'node:path';
-import { ROLLBACK_SUFFIX } from './database.constant.js';
+import { ROLLBACK_SUFFIX } from '../src/database.constant.js';
 
 function readMigrationPrefix(fileName: string): number {
   return Number(fileName.split('_', 1)[0]);

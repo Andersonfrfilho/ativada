@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createAdminAccountRepository } from './admin/admin-account.repository.js';
-import type { AccountPageCursor } from './admin/admin-account.types.js';
-import { parseAccountId, type AccountId } from './admin/admin-account-id.js';
-import { AUDIT_ACTOR_KIND } from './audit/audit-event.constant.js';
-import { createAuditEventRepository } from './audit/audit-event.repository.js';
-import type { DatabaseHandle } from './database-handle.js';
-import { resolveUserBySubject } from './users/resolve-user-by-subject.js';
-import { USER_RESOLUTION_STATUS } from './users/user-resolution.constant.js';
+import { createAdminAccountRepository } from '../src/admin/admin-account.repository.js';
+import type { AccountPageCursor } from '../src/admin/admin-account.types.js';
+import { parseAccountId, type AccountId } from '../src/admin/admin-account-id.js';
+import { AUDIT_ACTOR_KIND } from '../src/audit/audit-event.constant.js';
+import { createAuditEventRepository } from '../src/audit/audit-event.repository.js';
+import type { DatabaseHandle } from '../src/database-handle.js';
+import { resolveUserBySubject } from '../src/users/resolve-user-by-subject.js';
+import { USER_RESOLUTION_STATUS } from '../src/users/user-resolution.constant.js';
 
 const SUBJECTS = ['subject-admin-a', 'subject-admin-b', 'subject-admin-c', 'subject-admin-d'];
 

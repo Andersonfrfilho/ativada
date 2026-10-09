@@ -5,7 +5,7 @@ import { readDatabaseUrl } from '../packages/database/src/read-database-url.js';
 import {
   createTemporaryDatabase,
   dropTemporaryDatabase,
-} from '../packages/database/src/temporary-database.js';
+} from '../packages/database/test-support/temporary-database.js';
 import { checkDiscovery, waitForRealm } from './identity-test/check-discovery.js';
 import { createCleanupStack } from './identity-test/cleanup-stack.js';
 import type { IdentityContext } from './identity-test/identity-context.js';

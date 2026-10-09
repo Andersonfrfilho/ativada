@@ -170,6 +170,15 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/*/src/**/*.{ts,tsx,mts,cts}', 'packages/*/src/**/*.{ts,tsx,mts,cts}'],
+    rules: { 'no-console': 'error' },
+  },
+  {
+    // Scripts de integração imprimem o resultado no terminal; o código de produção não.
+    files: ['packages/*/test-support/**/*.ts', 'scripts/**/*.ts'],
+    rules: { 'no-console': 'off' },
+  },
+  {
     files: ['packages/database/drizzle.config.ts'],
     rules: {
       'no-restricted-exports': 'off',

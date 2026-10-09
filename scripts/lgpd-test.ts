@@ -5,7 +5,7 @@ import { readDatabaseUrl } from '../packages/database/src/read-database-url.js';
 import {
   createTemporaryDatabase,
   dropTemporaryDatabase,
-} from '../packages/database/src/temporary-database.js';
+} from '../packages/database/test-support/temporary-database.js';
 import { INVITEE_PREFIX } from './admin-test/admin-test.constant.js';
 import { startFakeTelegramServer } from './admin-test/check-telegram.js';
 import { deleteKeycloakUsersWithPrefix } from './admin-test/keycloak-reads.js';

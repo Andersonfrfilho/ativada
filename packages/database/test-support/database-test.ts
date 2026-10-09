@@ -1,16 +1,16 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { MIGRATIONS_FOLDER } from './database.constant.js';
-import { closeDatabase, openDatabase, type DatabaseHandle } from './database-handle.js';
-import { applyMigrations } from './migrate.js';
-import { readDatabaseUrl } from './read-database-url.js';
+import { MIGRATIONS_FOLDER } from '../src/database.constant.js';
+import { closeDatabase, openDatabase, type DatabaseHandle } from '../src/database-handle.js';
+import { applyMigrations } from '../src/migrate.js';
+import { readDatabaseUrl } from '../src/read-database-url.js';
 import { checkPendingQueue, checkPurge, checkRemoveAndRetention } from './account-purge-checks.js';
 import { checkAdminRepositories } from './admin-checks.js';
 import { checkExport, checkMarkDeleted, seedLifecycleOwners } from './account-lifecycle-checks.js';
 import { checkProfileRepository } from './profile-checks.js';
 import { checkTelegramLink, checkTelegramRaces } from './telegram-checks.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
-import { resolveUserBySubject } from './users/resolve-user-by-subject.js';
-import { USER_RESOLUTION_STATUS } from './users/user-resolution.constant.js';
+import { resolveUserBySubject } from '../src/users/resolve-user-by-subject.js';
+import { USER_RESOLUTION_STATUS } from '../src/users/user-resolution.constant.js';
 
 const TEMPORARY_DATABASE_PREFIX = 'crypto_database_';
 const CONCURRENT_CALLS = 20;

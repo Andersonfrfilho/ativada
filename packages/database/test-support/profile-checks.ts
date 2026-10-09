@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { DatabaseHandle } from './database-handle.js';
-import { DISPLAY_CURRENCY } from './users/display-currency.constant.js';
-import { createProfileRepository } from './users/profile.repository.js';
-import { resolveUserBySubject } from './users/resolve-user-by-subject.js';
-import { USER_RESOLUTION_STATUS } from './users/user-resolution.constant.js';
-import type { OwnerScope } from './ownership/owner-scope.js';
+import type { DatabaseHandle } from '../src/database-handle.js';
+import { DISPLAY_CURRENCY } from '../src/users/display-currency.constant.js';
+import { createProfileRepository } from '../src/users/profile.repository.js';
+import { resolveUserBySubject } from '../src/users/resolve-user-by-subject.js';
+import { USER_RESOLUTION_STATUS } from '../src/users/user-resolution.constant.js';
+import type { OwnerScope } from '../src/ownership/owner-scope.js';
 
 const SUBJECT_OF_A = 'subject-profile-a';
 const SUBJECT_OF_B = 'subject-profile-b';
