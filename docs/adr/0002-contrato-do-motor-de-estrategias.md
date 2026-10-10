@@ -1231,7 +1231,7 @@ execuções (T3.6)") é a fábrica em `create-application.ts`. Falha ao despacha
 |---|---|---|
 | Validação | Corpo `z.strictObject`; TODOS os problemas de uma vez só com `field` e `reason` (nunca o valor enviado); a configuração da estratégia e os `runParameters` são conferidos pelos esquemas do MOTOR dentro do mesmo passo do corpo; regras entre campos (período, grade só em walk-forward) saem juntas na 2ª fase | RF03/RF07, RNF04 |
 | Antes de aceitar (walk-forward) | `expandWalkForwardGrid` contra a configuração-base e `planWalkForwardWindows` sobre o período cortado no candle fechado: `GRID_TOO_LARGE` (teto de 200 combinações VÁLIDAS), `NO_VALID_COMBINATIONS`, `INVALID_GRID` (texto fixo: a mensagem do motor cita o caminho enviado), `INVALID_WINDOW_CONFIG`, `PERIOD_TOO_SHORT`, todos `400`; nada é criado | RNF02, ADR 0002 §Walk-forward |
-| `live_paper` | `501 LIVE_RUNS_NOT_AVAILABLE` até a Fase 4, DEPOIS da validação e da conferência da versão (versão alheia continua `404`) | Não revelar existência |
+| `live_paper` | `501 LIVE_RUNS_NOT_AVAILABLE` até a Fase 4, DEPOIS da validação e da conferência da versão (versão alheia continua `404`). **Substituído na T4.1:** a rota cria a simulação (ver "Simulação ao vivo (T4.1 e T4.2)") | Não revelar existência |
 | Avisos | `warnRunParameters` contra o preço (`open`) do PRIMEIRO candle do período, na criação e na leitura (mesma conta); sem candle, sem avisos de preço | Determinístico e sem gravar |
 | Recurso alheio | `404` com o mesmo `<RECURSO>_NOT_FOUND`, mesma mensagem e mesmo tamanho de corpo do inexistente e do id malformado (UUID só em minúsculas, como no banco); `STRATEGY_NOT_FOUND`, `STRATEGY_VERSION_NOT_FOUND`, `RUN_NOT_FOUND` | ADR 0001 §e |
 | Paginação | Cursor opaco (JSON em base64url validado por Zod), `limit` 1 a 100 (padrão 50), cursor adulterado ou parâmetro desconhecido ou repetido é `400`; as séries leem UMA página do repositório por chamada | Sem carregar a série em memória |
@@ -1345,6 +1345,65 @@ outro dono roda, 10 backtests de um dono + 1 de outro (o de outro começa antes 
 entregue UMA vez, nenhuma perdida), queda no meio com batimento vencido e retomada do checkpoint com resultado IDÊNTICO ao da
 contínua, reinício sem perder a fila e isolamento pela API (posição, 404, saúde, `429` e `409`).
 
+## Simulação ao vivo (T4.1 e T4.2)
+
+Entregue em `apps/worker-cryptoada/src/live/`, `packages/database/src/live-runs/` (sem migration) e `packages/run-recording/` (novo), com
+`POST /v1/runs` ligando `live_paper`. **Só o worker avalia**; a API cria a execução e a encerra, nunca calcula um candle. O passo é o
+mesmo do backtest: `advanceCandle` (em `@cryptoada/run-recording`) chama o `Engine.step` de produção, e o backtest da API passou a
+usá-lo também (as peças que os dois compartilham — passo de candle, mapeamento decisões → linhas, rastreio de posição, escolha do
+sentimento, mapeamento registro → candle e parse de JSON canônico — saíram de `apps/api-cryptoada/src/backtest/` para o pacote, porque
+uma app não importa código de outra).
+
+| Decisão | Valor | Motivo |
+|---|---|---|
+| Quem reivindica | `createLiveRunRepository(handle).claimLiveRuns({ claimedBy, heartbeatTimeoutSeconds })`: as `queued` e as `running` de batimento vencido, de conta ativa, UMA por vez, cada uma numa transação com o lock do usuário (`FOR NO KEY UPDATE SKIP LOCKED`), a contagem das ativas do dono (`running` com batimento fresco) contra `maxActiveLivePaperRuns` e o lock da execução (`FOR UPDATE SKIP LOCKED`); `claimed_by` + `heartbeat_at` como na fila (T3.6). `renewHeartbeat` e `releaseClaimedRuns` são os mesmos da fila | Dois workers nunca avaliam a mesma simulação; a de um worker caído passa a outro quando o batimento vence; o teto de ativas vale também sob disputa. A fila de backtests continua sem tocar `live_paper` |
+| Conta inativa | A reivindicação só considera conta sem `deleted_at` nem `blocked_at`; `cancelLiveRunsOfInactiveOwners` cancela as `running` dela a cada ronda (as `queued` ficam e voltam se a conta for desbloqueada); o dono da execução vem de `resolveRunOwnerScope`, que não resolve conta apagada ou bloqueada | ADR 0001 §k. A fila só cancelava backtest e walk-forward; para o ao vivo isto é do próprio repositório |
+| Ronda | `createLiveEvaluator(...).tick()`: cancela as de conta inativa, renova o batimento (a posse perdida sai da lista), reivindica e avalia cada execução detida, todas em paralelo e SEM que uma derrube outra (a avaliação de uma execução nunca lança: vira desfecho). O `createLiveScheduler` roda uma ronda a cada `LIVE_POLL_SECONDS` (padrão 5) e uma a mais a cada candle gravado pelo stream (`onCandleStored`); as rondas nunca se sobrepõem; no SIGTERM espera a ronda no ar e devolve as simulações da instância à fila | RNF03 (alerta em até 10 s do fechamento); retomada por qualquer instância |
+| Um passo = UMA transação | `runInBatch`: trava a execução, confere `running`, grava as linhas do candle (`signals`, `orders`, `fills`, `positions`, `equity_points`, `run_commands`) e o checkpoint (`engine_state` canônico + `last_candle_time`) juntos. O checkpoint só avança (`last_candle_time` estritamente maior): recusado ⇒ `already_recorded` e a transação inteira é desfeita | Reiniciar nunca duplica operação nem sinal: o que caiu antes do COMMIT não existe e o que caiu depois já está no checkpoint |
+| Retomada | Cada ronda lê o checkpoint (nenhum estado em memória entre rondas), confere que o estado é DESTA estratégia e DESTES parâmetros (`engineVersion`, `configHash`, `runHash`) e que termina exatamente no `last_candle_time`, e processa os candles fechados depois dele em ordem, no máximo `maxStepsPerPass` (500) por ronda. Sem checkpoint é a largada: o aquecimento (candles antes de `period_start`) precisa estar inteiro no banco, senão `INSUFFICIENT_HISTORY`; o estado inicial (capital fictício e parâmetros de risco dos `run_parameters`, versão da estratégia imutável por hash) nasce com `createInitialState` no primeiro passo | O estado inicial é função pura de entradas imutáveis, então não há o que gravar antes do primeiro candle; hashes recalculados do conteúdo a cada ronda |
+| Candle repetido | O estado é a verdade: candle com abertura ≤ à do último processado é pulado sem tocar o motor nem o banco (`CANDLE_ALREADY_PROCESSED` = pule, §a); a vela reentregue pelo stream já não duplica no `upsertCandles` | Idempotência nos dois níveis |
+| Lacuna | Buraco entre o último candle processado e o seguinte do banco só é declarado ao motor (`confirmedGapCandles` exato) se a recuperação do stream já o marcou como inalcançável (`unfillable`, o conjunto vivo de `gap-recovery.ts`, compartilhado com o avaliador); senão a simulação ESPERA (não falha, não avança) até a recuperação preencher. Lacuna confirmada ⇒ regra de §a: posição fechada na abertura seguinte com motivo `gap`, ordens caducas | Candle que só "ainda não chegou" nunca vira lacuna no ao vivo (paridade com o backtest) |
+| Falha | Erro tipado (hash, versão, histórico, estado, entrada recusada pelo motor) ⇒ `failed` com código estável (`HASH_MISMATCH`, `INSUFFICIENT_HISTORY`, `ENGINE_STATE_UNUSABLE`, `ENGINE_REJECTED_INPUT`, …) e nada mais: o texto do erro original NUNCA sai (no log vai o código e o nome da classe). Erro de banco ou rede (SQLSTATE fora das classes 22, 23 e 42, ou código de conexão) NÃO falha a execução: ela segue detida e a ronda seguinte retoma do checkpoint | Falha de infraestrutura não pode matar uma simulação de semanas |
+| Exclusão da conta | Violação de FK (23503) no passo, ou execução que sumiu, = execução encerrada, sem erro e sem `failed` | ADR 0001 §k |
+| API | `POST /v1/runs` com `kind: live_paper`: o corpo NÃO leva `periodStart` nem `periodEnd` (`not_allowed_for_kind`); a execução nasce `queued` com `period_start` = abertura do candle em curso pelo relógio da API e sem fim, e não passa pelo despachante de backtests; backtest e walk-forward passam a responder `required` quando falta o período. `409 LIVE_RUN_LIMIT_REACHED` acima do teto segue; o `501 LIVE_RUNS_NOT_AVAILABLE` saiu. `POST /v1/runs/:id/stop` cancela a `queued` ou `running`; o worker vê o `cancelled` no passo seguinte e para | RF09 |
+
+**Paridade (T4.2).** `test/live-parity.contract.test.ts` (em memória) e o `make live-test` (Postgres) rodam o MESMO conjunto de candles
+reais (`BTCUSDT 1h × 500` e `ETHUSDT 1d × 400`, `test/fixtures/strategy-engine/market/`) como backtest (thread de produção, período a
+partir do candle `leadIn`) e como simulação ao vivo passo a passo (uma transação por candle, 64 passos por ronda) e exigem: as mesmas
+linhas uma a uma — sinais, ordens, preenchimentos, posições abertas e fechadas, patrimônio (ids, preços, quantidades, motivos, taxas) —,
+o mesmo digest SHA-256 do conjunto, o mesmo `engine_state` no último candle e o mesmo `last_candle_time`. Medido: `BTCUSDT 1h`: 307
+sinais, 27 ordens, 27 preenchimentos, 14 posições, 307 pontos de patrimônio, digest `1db049e92d591707…`; `ETHUSDT 1d`: 207, 20, 20, 10,
+207, digest `7c8849814fd68407…`; **~3 ms por passo** com o Postgres local (500 passos em ~1,3 s). Uma execução ao vivo interrompida e
+retomada é igual à contínua, que é igual ao backtest.
+
+**Prova.** 53 contratos sem banco (`test/live-evaluator*.contract.test.ts`, `test/live-scheduler.contract.test.ts`,
+`test/live-parity.contract.test.ts`: passo por candle, queda dentro de cada ponto sensível, posse perdida, assunção, encerramento
+gracioso, cancelamento, conta inativa, FK, lacuna que espera e que se confirma, candle repetido, histórico curto, hashes, versão do
+motor, checkpoint de outra execução, sentimento com corte de inserção, erro de banco repetível e defeito de dado que falha, texto do erro
+que não vaza) e **32 mutantes** do avaliador e do agendador (`test/live-mutants.contract.test.ts`) reprovados — o juiz roda uma cópia do
+módulo (com a cópia do pacote de gravação ao lado) num processo à parte. No banco, `make database-test` e `make queue-test` (checks
+`live-run-checks.ts`: marca com dono e batimento, teto por usuário, 200 rodadas × 6 workers disputando a única vaga, `SKIP LOCKED`,
+assunção por batimento vencido, vencido não ocupa vaga, conta inativa, devolução) e `make queue-mutants` (+10 mutantes do banco: teto
+ignorado, sem lock do usuário nem da execução, assunção proibida, vencido que ocupa vaga, tipo e dono não filtrados, cancelamento
+que atinge backtest ou conta ativa). `make live-test` (Postgres descartável, API real, worker em PROCESSO à parte): paridade com o
+backtest; morte do processo por SIGKILL depois do 1º passo, no fim do aquecimento, aos 250 e de fora aos 60 e 230 candles, com retomada
+por outra instância e digest idêntico ao contínuo; passo = uma transação (o banco recusa o checkpoint de um passo depois das linhas
+dele e nada sobra); candle repetido; conta bloqueada, apagada no meio e dados apagados entre dois passos; dois workers e seis
+simulações de três usuários (cada uma avaliada por um só); teto de 1 ativa; lacuna recuperável e confirmada; falhas tipadas; API de
+ponta a ponta. `make live-mutants`: 6 mutantes do adaptador (passo em duas transações, checkpoint recusado que deixa linhas, bolsa errada,
+leitura de candles desde o começo, sem corte de inserção do sentimento, falha nunca gravada) reprovados pelo `live-test` inteiro.
+
+**Limitações assumidas.** (1) A simulação ao vivo não termina sozinha (sem `period_end`): só `stop`, falha tipada ou conta inativa a
+encerram; `progress` fica em 0 e o painel mostra `last_candle_time`. (2) A marca de lacuna inalcançável vive na memória do worker e só
+nasce para buraco com mais de 24 h dentro da janela de retrocesso (`STREAM_GAP_LOOKBACK_HOURS`, 168 h): buraco recente espera; buraco
+mais velho que a janela, depois de um reinício, não é mais marcado e a simulação fica esperando por ele até alguém preencher (o
+backfill do cron). Esperar é conservador (nenhuma decisão errada), mas uma posição aberta fica sem stop avaliado nesse tempo. (3) Uma
+ronda avalia no máximo 500 passos por execução; o batimento é renovado uma vez por ronda, então uma ronda mais longa que
+`LIVE_HEARTBEAT_TIMEOUT_SECONDS` (padrão 60) deixa outra instância assumir (o checkpoint monotônico impede dano: o passo repetido é
+recusado). (4) Conta bloqueada ou apagada no meio de uma ronda deixa terminar, no máximo, os passos dessa ronda (candles históricos já
+fechados); a ronda seguinte cancela. (5) O estado inicial não é gravado na criação: nasce no primeiro passo. (6) Sem histórico de
+aquecimento a execução falha com `INSUFFICIENT_HISTORY` no worker, não na criação.
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
@@ -1379,7 +1438,7 @@ contínua, reinício sem perder a fila e isolamento pela API (posição, 404, sa
 - T3.1 cria as colunas e tabelas de §a/§b/§d (`runs.engine_state`, `engine_version`, `run_parameters`,
   `run_hash`, `migrated_from_run_id`, `engine_key` em `orders` e `positions`, `signals.regime`,
   `signals.sentiment_observation`, `equity_points.equity_at_low`, `run_commands`, `sentiment_observations`).
-- T3.2 (backtest, entregue: seção "Backtest em `worker_thread` (T3.2)") e T4.1 (ao vivo) são laços sobre `step` com a persistência de §b; T4.2 (paridade)
+- T3.2 (backtest, entregue: seção "Backtest em `worker_thread` (T3.2)") e T4.1 (ao vivo, entregue: seção "Simulação ao vivo (T4.1 e T4.2)") são laços sobre `step` com a persistência de §b; T4.2 (paridade, entregue)
   compara as duas execuções com os mesmos `leadInCandles` e as mesmas lacunas declaradas.
 - T3.3 (walk-forward, entregue: seção "Walk-forward (T3.3)") usa as metades do motor: sinal por combinação, carteira por janela.
 - Mudar a semântica do motor exige nova `engineVersion` e novo golden; execuções em curso migram (§b).

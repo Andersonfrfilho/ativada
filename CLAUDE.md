@@ -8,7 +8,7 @@ Contexto operacional do **CryptoAdA**. Produto e regras em `README.md`,
 Spec 001 em andamento (progresso real em `specs/001-simulador-e-sinais/evidence.md`). Prontos: Fase 0
 (fundação), Fase 0b (contas, login, isolamento entre usuários, LGPD) e Fase 1 (candles da Binance:
 backfill, Fear & Greed e stream ao vivo com recuperação de lacuna). Fase 2 (o motor em
-`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) a estratégia de exemplo por usuário (T3.5) e a fila durável de execuções com tetos por usuário (T3.6); próximo passo: Fase 4 (simulação ao vivo e alertas).
+`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) a estratégia de exemplo por usuário (T3.5) e a fila durável de execuções com tetos por usuário (T3.6); Fase 4 com a simulação ao vivo no worker (T4.1), a paridade com o backtest (T4.2) e a sobrevivência do saldo (T4.3); próximo passo: T4.4 (`LISTEN/NOTIFY` → WebSocket).
 
 ## Stack decidida
 
@@ -23,6 +23,7 @@ packages/database/      Drizzle + migrations (cada uma com .rollback.sql) + clie
 packages/environment/   validação Zod do env; `process.env` só em environment.ts (lint)
 packages/identity-admin/ cliente da Admin API do Keycloak (API e cron o compartilham)
 packages/market-data/    cliente REST de klines e stream WebSocket de klines da Binance (Zod, peso, retry, reconexão; cron e worker o compartilham)
+packages/run-recording/  o que backtest e simulação ao vivo compartilham: o passo de candle (`advanceCandle`), as linhas que as decisões geram, o rastreio de posição e o mapeamento candle/sentimento
 packages/strategy-engine/  indicadores, placar de votos, risco, corretora simulada, métricas —
                            o MESMO código roda no backtest e no ao vivo (contrato: ADR 0002)
 ```
@@ -43,7 +44,7 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `make down DOWN_FLAGS=--volumes` e `make up` (apaga os dados do Keycloak daquele ambiente). `make up`
   avisa quando o JSON é mais novo que o volume.
 - Alvos `*-test` (`migration-test`, `database-test`, `identity-test`, `session-test`, `admin-test`,
-  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`, `walkforward-test`, `api-runs-test`, `api-runs-mutants`, `example-mutants`, `queue-test`, `queue-mutants`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
+  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`, `walkforward-test`, `api-runs-test`, `api-runs-mutants`, `example-mutants`, `queue-test`, `queue-mutants`, `live-test`, `live-mutants`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
   `TERM`: Ctrl-C não deixa container vivo. Dois deles ao mesmo tempo disputam o mesmo projeto; rode um por vez.
 - `make check` roda `bun test` com `env -i`: teste que precisa de variável a declara; o `export` do `env.dev`
   não chega a ele.
@@ -168,6 +169,18 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `packages/database/src/run-queue/claim-policy.ts`. Teste novo da fila usa `loadApiApp()`; teste do banco entra em
   `packages/database/test-support/run-queue-*.ts`. Prova: contratos, `make database-test`, `make queue-test` (duas instâncias reais, queda
   e retomada idêntica) e `make queue-mutants` (14 mutantes do banco) mais 20 mutantes da API (`test/run-queue-mutants.contract.test.ts`).
+- **Simulação ao vivo (T4.1, T4.2, ADR 0002 §"Simulação ao vivo (T4.1 e T4.2)").** SÓ o worker avalia (`apps/worker-cryptoada/src/live/`): `createLiveEvaluator(...).tick()`
+  cancela as de conta inativa, renova o batimento, reivindica (`createLiveRunRepository(...).claimLiveRuns`: `claimed_by` + batimento, teto
+  `maxActiveLivePaperRuns` por usuário sob `SKIP LOCKED`, assume a de worker caído) e avalia cada uma detida sem que uma derrube outra.
+  Um passo por candle fechado = UMA transação (linhas + `engine_state` + `last_candle_time`); o estado vem sempre do checkpoint (nada em
+  memória entre rondas), então reiniciar nunca duplica operação nem sinal. O passo é `advanceCandle` (`@cryptoada/run-recording`), o MESMO do
+  backtest: mexer nele muda os dois. Candle repetido é pulado; buraco espera a recuperação do stream e só vira lacuna (posição fechada,
+  motivo `gap`) quando ela o marcou como inalcançável (`unfillable`); FK violada/execução sumida = encerrada sem erro; erro de banco repete,
+  erro tipado grava só o código (nunca o texto). `POST /v1/runs` com `live_paper` NÃO leva período (começa no candle em curso, sem fim); o
+  agendador (`LIVE_POLL_SECONDS` 5, `LIVE_HEARTBEAT_TIMEOUT_SECONDS` 60) roda uma ronda por intervalo e uma por candle gravado. Teste novo do
+  avaliador usa `loadLiveApi()` (`test/fixtures/live/`): é por ele que os 32 mutantes entram. Prova: 53 contratos, `make live-test` (Postgres
+  descartável, API real, worker em processo à parte morto por SIGKILL, paridade com o backtest nos dois conjuntos reais, ~3 ms por passo),
+  `make live-mutants` (6 mutantes do adaptador) e `make queue-mutants` (+10 da reivindicação ao vivo).
 - Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account

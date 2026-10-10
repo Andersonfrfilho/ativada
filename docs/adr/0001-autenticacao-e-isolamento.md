@@ -596,8 +596,8 @@ Cada task abaixo só fecha com estes itens atendidos e provados (contrato ou ver
 **Fases 2, 3 e 5 — worker, NOTIFY e WebSocket**
 
 - Worker filtra conta apagada ou bloqueada (`deleted_at IS NULL`, `blocked_at IS NULL`) ao listar
-  simulações ativas.
-- Violação de FK na corrida com a exclusão de conta = "execução encerrada", não erro em laço.
+  simulações ativas. **Cumprido na T4.1** (ADR 0002 "Simulação ao vivo (T4.1 e T4.2)"): a reivindicação só considera conta ativa e a ronda cancela as `running` de conta inativa.
+- Violação de FK na corrida com a exclusão de conta = "execução encerrada", não erro em laço. **Cumprido na T4.1**: FK violada ou execução sumida encerra sem erro e sem `failed`.
 - Execução órfã (processo caiu no meio): detectada pelo BATIMENTO vencido (`runs.heartbeat_at`, T3.6) e recuperada no boot e na ronda
   periódica por qualquer instância; com checkpoint volta à fila e retoma, sem checkpoint vira `failed`/`ORPHANED` (ADR 0002 §"Fila de
   execuções (T3.6)"). Conta apagada ou bloqueada: a fila não reivindica as execuções dela e as `running` são canceladas.
