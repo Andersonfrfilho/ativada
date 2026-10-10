@@ -3,9 +3,15 @@ import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import type { DatabaseExecutor } from '../database-executor.js';
-import { readJsonb, toJsonb } from '../jsonb.js';
+import { toJsonb } from '../jsonb.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
 import { strategies, strategyVersions } from '../schema/strategies.schema.js';
+import {
+  createStrategyWithFirstVersion,
+  listStrategiesPage,
+  listVersionsPage,
+} from './strategy-page.js';
+import { STRATEGY_COLUMNS, toVersionRecord, VERSION_COLUMNS } from './strategy-record.mapper.js';
 import type {
   AddStrategyVersionParams,
   AddStrategyVersionResult,
@@ -16,29 +22,6 @@ import type {
 } from './strategy.types.js';
 
 type Database = ReturnType<typeof readOpenDatabase>['database'];
-
-const STRATEGY_COLUMNS = {
-  id: strategies.id,
-  name: strategies.name,
-  isExample: strategies.isExample,
-  createdAt: strategies.createdAt,
-  updatedAt: strategies.updatedAt,
-} as const;
-
-const VERSION_COLUMNS = {
-  id: strategyVersions.id,
-  strategyId: strategyVersions.strategyId,
-  version: strategyVersions.version,
-  config: strategyVersions.config,
-  configHash: strategyVersions.configHash,
-  createdAt: strategyVersions.createdAt,
-} as const;
-
-type VersionRow = Omit<StrategyVersionRecord, 'config'> & { readonly config: unknown };
-
-function toVersionRecord(row: VersionRow): StrategyVersionRecord {
-  return { ...row, config: readJsonb(row.config) };
-}
 
 function activeStrategy(scope: OwnerScope, strategyId: string): ReturnType<typeof and> {
   return and(
@@ -207,6 +190,10 @@ export function createStrategyRepository(handle: DatabaseHandle): StrategyReposi
   const { database } = readOpenDatabase(handle);
   return {
     createStrategy: (scope, params) => createStrategy(database, scope, params),
+    createStrategyWithFirstVersion: (scope, params) =>
+      createStrategyWithFirstVersion(database, scope, params),
+    listStrategiesPage: (scope, params) => listStrategiesPage(database, scope, params),
+    listVersionsPage: (scope, params) => listVersionsPage(database, scope, params),
     findStrategy: (scope, strategyId) => findStrategy(database, scope, strategyId),
     listStrategies: (scope) => listStrategies(database, scope),
     softDeleteStrategy: (scope, strategyId) => softDeleteStrategy(database, scope, strategyId),

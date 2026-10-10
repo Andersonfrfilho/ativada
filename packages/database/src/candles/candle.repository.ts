@@ -22,6 +22,8 @@ import type {
 } from './candle.types.js';
 import { OpenCandleRejectedError } from './open-candle-rejected.error.js';
 
+const NO_ROW_LIMIT = Number.MAX_SAFE_INTEGER;
+
 function matchesSeries(key: CandleSeriesKey): ReturnType<typeof and> {
   return and(
     eq(candles.exchange, key.exchange),
@@ -98,7 +100,8 @@ async function findCandles(
         lt(candles.openTime, params.to),
       ),
     )
-    .orderBy(asc(candles.openTime));
+    .orderBy(asc(candles.openTime))
+    .limit(params.limit ?? NO_ROW_LIMIT);
   return rows.map((row) => ({
     exchange: row.exchange,
     symbol: row.symbol,

@@ -36,11 +36,62 @@ export type AddStrategyVersionResult = {
   readonly isNew: boolean;
 };
 
+// `createdAt` é o texto do Postgres com microssegundos: o Date do JS só guarda milissegundos.
+export type StrategyCursor = {
+  readonly createdAt: string;
+  readonly id: string;
+};
+
+export type ListStrategiesParams = {
+  readonly limit: number;
+  readonly after: StrategyCursor | undefined;
+};
+
+export type StrategiesPage = {
+  readonly strategies: readonly StrategyRecord[];
+  readonly nextCursor: StrategyCursor | undefined;
+};
+
+// Versões da mais nova para a mais antiga; o cursor é o número da última versão da página.
+export type ListVersionsParams = {
+  readonly strategyId: string;
+  readonly limit: number;
+  readonly after: number | undefined;
+};
+
+export type VersionsPage = {
+  readonly versions: readonly StrategyVersionRecord[];
+  readonly nextCursor: number | undefined;
+};
+
+export type CreateStrategyWithVersionParams = CreateStrategyParams & {
+  readonly config: JsonContainer;
+  readonly configHash: string;
+};
+
+export type CreateStrategyWithVersionResult = {
+  readonly strategy: StrategyRecord;
+  readonly version: StrategyVersionRecord;
+};
+
 export type StrategyRepository = {
   readonly createStrategy: (
     scope: OwnerScope,
     params: CreateStrategyParams,
   ) => Promise<StrategyRecord>;
+  // A estratégia e a versão 1 nascem na mesma transação: nunca fica estratégia sem versão.
+  readonly createStrategyWithFirstVersion: (
+    scope: OwnerScope,
+    params: CreateStrategyWithVersionParams,
+  ) => Promise<CreateStrategyWithVersionResult>;
+  readonly listStrategiesPage: (
+    scope: OwnerScope,
+    params: ListStrategiesParams,
+  ) => Promise<StrategiesPage>;
+  readonly listVersionsPage: (
+    scope: OwnerScope,
+    params: ListVersionsParams,
+  ) => Promise<VersionsPage | undefined>;
   readonly findStrategy: (
     scope: OwnerScope,
     strategyId: string,

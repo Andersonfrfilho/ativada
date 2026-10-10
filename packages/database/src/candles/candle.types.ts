@@ -28,9 +28,14 @@ export type CandleSeriesKey = {
 export type FindCandlesParams = CandleSeriesKey & {
   readonly from: number;
   readonly to: number;
+  // Teto de linhas (leitura do primeiro candle, páginas); ausente = o intervalo inteiro.
+  readonly limit?: number | undefined;
 };
 
-export type FindMissingOpenTimesParams = FindCandlesParams;
+export type FindMissingOpenTimesParams = CandleSeriesKey & {
+  readonly from: number;
+  readonly to: number;
+};
 
 export type UpsertCandlesResult = { readonly inserted: number };
 

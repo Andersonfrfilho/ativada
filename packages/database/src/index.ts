@@ -136,9 +136,16 @@ export type {
   AddStrategyVersionParams,
   AddStrategyVersionResult,
   CreateStrategyParams,
+  CreateStrategyWithVersionParams,
+  CreateStrategyWithVersionResult,
+  ListStrategiesParams,
+  ListVersionsParams,
+  StrategiesPage,
+  StrategyCursor,
   StrategyRecord,
   StrategyRepository,
   StrategyVersionRecord,
+  VersionsPage,
 } from './strategies/strategy.types.js';
 export { InvalidUserIdError } from './ownership/invalid-user-id.error.js';
 export type { OwnerScope } from './ownership/owner-scope.js';

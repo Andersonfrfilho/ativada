@@ -117,7 +117,20 @@ async function checkRangeAndLatest(context: CandleCheckContext): Promise<void> {
   const absent = await repository.findLatestOpenTime({ ...key, symbol: 'ABSENTUSDT' });
   assertCondition(latest === FIRST_OPEN_TIME + 4 * ONE_HOUR, `último open_time ${latest}`);
   assertCondition(absent === undefined, 'par sem candles deveria devolver undefined');
-  reportCheck('leitura ordenada e semi-aberta [from, to); findLatestOpenTime devolve o maior');
+  const firstOnly = await repository.findCandles({
+    ...key,
+    from: FIRST_OPEN_TIME,
+    to: FIRST_OPEN_TIME + 5 * ONE_HOUR,
+    limit: 2,
+  });
+  assertCondition(
+    firstOnly.map((candle) => candle.openTime).join() ===
+      [FIRST_OPEN_TIME, FIRST_OPEN_TIME + ONE_HOUR].join(),
+    'limit devolve só os primeiros candles do intervalo, em ordem',
+  );
+  reportCheck(
+    'leitura ordenada e semi-aberta [from, to) com teto de linhas; findLatestOpenTime devolve o maior',
+  );
 }
 
 async function checkRejections(context: CandleCheckContext): Promise<void> {
