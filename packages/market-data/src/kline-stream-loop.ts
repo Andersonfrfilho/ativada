@@ -13,9 +13,21 @@ import type {
 import { computeBackoffDelay } from './reconnect-backoff.js';
 import type { ResolvedStreamSettings } from './resolve-stream-settings.js';
 
+// O que o laço de reconexão lê: o stream de klines e o de ticker o compartilham.
+export type ReconnectConfig = Pick<
+  ResolvedStreamSettings,
+  | 'url'
+  | 'staleAfterMilliseconds'
+  | 'reconnectBaseMilliseconds'
+  | 'reconnectMaxMilliseconds'
+  | 'stableAfterMilliseconds'
+>;
+
+export type ReconnectCounters = Pick<KlineStreamCounters, 'attemptCount' | 'loopFailureCount'>;
+
 export type ReconnectLoopParams = {
-  readonly config: ResolvedStreamSettings;
-  readonly counters: KlineStreamCounters;
+  readonly config: ReconnectConfig;
+  readonly counters: ReconnectCounters;
   readonly lifecycle: StreamLifecycle;
   readonly dispatcher: StreamDispatcher;
   readonly cancellable: CancellableSleep;

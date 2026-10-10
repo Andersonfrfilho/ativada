@@ -11,6 +11,33 @@ export type KlineEventParams = {
   readonly isClosed: boolean;
 };
 
+export type MiniTickerEventParams = {
+  readonly symbol: string;
+  readonly price: string;
+  readonly openPrice: string;
+  readonly eventTime: number;
+};
+
+// O `<par>@miniTicker` da Binance: o preço corrente (`c`) e o de abertura da janela de 24 h (`o`).
+export function buildMiniTickerEvent(
+  params: MiniTickerEventParams,
+): Readonly<Record<string, unknown>> {
+  return {
+    stream: `${params.symbol.toLowerCase()}@miniTicker`,
+    data: {
+      e: '24hrMiniTicker',
+      E: params.eventTime,
+      s: params.symbol,
+      c: params.price,
+      o: params.openPrice,
+      h: params.price,
+      l: params.openPrice,
+      v: '10000.00000000',
+      q: '18.00000000',
+    },
+  };
+}
+
 export type KlinesRestRequest = {
   readonly symbol: string;
   readonly interval: string;

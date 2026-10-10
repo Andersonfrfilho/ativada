@@ -23,13 +23,13 @@ export type ResolvedStreamSettings = {
   readonly stableAfterMilliseconds: number;
 };
 
-function assertPositive(name: string, value: number): void {
+export function assertPositive(name: string, value: number): void {
   if (!Number.isFinite(value) || value <= 0) {
     throw new MarketDataInvalidRequestError(`${name} deve ser um número positivo.`);
   }
 }
 
-function assertBaseUrl(baseUrl: string): string {
+export function assertBaseUrl(baseUrl: string): string {
   const isWebSocketUrl =
     URL.canParse(baseUrl) && WEBSOCKET_PROTOCOLS.includes(new URL(baseUrl).protocol);
   if (!isWebSocketUrl) throw new MarketDataInvalidRequestError('baseUrl deve ser ws:// ou wss://.');

@@ -73,3 +73,15 @@ export type {
   MalformedReason,
 } from './kline-stream.types.js';
 export { computeBackoffDelay, type BackoffParams } from './reconnect-backoff.js';
+export { createTickerStream } from './ticker/create-ticker-stream.js';
+export { createTickAggregator } from './ticker/tick-aggregator.js';
+export { computeChangePercent } from './ticker/percent-change.js';
+export { TICK_PUBLISH_INTERVAL_MILLISECONDS } from './ticker/ticker.constant.js';
+export type { TickAggregator, TickAggregatorSettings } from './ticker/tick-aggregator.js';
+export type { AggregatedTick, PriceTickListener } from './ticker/price-tick-listener.js';
+export type {
+  RawTick,
+  TickerStream,
+  TickerStreamSettings,
+  TickerStreamStats,
+} from './ticker/ticker.types.js';

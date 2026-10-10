@@ -2,17 +2,21 @@
 import type { Timeframe } from '../src/index.js';
 import {
   buildKlineEvent,
+  buildMiniTickerEvent,
   buildRestRow,
   readRestRequest,
   type KlineEventParams,
   type KlinesRestRequest,
+  type MiniTickerEventParams,
 } from './fake-binance-payloads.js';
 
 export {
   buildFakePrice,
   buildKlineEvent,
+  buildMiniTickerEvent,
   type KlineEventParams,
   type KlinesRestRequest,
+  type MiniTickerEventParams,
 } from './fake-binance-payloads.js';
 
 const LOOPBACK_HOST = '127.0.0.1';
@@ -44,6 +48,7 @@ export type FakeBinanceStreamServer = {
   readonly openConnectionCount: () => number;
   readonly requestedStreams: () => readonly string[];
   readonly sendEvent: (params: KlineEventParams) => void;
+  readonly sendTicker: (params: MiniTickerEventParams) => void;
   readonly sendText: (text: string) => void;
   readonly dropConnections: () => void;
   readonly refuseConnections: (isRefusing: boolean) => void;
@@ -134,6 +139,7 @@ export function startFakeBinanceStreamServer(): FakeBinanceStreamServer {
     openConnectionCount: (): number => sockets.size,
     requestedStreams: (): readonly string[] => streams,
     sendEvent: (params): void => sendText(JSON.stringify(buildKlineEvent(params))),
+    sendTicker: (params): void => sendText(JSON.stringify(buildMiniTickerEvent(params))),
     sendText,
     dropConnections: (): void => {
       for (const socket of [...sockets]) socket.close(WEBSOCKET_GOING_AWAY);
