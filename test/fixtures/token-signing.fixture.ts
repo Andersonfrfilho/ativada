@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { SignJWT, exportJWK, generateKeyPair, type CryptoKey, type JWK } from './jose.fixture.js';
 
-export const TEST_ISSUER = 'http://keycloak.test/realms/crypto-paper-trader';
-export const TEST_AUDIENCE = 'crypto-api';
-export const TEST_AUTHORIZED_PARTY = 'crypto-session';
+export const TEST_ISSUER = 'http://keycloak.test/realms/cryptoada';
+export const TEST_AUDIENCE = 'cryptoada-api';
+export const TEST_AUTHORIZED_PARTY = 'cryptoada-session';
 export const TEST_SUBJECT = 'subject-0001';
 
 const SECONDS_PER_MINUTE = 60;

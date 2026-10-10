@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import { ACCOUNTS_PATH } from '../apps/api-crypto/src/admin/admin.constant.js';
+import { ACCOUNTS_PATH } from '../apps/api-cryptoada/src/admin/admin.constant.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
 import { callAdmin, readError } from './fixtures/admin-calls.fixture.js';
 import {

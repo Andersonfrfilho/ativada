@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { AccessTokenVerifier } from '../../apps/api-crypto/src/authentication/access-token-verifier.js';
+import type { AccessTokenVerifier } from '../../apps/api-cryptoada/src/authentication/access-token-verifier.js';
 import type { IdentityContext } from '../identity-test/identity-context.js';
 import type { RunningApi } from './start-api.js';
 

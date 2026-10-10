@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { MILLISECONDS_PER_SECOND, z } from '@crypto/environment';
+import { MILLISECONDS_PER_SECOND, z } from '@cryptoada/environment';
 
 import { HTTP_METHOD, HTTP_STATUS } from './identity-http.constant.js';
 import {

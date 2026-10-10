@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { EXIT_CODE } from '../apps/cron-crypto/src/cron.constant.js';
-import { createCronLogger } from '../apps/cron-crypto/src/logging/cron-logger.js';
-import { computeBackfillWindow } from '../apps/cron-crypto/src/market/backfill-window.js';
-import { runCronTasks } from '../apps/cron-crypto/src/run-cron-tasks.js';
+import { EXIT_CODE } from '../apps/cron-cryptoada/src/cron.constant.js';
+import { createCronLogger } from '../apps/cron-cryptoada/src/logging/cron-logger.js';
+import { computeBackfillWindow } from '../apps/cron-cryptoada/src/market/backfill-window.js';
+import { runCronTasks } from '../apps/cron-cryptoada/src/run-cron-tasks.js';
 import type { CandleRecord, CandleTimeframe } from '../packages/database/src/index.js';
 import { TIMEFRAME_DURATION_MILLISECONDS } from '../packages/market-data/src/index.js';
 import {
@@ -127,7 +127,7 @@ describe('backfill-candles: pairs are isolated and sequential', () => {
     const logLines: string[] = [];
     const exitCode = await runCronTasks(
       [{ name: 'backfill-candles', run: harness.run }],
-      createCronLogger({ appName: 'cron-crypto', write: (line) => void logLines.push(line) }),
+      createCronLogger({ appName: 'cron-cryptoada', write: (line) => void logLines.push(line) }),
     );
     expect(exitCode).toBe(EXIT_CODE.FAILURE);
     expect(harness.repository.stored().filter((c) => c.symbol === 'BBBUSDT')).toHaveLength(

@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import { createReconcileBlockedAccountsTask } from '../apps/cron-crypto/src/accounts/reconcile-blocked-accounts.task.js';
+import { createReconcileBlockedAccountsTask } from '../apps/cron-cryptoada/src/accounts/reconcile-blocked-accounts.task.js';
 import type { BlockedAccountRepository } from '../packages/database/src/index.js';
-import { createCronLogger } from '../apps/cron-crypto/src/logging/cron-logger.js';
+import { createCronLogger } from '../apps/cron-cryptoada/src/logging/cron-logger.js';
 import { createKeycloakIdentityAdmin } from '../packages/identity-admin/src/create-keycloak-identity-admin.js';
 import {
   ADMIN_OPERATION,
@@ -38,7 +38,10 @@ function buildTask(repository: BlockedAccountRepository = store.repository): typ
       clientSecret: FAKE_SERVICE_CLIENT_SECRET,
       now: () => Date.now(),
     }),
-    logger: createCronLogger({ appName: 'cron-crypto', write: (line) => void logLines.push(line) }),
+    logger: createCronLogger({
+      appName: 'cron-cryptoada',
+      write: (line) => void logLines.push(line),
+    }),
   });
   return task;
 }

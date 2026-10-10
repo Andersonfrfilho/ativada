@@ -9,8 +9,8 @@ import {
   type JsonRecord,
 } from './http-client.js';
 
-export const SESSION_CLIENT_ID = 'crypto-session';
-export const SERVICE_CLIENT_ID = 'crypto-api-service';
+export const SESSION_CLIENT_ID = 'cryptoada-session';
+export const SERVICE_CLIENT_ID = 'cryptoada-api-service';
 
 export function buildRealmUrl(environment: IdentityEnvironment): string {
   return `${environment.keycloakUrl}/realms/${environment.realmName}`;

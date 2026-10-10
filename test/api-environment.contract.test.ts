@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import { EnvironmentError, parseEnvironment } from '../packages/environment/src/index.js';
-import { environmentSchema } from '../apps/api-crypto/src/environment.js';
+import { environmentSchema } from '../apps/api-cryptoada/src/environment.js';
 import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
 
 const AUTHENTICATION_VARIABLES: readonly string[] = [
@@ -27,14 +27,14 @@ const IDENTITY_ADMIN_VARIABLES: readonly string[] = [
   'KEYCLOAK_SERVICE_CLIENT_SECRET',
 ];
 
-describe('api-crypto environment (authentication, CORS and proxies)', () => {
+describe('api-cryptoada environment (authentication, CORS and proxies)', () => {
   test.each(['env.dev', 'env.test'])('%s satisfies the schema', async (fileName) => {
     const environment = parseEnvironment(environmentSchema, await readEnvironmentFile(fileName));
-    expect(environment.API_AUDIENCE).toBe('crypto-api');
-    expect(environment.AUTHORIZED_PARTIES).toStrictEqual(['crypto-session']);
+    expect(environment.API_AUDIENCE).toBe('cryptoada-api');
+    expect(environment.AUTHORIZED_PARTIES).toStrictEqual(['cryptoada-session']);
     expect(environment.CORS_ALLOWED_ORIGINS.length).toBeGreaterThan(0);
     expect(environment.TRUSTED_PROXY_HOPS).toBe(0);
-    expect(environment.KEYCLOAK_ISSUER.endsWith('/realms/crypto-paper-trader')).toBe(true);
+    expect(environment.KEYCLOAK_ISSUER.endsWith('/realms/cryptoada')).toBe(true);
     expect(environment.KEYCLOAK_JWKS_URL.endsWith('/protocol/openid-connect/certs')).toBe(true);
   });
 
@@ -58,10 +58,10 @@ describe('api-crypto environment (authentication, CORS and proxies)', () => {
     const base = await readEnvironmentFile('env.test');
     const environment = parseEnvironment(environmentSchema, {
       ...base,
-      AUTHORIZED_PARTIES: 'crypto-session, crypto-other,',
+      AUTHORIZED_PARTIES: 'cryptoada-session, crypto-other,',
       CORS_ALLOWED_ORIGINS: 'https://app.example.com , http://127.0.0.1:56100',
     });
-    expect(environment.AUTHORIZED_PARTIES).toStrictEqual(['crypto-session', 'crypto-other']);
+    expect(environment.AUTHORIZED_PARTIES).toStrictEqual(['cryptoada-session', 'crypto-other']);
     expect(environment.CORS_ALLOWED_ORIGINS).toStrictEqual([
       'https://app.example.com',
       'http://127.0.0.1:56100',
@@ -122,7 +122,7 @@ describe('api-crypto environment (authentication, CORS and proxies)', () => {
       'https://a.example.com/cb',
       'https://b.example.com/cb',
     ]);
-    expect(environment.KEYCLOAK_SESSION_CLIENT_ID).toBe('crypto-session');
+    expect(environment.KEYCLOAK_SESSION_CLIENT_ID).toBe('cryptoada-session');
   });
 
   test.each(['', 'not-a-url', ' , '])('rejects SESSION_ALLOWED_REDIRECT_URIS=%p', async (value) => {
@@ -141,12 +141,10 @@ describe('api-crypto environment (authentication, CORS and proxies)', () => {
     expect(parseEnvironment.bind(undefined, environmentSchema, base)).toThrow(EnvironmentError);
   });
 
-  test('the service account settings point at the crypto-api-service client', async () => {
+  test('the service account settings point at the cryptoada-api-service client', async () => {
     const environment = parseEnvironment(environmentSchema, await readEnvironmentFile('env.test'));
-    expect(environment.KEYCLOAK_SERVICE_CLIENT_ID).toBe('crypto-api-service');
-    expect(environment.KEYCLOAK_ADMIN_API_URL.endsWith('/admin/realms/crypto-paper-trader')).toBe(
-      true,
-    );
+    expect(environment.KEYCLOAK_SERVICE_CLIENT_ID).toBe('cryptoada-api-service');
+    expect(environment.KEYCLOAK_ADMIN_API_URL.endsWith('/admin/realms/cryptoada')).toBe(true);
   });
 
   test('Telegram settings are optional and the API base URL has a default', async () => {

@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { TOKEN_VERIFICATION_STATUS } from '../../apps/api-crypto/src/authentication/authentication.constant.js';
+import { TOKEN_VERIFICATION_STATUS } from '../../apps/api-cryptoada/src/authentication/authentication.constant.js';
 import { decodeTokenPayload } from '../identity-test/keycloak-client.js';
 import { assertCondition } from '../identity-test/identity-test.error.js';
 import { EXPECTED_AUDIENCE, SESSION_CLIENT_ID } from './session-test.constant.js';

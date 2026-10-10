@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
-import { ROUTE_ACCESS } from '../apps/api-crypto/src/router/route-access.constant.js';
-import { createApiRoutes } from '../apps/api-crypto/src/routes/create-api-routes.js';
-import type { Route } from '../apps/api-crypto/src/router/route.types.js';
+import { ROUTE_ACCESS } from '../apps/api-cryptoada/src/router/route-access.constant.js';
+import { createApiRoutes } from '../apps/api-cryptoada/src/routes/create-api-routes.js';
+import type { Route } from '../apps/api-cryptoada/src/router/route.types.js';
 import { callAdmin, collectKeys } from './fixtures/admin-calls.fixture.js';
 import { ADMIN_PATH } from './fixtures/api-harness.fixture.js';
 import { buildApiRouteDependencies } from './fixtures/api-route-dependencies.fixture.js';

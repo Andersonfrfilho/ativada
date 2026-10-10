@@ -99,7 +99,7 @@ export async function checkPlainUserLogin(context: IdentityContext): Promise<voi
   const claims = await exchangeCode(context, outcome.location, pkce);
   const roles = readRealmRoles(claims);
   assertCondition(claims['azp'] === SESSION_CLIENT_ID, `azp: ${String(claims['azp'])}`);
-  assertCondition(String(claims['aud']).includes('crypto-api'), `aud: ${String(claims['aud'])}`);
+  assertCondition(String(claims['aud']).includes('cryptoada-api'), `aud: ${String(claims['aud'])}`);
   assertCondition(roles.includes('user') && !roles.includes('admin'), `papéis: ${roles.join(',')}`);
   assertCondition(!roles.includes('offline_access'), 'token com offline_access');
   assertCondition(
@@ -108,7 +108,7 @@ export async function checkPlainUserLogin(context: IdentityContext): Promise<voi
   );
   reportStep(
     'login do usuário comum',
-    `Code + PKCE sem OTP; aud crypto-api; papéis ${roles.join(',')}; acr ${String(claims['acr'])} (LoA 1 vem como o nome mapeado; LoA 2 repete o valor pedido)`,
+    `Code + PKCE sem OTP; aud cryptoada-api; papéis ${roles.join(',')}; acr ${String(claims['acr'])} (LoA 1 vem como o nome mapeado; LoA 2 repete o valor pedido)`,
   );
 }
 

@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 export const TEMPORARY_DATABASE_PREFIX = 'crypto_lgpd_';
 export const EXPORT_PATH = '/v1/me/export';
-export const CRON_ENTRYPOINT = 'apps/cron-crypto/src/main.ts';
-export const CRON_APP_NAME = 'cron-crypto';
+export const CRON_ENTRYPOINT = 'apps/cron-cryptoada/src/main.ts';
+export const CRON_APP_NAME = 'cron-cryptoada';
 
 export const NAME_OF_A = 'Lgpd Owner Alpha';
 export const NAME_OF_B = 'Lgpd Owner Bravo';

@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { environmentSchema as apiEnvironmentSchema } from '../apps/api-crypto/src/environment.js';
-import { environmentSchema as cronEnvironmentSchema } from '../apps/cron-crypto/src/environment.js';
+import { environmentSchema as apiEnvironmentSchema } from '../apps/api-cryptoada/src/environment.js';
+import { environmentSchema as cronEnvironmentSchema } from '../apps/cron-cryptoada/src/environment.js';
 import { EnvironmentError, parseEnvironment } from '../packages/environment/src/index.js';
 import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
 
@@ -14,17 +14,17 @@ type EnvironmentSource = Record<string, string>;
 async function buildProductionEnvironment(): Promise<EnvironmentSource> {
   const base = await readEnvironmentFile('env.test');
   const origin = 'https://auth.crypto.example.com';
-  const realm = `${origin}/realms/crypto-paper-trader`;
+  const realm = `${origin}/realms/cryptoada`;
   return {
     ...base,
     ENV: 'production',
     DATABASE_URL:
-      'postgres://crypto:prod-password-0123456789@db.internal:5432/crypto?sslmode=require',
+      'postgres://cryptoada:prod-password-0123456789@db.internal:5432/crypto?sslmode=require',
     KEYCLOAK_ISSUER: realm,
     KEYCLOAK_JWKS_URL: `${realm}/protocol/openid-connect/certs`,
     KEYCLOAK_TOKEN_URL: `${realm}/protocol/openid-connect/token`,
     KEYCLOAK_LOGOUT_URL: `${realm}/protocol/openid-connect/logout`,
-    KEYCLOAK_ADMIN_API_URL: `${origin}/admin/realms/crypto-paper-trader`,
+    KEYCLOAK_ADMIN_API_URL: `${origin}/admin/realms/cryptoada`,
     KEYCLOAK_SESSION_CLIENT_SECRET: STRONG_SECRET,
     KEYCLOAK_SERVICE_CLIENT_SECRET: STRONG_SECRET,
     SESSION_ALLOWED_REDIRECT_URIS: 'https://app.crypto.example.com/auth/callback',
@@ -49,7 +49,7 @@ function issuesOf(
   return '';
 }
 
-describe('api-crypto in production', () => {
+describe('api-cryptoada in production', () => {
   test('accepts a fully explicit production configuration', async () => {
     const environment = parseEnvironment(apiEnvironmentSchema, await buildProductionEnvironment());
     expect(environment.TRUSTED_PROXY_HOPS).toBe(1);
@@ -82,10 +82,10 @@ describe('api-crypto in production', () => {
   });
 
   test.each([
-    ['without sslmode', 'postgres://crypto:prod-password-0123456789@db.internal:5432/crypto'],
+    ['without sslmode', 'postgres://cryptoada:prod-password-0123456789@db.internal:5432/crypto'],
     [
       'with sslmode=disable',
-      'postgres://crypto:prod-password-0123456789@db.internal:5432/crypto?sslmode=disable',
+      'postgres://cryptoada:prod-password-0123456789@db.internal:5432/crypto?sslmode=disable',
     ],
   ])('rejects DATABASE_URL %s', async (_name, value) => {
     const source = await buildProductionEnvironment();
@@ -135,7 +135,7 @@ describe('api-crypto in production', () => {
   );
 });
 
-describe('cron-crypto in production', () => {
+describe('cron-cryptoada in production', () => {
   async function buildCronProductionEnvironment(): Promise<EnvironmentSource> {
     return buildProductionEnvironment();
   }

@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { z } from '@crypto/environment';
+import { z } from '@cryptoada/environment';
 
 import type { Candle } from './candle.types.js';
 import { MarketDataResponseError } from './market-data.error.js';

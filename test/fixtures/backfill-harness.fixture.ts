@@ -2,8 +2,8 @@
 import {
   createBackfillCandlesTask,
   type BackfillCandlesSummary,
-} from '../../apps/cron-crypto/src/market/backfill-candles.task.js';
-import { createCronLogger } from '../../apps/cron-crypto/src/logging/cron-logger.js';
+} from '../../apps/cron-cryptoada/src/market/backfill-candles.task.js';
+import { createCronLogger } from '../../apps/cron-cryptoada/src/logging/cron-logger.js';
 import type { CandleRecord, CandleTimeframe } from '../../packages/database/src/index.js';
 import {
   createMarketDataClient,
@@ -82,7 +82,7 @@ export function createBackfillHarness(options: BackfillHarnessOptions = {}): Bac
       now: clock.now,
       sleep: clock.sleep,
     }),
-    logger: createCronLogger({ appName: 'cron-crypto', write: (line) => void lines.push(line) }),
+    logger: createCronLogger({ appName: 'cron-cryptoada', write: (line) => void lines.push(line) }),
     now: () => BACKFILL_NOW,
     exchange: BACKFILL_EXCHANGE,
     symbols: options.symbols ?? ['BTCUSDT'],

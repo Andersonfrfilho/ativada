@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { ESLint } from 'eslint';
 
 const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
-const PROBE_DIRECTORY = 'apps/api-crypto/src';
+const PROBE_DIRECTORY = 'apps/api-cryptoada/src';
 const PROBE_PREFIX = 'lint-boundary-probe-';
 const COPYRIGHT_LINE = '// Copyright (c) 2026 Ada Technology. All rights reserved.';
 const LINT_TIMEOUT_MILLISECONDS = 120_000;
@@ -45,7 +45,7 @@ const PROBE_CASES: readonly ProbeCase[] = [
   },
   {
     name: 'database-subpath',
-    body: "import { userIdFromDatabase } from '@crypto/database/src/ownership/user-id.js';\nexport const PROBE = userIdFromDatabase;",
+    body: "import { userIdFromDatabase } from '@cryptoada/database/src/ownership/user-id.js';\nexport const PROBE = userIdFromDatabase;",
     expectedRule: RESTRICTED_IMPORTS_RULE,
   },
   {
@@ -60,12 +60,12 @@ const PROBE_CASES: readonly ProbeCase[] = [
   },
   {
     name: 'user-id-cast',
-    body: "import type { UserId } from '@crypto/database';\nexport function forgeUserId(value: string): UserId {\n  return value as UserId;\n}",
+    body: "import type { UserId } from '@cryptoada/database';\nexport function forgeUserId(value: string): UserId {\n  return value as UserId;\n}",
     expectedRule: TYPE_ASSERTIONS_RULE,
   },
   {
     name: 'user-id-type-guard',
-    body: "import type { UserId } from '@crypto/database';\nexport function isUserId(value: string): value is UserId {\n  return value.length > 0;\n}",
+    body: "import type { UserId } from '@cryptoada/database';\nexport function isUserId(value: string): value is UserId {\n  return value.length > 0;\n}",
     expectedRule: RESTRICTED_SYNTAX_RULE,
   },
   {
@@ -75,7 +75,7 @@ const PROBE_CASES: readonly ProbeCase[] = [
   },
   {
     name: 'public-surface-allowed',
-    body: "import { parseAccountId, type OwnerScope, type UserId } from '@crypto/database';\nexport const PROBE = parseAccountId;\nexport type ProbeScope = OwnerScope;\nexport type ProbeUserId = UserId;\nexport const PROBE_NAME = 'probe' as const;",
+    body: "import { parseAccountId, type OwnerScope, type UserId } from '@cryptoada/database';\nexport const PROBE = parseAccountId;\nexport type ProbeScope = OwnerScope;\nexport type ProbeUserId = UserId;\nexport const PROBE_NAME = 'probe' as const;",
     expectedRule: undefined,
   },
   {
@@ -85,19 +85,19 @@ const PROBE_CASES: readonly ProbeCase[] = [
   },
   {
     name: 'dynamic-import-worker',
-    directory: 'apps/worker-crypto/src',
+    directory: 'apps/worker-cryptoada/src',
     body: "export async function loadClient(): Promise<unknown> {\n  return import('../../../packages/database/src/database-client.js');\n}",
     expectedRule: RESTRICTED_SYNTAX_RULE,
   },
   {
     name: 'dynamic-import-cron',
-    directory: 'apps/cron-crypto/src',
+    directory: 'apps/cron-cryptoada/src',
     body: "export async function loadClient(): Promise<unknown> {\n  return import('../../../packages/database/src/database-client.js');\n}",
     expectedRule: RESTRICTED_SYNTAX_RULE,
   },
   {
     name: 'dynamic-import-frontend-allowed',
-    directory: 'apps/frontend-crypto/src',
+    directory: 'apps/frontend-cryptoada/src',
     body: "export async function loadLazyModule(): Promise<unknown> {\n  return import('./environment.js');\n}",
     expectedRule: undefined,
   },
@@ -148,28 +148,28 @@ const PROBE_CASES: readonly ProbeCase[] = [
   },
   {
     name: 'user-id-overload',
-    body: "import type { UserId } from '@crypto/database';\nexport function mintUserId(value: string): UserId;\nexport function mintUserId(value: string): unknown {\n  return value;\n}",
+    body: "import type { UserId } from '@cryptoada/database';\nexport function mintUserId(value: string): UserId;\nexport function mintUserId(value: string): unknown {\n  return value;\n}",
     expectedRule: RESTRICTED_SYNTAX_RULE,
   },
   {
     name: 'owner-scope-function-type',
-    body: "import type { OwnerScope } from '@crypto/database';\nexport type ScopeMinter = (value: string) => OwnerScope;",
+    body: "import type { OwnerScope } from '@cryptoada/database';\nexport type ScopeMinter = (value: string) => OwnerScope;",
     expectedRule: RESTRICTED_SYNTAX_RULE,
   },
   {
     name: 'account-id-class-overload',
-    body: "import type { AccountId } from '@crypto/database';\nexport class AccountMinter {\n  mint(value: string): AccountId;\n  mint(value: string): unknown {\n    return value;\n  }\n}",
+    body: "import type { AccountId } from '@cryptoada/database';\nexport class AccountMinter {\n  mint(value: string): AccountId;\n  mint(value: string): unknown {\n    return value;\n  }\n}",
     expectedRule: RESTRICTED_SYNTAX_RULE,
   },
   {
     name: 'user-id-passthrough-allowed',
-    body: "import type { UserId } from '@crypto/database';\nexport function readUserId(owner: { readonly userId: UserId }): UserId {\n  return owner.userId;\n}",
+    body: "import type { UserId } from '@cryptoada/database';\nexport function readUserId(owner: { readonly userId: UserId }): UserId {\n  return owner.userId;\n}",
     expectedRule: undefined,
   },
   {
     name: 'tsx-valid-component',
     extension: 'tsx',
-    directory: 'apps/frontend-crypto/src',
+    directory: 'apps/frontend-cryptoada/src',
     body: 'export function ProbeView(): unknown {\n  return <span>probe</span>;\n}',
     expectedRule: undefined,
   },

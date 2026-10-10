@@ -45,7 +45,7 @@ function assertAttachmentHeaders(headers: Headers): void {
   );
   const disposition = headers.get('content-disposition') ?? '';
   assertCondition(
-    /^attachment; filename="crypto-paper-trader-export-\d{4}-\d{2}-\d{2}\.json"$/.test(disposition),
+    /^attachment; filename="cryptoada-export-\d{4}-\d{2}-\d{2}\.json"$/.test(disposition),
     `Content-Disposition: ${disposition}`,
   );
 }

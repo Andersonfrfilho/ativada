@@ -1,14 +1,14 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
-import { RouteDeclarationError } from '../apps/api-crypto/src/router/route-declaration.error.js';
-import { ROUTE_ACCESS } from '../apps/api-crypto/src/router/route-access.constant.js';
-import { createRateLimiter } from '../apps/api-crypto/src/rate-limit/rate-limiter.js';
-import { createRouter } from '../apps/api-crypto/src/router/create-router.js';
-import { createRouteTable } from '../apps/api-crypto/src/router/route-table.js';
-import type { Route } from '../apps/api-crypto/src/router/route.types.js';
-import { HTTP_METHOD } from '../apps/api-crypto/src/shared/http/http.constant.js';
-import { ROUTING_ERROR_CODE } from '../apps/api-crypto/src/shared/errors/error-code.constant.js';
+import { RouteDeclarationError } from '../apps/api-cryptoada/src/router/route-declaration.error.js';
+import { ROUTE_ACCESS } from '../apps/api-cryptoada/src/router/route-access.constant.js';
+import { createRateLimiter } from '../apps/api-cryptoada/src/rate-limit/rate-limiter.js';
+import { createRouter } from '../apps/api-cryptoada/src/router/create-router.js';
+import { createRouteTable } from '../apps/api-cryptoada/src/router/route-table.js';
+import type { Route } from '../apps/api-cryptoada/src/router/route.types.js';
+import { HTTP_METHOD } from '../apps/api-cryptoada/src/shared/http/http.constant.js';
+import { ROUTING_ERROR_CODE } from '../apps/api-cryptoada/src/shared/errors/error-code.constant.js';
 import { createApiHarness, type ApiHarness } from './fixtures/api-harness.fixture.js';
 import { sweepProtectedRoutesWithoutToken } from './fixtures/route-sweep.fixture.js';
 import { signTestToken } from './fixtures/token-signing.fixture.js';

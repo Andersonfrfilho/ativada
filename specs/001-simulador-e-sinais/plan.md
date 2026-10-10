@@ -5,13 +5,13 @@
 ```
                  Binance REST (histórico)          Binance WS (kline ao vivo)
                           │                                   │
-                   cron-crypto (backfill)              worker-crypto
+                   cron-cryptoada (backfill)              worker-cryptoada
                           │                       ┌──────────┴──────────┐
                           ▼                       │ candle fechado      │
                      PostgreSQL ◄──────────────── │ → strategy-engine   │
                           │   LISTEN/NOTIFY       │ → corretora simulada│
                           ▼                       └──────────┬──────────┘
-                    api-crypto ── WebSocket ──► frontend-crypto   Telegram ◄─┘
+                    api-cryptoada ── WebSocket ──► frontend-cryptoada   Telegram ◄─┘
                     (backtest em worker_thread)
 ```
 
@@ -20,12 +20,12 @@
 | `packages/strategy-engine` | Puro, sem I/O: indicadores, votos, regime, risco, corretora simulada, métricas, walk-forward |
 | `packages/database` | Drizzle (driver `Bun.sql`), schema, migrations com `rollback.sql` obrigatório, cliente; usado por API, worker e cron |
 | `packages/environment` | Validação Zod do ambiente (`parseEnvironment`, `runWithEnvironment`, `postgresUrlSchema`); lista todas as variáveis inválidas e nunca imprime valores |
-| `packages/identity-admin` | Cliente da Admin API do Keycloak (service account `crypto-api-service`): convidar, bloquear, apagar e encerrar sessões de usuário; compartilhado pela API e pelo cron, porque uma app não importa código de outra (ADR 0001 §h) |
+| `packages/identity-admin` | Cliente da Admin API do Keycloak (service account `cryptoada-api-service`): convidar, bloquear, apagar e encerrar sessões de usuário; compartilhado pela API e pelo cron, porque uma app não importa código de outra (ADR 0001 §h) |
 | `packages/market-data` | Cliente REST de klines da Binance (`fetchKlines`, `fetchKlinesRange`): resposta validada com Zod, candle aberto descartado, controle de peso (`x-mbx-used-weight-1m`), 429/418 e backoff; compartilhado por cron e worker. Base `https://data-api.binance.vision` (host só de dados de mercado públicos, sem chave nem restrição de região, indicado pela documentação da Binance); `https://api.binance.com` é a alternativa e a base é parâmetro do cliente |
-| `apps/cron-crypto` | One-shot agendado: exclusão de contas (passos 2 e 3 e remoção da linha de `users`, ADR 0001 §h; retenção de 90 dias do IP da auditoria), backfill de candles (`backfill-candles`: por par, em sequência, janela de `BACKFILL_YEARS` alinhada à grade, lacunas por `findMissingOpenTimes` em SQL, uma página gravada por vez; `MARKET_EXCHANGE`, `MARKET_SYMBOLS`, `MARKET_TIMEFRAMES`, `BACKFILL_YEARS`, `BINANCE_BASE_URL`, `CRON_TASKS`; prova em `make backfill-test`), correção de lacunas, Fear & Greed |
-| `apps/worker-crypto` | Consome o stream de klines; no candle fechado, avalia as simulações ativas, grava e notifica |
-| `apps/api-crypto` | `Bun.serve`: REST, WebSocket para o painel, backtest e walk-forward em `worker_thread` |
-| `apps/frontend-crypto` | React 19 + Vite, PWA |
+| `apps/cron-cryptoada` | One-shot agendado: exclusão de contas (passos 2 e 3 e remoção da linha de `users`, ADR 0001 §h; retenção de 90 dias do IP da auditoria), backfill de candles (`backfill-candles`: por par, em sequência, janela de `BACKFILL_YEARS` alinhada à grade, lacunas por `findMissingOpenTimes` em SQL, uma página gravada por vez; `MARKET_EXCHANGE`, `MARKET_SYMBOLS`, `MARKET_TIMEFRAMES`, `BACKFILL_YEARS`, `BINANCE_BASE_URL`, `CRON_TASKS`; prova em `make backfill-test`), correção de lacunas, Fear & Greed |
+| `apps/worker-cryptoada` | Consome o stream de klines; no candle fechado, avalia as simulações ativas, grava e notifica |
+| `apps/api-cryptoada` | `Bun.serve`: REST, WebSocket para o painel, backtest e walk-forward em `worker_thread` |
+| `apps/frontend-cryptoada` | React 19 + Vite, PWA |
 
 O motor é o mesmo para backtest e ao vivo: o backtest alimenta candles do banco num laço; o ao vivo
 alimenta um candle por vez. A interface é uma só:
@@ -48,7 +48,7 @@ type EngineStep = (input: StepInput) => StepResult; // estado entra, estado sai 
 | D8 | Telegram por Bot API direta (`fetch`), sem SDK | Dois métodos usados; dependência não se paga |
 | D9 | Keycloak (OIDC) para login, com realm versionado em `realm/`; a API valida o JWT pela JWKS com a biblioteca `jose` na versão exata `6.2.12` (dependência prevista, instalada na T0.7) e faz o papel de *token handler* com cliente confidencial (ADR 0001) | Senha, recuperação, verificação de e-mail e TOTP prontos; mesma pilha já usada no ecossistema |
 | D10 | Tabela `users` local espelha o `sub` do Keycloak (criada no primeiro acesso) e guarda preferências | O domínio referencia `user_id` sem depender do Keycloak em cada consulta |
-| D11 | Autorização por objeto num único ponto: todo método de repositório de recurso de usuário recebe `OwnerScope` como primeiro parâmetro. Defesa em camadas (ADR 0001 §c): (1) o escopo e o `UserId` só nascem dentro de `@crypto/database`, cujo índice público exporta só os tipos e a app os recebe por retorno de função do pacote (`resolveUserBySubject` → `{ userId, scope }`); (2) o lint de `apps/*/src` é lista de bloqueio com as brechas conhecidas fechadas por sonda (Drizzle, `Bun.SQL` em todas as formas, `import()` dinâmico no backend, subcaminhos, asserção, *type guard* e sobrecarga que devolve `UserId`/`OwnerScope`/`AccountId`); (3) contrato negativo por rota | Chamar repositório sem escopo de dono não compila e a app não recebe o escopo por nenhum caminho que o pacote não tenha emitido; as camadas se cobrem entre si e a lista de brechas conhecidas está no ADR, sem afirmar impossibilidade absoluta |
+| D11 | Autorização por objeto num único ponto: todo método de repositório de recurso de usuário recebe `OwnerScope` como primeiro parâmetro. Defesa em camadas (ADR 0001 §c): (1) o escopo e o `UserId` só nascem dentro de `@cryptoada/database`, cujo índice público exporta só os tipos e a app os recebe por retorno de função do pacote (`resolveUserBySubject` → `{ userId, scope }`); (2) o lint de `apps/*/src` é lista de bloqueio com as brechas conhecidas fechadas por sonda (Drizzle, `Bun.SQL` em todas as formas, `import()` dinâmico no backend, subcaminhos, asserção, *type guard* e sobrecarga que devolve `UserId`/`OwnerScope`/`AccountId`); (3) contrato negativo por rota | Chamar repositório sem escopo de dono não compila e a app não recebe o escopo por nenhum caminho que o pacote não tenha emitido; as camadas se cobrem entre si e a lista de brechas conhecidas está no ADR, sem afirmar impossibilidade absoluta |
 | D13 | `ENV=production` exige configuração explícita (ADR 0001 §g e §p): `TRUSTED_PROXY_HOPS` sem default (1 ou mais atrás de proxy), todas as URLs `https://`, `DATABASE_URL` com `sslmode=require`, segredos de 32+ caracteres e nenhum valor `_dev_only`/`_test_only`; vale para API e cron e a falha de boot não ecoa valores | Um default seguro em dev vira IP errado no rate limit e TLS desligado em produção sem que nada falhe |
 | D12 | Worker avalia todas as simulações ativas do par no mesmo candle e roteia alertas pelo dono | Um stream de mercado para todos (RNF06) |
 

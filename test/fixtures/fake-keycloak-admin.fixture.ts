@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const FAKE_SERVICE_CLIENT_ID = 'crypto-api-service';
+export const FAKE_SERVICE_CLIENT_ID = 'cryptoada-api-service';
 export const FAKE_SERVICE_CLIENT_SECRET = 'fake-service-secret-value';
 export const FAKE_SERVICE_TOKEN = 'fake-service-account-access-token';
 

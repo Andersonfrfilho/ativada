@@ -4,10 +4,10 @@ import { describe, expect, test } from 'bun:test';
 const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
 const COPYRIGHT_LINE = '// Copyright (c) 2026 Ada Technology. All rights reserved.';
 const WORKSPACE_DIRECTORIES: readonly string[] = [
-  'apps/api-crypto',
-  'apps/worker-crypto',
-  'apps/cron-crypto',
-  'apps/frontend-crypto',
+  'apps/api-cryptoada',
+  'apps/worker-cryptoada',
+  'apps/cron-cryptoada',
+  'apps/frontend-cryptoada',
   'packages/strategy-engine',
   'packages/database',
   'packages/environment',
@@ -79,7 +79,7 @@ describe('workspace contract', () => {
     for (const workspaceDirectory of WORKSPACE_DIRECTORIES) {
       const workspaceName = workspaceDirectory.split('/').at(-1) ?? '';
       const manifest = await readJsonFile<PackageManifest>(`${workspaceDirectory}/package.json`);
-      expect(manifest.name).toBe(`@crypto/${workspaceName}`);
+      expect(manifest.name).toBe(`@cryptoada/${workspaceName}`);
       expect(manifest.private).toBe(true);
       expect(manifest.type).toBe('module');
       expect(await Bun.file(`${REPOSITORY_ROOT}${workspaceDirectory}/src/index.ts`).exists()).toBe(

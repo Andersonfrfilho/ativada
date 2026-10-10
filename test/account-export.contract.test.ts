@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import { ME_EXPORT_PATH } from '../apps/api-crypto/src/account/account.constant.js';
-import { RATE_LIMIT_ERROR_CODE } from '../apps/api-crypto/src/shared/errors/error-code.constant.js';
+import { ME_EXPORT_PATH } from '../apps/api-cryptoada/src/account/account.constant.js';
+import { RATE_LIMIT_ERROR_CODE } from '../apps/api-cryptoada/src/shared/errors/error-code.constant.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
 import {
   ADMIN_ACTOR_ID,
@@ -82,7 +82,7 @@ describe('GET /v1/me/export', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(response.headers.get('Content-Disposition')).toMatch(
-      /^attachment; filename="crypto-paper-trader-export-\d{4}-\d{2}-\d{2}\.json"$/,
+      /^attachment; filename="cryptoada-export-\d{4}-\d{2}-\d{2}\.json"$/,
     );
     const body = (await response.json()) as { data: Record<string, unknown> };
     expect(Object.keys(body.data).sort()).toStrictEqual([

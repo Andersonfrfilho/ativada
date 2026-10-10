@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import { ME_PATH } from '../apps/api-crypto/src/profile/profile.constant.js';
+import { ME_PATH } from '../apps/api-cryptoada/src/profile/profile.constant.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
 import { callAdmin, readError } from './fixtures/admin-calls.fixture.js';
 import {
@@ -106,7 +106,7 @@ describe('POST /v1/admin/accounts/:accountId/block', () => {
 
   test('the admin role is found even among composite and default roles', async () => {
     const roles = harness.keycloak.admin.users.get(OTHER_MEMBER_SUBJECT);
-    if (roles !== undefined) roles.roles = ['default-roles-crypto-paper-trader', 'user', 'admin'];
+    if (roles !== undefined) roles.roles = ['default-roles-cryptoada', 'user', 'admin'];
     const response = await block(OTHER_MEMBER_ID);
     expect((await readError(response)).code).toBe('CANNOT_BLOCK_ADMIN');
     expect(storedUser(OTHER_MEMBER_ID).blockedAt).toBeUndefined();

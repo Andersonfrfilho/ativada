@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { createRefreshDeduplicator } from '../apps/api-crypto/src/session/refresh-deduplicator.js';
+import { createRefreshDeduplicator } from '../apps/api-cryptoada/src/session/refresh-deduplicator.js';
 
 const WINDOW_MILLISECONDS = 10_000;
 

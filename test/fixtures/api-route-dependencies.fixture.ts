@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { ApiRouteDependencies } from '../../apps/api-crypto/src/routes/create-api-routes.js';
-import { createStreamTicketStore } from '../../apps/api-crypto/src/stream/stream-ticket-store.js';
+import type { ApiRouteDependencies } from '../../apps/api-cryptoada/src/routes/create-api-routes.js';
+import { createStreamTicketStore } from '../../apps/api-cryptoada/src/stream/stream-ticket-store.js';
 
 export function buildApiRouteDependencies(
   checkDatabase: () => Promise<boolean>,

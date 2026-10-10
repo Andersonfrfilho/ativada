@@ -3,7 +3,7 @@
 ## 1. Arquitetura
 
 ```
-worker-crypto (sinal no candle fechado)
+worker-cryptoada (sinal no candle fechado)
         │  NOTIFY signal_created
         ▼
 apps/executor-crypto ──► RiskGuard (tetos) ──► OrderService ──► ExchangeGateway (CCXT)

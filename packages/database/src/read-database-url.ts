@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { parseEnvironment, postgresUrlSchema, z } from '@crypto/environment';
+import { parseEnvironment, postgresUrlSchema, z } from '@cryptoada/environment';
 
 const DATABASE_URL_SCHEMA = z.object({
   DATABASE_URL: postgresUrlSchema,

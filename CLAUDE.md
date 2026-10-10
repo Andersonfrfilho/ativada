@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Contexto operacional do **crypto-paper-trader**. Produto e regras em `README.md`,
+Contexto operacional do **cryptoada**. Produto e regras em `README.md`,
 `docs/spec/constitution.md` e nas specs em `specs/NNN-nome/`.
 
 ## Estado
@@ -12,10 +12,10 @@ Só documentação. Nenhum código ainda. Próximo passo: `specs/001-simulador-e
 Monorepo Bun (workspaces) em TypeScript estrito:
 
 ```
-apps/api-crypto/        Bun.serve — REST + WebSocket para o painel; backtest em worker_thread
-apps/worker-crypto/     consome o stream de candles da Binance, avalia estratégias, simula ordens
-apps/cron-crypto/       one-shot agendado: exclusão de contas (Keycloak + dados, ADR 0001 §h), backfill de histórico e índice Fear & Greed
-apps/frontend-crypto/   React 19 + Vite (PWA)
+apps/api-cryptoada/        Bun.serve — REST + WebSocket para o painel; backtest em worker_thread
+apps/worker-cryptoada/     consome o stream de candles da Binance, avalia estratégias, simula ordens
+apps/cron-cryptoada/       one-shot agendado: exclusão de contas (Keycloak + dados, ADR 0001 §h), backfill de histórico e índice Fear & Greed
+apps/frontend-cryptoada/   React 19 + Vite (PWA)
 packages/database/      Drizzle + migrations (cada uma com .rollback.sql) + cliente Bun.sql
 packages/environment/   validação Zod do env; `process.env` só em environment.ts (lint)
 packages/identity-admin/ cliente da Admin API do Keycloak (API e cron o compartilham)
@@ -48,7 +48,7 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account
   (ADR 0001 §q). Atribuir o papel direto, sem o grupo, deixa a conta sem essa proteção.
-- O cron (`apps/cron-crypto`) roda quatro tarefas em sequência e sai `1` se qualquer uma falhar:
+- O cron (`apps/cron-cryptoada`) roda quatro tarefas em sequência e sai `1` se qualquer uma falhar:
   `purge-deleted-accounts`, `reconcile-blocked-accounts`, `expire-audit-events`, `backfill-candles`.
   `CRON_TASKS` (lista separada por vírgula) roda só as nomeadas. O backfill percorre cada par
   (`MARKET_SYMBOLS` x `MARKET_TIMEFRAMES`, padrão BTCUSDT/ETHUSDT em 15m/1h/4h/1d) em sequência, acha as

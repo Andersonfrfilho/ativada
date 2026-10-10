@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import { createStreamTicketStore } from '../apps/api-crypto/src/stream/stream-ticket-store.js';
+import { createStreamTicketStore } from '../apps/api-cryptoada/src/stream/stream-ticket-store.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
 import { createSessionHarness, type SessionHarness } from './fixtures/session-harness.fixture.js';
 import { signTestToken } from './fixtures/token-signing.fixture.js';

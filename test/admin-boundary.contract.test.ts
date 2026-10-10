@@ -20,7 +20,7 @@ async function listAdminSourceFiles(): Promise<readonly string[]> {
 }
 
 describe('admin boundary contract', () => {
-  test('admin files of @crypto/database never touch OwnerScope', async () => {
+  test('admin files of @cryptoada/database never touch OwnerScope', async () => {
     const adminFiles = await listAdminSourceFiles();
     expect(adminFiles.length).toBeGreaterThan(0);
     const offendingFiles: string[] = [];

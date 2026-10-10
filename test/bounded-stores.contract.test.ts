@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { createRefreshDeduplicator } from '../apps/api-crypto/src/session/refresh-deduplicator.js';
-import { createStreamTicketStore } from '../apps/api-crypto/src/stream/stream-ticket-store.js';
-import { createChatAttemptLimiter } from '../apps/api-crypto/src/telegram/chat-attempt-limiter.js';
-import { CHAT_FAILURE_LIMIT } from '../apps/api-crypto/src/telegram/telegram.constant.js';
+import { createRefreshDeduplicator } from '../apps/api-cryptoada/src/session/refresh-deduplicator.js';
+import { createStreamTicketStore } from '../apps/api-cryptoada/src/stream/stream-ticket-store.js';
+import { createChatAttemptLimiter } from '../apps/api-cryptoada/src/telegram/chat-attempt-limiter.js';
+import { CHAT_FAILURE_LIMIT } from '../apps/api-cryptoada/src/telegram/telegram.constant.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
 
 const USER_ID = userIdFromDatabase('0192f3a1-7c4e-7b2a-9d3f-5e6a7b8c9d0e');

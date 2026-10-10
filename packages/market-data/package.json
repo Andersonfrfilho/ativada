@@ -1,5 +1,5 @@
 {
-  "name": "@crypto/market-data",
+  "name": "@cryptoada/market-data",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,6 +8,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@crypto/environment": "workspace:*"
+    "@cryptoada/environment": "workspace:*"
   }
 }

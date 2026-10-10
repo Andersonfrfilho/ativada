@@ -1,5 +1,5 @@
 {
-  "name": "@crypto/database",
+  "name": "@cryptoada/database",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
     "db:database-test": "bun run test-support/database-test.ts"
   },
   "dependencies": {
-    "@crypto/environment": "workspace:*",
+    "@cryptoada/environment": "workspace:*",
     "drizzle-orm": "^0.45.4"
   },
   "devDependencies": {

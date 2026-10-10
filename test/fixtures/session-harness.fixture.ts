@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createSessionRouteDependencies } from '../../apps/api-crypto/src/session/create-session-routes-dependencies.js';
-import { createSessionRoutes } from '../../apps/api-crypto/src/session/session.routes.js';
-import { createStreamTicketStore } from '../../apps/api-crypto/src/stream/stream-ticket-store.js';
-import type { StreamTicketStore } from '../../apps/api-crypto/src/stream/stream-ticket-store.js';
-import { createStreamTicketRoutes } from '../../apps/api-crypto/src/stream/stream-ticket.routes.js';
+import { createSessionRouteDependencies } from '../../apps/api-cryptoada/src/session/create-session-routes-dependencies.js';
+import { createSessionRoutes } from '../../apps/api-cryptoada/src/session/session.routes.js';
+import { createStreamTicketStore } from '../../apps/api-cryptoada/src/stream/stream-ticket-store.js';
+import type { StreamTicketStore } from '../../apps/api-cryptoada/src/stream/stream-ticket-store.js';
+import { createStreamTicketRoutes } from '../../apps/api-cryptoada/src/stream/stream-ticket.routes.js';
 import { createLocalJWKSet } from './jose.fixture.js';
 import { ALLOWED_ORIGIN, createApiHarness, type ApiHarness } from './api-harness.fixture.js';
 import {
@@ -19,7 +19,7 @@ import { signTestToken } from './token-signing.fixture.js';
 export const ALLOWED_REDIRECT_URI = `${ALLOWED_ORIGIN}/auth/callback`;
 export const SESSION_URL_PATH = '/v1/session';
 export const REFRESH_URL_PATH = '/v1/session/refresh';
-export const COOKIE_NAME = '__Host-crypto_refresh';
+export const COOKIE_NAME = '__Host-cryptoada_refresh';
 
 export type SessionHarness = {
   readonly api: ApiHarness;

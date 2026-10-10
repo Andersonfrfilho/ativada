@@ -2,9 +2,9 @@
 import {
   createPurgeDeletedAccountsTask,
   type PurgeDeletedAccountsTask,
-} from '../../apps/cron-crypto/src/accounts/purge-deleted-accounts.task.js';
-import { ACCOUNT_REMOVAL_GRACE_PERIOD_MILLISECONDS } from '../../apps/cron-crypto/src/cron.constant.js';
-import { createCronLogger } from '../../apps/cron-crypto/src/logging/cron-logger.js';
+} from '../../apps/cron-cryptoada/src/accounts/purge-deleted-accounts.task.js';
+import { ACCOUNT_REMOVAL_GRACE_PERIOD_MILLISECONDS } from '../../apps/cron-cryptoada/src/cron.constant.js';
+import { createCronLogger } from '../../apps/cron-cryptoada/src/logging/cron-logger.js';
 import { createKeycloakIdentityAdmin } from '../../packages/identity-admin/src/create-keycloak-identity-admin.js';
 import {
   FAKE_SERVICE_CLIENT_ID,
@@ -80,7 +80,7 @@ export function createPurgeHarness(options: { readonly adminPath?: string } = {}
       now: clock.now,
     }),
     logger: createCronLogger({
-      appName: 'cron-crypto',
+      appName: 'cron-cryptoada',
       write: (line) => void logLines.push(line),
     }),
     now: clock.now,

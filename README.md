@@ -1,4 +1,4 @@
-# crypto-paper-trader
+# cryptoada
 
 Simulador de operações com criptomoedas: carteira fictícia sobre preço real, estratégias por regras,
 backtest com validação walk-forward e alertas de compra e venda. Numa segunda etapa, execução em

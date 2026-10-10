@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
-import { hashSecret } from '../apps/api-crypto/src/shared/crypto/hash-secret.js';
-import { TELEGRAM_LINK_PATH } from '../apps/api-crypto/src/telegram/telegram.constant.js';
+import { hashSecret } from '../apps/api-cryptoada/src/shared/crypto/hash-secret.js';
+import { TELEGRAM_LINK_PATH } from '../apps/api-cryptoada/src/telegram/telegram.constant.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
 import {
   CHAT_OF_A,

@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { EXIT_CODE } from '../apps/cron-crypto/src/cron.constant.js';
-import { createCronLogger } from '../apps/cron-crypto/src/logging/cron-logger.js';
-import { runCronTasks, type CronTask } from '../apps/cron-crypto/src/run-cron-tasks.js';
+import { EXIT_CODE } from '../apps/cron-cryptoada/src/cron.constant.js';
+import { createCronLogger } from '../apps/cron-cryptoada/src/logging/cron-logger.js';
+import { runCronTasks, type CronTask } from '../apps/cron-cryptoada/src/run-cron-tasks.js';
 
 function createSubject(): { readonly lines: string[]; readonly order: string[] } {
   return { lines: [], order: [] };
@@ -25,7 +25,7 @@ function task(
 
 function logger(subject: { readonly lines: string[] }): ReturnType<typeof createCronLogger> {
   return createCronLogger({
-    appName: 'cron-crypto',
+    appName: 'cron-cryptoada',
     write: (line) => void subject.lines.push(line),
   });
 }

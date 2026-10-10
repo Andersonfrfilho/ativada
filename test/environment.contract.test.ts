@@ -7,14 +7,18 @@ import {
   z,
 } from '../packages/environment/src/index.js';
 import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
-import { loadEnvironment as loadFrontendEnvironment } from '../apps/frontend-crypto/src/environment.js';
+import { loadEnvironment as loadFrontendEnvironment } from '../apps/frontend-cryptoada/src/environment.js';
 
 const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
-const LONG_RUNNING_APPLICATION = 'api-crypto';
+const LONG_RUNNING_APPLICATION = 'api-cryptoada';
 const LISTENING_MESSAGE = '"message":"listening"';
 const ENVIRONMENT_ERROR_PREFIX = 'Variáveis de ambiente inválidas';
-const CRON_APPLICATION = 'cron-crypto';
-const SERVER_APPLICATIONS: readonly string[] = ['api-crypto', 'worker-crypto', CRON_APPLICATION];
+const CRON_APPLICATION = 'cron-cryptoada';
+const SERVER_APPLICATIONS: readonly string[] = [
+  'api-cryptoada',
+  'worker-cryptoada',
+  CRON_APPLICATION,
+];
 const IDLE_APPLICATIONS: readonly string[] = SERVER_APPLICATIONS.filter(
   (applicationName) => applicationName !== CRON_APPLICATION,
 );
@@ -102,7 +106,7 @@ describe('parseEnvironment', () => {
   test('returns the coerced and typed object when every variable is valid', () => {
     const values = parseEnvironment(TEST_SCHEMA, {
       ENV: 'test',
-      DATABASE_URL: 'postgres://crypto:crypto_test_only@127.0.0.1:56433/crypto_test',
+      DATABASE_URL: 'postgres://cryptoada:cryptoada_test_only@127.0.0.1:56433/cryptoada_test',
       API_PORT: '53101',
     });
     expect(values.API_PORT).toBe(53101);
@@ -172,7 +176,7 @@ describe('cron application', () => {
     const testEnvironment = await readEnvironmentFile('env.test');
     const result = await runServerApplication(CRON_APPLICATION, {
       ...testEnvironment,
-      DATABASE_URL: `postgres://crypto:${UNREACHABLE_DATABASE_PASSWORD}@127.0.0.1:1/unreachable`,
+      DATABASE_URL: `postgres://cryptoada:${UNREACHABLE_DATABASE_PASSWORD}@127.0.0.1:1/unreachable`,
     });
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toContain('"level":"error"');

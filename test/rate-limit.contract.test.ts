@@ -5,16 +5,16 @@ import {
   RATE_LIMIT_KEY_SCOPE,
   RATE_LIMIT_POLICY,
   type RateLimitPolicy,
-} from '../apps/api-crypto/src/rate-limit/rate-limit-policy.constant.js';
-import { createRateLimiter } from '../apps/api-crypto/src/rate-limit/rate-limiter.js';
+} from '../apps/api-cryptoada/src/rate-limit/rate-limit-policy.constant.js';
+import { createRateLimiter } from '../apps/api-cryptoada/src/rate-limit/rate-limiter.js';
 import {
   resolveClientAddress,
   toRateLimitAddressKey,
-} from '../apps/api-crypto/src/rate-limit/resolve-client-address.js';
-import type { AccessTokenVerifier } from '../apps/api-crypto/src/authentication/access-token-verifier.js';
-import { createRouter } from '../apps/api-crypto/src/router/create-router.js';
-import { ROUTE_ACCESS } from '../apps/api-crypto/src/router/route-access.constant.js';
-import { RATE_LIMIT_ERROR_CODE } from '../apps/api-crypto/src/shared/errors/error-code.constant.js';
+} from '../apps/api-cryptoada/src/rate-limit/resolve-client-address.js';
+import type { AccessTokenVerifier } from '../apps/api-cryptoada/src/authentication/access-token-verifier.js';
+import { createRouter } from '../apps/api-cryptoada/src/router/create-router.js';
+import { ROUTE_ACCESS } from '../apps/api-cryptoada/src/router/route-access.constant.js';
+import { RATE_LIMIT_ERROR_CODE } from '../apps/api-cryptoada/src/shared/errors/error-code.constant.js';
 import {
   EXECUTION_PATH,
   PUBLIC_PATH,

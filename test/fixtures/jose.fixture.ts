@@ -7,4 +7,4 @@ export {
   generateKeyPair,
   type CryptoKey,
   type JWK,
-} from '../../apps/api-crypto/node_modules/jose';
+} from '../../apps/api-cryptoada/node_modules/jose';

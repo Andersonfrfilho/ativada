@@ -1,11 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { startServer, type StartedServer } from '../apps/api-crypto/src/server.js';
-import { createShutdownHandler } from '../apps/api-crypto/src/shutdown.js';
+import { startServer, type StartedServer } from '../apps/api-cryptoada/src/server.js';
+import { createShutdownHandler } from '../apps/api-cryptoada/src/shutdown.js';
 import { createApiHarness, type ApiHarness } from './fixtures/api-harness.fixture.js';
 import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
-import { createLogger } from '../apps/api-crypto/src/logging/logger.js';
+import { createLogger } from '../apps/api-cryptoada/src/logging/logger.js';
 
 const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
 const LISTENING_MESSAGE = '"message":"listening"';
@@ -115,7 +115,7 @@ describe('graceful shutdown', () => {
           ? Promise.reject(new Error('close failed'))
           : Promise.resolve();
       },
-      logger: createLogger({ appName: 'api-crypto', write: () => undefined }),
+      logger: createLogger({ appName: 'api-cryptoada', write: () => undefined }),
       timeoutMilliseconds: 5000,
       exit: (code: number): void => void exits.push(code),
     });
@@ -146,7 +146,7 @@ describe('graceful shutdown', () => {
     const shutdown = createShutdownHandler({
       stopServer: () => new Promise<void>(() => undefined),
       closeResources: () => Promise.resolve(),
-      logger: createLogger({ appName: 'api-crypto', write: () => undefined }),
+      logger: createLogger({ appName: 'api-cryptoada', write: () => undefined }),
       timeoutMilliseconds: 50,
       exit: (code: number): void => void exits.push(code),
     });
@@ -159,7 +159,7 @@ describe('graceful shutdown', () => {
 describe('main.ts as a real process', () => {
   test('boots, serves, and exits 0 on SIGTERM', async () => {
     const environment = await readEnvironmentFile('env.test');
-    const child = Bun.spawn([process.execPath, 'run', 'apps/api-crypto/src/main.ts'], {
+    const child = Bun.spawn([process.execPath, 'run', 'apps/api-cryptoada/src/main.ts'], {
       cwd: REPOSITORY_ROOT,
       env: { ...environment },
       stdout: 'pipe',

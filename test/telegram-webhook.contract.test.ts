@@ -6,7 +6,7 @@ import {
   CHAT_BLOCK_MILLISECONDS,
   LINK_CODE_TIME_TO_LIVE_SECONDS,
   TELEGRAM_WEBHOOK_PATH,
-} from '../apps/api-crypto/src/telegram/telegram.constant.js';
+} from '../apps/api-cryptoada/src/telegram/telegram.constant.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
 import { FAKE_BOT_TOKEN, FAKE_WEBHOOK_SECRET } from './fixtures/fake-telegram.fixture.js';
 import {

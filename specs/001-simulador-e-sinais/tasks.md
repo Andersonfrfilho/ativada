@@ -22,10 +22,10 @@ Cada task fecha com: `bun run typecheck` + testes da área + commit isolado + ev
 | Task | O quê | Aceite |
 |---|---|---|
 | T0.5 🧠 | Desenho de autenticação e isolamento: realm Keycloak (clientes, papéis `user`/`admin`, TOTP do admin), formato do contexto autenticado, tipo de repositório com `userId` obrigatório (D11) | Revisão `architect`; contrato negativo de exemplo escrito (vermelho) |
-| T0.5b 🧠 | Ajustes da revisão do `architect` (APROVADO COM AJUSTES): superfície pública fechada de `@crypto/database` + lint de fronteira nas apps, contexto autenticado sem e-mail na API, `AccountId` admin, harness com listagem e comparação de 404, ADR 0001 revisado | Gates verdes; mutações: import de Drizzle e `as UserId` numa app reprovados pelo lint, `LIST_IGNORES_OWNER` reprova o harness, `createOwnerScope` em arquivo `admin*` reprovado |
-| T0.6 | Keycloak no `compose.yaml`, realm versionado em `realm/`, import idempotente. Obrigações herdadas: ADR 0001 §k "T0.6" (TOTP `HmacSHA1`, LoA, `crypto-session` confidencial, service account sem mapear `admin`, Mailpit, mesma origem) | `make up` sobe com login funcionando; service account mapeando `admin` → `403`; reuso de refresh medido |
+| T0.5b 🧠 | Ajustes da revisão do `architect` (APROVADO COM AJUSTES): superfície pública fechada de `@cryptoada/database` + lint de fronteira nas apps, contexto autenticado sem e-mail na API, `AccountId` admin, harness com listagem e comparação de 404, ADR 0001 revisado | Gates verdes; mutações: import de Drizzle e `as UserId` numa app reprovados pelo lint, `LIST_IGNORES_OWNER` reprova o harness, `createOwnerScope` em arquivo `admin*` reprovado |
+| T0.6 | Keycloak no `compose.yaml`, realm versionado em `realm/`, import idempotente. Obrigações herdadas: ADR 0001 §k "T0.6" (TOTP `HmacSHA1`, LoA, `cryptoada-session` confidencial, service account sem mapear `admin`, Mailpit, mesma origem) | `make up` sobe com login funcionando; service account mapeando `admin` → `403`; reuso de refresh medido |
 | T0.7 | Migration `users`, `openDatabase`/`resolveUserBySubject` (devolve `{ userId, scope }`), middleware da API que valida o JWT pela JWKS, roteador que nega por padrão, rate limit, cabeçalhos e CORS, rota `/v1/health` e `/v1/admin/health`; o servidor sobe de verdade com encerramento gracioso. As rotas `/v1/session*` ficam na T0.7b. Obrigações herdadas: ADR 0001 §k "T0.7" (classificação 401/503, roteador que nega por padrão, `acr ≥ 2` no admin, `jose` 6.2.12 exata, cabeçalhos) | Contrato: token inválido/expirado → 401; erro desconhecido → 503; rota não pública sem token → 401; dois primeiros acessos simultâneos → um usuário só |
-| T0.7b | Rotas do token handler: `POST/DELETE /v1/session`, `POST /v1/session/refresh` (cliente confidencial `crypto-session`, refresh em cookie `__Host-` HttpOnly, CSRF por Origin + `X-Requested-With`, deduplicação do refresh por hash em ~10 s, `no-store`, `redirectUri` da lista) e `POST /v1/stream/tickets`. Obrigações: ADR 0001 §a e §k | Contrato: duas chamadas concorrentes a `/v1/session/refresh` → duas respostas 200; 400 do Keycloak → sessão encerrada e cookie apagado; sem `X-Requested-With` → 403; teste de integração contra o Keycloak de teste (`make identity-test`) |
+| T0.7b | Rotas do token handler: `POST/DELETE /v1/session`, `POST /v1/session/refresh` (cliente confidencial `cryptoada-session`, refresh em cookie `__Host-` HttpOnly, CSRF por Origin + `X-Requested-With`, deduplicação do refresh por hash em ~10 s, `no-store`, `redirectUri` da lista) e `POST /v1/stream/tickets`. Obrigações: ADR 0001 §a e §k | Contrato: duas chamadas concorrentes a `/v1/session/refresh` → duas respostas 200; 400 do Keycloak → sessão encerrada e cookie apagado; sem `X-Requested-With` → 403; teste de integração contra o Keycloak de teste (`make identity-test`) |
 | T0.8 | `/v1/me`, preferências, vínculo do Telegram por código, convite e bloqueio pelo admin. Obrigações herdadas: ADR 0001 §k "T0.8" | Contrato por rota, com listagem e 404 indistinguível |
 | T0.9 | LGPD: exportar e apagar conta (`202`, colunas `identity_deleted_at`/`data_purged_at`, cron que refaz os passos 2 e 3 — ADR 0001 §h) | Integração: apagar remove dados do usuário, pseudonimiza `audit_events` e não toca nos de outro |
 
@@ -37,9 +37,9 @@ Cada task fecha com: `bun run typecheck` + testes da área + commit isolado + ev
 |---|---|---|
 | T1.1 | Cliente REST de klines da Binance com validação Zod da resposta e controle de peso | Teste de contrato com resposta gravada |
 | T1.2 | Migration `candles` e `sentiment_daily` + repositório | Teste de integração: upsert idempotente |
-| T1.3 | `cron-crypto`: backfill retomável de 2 anos, detecção de lacuna | Integração: lacuna simulada é preenchida; segunda execução não duplica |
-| T1.4 | `cron-crypto`: Fear & Greed diário | Contrato com resposta gravada |
-| T1.5 | `worker-crypto`: stream WS de kline com reconexão e recuperação de lacuna pelo REST | Integração com servidor WS falso: queda e retomada sem buraco |
+| T1.3 | `cron-cryptoada`: backfill retomável de 2 anos, detecção de lacuna | Integração: lacuna simulada é preenchida; segunda execução não duplica |
+| T1.4 | `cron-cryptoada`: Fear & Greed diário | Contrato com resposta gravada |
+| T1.5 | `worker-cryptoada`: stream WS de kline com reconexão e recuperação de lacuna pelo REST | Integração com servidor WS falso: queda e retomada sem buraco |
 
 ## Fase 2 — Motor (`packages/strategy-engine`)
 
@@ -126,7 +126,7 @@ Cada task fecha com: `bun run typecheck` + testes da área + commit isolado + ev
 ## Prompt de execução
 
 Uma fase por execução do autopilot, aberta numa sessão do Claude Code com cwd em
-`~/Documents/personal/crypto-paper-trader`. Ao fim de cada fase o autopilot para; o responsável
+`~/Documents/personal/cryptoada`. Ao fim de cada fase o autopilot para; o responsável
 valida e roda o prompt da próxima, trocando `<FASE>` e a linha de modelos pela linha da tabela.
 
 | Fase | `<FASE>` | Linha de modelos |
@@ -146,7 +146,7 @@ inicial só com a documentação existente.
 
 ```text
 /oh-my-claudecode:autopilot Execute SOMENTE a <FASE> da spec specs/001-simulador-e-sinais/ no
-repositório ~/Documents/personal/crypto-paper-trader. Antes de tocar em código leia CLAUDE.md,
+repositório ~/Documents/personal/cryptoada. Antes de tocar em código leia CLAUDE.md,
 docs/spec/constitution.md, spec.md, plan.md, tasks.md e evidence.md, e confira em git log e
 evidence.md quais tasks já fecharam.
 Uma task por vez, na ordem do tasks.md. Modelos: <LINHA DE MODELOS>. Delegue cada task ao subagente
@@ -173,7 +173,7 @@ com o mesmo texto: ele retoma da primeira task sem linha em `evidence.md`.
 
 ```text
 /oh-my-claudecode:autopilot Execute a spec specs/001-simulador-e-sinais/ INTEIRA, da Fase 0b à Fase 6,
-no repositório ~/Documents/personal/crypto-paper-trader. A Fase 0 já está feita (commits 468a391 a 6f80710).
+no repositório ~/Documents/personal/cryptoada. A Fase 0 já está feita (commits 468a391 a 6f80710).
 
 RETOMADA: antes de qualquer coisa leia CLAUDE.md, docs/spec/constitution.md, spec.md, plan.md, tasks.md e
 evidence.md. A tabela de evidence.md e o git log dizem o que já fechou; comece na primeira task sem linha

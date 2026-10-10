@@ -7,7 +7,7 @@ export const TELEGRAM_LINK_PATH = '/v1/me/telegram-link';
 export const TELEGRAM_WEBHOOK_PATH = '/v1/telegram/webhook';
 export const WEBHOOK_SECRET_HEADER = 'X-Telegram-Bot-Api-Secret-Token';
 
-export const SESSION_CLIENT_ID = 'crypto-session';
+export const SESSION_CLIENT_ID = 'cryptoada-session';
 export const REQUESTED_WITH_VALUE = 'fetch';
 export const INVITEE_PREFIX = 'admin-test-';
 export const INVITEE_PASSWORD = 'Invite-Test-Pass-2026!';

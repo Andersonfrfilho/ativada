@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 export const TEMPORARY_DATABASE_PREFIX = 'crypto_backfill_';
-export const CRON_ENTRYPOINT = 'apps/cron-crypto/src/main.ts';
+export const CRON_ENTRYPOINT = 'apps/cron-cryptoada/src/main.ts';
 export const BACKFILL_TASK_NAME = 'backfill-candles';
 export const FINISHED_MESSAGE = `${BACKFILL_TASK_NAME} finished`;
 export const KLINES_PATH = '/api/v3/klines';

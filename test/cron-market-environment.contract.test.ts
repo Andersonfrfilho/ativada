@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { environmentSchema } from '../apps/cron-crypto/src/environment.js';
+import { environmentSchema } from '../apps/cron-cryptoada/src/environment.js';
 import { EnvironmentError, parseEnvironment } from '../packages/environment/src/index.js';
 import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
 
@@ -80,7 +80,7 @@ describe('cron market environment', () => {
     const production: Source = {
       ENV: 'production',
       DATABASE_URL:
-        'postgres://crypto:prod-password-0123456789@db.internal:5432/crypto?sslmode=require',
+        'postgres://cryptoada:prod-password-0123456789@db.internal:5432/crypto?sslmode=require',
       KEYCLOAK_TOKEN_URL: 'https://auth.crypto.example.com/token',
       KEYCLOAK_ADMIN_API_URL: 'https://auth.crypto.example.com/admin',
       KEYCLOAK_SERVICE_CLIENT_SECRET: 'S'.repeat(40),

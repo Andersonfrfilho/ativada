@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "crypto-paper-trader",
+      "name": "cryptoada",
       "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@types/bun": "^1.4.2",
@@ -13,45 +13,45 @@
         "typescript-eslint": "^8.71.1",
       },
     },
-    "apps/api-crypto": {
-      "name": "@crypto/api-crypto",
+    "apps/api-cryptoada": {
+      "name": "@cryptoada/api-cryptoada",
       "version": "0.0.0",
       "dependencies": {
-        "@crypto/database": "workspace:*",
-        "@crypto/environment": "workspace:*",
-        "@crypto/identity-admin": "workspace:*",
+        "@cryptoada/database": "workspace:*",
+        "@cryptoada/environment": "workspace:*",
+        "@cryptoada/identity-admin": "workspace:*",
         "jose": "6.2.12",
       },
     },
-    "apps/cron-crypto": {
-      "name": "@crypto/cron-crypto",
+    "apps/cron-cryptoada": {
+      "name": "@cryptoada/cron-cryptoada",
       "version": "0.0.0",
       "dependencies": {
-        "@crypto/database": "workspace:*",
-        "@crypto/environment": "workspace:*",
-        "@crypto/identity-admin": "workspace:*",
-        "@crypto/market-data": "workspace:*",
+        "@cryptoada/database": "workspace:*",
+        "@cryptoada/environment": "workspace:*",
+        "@cryptoada/identity-admin": "workspace:*",
+        "@cryptoada/market-data": "workspace:*",
       },
     },
-    "apps/frontend-crypto": {
-      "name": "@crypto/frontend-crypto",
+    "apps/frontend-cryptoada": {
+      "name": "@cryptoada/frontend-cryptoada",
       "version": "0.0.0",
       "dependencies": {
-        "@crypto/environment": "workspace:*",
+        "@cryptoada/environment": "workspace:*",
       },
     },
-    "apps/worker-crypto": {
-      "name": "@crypto/worker-crypto",
+    "apps/worker-cryptoada": {
+      "name": "@cryptoada/worker-cryptoada",
       "version": "0.0.0",
       "dependencies": {
-        "@crypto/environment": "workspace:*",
+        "@cryptoada/environment": "workspace:*",
       },
     },
     "packages/database": {
-      "name": "@crypto/database",
+      "name": "@cryptoada/database",
       "version": "0.0.0",
       "dependencies": {
-        "@crypto/environment": "workspace:*",
+        "@cryptoada/environment": "workspace:*",
         "drizzle-orm": "^0.45.4",
       },
       "devDependencies": {
@@ -59,28 +59,28 @@
       },
     },
     "packages/environment": {
-      "name": "@crypto/environment",
+      "name": "@cryptoada/environment",
       "version": "0.0.0",
       "dependencies": {
         "zod": "^4.6.5",
       },
     },
     "packages/identity-admin": {
-      "name": "@crypto/identity-admin",
+      "name": "@cryptoada/identity-admin",
       "version": "0.0.0",
       "dependencies": {
-        "@crypto/environment": "workspace:*",
+        "@cryptoada/environment": "workspace:*",
       },
     },
     "packages/market-data": {
-      "name": "@crypto/market-data",
+      "name": "@cryptoada/market-data",
       "version": "0.0.0",
       "dependencies": {
-        "@crypto/environment": "workspace:*",
+        "@cryptoada/environment": "workspace:*",
       },
     },
     "packages/strategy-engine": {
-      "name": "@crypto/strategy-engine",
+      "name": "@cryptoada/strategy-engine",
       "version": "0.0.0",
     },
   },
@@ -89,23 +89,23 @@
 
     "@cacheable/utils": ["@cacheable/utils@2.5.0", "", { "dependencies": { "hashery": "^1.5.1", "keyv": "^5.6.0" } }, "sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA=="],
 
-    "@crypto/api-crypto": ["@crypto/api-crypto@workspace:apps/api-crypto"],
+    "@cryptoada/api-cryptoada": ["@cryptoada/api-cryptoada@workspace:apps/api-cryptoada"],
 
-    "@crypto/cron-crypto": ["@crypto/cron-crypto@workspace:apps/cron-crypto"],
+    "@cryptoada/cron-cryptoada": ["@cryptoada/cron-cryptoada@workspace:apps/cron-cryptoada"],
 
-    "@crypto/database": ["@crypto/database@workspace:packages/database"],
+    "@cryptoada/database": ["@cryptoada/database@workspace:packages/database"],
 
-    "@crypto/environment": ["@crypto/environment@workspace:packages/environment"],
+    "@cryptoada/environment": ["@cryptoada/environment@workspace:packages/environment"],
 
-    "@crypto/frontend-crypto": ["@crypto/frontend-crypto@workspace:apps/frontend-crypto"],
+    "@cryptoada/frontend-cryptoada": ["@cryptoada/frontend-cryptoada@workspace:apps/frontend-cryptoada"],
 
-    "@crypto/identity-admin": ["@crypto/identity-admin@workspace:packages/identity-admin"],
+    "@cryptoada/identity-admin": ["@cryptoada/identity-admin@workspace:packages/identity-admin"],
 
-    "@crypto/market-data": ["@crypto/market-data@workspace:packages/market-data"],
+    "@cryptoada/market-data": ["@cryptoada/market-data@workspace:packages/market-data"],
 
-    "@crypto/strategy-engine": ["@crypto/strategy-engine@workspace:packages/strategy-engine"],
+    "@cryptoada/strategy-engine": ["@cryptoada/strategy-engine@workspace:packages/strategy-engine"],
 
-    "@crypto/worker-crypto": ["@crypto/worker-crypto@workspace:apps/worker-crypto"],
+    "@cryptoada/worker-cryptoada": ["@cryptoada/worker-cryptoada@workspace:apps/worker-cryptoada"],
 
     "@drizzle-team/brocli": ["@drizzle-team/brocli@0.10.2", "", {}, "sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w=="],
 

@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createApplication } from '../../apps/api-crypto/src/create-application.js';
-import { loadEnvironment, type Environment } from '../../apps/api-crypto/src/environment.js';
-import { createLogger } from '../../apps/api-crypto/src/logging/logger.js';
-import { startServer } from '../../apps/api-crypto/src/server.js';
+import { createApplication } from '../../apps/api-cryptoada/src/create-application.js';
+import { loadEnvironment, type Environment } from '../../apps/api-cryptoada/src/environment.js';
+import { createLogger } from '../../apps/api-cryptoada/src/logging/logger.js';
+import { startServer } from '../../apps/api-cryptoada/src/server.js';
 
 export type RunningApi = {
   readonly environment: Environment;
@@ -15,7 +15,7 @@ export function startApi(): RunningApi {
   const environment = loadEnvironment();
   const logLines: string[] = [];
   const logger = createLogger({
-    appName: 'api-crypto-session-test',
+    appName: 'api-cryptoada-session-test',
     write: (line) => void logLines.push(line),
   });
   const application = createApplication({ environment, logger });

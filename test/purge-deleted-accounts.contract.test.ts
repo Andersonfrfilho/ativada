@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import { ACCOUNT_REMOVAL_GRACE_PERIOD_MILLISECONDS } from '../apps/cron-crypto/src/cron.constant.js';
+import { ACCOUNT_REMOVAL_GRACE_PERIOD_MILLISECONDS } from '../apps/cron-cryptoada/src/cron.constant.js';
 import {
   OWNED_TABLE_DELETION_ORDER,
   tableNameOf,

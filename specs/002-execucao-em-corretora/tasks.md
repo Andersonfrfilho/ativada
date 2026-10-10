@@ -83,7 +83,7 @@ Cada task fecha com: `bun run typecheck` + testes + commit isolado + evidência 
 
 ```text
 /oh-my-claudecode:autopilot Execute a spec specs/002-execucao-em-corretora/ do repositório
-~/Documents/personal/crypto-paper-trader (leia CLAUDE.md, docs/spec/constitution.md, spec.md,
+~/Documents/personal/cryptoada (leia CLAUDE.md, docs/spec/constitution.md, spec.md,
 plan.md e tasks.md antes de começar). Só comece se specs/001-simulador-e-sinais/evidence.md tiver a
 decisão humana da T6.4. Uma task por vez, na ordem do tasks.md, da Fase 0 à Fase 5.
 Modelos: todas as fases → executor model=sonnet · T0.2 🧠 → opus (validar com architect) ·

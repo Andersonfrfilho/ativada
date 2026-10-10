@@ -16,7 +16,7 @@ import {
   type FakeKeycloakAdmin,
 } from './fake-keycloak-admin.fixture.js';
 
-export const FAKE_CLIENT_ID = 'crypto-session';
+export const FAKE_CLIENT_ID = 'cryptoada-session';
 export const FAKE_CLIENT_SECRET = 'fake-client-secret-value';
 export const FAKE_VALID_CODE = 'fake-valid-code-value';
 export const FAKE_CODE_VERIFIER = 'v'.repeat(64);

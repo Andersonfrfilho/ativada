@@ -5,7 +5,7 @@ import { applyRollbacks } from './rollback.js';
 import { readDatabaseUrl } from '../src/read-database-url.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
 
-const TEMPORARY_DATABASE_PREFIX = 'crypto_migration_';
+const TEMPORARY_DATABASE_PREFIX = 'cryptoada_migration_';
 
 type CountRow = { readonly total: number };
 type TableNameRow = { readonly table_name: string };

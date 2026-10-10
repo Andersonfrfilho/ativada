@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
-import { createApiRoutes } from '../apps/api-crypto/src/routes/create-api-routes.js';
-import { createRouter } from '../apps/api-crypto/src/router/create-router.js';
-import { createRateLimiter } from '../apps/api-crypto/src/rate-limit/rate-limiter.js';
-import { ROUTE_ACCESS } from '../apps/api-crypto/src/router/route-access.constant.js';
+import { createApiRoutes } from '../apps/api-cryptoada/src/routes/create-api-routes.js';
+import { createRouter } from '../apps/api-cryptoada/src/router/create-router.js';
+import { createRateLimiter } from '../apps/api-cryptoada/src/rate-limit/rate-limiter.js';
+import { ROUTE_ACCESS } from '../apps/api-cryptoada/src/router/route-access.constant.js';
 import { buildApiRouteDependencies } from './fixtures/api-route-dependencies.fixture.js';
 import { createApiHarness, type ApiHarness } from './fixtures/api-harness.fixture.js';
 import { sweepProtectedRoutesWithoutToken } from './fixtures/route-sweep.fixture.js';

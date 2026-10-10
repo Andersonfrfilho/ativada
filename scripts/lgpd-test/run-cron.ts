@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createPurgeDeletedAccountsTask } from '../../apps/cron-crypto/src/accounts/purge-deleted-accounts.task.js';
-import type { PurgeSummary } from '../../apps/cron-crypto/src/accounts/purge-deleted-accounts.task.js';
-import { createCronLogger } from '../../apps/cron-crypto/src/logging/cron-logger.js';
+import { createPurgeDeletedAccountsTask } from '../../apps/cron-cryptoada/src/accounts/purge-deleted-accounts.task.js';
+import type { PurgeSummary } from '../../apps/cron-cryptoada/src/accounts/purge-deleted-accounts.task.js';
+import { createCronLogger } from '../../apps/cron-cryptoada/src/logging/cron-logger.js';
 import {
   closeDatabase,
   createAccountPurgeRepository,

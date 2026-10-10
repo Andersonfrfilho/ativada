@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { z } from '@crypto/environment';
+import { z } from '@cryptoada/environment';
 
 import { HTTP_METHOD, HTTP_STATUS } from './identity-http.constant.js';
 import { INVITATION_ACTIONS, INVITATION_LIFESPAN_SECONDS } from './identity-admin.constant.js';

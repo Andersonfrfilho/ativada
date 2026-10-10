@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import { ME_EXPORT_PATH } from '../apps/api-crypto/src/account/account.constant.js';
-import { ME_PATH } from '../apps/api-crypto/src/profile/profile.constant.js';
+import { ME_EXPORT_PATH } from '../apps/api-cryptoada/src/account/account.constant.js';
+import { ME_PATH } from '../apps/api-cryptoada/src/profile/profile.constant.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
 import {
   OWNER_A,
