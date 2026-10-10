@@ -35,5 +35,4 @@ export const ALERT_LOG = {
   SKIPPED: 'alert skipped',
   DELIVERY_ERROR: 'alert delivery errored',
   DISPATCH_FAILED: 'alert dispatch failed',
-  DISPATCH_STARTED: 'alert dispatch started',
 } as const;
