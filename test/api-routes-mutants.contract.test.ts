@@ -20,6 +20,30 @@ function edit(file: string, find: string, replace: string): SourceEdit[] {
 
 const MUTANTS: readonly SourceMutant[] = [
   {
+    name: 'RUN_CURSOR_INSTANT_NOT_VALIDATED',
+    edits: edit('runs/run-cursor.ts', 'c: cursorInstantSchema', 'c: z.string().min(1)'),
+  },
+  {
+    name: 'STRATEGY_CURSOR_INSTANT_NOT_VALIDATED',
+    edits: edit('strategies/strategy-cursor.ts', 'c: cursorInstantSchema', 'c: z.string().min(1)'),
+  },
+  {
+    name: 'CURSOR_INSTANT_CALENDAR_NOT_CHECKED',
+    edits: edit(
+      'shared/pagination/cursor-instant.ts',
+      'return isCalendarDate && isClockTime && isOffset;',
+      'return isClockTime && isOffset;',
+    ),
+  },
+  {
+    name: 'CURSOR_INSTANT_OFFSET_NOT_CHECKED',
+    edits: edit(
+      'shared/pagination/cursor-instant.ts',
+      'return isCalendarDate && isClockTime && isOffset;',
+      'return isCalendarDate && isClockTime;',
+    ),
+  },
+  {
     name: 'ROUTE_WITHOUT_ACCESS',
     edits: edit(
       'strategies/strategies.routes.ts',

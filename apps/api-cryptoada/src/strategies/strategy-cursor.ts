@@ -3,8 +3,9 @@ import type { StrategyCursor } from '@cryptoada/database';
 import { z } from '@cryptoada/environment';
 
 import { decodeCursor, encodeCursor } from '../shared/pagination/cursor.js';
+import { cursorInstantSchema } from '../shared/pagination/cursor-instant.js';
 
-const strategyCursorSchema = z.strictObject({ c: z.string().min(1).max(64), i: z.uuid() });
+const strategyCursorSchema = z.strictObject({ c: cursorInstantSchema, i: z.uuid() });
 const versionCursorSchema = z.strictObject({ v: z.number().int().positive() });
 
 export function encodeStrategyCursor(cursor: StrategyCursor): string {

@@ -15,6 +15,11 @@ import {
 
 const STRATEGIES = '/v1/strategies';
 
+// Cursor bem formado cujo instante o Postgres recusaria (22007): precisa ser 400, nunca 500.
+function forgedInstantCursor(): string {
+  return Buffer.from(JSON.stringify({ c: 'abc', i: MISSING_ID })).toString('base64url');
+}
+
 let harness: RunsHarness;
 
 beforeAll(async () => {
@@ -183,6 +188,7 @@ describe('GET /v1/strategies', () => {
       'limit=abc',
       'cursor=%%%',
       'cursor=bm90LWpzb24',
+      `cursor=${forgedInstantCursor()}`,
       'extra=1',
     ]) {
       const response = await harness.call({ subject: SUBJECT_A, path: `${STRATEGIES}?${query}` });

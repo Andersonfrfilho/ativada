@@ -29,6 +29,7 @@ import { checkBacktestFlow, type SeriesWindow } from './api-runs-test/check-back
 import { checkDocumentation } from './api-runs-test/check-docs.js';
 import { checkExampleStrategy } from './api-runs-test/check-example-strategy.js';
 import { checkIsolationOverHttp } from './api-runs-test/check-isolation.js';
+import { checkTamperedCursor } from './api-runs-test/check-tampered-cursor.js';
 import { checkWalkForwardAndStops } from './api-runs-test/check-walk-forward.js';
 
 const WARM_UP_DAYS = 300;
@@ -67,6 +68,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkExampleStrategy(context, window);
     await checkIsolationOverHttp(context, flow, window);
     await checkWalkForwardAndStops(context, { classicVersionId: flow.versionId, window });
+    await checkTamperedCursor(context);
     await checkDocumentation(context);
   } finally {
     await context.stop();

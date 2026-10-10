@@ -3,8 +3,9 @@ import type { FillCursor, OrderCursor, PositionCursor, RunCursor } from '@crypto
 import { z } from '@cryptoada/environment';
 
 import { decodeCursor, encodeCursor } from '../shared/pagination/cursor.js';
+import { cursorInstantSchema } from '../shared/pagination/cursor-instant.js';
 
-const runCursorSchema = z.strictObject({ c: z.string().min(1).max(64), i: z.uuid() });
+const runCursorSchema = z.strictObject({ c: cursorInstantSchema, i: z.uuid() });
 const timeCursorSchema = z.strictObject({ t: z.number().int().nonnegative() });
 const KEY_MAX_LENGTH = 64;
 const orderCursorSchema = z.strictObject({

@@ -516,7 +516,16 @@ describe('GET /v1/runs', () => {
   });
 
   test('limit acima de 100, kind inválido e cursor adulterado são 400', async () => {
-    for (const query of ['limit=101', 'kind=outro', 'cursor=bm90LWpzb24', 'userId=x']) {
+    const forgedInstant = Buffer.from(JSON.stringify({ c: 'abc', i: MISSING_ID })).toString(
+      'base64url',
+    );
+    for (const query of [
+      'limit=101',
+      'kind=outro',
+      'cursor=bm90LWpzb24',
+      `cursor=${forgedInstant}`,
+      'userId=x',
+    ]) {
       const response = await harness.call({ subject: SUBJECT_A, path: `${RUNS}?${query}` });
       expect({ query, status: response.status }).toStrictEqual({ query, status: 400 });
     }

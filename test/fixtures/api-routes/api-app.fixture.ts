@@ -9,6 +9,8 @@ import type * as PolicyModule from '../../../apps/api-cryptoada/src/rate-limit/r
 import type * as RateLimiterModule from '../../../apps/api-cryptoada/src/rate-limit/rate-limiter.js';
 import type * as CreateRouterModule from '../../../apps/api-cryptoada/src/router/create-router.js';
 import type * as CreateRunModule from '../../../apps/api-cryptoada/src/runs/create-run.use-case.js';
+import type * as RunCursorModule from '../../../apps/api-cryptoada/src/runs/run-cursor.js';
+import type * as StrategyCursorModule from '../../../apps/api-cryptoada/src/strategies/strategy-cursor.js';
 import type * as RunQueueDispatcherModule from '../../../apps/api-cryptoada/src/runs/queue/run-queue-dispatcher.js';
 import type * as ApplicationDispatcherModule from '../../../apps/api-cryptoada/src/runs/queue/create-application-dispatcher.js';
 import type * as RunAdmissionModule from '../../../apps/api-cryptoada/src/runs/run-admission.js';
@@ -47,6 +49,8 @@ export type ApiApp = {
   readonly router: typeof CreateRouterModule;
   readonly createRun: typeof CreateRunModule;
   readonly runQueueDispatcher: typeof RunQueueDispatcherModule;
+  readonly runCursor: typeof RunCursorModule;
+  readonly strategyCursor: typeof StrategyCursorModule;
   readonly applicationDispatcher: typeof ApplicationDispatcherModule;
   readonly runAdmission: typeof RunAdmissionModule;
   readonly exportCsv: typeof ExportCsvModule;
@@ -89,6 +93,8 @@ export async function loadApiApp(): Promise<ApiApp> {
     router: await load('router/create-router'),
     createRun: await load('runs/create-run.use-case'),
     runQueueDispatcher: await load('runs/queue/run-queue-dispatcher'),
+    runCursor: await load('runs/run-cursor'),
+    strategyCursor: await load('strategies/strategy-cursor'),
     applicationDispatcher: await load('runs/queue/create-application-dispatcher'),
     runAdmission: await load('runs/run-admission'),
     exportCsv: await load('runs/export-run-csv.use-case'),
