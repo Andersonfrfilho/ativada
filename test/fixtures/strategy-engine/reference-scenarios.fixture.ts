@@ -95,6 +95,8 @@ function sellAndCommandsScenario(): EngineScenario {
       [9, [command(9, 'halt', 'user_stop')]],
       [11, [command(11, 'resume', 'user_resume')]],
       [14, [command(14, 'exit_position', 'goal_reached')]],
+      // O mesmo `commandId` chega de novo dois candles depois: ignorado, não reaplicado.
+      [16, [command(14, 'exit_position', 'goal_reached')]],
     ]),
     requiredEvents: [
       ENGINE_EVENT_KIND.SELL_CANCELS_LIMIT,
@@ -102,6 +104,7 @@ function sellAndCommandsScenario(): EngineScenario {
       ENGINE_EVENT_KIND.HALT_BLOCKS_ENTRY,
       ENGINE_EVENT_KIND.RESUME_AFTER_HALT,
       ENGINE_EVENT_KIND.COMMAND_EXIT,
+      ENGINE_EVENT_KIND.DUPLICATE_COMMAND_IGNORED,
       ENGINE_EVENT_KIND.SENTIMENT_USED,
       ENGINE_EVENT_KIND.SENTIMENT_STALE,
     ],
@@ -132,6 +135,20 @@ export const GAP_LIVE_LIMIT_PRICES: readonly CandleSpec[] = [
   ['100', '101', '98.5', '99.5'],
   QUIET,
 ];
+
+// exit_position na carteira livre, no candle de um BUY: só cancela, nenhuma entrada nasce nele.
+function exitCommandScenario(): EngineScenario {
+  return scenario({
+    name: 'exit-command-on-a-free-wallet',
+    strategy: buildReferenceStrategy(MARKET_ENTRY),
+    candles: buildCandles([QUIET, QUIET, QUIET, QUIET, QUIET, QUIET]),
+    commands: commandsByIndex([[2, [command(2, 'exit_position', 'goal_reached')]]]),
+    requiredEvents: [
+      ENGINE_EVENT_KIND.EXIT_COMMAND_BLOCKS_ENTRY,
+      ENGINE_EVENT_KIND.MARKET_ENTRY_FILL,
+    ],
+  });
+}
 
 function gapScenarios(): EngineScenario[] {
   return [
@@ -215,6 +232,7 @@ export function buildReferenceScenarios(): EngineScenario[] {
       candles: buildCandles(GAP_UP_PRICES),
       requiredEvents: [ENGINE_EVENT_KIND.GAP_UP_ENTRY, ENGINE_EVENT_KIND.STOP_EXIT_WITHOUT_GAP],
     }),
+    exitCommandScenario(),
     ...gapScenarios(),
   ];
 }

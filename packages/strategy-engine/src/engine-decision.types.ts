@@ -2,6 +2,7 @@
 import type { SentimentObservation } from './engine-candle.types.js';
 import type {
   CommandKind,
+  CommandOutcome,
   CommandReason,
   ExitReason,
   OrderEventReason,
@@ -110,6 +111,7 @@ export type AppliedCommandDecision = {
   readonly issuedAt: number;
   readonly kind: CommandKind;
   readonly reason: CommandReason;
+  readonly status: CommandOutcome;
 };
 
 export type WalletDecisions = {

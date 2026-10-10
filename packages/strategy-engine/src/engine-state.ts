@@ -34,6 +34,7 @@ export function createInitialWalletState(params: CreateInitialWalletStateParams)
     firstSignalCandleOpenTime: null,
     sequence: 0,
     isHalted: false,
+    processedCommandIds: [],
     cash: params.run.parameters.initialBalance,
     position: null,
     pendingOrder: null,

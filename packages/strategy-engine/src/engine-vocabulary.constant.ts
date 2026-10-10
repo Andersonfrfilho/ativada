@@ -89,6 +89,13 @@ export const COMMAND_KIND = {
 } as const;
 export type CommandKind = (typeof COMMAND_KIND)[keyof typeof COMMAND_KIND];
 
+// Resultado de um comando no passo: aplicado, ou ignorado por repetir um `commandId` já processado.
+export const COMMAND_OUTCOME = {
+  APPLIED: 'applied',
+  IGNORED_DUPLICATE: 'ignored_duplicate',
+} as const;
+export type CommandOutcome = (typeof COMMAND_OUTCOME)[keyof typeof COMMAND_OUTCOME];
+
 export const COMMAND_REASON = {
   GOAL_REACHED: 'goal_reached',
   GOAL_MAX_LOSS: 'goal_max_loss',

@@ -43,6 +43,11 @@ const MAX_LEAD_IN = 3;
 const PERCENT = 100;
 const PER_MILLE = 1_000;
 const ATR_SIGNIFICANT_DIGITS = 12;
+// De cinquenta em cinquenta, um fluxo é uma tempestade de comandos: passa dos 64 identificadores lembrados e
+// repete identificadores (alguns já esquecidos), para exercitar a idempotência entre passos e o limite.
+const STORM_EVERY_FLOWS = 50;
+const STORM_REPEAT_PERCENT = 35;
+const STORM_REPEAT_WINDOW = 90;
 
 type Random = (limit: number) => number;
 
@@ -223,16 +228,44 @@ function buildSignal(params: SignalParams): SignalDecision {
   };
 }
 
+function commandOf(params: {
+  readonly kind: CommandKind;
+  readonly commandId: string;
+  readonly candle: EngineCandle;
+}): EngineCommand {
+  const { kind, commandId, candle } = params;
+  return { commandId, issuedAt: candle.openTime, kind, reason: COMMAND_KIND_REASON[kind] };
+}
+
 function buildCommands(random: Random, flowIndex: number, candle: EngineCandle): EngineCommand[] {
   if (random(PERCENT) >= COMMAND_SHARE_PERCENT) return [];
   const count = 1 + random(2);
   const kinds = Array.from({ length: count }, () => pick(random, COMMAND_KINDS));
-  return kinds.map((kind, order) => ({
-    commandId: `flow-${flowIndex}-${candle.openTime}-${order}`,
-    issuedAt: candle.openTime,
-    kind,
-    reason: COMMAND_KIND_REASON[kind],
-  }));
+  return kinds.map((kind, order) =>
+    commandOf({ kind, commandId: `flow-${flowIndex}-${candle.openTime}-${order}`, candle }),
+  );
+}
+
+// Comandos em todo candle; parte deles repete um `commandId` recente (nunca duas vezes no mesmo passo).
+function buildStormCommands(
+  random: Random,
+  candle: EngineCandle,
+  history: string[],
+): EngineCommand[] {
+  const used = new Set<string>();
+  const commands: EngineCommand[] = [];
+  const count = 1 + random(2);
+  for (let order = 0; order < count; order += 1) {
+    const recent = history.slice(-STORM_REPEAT_WINDOW);
+    const repeats = recent.length > 0 && random(PERCENT) < STORM_REPEAT_PERCENT;
+    const commandId = repeats ? pick(random, recent) : `storm-${candle.openTime}-${order}`;
+    const kind = pick(random, COMMAND_KINDS);
+    if (used.has(commandId)) continue;
+    used.add(commandId);
+    commands.push(commandOf({ kind, commandId, candle }));
+  }
+  history.push(...commands.map((command) => command.commandId));
+  return commands;
 }
 
 export function buildWalletFlow(index: number): WalletFlow {
@@ -248,6 +281,8 @@ export function buildWalletFlow(index: number): WalletFlow {
     .dividedBy(profile.tickSize)
     .toNumber();
   const steps: FlowStep[] = [];
+  const isStorm = index % STORM_EVERY_FLOWS === 0;
+  const commandHistory: string[] = [];
   let previousCloseTicks = basePriceTicks;
   let slot = 0;
   for (let position = 0; position < length; position += 1) {
@@ -264,7 +299,10 @@ export function buildWalletFlow(index: number): WalletFlow {
       position < leadIn
         ? null
         : buildSignal({ random, candle, strategy, confirmedGapCandles: built.ticks.missing });
-    steps.push({ candle, signal, commands: buildCommands(random, index, candle) });
+    const commands = isStorm
+      ? buildStormCommands(random, candle, commandHistory)
+      : buildCommands(random, index, candle);
+    steps.push({ candle, signal, commands });
     previousCloseTicks = built.ticks.ticks;
     slot += built.ticks.missing + 1;
   }

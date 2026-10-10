@@ -133,6 +133,14 @@ function classifySignal(entry: TimelineEntry, found: Found, seenResume: { value:
       order.purpose === 'entry' && order.createdCandleOpenTime === entry.step.candle.openTime,
   );
   if (seenResume.value && createdEntry) found.add(ENGINE_EVENT_KIND.RESUME_AFTER_HALT);
+  if (decisions.commands.some((command) => command.status === 'ignored_duplicate'))
+    found.add(ENGINE_EVENT_KIND.DUPLICATE_COMMAND_IGNORED);
+  const appliedExit = decisions.commands.some(
+    (command) => command.status === 'applied' && command.kind === 'exit_position',
+  );
+  if (signal?.action === 'BUY' && appliedExit && !createdEntry && state.wallet.position === null) {
+    found.add(ENGINE_EVENT_KIND.EXIT_COMMAND_BLOCKS_ENTRY);
+  }
   if (signal === null) return;
   const isFree = state.wallet.position === null && state.wallet.pendingOrder === null;
   if (signal.action === 'BUY' && state.wallet.isHalted && isFree)

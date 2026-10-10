@@ -170,6 +170,7 @@ describe('reference engine — signals, commands and sentiment', () => {
         issuedAt: stepAt(run, 9).candle.openTime,
         kind: 'halt',
         reason: 'user_stop',
+        status: 'applied',
       },
     ]);
     expect(orderSummary(stepAt(run, 9))).toStrictEqual(['limit:cancelled:command']);

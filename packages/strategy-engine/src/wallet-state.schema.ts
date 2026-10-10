@@ -5,7 +5,7 @@ import {
   NON_NEGATIVE_DECIMAL_STATE_TEXT_SCHEMA,
   POSITIVE_DECIMAL_STATE_TEXT_SCHEMA,
 } from './decimal-text.schema.js';
-import { CUSTOM_ISSUE_CODE } from './engine.constant.js';
+import { CUSTOM_ISSUE_CODE, MAX_PROCESSED_COMMAND_IDS } from './engine.constant.js';
 import { toEngineDecimal } from './engine-decimal.js';
 import {
   ENTRY_ORDER_TYPE,
@@ -119,6 +119,7 @@ const WALLET_STATE_SHAPE = z.strictObject({
   firstSignalCandleOpenTime: TIME_SCHEMA.nullable(),
   sequence: COUNT_SCHEMA,
   isHalted: z.boolean(),
+  processedCommandIds: z.array(KEY_SCHEMA).max(MAX_PROCESSED_COMMAND_IDS),
   cash: NON_NEGATIVE_DECIMAL_STATE_TEXT_SCHEMA,
   position: OPEN_POSITION_SCHEMA.nullable(),
   pendingOrder: PENDING_ORDER_SCHEMA.nullable(),
@@ -147,4 +148,7 @@ export const WALLET_STATE_SCHEMA = WALLET_STATE_SHAPE.superRefine((wallet, conte
     reportIssue(context, PENDING_ORDER_PATH, 'Saída pendente sem posição.');
   }
   checkTradingStart(wallet, context);
+  if (new Set(wallet.processedCommandIds).size !== wallet.processedCommandIds.length) {
+    reportIssue(context, ['processedCommandIds'], 'Comando processado repetido na lista.');
+  }
 });

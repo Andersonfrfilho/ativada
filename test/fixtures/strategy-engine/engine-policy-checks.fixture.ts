@@ -13,6 +13,7 @@ type CloseSituation = {
   readonly isAfterGap: boolean;
   readonly cancelledBy: (reason: string) => boolean;
   readonly commandKinds: readonly string[];
+  readonly blocksEntry: boolean;
 };
 
 function isCreatedHere(order: OrderEvent, entry: TimelineEntry): boolean {
@@ -36,6 +37,9 @@ function hasLiveEntryAtClose(timeline: Timeline, entry: TimelineEntry): boolean 
 function describeClose(timeline: Timeline, entry: TimelineEntry): CloseSituation {
   const { decisions, state } = entry.step.result;
   const createdHere = decisions.orders.filter((order) => isCreatedHere(order, entry));
+  const appliedKinds = decisions.commands
+    .filter((command) => command.status === 'applied')
+    .map((command) => command.kind);
   const isProtective = (order: OrderEvent): boolean =>
     order.type === 'stop' || order.type === 'target';
   return {
@@ -49,7 +53,8 @@ function describeClose(timeline: Timeline, entry: TimelineEntry): CloseSituation
     ),
     cancelledBy: (reason) =>
       decisions.orders.some((order) => order.status === 'cancelled' && order.reason === reason),
-    commandKinds: decisions.commands.map((command) => command.kind),
+    commandKinds: appliedKinds,
+    blocksEntry: appliedKinds.some((kind) => kind === 'halt' || kind === 'exit_position'),
   };
 }
 
@@ -68,11 +73,21 @@ function assertCommands(situation: CloseSituation, label: string): void {
   }
   if (situation.isHalted)
     assertContract(!situation.createdEntry, `${label}: entrada criada parado (halt).`);
+  if (situation.blocksEntry) {
+    assertContract(
+      !situation.createdEntry,
+      `${label}: entrada criada no candle de halt ou exit_position.`,
+    );
+  }
 }
 
 function assertSignal(action: string, situation: CloseSituation, label: string): void {
   const isBusy =
-    situation.hasLiveEntry || situation.hasPosition || situation.isHalted || situation.isAfterGap;
+    situation.hasLiveEntry ||
+    situation.hasPosition ||
+    situation.isHalted ||
+    situation.isAfterGap ||
+    situation.blocksEntry;
   if (action === 'SELL' && situation.hasLiveEntry && !situation.cancelledBy('command')) {
     assertContract(
       situation.cancelledBy('opposite_signal'),
@@ -94,10 +109,24 @@ function assertSignal(action: string, situation: CloseSituation, label: string):
   if (action === 'HOLD') assertContract(!situation.createdEntry, `${label}: HOLD criou entrada.`);
 }
 
+// `commandId` já processado é ignorado, não reaplicado: a repetição só aparece como `ignored_duplicate`.
+function assertCommandIdempotency(entry: TimelineEntry, seen: Set<string>): void {
+  for (const command of entry.step.result.decisions.commands) {
+    const expected = seen.has(command.commandId) ? 'ignored_duplicate' : 'applied';
+    assertContract(
+      command.status === expected,
+      `Passo ${entry.index}: comando ${command.commandId} ${command.status}, esperado ${expected}.`,
+    );
+    seen.add(command.commandId);
+  }
+}
+
 // Tabela de sinais e comandos do ADR 0002 §c, conferida no fechamento de cada candle.
 export function checkSignalPolicy(context: CheckContext): void {
   const timeline = buildTimeline(context.scenario, context.baseline);
+  const seenCommands = new Set<string>();
   for (const entry of timeline.entries) {
+    assertCommandIdempotency(entry, seenCommands);
     const signal = entry.step.result.decisions.signal;
     const situation = describeClose(timeline, entry);
     const label = `Passo ${entry.index}`;

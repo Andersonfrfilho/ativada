@@ -188,6 +188,7 @@ describe('walletStep: the signal and command policy by hand', () => {
         issuedAt: candle.openTime,
         kind: 'halt',
         reason: 'user_stop',
+        status: 'applied',
       },
     ]);
   });

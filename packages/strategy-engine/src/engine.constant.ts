@@ -16,6 +16,8 @@ export const ENGINE_VERSION = 'engine-2';
 // Teto de combinações da grade do walk-forward (RNF02); a grade em si é parâmetro da execução (T3.3).
 export const MAX_WALK_FORWARD_COMBINATIONS = 200;
 export const MAX_STRATEGY_RULES = 12;
+// A carteira lembra os últimos comandos processados: o `commandId` repetido num passo posterior é ignorado.
+export const MAX_PROCESSED_COMMAND_IDS = 64;
 // ln(1/ε) com ε = 1e-3 (peso residual do primeiro candle); constante: logaritmo é proibido no motor.
 export const LN_INVERSE_CONVERGENCE_EPSILON = 6.907755278982137;
 // Fear & Greed é diário; observação mais velha que isto vira dado ausente (voto 0).

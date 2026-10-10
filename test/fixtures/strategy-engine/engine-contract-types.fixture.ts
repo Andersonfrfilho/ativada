@@ -40,6 +40,8 @@ export const ENGINE_EVENT_KIND = {
   SENTIMENT_STALE: 'sentiment-stale',
   GAP_CLOSES_POSITION: 'gap-closes-position',
   GAP_CANCELS_PENDING_ORDER: 'gap-cancels-pending-order',
+  EXIT_COMMAND_BLOCKS_ENTRY: 'exit-command-blocks-entry',
+  DUPLICATE_COMMAND_IGNORED: 'duplicate-command-ignored',
 } as const;
 
 export type EngineEventKind = (typeof ENGINE_EVENT_KIND)[keyof typeof ENGINE_EVENT_KIND];

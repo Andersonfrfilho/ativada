@@ -62,6 +62,8 @@ export type WalletState = {
   readonly firstSignalCandleOpenTime: number | null;
   readonly sequence: number;
   readonly isHalted: boolean;
+  // Últimos `commandId` processados, do mais antigo ao mais novo (no máximo 64): repetição é ignorada.
+  readonly processedCommandIds: readonly string[];
   readonly cash: string;
   readonly position: OpenPositionState | null;
   readonly pendingOrder: PendingOrderState | null;

@@ -151,23 +151,47 @@ function createExit(draft: WalletDraft, context: WalletContext, exitReason: Exit
   draft.state = { ...draft.state, pendingOrder: order };
 }
 
+const REMEMBERED_COMMANDS = 64;
+
+function wasProcessed(draft: WalletDraft, context: WalletContext, commandId: string): boolean {
+  if (context.defect === REFERENCE_ENGINE_DEFECT.DUPLICATE_COMMAND_REAPPLIED) return false;
+  return new Set(draft.state.processedCommandIds).has(commandId);
+}
+
 // Comandos agem no fechamento, antes do placar: `halt` cancela a entrada viva e para de entrar;
-// `resume` volta a entrar; `exit_position` cancela a entrada viva e vende a mercado em t+1.
-function applyCommand(draft: WalletDraft, context: WalletContext, command: EngineCommand): void {
+// `resume` volta a entrar; `exit_position` cancela a entrada viva e vende a mercado em t+1. O `commandId`
+// repetido (nos últimos 64) só é registrado como ignorado. Devolve se o comando foi aplicado.
+function applyCommand(draft: WalletDraft, context: WalletContext, command: EngineCommand): boolean {
+  const isRepeat = wasProcessed(draft, context, command.commandId);
   draft.commands.push({
     commandId: command.commandId,
     candleOpenTime: context.candle.openTime,
     issuedAt: command.issuedAt,
     kind: command.kind,
     reason: command.reason,
+    status: isRepeat ? 'ignored_duplicate' : 'applied',
   });
+  if (isRepeat) return false;
+  const known = draft.state.processedCommandIds;
+  const ids = known.includes(command.commandId) ? known : [...known, command.commandId];
+  draft.state = {
+    ...draft.state,
+    processedCommandIds: ids.slice(Math.max(0, ids.length - REMEMBERED_COMMANDS)),
+  };
   if (command.kind === COMMAND_KIND.RESUME) {
     draft.state = { ...draft.state, isHalted: false };
-    return;
+    return true;
   }
   cancelPendingEntry(draft, context, ORDER_EVENT_REASON.COMMAND);
   if (command.kind === COMMAND_KIND.HALT) draft.state = { ...draft.state, isHalted: true };
   else createExit(draft, context, EXIT_REASON.COMMAND);
+  return true;
+}
+
+function appliesEntryBlock(command: EngineCommand, context: WalletContext): boolean {
+  if (command.kind === COMMAND_KIND.HALT) return true;
+  const isExit = command.kind === COMMAND_KIND.EXIT_POSITION;
+  return isExit && context.defect !== REFERENCE_ENGINE_DEFECT.EXIT_COMMAND_ALLOWS_ENTRY;
 }
 
 // Tabela de sinais do ADR 0002 §c: SELL cancela a entrada viva ou vende a posição; BUY só entra com a
@@ -181,11 +205,15 @@ export function applyClose(
     readonly isAfterGap: boolean;
   },
 ): void {
-  for (const command of params.commands) applyCommand(draft, context, command);
+  let isEntryBlocked = params.isAfterGap;
+  for (const command of params.commands) {
+    const isApplied = applyCommand(draft, context, command);
+    if (isApplied && appliesEntryBlock(command, context)) isEntryBlocked = true;
+  }
   const { signal } = params;
   if (signal === null) return;
   if (signal.action === SIGNAL_ACTION.BUY) {
-    return params.isAfterGap ? undefined : placeEntry(draft, context, signal);
+    return isEntryBlocked ? undefined : placeEntry(draft, context, signal);
   }
   if (signal.action !== SIGNAL_ACTION.SELL) return;
   if (context.defect !== REFERENCE_ENGINE_DEFECT.IGNORES_OPPOSITE_SIGNAL) {

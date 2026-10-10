@@ -269,8 +269,43 @@ const POLICY_MUTANTS: readonly Mutant[] = [
     name: 'COMMAND_REAPPLIED',
     edits: edit(
       POLICY,
-      'for (const command of closing.commands) applyCommand(draft, context, command);',
-      'for (const command of closing.commands) {\n    applyCommand(draft, context, command);\n    applyCommand(draft, context, command);\n  }',
+      '    const isApplied = applyCommand(draft, context, command);',
+      '    applyCommand(draft, context, command);\n    const isApplied = applyCommand(draft, context, command);',
+    ),
+    stage: JUDGE_STAGE.DIFFERENTIAL,
+  },
+];
+
+const COMMAND_MUTANTS: readonly Mutant[] = [
+  {
+    name: 'EXIT_COMMAND_ALLOWS_ENTRY',
+    edits: edit(
+      POLICY,
+      '  COMMAND_KIND.HALT,\n  COMMAND_KIND.EXIT_POSITION,\n];',
+      '  COMMAND_KIND.HALT,\n];',
+    ),
+    stage: JUDGE_STAGE.DIFFERENTIAL,
+  },
+  {
+    name: 'DUPLICATE_COMMAND_REAPPLIED',
+    edits: edit(
+      POLICY,
+      'if (draft.state.processedCommandIds.includes(command.commandId)) {',
+      'if (false) {',
+    ),
+    stage: JUDGE_STAGE.DIFFERENTIAL,
+  },
+  {
+    name: 'COMMAND_HISTORY_UNBOUNDED',
+    edits: edit(POLICY, 'remembered.slice(-MAX_PROCESSED_COMMAND_IDS)', 'remembered'),
+    stage: JUDGE_STAGE.DIFFERENTIAL,
+  },
+  {
+    name: 'COMMAND_HISTORY_ONE_TOO_SHORT',
+    edits: edit(
+      POLICY,
+      'remembered.slice(-MAX_PROCESSED_COMMAND_IDS)',
+      'remembered.slice(-(MAX_PROCESSED_COMMAND_IDS - 1))',
     ),
     stage: JUDGE_STAGE.DIFFERENTIAL,
   },
@@ -291,8 +326,8 @@ const GAP_MUTANTS: readonly Mutant[] = [
     name: 'GAP_ALLOWS_ENTRY',
     edits: edit(
       POLICY,
-      'return closing.isAfterGap ? undefined : placeEntry(draft, context, signal);',
-      'return placeEntry(draft, context, signal);',
+      'const isEntryBlocked = closing.isAfterGap || hasBlockingCommand;',
+      'const isEntryBlocked = hasBlockingCommand;',
     ),
     stage: JUDGE_STAGE.DIFFERENTIAL,
   },
@@ -420,6 +455,7 @@ const COMPOSITION_MUTANTS: readonly Mutant[] = [
 const SOURCE_MUTANTS: readonly Mutant[] = [
   ...FILL_MUTANTS,
   ...POLICY_MUTANTS,
+  ...COMMAND_MUTANTS,
   ...GAP_MUTANTS,
   ...GUARD_MUTANTS,
   ...COMPOSITION_MUTANTS,
@@ -473,6 +509,8 @@ describe('production engine: the guards, the differential and the harness reject
       'SELL_IGNORED',
       'HALT_IGNORED',
       'COMMAND_REAPPLIED',
+      'EXIT_COMMAND_ALLOWS_ENTRY',
+      'DUPLICATE_COMMAND_REAPPLIED',
       'GAP_KEEPS_POSITION',
       'GAP_KEEPS_PENDING',
       'EQUITY_AT_LOW_MARKED_AT_THE_CLOSE',

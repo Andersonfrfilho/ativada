@@ -121,6 +121,7 @@ describe('engine state', () => {
         firstSignalCandleOpenTime: null,
         sequence: 0,
         isHalted: false,
+        processedCommandIds: [],
         cash: '10000',
         position: null,
         pendingOrder: null,

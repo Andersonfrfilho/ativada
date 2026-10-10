@@ -38,6 +38,8 @@ export const REFERENCE_ENGINE_DEFECT = {
   EQUITY_LOW_COUNTS_STOP_AT_LOW: 'equity-low-counts-stop-at-low',
   GAP_KEEPS_POSITION: 'gap-keeps-position',
   GAP_KEEPS_PENDING: 'gap-keeps-pending',
+  EXIT_COMMAND_ALLOWS_ENTRY: 'exit-command-allows-entry',
+  DUPLICATE_COMMAND_REAPPLIED: 'duplicate-command-reapplied',
 } as const;
 
 export type ReferenceEngineDefect =
