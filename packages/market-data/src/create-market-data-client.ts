@@ -62,6 +62,8 @@ export function createMarketDataClient(clientSettings: MarketDataClientSettings)
         limit: MAX_KLINES_PER_REQUEST,
       });
       collected.push(...page.closedCandles);
+      if (params.onPage !== undefined && page.closedCandles.length > 0)
+        await params.onPage(page.closedCandles);
       if (page.lastOpenTime === undefined || page.rowCount < MAX_KLINES_PER_REQUEST) break;
       const nextCursor = page.lastOpenTime + duration;
       if (nextCursor <= cursor)

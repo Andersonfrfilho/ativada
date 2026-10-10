@@ -236,4 +236,58 @@ describe('market-data klines contract', () => {
     expect(candles).toHaveLength(1_000);
     expect(calls).toHaveLength(2);
   });
+
+  test('fetchKlinesRange hands each page to onPage before asking for the next one', async () => {
+    const series = buildSyntheticSeries({
+      firstOpenTime: FIRST_OPEN_TIME,
+      durationMilliseconds: ONE_HOUR,
+      count: 2_500,
+    });
+    const { fetchImplementation, calls } = createSeriesFetch(series);
+    const client = createMarketDataClient({
+      baseUrl: BASE_URL,
+      fetchImplementation,
+      now: () => FAR_FUTURE_MILLISECONDS,
+    });
+    const callsSeenByPage: number[] = [];
+    const pageSizes: number[] = [];
+    await client.fetchKlinesRange({
+      symbol: SYMBOL,
+      timeframe: TIMEFRAME.ONE_HOUR,
+      from: FIRST_OPEN_TIME,
+      to: FIRST_OPEN_TIME + 2_499 * ONE_HOUR,
+      onPage: (page) => {
+        callsSeenByPage.push(calls.length);
+        pageSizes.push(page.length);
+        return Promise.resolve();
+      },
+    });
+    expect(pageSizes).toStrictEqual([1_000, 1_000, 500]);
+    expect(callsSeenByPage).toStrictEqual([1, 2, 3]);
+  });
+
+  test('a failing onPage stops the range before the next request', async () => {
+    const series = buildSyntheticSeries({
+      firstOpenTime: FIRST_OPEN_TIME,
+      durationMilliseconds: ONE_HOUR,
+      count: 2_500,
+    });
+    const { fetchImplementation, calls } = createSeriesFetch(series);
+    const client = createMarketDataClient({
+      baseUrl: BASE_URL,
+      fetchImplementation,
+      now: () => FAR_FUTURE_MILLISECONDS,
+    });
+    const attempt = client.fetchKlinesRange({
+      symbol: SYMBOL,
+      timeframe: TIMEFRAME.ONE_HOUR,
+      from: FIRST_OPEN_TIME,
+      to: FIRST_OPEN_TIME + 2_499 * ONE_HOUR,
+      onPage: () => Promise.reject(new Error('disk full')),
+    });
+    const outcome = await attempt.catch((error: unknown) => error);
+    expect(outcome).toBeInstanceOf(Error);
+    expect((outcome as Error).message).toBe('disk full');
+    expect(calls).toHaveLength(1);
+  });
 });

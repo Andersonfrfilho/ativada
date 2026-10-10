@@ -33,6 +33,7 @@ export type FetchKlinesRangeParams = {
   readonly timeframe: Timeframe;
   readonly from: number;
   readonly to: number;
+  readonly onPage?: (page: readonly Candle[]) => Promise<void>;
 };
 
 export type MarketDataClient = {

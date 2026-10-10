@@ -31,4 +31,5 @@ export const TASK_NAME = {
   PURGE_DELETED_ACCOUNTS: 'purge-deleted-accounts',
   RECONCILE_BLOCKED_ACCOUNTS: 'reconcile-blocked-accounts',
   EXPIRE_AUDIT_EVENTS: 'expire-audit-events',
+  BACKFILL_CANDLES: 'backfill-candles',
 } as const;

@@ -30,6 +30,7 @@
         "@crypto/database": "workspace:*",
         "@crypto/environment": "workspace:*",
         "@crypto/identity-admin": "workspace:*",
+        "@crypto/market-data": "workspace:*",
       },
     },
     "apps/frontend-crypto": {
