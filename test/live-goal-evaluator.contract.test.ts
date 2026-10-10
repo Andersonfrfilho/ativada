@@ -20,6 +20,12 @@ import {
   createEmptyResults,
   snapshotResults,
 } from './fixtures/backtest/in-memory-backtest-results.fixture.js';
+import {
+  expectedGoalOutcome as expectedOutcome,
+  GOAL_SPECS as SPECS,
+  type Expected,
+  type Spec,
+} from './fixtures/live/goal-expected-outcome.fixture.js';
 import type { InMemoryLive } from './fixtures/live/in-memory-live-database.fixture.js';
 import {
   buildLive,
@@ -36,53 +42,7 @@ import {
 
 const ETH_DAILY = REAL_DATASETS[1] as RealDataset;
 const DAY = ENGINE_TIMEFRAME_DURATION_MILLISECONDS['1d'];
-const INITIAL = 10_000;
-const SCALE = 100_000_000n;
 const GOAL_ID = '018f0000-0000-7000-8000-0000000000cc';
-
-type Spec = { targetRate: string; maxLossRate: string; horizonDays: number };
-type Expected = {
-  readonly outcome: 'reached' | 'stopped' | 'expired';
-  readonly runOutcome: 'goal_reached' | 'goal_stopped' | 'goal_expired';
-  readonly candleIndex: number;
-};
-
-function scaled(text: string): bigint {
-  const [whole = '0', fraction = ''] = text.replace('-', '').split('.');
-  return BigInt(whole) * SCALE + BigInt(fraction.padEnd(8, '0').slice(0, 8));
-}
-
-function ceilScaled(numerator: bigint, denominator: bigint): bigint {
-  return (numerator + denominator - 1n) / denominator;
-}
-
-// O desfecho esperado, achado por varredura independente do código de produção da meta: a primeira vez, depois do início
-// da simulação, em que o vale toca a perda máxima (antes do alvo no mesmo candle), o fechamento alcança o alvo ou o prazo acaba.
-function expectedOutcome(spec: Spec): Expected {
-  const setup = classicSetup(ETH_DAILY);
-  const engine = createEngine();
-  let state = engine.createInitialState({ strategy: CLASSIC_STRATEGY, run: setup });
-  const initial = BigInt(INITIAL) * SCALE;
-  const target = ceilScaled(initial * (SCALE + scaled(spec.targetRate)), SCALE);
-  const stop = ceilScaled(initial * (SCALE - scaled(spec.maxLossRate)), SCALE);
-  for (const [index, candle] of ETH_DAILY.candles.entries()) {
-    const result = engine.step({ strategy: CLASSIC_STRATEGY, run: setup, state, candle });
-    state = result.state;
-    const elapsed = index - LEAD_IN_CANDLES + 1;
-    const point = result.decisions.equityPoint;
-    if (elapsed < 1 || point === null) continue;
-    if (scaled(point.equityAtLow) <= stop) {
-      return { outcome: 'stopped', runOutcome: 'goal_stopped', candleIndex: index };
-    }
-    if (scaled(point.equity) >= target) {
-      return { outcome: 'reached', runOutcome: 'goal_reached', candleIndex: index };
-    }
-    if (elapsed >= spec.horizonDays) {
-      return { outcome: 'expired', runOutcome: 'goal_expired', candleIndex: index };
-    }
-  }
-  throw new Error('a meta não teve desfecho nos candles do conjunto');
-}
 
 // A referência do que deve ficar gravado: o passo de produção em laço direto, com a saída por meta no candle do desfecho e
 // o fim quando a carteira se assenta depois dele.
@@ -143,13 +103,6 @@ function referenceRun(expected: Expected): {
 function withLiveId(rows: Record<string, readonly unknown[]>, live: InMemoryLive): string {
   return JSON.stringify(rows).replaceAll('goal:LIVE:', `goal:${live.runId}:`);
 }
-
-const NEVER_STOPS = '0.99';
-const SPECS: Readonly<Record<string, Spec>> = {
-  reached: { targetRate: '0.002', maxLossRate: NEVER_STOPS, horizonDays: 90 },
-  stopped: { targetRate: '5', maxLossRate: '0.002', horizonDays: 90 },
-  expired: { targetRate: '5', maxLossRate: NEVER_STOPS, horizonDays: 7 },
-};
 
 function alerting(): { now: () => number; maxAgeCandles: number } {
   return { now: () => ETH_DAILY.candles.at(-1)?.closeTime ?? 0, maxAgeCandles: 1_000_000 };

@@ -6,7 +6,7 @@ export
 COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
 
-.PHONY: help bootstrap config up down ps check contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants alert-mutants runlog-mutants telegram-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants identity-logs
+.PHONY: help bootstrap config up down ps check contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants alert-mutants runlog-mutants telegram-test goals-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants identity-logs
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -171,6 +171,13 @@ runlog-mutants: ## Prova que o registro cronológico da execução reprova 10 mu
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/runlog-mutants.ts
+
+goals-test: ## Prova as metas contra a API real e um Postgres de teste descartável: CRUD e isolamento entre usuários, avaliação estratégia x par de 5 pares em menos de 1 s com cache e ranking, simulação ao vivo atrelada à meta com os três desfechos (atingida, perda máxima, prazo) iguais à varredura independente, alerta GOAL uma vez por desfecho e reinício no meio sem duplicar desfecho nem alerta
+	set -a; . envs/env.test; set +a; \
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/goals-test.ts
 
 telegram-test: ## Prova o alerta no Telegram contra Postgres de teste descartável e uma Bot API falsa: vínculo por código (uso único, vencido, chat de outro dono), passo ao vivo que enfileira um alerta por sinal BUY/SELL, entrega ao chat do próprio dono com motivo e acerto histórico, retry com espera crescente e retry_after, desistência, queda e reinício sem duplicar, desvinculação, exportação e exclusão LGPD e log sem token nem chat
 	set -a; . envs/env.test; set +a; \
