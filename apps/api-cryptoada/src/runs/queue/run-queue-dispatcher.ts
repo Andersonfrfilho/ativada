@@ -8,8 +8,8 @@ import type {
 } from './run-queue-dispatcher.types.js';
 
 const NO_EXECUTOR_MESSAGE = 'Tipo de execução sem executor.';
-const RELEASE_TIMEOUT_MESSAGE = 'A devolução das execuções ao encerrar passou do prazo.';
-const CLAIM_LOST_MESSAGE = 'Outra instância recuperou uma execução que esta ainda rodava.';
+const SHUTDOWN_TIMEOUT_MESSAGE = 'O encerramento da fila passou do prazo.';
+const CLAIM_LOST_MESSAGE = 'Outra instância recuperou execuções que esta ainda rodava:';
 
 // A fila é o banco; este objeto só reivindica a próxima execução elegível (round-robin entre usuários, tetos por usuário
 // e tipo, tudo decidido pelo repositório), executa até o teto GLOBAL desta instância, mantém o batimento do que roda e
@@ -21,6 +21,7 @@ class RunQueueEngine {
   private isStopping = false;
   private isPumping = false;
   private isPumpRequested = false;
+  private pumpInFlight: Promise<void> | undefined;
 
   constructor(private readonly dependencies: RunQueueDispatcherDependencies) {}
 
@@ -49,22 +50,29 @@ class RunQueueEngine {
 
   async stop(): Promise<void> {
     this.haltLocally();
+    // Um claim em voo termina antes da devolução: a execução que ele reivindicou não é lançada (`isStopping`) e a
+    // devolução geral a leva de volta à fila.
+    await this.guarded(() => this.withinShutdownTimeout(this.pumpInFlight ?? Promise.resolve()));
     await this.endExecutions();
     // Se o banco não responde agora, o batimento vence e outra instância (ou o próximo boot) recupera a execução.
-    await this.guarded(() => this.releaseWithinTimeout());
+    await this.guarded(() => this.withinShutdownTimeout(this.releaseClaimedRuns()));
   }
 
-  private async releaseWithinTimeout(): Promise<void> {
+  private releaseClaimedRuns(): Promise<number> {
     const { queue, config } = this.dependencies;
+    return queue.releaseClaimedRuns({ claimedBy: config.instanceId });
+  }
+
+  private async withinShutdownTimeout(task: Promise<unknown>): Promise<void> {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const expiry = new Promise<never>((_resolve, reject) => {
       timer = setTimeout(
-        () => reject(new Error(RELEASE_TIMEOUT_MESSAGE)),
-        config.releaseTimeoutMilliseconds,
+        () => reject(new Error(SHUTDOWN_TIMEOUT_MESSAGE)),
+        this.dependencies.config.releaseTimeoutMilliseconds,
       );
     });
     try {
-      await Promise.race([queue.releaseClaimedRuns({ claimedBy: config.instanceId }), expiry]);
+      await Promise.race([task, expiry]);
     } finally {
       clearTimeout(timer);
     }
@@ -110,7 +118,7 @@ class RunQueueEngine {
   private async fillFreeSlots(): Promise<void> {
     while (!this.isStopping && this.active.size < this.dependencies.config.globalConcurrency) {
       const claimed = await this.claim();
-      if (claimed === undefined) return;
+      if (claimed === undefined || this.isStopping) return;
       this.launch(claimed);
     }
   }
@@ -121,14 +129,20 @@ class RunQueueEngine {
       return;
     }
     this.isPumping = true;
+    this.pumpInFlight = this.runPumpCycles();
     try {
-      do {
-        this.isPumpRequested = false;
-        await this.fillFreeSlots();
-      } while (this.isPumpRequested && !this.isStopping);
+      await this.pumpInFlight;
     } finally {
       this.isPumping = false;
+      this.pumpInFlight = undefined;
     }
+  }
+
+  private async runPumpCycles(): Promise<void> {
+    do {
+      this.isPumpRequested = false;
+      await this.fillFreeSlots();
+    } while (this.isPumpRequested && !this.isStopping);
   }
 
   private async maintain(): Promise<void> {
@@ -149,7 +163,11 @@ class RunQueueEngine {
     await this.guarded(async () => {
       const { queue, config } = this.dependencies;
       const { lost } = await queue.renewHeartbeat({ claimedBy: config.instanceId, runIds });
-      if (lost.length > 0) this.dependencies.reportUnexpectedError(new Error(CLAIM_LOST_MESSAGE));
+      if (lost.length > 0) {
+        this.dependencies.reportUnexpectedError(
+          new Error(`${CLAIM_LOST_MESSAGE} ${lost.join(', ')}`),
+        );
+      }
     });
   }
 

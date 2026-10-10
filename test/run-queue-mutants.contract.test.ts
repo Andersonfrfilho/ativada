@@ -61,17 +61,49 @@ const MUTANTS: readonly SourceMutant[] = [
     name: 'SHUTDOWN_LEAVES_THE_RUNS_RUNNING',
     edits: edit(
       DISPATCHER,
-      'queue.releaseClaimedRuns({ claimedBy: config.instanceId }), expiry',
-      'Promise.resolve(0), expiry',
+      'return queue.releaseClaimedRuns({ claimedBy: config.instanceId });',
+      'return Promise.resolve(0);',
     ),
   },
   {
     name: 'SHUTDOWN_WAITS_FOREVER_FOR_THE_RELEASE',
     edits: edit(
       DISPATCHER,
-      'await Promise.race([queue.releaseClaimedRuns({ claimedBy: config.instanceId }), expiry]);',
-      'await queue.releaseClaimedRuns({ claimedBy: config.instanceId });',
+      'this.withinShutdownTimeout(this.releaseClaimedRuns())',
+      'this.releaseClaimedRuns()',
     ),
+  },
+  {
+    name: 'SHUTDOWN_WAITS_FOREVER_FOR_A_CLAIM_IN_FLIGHT',
+    edits: edit(
+      DISPATCHER,
+      'this.withinShutdownTimeout(this.pumpInFlight ?? Promise.resolve())',
+      '(this.pumpInFlight ?? Promise.resolve())',
+    ),
+  },
+  {
+    name: 'SHUTDOWN_DOES_NOT_AWAIT_A_CLAIM_IN_FLIGHT',
+    edits: edit(
+      DISPATCHER,
+      'this.withinShutdownTimeout(this.pumpInFlight ?? Promise.resolve())',
+      'Promise.resolve()',
+    ),
+  },
+  {
+    name: 'SHUTDOWN_LAUNCHES_THE_CLAIM_IN_FLIGHT',
+    edits: edit(
+      DISPATCHER,
+      'if (claimed === undefined || this.isStopping) return;',
+      'if (claimed === undefined) return;',
+    ),
+  },
+  {
+    name: 'TIMER_REENTERS_SLOW_CYCLES',
+    edits: edit('runs/queue/interval-timers.ts', '        if (isRunning) return;\n', ''),
+  },
+  {
+    name: 'LOST_CLAIM_WITHOUT_THE_RUN_ID',
+    edits: edit(DISPATCHER, "`${CLAIM_LOST_MESSAGE} ${lost.join(', ')}`", 'CLAIM_LOST_MESSAGE'),
   },
   {
     name: 'SHUTDOWN_KEEPS_CLAIMING',

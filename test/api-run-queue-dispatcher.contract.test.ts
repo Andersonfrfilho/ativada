@@ -34,6 +34,7 @@ type Harness = {
     readonly renew: { claimedBy: string; runIds: readonly string[] }[];
     readonly reclaim: { heartbeatTimeoutSeconds: number; orphanPolicy: string }[];
     readonly release: string[];
+    readonly releasedWithClaimInFlight: boolean[];
     cancelInactive: number;
     terminate: number;
     readonly reported: unknown[];
@@ -44,7 +45,9 @@ type Harness = {
     claimFailures: number;
     failReclaim: boolean;
     hangRelease: boolean;
+    holdClaims: boolean;
   };
+  readonly resolveHeldClaims: () => void;
   readonly backlog: ClaimedRun[];
   readonly executions: Deferred[];
   readonly executed: { kind: RunKind; runId: string }[];
@@ -59,6 +62,7 @@ function build(options: { globalConcurrency?: number; backlog?: ClaimedRun[] } =
     renew: [] as { claimedBy: string; runIds: readonly string[] }[],
     reclaim: [] as { heartbeatTimeoutSeconds: number; orphanPolicy: string }[],
     release: [] as string[],
+    releasedWithClaimInFlight: [] as boolean[],
     cancelInactive: 0,
     terminate: 0,
     reported: [] as unknown[],
@@ -69,7 +73,9 @@ function build(options: { globalConcurrency?: number; backlog?: ClaimedRun[] } =
     claimFailures: 0,
     failReclaim: false,
     hangRelease: false,
+    holdClaims: false,
   };
+  const heldClaims: (() => void)[] = [];
   const executions: Deferred[] = [];
   const executed: { kind: RunKind; runId: string }[] = [];
   const intervals: {
@@ -93,6 +99,11 @@ function build(options: { globalConcurrency?: number; backlog?: ClaimedRun[] } =
           state.claimFailures -= 1;
           return Promise.reject(new Error('banco indisponível'));
         }
+        if (state.holdClaims) {
+          return new Promise((resolve) => {
+            heldClaims.push(() => resolve(backlog.shift()));
+          });
+        }
         return Promise.resolve(backlog.shift());
       },
       renewHeartbeat: (params) => {
@@ -106,6 +117,7 @@ function build(options: { globalConcurrency?: number; backlog?: ClaimedRun[] } =
       },
       releaseClaimedRuns: ({ claimedBy }) => {
         calls.release.push(claimedBy);
+        calls.releasedWithClaimInFlight.push(heldClaims.length > 0);
         if (state.hangRelease) return new Promise<number>(() => undefined);
         return Promise.resolve(0);
       },
@@ -149,7 +161,20 @@ function build(options: { globalConcurrency?: number; backlog?: ClaimedRun[] } =
     }
     await settle();
   }
-  return { dispatcher, calls, state, backlog, executions, executed, intervals, tick };
+  const resolveHeldClaims = (): void => {
+    for (const resolve of heldClaims.splice(0)) resolve();
+  };
+  return {
+    dispatcher,
+    calls,
+    state,
+    resolveHeldClaims,
+    backlog,
+    executions,
+    executed,
+    intervals,
+    tick,
+  };
 }
 
 async function settle(): Promise<void> {
@@ -294,6 +319,7 @@ describe('RunQueueDispatcher: batimento e órfãs', () => {
     harness.state.lost = ['r1'];
     await harness.tick(HEARTBEAT_INTERVAL);
     expect(harness.calls.reported).toHaveLength(1);
+    expect((harness.calls.reported[0] as Error).message).toContain('r1');
   });
 
   test('a ronda periódica recupera órfãs, cancela contas inativas e reivindica o que chegou', async () => {
@@ -346,6 +372,36 @@ describe('RunQueueDispatcher: encerramento', () => {
     expect(harness.executed.map((entry) => entry.runId)).toStrictEqual(['r1']);
   });
 
+  test('claim em voo durante o stop: nada é executado e a execução reivindicada é devolvida DEPOIS do claim', async () => {
+    const harness = build({ backlog: [run('r1')], globalConcurrency: 1 });
+    harness.state.holdClaims = true;
+    await harness.dispatcher.dispatch({ runId: 'r1', kind: RUN_KIND.BACKTEST });
+    await settle();
+    const stopping = harness.dispatcher.stop();
+    await settle();
+    expect(harness.calls.release).toHaveLength(0);
+    harness.resolveHeldClaims();
+    await stopping;
+    expect(harness.executed).toHaveLength(0);
+    expect(harness.dispatcher.activeCount()).toBe(0);
+    expect(harness.calls.release).toStrictEqual([INSTANCE_ID]);
+    expect(harness.calls.releasedWithClaimInFlight).toStrictEqual([false]);
+  });
+
+  test('claim que nunca responde não prende o stop: o prazo vence, reporta e devolve', async () => {
+    const harness = build({ backlog: [run('r1')], globalConcurrency: 1 });
+    harness.state.holdClaims = true;
+    await harness.dispatcher.dispatch({ runId: 'r1', kind: RUN_KIND.BACKTEST });
+    await settle();
+    const winner = await Promise.race([
+      harness.dispatcher.stop().then(() => 'stopped'),
+      Bun.sleep(1_000).then(() => 'hung'),
+    ]);
+    expect(winner).toBe('stopped');
+    expect(harness.calls.reported).toHaveLength(1);
+    expect(harness.calls.release).toStrictEqual([INSTANCE_ID]);
+  });
+
   test('abandon simula a morte do processo: termina as threads e NÃO toca a fila', async () => {
     const harness = build({ backlog: [run('r1')] });
     await harness.dispatcher.start();
@@ -354,6 +410,27 @@ describe('RunQueueDispatcher: encerramento', () => {
     expect(harness.calls.terminate).toBe(1);
     expect(harness.calls.release).toHaveLength(0);
     expect(harness.intervals.every((entry) => entry.isCancelled)).toBe(true);
+  });
+});
+
+describe('temporizador da fila', () => {
+  test('um ciclo lento não reentra: as batidas enquanto ele roda são puladas', async () => {
+    const timers = app.intervalTimers.createIntervalTimers();
+    let started = 0;
+    let finishCycle: () => void = () => undefined;
+    const cancel = timers.every(5, () => {
+      started += 1;
+      return new Promise<void>((resolve) => {
+        finishCycle = resolve;
+      });
+    });
+    await Bun.sleep(60);
+    expect(started).toBe(1);
+    finishCycle();
+    await Bun.sleep(30);
+    expect(started).toBe(2);
+    cancel();
+    finishCycle();
   });
 });
 
