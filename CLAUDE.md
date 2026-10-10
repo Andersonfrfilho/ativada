@@ -97,6 +97,18 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   (`bun run scripts/record-metrics-golden.ts`). Prova: contas à mão, 2.000 séries de propriedades, dourado dos dois conjuntos
   reais, 31 mutantes (`test/metrics-mutants.contract.test.ts`) e o oráculo Python
   `test/fixtures/strategy-engine/oracle/metrics_reference.py` (uso no ADR; não roda na CI).
+- **Persistência de estratégias e execuções (T3.1, ADR 0002 §"Persistência (T3.1)").** `strategies`, `strategy_versions`,
+  `runs` (0007) e `signals`, `orders`, `fills`, `positions`, `equity_points`, `run_commands`, `sentiment_observations`
+  (0008), em quatro repositórios (`createStrategyRepository`, `createRunRepository`, `createRunResultRepository`,
+  `createSentimentObservationRepository`). Dono em toda tabela, FK composta `(pai_id, user_id)` e `ON DELETE RESTRICT`;
+  o resultado grava em LOTE (`append*`: uma transação, blocos ≤ 5.000 linhas e < 60.000 parâmetros, idempotente por
+  chave natural; `orders` e `positions` com upsert de status monotônico, `signals`/`fills`/`equity_points`/`run_commands`
+  com `DO NOTHING`). Versão de estratégia = hash da configuração: hash igual devolve a mesma versão. Valores do motor são
+  `numeric` sem precisão e `jsonb` só aceita objeto/lista (`sql.param(valor)::jsonb`); o cursor de `runs` leva
+  `created_at::text` (microssegundos). `sentiment_observations` é pública e imutável por GATILHO (UPDATE, DELETE e
+  TRUNCATE), com `created_at` = instante em que o valor ficou conhecido. Prova: `make database-test` (lote sintético de
+  17.520 + 4.000 + 300 em ~1 s, monotonicidade, isolamento, FK composta, paginação), `make lgpd-test` (exportação e
+  purga das 9 tabelas) e os contratos `strategy-persistence-schema` e `ownership-registry`.
 - Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account

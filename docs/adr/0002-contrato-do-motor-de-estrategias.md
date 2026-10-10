@@ -112,11 +112,11 @@ corrente — nenhuma decisão é carimbada no passado:
 
 | Campo | Conteúdo | Tabela (plan §3) |
 |---|---|---|
-| `signal` | `null` no aquecimento; depois, um por candle: `action`, `score`, `regime`, `votes[]` (`ruleId`, `family`, `vote`, `weight`, `isMissing`), `indicators` (ids com espaço de nome, achatados), `sentiment` (a observação usada, nula se ausente/velha), `reason` | `signals` (único por `run_id, candle_time`) |
-| `commands[]` | comandos do passo: `commandId`, `kind`, `reason`, `issuedAt` e `status` (`applied`, ou `ignored_duplicate` quando o `commandId` já foi processado) | `run_commands` (T3.1) |
+| `signal` | `null` no aquecimento; depois, um por candle: `action`, `score`, `regime`, `votes[]` (`ruleId`, `family`, `vote`, `weight`, `isMissing`), `indicators` (ids com espaço de nome, achatados), `sentiment` (a observação usada, nula se ausente/velha), `reason` | `signals` (único por `run_id, candle_time`; a observação vai em `sentiment_observation jsonb`) |
+| `commands[]` | comandos do passo: `commandId`, `kind`, `reason`, `issuedAt` e `status` (`applied`, ou `ignored_duplicate` quando o `commandId` já foi processado) | `run_commands` (único por `run_id, command_id`: o primeiro registro vale) |
 | `orders[]` | eventos do ciclo de vida: `created`, `filled`, `cancelled`, `expired`, `rejected` (com `reason`), por `orderKey`; `price`/`quantity` só no `filled`; `triggerPrice` (stop/alvo) só nas saídas protetoras; `riskAmount`, `stopDistance`, `targetDistance`, `limitPrice`, `eligibleCandles` na entrada | `orders` (status monotônico) |
-| `fills[]` | `orderKey`, `positionKey`, lado, `price`, `quantity`, `notional`, `fee` | `fills` |
-| `openedPositions[]` / `closedPositions[]` | abertura (preço, quantidade, stop, alvo, taxa) e fechamento (preço de saída, taxas, `netProfit`, `exitReason`) | `positions` |
+| `fills[]` | `orderKey`, `positionKey`, lado, `price`, `quantity`, `notional`, `fee` | `fills` (único por `run_id, order_key, candle_time`) |
+| `openedPositions[]` / `closedPositions[]` | abertura (preço, quantidade, stop, alvo, taxa) e fechamento (preço de saída, taxas, `netProfit`, `exitReason`, inclusive `gap`) | `positions` (uma linha por `engine_key`, `open` → `closed`; o chamador junta abertura e fechamento) |
 | `equityPoint` | `equity` e `benchmark` a valor de liquidação no fechamento, e `equityAtLow` (o vale do candle: o menor entre a posição que EXISTIU durante o candle valorada na mínima e o valor ao fim do passo, §e — perda máxima da meta e piso do RF09) | `equity_points` |
 
 **Guarda de entrada (`assertStepInput`, `assertSignalStepInput`, `assertWalletStepInput`).** Recusa em voz
@@ -1046,6 +1046,32 @@ seção "Prova" abaixo.
   a ser o último ponto que alcançou o valor máximo, de modo que a volta exata ao pico encerra a queda anterior; a
   exposição conta fechamentos com posição, então uma operação aberta e fechada no mesmo candle (stop) não conta.
 
+## Persistência (T3.1)
+
+Entregue em `packages/database` (migrations 0007 e 0008); o mapeamento de §a (tabela "O que entra em `decisions`")
+e as chaves naturais de §b valem como escritos. O que a implementação fixou:
+
+| Decisão | Valor | Motivo |
+|---|---|---|
+| Dono e integridade | `user_id NOT NULL` em toda tabela de dono; `UNIQUE (id, user_id)` nos pais (`strategies`, `strategy_versions`, `runs`); FK composta `(pai_id, user_id)` nas filhas (`strategy_versions`, `runs` — duas, para a versão e para `migrated_from_run_id` —, `signals`, `orders`, `fills`, `positions`, `equity_points`, `run_commands`), todas `ON DELETE RESTRICT` | O banco recusa linha cujo dono diverge do dono do pai (provado com INSERT cru nas seis tabelas de resultado) e apagar estratégia ou versão com execuções |
+| Versão da estratégia | único `(strategy_id, version)` e único `(strategy_id, config_hash)`; `addVersion` devolve a versão existente quando o hash repete, e o `FOR UPDATE` na linha da estratégia serializa a numeração | Hash igual NÃO gera versão nova (RF03), nem sob concorrência |
+| Status monotônico | `orders`: `created` < qualquer final; `positions`: `open` < `closed`; `DO UPDATE … WHERE rank(novo) > rank(gravado) AND user_id igual`; os campos que o evento novo traz nulos mantêm o valor anterior (`coalesce`); `runs.status` só aceita a origem válida no `WHERE` do UPDATE e o checkpoint só grava com `running` e `last_candle_time` maior | Evento atrasado ou reenvio nunca regride um estado final; um final nunca vira outro final |
+| Lote | `append*` = uma transação por chamada; blocos de no máximo 5.000 linhas e menos que 60.000 parâmetros; as linhas do mesmo `engine_key` no lote são colapsadas antes do INSERT | O Postgres recusa o `ON CONFLICT DO UPDATE` que afeta a mesma linha duas vezes; o protocolo limita a 65.535 parâmetros |
+| Decimais | `numeric` sem precisão nas colunas vindas do motor | O motor emite até 15 algarismos significativos em distâncias; `numeric(24,8)` arredondaria em silêncio e o reenvio deixaria de ser byte a byte igual |
+| `sentiment_observations` imutável | **Gatilho**, não `REVOKE`: `BEFORE UPDATE OR DELETE` por linha e `BEFORE TRUNCATE` levantam `sentiment_observations é append-only` | O aplicativo conecta com o mesmo papel que dono da tabela, e `REVOKE` não vale contra o dono nem contra o superusuário; o gatilho vale para qualquer papel que não o desabilite de propósito (`ALTER TABLE … DISABLE TRIGGER` exige ser dono). Provado por UPDATE e DELETE crus |
+| Seleção do sentimento | `observed_at ≤ t` **e** `created_at ≤ corte de inserção`, da fonte pedida; empate em `observed_at` vale a inserida por último (`created_at`, depois `id`) | Regra de §d; o corte compara com precisão de milissegundo (a linha de .123456 não entra no corte .123) |
+| Execução órfã | `failOrphanedRuns({ kinds, errorCode })`: `running` de `backtest`/`walk_forward` vira `failed` com `finished_at`; devolve só a contagem | Uso do boot (T3.6); a simulação ao vivo e `queued` nunca são tocadas. É a única operação de repositório sem `OwnerScope` (ADR 0001 §e, regra 7) |
+
+**Medida (RNF01, T3.2).** Gravação em lote de uma execução sintética de 17.520 pontos de patrimônio, 4.000 sinais e
+300 ordens, 300 preenchimentos, 300 posições e 20 comandos, num Postgres local descartável: **~1,0 s** (pontos
+~0,66 s, sinais ~0,27 s, o resto ~0,08 s), meta < 1,5 s do `make database-test`. O reenvio do mesmo lote grava 0
+linhas e deixa a contagem e o digest das seis tabelas idênticos.
+
+**Exportação e exclusão (LGPD).** As nove tabelas de dono entram em `OWNED_TABLE_EXPORTS` (por colunas, sem
+`user_id`, `engineState` nem os hashes `config_hash`/`run_hash`, que o contrato de colunas secretas também barra) e na
+ordem de exclusão `equity_points`, `run_commands`, `fills`, `positions`, `orders`, `signals`, `runs`,
+`strategy_versions`, `strategies`; `sentiment_observations` é pública (`UNOWNED_PUBLIC_TABLES`).
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
@@ -1079,7 +1105,7 @@ seção "Prova" abaixo.
   código de produção.
 - T3.1 cria as colunas e tabelas de §a/§b/§d (`runs.engine_state`, `engine_version`, `run_parameters`,
   `run_hash`, `migrated_from_run_id`, `engine_key` em `orders` e `positions`, `signals.regime`,
-  `signals.sentiment`, `equity_points.equity_at_low`, `run_commands`, `sentiment_observations`).
+  `signals.sentiment_observation`, `equity_points.equity_at_low`, `run_commands`, `sentiment_observations`).
 - T3.2 (backtest) e T4.1 (ao vivo) são laços sobre `step` com a persistência de §b; T4.2 (paridade)
   compara as duas execuções com os mesmos `leadInCandles` e as mesmas lacunas declaradas.
 - Mudar a semântica do motor exige nova `engineVersion` e novo golden; execuções em curso migram (§b).
