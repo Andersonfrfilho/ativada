@@ -9,6 +9,9 @@ export const ENGINE_STATE_VERSION = 1 as const;
 // Versão da semântica da metade SINAL (votos, regime, placar, motivo): o dourado do Placar clássico é
 // preso a ela. Mudar a saída exige nova versão e novo dourado; a T2.5 a integra à `engineVersion`.
 export const SIGNAL_ENGINE_VERSION = 'signal-2';
+// Versão da semântica do motor COMPLETO (sinal + modelo de preenchimento + política da carteira): é ela que
+// o estado grava. Saída diferente exige nova versão e novo dourado; estado de outra versão migra (§b).
+export const ENGINE_VERSION = 'engine-1';
 
 // Teto de combinações da grade do walk-forward (RNF02); a grade em si é parâmetro da execução (T3.3).
 export const MAX_WALK_FORWARD_COMBINATIONS = 200;

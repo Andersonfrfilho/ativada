@@ -31,6 +31,7 @@ export {
   ENGINE_STATE_VERSION,
   ENGINE_TIMEFRAME,
   ENGINE_TIMEFRAME_DURATION_MILLISECONDS,
+  ENGINE_VERSION,
   INDICATOR_NAMESPACE,
   INDICATOR_SIGNIFICANT_DIGITS,
   LN_INVERSE_CONVERGENCE_EPSILON,
@@ -136,6 +137,7 @@ export {
   type StoredSentimentObservation,
 } from './sentiment.js';
 export { ruleLabel } from './rule-label.js';
+export { createEngine } from './create-engine.js';
 export { computePositionSize } from './risk/position-size.js';
 export { computeProtectivePrices } from './risk/protective-prices.js';
 export * from './risk/risk.constant.js';

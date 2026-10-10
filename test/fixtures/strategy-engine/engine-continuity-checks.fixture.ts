@@ -134,6 +134,11 @@ function refusalCode(context: CheckContext, input: StepInput): string {
   }
 }
 
+// Outro par que o da execução, qualquer que seja ele.
+function otherSymbol(symbol: string): string {
+  return symbol === 'ETHUSDT' ? 'BTCUSDT' : 'ETHUSDT';
+}
+
 function guardCases(context: CheckContext): GuardCase[] {
   const { scenario } = context;
   const [, second, third, fourth] = scenario.candles;
@@ -168,7 +173,7 @@ function guardCases(context: CheckContext): GuardCase[] {
     {
       label: 'outro par',
       code: code.CANDLE_WRONG_MARKET,
-      input: { ...base, candle: { ...third, symbol: 'ETHUSDT' } },
+      input: { ...base, candle: { ...third, symbol: otherSymbol(scenario.run.parameters.symbol) } },
     },
     {
       label: 'fora da grade',
