@@ -12,6 +12,7 @@ import {
 import { findFirstViolation } from '../wallet/wallet-properties.fixture.js';
 import type { EngineApi } from './engine-api.fixture.js';
 import { countEnumerationsAfterEachCall } from './hash-probe.fixture.js';
+import { findRoundingDeviation } from './rounding-hand-values.fixture.js';
 import { buildProductionScenarios } from './production-scenarios.fixture.js';
 import { buildEchoedGapInput, buildWalletGuardCases } from './wallet-guard-cases.fixture.js';
 
@@ -20,6 +21,7 @@ import { buildEchoedGapInput, buildWalletGuardCases } from './wallet-guard-cases
 export const JUDGE_STAGE = {
   GUARDS: 'guards',
   ENGINE_API: 'engine-api',
+  HAND_VALUES: 'hand-values',
   DIFFERENTIAL: 'differential',
   PROPERTIES: 'properties',
   HARNESS: 'harness',
@@ -156,5 +158,7 @@ export function judgeEngineApiAgainstReference(params: JudgeParams): JudgeVerdic
   }
   const violation = findFirstViolation(api.walletStep, params.flowCount);
   if (violation !== undefined) return { stage: JUDGE_STAGE.PROPERTIES, detail: violation };
+  const deviation = findRoundingDeviation(api.walletStep);
+  if (deviation !== undefined) return { stage: JUDGE_STAGE.HAND_VALUES, detail: deviation };
   return judgeHarness(api);
 }

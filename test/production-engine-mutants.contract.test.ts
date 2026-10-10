@@ -11,6 +11,7 @@ import {
   loadEngineMutantApi,
   type EngineSourceEdit,
 } from './fixtures/strategy-engine/production/engine-mutation.fixture.js';
+import { findRoundingDeviation } from './fixtures/strategy-engine/production/rounding-hand-values.fixture.js';
 import { removeMutants } from './fixtures/strategy-engine/signal/signal-mutation.fixture.js';
 
 const MUTANT_TIMEOUT_MILLISECONDS = 120_000;
@@ -227,6 +228,24 @@ const FILL_MUTANTS: readonly Mutant[] = [
       VALUATION,
       '(position) => position.exitReason === EXIT_REASON.TARGET',
       '(position) =>\n      position.exitReason === EXIT_REASON.TARGET || position.exitReason === EXIT_REASON.STOP',
+    ),
+    stage: JUDGE_STAGE.DIFFERENTIAL,
+  },
+  {
+    name: 'SELL_CREDIT_ROUNDED_UP',
+    edits: edit(
+      PRICING,
+      'return moneyDown(notional).minus(tradeFee(notional, parameters));',
+      'return moneyUp(notional).minus(tradeFee(notional, parameters));',
+    ),
+    stage: JUDGE_STAGE.DIFFERENTIAL,
+  },
+  {
+    name: 'BUY_DEBIT_ROUNDED_DOWN',
+    edits: edit(
+      PRICING,
+      'return moneyUp(notional).plus(tradeFee(notional, parameters));',
+      'return moneyDown(notional).plus(tradeFee(notional, parameters));',
     ),
     stage: JUDGE_STAGE.DIFFERENTIAL,
   },
@@ -492,6 +511,17 @@ describe('production engine: the guards, the differential and the harness reject
     MUTANT_TIMEOUT_MILLISECONDS,
   );
 
+  test.each([['SELL_CREDIT_ROUNDED_UP'], ['BUY_DEBIT_ROUNDED_DOWN']])(
+    'the hand values alone also reject %s',
+    async (name) => {
+      const mutant = SOURCE_MUTANTS.find((candidate) => candidate.name === name);
+      if (mutant === undefined) throw new Error(`Mutante ${name} ausente.`);
+      const api = await loadEngineMutantApi(mutant);
+      expect(findRoundingDeviation(api.walletStep)).toBeDefined();
+    },
+    MUTANT_TIMEOUT_MILLISECONDS,
+  );
+
   test('the mutants the brief listed are all there', () => {
     const names = SOURCE_MUTANTS.map((mutant) => mutant.name);
     for (const mandatory of [
@@ -516,6 +546,8 @@ describe('production engine: the guards, the differential and the harness reject
       'EQUITY_AT_LOW_MARKED_AT_THE_CLOSE',
       'EQUITY_LOW_IGNORES_EXITING_POSITION',
       'EQUITY_LOW_COUNTS_STOP_AT_LOW',
+      'SELL_CREDIT_ROUNDED_UP',
+      'BUY_DEBIT_ROUNDED_DOWN',
       'CONTIGUITY_NOT_CHECKED',
       'HASHES_NOT_CHECKED',
       'RUN_HASH_NOT_RECOMPUTED',

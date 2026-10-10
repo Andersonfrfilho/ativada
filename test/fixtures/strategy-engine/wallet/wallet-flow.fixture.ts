@@ -64,6 +64,8 @@ const PROFILES: readonly MarketProfile[] = [
   { tickSize: '0.0001', quantityStep: '1', minNotional: '5', basePrice: '0.5' },
   { tickSize: '1', quantityStep: '0.1', minNotional: '10', basePrice: '100' },
   { tickSize: '0.00000001', quantityStep: '1000', minNotional: '1', basePrice: '0.00002' },
+  // Notional de 11 casas: o arredondamento do dinheiro (8 casas) deixa de ser um no-op.
+  { tickSize: '0.00000001', quantityStep: '0.001', minNotional: '1', basePrice: '0.00002' },
 ];
 const FEE_RATES = ['0', '0.0005', '0.001', '0.0075', '0.01'] as const;
 const SLIPPAGE_RATES = ['0', '0.0005', '0.001', '0.005', '0.02'] as const;

@@ -4,6 +4,7 @@ import {
   walletStep,
   type EngineCommand,
   type OpenPositionState,
+  type RunSetup,
   type PendingOrderState,
   type SignalAction,
   type StrategyVersion,
@@ -82,21 +83,26 @@ export type HandStepParams = {
   readonly commands?: readonly EngineCommand[];
   readonly gapCandles?: number;
   readonly strategy?: StrategyVersion;
+  readonly run?: RunSetup;
+  // Executa o passo; o padrão é o `walletStep` de produção (o juiz de mutantes passa o da cópia mutada).
+  readonly walletStepImplementation?: typeof walletStep;
 };
 
 // Um `walletStep` AVULSO sobre o candle seguinte ao de decisão (ou depois de `gapCandles` ausentes).
 export function handStep(params: HandStepParams): WalletStepResult {
   const strategy = params.strategy ?? HAND_STRATEGY;
+  const run = params.run ?? HAND_RUN;
+  const execute = params.walletStepImplementation ?? walletStep;
   const gapCandles = params.gapCandles ?? 0;
   const fillers = Array.from({ length: gapCandles }, () => QUIET_CANDLE);
   const candle = buildCandles([DECISION_CANDLE, ...fillers, params.candle]).at(-1);
   if (candle === undefined) throw new Error('Candle ausente.');
   const action = params.action === undefined ? 'HOLD' : params.action;
-  return walletStep({
+  return execute({
     strategy,
-    run: HAND_RUN,
+    run,
     state: {
-      ...createInitialWalletState({ strategy, run: HAND_RUN }),
+      ...createInitialWalletState({ strategy, run }),
       lastCandleOpenTime: DECISION_OPEN_TIME,
       ...params.state,
     },
