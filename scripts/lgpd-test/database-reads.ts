@@ -64,3 +64,14 @@ export async function countNullActorRows(context: LgpdContext, action: string): 
     WHERE action = ${action} AND actor_user_id IS NULL AND target_id IS NULL AND ip IS NULL`;
   return (rows as readonly CountRow[])[0]?.total ?? 0;
 }
+
+export async function countOwnedRows(
+  context: LgpdContext,
+  params: { readonly table: string; readonly userId: string },
+): Promise<number> {
+  const rows: unknown = await context.sql.unsafe(
+    `SELECT count(*)::int AS total FROM ${params.table} WHERE user_id = $1`,
+    [params.userId],
+  );
+  return (rows as readonly CountRow[])[0]?.total ?? 0;
+}

@@ -2,10 +2,15 @@
 import { attemptLoginRedirects } from '../admin-test/admin-login.js';
 import type { Actor } from '../admin-test/admin-test-context.js';
 import { buildAdminUrl, fetchMasterAdminToken } from '../identity-test/keycloak-client.js';
+import {
+  PERSISTENCE_EXPECTED_ROWS,
+  PERSISTENCE_TABLES,
+} from '../../packages/database/test-support/persistence-lgpd-checks.js';
 import { sendRequest } from '../identity-test/http-client.js';
 import { assertCondition } from '../identity-test/identity-test.error.js';
 import {
   countAuditReferences,
+  countOwnedRows,
   countLinkCodes,
   countNullActorRows,
   readUserId,
@@ -53,6 +58,17 @@ export async function takeBaseline(
   return { userIdOfA, userIdOfB, audit: await snapshotAudit(context, { userIdOfA, userIdOfB }) };
 }
 
+async function assertPersistenceRows(
+  context: LgpdContext,
+  params: { readonly userId: string; readonly isPurged: boolean },
+): Promise<void> {
+  for (const table of PERSISTENCE_TABLES) {
+    const count = await countOwnedRows(context, { table, userId: params.userId });
+    const expected = params.isPurged ? 0 : PERSISTENCE_EXPECTED_ROWS[table];
+    assertCondition(count === expected, `${table}: ${count} linhas (esperado ${expected})`);
+  }
+}
+
 async function assertOwnerBUntouched(
   context: LgpdContext,
   owners: LgpdOwners,
@@ -68,6 +84,7 @@ async function assertOwnerBUntouched(
     'B ganhou estado de exclusão',
   );
   assertCondition((await countLinkCodes(context, baseline.userIdOfB)) === 1, 'código de B');
+  await assertPersistenceRows(context, { userId: baseline.userIdOfB, isPurged: false });
   assertCondition(
     (await countAuditReferences(context, baseline.userIdOfB)) === baseline.audit.referencingB,
     'a auditoria de B mudou',
@@ -102,10 +119,11 @@ export async function checkFirstCronRun(
   );
   assertCondition(row.display_name === null && row.telegram_chat_id === null, 'A não anonimizado');
   assertCondition((await countLinkCodes(context, baseline.userIdOfA)) === 0, 'códigos de A restam');
+  await assertPersistenceRows(context, { userId: baseline.userIdOfA, isPurged: true });
   await assertOwnerBUntouched(context, owners, baseline);
   reportLgpdStep(
     'cron (main.ts, carência de 24 h)',
-    'A apagado no Keycloak, dados purgados e pessoais anulados, as duas colunas preenchidas, a linha fica pela carência; B intacto',
+    'A apagado no Keycloak, dados purgados (inclusive as 9 tabelas de estratégia/execução/resultado) e pessoais anulados, as duas colunas preenchidas, a linha fica pela carência; B intacto',
   );
   return run;
 }

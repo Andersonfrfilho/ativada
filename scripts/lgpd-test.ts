@@ -27,6 +27,7 @@ import {
 } from './lgpd-test/check-purge.js';
 import { TEMPORARY_DATABASE_PREFIX } from './lgpd-test/lgpd-test.constant.js';
 import type { LgpdContext } from './lgpd-test/lgpd-test-context.js';
+import { seedPersistence } from './lgpd-test/seed-persistence.js';
 import { setUpOwners } from './lgpd-test/setup-owners.js';
 
 async function runChecks(context: LgpdContext): Promise<void> {
@@ -35,6 +36,7 @@ async function runChecks(context: LgpdContext): Promise<void> {
   const telegram = startFakeTelegramServer(context.api.environment.TELEGRAM_API_BASE_URL);
   try {
     const owners = await setUpOwners(context);
+    await seedPersistence(context, owners);
     await checkExports(context, owners);
     await checkDeletionStep1(context, owners);
     const baseline = await takeBaseline(context, owners);

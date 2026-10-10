@@ -1,5 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { Actor } from '../admin-test/admin-test-context.js';
+import {
+  PERSISTENCE_EXPECTED_ROWS,
+  PERSISTENCE_TABLES,
+} from '../../packages/database/test-support/persistence-lgpd-checks.js';
 import { assertCondition } from '../identity-test/identity-test.error.js';
 import { readUserId } from './database-reads.js';
 import {
@@ -63,7 +67,16 @@ function assertOwnData(response: ExportResponse, own: Side): ExportBody {
     .sort()
     .join();
   assertCondition(columns === 'attempts,createdAt,expiresAt', `colunas do código: ${columns}`);
+  assertCondition(!('deletedAt' in account), 'o estado de exclusão da conta não é exportado');
+  assertPersistenceTables(tables);
   return body;
+}
+
+function assertPersistenceTables(tables: ExportBody['data']['tables']): void {
+  for (const table of PERSISTENCE_TABLES) {
+    const count = tables[table]?.length ?? -1;
+    assertCondition(count === PERSISTENCE_EXPECTED_ROWS[table], `exportação de ${table}: ${count}`);
+  }
 }
 
 async function assertNothingForeign(
@@ -80,7 +93,10 @@ async function assertNothingForeign(
     'keycloak',
     'codeHash',
     'code_hash',
-    'deletedAt',
+    'engineState',
+    'engine_state',
+    'configHash',
+    'runHash',
   ];
   for (const value of foreign) {
     assertCondition(!text.includes(value), 'a exportação vazou dado do outro usuário');
@@ -112,7 +128,7 @@ export async function checkExports(context: LgpdContext, owners: LgpdOwners): Pr
   assertAuditAsTarget(bodyOfA);
   reportLgpdStep(
     'GET /v1/me/export de A',
-    'attachment no-store com perfil, e-mail, chat e código pendente (sem hash) e a auditoria como alvo sem IP do admin; nada de B',
+    'attachment no-store com perfil, e-mail, chat, código pendente (sem hash), as 9 tabelas de estratégia/execução/resultado (sem estado do motor) e a auditoria como alvo sem IP do admin; nada de B',
   );
   const exportOfB = await fetchExport(context, owners.ownerB);
   assertOwnData(exportOfB, sideOfB);
