@@ -263,6 +263,7 @@ O pré-aquecimento é derivado da lógica (§c), não um campo.
 | `schemaVersion` | `1` | — |
 | `symbol` | `^[A-Z0-9]{2,16}USDT$` (saldo em USDT — D7) | obrigatório |
 | `timeframe` | `15m`/`1h`/`4h`/`1d` | obrigatório |
+| `sentimentSource` | texto de 1 a 64 caracteres: a fonte das observações de sentimento que a execução lê (§f); entra no `runHash` | obrigatório |
 | `initialBalance` | [10, 10⁹] — `numeric(24,8)` guarda 16 dígitos inteiros; 10⁹ deixa folga para quantidade × preço e taxa sem estourar a coluna | 10 000 |
 | `feeRate` / `slippageRate` | [0, 1%] / [0, 5%] | 0,1% / 0,05% |
 | `tickSize`, `quantityStep`, `minNotional` | filtros da corretora | 0,01 / 0,00001 / 5 (BTCUSDT) |
@@ -378,6 +379,17 @@ seja inteiro finito 0..100. Idade exata: `closeTime − observedAt > 48 h` ⇒ a
 vale; `resolveFreshSentiment`). Observação ausente ou velha ⇒ voto `0` com `isMissing: true`. O sinal
 grava a observação usada (`signal.sentiment`).
 
+**Fonte, corte de inserção e paridade (T2.3).** A fonte é parâmetro da execução
+(`RunParameters.sentimentSource`, dentro do `runHash`): trocá-la é outra execução, nunca a mesma com
+resultado diferente. O chamador seleciona com `selectAvailableSentiment({ observations, closeTime, source,
+insertionCutoff })`, que só considera linhas da `source` da execução, com `createdAt ≤ insertionCutoff`
+(o início da execução no backtest: uma linha gravada depois — histórico reescrito, atraso novo — nunca muda
+um resultado já calculado) e `observedAt ≤ closeTime`; o `createdAt` fica fora do que o motor recebe. O
+`signalStep` repete a defesa: observação de outra fonte nunca vota (dado ausente). **Regra de paridade: o
+backtest usa a fonte coletada AO VIVO quando ela existir para o período, e a fonte histórica (data + atraso
+de publicação) só onde faltar**, para que o backtest veja o que o ao vivo viu; cada uma é uma `source`
+distinta, então a escolha fica registrada no `runHash`.
+
 **Aquecimento e dado ausente.** Nenhum sinal antes de `leadInCandles` candles. Depois do aquecimento,
 valor ausente ou não finito de indicador de candle é **erro**; só o sentimento pode faltar.
 
@@ -394,6 +406,57 @@ valor ausente ou não finito de indicador de candle é **erro**; só o sentiment
   `Fear & Greed`.
 
 A T2.3 implementa o formato e o prende por tabela de cenários.
+
+### f2) Votos, placar e motivo — como a T2.3 fixou (T2.3)
+
+- **Votos estritos.** Só `−1`, `0` ou `+1`; comparações `>`/`<` em `number`, empate vota `0`. Donchian: o
+  valor corrente do indicador inclui o candle atual, então o rompimento compara o fechamento com o canal do
+  candle ANTERIOR, guardado no estado ao lado do snapshot (`previous:rule:<id>`); por isso o aquecimento da
+  regra conta um candle a mais (`period + 1`, em `collectIndicatorHorizons`). RSI: `< oversold` compra,
+  `> overbought` vende (platô = 50 ⇒ 0). Bollinger: fecha abaixo da inferior compra, acima da superior vende.
+  OBV: acima da EMA compra. Fear & Greed: `≤ fearAtOrBelow` compra, `≥ greedAtOrAbove` vende (inclusivos).
+- **Antes do aquecimento o passo não decide**: `signal: null` (o `HOLD` aqui seria uma linha em `signals`
+  que o contrato proíbe — `firstSignalCandleOpenTime` e a régua nascem com o primeiro sinal). Depois do
+  aquecimento, indicador sem valor (de regra, ATR ou ADX) é `IndicatorError` com código `MISSING_VALUE`; só o
+  sentimento pode faltar.
+- **Regime.** `adx >= trendThreshold` (inclusivo) ⇒ `trending`; senão `ranging`; sem filtro, `none` e todo
+  peso `1`. O ADX vem do fechamento corrente (nunca do seguinte).
+- **Pontuação.** Soma de `voto × peso(família, regime)` em `decimal.js`, texto canônico. `BUY` se
+  `score ≥ buy`; `SELL` se `score ≤ sell`; senão `HOLD`. Limiares inclusivos; as faixas não se sobrepõem
+  (`buy > 0 > sell` no schema). Empate (votos de sinais opostos que se anulam, soma `0`) é `HOLD`.
+- **Indicadores gravados** (`signal.indicators`): `rule:<id>` (achatado: `rule:macd-12-26-9.signal`),
+  `risk:atr` e `regime:adx.adx` / `.minusDi` / `.plusDi` (o ADX tem três saídas, então segue o
+  achatamento); a regra de sentimento grava o valor usado ou `null`.
+- **Motivo.** `<Ação> · pontuação <±N> · <regime> · compra: … · venda: … · neutras: …[ · sem dado: …]`,
+  `Ação ∈ {Compra, Venda, Neutro}`, pontuação com sinal explícito quando positiva (`+2.5`, `0`, `-1.5`),
+  ponto decimal, regras na ordem da configuração separadas por `, `, lista vazia = `nenhuma`; a regra sem
+  dado aparece só em `sem dado`. ADX truncado em uma casa por `formatTruncatedAdx` (24,96 ⇒ `24.9`).
+  Sem `toLocale*`, `Intl` nem relógio.
+- **`SIGNAL_ENGINE_VERSION = 'signal-1'`** prende o dourado do Placar clássico
+  (`test/fixtures/strategy-engine/golden/classic-scoreboard-signals.signal-1.json`): saída diferente sem
+  trocar a versão reprova; trocar a versão exige gravar o novo dourado. A T2.5 integra a versão à
+  `engineVersion` do motor completo.
+- **Prova** (T2.3): tabela de cenários escrita à mão (`scoreboard-scenarios`), tabela de votos por tipo,
+  regime, peso e ADX exibido (`rule-cases`), seleção de sentimento (`selection-cases`),
+  `runSignalContract` (determinismo, imutabilidade, serialização, carimbo, sem lookahead — candles ×1,37,
+  ×0,63, constante, permutados e sentimento futuro —, retomada do estado serializado em todo corte e lotes
+  de 2/3/5/7) e o ponta a ponta nos dois conjuntos reais (BTCUSDT 1h × 500: 307 decididos, 113 `BUY`, 57
+  `SELL`, 137 `HOLD`; ETHUSDT 1d × 400: 207 decididos, 60 `BUY`, 67 `SELL`, 80 `HOLD`; nenhum antes do
+  candle 194).
+
+| Mutante (mutação de UMA expressão numa cópia do `src`) | Quem o reprova primeiro |
+|---|---|
+| `THRESHOLD_EXCLUSIVE` / `_SELL` (`≥`→`>`, `≤`→`<` nos limiares) | tabela de cenários (score exatamente em ±2) |
+| `WEIGHTS_SWAPPED` (pesos de tendência e lateral trocados) | tabela de regime e peso |
+| `SENTIMENT_STALE_ACCEPTED` (48 h + 1 ms vota) | tabela de cenários |
+| `SENTIMENT_WRONG_SOURCE` (outra fonte vota) | tabela de cenários |
+| `ADX_ROUNDED_UP` (24,96 ⇒ `25.0`) | tabela de ADX exibido |
+| `HOLD_BEFORE_WARMUP_MISSING` (sem a guarda de aquecimento: o passo vota antes dele) | contrato (`completes`: `MISSING_VALUE`) |
+| `WARMUP_ONE_CANDLE_LATE` (`<` → `<=`) | contrato (`timing`) |
+| `DONCHIAN_WITHOUT_EXTRA_CANDLE`, `DONCHIAN_PREVIOUS_NOT_STORED`, `SNAPSHOT_NOT_SAVED` | contrato (`completes`) |
+| `DONCHIAN_USES_CURRENT_CHANNEL`, `RSI_AT_OVERSOLD_BUYS`, `EQUAL_AVERAGES_BUY`, `FEAR_NOT_CONTRARIAN`, `MISSING_SENTIMENT_NOT_FLAGGED`, `REGIME_THRESHOLD_EXCLUSIVE` | tabela de votos/regime |
+| `SELECTOR_IGNORES_SOURCE`, `SELECTOR_IGNORES_INSERTION_CUTOFF`, `SELECTOR_ACCEPTS_FUTURE_OBSERVATION` | tabela de seleção |
+| `VOTE_LOOKAHEAD`, `REGIME_ON_FUTURE_ADX` (decisão do candle `t-1` refeita com o fechamento ou o ADX de `t`) | contrato (`timing`); a verificação `no-lookahead` sozinha também os reprova |
 
 ### g) Não-lookahead e determinismo como contrato
 
@@ -680,7 +743,7 @@ Cada mutação de `src` foi aplicada à mão, reprovou algum teste e foi reverti
 ## Consequências
 
 - T2.2 implementa cada indicador (implementação própria, `trading-signals` como oráculo) com
-  `convergenceCandles` e o roda em `expectIndicatorContract`; T2.3 o voto, o regime e o motivo; T2.4 o
+  `convergenceCandles` e o roda em `expectIndicatorContract`; T2.3 o voto, o regime e o motivo (§f2); T2.4 o
   tamanho e os tetos de §e; T2.5 o `FillModel` e o motor completo, que **precisa passar
   `runEngineContract`** nos cenários da referência e em cenários próprios com o Placar clássico, mais o
   teste diferencial e o golden por versão. A referência de teste não vira código de produção.

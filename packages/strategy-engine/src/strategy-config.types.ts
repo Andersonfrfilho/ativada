@@ -14,7 +14,7 @@ export type RegimeConfig = StrategyConfig['regime'];
 
 export type RunParameters = z.output<typeof RUN_PARAMETERS_SCHEMA>;
 export type RunParametersInput = z.input<typeof RUN_PARAMETERS_SCHEMA>;
-export type EngineMarket = Pick<RunParameters, 'symbol' | 'timeframe'>;
+export type EngineMarket = Pick<RunParameters, 'symbol' | 'timeframe' | 'sentimentSource'>;
 
 // A versão da estratégia (lógica) e o hash que prende resultados a ela (RF03).
 export type StrategyVersion = {

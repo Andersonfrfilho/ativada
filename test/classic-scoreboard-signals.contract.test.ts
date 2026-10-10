@@ -4,7 +4,6 @@ import { describe, expect, test } from 'bun:test';
 import {
   EngineDecimal,
   RULE_FAMILY,
-  SIGNAL_ACTION,
   SIGNAL_ENGINE_VERSION,
   type SignalDecision,
 } from '../packages/strategy-engine/src/index.js';
@@ -147,7 +146,7 @@ describe.each(REAL_DATASETS.map((dataset) => [dataset.name, dataset] as const))(
       expect(summarizeSignals(again)).toStrictEqual(summarizeSignals(signals));
       const golden = await readGolden();
       expect(golden.engineVersion).toBe(SIGNAL_ENGINE_VERSION);
-      expect(summarizeSignals(signals)).toStrictEqual(golden.datasets[dataset.name]);
+      expect(golden.datasets[dataset.name]).toStrictEqual(summarizeSignals(signals));
     });
   },
 );

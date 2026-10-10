@@ -68,14 +68,14 @@ export function buildSyntheticSpecs(params: {
   return specs;
 }
 
-// Medo extremo, depois ganância, depois nada: a observação envelhece além de 48 h.
+// Sem observação nos primeiros candles decididos, depois medo extremo e então ganância extrema.
 function buildSentiment(count: number): readonly SentimentObservation[] {
   const at = (index: number, value: number): SentimentObservation => ({
     value,
     observedAt: openTimeAt(index) + HOUR - 1,
     source: SENTIMENT_SOURCE,
   });
-  return [at(Math.floor(count * 0.4), 15), at(Math.floor(count * 0.55), 82)];
+  return [at(Math.floor(count * 0.56), 15), at(Math.floor(count * 0.78), 82)];
 }
 
 const FAST_CONFIG: StrategyConfigInput = {
@@ -89,7 +89,7 @@ const FAST_CONFIG: StrategyConfigInput = {
     { id: 'obv-ema-3', kind: 'obv_trend', emaPeriod: 3 },
     { id: 'fear-greed', kind: 'fear_greed', fearAtOrBelow: 25, greedAtOrAbove: 75 },
   ],
-  regime: { kind: 'adx', period: 2, trendThreshold: 20 },
+  regime: { kind: 'adx', period: 2, trendThreshold: 60 },
   thresholds: { buy: '1.5', sell: '-1.5' },
   risk: { atrPeriod: 3 },
 };
@@ -99,6 +99,17 @@ const PLAIN_CONFIG: StrategyConfigInput = {
   rules: [
     { id: 'rsi-3', kind: 'rsi', period: 3, oversold: 30, overbought: 70 },
     { id: 'donchian-3', kind: 'donchian_breakout', period: 3 },
+  ],
+  thresholds: { buy: '1', sell: '-1' },
+  risk: { atrPeriod: 2 },
+};
+
+// O rompimento de Donchian pede um candle a mais que o período: aqui ele é o aquecimento mais longo.
+const BREAKOUT_LONGEST_CONFIG: StrategyConfigInput = {
+  schemaVersion: 1,
+  rules: [
+    { id: 'donchian-30', kind: 'donchian_breakout', period: 30 },
+    { id: 'ema-3-5', kind: 'ema_cross', fastPeriod: 3, slowPeriod: 5 },
   ],
   thresholds: { buy: '1', sell: '-1' },
   risk: { atrPeriod: 2 },
@@ -137,6 +148,12 @@ export function buildSignalScenarios(): readonly SignalScenario[] {
       config: PLAIN_CONFIG,
       count: 40,
       seed: 11,
+    }),
+    scenario({
+      name: 'Donchian breakout is the longest warm-up',
+      config: BREAKOUT_LONGEST_CONFIG,
+      count: 50,
+      seed: 13,
     }),
   ];
 }

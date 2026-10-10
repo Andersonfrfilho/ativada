@@ -5,6 +5,7 @@ import { decimalTextSchema } from './decimal-text.schema.js';
 import {
   ENGINE_TIMEFRAME,
   MAX_INITIAL_BALANCE,
+  MAX_SENTIMENT_SOURCE_LENGTH,
   RUN_PARAMETERS_SCHEMA_VERSION,
 } from './engine.constant.js';
 
@@ -25,6 +26,9 @@ export const RUN_PARAMETERS_SCHEMA = z.strictObject({
   schemaVersion: z.literal(RUN_PARAMETERS_SCHEMA_VERSION),
   symbol: z.string().regex(/^[A-Z0-9]{2,16}USDT$/, 'Use um par cotado em USDT, como "BTCUSDT".'),
   timeframe: z.enum(ENGINE_TIMEFRAME),
+  // Fonte das observações de sentimento que a execução lê (ADR 0002 §f): entra no `runHash`, então
+  // trocar de fonte é outra execução, nunca a mesma com resultado diferente.
+  sentimentSource: z.string().min(1).max(MAX_SENTIMENT_SOURCE_LENGTH),
   initialBalance: decimalTextSchema({ minimum: '10', maximum: MAX_INITIAL_BALANCE }).default(
     '10000',
   ),

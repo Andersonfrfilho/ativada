@@ -41,6 +41,7 @@ export {
   REGIME_ADX_INDICATOR_ID,
   RISK_ATR_INDICATOR_ID,
   RUN_PARAMETERS_SCHEMA_VERSION,
+  SIGNAL_ENGINE_VERSION,
   SENTIMENT_STALE_AFTER_MILLISECONDS,
   STRATEGY_CONFIG_SCHEMA_VERSION,
   type EngineTimeframe,
@@ -132,7 +133,27 @@ export {
   selectAvailableSentiment,
   type ResolveFreshSentimentParams,
   type SelectAvailableSentimentParams,
+  type StoredSentimentObservation,
 } from './sentiment.js';
+export { ruleLabel } from './rule-label.js';
+export {
+  evaluateScoreboard,
+  type ScoreboardEvaluation,
+  type ScoreboardInput,
+} from './scoreboard.js';
+export {
+  advanceIndicators,
+  previousValueId,
+  type AdvanceIndicatorsParams,
+  type AdvancedIndicators,
+  type IndicatorSnapshots,
+} from './signal-indicators.js';
+export {
+  buildSignalReason,
+  type BuildSignalReasonParams,
+  type ReasonVote,
+} from './signal-reason.js';
+export { signalStep } from './signal-step.js';
 export { STRATEGY_CONFIG_SCHEMA } from './strategy-config.schema.js';
 export {
   collectIndicatorHorizons,

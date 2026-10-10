@@ -269,7 +269,11 @@ const FLAT_SCENARIOS: readonly ScoreboardScenario[] = [
 const FEAR_GREED_WEIGHT = '1';
 const FEAR_GREED_ID = 'fear-greed';
 
-function observationAged(value: number, ageMilliseconds: number, source = SENTIMENT_SOURCE) {
+function observationAged(
+  value: number,
+  ageMilliseconds: number,
+  source = SENTIMENT_SOURCE,
+): SentimentObservation {
   return { value, observedAt: CLOSE_TIME - ageMilliseconds, source };
 }
 

@@ -6,6 +6,9 @@ export const RUN_PARAMETERS_SCHEMA_VERSION = 1 as const;
 export const CUSTOM_ISSUE_CODE = 'custom' as const;
 export const RULE_DISCRIMINATOR = 'kind' as const;
 export const ENGINE_STATE_VERSION = 1 as const;
+// Versão da semântica da metade SINAL (votos, regime, placar, motivo): o dourado do Placar clássico é
+// preso a ela. Mudar a saída exige nova versão e novo dourado; a T2.5 a integra à `engineVersion`.
+export const SIGNAL_ENGINE_VERSION = 'signal-1';
 
 // Teto de combinações da grade do walk-forward (RNF02); a grade em si é parâmetro da execução (T3.3).
 export const MAX_WALK_FORWARD_COMBINATIONS = 200;
@@ -15,6 +18,8 @@ export const LN_INVERSE_CONVERGENCE_EPSILON = 6.907755278982137;
 // Fear & Greed é diário; observação mais velha que isto vira dado ausente (voto 0).
 export const SENTIMENT_STALE_AFTER_MILLISECONDS = 48 * 60 * 60 * 1_000;
 export const SENTIMENT_MAXIMUM_VALUE = 100;
+// A fonte do sentimento é um identificador curto (o guarda recusa observação com fonte maior).
+export const MAX_SENTIMENT_SOURCE_LENGTH = 64;
 // Mesmas casas do `numeric(24,8)` do banco para saldo, taxa e valor de operação.
 export const MONEY_DECIMAL_PLACES = 8;
 // numeric(24,8) guarda 16 dígitos inteiros; 1e9 de saldo deixa folga para quantidade × preço.
@@ -41,6 +46,11 @@ export const ENGINE_TIMEFRAME_DURATION_MILLISECONDS: Readonly<Record<EngineTimef
 };
 
 // Ids de snapshot e de valor de indicador têm espaço de nome: regra, risco e regime nunca colidem.
-export const INDICATOR_NAMESPACE = { RULE: 'rule', RISK: 'risk', REGIME: 'regime' } as const;
+export const INDICATOR_NAMESPACE = {
+  RULE: 'rule',
+  RISK: 'risk',
+  REGIME: 'regime',
+  PREVIOUS: 'previous',
+} as const;
 export const RISK_ATR_INDICATOR_ID = `${INDICATOR_NAMESPACE.RISK}:atr`;
 export const REGIME_ADX_INDICATOR_ID = `${INDICATOR_NAMESPACE.REGIME}:adx`;

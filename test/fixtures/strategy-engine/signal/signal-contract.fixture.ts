@@ -136,9 +136,9 @@ function checkImmutability(context: CheckContext): void {
 // O estado vai ao banco como JSON: nada de `undefined`, `Map`, classe ou número não finito.
 function checkSerialization(context: CheckContext): void {
   for (const step of context.baseline) {
-    const text = canonicalJson(step.result.state);
+    const restored: unknown = JSON.parse(canonicalJson(step.result.state));
     assertSignal(
-      JSON.stringify(JSON.parse(text)) === JSON.stringify(step.result.state),
+      Bun.deepEquals(restored, step.result.state, true),
       'O estado não volta igual do JSON.',
     );
   }
@@ -304,4 +304,21 @@ export function runSignalContract(params: SignalContractParams): void {
       guard({ check, scenarioName: scenario.name, run: () => verify(context) });
     }
   }
+}
+
+// Uma verificação só, em um cenário: mostra que a verificação sozinha reprova o defeito.
+export function runSignalCheck(params: {
+  readonly api: SignalApi;
+  readonly scenario: SignalScenario;
+  readonly check: SignalContractCheck;
+}): void {
+  const { api, scenario, check } = params;
+  const entry = SIGNAL_CONTRACT_CHECKS.find(([name]) => name === check);
+  if (entry === undefined) throw new Error(`Verificação desconhecida: ${check}.`);
+  const baseline = runSignal({ api, scenario });
+  guard({
+    check,
+    scenarioName: scenario.name,
+    run: () => entry[1]({ api, scenario, baseline }),
+  });
 }

@@ -9,3 +9,4 @@ envs/*.local
 .DS_Store
 *.log
 tmp/
+.mutants/

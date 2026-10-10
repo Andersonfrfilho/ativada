@@ -1,0 +1,21 @@
+{
+  "engineVersion": "signal-1",
+  "datasets": {
+    "BTCUSDT 1h × 500": {
+      "candles": 500,
+      "decided": 307,
+      "buy": 113,
+      "sell": 57,
+      "hold": 137,
+      "digest": "8defe9505882464e65a7088aaa9b0abee78ab0cc8aa1c2ab07a2c72aa6b5b655"
+    },
+    "ETHUSDT 1d × 400": {
+      "candles": 400,
+      "decided": 207,
+      "buy": 60,
+      "sell": 67,
+      "hold": 80,
+      "digest": "e355b437612eeb1f4915886160820892ada69c7196f9f8a05d3d0e9134911515"
+    }
+  }
+}
