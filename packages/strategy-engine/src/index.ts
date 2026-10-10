@@ -165,3 +165,7 @@ export { STRATEGY_CONFIG_SCHEMA } from './strategy-config.schema.js';
 export { computeStrategyLeadInCandles, createStrategySignalState } from './strategy-horizons.js';
 export type * from './strategy-config.types.js';
 export * from './strategy-engine.error.js';
+export { computeRunMetrics } from './metrics/compute-run-metrics.js';
+export * from './metrics/metrics.constant.js';
+export type * from './metrics/metrics.types.js';
+export { reconcileRunMetrics } from './metrics/reconcile-run-metrics.js';
