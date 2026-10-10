@@ -61,6 +61,21 @@ async function failExhausted(
     .where(inArray(alerts.id, [...exhaustedIds]));
 }
 
+function toClaimedAlerts(
+  taken: readonly (typeof alerts.$inferSelect)[],
+  chats: ReadonlyMap<string, string>,
+): ClaimedAlert[] {
+  return taken.map((row) => ({
+    id: row.id,
+    runId: row.runId,
+    candleTime: row.candleTime,
+    side: row.side as AlertSide,
+    payload: readJsonb(row.payload),
+    attempts: row.attempts,
+    chatId: chats.get(row.userId),
+  }));
+}
+
 async function claimDue(database: Database, params: ClaimAlertsParams): Promise<ClaimedAlert[]> {
   const limit = Math.min(Math.max(Math.trunc(params.limit), 1), ALERT_CLAIM_MAXIMUM_BATCH);
   return database.transaction(async (transaction) => {
@@ -91,15 +106,7 @@ async function claimDue(database: Database, params: ClaimAlertsParams): Promise<
       )
       .returning();
     const chats = await readChats(transaction, [...new Set(taken.map((row) => row.userId))]);
-    return taken.map((row) => ({
-      id: row.id,
-      runId: row.runId,
-      candleTime: row.candleTime,
-      side: row.side as AlertSide,
-      payload: readJsonb(row.payload),
-      attempts: row.attempts,
-      chatId: chats.get(row.userId),
-    }));
+    return toClaimedAlerts(taken, chats);
   });
 }
 
