@@ -5,6 +5,7 @@ import {
   assertCandleShape,
   refuse,
 } from './assert-candle.js';
+import { assertRunHash, assertStrategyHash } from './assert-hashes.js';
 import type { EngineCandle, SentimentObservation } from './engine-candle.types.js';
 import { SENTIMENT_MAXIMUM_VALUE } from './engine.constant.js';
 import type { EngineCommand, SignalStepInput, StepInput, WalletStepInput } from './engine.types.js';
@@ -101,6 +102,8 @@ export function assertStepInput(params: AssertStepInputParams): void {
   if (input.state.runHash !== input.run.runHash) {
     refuse(ENGINE_INPUT_ERROR_CODE.RUN_HASH_MISMATCH, 'Estado de outros parâmetros de execução.');
   }
+  assertStrategyHash(input.strategy);
+  assertRunHash(input.run);
   assertSignalStepInput({ ...input, market: input.run.parameters, state: input.state.signal });
   assertCommands(input.commands ?? [], input.candle);
 }

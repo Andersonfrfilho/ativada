@@ -321,6 +321,39 @@ const GUARD_MUTANTS: readonly Mutant[] = [
 ];
 
 const CREATE_ENGINE = 'create-engine.ts';
+const ASSERT_HASHES = 'assert-hashes.ts';
+const ASSERT_STEP = 'assert-step-input.ts';
+
+const HASH_MUTANTS: readonly Mutant[] = [
+  {
+    name: 'RUN_HASH_NOT_RECOMPUTED',
+    edits: edit(ASSERT_HASHES, 'if (recomputeRunHash(run) !== run.runHash) {', 'if (false) {'),
+    stage: JUDGE_STAGE.GUARDS,
+  },
+  {
+    name: 'CONFIG_HASH_NOT_RECOMPUTED',
+    edits: edit(
+      ASSERT_HASHES,
+      'if (recomputeStrategyHash(strategy) !== strategy.configHash) {',
+      'if (false) {',
+    ),
+    stage: JUDGE_STAGE.GUARDS,
+  },
+  {
+    name: 'HASH_CACHE_DISABLED',
+    edits: edit(ASSERT_HASHES, 'if (VERIFIED_STRATEGIES.has(strategy)) return;', ''),
+    stage: JUDGE_STAGE.GUARDS,
+  },
+  {
+    name: 'STEP_DOES_NOT_RECOMPUTE_THE_HASHES',
+    edits: edit(
+      ASSERT_STEP,
+      '  assertStrategyHash(input.strategy);\n  assertRunHash(input.run);\n',
+      '',
+    ),
+    stage: JUDGE_STAGE.ENGINE_API,
+  },
+];
 
 const COMPOSITION_MUTANTS: readonly Mutant[] = [
   {
@@ -335,7 +368,7 @@ const COMPOSITION_MUTANTS: readonly Mutant[] = [
       '  assertStepInput({ input, engineVersion: ENGINE_VERSION });\n',
       '',
     ),
-    stage: JUDGE_STAGE.HARNESS,
+    stage: JUDGE_STAGE.ENGINE_API,
   },
 ];
 
@@ -344,6 +377,7 @@ const SOURCE_MUTANTS: readonly Mutant[] = [
   ...POLICY_MUTANTS,
   ...GUARD_MUTANTS,
   ...COMPOSITION_MUTANTS,
+  ...HASH_MUTANTS,
 ];
 
 describe('production engine: the guards, the differential and the harness reject every mutant', () => {
@@ -398,6 +432,9 @@ describe('production engine: the guards, the differential and the harness reject
       'EQUITY_LOW_COUNTS_STOP_AT_LOW',
       'CONTIGUITY_NOT_CHECKED',
       'HASHES_NOT_CHECKED',
+      'RUN_HASH_NOT_RECOMPUTED',
+      'CONFIG_HASH_NOT_RECOMPUTED',
+      'HASH_CACHE_DISABLED',
     ]) {
       expect(names).toContain(mandatory);
     }

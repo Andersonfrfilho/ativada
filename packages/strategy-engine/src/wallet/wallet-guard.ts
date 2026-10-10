@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { refuse } from '../assert-candle.js';
+import { assertRunHash, assertStrategyHash } from '../assert-hashes.js';
 import { assertWalletStepInput } from '../assert-step-input.js';
 import { ENGINE_TIMEFRAME_DURATION_MILLISECONDS } from '../engine.constant.js';
 import type { WalletStepInput } from '../engine.types.js';
@@ -17,6 +18,8 @@ function assertWalletHashes(input: WalletStepInput): void {
   if (input.signal !== null && input.signal.configHash !== input.strategy.configHash) {
     refuse(ENGINE_INPUT_ERROR_CODE.CONFIG_HASH_MISMATCH, 'Sinal de outra versão da estratégia.');
   }
+  assertStrategyHash(input.strategy);
+  assertRunHash(input.run);
 }
 
 // O candle é o seguinte ao último da carteira, ou a lacuna entre eles foi confirmada: o sinal ecoa a

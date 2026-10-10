@@ -158,6 +158,24 @@ export function buildWalletGuardCases(): readonly WalletGuardCase[] {
       code.CANDLE_GAP_UNCONFIRMED,
       { signal: guardSignal({ candle: second, action: 'HOLD', gap: 1 }) },
     ],
+    [
+      'parâmetros alterados mantendo o runHash',
+      code.RUN_HASH_MISMATCH,
+      { run: { ...GUARD_RUN, parameters: { ...GUARD_RUN.parameters, feeRate: '0.002' } } },
+    ],
+    [
+      'estratégia alterada mantendo o configHash',
+      code.CONFIG_HASH_MISMATCH,
+      {
+        strategy: {
+          ...GUARD_STRATEGY,
+          config: {
+            ...GUARD_STRATEGY.config,
+            risk: { ...GUARD_STRATEGY.config.risk, riskPerTrade: '0.02' },
+          },
+        },
+      },
+    ],
     ['outro par', code.CANDLE_WRONG_MARKET, { candle: { ...second, symbol: 'ETHUSDT' } }],
     ['preço zero', code.CANDLE_INSANE, { candle: { ...second, low: '0' } }],
     [

@@ -11,6 +11,7 @@ import {
 } from '../wallet/wallet-differential.fixture.js';
 import { findFirstViolation } from '../wallet/wallet-properties.fixture.js';
 import type { EngineApi } from './engine-api.fixture.js';
+import { countEnumerationsAfterEachCall } from './hash-probe.fixture.js';
 import { buildProductionScenarios } from './production-scenarios.fixture.js';
 import { buildEchoedGapInput, buildWalletGuardCases } from './wallet-guard-cases.fixture.js';
 
@@ -59,9 +60,14 @@ function judgeGuards(api: EngineApi): JudgeVerdict {
   if (echoed !== 'aceito') {
     return { stage: JUDGE_STAGE.GUARDS, detail: `lacuna ecoada recusada com ${echoed}` };
   }
+  const counts = countEnumerationsAfterEachCall(api.walletStep, HASH_PROBE_CALLS);
+  if (new Set(counts).size !== 1) {
+    return { stage: JUDGE_STAGE.GUARDS, detail: 'o hash é recalculado a cada passo' };
+  }
   return undefined;
 }
 
+const HASH_PROBE_CALLS = 4;
 const GAP_PROBE_CANDLES = 40;
 const GAP_PROBE_SKIPPED = 1;
 
@@ -85,6 +91,23 @@ function judgeEngineApi(api: EngineApi): JudgeVerdict {
   const echoed = engine.step(input).decisions.signal?.confirmedGapCandles;
   if (echoed !== GAP_PROBE_SKIPPED) {
     return { stage: JUDGE_STAGE.ENGINE_API, detail: `o sinal ecoou a lacuna ${String(echoed)}` };
+  }
+  const tamperedRun = {
+    ...input.run,
+    parameters: { ...input.run.parameters, feeRate: '0.002' },
+  };
+  if (codeOf(() => engine.step({ ...input, run: tamperedRun })) !== 'RUN_HASH_MISMATCH') {
+    return { stage: JUDGE_STAGE.ENGINE_API, detail: 'o passo aceitou parâmetros adulterados' };
+  }
+  const { config } = input.strategy;
+  const tamperedStrategy = {
+    ...input.strategy,
+    config: { ...config, risk: { ...config.risk, riskPerTrade: '0.02' } },
+  };
+  if (
+    codeOf(() => engine.step({ ...input, strategy: tamperedStrategy })) !== 'CONFIG_HASH_MISMATCH'
+  ) {
+    return { stage: JUDGE_STAGE.ENGINE_API, detail: 'o passo aceitou estratégia adulterada' };
   }
   const report = {
     kind: 'order_rejected',
