@@ -2,7 +2,6 @@
 import {
   deserializeEngineState,
   ENGINE_INPUT_ERROR_CODE,
-  EngineInputError,
   formatEngineDecimal,
   serializeEngineState,
   toEngineDecimal,
@@ -124,12 +123,20 @@ type GuardCase = {
   readonly input: StepInput;
 };
 
+// Pelo campo `code`, não por `instanceof`: o motor sob prova pode ser uma cópia mutada de `src` (outro módulo).
+function readErrorCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  const code: unknown = Object.getOwnPropertyDescriptor(error, 'code')?.value;
+  return typeof code === 'string' ? code : undefined;
+}
+
 function refusalCode(context: CheckContext, input: StepInput): string {
   try {
     context.createEngine().step(input);
     return 'aceito';
   } catch (error) {
-    if (error instanceof EngineInputError) return error.code;
+    const code = readErrorCode(error);
+    if (code !== undefined) return code;
     return error instanceof Error ? error.name : String(error);
   }
 }

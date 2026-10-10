@@ -3,7 +3,6 @@ import { describe, expect, test } from 'bun:test';
 
 import {
   createInitialWalletState,
-  ENGINE_INPUT_ERROR_CODE,
   EngineInputError,
   RISK_ATR_INDICATOR_ID,
   walletStep,
@@ -24,6 +23,10 @@ import {
   QUIET_CANDLE,
   type CandleSpec,
 } from './fixtures/strategy-engine/engine-scenarios.fixture.js';
+import {
+  buildEchoedGapInput,
+  buildWalletGuardCases,
+} from './fixtures/strategy-engine/production/wallet-guard-cases.fixture.js';
 
 const STRATEGY = buildReferenceStrategy(MARKET_ENTRY);
 const LIMIT_STRATEGY = buildReferenceStrategy(LIMIT_ENTRY);
@@ -93,114 +96,16 @@ describe('walletStep standalone: refuses what the composed step already checked 
   });
 
   test('every refusal carries a stable code', () => {
-    const code = ENGINE_INPUT_ERROR_CODE;
-    const second = candleAt(SPECS, 1);
-    const third = candleAt(SPECS, 2);
-    const command = (overrides: Partial<EngineCommand>): EngineCommand => ({
-      commandId: 'c-1',
-      issuedAt: second.openTime,
-      kind: 'halt',
-      reason: 'user_stop',
-      ...overrides,
-    });
-    const cases: readonly (readonly [string, EngineInputErrorCode, Partial<WalletStepInput>])[] = [
-      [
-        'estado de outra estratégia',
-        code.CONFIG_HASH_MISMATCH,
-        { state: { ...afterFirst(), configHash: 'f'.repeat(64) } },
-      ],
-      [
-        'estratégia de outro hash',
-        code.CONFIG_HASH_MISMATCH,
-        { strategy: { ...STRATEGY, configHash: 'f'.repeat(64) } },
-      ],
-      [
-        'sinal de outra estratégia',
-        code.CONFIG_HASH_MISMATCH,
-        { signal: signalOf({ candle: second, action: 'BUY', configHash: 'f'.repeat(64) }) },
-      ],
-      [
-        'estado de outros parâmetros',
-        code.RUN_HASH_MISMATCH,
-        { state: { ...afterFirst(), runHash: 'e'.repeat(64) } },
-      ],
-      ['outros parâmetros', code.RUN_HASH_MISMATCH, { run: { ...RUN, runHash: 'e'.repeat(64) } }],
-      [
-        'candle repetido',
-        code.CANDLE_ALREADY_PROCESSED,
-        {
-          candle: candleAt(SPECS, 0),
-          signal: signalOf({ candle: candleAt(SPECS, 0), action: 'HOLD' }),
-        },
-      ],
-      [
-        'candle fora de ordem',
-        code.CANDLE_OUT_OF_ORDER,
-        { state: { ...afterFirst(), lastCandleOpenTime: third.openTime } },
-      ],
-      [
-        'lacuna sem confirmação',
-        code.CANDLE_GAP_UNCONFIRMED,
-        { candle: third, signal: signalOf({ candle: third, action: 'HOLD' }) },
-      ],
-      [
-        'lacuna declarada errada',
-        code.CANDLE_GAP_UNCONFIRMED,
-        { candle: third, signal: signalOf({ candle: third, action: 'HOLD', gap: 2 }) },
-      ],
-      [
-        'lacuna sem sinal para ecoá-la',
-        code.CANDLE_GAP_UNCONFIRMED,
-        { candle: third, signal: null },
-      ],
-      [
-        'lacuna declarada onde não há',
-        code.CANDLE_GAP_UNCONFIRMED,
-        { signal: signalOf({ candle: second, action: 'HOLD', gap: 1 }) },
-      ],
-      ['outro par', code.CANDLE_WRONG_MARKET, { candle: { ...second, symbol: 'ETHUSDT' } }],
-      ['preço zero', code.CANDLE_INSANE, { candle: { ...second, low: '0' } }],
-      [
-        'sinal de outro candle',
-        code.SIGNAL_MISMATCH,
-        { signal: signalOf({ candle: candleAt(SPECS, 0), action: 'HOLD' }) },
-      ],
-      [
-        'comando do futuro',
-        code.COMMAND_INVALID,
-        { commands: [command({ issuedAt: second.closeTime + 1 })] },
-      ],
-      [
-        'comando repetido',
-        code.COMMAND_INVALID,
-        { commands: [command({}), command({ kind: 'resume', reason: 'user_resume' })] },
-      ],
-    ];
-    for (const [label, expected, overrides] of cases) {
-      expect([label, codeOf(() => walletStep(input(overrides)))]).toStrictEqual([label, expected]);
+    for (const guard of buildWalletGuardCases()) {
+      expect([guard.label, codeOf(() => walletStep(guard.input))]).toStrictEqual([
+        guard.label,
+        guard.code,
+      ]);
     }
   });
 
   test('a forward gap passes when the signal echoes the exact count of missing candles', () => {
-    const third = candleAt(SPECS, 2);
-    const echoed = signalOf({ candle: third, action: 'HOLD', gap: 1 });
-    expect(codeOf(() => walletStep(input({ candle: third, signal: echoed })))).toBe('aceito');
-  });
-
-  test('execution reports from the exchange are refused loudly', () => {
-    const second = candleAt(SPECS, 1);
-    const report = {
-      kind: 'position_closed_externally',
-      reportId: 'report-1',
-      reportedAt: second.openTime,
-      positionKey: 'position-0',
-      price: '100',
-      quantity: '1',
-      fee: '0.1',
-    } as const;
-    expect(codeOf(() => walletStep(input({ executionReports: [report] })))).toBe(
-      ENGINE_INPUT_ERROR_CODE.EXECUTION_REPORTS_UNSUPPORTED,
-    );
+    expect(codeOf(() => walletStep(buildEchoedGapInput()))).toBe('aceito');
   });
 });
 

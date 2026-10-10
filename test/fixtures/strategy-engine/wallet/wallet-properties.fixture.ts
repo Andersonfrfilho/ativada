@@ -173,8 +173,11 @@ export function findFlowViolation(recorded: readonly RecordedWalletStep[]): stri
   return undefined;
 }
 
-export function findFirstViolation(implementation: WalletImplementation): string | undefined {
-  for (const flow of iterateFlows()) {
+export function findFirstViolation(
+  implementation: WalletImplementation,
+  count?: number,
+): string | undefined {
+  for (const flow of iterateFlows(count)) {
     const violation = findFlowViolation(runWalletFlow(flow, implementation));
     if (violation !== undefined) return violation;
   }
