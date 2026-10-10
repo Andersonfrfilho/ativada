@@ -14,6 +14,7 @@ const PARALLEL_MUTANTS = 4;
 const CONTROL: GoalSourceMutant = { name: 'CONTROL', edits: [] };
 const LEVELS = 'goal/goal-levels.ts';
 const OUTCOME = 'goal/goal-window-outcome.ts';
+const PROGRESS = 'goal/goal-progress.ts';
 const WINDOWS = 'goal/goal-windows.ts';
 const SUMMARY = 'goal/goal-summary.ts';
 const VERDICT = 'goal/goal-verdict.ts';
@@ -59,35 +60,47 @@ const MUTANTS: readonly GoalSourceMutant[] = [
   },
   {
     name: 'STOP_NEEDS_TO_GO_STRICTLY_BELOW',
-    edits: edit(OUTCOME, 'point.equityAtLow.lte(levels.stop)', 'point.equityAtLow.lt(levels.stop)'),
+    edits: edit(
+      PROGRESS,
+      'point.equityAtLow.lte(levels.stop)',
+      'point.equityAtLow.lt(levels.stop)',
+    ),
   },
   {
     name: 'TARGET_NEEDS_TO_GO_STRICTLY_ABOVE',
-    edits: edit(OUTCOME, 'point.equity.gte(levels.target)', 'point.equity.gt(levels.target)'),
+    edits: edit(PROGRESS, 'point.equity.gte(levels.target)', 'point.equity.gt(levels.target)'),
   },
   {
     name: 'STOP_LOOKS_AT_THE_CLOSE',
-    edits: edit(OUTCOME, 'point.equityAtLow.lte(levels.stop)', 'point.equity.lte(levels.stop)'),
+    edits: edit(PROGRESS, 'point.equityAtLow.lte(levels.stop)', 'point.equity.lte(levels.stop)'),
   },
   {
     name: 'TARGET_LOOKS_AT_THE_LOW',
-    edits: edit(OUTCOME, 'point.equity.gte(levels.target)', 'point.equityAtLow.gte(levels.target)'),
+    edits: edit(
+      PROGRESS,
+      'point.equity.gte(levels.target)',
+      'point.equityAtLow.gte(levels.target)',
+    ),
   },
   {
     name: 'TARGET_WINS_THE_SAME_CANDLE',
     edits: edit(
-      OUTCOME,
-      'if (point.equityAtLow.lte(levels.stop)) {',
-      'if (!point.equity.gte(levels.target) && point.equityAtLow.lte(levels.stop)) {',
+      PROGRESS,
+      'if (point.equityAtLow.lte(levels.stop)) return',
+      'if (!point.equity.gte(levels.target) && point.equityAtLow.lte(levels.stop)) return',
     ),
   },
   {
     name: 'STOPPED_VALUE_AT_THE_CLOSE',
-    edits: edit(OUTCOME, 'finalValue: point.equityAtLow,', 'finalValue: point.equity,'),
+    edits: edit(
+      PROGRESS,
+      'outcome === GOAL_OUTCOME.STOPPED ? point.equityAtLow : point.equity',
+      'point.equity',
+    ),
   },
   {
     name: 'ELAPSED_COUNTS_FROM_ZERO',
-    edits: edit(OUTCOME, 'candlesElapsed: offset + 1,', 'candlesElapsed: offset,', 2),
+    edits: edit(OUTCOME, 'candlesElapsed: offset + 1,', 'candlesElapsed: offset,'),
   },
   {
     name: 'EXPIRED_VALUE_AT_THE_FIRST_CANDLE',

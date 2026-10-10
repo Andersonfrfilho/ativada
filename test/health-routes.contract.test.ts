@@ -8,15 +8,19 @@ import { ROUTE_ACCESS } from '../apps/api-cryptoada/src/router/route-access.cons
 import {
   buildApiRouteDependencies,
   EMPTY_QUEUE_SUMMARY,
+  HEALTHY_LISTENER,
 } from './fixtures/api-route-dependencies.fixture.js';
 import { createApiHarness, type ApiHarness } from './fixtures/api-harness.fixture.js';
 import { sweepProtectedRoutesWithoutToken } from './fixtures/route-sweep.fixture.js';
+import type { ListenerHealth } from '../apps/api-cryptoada/src/stream/listener-health.js';
 import { signTestToken } from './fixtures/token-signing.fixture.js';
 
 const HEALTH_PATH = '/v1/health';
 const ADMIN_HEALTH_PATH = '/v1/admin/health';
 const MONITOR_ADDRESS = '203.0.113.71';
 const OTHER_MONITOR_ADDRESS = '203.0.113.72';
+// Um endereço por rota: o balde dos não autenticados é por endereço e a varredura cresce a cada rota nova.
+const SWEEP_ADDRESS_PREFIX = '198.51.100.';
 const ADMIN_CLAIMS = { realm_access: { roles: ['user', 'admin'] }, acr: '2' };
 
 let harness: ApiHarness;
@@ -84,9 +88,15 @@ describe('GET /v1/admin/health', () => {
   });
 
   test('every non-public production route answers 401 without a token', async () => {
-    const outcomes = await sweepProtectedRoutesWithoutToken(routes, (params) =>
-      sendToProduction(params.path, params.method),
-    );
+    let nextSweepHost = 0;
+    const outcomes = await sweepProtectedRoutesWithoutToken(routes, (params) => {
+      nextSweepHost += 1;
+      return sendToProduction(
+        params.path,
+        params.method,
+        `${SWEEP_ADDRESS_PREFIX}${nextSweepHost}`,
+      );
+    });
     expect(outcomes.length).toBeGreaterThanOrEqual(1);
     expect(outcomes.filter((outcome) => outcome.status !== 401)).toStrictEqual([]);
   });
@@ -97,11 +107,17 @@ describe('admin health through the full authentication pipeline', () => {
     databaseIsUp: boolean,
     claims: Record<string, unknown>,
     queueSummary = EMPTY_QUEUE_SUMMARY,
+    listenerHealth: ListenerHealth = HEALTHY_LISTENER,
   ): Promise<Response> {
     const databaseHarness = await createApiHarness();
     try {
       const productionRoutes = createApiRoutes(
-        buildApiRouteDependencies(() => Promise.resolve(databaseIsUp), false, queueSummary),
+        buildApiRouteDependencies(
+          () => Promise.resolve(databaseIsUp),
+          false,
+          queueSummary,
+          listenerHealth,
+        ),
       );
       const router = createRouter({
         routes: productionRoutes,
@@ -128,7 +144,12 @@ describe('admin health through the full authentication pipeline', () => {
     const response = await adminHealthWith(true, ADMIN_CLAIMS);
     expect(response.status).toBe(200);
     expect(await response.json()).toStrictEqual({
-      data: { status: 'ok', checks: { database: 'up' }, runs: EMPTY_QUEUE_SUMMARY },
+      data: {
+        status: 'ok',
+        checks: { database: 'up' },
+        listener: { state: 'up', reason: null },
+        runs: EMPTY_QUEUE_SUMMARY,
+      },
     });
   });
 
@@ -155,13 +176,30 @@ describe('admin health through the full authentication pipeline', () => {
   test('reports degraded when the database does not answer, with no user data', async () => {
     const response = await adminHealthWith(false, ADMIN_CLAIMS);
     const body = (await response.json()) as {
-      data: { status: string; checks: { database: string }; runs: unknown };
+      data: { status: string; checks: { database: string }; listener: unknown; runs: unknown };
     };
     expect(body.data).toStrictEqual({
       status: 'degraded',
       checks: { database: 'down' },
+      listener: { state: 'up', reason: null },
       runs: null,
     });
+  });
+
+  test('a listener that failed for good (wrong password) degrades the state and names the reason only', async () => {
+    const failed: ListenerHealth = { state: 'failed', reason: 'authentication_failed' };
+    const response = await adminHealthWith(true, ADMIN_CLAIMS, EMPTY_QUEUE_SUMMARY, failed);
+    const body = (await response.json()) as { data: { status: string; listener: unknown } };
+    expect(body.data.status).toBe('degraded');
+    expect(body.data.listener).toStrictEqual({ state: 'failed', reason: 'authentication_failed' });
+  });
+
+  test('a listener that is only reconnecting does not degrade the state', async () => {
+    const reconnecting: ListenerHealth = { state: 'reconnecting', reason: null };
+    const response = await adminHealthWith(true, ADMIN_CLAIMS, EMPTY_QUEUE_SUMMARY, reconnecting);
+    const body = (await response.json()) as { data: { status: string; listener: unknown } };
+    expect(body.data.status).toBe('ok');
+    expect(body.data.listener).toStrictEqual({ state: 'reconnecting', reason: null });
   });
 
   test('admin without acr 2 gets 403 MFA_REQUIRED', async () => {

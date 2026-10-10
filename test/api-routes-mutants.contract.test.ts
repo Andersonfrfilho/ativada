@@ -363,8 +363,8 @@ const MUTANTS: readonly SourceMutant[] = [
     name: 'SURVIVAL_SETTINGS_NOT_STORED',
     edits: edit(
       'runs/create-run.use-case.ts',
-      'return parseJsonContainer(JSON.stringify({ survival: body.survival }));',
-      'return undefined;',
+      '    ...(body.survival === undefined ? {} : { survival: body.survival }),\n',
+      '',
     ),
   },
   {

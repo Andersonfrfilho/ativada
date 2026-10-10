@@ -15,6 +15,7 @@ const PARALLEL_MUTANTS = 4;
 const CONTROL: LiveSourceMutant = { name: 'CONTROL', edits: [] };
 const EVALUATOR = 'live-evaluator.ts';
 const PASS = 'live-pass.ts';
+const STEP = 'live-step.ts';
 const CURSOR = 'resolve-live-cursor.ts';
 const RESTORE = 'restore-live-state.ts';
 const CONTEXT = 'load-live-context.ts';
@@ -106,7 +107,7 @@ const MUTANTS: readonly LiveSourceMutant[] = [
   },
   {
     name: 'CHECKPOINT_AT_THE_WRONG_CANDLE',
-    edits: edit(PASS, 'lastCandleTime: candle.openTime,', 'lastCandleTime: candle.closeTime,'),
+    edits: edit(STEP, 'lastCandleTime: candle.openTime,', 'lastCandleTime: candle.closeTime,'),
   },
   {
     name: 'CURSOR_NOT_ADVANCED',
@@ -331,9 +332,9 @@ const MUTANTS: readonly LiveSourceMutant[] = [
   {
     name: 'ALERTS_NOT_HANDED_TO_THE_COMMIT',
     edits: edit(
-      PASS,
-      '    alerts,\n    rows: toRunResultRows(buffer),',
-      '    alerts: [],\n    rows: toRunResultRows(buffer),',
+      STEP,
+      '    alerts: await collectAlerts(run, { settled, candle }),\n',
+      '    alerts: [],\n',
     ),
   },
   {
@@ -342,7 +343,11 @@ const MUTANTS: readonly LiveSourceMutant[] = [
   },
   {
     name: 'ALERT_PAYLOAD_ACCEPTS_EXTRA_FIELDS',
-    edits: edit(PAYLOAD, 'z.strictObject({\n  symbol', 'z.looseObject({\n  symbol'),
+    edits: edit(
+      PAYLOAD,
+      'export const alertPayloadSchema = z.strictObject({',
+      'export const alertPayloadSchema = z.looseObject({',
+    ),
   },
   {
     name: 'HIT_RATE_WITHOUT_VALUE_IS_ACCEPTED',
