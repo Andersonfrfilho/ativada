@@ -2,5 +2,13 @@
   "name": "@cryptoada/strategy-engine",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@cryptoada/environment": "workspace:*",
+    "decimal.js": "10.6.0"
+  }
 }
