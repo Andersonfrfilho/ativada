@@ -25,6 +25,7 @@ import {
 } from '../../packages/strategy-engine/src/index.js';
 import type {
   GapConfirmation,
+  LiveAlertingSettings,
   LiveCommitOutcome,
   LiveEvaluator,
   LiveRunDatabase,
@@ -262,6 +263,7 @@ export type EvaluatorOptions = {
   readonly isGapConfirmed?: GapConfirmation;
   readonly heartbeatTimeoutSeconds?: number;
   readonly maxStepsPerPass?: number;
+  readonly alerting?: LiveAlertingSettings;
   // Roda antes de cada passo ser gravado (por exemplo, apagar a conta no meio).
   readonly beforeCommit?: (runId: string) => Promise<void>;
 };
@@ -308,6 +310,7 @@ export function createProductionEvaluator(
     isGapConfirmed: options.isGapConfirmed ?? ((): boolean => false),
     logger,
     ...(options.maxStepsPerPass === undefined ? {} : { maxStepsPerPass: options.maxStepsPerPass }),
+    ...(options.alerting === undefined ? {} : { alerting: options.alerting }),
   });
   return { evaluator, entries, committed };
 }

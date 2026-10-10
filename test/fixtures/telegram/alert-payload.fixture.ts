@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { JsonValue } from '../../../packages/database/src/index.js';
+import type { JsonContainer, JsonValue } from '../../../packages/database/src/index.js';
 
 export const REASON_TEXT = 'Compra 3/4: tendência, MACD e volume confirmam; RSI neutro';
 
 export type PayloadOverrides = Readonly<Record<string, JsonValue>>;
 
 // O conteúdo que o passo ao vivo grava em `alerts.payload` (esquema estrito do worker).
-export function alertPayload(overrides: PayloadOverrides = {}): JsonValue {
+export function alertPayload(overrides: PayloadOverrides = {}): JsonContainer {
   return {
     symbol: 'BTCUSDT',
     timeframe: '1h',
