@@ -53,6 +53,10 @@ export type WorkerDependencies = {
   readonly gapLookbackHours?: number | undefined;
   readonly gapCheckMinutes?: number | undefined;
   readonly abortController: AbortController;
+  // Aberturas que a Binance não tem: a recuperação as preenche e a simulação ao vivo as lê como lacuna confirmada.
+  readonly unfillable?: Set<string> | undefined;
+  // Chamado depois de cada candle fechado gravado: acorda a avaliação das simulações ao vivo.
+  readonly onCandleStored?: (() => void) | undefined;
   readonly serverClock?: Pick<ServerClock, 'now' | 'refresh'> | undefined;
   readonly timing?: WorkerTiming;
 };
@@ -98,7 +102,7 @@ function resolveTiming(
 }
 
 function createRecovery(dependencies: WorkerDependencies, timing: ResolvedTiming): RecoveryRunner {
-  const unfillable = new Set<string>();
+  const unfillable = dependencies.unfillable ?? new Set<string>();
   return createRecoveryRunner({
     recover: () =>
       recoverGaps({
@@ -138,7 +142,10 @@ function createWorkerStream(params: WorkerStreamParams): KlineStream {
     now: timing.now,
     sleep: timing.sleep,
     random: timing.random,
-    onCandle: writer.write,
+    onCandle: async (candle) => {
+      await writer.write(candle);
+      dependencies.onCandleStored?.();
+    },
     // O fluxo não é confiável antes da lacuna fechada: cada (re)conexão dispara a recuperação.
     onConnected: ({ attempt }) => {
       logger.info(WORKER_LOG.STREAM_CONNECTED, { attempt });

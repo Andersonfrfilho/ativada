@@ -45,7 +45,7 @@ export type RecoveryOutcome = {
   readonly banMilliseconds?: number;
 };
 
-function buildUnfillableKey(pair: PairKey, openTime: number): string {
+export function buildUnfillableKey(pair: PairKey, openTime: number): string {
   return `${formatPairLabel(pair)}/${openTime}`;
 }
 

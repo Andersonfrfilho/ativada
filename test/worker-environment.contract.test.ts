@@ -16,6 +16,8 @@ const WORKER_VARIABLES: readonly string[] = [
   'STREAM_STALE_SECONDS',
   'STREAM_GAP_LOOKBACK_HOURS',
   'STREAM_GAP_CHECK_MINUTES',
+  'LIVE_POLL_SECONDS',
+  'LIVE_HEARTBEAT_TIMEOUT_SECONDS',
 ];
 const SECRET_FRAGMENT = 'ValorQueNaoPodeVazar';
 const PRODUCTION_DATABASE_URL =
@@ -60,6 +62,25 @@ describe('worker environment', () => {
     expect(environment.STREAM_GAP_CHECK_MINUTES).toBe(15);
   });
 
+  test('simulação ao vivo: ronda de 5 s e batimento vencido em 60 s por padrão, configuráveis', async () => {
+    const defaults = parseEnvironment(environmentSchema, await buildSource());
+    expect(defaults.LIVE_POLL_SECONDS).toBe(5);
+    expect(defaults.LIVE_HEARTBEAT_TIMEOUT_SECONDS).toBe(60);
+    const custom = parseEnvironment(
+      environmentSchema,
+      await buildSource({ LIVE_POLL_SECONDS: '2', LIVE_HEARTBEAT_TIMEOUT_SECONDS: '30' }),
+    );
+    expect(custom.LIVE_POLL_SECONDS).toBe(2);
+    expect(custom.LIVE_HEARTBEAT_TIMEOUT_SECONDS).toBe(30);
+  });
+
+  test('o batimento vence só depois de mais de uma ronda: o prazo menor ou igual ao intervalo falha', async () => {
+    const message = issuesOf(
+      await buildSource({ LIVE_POLL_SECONDS: '20', LIVE_HEARTBEAT_TIMEOUT_SECONDS: '20' }),
+    );
+    expect(message).toContain('LIVE_HEARTBEAT_TIMEOUT_SECONDS');
+  });
+
   test('reads the gap lookback window and the periodic check interval', async () => {
     const environment = parseEnvironment(
       environmentSchema,
@@ -99,6 +120,12 @@ describe('worker environment', () => {
     ['STREAM_GAP_LOOKBACK_HOURS', 'muito'],
     ['STREAM_GAP_CHECK_MINUTES', '0'],
     ['STREAM_GAP_CHECK_MINUTES', '1441'],
+    ['LIVE_POLL_SECONDS', '0'],
+    ['LIVE_POLL_SECONDS', '301'],
+    ['LIVE_POLL_SECONDS', 'muito'],
+    ['LIVE_HEARTBEAT_TIMEOUT_SECONDS', '4'],
+    ['LIVE_HEARTBEAT_TIMEOUT_SECONDS', '3601'],
+    ['LIVE_HEARTBEAT_TIMEOUT_SECONDS', 'muito'],
   ])(
     'fails at boot with an invalid %s=%s, naming the variable and never the value',
     async (variable, value) => {
