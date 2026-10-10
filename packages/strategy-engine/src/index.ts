@@ -174,9 +174,21 @@ export {
 } from './metrics/open-position-metrics.js';
 export { reconcileRunMetrics } from './metrics/reconcile-run-metrics.js';
 export {
+  chainWindowResult,
+  type ChainWindowResultParams,
+} from './walk-forward/chain-window-result.js';
+export {
+  concatenateOutOfSample,
+  type ConcatenateOutOfSampleParams,
+} from './walk-forward/concatenate-out-of-sample.js';
+export {
   deriveStrategyConfig,
   type DerivedStrategyConfig,
 } from './walk-forward/derive-strategy-config.js';
+export {
+  detectOverfitting,
+  type DetectOverfittingParams,
+} from './walk-forward/detect-overfitting.js';
 export {
   countValidCombinations,
   expandWalkForwardGrid,
