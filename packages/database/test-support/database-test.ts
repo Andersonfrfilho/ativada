@@ -28,6 +28,13 @@ import {
   checkLargeBatch,
   checkOversizedOrderBatch,
 } from './run-result-batch-checks.js';
+import {
+  checkBatchCommitAndRollback,
+  checkBatchGuards,
+  checkCancelWaitsForTheBatch,
+  checkCompletionSetsFullProgress,
+  checkRunOwnerResolution,
+} from './run-batch-checks.js';
 import { checkResultPagination } from './run-result-page-checks.js';
 import {
   checkCommandsAndForeignKey,
@@ -111,6 +118,11 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkWindowNamespace(context);
   await checkCommandsAndForeignKey(context);
   await checkPersistenceIsolation(context);
+  await checkRunOwnerResolution(context);
+  await checkBatchCommitAndRollback(context);
+  await checkBatchGuards(context);
+  await checkCancelWaitsForTheBatch(context);
+  await checkCompletionSetsFullProgress(context);
 }
 
 async function runChecks(databaseUrl: string): Promise<void> {

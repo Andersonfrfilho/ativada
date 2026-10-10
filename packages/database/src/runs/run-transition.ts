@@ -6,6 +6,7 @@ import { toJsonb } from '../jsonb.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
 import { runs } from '../schema/runs.schema.js';
 import {
+  RUN_PROGRESS_MAXIMUM,
   RUN_STATUS,
   RUN_TRANSITION_OUTCOME,
   RUN_TRANSITION_SOURCES,
@@ -24,6 +25,7 @@ function buildTransitionChanges(params: TransitionRunParams): Record<string, unk
   return {
     status: params.to,
     ...(params.to === RUN_STATUS.RUNNING ? { startedAt: sql`now()` } : {}),
+    ...(params.to === RUN_STATUS.COMPLETED ? { progress: RUN_PROGRESS_MAXIMUM } : {}),
     ...(TERMINAL_RUN_STATUSES.includes(params.to) ? { finishedAt: sql`now()` } : {}),
     ...(params.metrics === undefined ? {} : { metrics: toJsonb(params.metrics) }),
     ...(params.errorCode === undefined ? {} : { errorCode: params.errorCode }),

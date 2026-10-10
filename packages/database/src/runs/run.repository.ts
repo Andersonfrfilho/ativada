@@ -80,7 +80,7 @@ async function findRun(
 }
 
 // Só uma execução `running` grava, e `last_candle_time` só avança: o estado final e o passo antigo não sobrescrevem.
-async function saveCheckpoint(
+export async function saveCheckpoint(
   executor: DatabaseExecutor,
   scope: OwnerScope,
   params: SaveCheckpointParams,

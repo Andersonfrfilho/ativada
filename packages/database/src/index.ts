@@ -118,6 +118,14 @@ export type {
   RunResultRepository,
   SignalInput,
 } from './run-results/run-result.types.js';
+export { createRunBatchRepository } from './run-results/run-batch.repository.js';
+export type {
+  BatchCheckpointParams,
+  RunBatchRepository,
+  RunBatchWriter,
+  RunResultRows,
+} from './run-results/run-batch.types.js';
+export { resolveRunOwnerScope } from './runs/run-owner.js';
 export { createStrategyRepository } from './strategies/strategy.repository.js';
 export type {
   AddStrategyVersionParams,

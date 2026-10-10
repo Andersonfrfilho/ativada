@@ -333,6 +333,15 @@ métodos recebem `OwnerScope`. Qualquer nova exportação pública passa pelo co
    repositório de recurso; a leitura que lista as simulações ativas de um par é uma consulta própria do
    worker, que devolve `(runId, userId)` e filtra conta apagada ou bloqueada (`deleted_at IS NULL`,
    `blocked_at IS NULL`).
+8. **Dono da execução para workers (T3.2).** O `worker_thread` de backtest recebe só um `runId` e não pode
+   cunhar `UserId`. `resolveRunOwnerScope(handle, runId)` (`@cryptoada/database`) devolve o `OwnerScope` do dono da
+   execução — construído dentro do pacote, a partir de `runs.user_id` — ou `undefined` quando o `runId` é
+   malformado, inexistente, ou a conta do dono está apagada ou bloqueada. **Só vale para `runId` enfileirado pela
+   própria API depois de autorizar o usuário** (T3.4 e T3.6): um `runId` vindo de cliente, de payload ou de URL nunca
+   chega a essa função. Todo método de repositório continua exigindo o escopo e filtrando `user_id`; o escopo só
+   substitui o `resolveUserBySubject` onde não há token. O lote do backtest (`createRunBatchRepository(handle)
+   .runInBatch(scope, runId, work)`) abre a transação, trava a linha da execução (`FOR UPDATE`, filtrada pelo dono) e
+   só então entrega ao `work` um escritor preso àquele dono e àquela execução.
 
 **WebSocket (`/v1/stream`):** o navegador não manda cabeçalho no handshake, e token em query é proibido.
 O painel pede `POST /v1/stream/tickets` (Bearer) e recebe um ticket aleatório de 32 bytes, uso único,

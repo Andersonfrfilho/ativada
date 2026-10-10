@@ -32,6 +32,7 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'createBlockedAccountRepository',
   'createCandleRepository',
   'createProfileRepository',
+  'createRunBatchRepository',
   'createRunRepository',
   'createRunResultRepository',
   'createSentimentObservationRepository',
@@ -44,6 +45,7 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'parseAccountId',
   'pingDatabase',
   'readPostgresErrorCode',
+  'resolveRunOwnerScope',
   'resolveUserBySubject',
 ];
 
