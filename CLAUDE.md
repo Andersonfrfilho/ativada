@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Contexto operacional do **cryptoada**. Produto e regras em `README.md`,
+Contexto operacional do **CryptoAdA**. Produto e regras em `README.md`,
 `docs/spec/constitution.md` e nas specs em `specs/NNN-nome/`.
 
 ## Estado
