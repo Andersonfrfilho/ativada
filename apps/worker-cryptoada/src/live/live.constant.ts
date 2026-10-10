@@ -8,6 +8,8 @@ export const LIVE_MAXIMUM_POLL_SECONDS = 300;
 export const LIVE_DEFAULT_HEARTBEAT_TIMEOUT_SECONDS = 60;
 export const LIVE_MINIMUM_HEARTBEAT_TIMEOUT_SECONDS = 5;
 export const LIVE_MAXIMUM_HEARTBEAT_TIMEOUT_SECONDS = 3_600;
+// Alerta de sinal só de candle fechado há no máximo isto: replay depois de parada longa não vira notícia velha.
+export const LIVE_ALERT_MAX_AGE_CANDLES = 2;
 // O ao vivo não tem fim: o progresso fica em zero e o painel mostra o último candle.
 export const LIVE_PROGRESS = 0;
 

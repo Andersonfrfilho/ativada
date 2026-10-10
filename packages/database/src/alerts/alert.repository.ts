@@ -64,17 +64,15 @@ async function claimDue(database: Database, params: ClaimAlertsParams): Promise<
       )
       .returning();
     const chats = await readChats(transaction, [...new Set(taken.map((row) => row.userId))]);
-    return taken
-      .map((row) => ({
-        id: row.id,
-        runId: row.runId,
-        candleTime: row.candleTime,
-        side: row.side as AlertSide,
-        payload: readJsonb(row.payload),
-        attempts: row.attempts,
-        chatId: chats.get(row.userId),
-      }))
-      .sort((first, second) => first.candleTime - second.candleTime);
+    return taken.map((row) => ({
+      id: row.id,
+      runId: row.runId,
+      candleTime: row.candleTime,
+      side: row.side as AlertSide,
+      payload: readJsonb(row.payload),
+      attempts: row.attempts,
+      chatId: chats.get(row.userId),
+    }));
   });
 }
 

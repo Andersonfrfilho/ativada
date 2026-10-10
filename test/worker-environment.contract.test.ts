@@ -18,6 +18,9 @@ const WORKER_VARIABLES: readonly string[] = [
   'STREAM_GAP_CHECK_MINUTES',
   'LIVE_POLL_SECONDS',
   'LIVE_HEARTBEAT_TIMEOUT_SECONDS',
+  'TELEGRAM_BOT_TOKEN',
+  'TELEGRAM_API_BASE_URL',
+  'ALERT_POLL_SECONDS',
 ];
 const SECRET_FRAGMENT = 'ValorQueNaoPodeVazar';
 const PRODUCTION_DATABASE_URL =
@@ -45,6 +48,7 @@ async function buildProductionSource(overrides: Source = {}): Promise<Source> {
     DATABASE_URL: PRODUCTION_DATABASE_URL,
     BINANCE_BASE_URL: 'https://data-api.binance.vision',
     BINANCE_STREAM_URL: 'wss://data-stream.binance.vision',
+    TELEGRAM_API_BASE_URL: 'https://api.telegram.org',
     ...overrides,
   });
 }
@@ -72,6 +76,24 @@ describe('worker environment', () => {
     );
     expect(custom.LIVE_POLL_SECONDS).toBe(2);
     expect(custom.LIVE_HEARTBEAT_TIMEOUT_SECONDS).toBe(30);
+  });
+
+  test('alertas no Telegram: desligados sem token, API pública por padrão, despacho de 2 s configurável', async () => {
+    const defaults = parseEnvironment(environmentSchema, await buildSource());
+    expect(defaults.TELEGRAM_BOT_TOKEN).toBeUndefined();
+    expect(defaults.TELEGRAM_API_BASE_URL).toBe('https://api.telegram.org');
+    expect(defaults.ALERT_POLL_SECONDS).toBe(2);
+    const custom = parseEnvironment(
+      environmentSchema,
+      await buildSource({
+        TELEGRAM_BOT_TOKEN: '123456789:FAKE_worker_token',
+        TELEGRAM_API_BASE_URL: 'http://127.0.0.1:9',
+        ALERT_POLL_SECONDS: '10',
+      }),
+    );
+    expect(custom.TELEGRAM_BOT_TOKEN).toBe('123456789:FAKE_worker_token');
+    expect(custom.TELEGRAM_API_BASE_URL).toBe('http://127.0.0.1:9');
+    expect(custom.ALERT_POLL_SECONDS).toBe(10);
   });
 
   test('o batimento vence só depois de mais de uma ronda: o prazo menor ou igual ao intervalo falha', async () => {
@@ -126,6 +148,10 @@ describe('worker environment', () => {
     ['LIVE_HEARTBEAT_TIMEOUT_SECONDS', '4'],
     ['LIVE_HEARTBEAT_TIMEOUT_SECONDS', '3601'],
     ['LIVE_HEARTBEAT_TIMEOUT_SECONDS', 'muito'],
+    ['ALERT_POLL_SECONDS', '0'],
+    ['ALERT_POLL_SECONDS', '61'],
+    ['ALERT_POLL_SECONDS', 'muito'],
+    ['TELEGRAM_API_BASE_URL', 'ftp://example.com'],
   ])(
     'fails at boot with an invalid %s=%s, naming the variable and never the value',
     async (variable, value) => {
@@ -163,6 +189,27 @@ describe('worker environment in production', () => {
       expect(message).toContain('BINANCE_STREAM_URL');
     },
   );
+
+  test('rejects a plain http:// Telegram API base', async () => {
+    const source = await buildProductionSource({
+      TELEGRAM_API_BASE_URL: 'http://insecure.example.com',
+    });
+    expect(issuesOf(source)).toContain('TELEGRAM_API_BASE_URL');
+  });
+
+  test('rejects a short bot token, naming the variable and never the value', async () => {
+    const source = await buildProductionSource({ TELEGRAM_BOT_TOKEN: `1:curto${SECRET_FRAGMENT}` });
+    const message = issuesOf(source);
+    expect(message).toContain('TELEGRAM_BOT_TOKEN');
+    expect(message).not.toContain(SECRET_FRAGMENT);
+  });
+
+  test('rejects a bot token that keeps a development marker', async () => {
+    const source = await buildProductionSource({
+      TELEGRAM_BOT_TOKEN: '123456789:prod_token_dev_only_padding_0123456789',
+    });
+    expect(issuesOf(source)).toContain('TELEGRAM_BOT_TOKEN');
+  });
 
   test('rejects a database URL without TLS', async () => {
     const source = await buildProductionSource({ DATABASE_URL: 'postgres://u:p@h:5432/d' });
