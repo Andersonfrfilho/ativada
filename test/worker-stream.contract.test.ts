@@ -22,6 +22,18 @@ afterEach(async () => {
   await stopPipeline(pipeline);
 });
 
+function failingRepository(
+  shouldFail: () => boolean,
+): NonNullable<Parameters<typeof startPipeline>[0]>['wrapRepository'] & {} {
+  return (repository) => ({
+    ...repository,
+    upsertCandles: (candles): Promise<UpsertCandlesResult> => {
+      if (shouldFail()) return Promise.reject(new Error(`falha ${SECRET_MARKER}`));
+      return repository.upsertCandles(candles);
+    },
+  });
+}
+
 async function startConnected(options: Parameters<typeof startPipeline>[0] = {}): Promise<void> {
   pipeline = startPipeline(options);
   await waitFor(() => pipeline.finishedRecoveries() === 1, 'first recovery finished');
@@ -88,33 +100,36 @@ describe('worker: closed candles from the stream', () => {
 });
 
 describe('worker: write failures and shutdown', () => {
-  test('a write error is logged with an opaque id and does not stop the worker', async () => {
-    let calls = 0;
-    await startConnected({
-      wrapRepository: (repository) => ({
-        ...repository,
-        upsertCandles: (candles): Promise<UpsertCandlesResult> => {
-          calls += 1;
-          if (calls === 1) return Promise.reject(new Error(`falha ${SECRET_MARKER}`));
-          return repository.upsertCandles(candles);
-        },
-      }),
-    });
-    const firstOpenTime = pipeline.closeNextCandle();
-    sendClosed(firstOpenTime);
-    await waitFor(
-      () => pipeline.logs(WORKER_LOG.CANDLE_WRITE_FAILED).length === 1,
-      'failure logged',
+  test('a transient write error is retried with backoff and the candle is stored without REST', async () => {
+    let failuresLeft = 2;
+    await startConnected({ wrapRepository: failingRepository(() => failuresLeft-- > 0) });
+    const openTime = pipeline.closeNextCandle();
+    sendClosed(openTime);
+    await waitFor(() => pipeline.storedOpenTimes('BTCUSDT').includes(openTime), 'candle stored');
+    expect(pipeline.delays).toStrictEqual([200, 400]);
+    expect(pipeline.server.restRequests).toHaveLength(0);
+    expect(pipeline.logs(WORKER_LOG.CANDLE_WRITE_FAILED)).toHaveLength(0);
+    expect(JSON.stringify(pipeline.logs(WORKER_LOG.CANDLE_WRITE_RETRY))).not.toContain(
+      SECRET_MARKER,
     );
-    const secondOpenTime = pipeline.closeNextCandle();
-    sendClosed(secondOpenTime);
-    await waitFor(
-      () => pipeline.storedOpenTimes('BTCUSDT').includes(secondOpenTime),
-      'next candle stored',
-    );
-    const failure = pipeline.logs(WORKER_LOG.CANDLE_WRITE_FAILED)[0];
-    expect(failure?.candleId).toBe(`BTCUSDT/1h/${firstOpenTime}`);
+  });
+
+  test('a write that keeps failing is logged with an opaque id and the recovery brings the candle back', async () => {
+    let failuresLeft = 3;
+    await startConnected({ wrapRepository: failingRepository(() => failuresLeft-- > 0) });
+    const openTime = pipeline.closeNextCandle();
+    pipeline.server.setHistory({ symbol: 'BTCUSDT', timeframe: '1h', openTimes: [openTime] });
+    sendClosed(openTime);
+    await waitFor(() => pipeline.storedOpenTimes('BTCUSDT').includes(openTime), 'candle recovered');
+    const failure = pipeline.logs(WORKER_LOG.CANDLE_WRITE_FAILED);
+    expect(failure).toHaveLength(1);
+    expect(failure[0]?.candleId).toBe(`BTCUSDT/1h/${openTime}`);
     expect(JSON.stringify(failure)).not.toContain(SECRET_MARKER);
+    expect(pipeline.server.restRequests).toHaveLength(1);
+    expect(pipeline.server.restRequests[0]).toMatchObject({
+      startTime: openTime,
+      endTime: openTime,
+    });
     expect(pipeline.server.connectionCount()).toBe(1);
   });
 

@@ -24,16 +24,23 @@ export type GapRecoveryDependencies = {
   readonly exchange: string;
   readonly symbols: readonly string[];
   readonly timeframes: readonly Timeframe[];
+  readonly lookbackMilliseconds: number;
+  // Aberturas que a Binance não tem: perguntar de novo a cada verificação só gastaria peso.
+  readonly unfillable: Set<string>;
 };
 
 type Pair = { readonly symbol: string; readonly timeframe: Timeframe };
+
+function buildUnfillableKey(pair: Pair, openTime: number): string {
+  return `${pair.symbol}/${pair.timeframe}/${openTime}`;
+}
 
 async function downloadInterval(
   dependencies: GapRecoveryDependencies,
   pair: Pair,
   interval: OpenTimeInterval,
 ): Promise<number> {
-  let downloaded = 0;
+  const received = new Set<number>();
   await dependencies.client.fetchKlinesRange({
     symbol: pair.symbol,
     timeframe: pair.timeframe,
@@ -43,31 +50,48 @@ async function downloadInterval(
       await dependencies.repository.upsertCandles(
         page.map((candle) => ({ ...candle, exchange: dependencies.exchange })),
       );
-      downloaded += page.length;
+      for (const candle of page) received.add(candle.openTime);
     },
   });
-  return downloaded;
+  const duration = TIMEFRAME_DURATION_MILLISECONDS[pair.timeframe];
+  for (let openTime = interval.from; openTime <= interval.to; openTime += duration) {
+    if (!received.has(openTime)) dependencies.unfillable.add(buildUnfillableKey(pair, openTime));
+  }
+  return received.size;
+}
+
+async function findMissing(
+  dependencies: GapRecoveryDependencies,
+  pair: Pair,
+): Promise<readonly number[]> {
+  const duration = TIMEFRAME_DURATION_MILLISECONDS[pair.timeframe];
+  const now = dependencies.now();
+  const openTimes = await dependencies.repository.findMissingOpenTimes({
+    exchange: dependencies.exchange,
+    ...pair,
+    from: now - dependencies.lookbackMilliseconds,
+    to: Math.floor(now / duration) * duration,
+  });
+  return openTimes.filter(
+    (openTime) => !dependencies.unfillable.has(buildUnfillableKey(pair, openTime)),
+  );
 }
 
 async function recoverPair(dependencies: GapRecoveryDependencies, pair: Pair): Promise<void> {
-  const series = { exchange: dependencies.exchange, ...pair };
-  const latestOpenTime = await dependencies.repository.findLatestOpenTime(series);
+  const latestOpenTime = await dependencies.repository.findLatestOpenTime({
+    exchange: dependencies.exchange,
+    ...pair,
+  });
   if (latestOpenTime === undefined) {
     dependencies.logger.info(WORKER_LOG.NO_STORED_CANDLES, {
       pairId: `${pair.symbol}/${pair.timeframe}`,
     });
     return;
   }
-  const duration = TIMEFRAME_DURATION_MILLISECONDS[pair.timeframe];
-  // A grade corrente começa na abertura do candle ainda aberto; tudo antes dela já fechou.
-  const currentOpenTime = Math.floor(dependencies.now() / duration) * duration;
-  const openTimes = await dependencies.repository.findMissingOpenTimes({
-    ...series,
-    from: latestOpenTime,
-    to: currentOpenTime,
-  });
+  const openTimes = await findMissing(dependencies, pair);
   let downloaded = 0;
-  for (const interval of groupConsecutiveOpenTimes({ openTimes, durationMilliseconds: duration })) {
+  const durationMilliseconds = TIMEFRAME_DURATION_MILLISECONDS[pair.timeframe];
+  for (const interval of groupConsecutiveOpenTimes({ openTimes, durationMilliseconds })) {
     downloaded += await downloadInterval(dependencies, pair, interval);
   }
   if (openTimes.length > 0) {
@@ -79,7 +103,6 @@ async function recoverPair(dependencies: GapRecoveryDependencies, pair: Pair): P
   }
 }
 
-// Devolve quantos pares falharam; em sequência de propósito, porque o peso por minuto da Binance é um só.
 export async function recoverGaps(dependencies: GapRecoveryDependencies): Promise<number> {
   let failures = 0;
   for (const symbol of dependencies.symbols) {

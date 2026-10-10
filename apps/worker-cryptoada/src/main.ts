@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+// Copyright (c) 2026 Ada Technology. All rights reserved.
 import { closeDatabase, createCandleRepository, openDatabase } from '@cryptoada/database';
 import { MILLISECONDS_PER_SECOND, runWithEnvironment } from '@cryptoada/environment';
 import { createMarketDataClient } from '@cryptoada/market-data';
@@ -25,6 +26,8 @@ function startWorker(environment: Environment): void {
     logger,
     streamBaseUrl: environment.BINANCE_STREAM_URL,
     staleAfterMilliseconds: environment.STREAM_STALE_SECONDS * MILLISECONDS_PER_SECOND,
+    gapLookbackHours: environment.STREAM_GAP_LOOKBACK_HOURS,
+    gapCheckMinutes: environment.STREAM_GAP_CHECK_MINUTES,
   });
   logger.info(WORKER_LOG.STARTED, {
     env: environment.ENV,

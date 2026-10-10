@@ -14,6 +14,8 @@ const WORKER_VARIABLES: readonly string[] = [
   'BINANCE_BASE_URL',
   'BINANCE_STREAM_URL',
   'STREAM_STALE_SECONDS',
+  'STREAM_GAP_LOOKBACK_HOURS',
+  'STREAM_GAP_CHECK_MINUTES',
 ];
 const SECRET_FRAGMENT = 'ValorQueNaoPodeVazar';
 const PRODUCTION_DATABASE_URL =
@@ -54,6 +56,17 @@ describe('worker environment', () => {
     expect(environment.BINANCE_BASE_URL).toBe('https://data-api.binance.vision');
     expect(environment.BINANCE_STREAM_URL).toBe('wss://data-stream.binance.vision');
     expect(environment.STREAM_STALE_SECONDS).toBe(60);
+    expect(environment.STREAM_GAP_LOOKBACK_HOURS).toBe(168);
+    expect(environment.STREAM_GAP_CHECK_MINUTES).toBe(15);
+  });
+
+  test('reads the gap lookback window and the periodic check interval', async () => {
+    const environment = parseEnvironment(
+      environmentSchema,
+      await buildSource({ STREAM_GAP_LOOKBACK_HOURS: '720', STREAM_GAP_CHECK_MINUTES: '1' }),
+    );
+    expect(environment.STREAM_GAP_LOOKBACK_HOURS).toBe(720);
+    expect(environment.STREAM_GAP_CHECK_MINUTES).toBe(1);
   });
 
   test('reads the lists, the stream URL and the silence limit', async () => {
@@ -79,6 +92,11 @@ describe('worker environment', () => {
     ['BINANCE_STREAM_URL', 'https://data-stream.binance.vision'],
     ['STREAM_STALE_SECONDS', '0'],
     ['STREAM_STALE_SECONDS', 'muito'],
+    ['STREAM_GAP_LOOKBACK_HOURS', '0'],
+    ['STREAM_GAP_LOOKBACK_HOURS', '721'],
+    ['STREAM_GAP_LOOKBACK_HOURS', 'muito'],
+    ['STREAM_GAP_CHECK_MINUTES', '0'],
+    ['STREAM_GAP_CHECK_MINUTES', '1441'],
   ])(
     'fails at boot with an invalid %s=%s, naming the variable and never the value',
     async (variable, value) => {
