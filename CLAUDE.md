@@ -66,6 +66,14 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   da execução real (spec 002) e da camada de metas. `warnRunParameters` devolve avisos (tick que domina o
   slippage, passo que zera ou engrossa a quantidade, mínimo acima do saldo). Provado por diferencial de 6.000
   cenários contra o oráculo independente em `test/fixtures/strategy-engine/risk/` e por 18 mutantes.
+- **Motor em produção (T2.5, ADR 0002 §"Motor em produção").** `createEngine()` (`engine-1`) = `signalStep ∘
+  walletStep`; a corretora simulada mora em `packages/strategy-engine/src/wallet/` (`simulatedFillModel`, política de
+  sinal e comandos, régua, patrimônio com `equityAtLow`). O `walletStep` AVULSO confere hashes (o sinal carrega
+  `configHash` e a lacuna ecoada; o estado da carteira carrega `configHash` e `runHash`) e a contiguidade do candle;
+  mexer no sinal ou nessa guarda exige `SIGNAL_ENGINE_VERSION`/`ENGINE_VERSION` novos e o dourado regravado
+  (`test/fixtures/strategy-engine/golden/`). Prova: diferencial byte a byte contra a referência em 3.000 fluxos,
+  propriedades, harness de 20 verificações no motor completo e 33 mutantes de produção
+  (`test/production-engine-mutants.contract.test.ts`).
 - Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account

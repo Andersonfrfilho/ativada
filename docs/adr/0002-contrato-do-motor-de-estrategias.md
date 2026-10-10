@@ -758,6 +758,74 @@ quantidade para cima, sem teto de caixa / exposição / volume, `volume(k)`, `mi
 cima, alvo para baixo, ATR de `t+1`, exposição sobre o caixa, saída sem slippage, débito para baixo, folgas
 de arredondamento removidas, ATR zero aceito, stop inválido aceito.
 
+## Motor em produção (T2.5)
+
+`packages/strategy-engine/src/wallet/` (a corretora simulada) e `src/create-engine.ts` (o motor completo). Nenhuma
+dependência nova; a referência de teste continua independente do `src` de carteira (importa só as primitivas
+decimais e os tipos).
+
+- **`createEngine()`** devolve o `Engine` do contrato: `step = assertStepInput → signalStep → runWalletStep`, e
+  `signalStep`/`walletStep` expostos para o walk-forward e as metas. `ENGINE_VERSION = 'engine-1'` é o que o estado
+  grava (estado de outra versão ⇒ `engine_mismatch` ⇒ migração, §b). A semântica do sinal continua versionada à
+  parte: **`SIGNAL_ENGINE_VERSION` passou a `signal-2`** (e o dourado do sinal foi regravado) porque o
+  `SignalDecision` ganhou dois campos, abaixo.
+- **`walletStep` avulso confere o que o `step` já conferiu** (herdado da revisão do arquiteto). O sinal carrega
+  `configHash` (a versão da estratégia que decidiu) e `confirmedGapCandles` (a lacuna que o `signalStep` aceitou);
+  o `WalletState` carrega `configHash` e `runHash` (o esquema do estado exige que sejam os do estado). O avulso
+  recusa com código: `CONFIG_HASH_MISMATCH` (estado, estratégia ou sinal de outra versão), `RUN_HASH_MISMATCH`,
+  `CANDLE_GAP_UNCONFIRMED` (o candle não é o seguinte ao último da carteira e o sinal não ecoa a contagem exata de
+  candles ausentes; sinal nulo = aquecimento = sem lacuna), além das guardas de forma, ordem, sinal de outro candle
+  e comandos. O `step` composto usa `runWalletStep`, sem essas conferências (já fez a guarda do passo inteiro,
+  inclusive lacuna no aquecimento, onde o sinal é nulo e não tem como ecoá-la).
+- **`simulatedFillModel`** é o `FillModel` de produção: ordem pendente na abertura de `t+1`, depois stop e alvo
+  contra máxima e mínima (§e, ao pé da letra). `executionReports` não vazio ⇒ `EXECUTION_REPORTS_UNSUPPORTED`.
+  Stop, alvo e quantidade vêm de `computeProtectivePrices` e `computePositionSize` (T2.4). A ordem pendente guarda
+  as DISTÂNCIAS (ATR de `t` × múltiplos), não o ATR; o ATR de `t` volta delas por divisão exata
+  (`stopDistance ÷ stopAtrMultiple`: o quociente termina em até 15 algarismos), então o preço de preenchimento `P`
+  é o único dado novo. Recusa do preenchimento vira `rejected` com motivo (`invalid_stop`, `below_min_notional`).
+- **Dois comportamentos de §e que a prova tornou explícitos** (e que ficam, por serem a regra escrita):
+  (1) a limitada que preenche do 2º candle em diante com a abertura ≤ `L` preenche a `L` mesmo que o candle inteiro
+  esteja abaixo de `L` (preço acima da máxima: pessimista, "nunca melhor"); (2) o gap acima do alvo preenche ao
+  PREÇO DO ALVO, que pode estar abaixo do candle inteiro (a ordem de alvo estava no livro; otimista nesse ponto,
+  já listado em "Riscos"). A propriedade "preço dentro do candle" do teste trata esses dois casos pelo que são.
+- **Prova.** (1) Contas à mão do `FillModel` (`wallet-fill-hand-values`): mercado, quantidade, taxa, caixa,
+  melhora de preço só no 1º candle, toque sem preenchimento, expiração no N-ésimo, limitada no meio do candle com
+  máxima além do alvo, stop com gap, stop e alvo no mesmo candle, alvo só tocado, gap acima do alvo, venda por
+  sinal. (2) DIFERENCIAL: `walletStep` e `simulatedFillModel` de produção × referência, byte a byte, em 3.000
+  fluxos de 30 a 120 candles gerados por PRNG inteiro (mulberry32, semente 20 261 011; gaps de preço e de tempo, ATR
+  zero ou ausente, volume pequeno, limitadas, expirações, comandos): 227.213 passos, 0 divergências; o gerador
+  exercita cada caminho de preenchimento mais de 100 vezes. (3) PROPRIEDADES sobre as mesmas execuções, sem
+  consultar a referência: caixa ≥ 0, no máximo uma posição, patrimônio = caixa + posição a valor de liquidação (no
+  fechamento e na mínima), perda realizada num stop sem gap ≤ valor em risco, e nenhuma ordem preenchida fora do
+  candle permitido (a mercado em `t+1`, limitada dentro da validade, protetora no candle em que nasce). (4)
+  HARNESS: `runEngineContract` (20 verificações) passa no `createEngine` em 6 cenários sintéticos (placar de
+  verdade com indicadores curtos, passeio aleatório com semente: gap na entrada, stop e alvo com e sem gap,
+  limitadas, SELL que cancela a viva, `halt`/`resume`/`exit_position`, sentimento fresco e velho) e nos dois
+  conjuntos reais com o Placar clássico; a carteira de produção ligada ao sinal da referência passa nos 7 cenários
+  originais; os 27 motores defeituosos da referência continuam reprovados.
+- **33 mutantes de produção** (cópias do `src` com uma edição, como na T2.3 e na T2.4), cada um reprovado pelo
+  estágio indicado: DIFERENCIAL (preencher na abertura errada, no candle de decisão, sem taxa de entrada ou de
+  saída, sem slippage na compra ou na venda, preço de compra para baixo, alvo antes do stop, gap no preço do stop,
+  stop que exige cruzar, alvo no toque, alvo contado no candle de uma limitada preenchida no meio, limitada que
+  preenche no toque, melhora de preço em todo candle, expiração com erro de 1, proteção calculada da abertura e
+  não do preço de preenchimento, volume do candle de preenchimento, teto de caixa esquecido, régua comprada no
+  fechamento, `equityAtLow` no fechamento, segunda posição, `SELL` ignorado, `SELL` que não cancela a limitada
+  viva, `halt` ignorado, comando reaplicado); GUARDAS (contiguidade, eco da lacuna, hashes do estado e do sinal,
+  relatório da corretora ignorado); API DO MOTOR (o sinal que não ecoa a lacuna); HARNESS (`step` que descarta os
+  comandos, `step` sem a guarda de entrada).
+- **Dourado preso à `engineVersion`** (`test/fixtures/strategy-engine/golden/classic-scoreboard-engine.engine-1.json`):
+  Placar clássico + saldo 10 000, taxa 0,1%, slippage 0,05% sobre os dois conjuntos reais inteiros. Guarda número de
+  operações, vitórias, taxas pagas, patrimônio final, queda máxima (no fechamento e na mínima), retorno do "comprar
+  e segurar" e o digest de todas as decisões; saída diferente sem trocar `ENGINE_VERSION` reprova, e trocar a
+  versão exige gravar o dourado novo. Mais: a contabilidade fecha por conta independente (soma dos resultados das
+  operações + o que a posição aberta vale a mais ou a menos que o custo dela = patrimônio final − saldo inicial; e
+  reproduzir os preenchimentos sobre o saldo inicial dá o caixa final), e as duas primeiras operações de cada
+  conjunto foram calculadas à mão (só `decimal.js` e as fórmulas de §e) e conferidas por uma terceira conta fora do
+  TypeScript.
+- **Paridade e retomada.** O motor de produção retomado do estado serializado a cada 37 candles dá a execução
+  contínua byte a byte nos dois conjuntos reais, e a execução em lotes de 1, 5 e 50 candles (motor novo e estado
+  vindo do JSON a cada lote) é idêntica.
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
@@ -787,7 +855,8 @@ de arredondamento removidas, ATR zero aceito, stop inválido aceito.
   `convergenceCandles` e o roda em `expectIndicatorContract`; T2.3 o voto, o regime e o motivo (§f2); T2.4 o
   tamanho e os tetos de §e; T2.5 o `FillModel` e o motor completo, que **precisa passar
   `runEngineContract`** nos cenários da referência e em cenários próprios com o Placar clássico, mais o
-  teste diferencial e o golden por versão. A referência de teste não vira código de produção.
+  teste diferencial e o golden por versão (entregue: "Motor em produção (T2.5)"). A referência de teste não vira
+  código de produção.
 - T3.1 cria as colunas e tabelas de §a/§b/§d (`runs.engine_state`, `engine_version`, `run_parameters`,
   `run_hash`, `migrated_from_run_id`, `engine_key` em `orders` e `positions`, `signals.regime`,
   `signals.sentiment`, `equity_points.equity_at_low`, `run_commands`, `sentiment_observations`).
