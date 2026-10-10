@@ -24,6 +24,16 @@ export class GoalLimitReachedError extends DomainError {
   }
 }
 
+export class GoalInactiveError extends DomainError {
+  constructor() {
+    super({
+      code: GOAL_ERROR_CODE.GOAL_INACTIVE,
+      message: 'A meta está desligada: ligue-a para iniciar uma simulação.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}
+
 export class GoalInUseError extends DomainError {
   constructor() {
     super({

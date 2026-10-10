@@ -4,6 +4,8 @@ import {
   RUN_STATUS,
   RUN_TRANSITION_OUTCOME,
   type CreateRunParams,
+  type GoalRecord,
+  type GoalRepository,
   type OwnerScope,
   type RunRecord,
   type RunRepository,
@@ -18,6 +20,8 @@ import {
 } from '@cryptoada/strategy-engine';
 
 import { parseJsonContainer } from '@cryptoada/run-recording';
+import { GoalInactiveError, GoalNotFoundError } from '../goals/goal.error.js';
+import { RequestValidationError } from '../shared/http/request-validation.error.js';
 import { StrategyVersionNotFoundError } from '../strategies/strategy.error.js';
 import { checkWalkForwardRequest } from './check-walk-forward-request.js';
 import type { CreateRunBody } from './create-run-request.schema.js';
@@ -27,12 +31,13 @@ import { readQueuePosition, type RunQueuePositionDependencies } from './run-queu
 import { describeRunSurvival } from './run-survival.js';
 import { toRunView, type RunDetailView } from './run-view.js';
 import { readRunWarnings, type RunWarningDependencies } from './run-warnings.js';
-import { RUN_STORED_ERROR_CODE } from './runs.constant.js';
+import { RUN_FIELD, RUN_REASON, RUN_STORED_ERROR_CODE } from './runs.constant.js';
 
 export type CreateRunDependencies = RunWarningDependencies &
   RunAdmissionDependencies &
   RunQueuePositionDependencies & {
     readonly strategies: Pick<StrategyRepository, 'findVersion'>;
+    readonly goals: Pick<GoalRepository, 'findGoal'>;
     readonly runs: Pick<RunRepository, 'createRun' | 'transitionRun'>;
     readonly dispatcher: RunDispatcher;
     readonly now: () => number;
@@ -49,14 +54,31 @@ function resolvePeriodStart(body: CreateRunBody, now: number): number {
   return Math.floor(now / duration) * duration;
 }
 
-// O pedido guardado na linha: a grade e as janelas do walk-forward, ou a configuração do piso/dobro da simulação ao vivo.
-function toRequest(body: CreateRunBody): CreateRunParams['request'] {
+// O pedido guardado na linha: a grade e as janelas do walk-forward, ou a configuração do piso/dobro da simulação ao vivo e a
+// fotografia da meta (alterar a meta depois não muda uma simulação em andamento).
+function toRequest(body: CreateRunBody, goal: GoalRecord | undefined): CreateRunParams['request'] {
   if (body.walkForward !== undefined) return parseJsonContainer(JSON.stringify(body.walkForward));
-  if (body.survival === undefined) return undefined;
-  return parseJsonContainer(JSON.stringify({ survival: body.survival }));
+  const request = {
+    ...(body.survival === undefined ? {} : { survival: body.survival }),
+    ...(goal === undefined
+      ? {}
+      : {
+          goal: {
+            targetRate: goal.targetRate,
+            maxLossRate: goal.maxLossRate,
+            horizonDays: goal.horizonDays,
+          },
+        }),
+  };
+  return Object.keys(request).length === 0
+    ? undefined
+    : parseJsonContainer(JSON.stringify(request));
 }
 
-function toCreateParams(body: CreateRunBody, now: number): CreateRunParams {
+function toCreateParams(
+  body: CreateRunBody,
+  context: { readonly now: number; readonly goal: GoalRecord | undefined },
+): CreateRunParams {
   const { parameters } = body.setup;
   return {
     strategyVersionId: body.strategyVersionId,
@@ -68,11 +90,12 @@ function toCreateParams(body: CreateRunBody, now: number): CreateRunParams {
     engineVersion: ENGINE_VERSION,
     signalEngineVersion: SIGNAL_ENGINE_VERSION,
     metricsVersion: METRICS_VERSION,
-    periodStart: resolvePeriodStart(body, now),
+    periodStart: resolvePeriodStart(body, context.now),
     periodEnd: body.periodEnd,
     migratedFromRunId: undefined,
     // O pedido do walk-forward (grade e janelas) mora na linha: a thread o lê de lá (migration 0010).
-    request: toRequest(body),
+    request: toRequest(body, context.goal),
+    ...(context.goal === undefined ? {} : { goalId: context.goal.id }),
   };
 }
 
@@ -124,15 +147,34 @@ function assertWalkForward(
   });
 }
 
+// A meta da simulação: do dono (meta alheia e inexistente são o mesmo 404), ligada, e do MESMO par da simulação.
+async function resolveGoal(
+  dependencies: CreateRunDependencies,
+  scope: OwnerScope,
+  body: CreateRunBody,
+): Promise<GoalRecord | undefined> {
+  if (body.goalId === undefined) return undefined;
+  const goal = await dependencies.goals.findGoal(scope, body.goalId);
+  if (goal === undefined) throw new GoalNotFoundError();
+  if (!goal.isActive) throw new GoalInactiveError();
+  if (goal.symbol !== body.setup.parameters.symbol) {
+    throw new RequestValidationError([
+      { field: RUN_FIELD.GOAL_ID, reason: RUN_REASON.GOAL_SYMBOL_MISMATCH },
+    ]);
+  }
+  return goal;
+}
+
 export function createCreateRunUseCase(dependencies: CreateRunDependencies): CreateRunUseCase {
   return async (scope, body) => {
     const version = await dependencies.strategies.findVersion(scope, body.strategyVersionId);
     if (version === undefined) throw new StrategyVersionNotFoundError();
+    const goal = await resolveGoal(dependencies, scope, body);
     await admitRun(dependencies, { scope, kind: body.kind });
     assertWalkForward(dependencies, body, version.config);
     const created = await dependencies.runs.createRun(
       scope,
-      toCreateParams(body, dependencies.now()),
+      toCreateParams(body, { now: dependencies.now(), goal }),
     );
     if (created === undefined) throw new StrategyVersionNotFoundError();
     // A simulação ao vivo não passa pelo despachante: o worker a reivindica no banco (ADR 0002, T4.1).

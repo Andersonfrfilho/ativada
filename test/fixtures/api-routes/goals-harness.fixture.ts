@@ -4,7 +4,6 @@ import type { CandleRecord } from '../../../packages/database/src/index.js';
 import type { SentimentObservationRepository } from '../../../packages/database/src/sentiment/sentiment-observation.types.js';
 import type { Route } from '../../../apps/api-cryptoada/src/router/route.types.js';
 import ethDaily from '../strategy-engine/market/ethusdt-1d-400.json' with { type: 'json' };
-import { createInMemoryGoals, type InMemoryGoals } from './in-memory-goals.fixture.js';
 import {
   createRunsHarness,
   EXCHANGE,
@@ -50,7 +49,6 @@ export function buildDailyCandles(symbols: readonly string[]): CandleRecord[] {
 export type GoalsHarness = RunsHarness & {
   // O mesmo vetor que o repositório em memória lê: um teste que acrescenta ou remove candle muda o que a API enxerga.
   readonly candleRecords: CandleRecord[];
-  readonly goals: InMemoryGoals;
   readonly evaluations: { count: number };
   readonly sentimentReads: { count: number };
 };
@@ -70,7 +68,6 @@ export async function createGoalsHarness(options: GoalsHarnessOptions = {}): Pro
   const withCandles = options.symbols ?? GOAL_SYMBOLS;
   const symbols = [...withCandles, ...(options.symbolsWithoutCandles ?? [])];
   const candleRecords = buildDailyCandles(withCandles);
-  const goals = createInMemoryGoals();
   const evaluations = { count: 0 };
   const sentimentReads = { count: 0 };
   const harness = await createRunsHarness({
@@ -81,9 +78,9 @@ export async function createGoalsHarness(options: GoalsHarnessOptions = {}): Pro
       : { queuePerUserLimit: options.queuePerUserLimit }),
     extraRoutes: (app, parts): readonly Route[] => {
       const useCases = app.goalUseCases;
-      const base = { goals: goals.repository, maxGoals: options.maxGoals ?? 20 };
+      const base = { goals: parts.goals.repository, maxGoals: options.maxGoals ?? 20 };
       const evaluation = app.goalEvaluation.createGoalEvaluationUseCase({
-        goals: goals.repository,
+        goals: parts.goals.repository,
         strategies: parts.strategies.repository,
         candles: parts.candles.repository,
         sentiments: {
@@ -112,5 +109,5 @@ export async function createGoalsHarness(options: GoalsHarnessOptions = {}): Pro
       });
     },
   });
-  return { ...harness, candleRecords, goals, evaluations, sentimentReads };
+  return { ...harness, candleRecords, evaluations, sentimentReads };
 }

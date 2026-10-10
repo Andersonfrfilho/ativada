@@ -22,6 +22,9 @@ const EVALUATION = 'goals/goal-evaluation.use-case.ts';
 const STRATEGIES = 'goals/goal-evaluation-strategies.ts';
 const CACHE = 'goals/goal-evaluation-cache.ts';
 const CONSTANT = 'goals/goal.constant.ts';
+const RUN_REQUEST = 'runs/create-run-request.schema.ts';
+const CREATE_RUN = 'runs/create-run.use-case.ts';
+const RUN_VIEW = 'runs/run-view.ts';
 
 function edit(file: string, find: string, replace: string): SourceEdit[] {
   return [{ file, find, replace, occurrences: 1 }];
@@ -216,6 +219,58 @@ const MUTANTS: readonly SourceMutant[] = [
   {
     name: 'CACHE_REWRITE_KEEPS_THE_OLD_POSITION',
     edits: edit(CACHE, '      entries.delete(text);\n', ''),
+  },
+  {
+    name: 'GOAL_ACCEPTED_FOR_BACKTEST_AND_WALK_FORWARD',
+    edits: edit(
+      RUN_REQUEST,
+      'if (body.goalId !== undefined && body.kind !== RUN_KIND.LIVE_PAPER) {',
+      'if (false as boolean) {',
+    ),
+  },
+  {
+    name: 'GOAL_NEVER_RESOLVED_ON_RUN_CREATION',
+    edits: edit(
+      CREATE_RUN,
+      'if (body.goalId === undefined) return undefined;',
+      'return undefined;',
+    ),
+  },
+  {
+    name: 'MISSING_GOAL_NOT_REPORTED',
+    edits: edit(CREATE_RUN, 'if (goal === undefined) throw new GoalNotFoundError();', ''),
+  },
+  {
+    name: 'INACTIVE_GOAL_ACCEPTED',
+    edits: edit(CREATE_RUN, 'if (!goal.isActive) throw new GoalInactiveError();', ''),
+  },
+  {
+    name: 'GOAL_OF_ANOTHER_SYMBOL_ACCEPTED',
+    edits: edit(
+      CREATE_RUN,
+      'if (goal.symbol !== body.setup.parameters.symbol) {',
+      'if (false as boolean) {',
+    ),
+  },
+  {
+    name: 'GOAL_SNAPSHOT_FROM_THE_WRONG_FIELD',
+    edits: edit(CREATE_RUN, 'targetRate: goal.targetRate,', 'targetRate: goal.maxLossRate,'),
+  },
+  {
+    name: 'GOAL_NOT_LINKED_TO_THE_RUN',
+    edits: edit(
+      CREATE_RUN,
+      '    ...(context.goal === undefined ? {} : { goalId: context.goal.id }),\n',
+      '',
+    ),
+  },
+  {
+    name: 'RUN_VIEW_HIDES_THE_GOAL',
+    edits: edit(RUN_VIEW, 'goalId: record.goalId ?? null,', 'goalId: null,'),
+  },
+  {
+    name: 'RUN_VIEW_HIDES_THE_OUTCOME',
+    edits: edit(RUN_VIEW, 'goalOutcome: record.goalOutcome ?? null,', 'goalOutcome: null,'),
   },
 ];
 

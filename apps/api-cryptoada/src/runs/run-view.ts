@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { JsonValue, RunKind, RunRecord, RunStatus } from '@cryptoada/database';
+import type { GoalRunOutcome, JsonValue, RunKind, RunRecord, RunStatus } from '@cryptoada/database';
 import type { BalanceSurvival } from '@cryptoada/strategy-engine';
 import { RUN_KIND } from '@cryptoada/database';
 
@@ -27,6 +27,9 @@ export type RunView = {
   readonly createdAt: string;
   readonly startedAt: string | null;
   readonly finishedAt: string | null;
+  // A meta a que a simulação ao vivo está atrelada e como terminou (`null` enquanto não terminou ou sem meta).
+  readonly goalId: string | null;
+  readonly goalOutcome: GoalRunOutcome | null;
 };
 
 export type RunQueuePositionView = { readonly own: number; readonly overall: number };
@@ -73,5 +76,7 @@ export function toRunView(record: RunRecord): RunView {
     createdAt: record.createdAt.toISOString(),
     startedAt: record.startedAt?.toISOString() ?? null,
     finishedAt: record.finishedAt?.toISOString() ?? null,
+    goalId: record.goalId ?? null,
+    goalOutcome: record.goalOutcome ?? null,
   };
 }

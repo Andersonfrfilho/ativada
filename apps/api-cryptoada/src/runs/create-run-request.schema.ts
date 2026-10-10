@@ -66,6 +66,8 @@ export type CreateRunBody = {
   readonly walkForward: WalkForwardBody | undefined;
   // Piso e meta de dobro da simulação ao vivo (RF09); ausente vale o padrão do RF09.
   readonly survival: SurvivalSettings | undefined;
+  // A meta do dono a que a simulação ao vivo fica atrelada (a existência e o dono são conferidos ao criar).
+  readonly goalId: string | undefined;
 };
 
 type ParsedBody = {
@@ -79,6 +81,7 @@ type ParsedBody = {
   readonly grid?: unknown;
   readonly windows?: z.infer<typeof windowsBodySchema> | undefined;
   readonly survival?: z.infer<typeof survivalBodySchema> | undefined;
+  readonly goalId?: string | undefined;
 };
 
 type Context = z.RefinementCtx;
@@ -103,6 +106,12 @@ function checkPeriod(body: ParsedBody, context: Context): void {
   }
 }
 
+function checkGoal(body: ParsedBody, context: Context): void {
+  if (body.goalId !== undefined && body.kind !== RUN_KIND.LIVE_PAPER) {
+    addIssue(context, [RUN_FIELD.GOAL_ID], RUN_REASON.NOT_ALLOWED_FOR_KIND);
+  }
+}
+
 function checkKindFields(body: ParsedBody, context: Context): void {
   const isWalkForward = body.kind === RUN_KIND.WALK_FORWARD;
   if (isWalkForward && body.grid === undefined) {
@@ -115,6 +124,7 @@ function checkKindFields(body: ParsedBody, context: Context): void {
     addIssue(context, [RUN_FIELD.WINDOWS], RUN_REASON.NOT_ALLOWED_FOR_KIND);
   }
   checkPeriod(body, context);
+  checkGoal(body, context);
 }
 
 type ParametersInput = z.infer<typeof runParametersBodySchema> | undefined;
@@ -186,6 +196,7 @@ export function createRunRequestSchema(enabled: EnabledMarkets): z.ZodType<Creat
       grid: z.unknown().optional(),
       windows: windowsBodySchema.optional(),
       survival: survivalBodySchema.optional(),
+      goalId: resourceIdSchema.optional(),
     })
     .transform((body, context): CreateRunBody => {
       checkKindFields(body, context);
@@ -203,6 +214,7 @@ export function createRunRequestSchema(enabled: EnabledMarkets): z.ZodType<Creat
         periodEnd: body.periodEnd,
         walkForward: toWalkForward(body),
         survival,
+        goalId: body.goalId,
       };
     });
 }

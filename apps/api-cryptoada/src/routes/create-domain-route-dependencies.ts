@@ -116,6 +116,7 @@ function createRunDependencies(
     createRun: createCreateRunUseCase({
       ...shared,
       strategies: createStrategyRepository(database),
+      goals: createGoalRepository(database),
       dispatcher: params.dispatcher,
       queuePerUserLimit: environment.RUN_QUEUE_PER_USER_LIMIT,
       now: params.now,

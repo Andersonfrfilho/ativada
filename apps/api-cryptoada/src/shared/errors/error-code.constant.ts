@@ -59,6 +59,7 @@ export const GOAL_ERROR_CODE = {
   GOAL_NOT_FOUND: 'GOAL_NOT_FOUND',
   GOAL_LIMIT_REACHED: 'GOAL_LIMIT_REACHED',
   GOAL_IN_USE: 'GOAL_IN_USE',
+  GOAL_INACTIVE: 'GOAL_INACTIVE',
 } as const;
 
 // Os cinco últimos são os códigos do walk-forward do motor, recusados ANTES de aceitar a execução (T3.4);

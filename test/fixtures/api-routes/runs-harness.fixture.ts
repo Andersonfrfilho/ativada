@@ -26,6 +26,7 @@ import {
   type InMemoryRuns,
 } from './in-memory-runs.fixture.js';
 import { createInMemoryRunQueue, type InMemoryRunQueue } from './in-memory-run-queue.fixture.js';
+import { createInMemoryGoals, type InMemoryGoals } from './in-memory-goals.fixture.js';
 import {
   createInMemoryStrategies,
   type InMemoryStrategies,
@@ -57,6 +58,7 @@ export type CallParams = {
 // O que as rotas extras de um teste compartilham com as do harness: os mesmos repositórios em memória e o mesmo relógio.
 export type HarnessParts = {
   readonly strategies: InMemoryStrategies;
+  readonly goals: InMemoryGoals;
   readonly candles: InMemoryCandles;
   readonly clock: { now: number };
 };
@@ -72,6 +74,7 @@ export type RunsHarnessOptions = {
 export type RunsHarness = {
   readonly app: ApiApp;
   readonly strategies: InMemoryStrategies;
+  readonly goals: InMemoryGoals;
   readonly runs: InMemoryRuns;
   readonly candles: InMemoryCandles;
   readonly dispatched: RunDispatchRequest[];
@@ -122,7 +125,8 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
   const key: TestSigningKey = await createTestSigningKey('key-runs');
   const jwks: JwksTestServer = startJwksTestServer([key]);
   const strategies = createInMemoryStrategies();
-  const runs = createInMemoryRuns(strategies.repository);
+  const goals = createInMemoryGoals();
+  const runs = createInMemoryRuns(strategies.repository, (goalId) => goals.referenced.add(goalId));
   const candles = createInMemoryCandleSeries(options.candles ?? []);
   const dispatched: RunDispatchRequest[] = [];
   const dispatch = { shouldFail: false };
@@ -186,6 +190,7 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
         },
         reportUnexpectedError: (error) => reportedErrors.push(error),
         strategies: strategies.repository,
+        goals: goals.repository,
         dispatcher,
         queuePerUserLimit: options.queuePerUserLimit ?? DEFAULT_QUEUE_PER_USER_LIMIT,
         now: () => clock.now,
@@ -202,7 +207,7 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
         ...(options.csvLimits === undefined ? {} : { limits: options.csvLimits }),
       }),
     ),
-    ...(options.extraRoutes?.(app, { strategies, candles, clock }) ?? []),
+    ...(options.extraRoutes?.(app, { strategies, goals, candles, clock }) ?? []),
   ];
   const verifyAccessToken = app.tokenVerifier.createAccessTokenVerifier({
     settings: {
@@ -239,6 +244,7 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
   return {
     app,
     strategies,
+    goals,
     runs,
     candles,
     dispatched,

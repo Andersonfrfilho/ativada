@@ -26,6 +26,7 @@ export const RUN_FIELD = {
   GRID: 'grid',
   WINDOWS: 'windows',
   PERIOD_END: 'periodEnd',
+  GOAL_ID: 'goalId',
 } as const;
 
 export const RUN_REASON = {
@@ -36,6 +37,7 @@ export const RUN_REASON = {
   GRID_REQUIRED: 'required_for_walk_forward',
   NOT_ALLOWED_FOR_KIND: 'not_allowed_for_kind',
   UNKNOWN_FIELD: 'unknown_field',
+  GOAL_SYMBOL_MISMATCH: 'goal_symbol_mismatch',
 } as const;
 
 export const INVALID_GRID_MESSAGE =

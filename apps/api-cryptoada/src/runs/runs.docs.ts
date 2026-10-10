@@ -5,6 +5,7 @@ import { z } from '@cryptoada/environment';
 import type { RouteDocumentation } from '../openapi/route-documentation.types.js';
 import { pathIdSchema, resourceIdSchema } from '../openapi/schema-primitives.js';
 import {
+  GOAL_ERROR_CODE,
   RUN_ERROR_CODE,
   STRATEGY_ERROR_CODE,
   VALIDATION_ERROR_CODE,
@@ -29,7 +30,7 @@ const RUN_NOT_FOUND = {
 export const RUN_DOCUMENTATION = {
   create: {
     summary:
-      'Cria uma execução (backtest, walk-forward ou simulação ao vivo) e responde 202 com o id. Backtest e walk-forward entram na fila do usuário, que é limitada (429 `RUN_QUEUE_FULL`). `live_paper` não leva período (começa no candle corrente e não tem fim), fica `queued` até um worker reivindicá-la e responde 409 `LIVE_RUN_LIMIT_REACHED` acima do teto de ativas. `survival` (opcional, só no ao vivo) ajusta o piso (padrão 0,8 do saldo inicial) e a meta de dobro (padrão 2).',
+      'Cria uma execução (backtest, walk-forward ou simulação ao vivo) e responde 202 com o id. Backtest e walk-forward entram na fila do usuário, que é limitada (429 `RUN_QUEUE_FULL`). `live_paper` não leva período (começa no candle corrente e não tem fim), fica `queued` até um worker reivindicá-la e responde 409 `LIVE_RUN_LIMIT_REACHED` acima do teto de ativas. `survival` (opcional, só no ao vivo) ajusta o piso (padrão 0,8 do saldo inicial) e a meta de dobro (padrão 2). `goalId` (opcional, só no ao vivo) atrela a simulação a uma meta ligada do usuário, do mesmo par: ela vende no alvo, encerra na perda máxima ou no prazo e grava o desfecho em `goalOutcome`.',
     tag: TAG,
     successes: [
       {
@@ -47,6 +48,8 @@ export const RUN_DOCUMENTATION = {
       { status: HTTP_STATUS.BAD_REQUEST, code: RUN_ERROR_CODE.INVALID_WINDOW_CONFIG },
       { status: HTTP_STATUS.BAD_REQUEST, code: RUN_ERROR_CODE.PERIOD_TOO_SHORT },
       { status: HTTP_STATUS.NOT_FOUND, code: STRATEGY_ERROR_CODE.STRATEGY_VERSION_NOT_FOUND },
+      { status: HTTP_STATUS.NOT_FOUND, code: GOAL_ERROR_CODE.GOAL_NOT_FOUND },
+      { status: HTTP_STATUS.CONFLICT, code: GOAL_ERROR_CODE.GOAL_INACTIVE },
       { status: HTTP_STATUS.CONFLICT, code: RUN_ERROR_CODE.LIVE_RUN_LIMIT_REACHED },
       { status: HTTP_STATUS.TOO_MANY_REQUESTS, code: RUN_ERROR_CODE.RUN_QUEUE_FULL },
     ],

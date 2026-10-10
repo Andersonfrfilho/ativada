@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { RUN_KIND, RUN_STATUS } from '@cryptoada/database';
+import { GOAL_RUN_OUTCOME, RUN_KIND, RUN_STATUS } from '@cryptoada/database';
 import { z } from '@cryptoada/environment';
 import { ENGINE_TIMEFRAME, RUN_PARAMETERS_SCHEMA } from '@cryptoada/strategy-engine';
 
@@ -33,6 +33,8 @@ export const RUN_VIEW_SCHEMA = z.strictObject({
   createdAt: isoDateTimeSchema,
   startedAt: isoDateTimeSchema.nullable(),
   finishedAt: isoDateTimeSchema.nullable(),
+  goalId: resourceIdSchema.nullable(),
+  goalOutcome: z.enum(GOAL_RUN_OUTCOME).nullable(),
 });
 
 export const RUN_WARNING_SCHEMA = z.strictObject({ code: z.string(), message: z.string() });
