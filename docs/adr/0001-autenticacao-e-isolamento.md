@@ -438,13 +438,15 @@ papel `admin` (só à mão no Keycloak). **Não bloqueia a si mesmo** (`409 CANN
   variável e nunca o valor. Em dev e test nada muda.
 - **Login:** a senha é digitada no Keycloak, não na API; o limite duro do login é o *brute force
   detection* do realm (§a) mais o limite de 10/min por IP nas rotas de sessão.
-- **Tetos de RF00b:** valores em `users.limits`. Cobrança no use case que cria a execução, dentro de uma
-  transação: `SELECT … FROM users WHERE id = $owner FOR UPDATE`, conta as execuções `live_paper`
-  ativas (ou `walk_forward` em andamento) do dono e insere; acima do teto → `409 LIVE_RUN_LIMIT_REACHED`
-  / `409 WALK_FORWARD_LIMIT_REACHED`. O lock na linha do dono serializa criações concorrentes do mesmo
-  usuário sem travar os outros, e não conflita com a resolução de §d, que só lê. A fila de
-  `worker_thread` do walk-forward também recusa um segundo job do mesmo dono (defesa em profundidade).
-  Alertas de preço: mesmo padrão, `409 PRICE_ALERT_LIMIT_REACHED`.
+- **Tetos de RF00b:** valores em `users.limits` (`maxConcurrentBacktests` 2, `maxConcurrentWalkForwards` 1,
+  `maxActiveLivePaperRuns` 5, `maxActivePriceAlerts` 50), lidos com Zod campo a campo: valor inválido ou ausente cai NO
+  PADRÃO, nunca num teto aberto. **Backtest e walk-forward** não são recusados por teto: entram na fila durável do usuário e
+  esperam a vez (T3.6, ADR 0002 §"Fila de execuções (T3.6)"): o 2º walk-forward do mesmo dono espera, o de outro dono roda. O
+  que se recusa é o excesso da FILA: `429 RUN_QUEUE_FULL` quando as `queued` do dono chegam a `RUN_QUEUE_PER_USER_LIMIT` (padrão
+  20). **Simulação ao vivo** acima do teto de ativas (`queued` ou `running`) responde `409 LIVE_RUN_LIMIT_REACHED`
+  (a rota continua `501 LIVE_RUNS_NOT_AVAILABLE` até a Fase 4, mas o teto vem ANTES do 501). Alertas de preço: mesmo padrão,
+  `409 PRICE_ALERT_LIMIT_REACHED`. A garantia dos tetos de EXECUÇÃO vive na reivindicação (`FOR NO KEY UPDATE SKIP LOCKED` na
+  linha do dono e recontagem dentro da transação), não numa transação de criação: criar nunca disputa o lock do dono.
 
 ### h) LGPD — exportar e apagar a conta
 
@@ -596,7 +598,9 @@ Cada task abaixo só fecha com estes itens atendidos e provados (contrato ou ver
 - Worker filtra conta apagada ou bloqueada (`deleted_at IS NULL`, `blocked_at IS NULL`) ao listar
   simulações ativas.
 - Violação de FK na corrida com a exclusão de conta = "execução encerrada", não erro em laço.
-- Walk-forward órfão (processo caiu no meio) vira `failed` no boot.
+- Execução órfã (processo caiu no meio): detectada pelo BATIMENTO vencido (`runs.heartbeat_at`, T3.6) e recuperada no boot e na ronda
+  periódica por qualquer instância; com checkpoint volta à fila e retoma, sem checkpoint vira `failed`/`ORPHANED` (ADR 0002 §"Fila de
+  execuções (T3.6)"). Conta apagada ou bloqueada: a fila não reivindica as execuções dela e as `running` são canceladas.
 - `NOTIFY` leva só `{ runId, kind, eventId }`; a API resolve o dono pelo banco e nunca confia em
   `userId` do payload; na reconexão do listener o painel rebusca.
 - Confirmar na Fase 3 se `Bun.SQL` suporta `LISTEN`; se não suportar, ADR antes de qualquer dependência.

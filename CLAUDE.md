@@ -8,7 +8,7 @@ Contexto operacional do **CryptoAdA**. Produto e regras em `README.md`,
 Spec 001 em andamento (progresso real em `specs/001-simulador-e-sinais/evidence.md`). Prontos: Fase 0
 (fundação), Fase 0b (contas, login, isolamento entre usuários, LGPD) e Fase 1 (candles da Binance:
 backfill, Fear & Greed e stream ao vivo com recuperação de lacuna). Fase 2 (o motor em
-`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) e a estratégia de exemplo por usuário (T3.5); próximo passo: fila com tetos (T3.6).
+`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) a estratégia de exemplo por usuário (T3.5) e a fila durável de execuções com tetos por usuário (T3.6); próximo passo: Fase 4 (simulação ao vivo e alertas).
 
 ## Stack decidida
 
@@ -43,7 +43,7 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `make down DOWN_FLAGS=--volumes` e `make up` (apaga os dados do Keycloak daquele ambiente). `make up`
   avisa quando o JSON é mais novo que o volume.
 - Alvos `*-test` (`migration-test`, `database-test`, `identity-test`, `session-test`, `admin-test`,
-  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`, `walkforward-test`, `api-runs-test`, `api-runs-mutants`, `example-mutants`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
+  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`, `walkforward-test`, `api-runs-test`, `api-runs-mutants`, `example-mutants`, `queue-test`, `queue-mutants`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
   `TERM`: Ctrl-C não deixa container vivo. Dois deles ao mesmo tempo disputam o mesmo projeto; rode um por vez.
 - `make check` roda `bun test` com `env -i`: teste que precisa de variável a declara; o `export` do `env.dev`
   não chega a ele.
@@ -155,6 +155,19 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   transação; apagar, renomear ou editar não a traz de volta, falha desfaz a marca e NUNCA derruba o acesso. Todo teste novo de
   API/LGPD que conte estratégias de um usuário que passou pela API conta o exemplo. Prova: `make database-test`,
   `make example-mutants` (6 mutantes no Postgres) e `test/example-strategy*.contract.test.ts`.
+- **Fila de execuções (T3.6, ADR 0002 §"Fila de execuções (T3.6)").** A fila é o banco: `POST /v1/runs` grava `queued` e o despachante
+  (`runs/queue/run-queue-dispatcher.ts`, que SUBSTITUIU o despachante direto da T3.4 em `create-application.ts`) reivindica a próxima
+  elegível com `createRunQueueRepository(...).claimNextRun` (round-robin entre usuários por `max(started_at)`, tetos por usuário e tipo de
+  `users.limits`, `FOR NO KEY UPDATE SKIP LOCKED` no dono e `FOR UPDATE SKIP LOCKED` na execução) e a entrega à `worker_thread`. Teto global
+  da instância `RUN_GLOBAL_CONCURRENCY`; fila por usuário `RUN_QUEUE_PER_USER_LIMIT` (429 `RUN_QUEUE_FULL`); simulação ao vivo acima do teto
+  409 `LIVE_RUN_LIMIT_REACHED`. `runs.claimed_by` + `heartbeat_at` (migration 0012): a instância renova o batimento a cada
+  `RUN_HEARTBEAT_INTERVAL_SECONDS`; órfã (vencido por `RUN_HEARTBEAT_TIMEOUT_SECONDS`) com checkpoint volta à fila e retoma, sem
+  checkpoint vira `failed`/`ORPHANED` (`RUN_ORPHAN_POLICY=fail` falha todas); `stop()` no SIGTERM devolve as `running` da instância à
+  fila. Conta bloqueada ou apagada não é reivindicada e as `running` dela são canceladas. `GET /v1/runs/:id` traz `queuePosition`
+  (`{ own, overall }`, só números) e `/v1/admin/health` traz `runs` (contagens agregadas). A regra de reivindicação é função PURA em
+  `packages/database/src/run-queue/claim-policy.ts`. Teste novo da fila usa `loadApiApp()`; teste do banco entra em
+  `packages/database/test-support/run-queue-*.ts`. Prova: contratos, `make database-test`, `make queue-test` (duas instâncias reais, queda
+  e retomada idêntica) e `make queue-mutants` (14 mutantes do banco) mais 20 mutantes da API (`test/run-queue-mutants.contract.test.ts`).
 - Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account

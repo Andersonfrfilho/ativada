@@ -1223,8 +1223,8 @@ passou a levar só `{ runId }` (`z.strictObject`; campo a mais é recusado). A c
 
 **`RunDispatcher`.** Porta `dispatch({ runId, kind }) → Promise<void>` (resolve quando a execução foi ENTREGUE, não quando
 terminou; rejeita se não foi possível entregar). A implementação padrão (`createDirectRunDispatcher`) inicia a `worker_thread`
-de backtest ou de walk-forward na hora e a rota responde `202`; NÃO há teto por usuário nem fila — **o ponto de troca da T3.6** é
-a fábrica em `create-application.ts` (`createApplicationRunners`). Falha ao despachar: a execução vira `failed` com
+de backtest ou de walk-forward na hora e a rota responde `202`; NÃO há teto por usuário nem fila — **o ponto de troca da T3.6** (feita: ver §"Fila de
+execuções (T3.6)") é a fábrica em `create-application.ts`. Falha ao despachar: a execução vira `failed` com
 `DISPATCH_FAILED` na mesma requisição (nunca fica `queued` para sempre); a resposta é `202` com `status: failed`.
 
 | Decisão | Valor | Motivo |
@@ -1298,6 +1298,52 @@ parcial) e 6 mutantes do banco (`make example-mutants`: sem marca, sem índice, 
 semeada, marca fora da transação, todos contra Postgres real). `make api-runs-test`: usuário novo → `GET /v1/strategies` já lista o
 exemplo (`isExample: true`), um backtest com ele completa e 20 primeiros acessos simultâneos pela API deixam exatamente 1
 estratégia e 1 versão.
+
+## Fila de execuções (T3.6)
+
+Entregue em `packages/database/src/run-queue/` (migration 0012 com `.rollback.sql`), `apps/api-cryptoada/src/runs/queue/` e
+`apps/api-cryptoada/src/runs/{run-admission,run-queue-position}.ts`. **O despachante sem tetos da T3.4 foi substituído**: a troca é
+explícita em `create-application.ts` (`createApplicationDispatcher`), e `create-direct-run-dispatcher.ts` deixou de existir.
+
+**A fila é o banco.** `POST /v1/runs` continua gravando a execução `queued` e chamando `RunDispatcher.dispatch` (resolve na hora, `202`);
+quem decide QUANDO ela roda é o despachante da fila (`createRunQueueDispatcher`), que reivindica a próxima elegível com
+`claimNextRun` e entrega à `worker_thread` (a mesma de antes; o backtest e o walk-forward já aceitavam `running` com checkpoint).
+
+| Decisão | Valor | Motivo |
+|---|---|---|
+| Reivindicar | (1) lista a CABEÇA da fila de cada (usuário, tipo) entre as contas ativas (`DISTINCT ON`), com `users.limits`, o `running` do tipo e o último início do usuário; (2) ordena em TypeScript pela política pura (`claim-policy.ts`); (3) para cada candidato, UMA transação: `SELECT … FROM users FOR NO KEY UPDATE SKIP LOCKED` (serializa quem reivindica para o mesmo dono; `NO KEY UPDATE` não conflita com a FK das execuções novas), RECONTA os `running` do dono e do tipo, `SELECT … FROM runs … FOR UPDATE SKIP LOCKED` na cabeça e `UPDATE … SET status = 'running', claimed_by, heartbeat_at = now(), started_at = coalesce(started_at, now())`. Dois reivindicadores simultâneos nunca pegam a mesma execução nem passam do teto | Seguro com várias instâncias da API sobre o mesmo banco |
+| Tetos por usuário | `maxConcurrentBacktests` 2, `maxConcurrentWalkForwards` 1 (RF00b), lidos de `users.limits` por Zod campo a campo (inválido ou ausente = padrão); `maxActiveLivePaperRuns` 5 vale na criação | O 2º walk-forward do mesmo dono espera; o de outro dono roda |
+| Teto global | `RUN_GLOBAL_CONCURRENCY` (1 a 32, padrão `max(1, núcleos − 1)`): quantas execuções ESTA instância roda ao mesmo tempo | Não esgotar a máquina |
+| Justiça | Round-robin: quem NUNCA foi servido vem primeiro; depois quem foi servido há mais tempo (`max(runs.started_at)` do usuário, em microssegundos); depois a fila mais antiga e o id. Teste de não-inanição: 10 de Ana na frente e 1 de Bia depois, Bia é a 2ª a começar | Um usuário com fila grande não bloqueia os outros |
+| Fila por usuário | `RUN_QUEUE_PER_USER_LIMIT` (1 a 1000, padrão 20) de execuções `queued` de backtest e walk-forward: o estouro responde `429 RUN_QUEUE_FULL` e nada é criado. Conferência antes de inserir (uma criação simultânea pode passar do teto por 1 ou 2; o teto é de uso, não de segurança) | RF00b |
+| Simulação ao vivo | `409 LIVE_RUN_LIMIT_REACHED` quando as ativas (`queued` ou `running`) do dono chegam a `maxActiveLivePaperRuns`; vem ANTES do `501 LIVE_RUNS_NOT_AVAILABLE`. A fila nunca a reivindica | A regra existe desde já; a rota liga na Fase 4 |
+| Batimento | `runs.claimed_by` (id da instância, um por processo) e `runs.heartbeat_at`; CHECK `claimed_by IS NULL OR status = 'running'`; estado final limpa os dois. Cada `RUN_HEARTBEAT_INTERVAL_SECONDS` (padrão 15) a instância renova SÓ as execuções que ainda roda e descobre as que perdeu (`lost`: voltaram à fila ou rodam sob outro dono; as que simplesmente terminaram não contam) | A instância que cai deixa o batimento vencer |
+| Órfã | `running` de backtest ou walk-forward com batimento ausente ou mais velho que `RUN_HEARTBEAT_TIMEOUT_SECONDS` (5 a 3600, padrão 60, maior que o intervalo). **Política padrão `resume`**: a que tem checkpoint (`engine_state`) VOLTA À FILA (`queued`, `claimed_by` nulo, checkpoint, progresso e `started_at` intactos) e a próxima reivindicação a retoma, com resultado idêntico ao da execução contínua; a que não tem vira `failed` com `ORPHANED`. **Política `fail`** (`RUN_ORPHAN_POLICY=fail`): todas viram `failed`/`ORPHANED`. A simulação ao vivo nunca é tocada. Roda no boot e a cada ronda (2 s) em QUALQUER instância; duas instruções atômicas, então quem renovar o batimento antes vence a corrida | Resolve `failOrphanedRuns` (T3.1), que falhava toda `running` de todos e era inseguro com mais de uma instância; ele deixou de existir |
+| Encerramento | `stop()` (SIGTERM, dentro do prazo de `shutdown.ts`): para de reivindicar, derruba as threads (`terminateAll`) e DEVOLVE à fila (`releaseClaimedRuns`: `running` → `queued`, checkpoint preservado) as execuções desta instância; a próxima instância retoma do checkpoint. Escolhido em vez de "terminar o lote em curso": o prazo do encerramento (10 s) é menor que um lote de backtest grande e o checkpoint é por lote, então devolver à fila nunca perde trabalho. Se o banco não responde no encerramento, o erro é reportado e o processo sai assim mesmo: o batimento vence e outra instância recupera | `queued` não se perde; nada fica `running` sem dono |
+| Reinício | `queued` é durável. No boot (`start()`): recupera as órfãs, cancela as de contas inativas e REDESPACHA a fila; a ronda de 2 s pega o que outra instância enfileirou | Fila no banco |
+| Conta inativa | A reivindicação só considera contas sem `deleted_at` nem `blocked_at` (lista e trava); as `running` de conta bloqueada ou apagada são CANCELADAS pela ronda e a thread vê o `cancelled` entre lotes; as `queued` ficam e voltam a ser reivindicadas se a conta for desbloqueada (ADR 0001 §k) | LGPD e bloqueio |
+| `queuePosition` | `GET /v1/runs/:id` (e a resposta do `POST`) devolve `{ own, overall }` só para `queued` (senão `null`): `own` é a posição 1-based entre as execuções `queued` DO PRÓPRIO dono; `overall` é a posição na fila inteira, só como NÚMERO (contagem; nenhuma linha de outro usuário). A ordem é a de CRIAÇÃO; quem de fato começa antes é decidido pelo round-robin | Informar a espera sem vazar |
+| Saúde do admin | `GET /v1/admin/health` ganhou `runs: { queued, running, byKind }`, só contagens agregadas por estado e tipo (`null` se o banco não responde); a rota continua sem dado de usuário | RF11 |
+| Cancelar | `POST /v1/runs/:id/stop` numa `queued` a torna `cancelled`: sai da fila (não é reivindicada) e devolve a vaga da fila do usuário | RF11 |
+
+**Limitações assumidas.** (1) Se uma instância perde a posse (batimento atrasado) enquanto a thread ainda roda, hoje o despachante só
+REPORTA a perda; a thread segue até o fim (os lotes são idempotentes e o checkpoint só avança em `running`). Matar a thread seria um
+refinamento. (2) O round-robin lê `max(started_at)` por usuário (índice parcial `runs_user_id_started_at_idx`); para milhares de
+usuários com fila, trocar por uma coluna de "último servido". (3) O teto da fila por usuário é conferido antes de inserir, sem
+travar o dono.
+
+**Prova.** Contratos puros e com fakes: política de reivindicação e tetos (`test/run-queue-policy.contract.test.ts`), despachante
+com relógio injetável (`test/api-run-queue-dispatcher.contract.test.ts`: teto global, boot, batimento, órfãs, encerramento, `abandon`),
+ligação com as threads (`test/api-application-dispatcher.contract.test.ts`), tetos de criação e posição
+(`test/api-run-admission.contract.test.ts`), ambiente (`test/run-queue-environment.contract.test.ts`) e saúde agregada; **20
+mutantes da API** (`test/run-queue-mutants.contract.test.ts`). `make database-test` e `make queue-mutants` (14 mutantes do banco:
+teto ignorado, FIFO puro, sem `SKIP LOCKED` na execução e no usuário, sem a trava do usuário, batimento não renovado, órfã nunca
+detectada, órfã que perde o checkpoint, `queued` perdida no encerramento, conta bloqueada reivindicada, posição que vaza de outro
+usuário, posição de execução alheia legível, contagem sem dono, estado final que guarda a posse) rodam os checks da fila no
+Postgres real. `make queue-test`: duas instâncias reais sobre o mesmo banco, o 2º walk-forward do mesmo dono espera enquanto o de
+outro dono roda, 10 backtests de um dono + 1 de outro (o de outro começa antes da 3ª), 24 execuções em 2 instâncias (cada uma
+entregue UMA vez, nenhuma perdida), queda no meio com batimento vencido e retomada do checkpoint com resultado IDÊNTICO ao da
+contínua, reinício sem perder a fila e isolamento pela API (posição, 404, saúde, `429` e `409`).
 
 ## Alternativas rejeitadas
 
