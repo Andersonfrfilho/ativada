@@ -2,6 +2,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
 import {
+  RECORDING_COPY,
   removeBacktestMutants,
   runBacktestMutant,
   type BacktestMutantVerdict,
@@ -21,6 +22,8 @@ const EXECUTE = 'execute-backtest.ts';
 const RUNNER = 'backtest-thread-runner.ts';
 const SERVE = 'serve-backtest-worker.ts';
 const OUTCOME = 'thread-outcome.ts';
+const RECORDING = RECORDING_COPY;
+const ADVANCE = `${RECORDING}/advance-candle.ts`;
 
 function edit(file: string, find: string, replace: string, occurrences = 1): BacktestSourceEdit[] {
   return [{ file, find, replace, occurrences }];
@@ -30,22 +33,22 @@ const MUTANTS: readonly BacktestSourceMutant[] = [
   {
     name: 'GAP_IGNORED',
     edits: edit(
-      LOOP,
-      'confirmedGapCandles: gap > 0 ? gap : undefined,',
+      ADVANCE,
+      'confirmedGapCandles: gapCandles > 0 ? gapCandles : undefined,',
       'confirmedGapCandles: undefined,',
     ),
   },
   {
     name: 'GAP_OFF_BY_ONE',
     edits: edit(
-      LOOP,
-      'confirmedGapCandles: gap > 0 ? gap : undefined,',
-      'confirmedGapCandles: gap > 0 ? gap - 1 : undefined,',
+      ADVANCE,
+      'confirmedGapCandles: gapCandles > 0 ? gapCandles : undefined,',
+      'confirmedGapCandles: gapCandles > 0 ? gapCandles - 1 : undefined,',
     ),
   },
   {
     name: 'GAP_NOT_COUNTED',
-    edits: edit(LOOP, 'state.gapCandles += gap;', ''),
+    edits: edit(LOOP, 'state.gapCandles += gapCandles;', ''),
   },
   {
     name: 'OPEN_CANDLE_ACCEPTED',
@@ -136,7 +139,11 @@ const MUTANTS: readonly BacktestSourceMutant[] = [
   },
   {
     name: 'RESUMED_POSITION_FORGOTTEN',
-    edits: edit('position-tracker.ts', 'if (seed !== null) {', 'if (false as boolean) {'),
+    edits: edit(
+      `${RECORDING}/position-tracker.ts`,
+      'if (seed !== null) {',
+      'if (false as boolean) {',
+    ),
   },
   {
     name: 'CHECKPOINT_NOT_VALIDATED',
@@ -145,7 +152,7 @@ const MUTANTS: readonly BacktestSourceMutant[] = [
   {
     name: 'SENTIMENT_INSERTION_CUTOFF_IGNORED',
     edits: edit(
-      'sentiment-picker.ts',
+      `${RECORDING}/sentiment-picker.ts`,
       'insertionCutoff: candle.closeTime,',
       'insertionCutoff: Number.MAX_SAFE_INTEGER,',
     ),

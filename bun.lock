@@ -21,6 +21,7 @@
         "@cryptoada/environment": "workspace:*",
         "@cryptoada/identity-admin": "workspace:*",
         "@cryptoada/market-data": "workspace:*",
+        "@cryptoada/run-recording": "workspace:*",
         "@cryptoada/strategy-engine": "workspace:*",
         "jose": "6.2.12",
       },
@@ -49,6 +50,8 @@
         "@cryptoada/database": "workspace:*",
         "@cryptoada/environment": "workspace:*",
         "@cryptoada/market-data": "workspace:*",
+        "@cryptoada/run-recording": "workspace:*",
+        "@cryptoada/strategy-engine": "workspace:*",
       },
     },
     "packages/database": {
@@ -83,6 +86,14 @@
         "@cryptoada/environment": "workspace:*",
       },
     },
+    "packages/run-recording": {
+      "name": "@cryptoada/run-recording",
+      "version": "0.0.0",
+      "dependencies": {
+        "@cryptoada/database": "workspace:*",
+        "@cryptoada/strategy-engine": "workspace:*",
+      },
+    },
     "packages/strategy-engine": {
       "name": "@cryptoada/strategy-engine",
       "version": "0.0.0",
@@ -113,6 +124,8 @@
     "@cryptoada/identity-admin": ["@cryptoada/identity-admin@workspace:packages/identity-admin"],
 
     "@cryptoada/market-data": ["@cryptoada/market-data@workspace:packages/market-data"],
+
+    "@cryptoada/run-recording": ["@cryptoada/run-recording@workspace:packages/run-recording"],
 
     "@cryptoada/strategy-engine": ["@cryptoada/strategy-engine@workspace:packages/strategy-engine"],
 

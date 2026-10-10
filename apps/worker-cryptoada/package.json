@@ -6,6 +6,8 @@
   "dependencies": {
     "@cryptoada/database": "workspace:*",
     "@cryptoada/environment": "workspace:*",
-    "@cryptoada/market-data": "workspace:*"
+    "@cryptoada/market-data": "workspace:*",
+    "@cryptoada/run-recording": "workspace:*",
+    "@cryptoada/strategy-engine": "workspace:*"
   }
 }

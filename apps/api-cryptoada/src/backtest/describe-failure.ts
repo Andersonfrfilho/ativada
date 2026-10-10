@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { PositionUntrackedError } from '@cryptoada/run-recording';
 import {
   EngineInputError,
   EngineStateError,
@@ -20,6 +21,9 @@ export type BacktestFailure = {
 // do erro original NUNCA passa adiante: erro de driver ou de rede pode trazer texto de consulta, URL ou segredo.
 export function describeFailure(error: unknown): BacktestFailure {
   if (error instanceof BacktestError) return { errorCode: error.code, message: error.message };
+  if (error instanceof PositionUntrackedError) {
+    return { errorCode: BACKTEST_ERROR_CODE.POSITION_UNTRACKED, message: error.message };
+  }
   if (error instanceof EngineInputError) {
     return {
       errorCode: BACKTEST_ERROR_CODE.ENGINE_REJECTED_INPUT,

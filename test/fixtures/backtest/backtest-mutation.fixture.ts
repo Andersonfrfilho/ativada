@@ -5,6 +5,10 @@ import { BACKTEST_MUTANT_VARIABLE } from './backtest-api.fixture.js';
 
 const REPOSITORY_ROOT = new URL('../../../', import.meta.url).pathname;
 const SOURCE_DIRECTORY = `${REPOSITORY_ROOT}apps/api-cryptoada/src/backtest`;
+const RECORDING_DIRECTORY = `${REPOSITORY_ROOT}packages/run-recording/src`;
+// A cópia do pacote de gravação (o passo de candle e o mapeamento das decisões) mora ao lado da cópia do backtest.
+export const RECORDING_COPY = 'run-recording-src';
+const RECORDING_IMPORT = "from '@cryptoada/run-recording'";
 // Dentro da app: é de lá que `@cryptoada/*` e `zod` se resolvem, como no módulo de produção.
 export const BACKTEST_MUTANT_ROOT = `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`;
 
@@ -49,12 +53,24 @@ async function applyEdit(directory: string, name: string, edit: BacktestSourceEd
   );
 }
 
+// O backtest importa o pacote pelo nome; na cópia, o import aponta para a cópia do pacote, que também pode ser mutada.
+async function pointImportsAtRecordingCopy(directory: string): Promise<void> {
+  for await (const name of new Bun.Glob('*.ts').scan(directory)) {
+    const path = `${directory}/${name}`;
+    const text = await Bun.file(path).text();
+    if (!text.includes(RECORDING_IMPORT)) continue;
+    await Bun.write(path, text.replaceAll(RECORDING_IMPORT, `from './${RECORDING_COPY}/index.js'`));
+  }
+}
+
 // Cópia do módulo com as edições; os testes do backtest rodam contra ela num processo à parte.
 export async function runBacktestMutant(
   mutant: BacktestSourceMutant,
 ): Promise<BacktestMutantVerdict> {
   const directory = `${BACKTEST_MUTANT_ROOT}/${mutant.name.toLowerCase()}`;
   await cp(SOURCE_DIRECTORY, directory, { recursive: true });
+  await cp(RECORDING_DIRECTORY, `${directory}/${RECORDING_COPY}`, { recursive: true });
+  await pointImportsAtRecordingCopy(directory);
   for (const edit of mutant.edits) await applyEdit(directory, mutant.name, edit);
   const child = Bun.spawn([process.execPath, 'test', ...BACKTEST_JUDGE_TEST_FILES], {
     cwd: REPOSITORY_ROOT,

@@ -1,6 +1,14 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { RunStatus } from '@cryptoada/database';
 import {
+  advanceCandle,
+  appendDecisions,
+  createBatchBuffer,
+  type BatchBuffer,
+  type PositionTracker,
+  type SentimentPicker,
+} from '@cryptoada/run-recording';
+import {
   serializeEngineState,
   type Engine,
   type EngineCandle,
@@ -14,15 +22,12 @@ import {
   PERCENT,
 } from './backtest.constant.js';
 import { BacktestError } from './backtest.error.js';
-import { appendDecisions, createBatchBuffer, type BatchBuffer } from './batch-buffer.js';
 import type { BacktestRunSession } from './backtest-database.types.js';
 import type { CandlePages } from './candle-stream.js';
 import { flushBatch } from './flush-batch.js';
 import { parseJsonContainer } from './json-container.js';
 import type { BacktestContext } from './load-backtest-context.js';
 import type { PhaseTimer } from './phase-timer.js';
-import type { PositionTracker } from './position-tracker.js';
-import type { SentimentPicker } from './sentiment-picker.js';
 
 export type LoopDependencies = {
   readonly session: BacktestRunSession;
@@ -73,28 +78,24 @@ export function computeProgress(context: BacktestContext, candleOpenTime: number
 
 // Candles que o banco não tem entre o anterior e este: a lacuna que o motor exige declarada com a contagem
 // exata. Nunca se pula candle em silêncio.
-function countMissingCandles(state: LoopState, candle: EngineCandle, duration: number): number {
-  if (state.previousOpenTime === null) return 0;
-  return (candle.openTime - state.previousOpenTime) / duration - 1;
-}
-
 function stepCandle(deps: LoopDependencies, state: LoopState, candle: EngineCandle): void {
   const { context } = deps;
-  const gap = countMissingCandles(state, candle, context.durationMilliseconds);
-  const result = deps.engine.step({
+  const { result, gapCandles } = advanceCandle({
+    engine: deps.engine,
     strategy: context.strategy,
-    run: context.setup,
+    setup: context.setup,
     state: state.engineState,
     candle,
-    sentiment: deps.pickSentiment(candle),
-    confirmedGapCandles: gap > 0 ? gap : undefined,
+    previousOpenTime: state.previousOpenTime,
+    durationMilliseconds: context.durationMilliseconds,
+    pickSentiment: deps.pickSentiment,
   });
   appendDecisions({ buffer: state.buffer, decisions: result.decisions, tracker: deps.tracker });
   state.engineState = result.state;
   state.previousOpenTime = candle.openTime;
   state.lastCandle = candle;
   state.processedCandles += 1;
-  state.gapCandles += gap;
+  state.gapCandles += gapCandles;
 }
 
 async function commitBatch(deps: LoopDependencies, state: LoopState): Promise<LoopResult> {

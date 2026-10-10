@@ -43,5 +43,3 @@ export const BACKTEST_PHASE = {
   METRICS: 'metrics',
 } as const;
 export type BacktestPhase = (typeof BACKTEST_PHASE)[keyof typeof BACKTEST_PHASE];
-
-export const POSITION_STATUS = { OPEN: 'open', CLOSED: 'closed' } as const;

@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { RUN_STATUS, type BatchCheckpointParams, type RunStatus } from '@cryptoada/database';
+import { toRunResultRows, type BatchBuffer } from '@cryptoada/run-recording';
 
 import { BACKTEST_ERROR_CODE } from './backtest.constant.js';
 import { BacktestError } from './backtest.error.js';
-import { toRunResultRows, type BatchBuffer } from './batch-buffer.js';
 import type { BacktestRunSession } from './backtest-database.types.js';
 
 export type FlushResult =

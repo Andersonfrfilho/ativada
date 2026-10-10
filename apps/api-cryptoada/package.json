@@ -8,6 +8,7 @@
     "@cryptoada/environment": "workspace:*",
     "@cryptoada/identity-admin": "workspace:*",
     "@cryptoada/market-data": "workspace:*",
+    "@cryptoada/run-recording": "workspace:*",
     "@cryptoada/strategy-engine": "workspace:*",
     "jose": "6.2.12"
   }

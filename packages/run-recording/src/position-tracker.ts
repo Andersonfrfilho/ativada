@@ -6,8 +6,9 @@ import type {
   OpenPositionState,
 } from '@cryptoada/strategy-engine';
 
-import { BACKTEST_ERROR_CODE, POSITION_STATUS } from './backtest.constant.js';
-import { BacktestError } from './backtest.error.js';
+import { PositionUntrackedError } from './run-recording.error.js';
+
+const POSITION_STATUS = { OPEN: 'open', CLOSED: 'closed' } as const;
 
 type Protection = { readonly stopPrice: string; readonly targetPrice: string };
 
@@ -67,10 +68,7 @@ export function createPositionTracker(seed: OpenPositionState | null): PositionT
     close(position): PositionInput {
       const protection = protections.get(position.positionKey);
       if (protection === undefined) {
-        throw new BacktestError(
-          BACKTEST_ERROR_CODE.POSITION_UNTRACKED,
-          'O motor fechou uma posição que não foi aberta nesta execução.',
-        );
+        throw new PositionUntrackedError();
       }
       protections.delete(position.positionKey);
       return toClosedRow(position, protection);

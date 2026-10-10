@@ -1,9 +1,13 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { RunResultRows } from '@cryptoada/database';
+import {
+  appendDecisions,
+  createBatchBuffer,
+  createPositionTracker,
+  toRunResultRows,
+} from '@cryptoada/run-recording';
 import type { ClosedPositionDecision, EquityPointDecision } from '@cryptoada/strategy-engine';
 
-import { appendDecisions, createBatchBuffer, toRunResultRows } from '../backtest/batch-buffer.js';
-import { createPositionTracker } from '../backtest/position-tracker.js';
 import type { WalletCollector } from './run-window-wallet.js';
 
 export type TestCollection = {

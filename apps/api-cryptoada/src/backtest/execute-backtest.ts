@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { RUN_STATUS, type RunStatus } from '@cryptoada/database';
+import { createPositionTracker, createSentimentPicker } from '@cryptoada/run-recording';
 import { createEngine, type EngineCandle } from '@cryptoada/strategy-engine';
 
 import {
@@ -22,8 +23,6 @@ import type { CandlePages } from './candle-stream.js';
 import { createLoopState, runCandleLoop, type LoopDependencies } from './candle-loop.js';
 import { loadBacktestContext, type BacktestContext } from './load-backtest-context.js';
 import { createPhaseTimer } from './phase-timer.js';
-import { createPositionTracker } from './position-tracker.js';
-import { createSentimentPicker } from './sentiment-picker.js';
 
 export type ExecuteBacktestParams = {
   readonly session: BacktestRunSession;
