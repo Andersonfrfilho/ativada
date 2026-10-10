@@ -174,6 +174,16 @@ export default tseslint.config(
     rules: { 'no-console': 'error' },
   },
   {
+    // Limites de tamanho do código de produção; exceção só como override nomeado por arquivo, logo abaixo (hoje nenhuma).
+    files: ['apps/*/src/**/*.{ts,tsx,mts,cts}', 'packages/*/src/**/*.{ts,tsx,mts,cts}'],
+    linterOptions: { noInlineConfig: true },
+    rules: {
+      'max-lines-per-function': ['error', { max: 40, skipBlankLines: true, skipComments: true }],
+      'max-lines': ['error', { max: 200, skipBlankLines: true, skipComments: true }],
+      'max-params': ['error', 3],
+    },
+  },
+  {
     // Scripts de integração imprimem o resultado no terminal; o código de produção não.
     files: ['packages/*/test-support/**/*.ts', 'scripts/**/*.ts'],
     rules: { 'no-console': 'off' },

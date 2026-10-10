@@ -90,4 +90,10 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   usuário arma a própria execução.
 - Toda decisão (sinal, motivo, ordem, preenchimento) fica registrada.
 - Chave, token e segredo nunca em log, commit ou terminal.
+- **Tamanho do código é imposto pelo lint** em `apps/*/src` e `packages/*/src` (testes, `scripts/` e `test-support/`
+  ficam de fora): função com no máximo 40 linhas, arquivo com no máximo 200 (ambos sem linhas em branco e comentários) e
+  3 parâmetros por função (acima disso, um objeto tipado). É erro, não aviso. A única forma de burlar é uma exceção
+  nomeada: um override por arquivo em `eslint.config.js`, com arquivo, função e motivo em um comentário de uma linha.
+  `eslint-disable` não funciona (`noInlineConfig`). Hoje há zero exceções. `test/code-size-limits.contract.test.ts` prova
+  cada regra por sonda e por mutação do limite.
 - Uma task por vez, tirada do `tasks.md`. Task só fecha com evidência em `evidence.md`.
