@@ -2,6 +2,7 @@
 import {
   closeDatabase,
   createProfileRepository,
+  createRunQueueRepository,
   createStrategyRepository,
   openDatabase,
   pingDatabase,
@@ -27,6 +28,8 @@ import { createGetProfileUseCase, createUpdateProfileUseCase } from './profile/p
 import { createTelegramRouteDependencies } from './telegram/create-telegram-route-dependencies.js';
 import { createRateLimiter } from './rate-limit/rate-limiter.js';
 import { createApplicationRunners } from './runs/create-application-runners.js';
+import { createApplicationDispatcher } from './runs/queue/create-application-dispatcher.js';
+import type { RunQueueDispatcher } from './runs/queue/run-queue-dispatcher.types.js';
 import type { RunDispatcher } from './runs/run-dispatcher.js';
 import { createSessionRouteDependencies } from './session/create-session-routes-dependencies.js';
 import { createExampleSeedingUserResolver } from './strategies/example-seeding-user-resolver.js';
@@ -39,10 +42,13 @@ import type { WalkForwardThreadRunner } from './walk-forward/walk-forward-thread
 
 export type Application = {
   readonly handler: RequestHandler;
-  // As rotas de execução despacham pela porta `RunDispatcher`; a fila com tetos por usuário (T3.6) a troca. Cada
-  // execução roda numa `worker_thread` destes executores.
+  // As rotas de execução despacham pela porta `RunDispatcher`, cuja implementação é a FILA durável com tetos por
+  // usuário (T3.6); cada execução roda numa `worker_thread` destes executores.
   readonly backtestRunner: BacktestThreadRunner;
   readonly walkForwardRunner: WalkForwardThreadRunner;
+  readonly dispatcher: RunQueueDispatcher;
+  // Boot da fila: recupera as órfãs e redespacha o que ficou `queued`. Chamar uma vez, depois de subir o servidor.
+  readonly start: () => Promise<void>;
   readonly closeResources: () => Promise<void>;
 };
 
@@ -101,6 +107,7 @@ function createApiRouter(params: ApiRouterParams): Router {
   return createRouter({
     routes: createApiRoutes({
       checkDatabase: () => pingDatabase(database),
+      readRunQueueSummary: () => createRunQueueRepository(database).readQueueSummary(),
       session: createSessionRouteDependencies({ environment, verifyAccessToken }),
       account: createAccountRouteDependencies({ database, identity, now: () => Date.now() }),
       profile: {
@@ -130,10 +137,15 @@ function createApiRouter(params: ApiRouterParams): Router {
 export function createApplication(params: CreateApplicationParams): Application {
   const { environment, logger } = params;
   const database = openDatabase(environment.DATABASE_URL);
-  const runners = createApplicationRunners({
+  const reportUnexpectedError = (error: unknown): void =>
+    logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { error });
+  const runners = createApplicationRunners({ environment, database });
+  // A TROCA da T3.4 para a T3.6: o despachante sem tetos deu lugar ao da fila durável, que reivindica as execuções do banco.
+  const dispatcher = createApplicationDispatcher({
     environment,
-    database,
-    reportUnexpectedError: (error) => logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { error }),
+    queue: createRunQueueRepository(database),
+    runners,
+    reportUnexpectedError,
   });
   const router = createApiRouter({
     environment,
@@ -141,7 +153,7 @@ export function createApplication(params: CreateApplicationParams): Application 
     database,
     identity: createIdentityAdmin({ environment, now: () => Date.now() }),
     verifyAccessToken: createVerifyAccessToken(environment),
-    dispatcher: runners.dispatcher,
+    dispatcher,
   });
   return {
     handler: createRequestHandler({
@@ -151,11 +163,10 @@ export function createApplication(params: CreateApplicationParams): Application 
     }),
     backtestRunner: runners.backtestRunner,
     walkForwardRunner: runners.walkForwardRunner,
+    dispatcher,
+    start: () => dispatcher.start(),
     closeResources: async (): Promise<void> => {
-      await Promise.all([
-        runners.backtestRunner.terminateAll(),
-        runners.walkForwardRunner.terminateAll(),
-      ]);
+      await dispatcher.stop();
       await closeDatabase(database);
     },
   };

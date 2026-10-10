@@ -37,6 +37,12 @@ export const RUN_VIEW_SCHEMA = z.strictObject({
 
 export const RUN_WARNING_SCHEMA = z.strictObject({ code: z.string(), message: z.string() });
 
+export const RUN_QUEUE_POSITION_SCHEMA = z.strictObject({
+  own: z.number().int().min(1),
+  overall: z.number().int().min(1),
+});
+
 export const RUN_DETAIL_SCHEMA = RUN_VIEW_SCHEMA.extend({
   warnings: z.array(RUN_WARNING_SCHEMA),
+  queuePosition: RUN_QUEUE_POSITION_SCHEMA.nullable(),
 });

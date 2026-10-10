@@ -15,6 +15,7 @@ import {
   createGetProfileUseCase,
   createUpdateProfileUseCase,
 } from '../../apps/api-cryptoada/src/profile/profile.use-case.js';
+import { EMPTY_QUEUE_SUMMARY } from './api-route-dependencies.fixture.js';
 import { createHealthRoutes } from '../../apps/api-cryptoada/src/routes/health.routes.js';
 import { createOwnerScope } from '../../packages/database/src/ownership/owner-scope.js';
 import { userIdFromDatabase } from '../../packages/database/src/ownership/user-id.js';
@@ -151,7 +152,10 @@ export async function createAdminHarness(): Promise<AdminHarness> {
         blockAccount: createBlockAccountUseCase(accountState),
         unblockAccount: createUnblockAccountUseCase(accountState),
       }),
-      ...createHealthRoutes({ checkDatabase: () => Promise.resolve(true) }),
+      ...createHealthRoutes({
+        checkDatabase: () => Promise.resolve(true),
+        readRunQueueSummary: () => Promise.resolve(EMPTY_QUEUE_SUMMARY),
+      }),
       ...createProfileRoutes({
         getProfile: createGetProfileUseCase(users.profiles),
         updateProfile: createUpdateProfileUseCase(users.profiles),

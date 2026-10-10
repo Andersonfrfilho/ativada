@@ -10,13 +10,15 @@ import {
 
 import type { PageOutput } from '../strategies/strategy.use-cases.js';
 import { RunAlreadyFinishedError, RunNotFoundError } from './run.error.js';
+import { readQueuePosition, type RunQueuePositionDependencies } from './run-queue-position.js';
 import { encodeRunCursor } from './run-cursor.js';
 import { toRunView, type RunDetailView, type RunView } from './run-view.js';
 import { readRunWarnings, type RunWarningDependencies } from './run-warnings.js';
 
-export type RunUseCaseDependencies = RunWarningDependencies & {
-  readonly runs: Pick<RunRepository, 'findRun' | 'listRuns' | 'transitionRun'>;
-};
+export type RunUseCaseDependencies = RunWarningDependencies &
+  RunQueuePositionDependencies & {
+    readonly runs: Pick<RunRepository, 'findRun' | 'listRuns' | 'transitionRun'>;
+  };
 
 export type ListRunsInput = {
   readonly limit: number;
@@ -37,7 +39,11 @@ export function createGetRunUseCase(dependencies: RunUseCaseDependencies): GetRu
   return async (scope, runId) => {
     const run = await dependencies.runs.findRun(scope, runId);
     if (run === undefined) throw new RunNotFoundError();
-    return { ...toRunView(run), warnings: await readRunWarnings(dependencies, run) };
+    return {
+      ...toRunView(run),
+      warnings: await readRunWarnings(dependencies, run),
+      queuePosition: await readQueuePosition(dependencies, scope, run),
+    };
   };
 }
 

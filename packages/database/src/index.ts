@@ -92,7 +92,6 @@ export { createRunRepository } from './runs/run.repository.js';
 export type {
   CreateRunParams,
   EngineCheckpoint,
-  FailOrphanedRunsParams,
   ListRunsParams,
   RunCursor,
   RunRecord,
@@ -131,6 +130,24 @@ export type {
   RunResultRows,
 } from './run-results/run-batch.types.js';
 export { resolveRunOwnerScope } from './runs/run-owner.js';
+export { createRunQueueRepository } from './run-queue/run-queue.repository.js';
+export {
+  RUN_ORPHAN_POLICY,
+  RUN_ORPHANED_ERROR_CODE,
+  type RunOrphanPolicy,
+} from './run-queue/run-queue.constant.js';
+export type { UserRunLimits } from './run-queue/run-limits.js';
+export type {
+  ClaimedRun,
+  ClaimNextRunParams,
+  ReclaimExpiredRunsParams,
+  ReclaimResult,
+  RenewHeartbeatParams,
+  RenewHeartbeatResult,
+  RunQueuePosition,
+  RunQueueRepository,
+  RunQueueSummary,
+} from './run-queue/run-queue.types.js';
 export { createStrategyRepository } from './strategies/strategy.repository.js';
 export { EXAMPLE_SEED_OUTCOME, type ExampleSeedOutcome } from './strategies/strategy.constant.js';
 export type {

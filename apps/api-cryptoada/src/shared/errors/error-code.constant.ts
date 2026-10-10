@@ -55,11 +55,14 @@ export const STRATEGY_ERROR_CODE = {
   STRATEGY_VERSION_NOT_FOUND: 'STRATEGY_VERSION_NOT_FOUND',
 } as const;
 
-// Os cinco últimos são os códigos do walk-forward do motor, recusados ANTES de aceitar a execução (T3.4).
+// Os cinco últimos são os códigos do walk-forward do motor, recusados ANTES de aceitar a execução (T3.4);
+// `RUN_QUEUE_FULL` e `LIVE_RUN_LIMIT_REACHED` são os tetos de uso por usuário (T3.6, RF00b).
 export const RUN_ERROR_CODE = {
   RUN_NOT_FOUND: 'RUN_NOT_FOUND',
   RUN_ALREADY_FINISHED: 'RUN_ALREADY_FINISHED',
   LIVE_RUNS_NOT_AVAILABLE: 'LIVE_RUNS_NOT_AVAILABLE',
+  RUN_QUEUE_FULL: 'RUN_QUEUE_FULL',
+  LIVE_RUN_LIMIT_REACHED: 'LIVE_RUN_LIMIT_REACHED',
   GRID_TOO_LARGE: 'GRID_TOO_LARGE',
   NO_VALID_COMBINATIONS: 'NO_VALID_COMBINATIONS',
   INVALID_GRID: 'INVALID_GRID',

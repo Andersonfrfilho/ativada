@@ -11,5 +11,4 @@ export const HOUR_MILLISECONDS = 3_600_000;
 export const DAY_MILLISECONDS = 86_400_000;
 export const PAGE_SIZE = 5_000;
 export const CANCEL_AT_PROGRESS = 20;
-export const ORPHANED_AT_BOOT = 'ORPHANED_AT_BOOT';
 export const GAP_LENGTH = 24;

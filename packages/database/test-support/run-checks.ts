@@ -14,7 +14,6 @@ import {
 
 const CHECK_VIOLATION = '23514';
 const FOREIGN_KEY_VIOLATION = '23503';
-const ORPHAN_ERROR_CODE = 'ORPHANED_AT_BOOT';
 const PAGED_RUNS = 23;
 const PAGE_SIZE = 7;
 
@@ -212,43 +211,6 @@ async function checkListing(context: LifecycleCheckContext): Promise<void> {
   );
 }
 
-async function checkOrphans(context: LifecycleCheckContext): Promise<void> {
-  const { handle, assertCondition, reportCheck } = context;
-  const owner = await resolvePersistenceOwner(handle, 'subject-run-orphans');
-  const runs = createRunRepository(handle);
-  const running = async (kind: (typeof RUN_KIND)[keyof typeof RUN_KIND]): Promise<string> => {
-    const run = await seedRun(handle, owner, { kind });
-    await runs.transitionRun(owner.scope, { runId: run.id, to: RUN_STATUS.RUNNING });
-    return run.id;
-  };
-  const backtest = await running(RUN_KIND.BACKTEST);
-  const walkForward = await running(RUN_KIND.WALK_FORWARD);
-  const livePaper = await running(RUN_KIND.LIVE_PAPER);
-  const queued = (await seedRun(handle, owner)).id;
-  const failed = await runs.failOrphanedRuns({
-    kinds: [RUN_KIND.BACKTEST, RUN_KIND.WALK_FORWARD],
-    errorCode: ORPHAN_ERROR_CODE,
-  });
-  const statusOf = async (runId: string): Promise<string | undefined> =>
-    (await runs.findRun(owner.scope, runId))?.status;
-  assertCondition(failed >= 2, `órfãs marcadas: ${failed}`);
-  assertCondition((await statusOf(backtest)) === RUN_STATUS.FAILED, 'backtest órfão -> failed');
-  assertCondition(
-    (await statusOf(walkForward)) === RUN_STATUS.FAILED,
-    'walk-forward órfão -> failed',
-  );
-  assertCondition((await statusOf(livePaper)) === RUN_STATUS.RUNNING, 'simulação ao vivo continua');
-  assertCondition((await statusOf(queued)) === RUN_STATUS.QUEUED, 'queued não é órfã');
-  const orphan = await runs.findRun(owner.scope, backtest);
-  assertCondition(
-    orphan?.errorCode === ORPHAN_ERROR_CODE && orphan.finishedAt !== undefined,
-    'órfã guarda o código e finished_at',
-  );
-  reportCheck(
-    'órfãs do boot: backtest e walk-forward running viram failed; ao vivo e queued ficam',
-  );
-}
-
 async function checkLineageAndConstraints(context: LifecycleCheckContext): Promise<void> {
   const { handle, client, assertCondition, reportCheck } = context;
   const owner = await resolvePersistenceOwner(handle, 'subject-run-owner');
@@ -295,5 +257,4 @@ export async function checkRunRepository(context: LifecycleCheckContext): Promis
   await checkCheckpoint(context);
   await checkListing(context);
   await checkLineageAndConstraints(context);
-  await checkOrphans(context);
 }

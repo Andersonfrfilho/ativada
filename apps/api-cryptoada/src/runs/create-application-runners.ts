@@ -15,19 +15,15 @@ import {
   createWalkForwardThreadRunner,
   type WalkForwardThreadRunner,
 } from '../walk-forward/walk-forward-thread-runner.js';
-import { createDirectRunDispatcher } from './create-direct-run-dispatcher.js';
-import type { RunDispatcher } from './run-dispatcher.js';
 
 export type ApplicationRunners = {
   readonly backtestRunner: BacktestThreadRunner;
   readonly walkForwardRunner: WalkForwardThreadRunner;
-  readonly dispatcher: RunDispatcher;
 };
 
 export type ApplicationRunnersParams = {
   readonly environment: Environment;
   readonly database: DatabaseHandle;
-  readonly reportUnexpectedError: (error: unknown) => void;
 };
 
 function createBacktestRunner(params: ApplicationRunnersParams): BacktestThreadRunner {
@@ -54,18 +50,11 @@ function createWalkForwardRunner(params: ApplicationRunnersParams): WalkForwardT
   });
 }
 
-// Executores de `worker_thread` e a PORTA que as rotas usam para despachar (ADR 0002, T3.4). A T3.6 troca só o
-// `dispatcher` daqui por uma fila com tetos por usuário.
+// Os executores de `worker_thread` (backtest e walk-forward). Quem decide QUANDO cada execução roda é o despachante da
+// fila (`queue/create-application-dispatcher.ts`), montado em `create-application.ts`.
 export function createApplicationRunners(params: ApplicationRunnersParams): ApplicationRunners {
-  const backtestRunner = createBacktestRunner(params);
-  const walkForwardRunner = createWalkForwardRunner(params);
   return {
-    backtestRunner,
-    walkForwardRunner,
-    dispatcher: createDirectRunDispatcher({
-      backtestRunner,
-      walkForwardRunner,
-      reportUnexpectedError: params.reportUnexpectedError,
-    }),
+    backtestRunner: createBacktestRunner(params),
+    walkForwardRunner: createWalkForwardRunner(params),
   };
 }

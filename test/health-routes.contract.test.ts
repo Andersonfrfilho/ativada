@@ -5,7 +5,10 @@ import { createApiRoutes } from '../apps/api-cryptoada/src/routes/create-api-rou
 import { createRouter } from '../apps/api-cryptoada/src/router/create-router.js';
 import { createRateLimiter } from '../apps/api-cryptoada/src/rate-limit/rate-limiter.js';
 import { ROUTE_ACCESS } from '../apps/api-cryptoada/src/router/route-access.constant.js';
-import { buildApiRouteDependencies } from './fixtures/api-route-dependencies.fixture.js';
+import {
+  buildApiRouteDependencies,
+  EMPTY_QUEUE_SUMMARY,
+} from './fixtures/api-route-dependencies.fixture.js';
 import { createApiHarness, type ApiHarness } from './fixtures/api-harness.fixture.js';
 import { sweepProtectedRoutesWithoutToken } from './fixtures/route-sweep.fixture.js';
 import { signTestToken } from './fixtures/token-signing.fixture.js';
@@ -93,11 +96,12 @@ describe('admin health through the full authentication pipeline', () => {
   async function adminHealthWith(
     databaseIsUp: boolean,
     claims: Record<string, unknown>,
+    queueSummary = EMPTY_QUEUE_SUMMARY,
   ): Promise<Response> {
     const databaseHarness = await createApiHarness();
     try {
       const productionRoutes = createApiRoutes(
-        buildApiRouteDependencies(() => Promise.resolve(databaseIsUp)),
+        buildApiRouteDependencies(() => Promise.resolve(databaseIsUp), false, queueSummary),
       );
       const router = createRouter({
         routes: productionRoutes,
@@ -124,16 +128,40 @@ describe('admin health through the full authentication pipeline', () => {
     const response = await adminHealthWith(true, ADMIN_CLAIMS);
     expect(response.status).toBe(200);
     expect(await response.json()).toStrictEqual({
-      data: { status: 'ok', checks: { database: 'up' } },
+      data: { status: 'ok', checks: { database: 'up' }, runs: EMPTY_QUEUE_SUMMARY },
     });
+  });
+
+  test('brings the AGGREGATED run queue: counts by status and kind, nothing from any user', async () => {
+    const summary = {
+      queued: 5,
+      running: 2,
+      byKind: {
+        backtest: { queued: 3, running: 1 },
+        walk_forward: { queued: 2, running: 1 },
+        live_paper: { queued: 0, running: 0 },
+      },
+    };
+    const response = await adminHealthWith(true, ADMIN_CLAIMS, summary);
+    const body = (await response.json()) as { data: { runs: unknown } };
+    expect(body.data.runs).toStrictEqual(summary);
+    expect(Object.keys(body.data.runs as object).sort()).toStrictEqual([
+      'byKind',
+      'queued',
+      'running',
+    ]);
   });
 
   test('reports degraded when the database does not answer, with no user data', async () => {
     const response = await adminHealthWith(false, ADMIN_CLAIMS);
     const body = (await response.json()) as {
-      data: { status: string; checks: { database: string } };
+      data: { status: string; checks: { database: string }; runs: unknown };
     };
-    expect(body.data).toStrictEqual({ status: 'degraded', checks: { database: 'down' } });
+    expect(body.data).toStrictEqual({
+      status: 'degraded',
+      checks: { database: 'down' },
+      runs: null,
+    });
   });
 
   test('admin without acr 2 gets 403 MFA_REQUIRED', async () => {

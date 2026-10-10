@@ -2,6 +2,7 @@
 import {
   createCandleRepository,
   createRunRepository,
+  createRunQueueRepository,
   createRunResultRepository,
   createStrategyRepository,
   type DatabaseHandle,
@@ -65,6 +66,7 @@ function createRunDependencies(
     runs: createRunRepository(database),
     candles,
     exchange: environment.MARKET_EXCHANGE,
+    queue: createRunQueueRepository(database),
   };
   const routes: RunRouteDependencies = {
     enabled,
@@ -72,6 +74,7 @@ function createRunDependencies(
       ...shared,
       strategies: createStrategyRepository(database),
       dispatcher: params.dispatcher,
+      queuePerUserLimit: environment.RUN_QUEUE_PER_USER_LIMIT,
       now: params.now,
     }),
     listRuns: createListRunsUseCase(shared),

@@ -11,7 +11,7 @@ import { RUN_STATUS } from './run.constant.js';
 import { listRuns } from './run-list.js';
 import { isOwnedRun } from './run-ownership.js';
 import { RUN_COLUMNS, toRunRecord } from './run-record.mapper.js';
-import { failOrphanedRuns, transitionRun } from './run-transition.js';
+import { transitionRun } from './run-transition.js';
 import type {
   CreateRunParams,
   EngineCheckpoint,
@@ -137,6 +137,5 @@ export function createRunRepository(handle: DatabaseHandle): RunRepository {
     transitionRun: (scope, params) => transitionRun(database, scope, params),
     saveCheckpoint: (scope, params) => saveCheckpoint(database, scope, params),
     readCheckpoint: (scope, runId) => readCheckpoint(database, scope, runId),
-    failOrphanedRuns: (params) => failOrphanedRuns(database, params),
   };
 }

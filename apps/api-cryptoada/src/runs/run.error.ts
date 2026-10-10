@@ -46,3 +46,26 @@ export class WalkForwardRequestRejectedError extends DomainError {
     super({ ...params, status: HTTP_STATUS.BAD_REQUEST });
   }
 }
+
+// A fila de execuções do usuário está cheia (`RUN_QUEUE_PER_USER_LIMIT`): nada é criado.
+export class RunQueueFullError extends DomainError {
+  constructor() {
+    super({
+      code: RUN_ERROR_CODE.RUN_QUEUE_FULL,
+      message: 'A fila de execuções está cheia; aguarde alguma terminar ou cancele uma.',
+      status: HTTP_STATUS.TOO_MANY_REQUESTS,
+    });
+  }
+}
+
+// Simulações ao vivo ativas no teto do usuário (`users.limits`, RF00b).
+export class LiveRunLimitReachedError extends DomainError {
+  constructor() {
+    super({
+      code: RUN_ERROR_CODE.LIVE_RUN_LIMIT_REACHED,
+      message:
+        'O limite de simulações ao vivo ativas foi atingido; encerre alguma antes de criar outra.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}

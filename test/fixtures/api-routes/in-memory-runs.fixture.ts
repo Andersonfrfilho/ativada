@@ -32,7 +32,7 @@ const EPOCH_MILLISECONDS = 1_700_000_000_000;
 const MILLISECONDS_PER_ROW = 1_000;
 const REPOSITORY_PAGE_MAXIMUM = 5_000;
 
-type StoredRun = { readonly userId: UserId; record: RunRecord; sequence: number };
+export type StoredRun = { readonly userId: UserId; record: RunRecord; sequence: number };
 
 export type ResultKind = 'signals' | 'orders' | 'fills' | 'positions' | 'equity' | 'windows';
 
@@ -65,6 +65,7 @@ export type InMemoryRuns = {
   ) => void;
   readonly updateRun: (runId: string, changes: Partial<RunRecord>) => void;
   readonly all: () => readonly RunRecord[];
+  readonly owned: () => readonly StoredRun[];
 };
 
 function isFinal(status: RunStatus): boolean {
@@ -200,7 +201,6 @@ export function createInMemoryRuns(
     },
     saveCheckpoint: () => Promise.resolve(false),
     readCheckpoint: () => Promise.resolve(undefined),
-    failOrphanedRuns: () => Promise.resolve(0),
   };
 
   function lister<TRow, TCursor>(
@@ -268,6 +268,7 @@ export function createInMemoryRuns(
       if (stored !== undefined) stored.record = { ...stored.record, ...changes };
     },
     all: () => runs.map((stored) => stored.record),
+    owned: () => runs,
   };
 }
 

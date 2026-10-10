@@ -19,6 +19,7 @@ export function startApi(): RunningApi {
     write: (line) => void logLines.push(line),
   });
   const application = createApplication({ environment, logger });
+  application.start().catch((error: unknown) => logger.error('unexpected error', { error }));
   const server = startServer({
     handler: application.handler,
     host: environment.API_HOST,

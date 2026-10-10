@@ -11,22 +11,19 @@ import {
   RUN_TRANSITION_OUTCOME,
   RUN_TRANSITION_SOURCES,
   TERMINAL_RUN_STATUSES,
-  type RunKind,
   type RunStatus,
 } from './run.constant.js';
 import { RUN_COLUMNS, toRunRecord } from './run-record.mapper.js';
-import type {
-  FailOrphanedRunsParams,
-  TransitionRunParams,
-  TransitionRunResult,
-} from './run.types.js';
+import type { TransitionRunParams, TransitionRunResult } from './run.types.js';
 
 function buildTransitionChanges(params: TransitionRunParams): Record<string, unknown> {
   return {
     status: params.to,
     ...(params.to === RUN_STATUS.RUNNING ? { startedAt: sql`now()` } : {}),
     ...(params.to === RUN_STATUS.COMPLETED ? { progress: RUN_PROGRESS_MAXIMUM } : {}),
-    ...(TERMINAL_RUN_STATUSES.includes(params.to) ? { finishedAt: sql`now()` } : {}),
+    ...(TERMINAL_RUN_STATUSES.includes(params.to)
+      ? { finishedAt: sql`now()`, claimedBy: null, heartbeatAt: null }
+      : {}),
     ...(params.metrics === undefined ? {} : { metrics: toJsonb(params.metrics) }),
     ...(params.errorCode === undefined ? {} : { errorCode: params.errorCode }),
   };
@@ -73,18 +70,4 @@ export async function transitionRun(
   const currentStatus = await readStatus(executor, scope, params.runId);
   if (currentStatus === undefined) return { outcome: RUN_TRANSITION_OUTCOME.NOT_FOUND };
   return { outcome: RUN_TRANSITION_OUTCOME.INVALID_TRANSITION, currentStatus };
-}
-
-export async function failOrphanedRuns(
-  executor: DatabaseExecutor,
-  params: FailOrphanedRunsParams,
-): Promise<number> {
-  if (params.kinds.length === 0) return 0;
-  const kinds: RunKind[] = [...params.kinds];
-  const rows = await executor
-    .update(runs)
-    .set({ status: RUN_STATUS.FAILED, errorCode: params.errorCode, finishedAt: sql`now()` })
-    .where(and(eq(runs.status, RUN_STATUS.RUNNING), inArray(runs.kind, kinds)))
-    .returning({ id: runs.id });
-  return rows.length;
 }

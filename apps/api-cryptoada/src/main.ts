@@ -35,6 +35,10 @@ function startApplication(environment: Environment): void {
       exit: (code) => process.exit(code),
     }),
   );
+  // O boot da fila só depois de o encerramento estar armado: um SIGTERM logo depois de subir já devolve o que foi reivindicado.
+  application
+    .start()
+    .catch((error: unknown) => logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { error }));
 }
 
 runWithEnvironment({ appName: WORKSPACE_NAME, load: loadEnvironment, run: startApplication });

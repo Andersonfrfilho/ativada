@@ -45,6 +45,9 @@ import {
   checkWindowNamespace,
 } from './run-result-rule-checks.js';
 import { checkExampleStrategySeeding } from './example-strategy-checks.js';
+import { checkRunQueueClaims } from './run-queue-checks.js';
+import { checkRunQueueLifecycle } from './run-queue-lifecycle-checks.js';
+import { checkRunQueueReading } from './run-queue-reading-checks.js';
 import { checkStrategyRepository } from './strategy-checks.js';
 import { checkStrategyPages } from './strategy-page-checks.js';
 import { checkProfileRepository } from './profile-checks.js';
@@ -131,6 +134,9 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkWindowBatchIsAtomic(context);
   await checkCancelWaitsForTheBatch(context);
   await checkCompletionSetsFullProgress(context);
+  await checkRunQueueClaims(context);
+  await checkRunQueueLifecycle(context);
+  await checkRunQueueReading(context);
 }
 
 async function runChecks(databaseUrl: string): Promise<void> {

@@ -23,10 +23,12 @@ import {
   TERMINAL_RUN_STATUSES,
 } from '../runs/run.constant.js';
 import { literalList } from './check-literals.js';
+import { runQueueConstraints } from './runs-queue.schema.js';
 import { strategyVersions } from './strategies.schema.js';
 import { users } from './users.schema.js';
 
 const VERSION_LABEL_MAX_LENGTH = 32;
+const CLAIMED_BY_MAX_LENGTH = 64;
 
 export const runs = pgTable(
   'runs',
@@ -56,6 +58,8 @@ export const runs = pgTable(
     errorCode: varchar('error_code', { length: 64 }),
     migratedFromRunId: uuid('migrated_from_run_id'),
     request: jsonb('request'),
+    claimedBy: varchar('claimed_by', { length: CLAIMED_BY_MAX_LENGTH }),
+    heartbeatAt: timestamp('heartbeat_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     startedAt: timestamp('started_at', { withTimezone: true }),
     finishedAt: timestamp('finished_at', { withTimezone: true }),
@@ -92,6 +96,7 @@ export const runs = pgTable(
       'runs_period_order_check',
       sql`${table.periodEnd} is null or ${table.periodEnd} > ${table.periodStart}`,
     ),
+    ...runQueueConstraints(table),
     check(
       'runs_finished_matches_terminal_status_check',
       sql`(${table.status} in (${literalList(TERMINAL_RUN_STATUSES)})) = (${table.finishedAt} is not null)`,

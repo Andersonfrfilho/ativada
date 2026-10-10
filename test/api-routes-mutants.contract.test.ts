@@ -193,18 +193,30 @@ const MUTANTS: readonly SourceMutant[] = [
   },
   {
     name: 'DISPATCHER_WAITS_FOR_THE_RUN_TO_FINISH',
-    edits: edit(
-      'runs/create-direct-run-dispatcher.ts',
-      'if (kind === RUN_KIND.BACKTEST) track(dependencies.backtestRunner.run(runId));',
-      'if (kind === RUN_KIND.BACKTEST) return dependencies.backtestRunner.run(runId).then(() => undefined);',
-    ),
+    edits: [
+      ...edit(
+        'runs/queue/run-queue-dispatcher.ts',
+        'dispatch(request: RunDispatchRequest): Promise<void> {',
+        'async dispatch(request: RunDispatchRequest): Promise<void> {',
+      ),
+      ...edit(
+        'runs/queue/run-queue-dispatcher.ts',
+        'if (!this.isStopping) void this.pump();\n    return Promise.resolve();',
+        'if (!this.isStopping) await this.pump();\n    return Promise.resolve();',
+      ),
+      ...edit(
+        'runs/queue/run-queue-dispatcher.ts',
+        '      this.launch(claimed);\n',
+        '      this.launch(claimed);\n      await this.active.get(claimed.runId);\n',
+      ),
+    ],
   },
   {
     name: 'DISPATCHER_SENDS_WALK_FORWARD_TO_THE_BACKTEST_RUNNER',
     edits: edit(
-      'runs/create-direct-run-dispatcher.ts',
-      'track(dependencies.walkForwardRunner.run(runId));',
-      'track(dependencies.backtestRunner.run(runId));',
+      'runs/queue/create-application-dispatcher.ts',
+      '[RUN_KIND.WALK_FORWARD]: (runId) => runners.walkForwardRunner.run(runId),',
+      '[RUN_KIND.WALK_FORWARD]: (runId) => runners.backtestRunner.run(runId),',
     ),
   },
   {

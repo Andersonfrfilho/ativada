@@ -11,7 +11,8 @@
     "db:migrate": "bun run src/migrate.ts",
     "db:migration-test": "bun run test-support/migration-test.ts",
     "db:database-test": "bun run test-support/database-test.ts",
-    "db:example-strategy-test": "bun run test-support/example-strategy-test.ts"
+    "db:example-strategy-test": "bun run test-support/example-strategy-test.ts",
+    "db:run-queue-test": "bun run test-support/run-queue-test.ts"
   },
   "dependencies": {
     "@cryptoada/environment": "workspace:*",

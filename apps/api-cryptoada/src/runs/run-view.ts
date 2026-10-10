@@ -28,7 +28,13 @@ export type RunView = {
   readonly finishedAt: string | null;
 };
 
-export type RunDetailView = RunView & { readonly warnings: readonly RunWarning[] };
+export type RunQueuePositionView = { readonly own: number; readonly overall: number };
+
+export type RunDetailView = RunView & {
+  readonly warnings: readonly RunWarning[];
+  // 1-based, só para `queued`: entre as execuções do dono e na fila inteira (só o número). `null` fora da fila.
+  readonly queuePosition: RunQueuePositionView | null;
+};
 
 function isJsonObject(
   value: JsonValue | undefined,

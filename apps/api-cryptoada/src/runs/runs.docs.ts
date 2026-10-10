@@ -29,7 +29,7 @@ const RUN_NOT_FOUND = {
 export const RUN_DOCUMENTATION = {
   create: {
     summary:
-      'Cria uma execução (backtest ou walk-forward), despacha e responde 202 com o id. `live_paper` responde 501 até a Fase 4.',
+      'Cria uma execução (backtest ou walk-forward), enfileira e responde 202 com o id; a fila do usuário é limitada (429 `RUN_QUEUE_FULL`). `live_paper` responde 409 acima do teto de ativas e 501 até a Fase 4.',
     tag: TAG,
     successes: [
       {
@@ -47,6 +47,8 @@ export const RUN_DOCUMENTATION = {
       { status: HTTP_STATUS.BAD_REQUEST, code: RUN_ERROR_CODE.INVALID_WINDOW_CONFIG },
       { status: HTTP_STATUS.BAD_REQUEST, code: RUN_ERROR_CODE.PERIOD_TOO_SHORT },
       { status: HTTP_STATUS.NOT_FOUND, code: STRATEGY_ERROR_CODE.STRATEGY_VERSION_NOT_FOUND },
+      { status: HTTP_STATUS.CONFLICT, code: RUN_ERROR_CODE.LIVE_RUN_LIMIT_REACHED },
+      { status: HTTP_STATUS.TOO_MANY_REQUESTS, code: RUN_ERROR_CODE.RUN_QUEUE_FULL },
       { status: HTTP_STATUS.NOT_IMPLEMENTED, code: RUN_ERROR_CODE.LIVE_RUNS_NOT_AVAILABLE },
     ],
   },
@@ -68,7 +70,8 @@ export const RUN_DOCUMENTATION = {
     errors: [VALIDATION],
   },
   get: {
-    summary: 'Status, progresso, métricas, alerta de overfitting e avisos de uma execução.',
+    summary:
+      'Status, progresso, métricas, alerta de overfitting, avisos e, se está na fila, a posição (a do usuário e a global, só como número).',
     tag: TAG,
     params: RUN_PARAMS,
     successes: [{ status: HTTP_STATUS.OK, description: 'A execução.', schema: RUN_DETAIL_SCHEMA }],

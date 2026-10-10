@@ -25,6 +25,7 @@ import {
   type InMemoryCandles,
   type InMemoryRuns,
 } from './in-memory-runs.fixture.js';
+import { createInMemoryRunQueue, type InMemoryRunQueue } from './in-memory-run-queue.fixture.js';
 import {
   createInMemoryStrategies,
   type InMemoryStrategies,
@@ -41,6 +42,7 @@ export const ENABLED_TIMEFRAMES = ['15m', '1h', '4h', '1d'] as const;
 export const EXCHANGE = 'binance';
 export const NOW = Date.UTC(2026, 9, 1);
 export const HOUR = 3_600_000;
+const DEFAULT_QUEUE_PER_USER_LIMIT = 20;
 export const CLASSIC_CONFIG: unknown = classicStrategy;
 
 export type CallParams = {
@@ -52,6 +54,7 @@ export type CallParams = {
 };
 
 export type RunsHarnessOptions = {
+  readonly queuePerUserLimit?: number;
   readonly candles?: readonly CandleRecord[];
   readonly csvLimits?: { maxRows?: number; maxDurationMilliseconds?: number };
   readonly extraRoutes?: (app: ApiApp) => readonly Route[];
@@ -63,6 +66,7 @@ export type RunsHarness = {
   readonly runs: InMemoryRuns;
   readonly candles: InMemoryCandles;
   readonly dispatched: RunDispatchRequest[];
+  readonly limits: InMemoryRunQueue['limits'];
   readonly dispatch: { shouldFail: boolean };
   readonly clock: { now: number };
   readonly routes: readonly Route[];
@@ -124,8 +128,14 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
       return Promise.resolve();
     },
   };
+  const queue = createInMemoryRunQueue(runs);
   const strategyDeps = { strategies: strategies.repository };
-  const runDeps = { runs: runs.repository, candles: candles.repository, exchange: EXCHANGE };
+  const runDeps = {
+    runs: runs.repository,
+    candles: candles.repository,
+    exchange: EXCHANGE,
+    queue: queue.port,
+  };
   const series = app.runSeriesUseCases.createRunSeriesUseCases({ results: runs.results });
   const routes: readonly Route[] = [
     ...app.marketRoutes.createMarketRoutes({
@@ -148,6 +158,7 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
         ...runDeps,
         strategies: strategies.repository,
         dispatcher,
+        queuePerUserLimit: options.queuePerUserLimit ?? DEFAULT_QUEUE_PER_USER_LIMIT,
         now: () => clock.now,
       }),
       listRuns: app.runUseCases.createListRunsUseCase(runDeps),
@@ -202,6 +213,7 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     runs,
     candles,
     dispatched,
+    limits: queue.limits,
     dispatch,
     clock,
     routes,

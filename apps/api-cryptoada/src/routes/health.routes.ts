@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import type { RunQueueSummary } from '@cryptoada/database';
+
 import { RATE_LIMIT_POLICY } from '../rate-limit/rate-limit-policy.constant.js';
 import { ROUTE_ACCESS } from '../router/route-access.constant.js';
 import type { Route } from '../router/route.types.js';
@@ -14,7 +16,17 @@ const DEPENDENCY_STATE = { UP: 'up', DOWN: 'down' } as const;
 
 export type HealthRouteDependencies = {
   readonly checkDatabase: () => Promise<boolean>;
+  // Contagens AGREGADAS da fila de execuções (por estado e tipo): nenhum dado de usuário.
+  readonly readRunQueueSummary: () => Promise<RunQueueSummary>;
 };
+
+async function readRuns(dependencies: HealthRouteDependencies): Promise<RunQueueSummary | null> {
+  try {
+    return await dependencies.readRunQueueSummary();
+  } catch {
+    return null;
+  }
+}
 
 export function createHealthRoutes(dependencies: HealthRouteDependencies): readonly Route[] {
   return [
@@ -39,6 +51,7 @@ export function createHealthRoutes(dependencies: HealthRouteDependencies): reado
           data: {
             status: isDatabaseUp ? HEALTH_STATUS.OK : HEALTH_STATUS.DEGRADED,
             checks: { database: isDatabaseUp ? DEPENDENCY_STATE.UP : DEPENDENCY_STATE.DOWN },
+            runs: isDatabaseUp ? await readRuns(dependencies) : null,
           },
         };
       },

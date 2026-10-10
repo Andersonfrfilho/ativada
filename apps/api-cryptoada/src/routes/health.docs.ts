@@ -1,10 +1,27 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { RUN_KIND } from '@cryptoada/database';
 import { z } from '@cryptoada/environment';
 
 import type { RouteDocumentation } from '../openapi/route-documentation.types.js';
 import { HTTP_STATUS } from '../shared/http/http.constant.js';
 
 const TAG = 'Saúde';
+
+const KIND_COUNTS_SCHEMA = z.strictObject({
+  queued: z.number().int().min(0),
+  running: z.number().int().min(0),
+});
+
+// Só contagens: a fila inteira por estado e por tipo, sem usuário, id de execução nem dono.
+const RUN_QUEUE_SUMMARY_SCHEMA = z.strictObject({
+  queued: z.number().int().min(0),
+  running: z.number().int().min(0),
+  byKind: z.strictObject({
+    [RUN_KIND.BACKTEST]: KIND_COUNTS_SCHEMA,
+    [RUN_KIND.WALK_FORWARD]: KIND_COUNTS_SCHEMA,
+    [RUN_KIND.LIVE_PAPER]: KIND_COUNTS_SCHEMA,
+  }),
+});
 
 export const HEALTH_DOCUMENTATION = {
   health: {
@@ -20,7 +37,8 @@ export const HEALTH_DOCUMENTATION = {
     errors: [],
   },
   adminHealth: {
-    summary: 'Saúde das dependências, só números agregados (administrador).',
+    summary:
+      'Saúde das dependências e contagens agregadas da fila de execuções (por estado e tipo), só números (administrador).',
     tag: TAG,
     successes: [
       {
@@ -29,6 +47,7 @@ export const HEALTH_DOCUMENTATION = {
         schema: z.strictObject({
           status: z.enum(['ok', 'degraded']),
           checks: z.strictObject({ database: z.enum(['up', 'down']) }),
+          runs: RUN_QUEUE_SUMMARY_SCHEMA.nullable(),
         }),
       },
     ],

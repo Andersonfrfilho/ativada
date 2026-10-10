@@ -30,6 +30,13 @@ const ALLOWED_RESPONSE_FIELDS: ReadonlySet<string> = new Set([
   'status',
   'checks',
   'database',
+  'runs',
+  'queued',
+  'running',
+  'byKind',
+  'backtest',
+  'walk_forward',
+  'live_paper',
   'data',
   'pagination',
 ]);

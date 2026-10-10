@@ -378,6 +378,8 @@ describe('POST /v1/runs', () => {
         body: backtestBody({ strategyVersionId: seeded.versionId }),
       });
       expect(blocked.status).toBe(429);
+      const { body } = await readJson(blocked);
+      expect((body as ErrorBody).error.code).toBe('RATE_LIMITED');
     } finally {
       await limited.stop();
     }

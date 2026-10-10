@@ -12,6 +12,12 @@ import {
   type ProductionProfile,
 } from '@cryptoada/environment';
 
+import {
+  HEARTBEAT_ORDER_EXPECTATION,
+  isHeartbeatTimeoutAfterInterval,
+  runQueueEnvironmentShape,
+} from './run-queue-environment.js';
+
 const API_PORT_EXPECTATION = 'inteiro entre 1024 e 65535';
 const ORIGIN_LIST_EXPECTATION =
   'lista de origens exatas separadas por vírgula (https://host[:porta], sem caminho nem barra final)';
@@ -141,6 +147,7 @@ export const environmentSchema = z
       .min(MIN_BACKTEST_TIMEOUT_SECONDS, { error: BACKTEST_TIMEOUT_EXPECTATION })
       .max(MAX_BACKTEST_TIMEOUT_SECONDS, { error: BACKTEST_TIMEOUT_EXPECTATION })
       .default(DEFAULT_BACKTEST_TIMEOUT_SECONDS),
+    ...runQueueEnvironmentShape,
     WALK_FORWARD_THREADS: walkForwardThreadsSchema,
     WALK_FORWARD_TIMEOUT_SECONDS: z.coerce
       .number({ error: WALK_FORWARD_TIMEOUT_EXPECTATION })
@@ -159,6 +166,10 @@ export const environmentSchema = z
       (values.TELEGRAM_BOT_TOKEN === undefined) === (values.TELEGRAM_WEBHOOK_SECRET === undefined),
     { error: TELEGRAM_PAIR_EXPECTATION, path: ['TELEGRAM_WEBHOOK_SECRET'] },
   )
+  .refine(isHeartbeatTimeoutAfterInterval, {
+    error: HEARTBEAT_ORDER_EXPECTATION,
+    path: ['RUN_HEARTBEAT_TIMEOUT_SECONDS'],
+  })
   .superRefine((values, context) => {
     checkProductionRules(values, PRODUCTION_PROFILE, context);
     const isHopsMissing = values.TRUSTED_PROXY_HOPS === undefined;

@@ -87,11 +87,6 @@ export type RunsPage = {
   readonly nextCursor: RunCursor | undefined;
 };
 
-export type FailOrphanedRunsParams = {
-  readonly kinds: readonly RunKind[];
-  readonly errorCode: string;
-};
-
 export type RunRepository = {
   readonly createRun: (
     scope: OwnerScope,
@@ -108,6 +103,4 @@ export type RunRepository = {
     scope: OwnerScope,
     runId: string,
   ) => Promise<EngineCheckpoint | undefined>;
-  // Única operação sem dono: o boot marca as execuções órfãs de todos e devolve só a contagem.
-  readonly failOrphanedRuns: (params: FailOrphanedRunsParams) => Promise<number>;
 };

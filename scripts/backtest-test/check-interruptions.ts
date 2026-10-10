@@ -1,12 +1,13 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
+  createRunQueueRepository,
   createRunRepository,
-  RUN_KIND,
+  RUN_ORPHAN_POLICY,
+  RUN_ORPHANED_ERROR_CODE,
   RUN_STATUS,
   type RunRecord,
 } from '../../packages/database/src/index.js';
 import {
-  ORPHANED_AT_BOOT,
   CANCEL_AT_PROGRESS,
   REPAIR_BUDGET_MILLISECONDS,
   SHORT_TIMEOUT_MILLISECONDS,
@@ -21,6 +22,7 @@ import {
 import { SYMBOL, TIMEFRAME, type SyntheticWindow } from './check-two-years.js';
 import { readPersistedRun } from './read-run-rows.js';
 
+const ORPHAN_TIMEOUT_SECONDS = 60;
 const CRASHING_WORKER_URL = new URL('./crashing.worker.ts', import.meta.url).href;
 
 async function newRun(context: BacktestTestContext, window: SyntheticWindow): Promise<RunRecord> {
@@ -221,19 +223,20 @@ export async function checkOrphans(
     `RETOMADA: a órfã running (checkpoint em ${checkpoint?.lastCandleTime}) retomou do banco em ${(performance.now() - startedAt).toFixed(0)} ms e o resultado é IDÊNTICO ao da execução contínua (digest ${finished.digest})`,
   );
   const second = await crashRun({ context, window, mode: 'exit', shouldRecord: false });
-  const failedAtBoot = await runs.failOrphanedRuns({
-    kinds: [RUN_KIND.BACKTEST, RUN_KIND.WALK_FORWARD],
-    errorCode: ORPHANED_AT_BOOT,
+  const reclaimed = await createRunQueueRepository(context.handle).reclaimExpiredRuns({
+    heartbeatTimeoutSeconds: ORPHAN_TIMEOUT_SECONDS,
+    orphanPolicy: RUN_ORPHAN_POLICY.FAIL_ALL,
   });
   const marked = await runs.findRun(context.owner.scope, second.run.id);
   assertCondition(
-    failedAtBoot === 1 &&
+    reclaimed.failed === 1 &&
+      reclaimed.requeued === 0 &&
       marked?.status === RUN_STATUS.FAILED &&
-      marked.errorCode === ORPHANED_AT_BOOT,
-    'a órfã não foi recuperada pelo failOrphanedRuns do boot (T3.6)',
+      marked.errorCode === RUN_ORPHANED_ERROR_CODE,
+    'a órfã sem batimento não foi marcada pelo reclaimExpiredRuns do boot (T3.6)',
   );
   assertCondition(second.wallMilliseconds < REPAIR_BUDGET_MILLISECONDS, 'a queda demorou demais');
   reportLine(
-    'ÓRFÃ: a execução running deixada por uma queda continua recuperável pela T3.6 (failOrphanedRuns a marca failed; ou a retomada a conclui)',
+    'ÓRFÃ: a execução running deixada por uma queda continua recuperável pela T3.6 (o reclaimExpiredRuns a marca failed/ORPHANED, ou a retomada a conclui)',
   );
 }

@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import type { RunQueueSummary } from '../../packages/database/src/run-queue/run-queue.types.js';
 import type { ApiRouteDependencies } from '../../apps/api-cryptoada/src/routes/create-api-routes.js';
 import { createStreamTicketStore } from '../../apps/api-cryptoada/src/stream/stream-ticket-store.js';
 
@@ -7,13 +8,25 @@ const ENABLED_MARKETS = {
   timeframes: ['15m', '1h', '4h', '1d'],
 };
 
+export const EMPTY_QUEUE_SUMMARY: RunQueueSummary = {
+  queued: 0,
+  running: 0,
+  byKind: {
+    backtest: { queued: 0, running: 0 },
+    walk_forward: { queued: 0, running: 0 },
+    live_paper: { queued: 0, running: 0 },
+  },
+};
+
 export function buildApiRouteDependencies(
   checkDatabase: () => Promise<boolean>,
   isDocumentationEnabled = false,
+  queueSummary: RunQueueSummary = EMPTY_QUEUE_SUMMARY,
 ): ApiRouteDependencies {
   const notUsed = (): Promise<never> => Promise.reject(new Error('not used'));
   return {
     checkDatabase,
+    readRunQueueSummary: () => Promise.resolve(queueSummary),
     session: {
       createSession: notUsed,
       refreshSession: notUsed,
