@@ -12,7 +12,7 @@ import {
   type OwnerScope,
   type RunRecord,
 } from '../../packages/database/src/index.js';
-import { parseJsonContainer } from '../../apps/api-cryptoada/src/backtest/json-container.js';
+import { parseJsonContainer } from '../../packages/run-recording/src/index.js';
 import { createWalkForwardDatabase } from '../../apps/api-cryptoada/src/walk-forward/create-walk-forward-database.js';
 import { failWalkForwardRun } from '../../apps/api-cryptoada/src/walk-forward/run-walk-forward.js';
 import type { WalkForwardRequest } from '../../apps/api-cryptoada/src/walk-forward/walk-forward.types.js';

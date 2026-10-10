@@ -7,11 +7,11 @@ import {
   type DatabaseHandle,
   type WalkForwardWindowInput,
 } from '@cryptoada/database';
+import { isCandleTimeframe } from '@cryptoada/run-recording';
 
 import {
   createMarketReaders,
   createRunLifecycle,
-  isTimeframe,
   type SessionTarget,
 } from '../backtest/create-backtest-database.js';
 import { createResultReaders } from '../backtest/database-result-readers.js';
@@ -68,7 +68,7 @@ export function createWalkForwardDatabase(handle: DatabaseHandle): WalkForwardDa
       const scope = await resolveRunOwnerScope(handle, runId);
       if (scope === undefined) return undefined;
       const run = await createRunRepository(handle).findRun(scope, runId);
-      if (run === undefined || !isTimeframe(run.timeframe)) return undefined;
+      if (run === undefined || !isCandleTimeframe(run.timeframe)) return undefined;
       return createSession(
         { handle, scope, runId },
         { symbol: run.symbol, timeframe: run.timeframe },

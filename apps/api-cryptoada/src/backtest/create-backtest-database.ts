@@ -8,16 +8,12 @@ import {
   resolveRunOwnerScope,
   RUN_STATUS,
   RUN_TRANSITION_OUTCOME,
-  type CandleRecord,
   type CandleSeriesKey,
   type DatabaseHandle,
   type OwnerScope,
 } from '@cryptoada/database';
-import {
-  ENGINE_TIMEFRAME,
-  type EngineCandle,
-  type StoredSentimentObservation,
-} from '@cryptoada/strategy-engine';
+import { isCandleTimeframe, toEngineCandle, toStoredSentiment } from '@cryptoada/run-recording';
+import type { EngineCandle, StoredSentimentObservation } from '@cryptoada/strategy-engine';
 
 import { BACKTEST_ERROR_CODE, BACKTEST_MARKET_EXCHANGE } from './backtest.constant.js';
 import { BacktestError } from './backtest.error.js';
@@ -28,26 +24,6 @@ import type {
   StartRunResult,
 } from './backtest-database.types.js';
 import { createResultReaders } from './database-result-readers.js';
-
-const TIMEFRAMES: readonly string[] = Object.values(ENGINE_TIMEFRAME);
-
-export function isTimeframe(value: string): value is CandleRecord['timeframe'] {
-  return TIMEFRAMES.includes(value);
-}
-
-function toEngineCandle(record: CandleRecord): EngineCandle {
-  return {
-    symbol: record.symbol,
-    timeframe: record.timeframe,
-    openTime: record.openTime,
-    closeTime: record.closeTime,
-    open: record.open,
-    high: record.high,
-    low: record.low,
-    close: record.close,
-    volume: record.volume,
-  };
-}
 
 export type SessionTarget = {
   readonly handle: DatabaseHandle;
@@ -111,12 +87,7 @@ export function createMarketReaders(
         observedUntil: query.until,
         insertedUntil: new Date(query.until),
       });
-      return records.map((record) => ({
-        value: record.fearGreed,
-        observedAt: record.observedAt,
-        source: record.source,
-        createdAt: record.createdAt.getTime(),
-      }));
+      return records.map(toStoredSentiment);
     },
   };
 }
@@ -142,7 +113,7 @@ export function createBacktestDatabase(handle: DatabaseHandle): BacktestDatabase
       const scope = await resolveRunOwnerScope(handle, runId);
       if (scope === undefined) return undefined;
       const run = await createRunRepository(handle).findRun(scope, runId);
-      if (run === undefined || !isTimeframe(run.timeframe)) return undefined;
+      if (run === undefined || !isCandleTimeframe(run.timeframe)) return undefined;
       return createSession(
         { handle, scope, runId },
         { symbol: run.symbol, timeframe: run.timeframe },

@@ -12,6 +12,8 @@ export {
   type AppendDecisionsParams,
   type BatchBuffer,
 } from './batch-buffer.js';
+export { isJsonContainer, parseJsonContainer } from './json-container.js';
+export { isCandleTimeframe, toEngineCandle, toStoredSentiment } from './market-mapping.js';
 export { createPositionTracker, type PositionTracker } from './position-tracker.js';
 export { PositionUntrackedError } from './run-recording.error.js';
 export { createSentimentPicker, type SentimentPicker } from './sentiment-picker.js';

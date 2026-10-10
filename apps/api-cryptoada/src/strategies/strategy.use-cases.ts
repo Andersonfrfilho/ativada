@@ -2,7 +2,7 @@
 import type { OwnerScope, StrategyCursor, StrategyRepository } from '@cryptoada/database';
 import type { StrategyVersion } from '@cryptoada/strategy-engine';
 
-import { parseJsonContainer } from '../backtest/json-container.js';
+import { parseJsonContainer } from '@cryptoada/run-recording';
 import { encodeStrategyCursor, encodeVersionCursor } from './strategy-cursor.js';
 import { StrategyNotFoundError } from './strategy.error.js';
 import {

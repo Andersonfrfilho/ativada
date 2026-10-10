@@ -2,7 +2,7 @@
 import type { ExampleSeedOutcome, OwnerScope, StrategyRepository } from '@cryptoada/database';
 import { CLASSIC_SCOREBOARD_STRATEGY } from '@cryptoada/strategy-engine';
 
-import { parseJsonContainer } from '../backtest/json-container.js';
+import { parseJsonContainer } from '@cryptoada/run-recording';
 
 export type SeedExampleStrategyDependencies = {
   readonly strategies: Pick<StrategyRepository, 'seedExampleStrategy'>;

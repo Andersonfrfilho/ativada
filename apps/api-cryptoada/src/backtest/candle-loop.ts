@@ -4,6 +4,7 @@ import {
   advanceCandle,
   appendDecisions,
   createBatchBuffer,
+  parseJsonContainer,
   type BatchBuffer,
   type PositionTracker,
   type SentimentPicker,
@@ -25,7 +26,6 @@ import { BacktestError } from './backtest.error.js';
 import type { BacktestRunSession } from './backtest-database.types.js';
 import type { CandlePages } from './candle-stream.js';
 import { flushBatch } from './flush-batch.js';
-import { parseJsonContainer } from './json-container.js';
 import type { BacktestContext } from './load-backtest-context.js';
 import type { PhaseTimer } from './phase-timer.js';
 

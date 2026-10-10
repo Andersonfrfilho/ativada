@@ -2,7 +2,7 @@
 import type { EngineCheckpoint, JsonContainer } from '@cryptoada/database';
 import { z } from '@cryptoada/environment';
 
-import { isJsonContainer } from '../backtest/json-container.js';
+import { isJsonContainer } from '@cryptoada/run-recording';
 import {
   WALK_FORWARD_CHECKPOINT_KIND,
   WALK_FORWARD_CHECKPOINT_VERSION,

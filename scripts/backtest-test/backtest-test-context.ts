@@ -13,7 +13,7 @@ import {
   type OwnerScope,
   type RunRecord,
 } from '../../packages/database/src/index.js';
-import { parseJsonContainer } from '../../apps/api-cryptoada/src/backtest/json-container.js';
+import { parseJsonContainer } from '../../packages/run-recording/src/index.js';
 import { createBacktestDatabase } from '../../apps/api-cryptoada/src/backtest/create-backtest-database.js';
 import type { BacktestDatabase } from '../../apps/api-cryptoada/src/backtest/backtest-database.types.js';
 import { failBacktestRun } from '../../apps/api-cryptoada/src/backtest/run-backtest.js';

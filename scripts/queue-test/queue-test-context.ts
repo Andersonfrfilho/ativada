@@ -2,7 +2,7 @@
 import { createIntervalTimers } from '../../apps/api-cryptoada/src/runs/queue/interval-timers.js';
 import { createRunQueueDispatcher } from '../../apps/api-cryptoada/src/runs/queue/run-queue-dispatcher.js';
 import type { RunQueueDispatcher } from '../../apps/api-cryptoada/src/runs/queue/run-queue-dispatcher.types.js';
-import { parseJsonContainer } from '../../apps/api-cryptoada/src/backtest/json-container.js';
+import { parseJsonContainer } from '../../packages/run-recording/src/index.js';
 import {
   createRunQueueRepository,
   createStrategyRepository,
