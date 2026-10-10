@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { CandleRepository } from '@cryptoada/database';
-import type { Candle } from '@cryptoada/market-data';
+import { readErrorName } from '@cryptoada/environment';
+import { formatPairLabel, type Candle } from '@cryptoada/market-data';
 
 import type { WorkerLogger } from '../logging/worker-logger.js';
 import {
@@ -24,11 +25,7 @@ export type CandleWriter = {
 };
 
 export function buildCandleId(candle: Pick<Candle, 'symbol' | 'timeframe' | 'openTime'>): string {
-  return `${candle.symbol}/${candle.timeframe}/${candle.openTime}`;
-}
-
-function readErrorName(error: unknown): string {
-  return error instanceof Error ? error.name : 'UnknownError';
+  return `${formatPairLabel(candle)}/${candle.openTime}`;
 }
 
 function sleepUnlessAborted(
@@ -43,46 +40,48 @@ function sleepUnlessAborted(
   });
 }
 
-export function createCandleWriter(dependencies: CandleWriterDependencies): CandleWriter {
-  const inFlight = new Set<Promise<void>>();
-
-  async function writeOne(candle: Candle): Promise<void> {
-    const candleId = buildCandleId(candle);
-    for (let attempt = 1; ; attempt += 1) {
-      try {
-        const result = await dependencies.repository.upsertCandles([
-          { ...candle, exchange: dependencies.exchange },
-        ]);
-        dependencies.logger.info(WORKER_LOG.CANDLE_STORED, { candleId, inserted: result.inserted });
-        return;
-      } catch (error: unknown) {
-        if (attempt >= CANDLE_WRITE_MAX_ATTEMPTS) {
-          dependencies.logger.error(WORKER_LOG.CANDLE_WRITE_FAILED, {
-            candleId,
-            attempts: attempt,
-            errorName: readErrorName(error),
-          });
-          dependencies.onWriteExhausted();
-          return;
-        }
-        dependencies.logger.warn(WORKER_LOG.CANDLE_WRITE_RETRY, {
+async function writeWithRetries(
+  dependencies: CandleWriterDependencies,
+  candle: Candle,
+): Promise<void> {
+  const candleId = buildCandleId(candle);
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      const result = await dependencies.repository.upsertCandles([
+        { ...candle, exchange: dependencies.exchange },
+      ]);
+      dependencies.logger.info(WORKER_LOG.CANDLE_STORED, { candleId, inserted: result.inserted });
+      return;
+    } catch (error: unknown) {
+      if (attempt >= CANDLE_WRITE_MAX_ATTEMPTS) {
+        dependencies.logger.error(WORKER_LOG.CANDLE_WRITE_FAILED, {
           candleId,
-          attempt,
+          attempts: attempt,
           errorName: readErrorName(error),
         });
-        await sleepUnlessAborted(
-          dependencies,
-          CANDLE_WRITE_RETRY_BASE_MILLISECONDS * 2 ** (attempt - 1),
-        );
-        // Parando, a vela fica para a recuperação por janela da próxima partida.
-        if (dependencies.signal.aborted) return;
+        dependencies.onWriteExhausted();
+        return;
       }
+      dependencies.logger.warn(WORKER_LOG.CANDLE_WRITE_RETRY, {
+        candleId,
+        attempt,
+        errorName: readErrorName(error),
+      });
+      await sleepUnlessAborted(
+        dependencies,
+        CANDLE_WRITE_RETRY_BASE_MILLISECONDS * 2 ** (attempt - 1),
+      );
+      // Parando, a vela fica para a recuperação por janela da próxima partida.
+      if (dependencies.signal.aborted) return;
     }
   }
+}
 
+export function createCandleWriter(dependencies: CandleWriterDependencies): CandleWriter {
+  const inFlight = new Set<Promise<void>>();
   return {
     write: (candle): Promise<void> => {
-      const pending = writeOne(candle);
+      const pending = writeWithRetries(dependencies, candle);
       inFlight.add(pending);
       void pending.finally(() => inFlight.delete(pending));
       return pending;

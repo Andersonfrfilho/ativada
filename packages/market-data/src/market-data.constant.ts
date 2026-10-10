@@ -12,7 +12,6 @@ export const RETRY_AFTER_HEADER = 'retry-after';
 export const WEIGHT_WINDOW_MILLISECONDS = 60_000;
 // Retry-After de 429 acima disto é tratado como este teto: o processo não pode dormir uma hora sem ser cancelável.
 export const MAXIMUM_RETRY_AFTER_SECONDS = 300;
-export const MILLISECONDS_PER_SECOND = 1_000;
 export const HTTP_STATUS_TOO_MANY_REQUESTS = 429;
 export const HTTP_STATUS_IP_BANNED = 418;
 export const HTTP_STATUS_SERVER_ERROR_MINIMUM = 500;
@@ -38,3 +37,9 @@ export const BINANCE_STREAM_BASE_URL = 'wss://data-stream.binance.vision';
 export const SERVER_TIME_PATH = '/api/v3/time';
 export const DEFAULT_SERVER_CLOCK_REFRESH_MILLISECONDS = 600_000;
 export const SERVER_TIME_TIMEOUT_MILLISECONDS = 5_000;
+
+// Variáveis de ambiente MARKET_*: padrões e o formato que as apps aceitam para os símbolos.
+export const DEFAULT_MARKET_EXCHANGE = 'binance';
+export const DEFAULT_MARKET_SYMBOLS = 'BTCUSDT,ETHUSDT';
+export const DEFAULT_MARKET_TIMEFRAMES = '15m,1h,4h,1d';
+export const CONFIGURED_SYMBOL_PATTERN = /^[A-Z0-9]{5,20}$/;

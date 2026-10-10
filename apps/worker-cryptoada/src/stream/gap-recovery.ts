@@ -1,10 +1,15 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { CandleRepository } from '@cryptoada/database';
-import { MILLISECONDS_PER_SECOND } from '@cryptoada/environment';
+import { MILLISECONDS_PER_SECOND, readErrorName } from '@cryptoada/environment';
 import {
+  downloadCandleInterval,
+  formatPairLabel,
+  groupConsecutiveOpenTimes,
   MarketDataBannedError,
   TIMEFRAME_DURATION_MILLISECONDS,
   type MarketDataClient,
+  type OpenTimeInterval,
+  type PairKey,
   type Timeframe,
 } from '@cryptoada/market-data';
 
@@ -15,10 +20,6 @@ import {
   UNFILLABLE_MIN_AGE_MILLISECONDS,
   WORKER_LOG,
 } from '../worker.constant.js';
-import {
-  groupConsecutiveOpenTimes,
-  type OpenTimeInterval,
-} from './group-consecutive-open-times.js';
 
 export type GapRecoveryDependencies = {
   readonly repository: Pick<
@@ -44,29 +45,21 @@ export type RecoveryOutcome = {
   readonly banMilliseconds?: number;
 };
 
-type Pair = { readonly symbol: string; readonly timeframe: Timeframe };
-
-function buildUnfillableKey(pair: Pair, openTime: number): string {
-  return `${pair.symbol}/${pair.timeframe}/${openTime}`;
+function buildUnfillableKey(pair: PairKey, openTime: number): string {
+  return `${formatPairLabel(pair)}/${openTime}`;
 }
 
 async function downloadInterval(
   dependencies: GapRecoveryDependencies,
-  pair: Pair,
+  pair: PairKey,
   interval: OpenTimeInterval,
 ): Promise<number> {
-  const received = new Set<number>();
-  await dependencies.client.fetchKlinesRange({
-    symbol: pair.symbol,
-    timeframe: pair.timeframe,
-    from: interval.from,
-    to: interval.to,
-    onPage: async (page) => {
-      await dependencies.repository.upsertCandles(
-        page.map((candle) => ({ ...candle, exchange: dependencies.exchange })),
-      );
-      for (const candle of page) received.add(candle.openTime);
-    },
+  const { receivedOpenTimes: received } = await downloadCandleInterval({
+    client: dependencies.client,
+    pair,
+    interval,
+    exchange: dependencies.exchange,
+    store: (records) => dependencies.repository.upsertCandles(records),
   });
   const duration = TIMEFRAME_DURATION_MILLISECONDS[pair.timeframe];
   const now = dependencies.now();
@@ -81,7 +74,7 @@ async function downloadInterval(
 
 async function findMissing(
   dependencies: GapRecoveryDependencies,
-  pair: Pair,
+  pair: PairKey,
 ): Promise<readonly number[]> {
   const duration = TIMEFRAME_DURATION_MILLISECONDS[pair.timeframe];
   const now = dependencies.now();
@@ -96,14 +89,14 @@ async function findMissing(
   );
 }
 
-async function recoverPair(dependencies: GapRecoveryDependencies, pair: Pair): Promise<void> {
+async function recoverPair(dependencies: GapRecoveryDependencies, pair: PairKey): Promise<void> {
   const latestOpenTime = await dependencies.repository.findLatestOpenTime({
     exchange: dependencies.exchange,
     ...pair,
   });
   if (latestOpenTime === undefined) {
     dependencies.logger.info(WORKER_LOG.NO_STORED_CANDLES, {
-      pairId: `${pair.symbol}/${pair.timeframe}`,
+      pairId: formatPairLabel(pair),
     });
     return;
   }
@@ -115,7 +108,7 @@ async function recoverPair(dependencies: GapRecoveryDependencies, pair: Pair): P
   }
   if (openTimes.length > 0) {
     dependencies.logger.info(WORKER_LOG.GAP_RECOVERED, {
-      pairId: `${pair.symbol}/${pair.timeframe}`,
+      pairId: formatPairLabel(pair),
       missing: openTimes.length,
       downloaded,
     });
@@ -139,8 +132,8 @@ export async function recoverGaps(dependencies: GapRecoveryDependencies): Promis
         if (dependencies.signal.aborted) return { failures };
         failures += 1;
         dependencies.logger.error(WORKER_LOG.GAP_RECOVERY_FAILED, {
-          pairId: `${symbol}/${timeframe}`,
-          errorName: error instanceof Error ? error.name : 'UnknownError',
+          pairId: formatPairLabel({ symbol, timeframe }),
+          errorName: readErrorName(error),
         });
         if (error instanceof MarketDataBannedError) {
           return { failures, banMilliseconds: computeBanMilliseconds(error) };

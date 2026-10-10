@@ -1,8 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { z } from '@cryptoada/environment';
+import { MILLISECONDS_PER_SECOND, z } from '@cryptoada/environment';
 
 import type { FearGreedPoint } from './fear-greed.types.js';
-import { MILLISECONDS_PER_SECOND } from './market-data.constant.js';
 import { MarketDataResponseError, MarketDataSourceError } from './market-data.error.js';
 
 const INTEGER_TEXT_PATTERN = /^\d{1,12}$/;

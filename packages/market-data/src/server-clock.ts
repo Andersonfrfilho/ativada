@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { z } from '@cryptoada/environment';
+import { readErrorName, z } from '@cryptoada/environment';
 
 import {
   BINANCE_MARKET_DATA_BASE_URL,
@@ -57,49 +57,63 @@ async function readServerTime(params: ReadServerTimeParams): Promise<number> {
   return parsed.data.serverTime;
 }
 
+type ClockState = {
+  offset: number;
+  lastAttemptAt: number | undefined;
+  inFlight: Promise<void> | undefined;
+};
+
+type ClockContext = {
+  readonly settings: ServerClockSettings;
+  readonly localNow: () => number;
+  readonly fetchImplementation: FetchImplementation;
+  readonly url: string;
+  readonly refreshInterval: number;
+  readonly state: ClockState;
+};
+
+async function measure(context: ClockContext): Promise<void> {
+  const { settings, localNow, fetchImplementation, url, state } = context;
+  const sentAt = localNow();
+  state.lastAttemptAt = sentAt;
+  try {
+    const serverTime = await readServerTime({ url, fetchImplementation, signal: settings.signal });
+    state.offset = serverTime - (sentAt + localNow()) / 2;
+  } catch (error: unknown) {
+    if (settings.signal?.aborted === true) return;
+    settings.onWarning?.({ errorName: readErrorName(error) });
+  }
+}
+
+function refresh(context: ClockContext): Promise<void> {
+  const { state } = context;
+  state.inFlight ??= measure(context).finally(() => {
+    state.inFlight = undefined;
+  });
+  return state.inFlight;
+}
+
+function refreshIfStale(context: ClockContext): Promise<void> {
+  const { state, localNow, refreshInterval } = context;
+  const isFresh =
+    state.lastAttemptAt !== undefined && localNow() - state.lastAttemptAt < refreshInterval;
+  return isFresh ? (state.inFlight ?? Promise.resolve()) : refresh(context);
+}
+
 export function createServerClock(settings: ServerClockSettings = {}): ServerClock {
-  const localNow = settings.now ?? Date.now;
-  const fetchImplementation =
-    settings.fetchImplementation ?? ((url, init): Promise<Response> => fetch(url, init));
-  const refreshInterval =
-    settings.refreshIntervalMilliseconds ?? DEFAULT_SERVER_CLOCK_REFRESH_MILLISECONDS;
-  const url = new URL(
-    SERVER_TIME_PATH,
-    settings.baseUrl ?? BINANCE_MARKET_DATA_BASE_URL,
-  ).toString();
-  let offset = 0;
-  let lastAttemptAt: number | undefined;
-  let inFlight: Promise<void> | undefined;
-
-  async function measure(): Promise<void> {
-    const sentAt = localNow();
-    lastAttemptAt = sentAt;
-    try {
-      const serverTime = await readServerTime({
-        url,
-        fetchImplementation,
-        signal: settings.signal,
-      });
-      offset = serverTime - (sentAt + localNow()) / 2;
-    } catch (error: unknown) {
-      if (settings.signal?.aborted === true) return;
-      settings.onWarning?.({ errorName: error instanceof Error ? error.name : 'UnknownError' });
-    }
-  }
-
-  function refresh(): Promise<void> {
-    inFlight ??= measure().finally(() => {
-      inFlight = undefined;
-    });
-    return inFlight;
-  }
-
+  const context: ClockContext = {
+    settings,
+    localNow: settings.now ?? Date.now,
+    fetchImplementation:
+      settings.fetchImplementation ?? ((url, init): Promise<Response> => fetch(url, init)),
+    refreshInterval:
+      settings.refreshIntervalMilliseconds ?? DEFAULT_SERVER_CLOCK_REFRESH_MILLISECONDS,
+    url: new URL(SERVER_TIME_PATH, settings.baseUrl ?? BINANCE_MARKET_DATA_BASE_URL).toString(),
+    state: { offset: 0, lastAttemptAt: undefined, inFlight: undefined },
+  };
   return {
-    now: (): number => Math.round(localNow() + offset),
-    refresh,
-    refreshIfStale: (): Promise<void> => {
-      const isFresh = lastAttemptAt !== undefined && localNow() - lastAttemptAt < refreshInterval;
-      return isFresh ? (inFlight ?? Promise.resolve()) : refresh();
-    },
+    now: (): number => Math.round(context.localNow() + context.state.offset),
+    refresh: () => refresh(context),
+    refreshIfStale: () => refreshIfStale(context),
   };
 }

@@ -4,6 +4,8 @@ import type { CandleRepository } from '@cryptoada/database';
 import {
   createCancellableSleep,
   createKlineStream,
+  type CancellableSleep,
+  type KlineStream,
   type MarketDataClient,
   type ServerClock,
   type Timeframe,
@@ -19,9 +21,9 @@ import {
   MILLISECONDS_PER_MINUTE,
   WORKER_LOG,
 } from '../worker.constant.js';
-import { createCandleWriter } from './candle-writer.js';
+import { createCandleWriter, type CandleWriter } from './candle-writer.js';
 import { recoverGaps } from './gap-recovery.js';
-import { createRecoveryRunner } from './recovery-runner.js';
+import { createRecoveryRunner, type RecoveryRunner } from './recovery-runner.js';
 
 const DEFAULT_BACKOFF_BASE_MILLISECONDS = 2_000;
 const DEFAULT_BACKOFF_MAX_MILLISECONDS = 60_000;
@@ -61,58 +63,81 @@ function shouldLogMalformed(count: number): boolean {
   return count <= MALFORMED_LOG_ALWAYS_UNTIL || count % MALFORMED_LOG_EVERY === 0;
 }
 
-export function createWorker(dependencies: WorkerDependencies): Worker {
-  const { logger, timing = {} } = dependencies;
-  const cancellable = createCancellableSleep();
-  const sleep = timing.sleep ?? cancellable.sleep;
-  const random = timing.random ?? Math.random;
-  const backoffBase = timing.backoffBaseMilliseconds ?? DEFAULT_BACKOFF_BASE_MILLISECONDS;
-  const backoffMax = timing.backoffMaxMilliseconds ?? DEFAULT_BACKOFF_MAX_MILLISECONDS;
+type ResolvedTiming = {
+  readonly now: () => number;
+  readonly marketNow: () => number;
+  readonly refreshClock: () => Promise<void>;
+  readonly sleep: (milliseconds: number) => Promise<void>;
+  readonly random: () => number;
+  readonly backoffBase: number;
+  readonly backoffMax: number;
+  readonly gapCheckIntervalMilliseconds: number;
+  readonly lookbackMilliseconds: number;
+};
+
+function resolveTiming(
+  dependencies: WorkerDependencies,
+  cancellable: CancellableSleep,
+): ResolvedTiming {
+  const timing = dependencies.timing ?? {};
   const now = timing.now ?? Date.now;
-  const gapCheckIntervalMilliseconds =
-    timing.gapCheckIntervalMilliseconds ??
-    (dependencies.gapCheckMinutes ?? DEFAULT_STREAM_GAP_CHECK_MINUTES) * MILLISECONDS_PER_MINUTE;
-  const lookbackMilliseconds =
-    (dependencies.gapLookbackHours ?? DEFAULT_STREAM_GAP_LOOKBACK_HOURS) * MILLISECONDS_PER_HOUR;
-  const marketNow = dependencies.serverClock?.now ?? now;
-  const refreshClock =
-    dependencies.serverClock?.refresh ?? ((): Promise<void> => Promise.resolve());
+  return {
+    now,
+    marketNow: dependencies.serverClock?.now ?? now,
+    refreshClock: dependencies.serverClock?.refresh ?? ((): Promise<void> => Promise.resolve()),
+    sleep: timing.sleep ?? cancellable.sleep,
+    random: timing.random ?? Math.random,
+    backoffBase: timing.backoffBaseMilliseconds ?? DEFAULT_BACKOFF_BASE_MILLISECONDS,
+    backoffMax: timing.backoffMaxMilliseconds ?? DEFAULT_BACKOFF_MAX_MILLISECONDS,
+    gapCheckIntervalMilliseconds:
+      timing.gapCheckIntervalMilliseconds ??
+      (dependencies.gapCheckMinutes ?? DEFAULT_STREAM_GAP_CHECK_MINUTES) * MILLISECONDS_PER_MINUTE,
+    lookbackMilliseconds:
+      (dependencies.gapLookbackHours ?? DEFAULT_STREAM_GAP_LOOKBACK_HOURS) * MILLISECONDS_PER_HOUR,
+  };
+}
+
+function createRecovery(dependencies: WorkerDependencies, timing: ResolvedTiming): RecoveryRunner {
   const unfillable = new Set<string>();
-  const recovery = createRecoveryRunner({
+  return createRecoveryRunner({
     recover: () =>
       recoverGaps({
         ...dependencies,
-        now: marketNow,
-        refreshClock,
-        lookbackMilliseconds,
+        now: timing.marketNow,
+        refreshClock: timing.refreshClock,
+        lookbackMilliseconds: timing.lookbackMilliseconds,
         unfillable,
         signal: dependencies.abortController.signal,
       }),
-    logger,
-    sleep,
-    random,
-    backoffBaseMilliseconds: backoffBase,
-    backoffMaxMilliseconds: backoffMax,
+    logger: dependencies.logger,
+    sleep: timing.sleep,
+    random: timing.random,
+    backoffBaseMilliseconds: timing.backoffBase,
+    backoffMaxMilliseconds: timing.backoffMax,
   });
-  const writer = createCandleWriter({
-    repository: dependencies.repository,
-    logger,
-    exchange: dependencies.exchange,
-    sleep,
-    onWriteExhausted: recovery.trigger,
-    signal: dependencies.abortController.signal,
-  });
-  const stream = createKlineStream({
+}
+
+type WorkerStreamParams = {
+  readonly dependencies: WorkerDependencies;
+  readonly timing: ResolvedTiming;
+  readonly recovery: RecoveryRunner;
+  readonly writer: CandleWriter;
+};
+
+function createWorkerStream(params: WorkerStreamParams): KlineStream {
+  const { dependencies, timing, recovery, writer } = params;
+  const { logger } = dependencies;
+  return createKlineStream({
     symbols: dependencies.symbols,
     timeframes: dependencies.timeframes,
     baseUrl: dependencies.streamBaseUrl,
     staleAfterMilliseconds: dependencies.staleAfterMilliseconds,
-    reconnectBaseMilliseconds: backoffBase,
-    reconnectMaxMilliseconds: backoffMax,
-    stableAfterMilliseconds: timing.stableAfterMilliseconds,
-    now,
-    sleep,
-    random,
+    reconnectBaseMilliseconds: timing.backoffBase,
+    reconnectMaxMilliseconds: timing.backoffMax,
+    stableAfterMilliseconds: dependencies.timing?.stableAfterMilliseconds,
+    now: timing.now,
+    sleep: timing.sleep,
+    random: timing.random,
     onCandle: writer.write,
     // O fluxo não é confiável antes da lacuna fechada: cada (re)conexão dispara a recuperação.
     onConnected: ({ attempt }) => {
@@ -124,16 +149,32 @@ export function createWorker(dependencies: WorkerDependencies): Worker {
       if (shouldLogMalformed(count)) logger.warn(WORKER_LOG.MALFORMED, { reason, count });
     },
   });
+}
+
+export function createWorker(dependencies: WorkerDependencies): Worker {
+  const { logger, abortController } = dependencies;
+  const cancellable = createCancellableSleep();
+  const timing = resolveTiming(dependencies, cancellable);
+  const recovery = createRecovery(dependencies, timing);
+  const writer = createCandleWriter({
+    repository: dependencies.repository,
+    logger,
+    exchange: dependencies.exchange,
+    sleep: timing.sleep,
+    onWriteExhausted: recovery.trigger,
+    signal: abortController.signal,
+  });
+  const stream = createWorkerStream({ dependencies, timing, recovery, writer });
 
   // Verificação barata (SQL): só vai ao REST se achar lacuna na janela de retrocesso.
   const periodicCheck = setInterval(() => {
     logger.info(WORKER_LOG.STREAM_STATS, { ...stream.stats() });
     recovery.trigger();
-  }, gapCheckIntervalMilliseconds);
+  }, timing.gapCheckIntervalMilliseconds);
 
   return {
     stop: async (): Promise<void> => {
-      dependencies.abortController.abort();
+      abortController.abort();
       clearInterval(periodicCheck);
       await stream.close();
       await recovery.stop();

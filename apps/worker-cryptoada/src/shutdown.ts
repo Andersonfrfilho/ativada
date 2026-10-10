@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { readErrorName } from '@cryptoada/environment';
+
 import type { WorkerLogger } from './logging/worker-logger.js';
 import { WORKER_LOG } from './worker.constant.js';
 
@@ -20,7 +22,9 @@ export function createShutdownHandler(params: ShutdownParams): (signal: string) 
     isShuttingDown = true;
     params.logger.info(WORKER_LOG.SHUTDOWN_STARTED, { signal });
     const safetyTimer = setTimeout(() => {
-      params.logger.error(WORKER_LOG.SHUTDOWN_TIMED_OUT, { timeoutMs: params.timeoutMilliseconds });
+      params.logger.error(WORKER_LOG.SHUTDOWN_TIMED_OUT, {
+        timeoutMilliseconds: params.timeoutMilliseconds,
+      });
       params.exit(1);
     }, params.timeoutMilliseconds);
     try {
@@ -32,7 +36,7 @@ export function createShutdownHandler(params: ShutdownParams): (signal: string) 
     } catch (error: unknown) {
       clearTimeout(safetyTimer);
       params.logger.error(WORKER_LOG.SHUTDOWN_FAILED, {
-        errorName: error instanceof Error ? error.name : 'UnknownError',
+        errorName: readErrorName(error),
       });
       params.exit(1);
     }

@@ -17,6 +17,19 @@ export {
 } from './server-clock.js';
 export { createKlineStream } from './create-kline-stream.js';
 export {
+  downloadCandleInterval,
+  type DownloadCandleIntervalParams,
+  type DownloadCandleIntervalResult,
+  type StoredCandle,
+} from './download-candle-interval.js';
+export { formatPairLabel, type PairKey } from './format-pair-label.js';
+export {
+  groupConsecutiveOpenTimes,
+  type GroupOpenTimesParams,
+  type OpenTimeInterval,
+} from './group-consecutive-open-times.js';
+export { marketEnvironmentShape } from './market-environment.js';
+export {
   BINANCE_MARKET_DATA_BASE_URL,
   BINANCE_STREAM_BASE_URL,
   FEAR_GREED_API_URL,

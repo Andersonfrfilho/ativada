@@ -1,9 +1,4 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const DEFAULT_MARKET_EXCHANGE = 'binance';
-export const DEFAULT_MARKET_SYMBOLS = 'BTCUSDT,ETHUSDT';
-export const DEFAULT_MARKET_TIMEFRAMES = '15m,1h,4h,1d';
-export const MARKET_LIST_SEPARATOR = ',';
-export const SYMBOL_PATTERN = /^[A-Z0-9]{5,20}$/;
 export const DEFAULT_STREAM_STALE_SECONDS = 60;
 export const MINIMUM_STREAM_STALE_SECONDS = 5;
 export const MAXIMUM_STREAM_STALE_SECONDS = 600;
