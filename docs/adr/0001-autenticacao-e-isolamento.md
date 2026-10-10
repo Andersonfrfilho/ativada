@@ -984,6 +984,23 @@ só `createBlockedAccountRepository` e `createAuditRetentionRepository`.
   cruza entre donos; 4401 em 4,96 s com token de 4 s; bloqueio fecha com 4403 na hora.
 
 
+### s) Resultados e desvios da T4.5 (alerta no Telegram) e da T4.6 (registro em CSV)
+
+Implementação em `apps/worker-cryptoada/src/{live,alerts}/` e, no pacote, `alerts/*` e a migration `0013_alerts` (com rollback).
+
+| Ponto | Decisão |
+|---|---|
+| Vinculação | Já existia desde a T0.8 (§n, §p): código de uso único gerado por CSPRNG, **só o hash no banco**, validade de 10 min, tentativas limitadas por chat e por código, webhook com `X-Telegram-Bot-Api-Secret-Token` comparado por `timingSafeEqual` sobre digests, fail-closed sem segredo. As rotas continuam `POST/DELETE /v1/me/telegram-link` e `POST /v1/telegram/webhook`, e sem `TELEGRAM_BOT_TOKEN` a emissão responde `503 FEATURE_DISABLED` (§n): não foram renomeadas nem trocadas por `501`, para não quebrar os contratos da T0.8. A T4.5 só acrescentou a prova de ponta a ponta (`make telegram-test`: hash no banco, uso único, vencido, reutilizado e chat de outro dono recusados) |
+| `telegram_chat_id` em repouso | **Lacuna registrada.** O ADR não define cifra de campo, e o `varchar(32)` com índice único parcial é o que garante "um chat, um dono" (§n); uma cifra não determinística quebraria a unicidade. A proteção de hoje é: nunca em log (redigido no logger **e** varrido por teste no `telegram-test`), nunca copiado para outra tabela (`alerts` não guarda o chat: ele é lido de `users` no momento do envio), exportado só ao próprio dono, anulado na desvinculação e na exclusão (§h passo 3). Antes de abrir a clientes externos: guardar um HMAC cego (unicidade) mais o valor cifrado com chave de aplicação separada da do banco |
+| Token do bot | Só por env, validado por Zod no boot (`TELEGRAM_BOT_TOKEN`, opcional; em produção ≥ 32 caracteres e sem marcador de desenvolvimento) e `TELEGRAM_API_BASE_URL` (https em produção). **Sem token o recurso inteiro fica desligado:** o passo ao vivo não enfileira alerta e nenhum despachante sobe. O erro do `fetch` cita a URL, que leva o token no caminho: o cliente o engole e devolve só um código (`network`, `http_429`, `http_5xx`, `http_<status>`); redirecionamento é recusado (`redirect: 'error'`) para o token não seguir a outro host |
+| LGPD | `alerts` é tabela de dono (`OWNED_TABLES`): exportada **sem** o arrendamento (`locked_until`) e sem `user_id`, apagada **antes** de `runs` (FK composta `RESTRICT`). O conteúdo (`payload`) é só mercado e regra: par, timeframe, preço de fechamento, placar, regime, motivo, ação simulada, stop, alvo e acerto histórico — nenhum dado da pessoa. O texto do Telegram sai desse `payload` e de mais nada |
+| Entrega a quem não deve | O alerta só nasce para dono ativo, com chat vinculado e alertas ligados (`users.alert_telegram_enabled`); no envio o chat é **relido do dono da própria linha** (`alerts.user_id`), então desvincular, desligar o alerta, bloquear ou apagar a conta depois de enfileirar faz o alerta ser dispensado (`no_link`), nunca enviado. O despachante não recebe usuário nem chat de ninguém além do que a linha do alerta aponta |
+| Log | Os campos do `WorkerLogger` só aceitam texto, número e booleano; o despachante registra `alertId` (uuid opaco), tentativas e código. O `telegram-test` varre as linhas de log (716 no teste) procurando token, chats, par, preço e o texto do motivo |
+| Auditoria | Alerta enviado não gera evento em `audit_events` (volume e nenhuma ação sensível do usuário); o estado fica em `alerts.status` e `last_error` (código, nunca texto) |
+| Registro CSV (T4.6) | `GET /v1/runs/:runId/log.csv` é rota de recurso de usuário: `access: user`, repositório com `OwnerScope`, filtro de dono em **cada uma** das três consultas do `UNION ALL`, `404` idêntico ao inexistente (contrato negativo no harness e em `make api-runs-test`), cota `RUN_EXPORT` compartilhada com `export.csv` |
+
+**Risco residual aceito.** Entrega *at-least-once*: se o processo morrer entre o `sendMessage` e o `markSent`, o arrendamento (120 s) vence e o alerta é reenviado uma vez (o Telegram não oferece chave de idempotência). A janela é de milissegundos; a alternativa (marcar antes de enviar) perderia o alerta, pior para o produto.
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
@@ -1021,6 +1038,7 @@ só `createBlockedAccountRepository` e `createAuditRetentionRepository`.
 | Cast `as UserId` dentro de `packages/database` fora do mapeamento | Revisão de código; o lint de asserção vale só nas apps |
 | Teste (`test/`) importa internals do pacote por caminho relativo | Aceito: o lint de fronteira vale para `apps/*/src`; testes precisam cunhar `UserId` |
 | Rate limit, tickets do stream, deduplicação de refresh e registro de sockets em memória | Válido com uma instância; escalar exige ADR (Postgres/Redis) |
+| `telegram_chat_id` em texto no banco (§s) | Lacuna registrada; HMAC cego + cifra de campo antes de abrir a clientes externos |
 | Access token roubado por XSS vale até 5 min | CSP sem `unsafe-inline`, token só em memória, vida curta; BFF reavaliado antes de abrir a clientes |
 | Keycloak fora do ar | Rotas respondem `503` quando a JWKS em cache expirar; login indisponível |
 | `cryptoada-api-service` comprometido gerencia usuários | Permissões finas mínimas, sem mapear papel (verificado na T0.6), **membros do grupo `admins` fora do alcance (T0.9c, §q)**, segredo só em env, rotação documentada em §q, eventos administrativos auditáveis |

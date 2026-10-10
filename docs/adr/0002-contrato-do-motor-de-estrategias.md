@@ -1462,6 +1462,42 @@ em teste automático. Mensagem acima do teto fecha com 1006 no cliente do Bun (o
 1000 no lugar de 1001. Uma instância de API (tickets, hub e rate limit em memória). O ticker é público e agregado por instância.
 
 
+## Alerta de sinal no Telegram (T4.5)
+
+O alerta tem duas metades que só se encontram no banco: o **passo ao vivo** (`apps/worker-cryptoada/src/live/`) o enfileira e o **despachante** (`src/alerts/`) o entrega.
+
+| Peça | Decisão | Motivo |
+|---|---|---|
+| Caixa de saída | Tabela `alerts` (migration `0013`): `(run_id, candle_time, side, channel)` único; `status` ∈ `pending`, `sent`, `failed`, `skipped`; `attempts`, `next_attempt_at`, `locked_until` (arrendamento), `last_error` (código curto); FK composta `(run_id, user_id)` | Chave de idempotência `execução + candle + lado`; o banco recusa dono divergente |
+| Nascimento | `writer.appendAlerts` **na transação do passo** (`runInBatch`), depois das linhas e antes do checkpoint; `ON CONFLICT DO NOTHING` | Passo desfeito leva o alerta junto; passo repetido (queda, reentrega, candle já gravado) nunca o duplica; provado com o checkpoint recusado por gatilho |
+| Quem recebe | Só dono ativo com `telegram_chat_id` e `alert_telegram_enabled`; o chat **não é copiado** | ADR 0001 §s |
+| Conteúdo | `buildStepAlert` (puro): par, timeframe, fechamento, placar, regime, **motivo** que o motor gravou, ação simulada (`enter` / `exit` / `none`), stop e alvo e o acerto histórico. Entrada nova: stop = fechamento − `stopDistance` e alvo = fechamento + `targetDistance` da ordem (referência; a execução é na abertura seguinte, com slippage); sem ordem nova: os níveis da posição aberta, se houver. A ordem que conta é a que o **sinal** provocou (entrada para BUY, venda a mercado para SELL): stop e alvo protetores também nascem e preenchem no candle, mas não são a ação do sinal | RF10 |
+| Acerto histórico | `runs.metrics.winRate` e `trades` do walk-forward **concluído mais recente da mesma versão** do dono (o relatório é o fora da amostra concatenado, plan §5); lido uma vez por ronda, **best-effort**: leitura que falha ou ausência vira `hitRate: null` ("sem walk-forward concluído"), nunca um número inventado nem um passo quebrado | Plan §5 |
+| Todo BUY/SELL alerta | Inclusive o que não gera ordem (já posicionado, entrada recusada, sem posição para vender): a mensagem diz "ação simulada: nenhuma" e por quê | Fiel ao RF10; decisão registrada para revisão do produto (repetição enquanto o placar persiste) |
+| Frescor | O alerta só nasce se o fechamento do candle tem no máximo `LIVE_ALERT_MAX_AGE_CANDLES` (2) candles de idade: replay depois de parada longa não manda notícia velha | Reinício depois de horas não despeja alertas antigos |
+| Despacho | `createAlertDispatcher`: reivindica até 10 (`FOR UPDATE SKIP LOCKED` + arrendamento de 120 s > 10 × 8 s de prazo), ordena por candle e envia **em sequência** ao chat do dono da linha; cada alerta é isolado (um erro não derruba o lote nem o ciclo). 429 respeita `retry_after` (com piso da espera padrão e teto de 15 min), 5xx e rede repetem com espera 30 s, 60 s, 120 s e 240 s, a 5ª tentativa desiste (`failed`), 4xx (401, 403, 404...) é definitivo, conteúdo ilegível é `bad_payload`, sem vínculo é `no_link` | A falha do Telegram **nunca** chega ao passo ao vivo: são processos de vida independentes ligados só pela tabela |
+| Cliente | `fetch` direto (plan D8), `AbortSignal.timeout` de 8 s, `redirect: 'error'`, resposta validada com Zod (`ok`, `parameters.retry_after`); só códigos saem dele | Token na URL |
+| Env | `TELEGRAM_BOT_TOKEN` (opcional; desliga o recurso), `TELEGRAM_API_BASE_URL` (padrão `https://api.telegram.org`; permite a Bot API falsa), `ALERT_POLL_SECONDS` (1 a 60, padrão 2) | RNF03: alerta ao painel em até 10 s |
+
+**Prova.** 19 + 22 contratos do passo (`live-alerts`, `live-alert-parts`: um alerta por BUY/SELL, nenhum por HOLD, níveis conferidos contra a ordem e a posição, frescor no limite exato, queda e leitura atrasada sem duplicar, leitura do acerto que falha), `telegram-client` (Bot API falsa em HTTP de verdade), `alert-message`, `alert-dispatcher` (backoff, `retry_after`, desistência, recusa, rede fora do ar, quem não tem vínculo, três usuários, dois despachantes, log limpo) e `alert-scheduler`. Mutantes reprovados: 22 no passo (`live-mutants`), 34 no despacho (`telegram-alert-mutants`), 11 na caixa de saída (`make alert-mutants`) e 4 no adaptador contra Postgres real (`make telegram-mutants`). `make telegram-test` (Postgres real e Bot API falsa): vínculo por código, 170 + 127 alertas de dois donos entregues ao chat certo com o acerto de um walk-forward semeado, queda do banco no passo 150 sem duplicar, despachante que morre depois de reivindicar, alerta dentro da transação do passo (checkpoint recusado por gatilho não deixa alerta), 503/429/403/rede fora do ar, seis despachantes simultâneos, desvinculação, exportação e exclusão LGPD e varredura do log.
+
+**Limitações conhecidas.** Entrega *at-least-once* (ADR 0001 §s); um despachante por vez por alerta, mas vários podem rodar (o arrendamento reparte); sem alerta no painel (T5.5 acrescenta o canal `panel` na mesma tabela, pela mesma chave); a taxa de acerto vem do último walk-forward concluído, pode ser antiga.
+
+## Registro cronológico em CSV (T4.6)
+
+`GET /v1/runs/:runId/log.csv` (RF12) junta sinais, ordens e preenchimentos numa linha do tempo só.
+
+| Peça | Decisão |
+|---|---|
+| Ordem | `(instante do candle, posição do tipo, chave)`: no mesmo candle, **preenchimento** (abertura, ordem do candle anterior), **sinal** (fechamento) e **ordem** (nasce com o sinal); a ordem entra no candle em que **nasceu** e a última atualização vai à parte (`last_event_time`) |
+| Consulta | `listLog` no `RunResultRepository`: `UNION ALL` das três tabelas com as mesmas 23 colunas, cursor por tupla `(event_time, event_rank, entry_key) >` e uma linha a mais para saber se há próxima página; o dono entra em **cada** consulta do `UNION` |
+| Fluxo | Páginas de 1.000 linhas, a primeira lida antes de qualquer byte (404 antes do corpo), tetos de 1.000.000 de linhas e 60 s que **abortam** o fluxo (os mesmos do `export.csv`) |
+| Colunas | Cabeçalho fixo de 21 colunas: `time,event,action,side,order_key,order_type,purpose,status,score,regime,price,limit_price,trigger_price,quantity,notional,fee,risk_amount,stop_distance,target_distance,last_event_time,reason` |
+| Formato | Tempos em UTC ISO com milissegundos e `Z`; decimais como **texto exato** (`::text` no banco, nunca por `Number`); vazio onde o tipo da linha não tem o campo; texto passa pelo neutralizador de fórmula (`=`, `+`, `-`, `@`, tab e CR ganham apóstrofo) e pelo escape RFC 4180 da T3.4 |
+| Acesso | `access: user`, `OwnerScope`, `404` idêntico ao de uma execução inexistente ou malformada; cota `RUN_EXPORT` (10 por minuto) compartilhada com `export.csv` |
+
+**Prova.** `api-run-log-export` (18 contratos: cabeçalho, ordem completa em literal, decimais de 19 algarismos, ISO, injeção, RFC 4180, fluxo em 3 páginas, 3.000 linhas sem repetir nem perder, tetos, cota, 404 idêntico), 10 mutantes da API, `make database-test` e `make runlog-mutants` (10 mutantes contra Postgres real: ordem, cursor, linha extra, instante da ordem, float, filtro de dono de cada consulta) e `make api-runs-test` (19.999 linhas = sinais + ordens + preenchimentos do banco).
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
