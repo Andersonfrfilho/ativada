@@ -121,7 +121,7 @@ export async function checkFirstCronRun(
   await assertOwnerBUntouched(context, owners, baseline);
   reportLgpdStep(
     'cron (main.ts, carência de 24 h)',
-    'A apagado no Keycloak, dados purgados (inclusive as 11 tabelas de estratégia/execução/resultado) e pessoais anulados, as duas colunas preenchidas, a linha fica pela carência; B intacto',
+    'A apagado no Keycloak, dados purgados (inclusive as 12 tabelas de estratégia/execução/resultado/alerta/meta) e pessoais anulados, as duas colunas preenchidas, a linha fica pela carência; B intacto',
   );
   return run;
 }

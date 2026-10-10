@@ -45,6 +45,7 @@ const OWNED_TABLE_NAMES: readonly string[] = [
   'run_commands',
   'walk_forward_windows',
   'alerts',
+  'goals',
 ];
 
 const NATURAL_KEYS: Readonly<Record<string, readonly (readonly string[])[]>> = {
@@ -63,7 +64,7 @@ const NATURAL_KEYS: Readonly<Record<string, readonly (readonly string[])[]>> = {
   sentiment_observations: [['source', 'date', 'observed_at']],
 };
 
-const UNIQUE_PARENT_NAMES: readonly string[] = ['strategies', 'strategy_versions', 'runs'];
+const UNIQUE_PARENT_NAMES: readonly string[] = ['strategies', 'strategy_versions', 'runs', 'goals'];
 const NATURAL_KEY_CASES: [string, readonly (readonly string[])[]][] = Object.entries(NATURAL_KEYS);
 
 function isPgTable(value: unknown): value is PgTable {

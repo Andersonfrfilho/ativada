@@ -146,6 +146,26 @@ describe('ownership registry (ADR 0001 §h)', () => {
     expect(order.indexOf('alerts')).toBeLessThan(order.indexOf('runs'));
   });
 
+  test('goals is owned, exported by columns and deleted AFTER runs, which will reference it', () => {
+    expect(ownedNames).toContain('goals');
+    const step = OWNED_TABLE_EXPORTS.find((entry) => nameOf(entry.table) === 'goals');
+    expect(step?.mode).toBe(OWNED_TABLE_EXPORT_MODE.COLUMNS);
+    if (step?.mode === OWNED_TABLE_EXPORT_MODE.COLUMNS) {
+      expect(step.columns).toStrictEqual([
+        'id',
+        'symbol',
+        'targetRate',
+        'horizonDays',
+        'maxLossRate',
+        'isActive',
+        'createdAt',
+        'updatedAt',
+      ]);
+    }
+    const order = OWNED_TABLE_DELETION_ORDER.map(nameOf);
+    expect(order.indexOf('goals')).toBeGreaterThan(order.indexOf('runs'));
+  });
+
   test('every owned table exposes the userId property the generic export and purge steps rely on', () => {
     for (const table of OWNED_TABLES) {
       const column = getTableColumns(table)[USER_ID_PROPERTY];

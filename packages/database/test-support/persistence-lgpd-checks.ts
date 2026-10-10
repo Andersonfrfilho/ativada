@@ -7,6 +7,7 @@ import { createAccountExportRepository } from '../src/account/account-export.rep
 import { RUN_KIND, RUN_STATUS } from '../src/runs/run.constant.js';
 import { createRunRepository } from '../src/runs/run.repository.js';
 import { createRunResultRepository } from '../src/run-results/run-result.repository.js';
+import { createGoalRepository } from '../src/goals/goal.repository.js';
 import { createStrategyRepository } from '../src/strategies/strategy.repository.js';
 import type {
   LifecycleCheckContext,
@@ -43,6 +44,7 @@ export const PERSISTENCE_TABLES = [
   'run_commands',
   'walk_forward_windows',
   'alerts',
+  'goals',
 ] as const;
 const ENGINE_STATE_MARKER = 'engine-state-marker';
 const ALERT_REASON_MARKER = 'alert-reason-marker';
@@ -60,6 +62,7 @@ export const PERSISTENCE_EXPECTED_ROWS: Readonly<
   run_commands: 1,
   walk_forward_windows: 2,
   alerts: 1,
+  goals: 2,
 };
 
 export function strategyNameOf(owner: LifecycleOwner): string {
@@ -106,6 +109,23 @@ export async function seedOwnerPersistence(
   await results.appendCommands(owner.scope, run.id, buildCommands(1));
   await results.appendWindows(owner.scope, run.id, buildWindows(2));
   await seedAlert(handle, owner, run.id);
+  await seedGoals(handle, owner);
+}
+
+const GOAL_SEED_LIMIT = 20;
+
+// A meta é dado do dono (o que ele quer ganhar e em quanto tempo): entra na exportação e some com a exclusão da conta.
+async function seedGoals(handle: DatabaseHandle, owner: LifecycleOwner): Promise<void> {
+  const goals = createGoalRepository(handle);
+  for (const symbol of ['BTCUSDT', 'ETHUSDT']) {
+    await goals.createGoal(owner.scope, {
+      symbol,
+      targetRate: '0.03',
+      horizonDays: 30,
+      maxLossRate: '0.05',
+      maxGoals: GOAL_SEED_LIMIT,
+    });
+  }
 }
 
 // Direto na tabela: o alerta é dado do dono (texto do motivo), e a semente não depende do vínculo do Telegram.
@@ -194,6 +214,6 @@ export async function checkPersistencePurge(
     );
   }
   reportCheck(
-    'purga: as 11 tabelas de estratégia/execução/resultado/alerta de A vazias, as de B intactas',
+    'purga: as 12 tabelas de estratégia/execução/resultado/alerta/meta de A vazias, as de B intactas',
   );
 }

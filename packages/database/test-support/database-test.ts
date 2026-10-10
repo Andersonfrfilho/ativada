@@ -48,6 +48,7 @@ import {
   checkWindowNamespace,
 } from './run-result-rule-checks.js';
 import { checkExampleStrategySeeding } from './example-strategy-checks.js';
+import { checkGoals } from './goal-checks.js';
 import { checkLiveRuns } from './live-run-checks.js';
 import { checkRunQueueClaims } from './run-queue-checks.js';
 import { checkRunQueueLifecycle } from './run-queue-lifecycle-checks.js';
@@ -143,6 +144,7 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkRunQueueReading(context);
   await checkLiveRuns(context);
   await checkAlerts(context);
+  await checkGoals(context);
   await checkRunLog(context);
 }
 

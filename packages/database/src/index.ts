@@ -5,12 +5,7 @@ export {
   createAdminAccountRepository,
   type AdminAccountRepository,
 } from './admin/admin-account.repository.js';
-export type {
-  AccountPage,
-  AccountPageCursor,
-  AdminAccountRecord,
-  ListAccountsParams,
-} from './admin/admin-account.types.js';
+export type * from './admin/admin-account.types.js';
 export {
   createAccountDeletionRepository,
   type AccountDeletionRepository,
@@ -19,22 +14,12 @@ export {
   createAccountPurgeRepository,
   type AccountPurgeRepository,
 } from './account/account-purge.repository.js';
-export type {
-  ListPendingAccountsParams,
-  PendingAccount,
-  PendingAccountCursor,
-  PendingAccountsPage,
-  RemoveUserRowParams,
-} from './account/account-purge.types.js';
+export type * from './account/account-purge.types.js';
 export {
   createAccountExportRepository,
   type AccountExportRepository,
 } from './account/account-export.repository.js';
-export type {
-  AccountExport,
-  AccountExportAuditEvents,
-  ExportRow,
-} from './account/account-export.types.js';
+export type * from './account/account-export.types.js';
 export {
   createBlockedAccountRepository,
   type BlockedAccount,
@@ -89,6 +74,9 @@ export type { JsonContainer, JsonValue } from './json-value.types.js';
 export { RUN_KIND, RUN_STATUS, RUN_TRANSITION_OUTCOME } from './runs/run.constant.js';
 export type { RunKind, RunStatus } from './runs/run.constant.js';
 export { createRunRepository } from './runs/run.repository.js';
+export { createGoalRepository } from './goals/goal.repository.js';
+export { GOAL_CREATE_OUTCOME, GOAL_DELETE_OUTCOME } from './goals/goal.constant.js';
+export type * from './goals/goal.types.js';
 export { createAlertRepository } from './alerts/alert.repository.js';
 export { ALERT_CHANNEL, ALERT_SIDE, ALERT_STATUS } from './alerts/alert.constant.js';
 export { createRunMetricsRepository } from './runs/run-metrics.repository.js';
@@ -128,12 +116,7 @@ export {
 } from './run-results/run-result.constant.js';
 export type { RunLogCursor, RunLogEntry } from './run-results/run-log.types.js';
 export { createRunBatchRepository } from './run-results/run-batch.repository.js';
-export type {
-  BatchCheckpointParams,
-  RunBatchRepository,
-  RunBatchWriter,
-  RunResultRows,
-} from './run-results/run-batch.types.js';
+export type * from './run-results/run-batch.types.js';
 export { resolveRunOwnerScope } from './runs/run-owner.js';
 export { RUN_EVENT_KIND } from './run-events/run-event.constant.js';
 export { createRunEventListener } from './run-events/run-event-listener.js';

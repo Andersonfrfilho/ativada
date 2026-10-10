@@ -6,6 +6,8 @@ import {
   type CrossOwnerContract,
   type ListedResource,
 } from '../../../test/fixtures/cross-owner-access.fixture.js';
+import { GOAL_CREATE_OUTCOME, GOAL_DELETE_OUTCOME } from '../src/goals/goal.constant.js';
+import { createGoalRepository } from '../src/goals/goal.repository.js';
 import type { OwnerScope } from '../src/ownership/owner-scope.js';
 import { RUN_STATUS, RUN_TRANSITION_OUTCOME } from '../src/runs/run.constant.js';
 import { createRunRepository } from '../src/runs/run.repository.js';
@@ -112,6 +114,37 @@ function buildVersionContract(context: LifecycleCheckContext, owners: Owners): C
           (await createRunRepository(handle).createRun(scope, buildRunParams(versionId))) !==
             undefined,
         ),
+    },
+  };
+}
+
+const GOAL_SEED = {
+  symbol: 'BTCUSDT',
+  targetRate: '0.03',
+  horizonDays: 30,
+  maxLossRate: '0.05',
+  maxGoals: 20,
+} as const;
+
+function buildGoalContract(context: LifecycleCheckContext, owners: Owners): CrossOwnerContract {
+  const goals = createGoalRepository(context.handle);
+  return {
+    ownerScope: owners.first.scope,
+    otherUserScope: owners.second.scope,
+    createResource: async (scope): Promise<string> => {
+      const created = await goals.createGoal(scope, GOAL_SEED);
+      if (created.outcome !== GOAL_CREATE_OUTCOME.CREATED) throw new Error('meta não criada');
+      return created.goal.id;
+    },
+    readResource: (scope, goalId) => goals.findGoal(scope, goalId),
+    listResources: async (scope) =>
+      (await goals.listGoalsPage(scope, { limit: 100, after: undefined })).goals,
+    attempts: {
+      read: async (scope, goalId) => outcomeOf((await goals.findGoal(scope, goalId)) !== undefined),
+      update: async (scope, goalId) =>
+        outcomeOf((await goals.updateGoal(scope, goalId, { isActive: false })) !== undefined),
+      delete: async (scope, goalId) =>
+        outcomeOf((await goals.deleteGoal(scope, goalId)) === GOAL_DELETE_OUTCOME.DELETED),
     },
   };
 }
@@ -273,9 +306,10 @@ export async function checkPersistenceIsolation(context: LifecycleCheckContext):
   await expectOtherUserGetsNotFound(buildStrategyContract(context, owners));
   await expectOtherUserGetsNotFound(buildVersionContract(context, owners));
   await expectOtherUserGetsNotFound(buildRunContract(context, owners));
+  await expectOtherUserGetsNotFound(buildGoalContract(context, owners));
   await checkNotFoundIsIndistinguishable(context, owners);
   await checkInnerOwnerFilters(context, owners);
   reportCheck(
-    'isolamento: B não lê, lista, altera nem grava resultado em estratégia, versão e execução de A; não-encontrado igual ao inexistente; filtro de dono de cada consulta vale sozinho',
+    'isolamento: B não lê, lista, altera nem grava resultado em estratégia, versão, execução e meta de A; não-encontrado igual ao inexistente; filtro de dono de cada consulta vale sozinho',
   );
 }

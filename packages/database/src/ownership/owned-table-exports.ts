@@ -4,6 +4,7 @@ import type { PgTable } from 'drizzle-orm/pg-core';
 import { alerts } from '../schema/alerts.schema.js';
 import { equityPoints } from '../schema/equity-points.schema.js';
 import { fills } from '../schema/fills.schema.js';
+import { goals } from '../schema/goals.schema.js';
 import { orders } from '../schema/orders.schema.js';
 import { positions } from '../schema/positions.schema.js';
 import { runCommands } from '../schema/run-commands.schema.js';
@@ -149,6 +150,16 @@ export const OWNED_TABLE_EXPORTS: readonly OwnedTableExportStep[] = [
     'outOfSample',
     'eligibleCombinations',
     'createdAt',
+  ]),
+  exportColumns(goals, [
+    'id',
+    'symbol',
+    'targetRate',
+    'horizonDays',
+    'maxLossRate',
+    'isActive',
+    'createdAt',
+    'updatedAt',
   ]),
   exportColumns(alerts, [
     'id',

@@ -7,6 +7,7 @@ import { auditEvents } from '../schema/audit-events.schema.js';
 import { candles } from '../schema/candles.schema.js';
 import { equityPoints } from '../schema/equity-points.schema.js';
 import { fills } from '../schema/fills.schema.js';
+import { goals } from '../schema/goals.schema.js';
 import { orders } from '../schema/orders.schema.js';
 import { positions } from '../schema/positions.schema.js';
 import { runCommands } from '../schema/run-commands.schema.js';
@@ -43,6 +44,7 @@ export const OWNED_TABLES: readonly PgTable[] = [
   runCommands,
   walkForwardWindows,
   alerts,
+  goals,
 ];
 
 // Ordem da exclusão (ADR 0001 §h passo 3): filhas antes dos pais, porque a FK é ON DELETE RESTRICT.
@@ -57,6 +59,7 @@ export const OWNED_TABLE_DELETION_ORDER: readonly PgTable[] = [
   orders,
   signals,
   runs,
+  goals,
   strategyVersions,
   strategies,
 ];

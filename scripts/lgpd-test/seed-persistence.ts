@@ -23,6 +23,6 @@ export async function seedPersistence(context: LgpdContext, owners: LgpdOwners):
   await seedActor(context, owners.ownerB);
   reportLgpdStep(
     'estratégias, execuções e resultados de A e de B',
-    '11 tabelas por dono: estratégia, versão, execução, sinais, ordens, preenchimentos, posição, patrimônio, comando, janelas do walk-forward e alerta',
+    '12 tabelas por dono: estratégia, versão, execução, sinais, ordens, preenchimentos, posição, patrimônio, comando, janelas do walk-forward, alerta e meta',
   );
 }
