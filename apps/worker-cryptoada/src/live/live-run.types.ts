@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type {
+  AlertInput,
   BatchCheckpointParams,
   EngineCheckpoint,
   LiveRunRepository,
@@ -32,6 +33,17 @@ export type LiveBlueprint = { readonly run: RunRecord; readonly version: Strateg
 export type LiveStepCommit = {
   readonly rows: RunResultRows;
   readonly checkpoint: BatchCheckpointParams;
+  // Alertas de sinal do candle (RF10): entram na mesma transação, então reentrega do passo nunca os repete.
+  readonly alerts: readonly AlertInput[];
+};
+
+// Taxa de acerto fora da amostra do último walk-forward concluído da versão (texto decimal exato) e as operações dela.
+export type HistoricalHitRate = { readonly winRate: string; readonly trades: number };
+
+// `maxAgeCandles`: candle com o fechamento mais velho que isto não gera alerta (replay, retomada depois de parada longa).
+export type LiveAlertingSettings = {
+  readonly now: () => number;
+  readonly maxAgeCandles: number;
 };
 
 export type LiveCommitOutcome = (typeof LIVE_COMMIT_OUTCOME)[keyof typeof LIVE_COMMIT_OUTCOME];
@@ -44,6 +56,7 @@ export type LiveRunSession = {
   readonly listSentiment: (
     query: LiveSentimentQuery,
   ) => Promise<readonly StoredSentimentObservation[]>;
+  readonly findHitRate: () => Promise<HistoricalHitRate | undefined>;
   readonly commitStep: (commit: LiveStepCommit) => Promise<LiveCommitOutcome>;
   readonly failRun: (errorCode: string) => Promise<boolean>;
 };
@@ -76,6 +89,8 @@ export type LiveEvaluatorDependencies = {
   readonly logger: WorkerLogger;
   readonly engine?: Engine;
   readonly maxStepsPerPass?: number;
+  // Ausente = alertas desligados (Telegram sem token): o passo não monta nem enfileira alerta algum.
+  readonly alerting?: LiveAlertingSettings;
 };
 
 export type LivePassOutcome = {

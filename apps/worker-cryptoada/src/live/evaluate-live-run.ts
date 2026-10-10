@@ -70,6 +70,7 @@ export async function evaluateLiveRun(params: EvaluateLiveRunParams): Promise<Li
       engine,
       maxSteps,
       isGapConfirmed: dependencies.isGapConfirmed,
+      alerting: dependencies.alerting,
     });
     if (outcome.kind === LIVE_PASS_KIND.WAITING) {
       dependencies.logger.info(LIVE_LOG.RUN_WAITING_FOR_GAP, { runId });

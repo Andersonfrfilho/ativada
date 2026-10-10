@@ -1,5 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { createLiveEvaluator } from '../../../apps/worker-cryptoada/src/live/live-evaluator.js';
+import type {
+  buildStepAlert,
+  isAlertableSignal,
+} from '../../../apps/worker-cryptoada/src/live/build-step-alert.js';
+import type { alertPayloadSchema } from '../../../apps/worker-cryptoada/src/live/alert-payload.schema.js';
+import type { parseHitRate } from '../../../apps/worker-cryptoada/src/live/hit-rate.js';
 import type { createLiveScheduler } from '../../../apps/worker-cryptoada/src/live/live-scheduler.js';
 
 const PRODUCTION_SOURCE = new URL('../../../apps/worker-cryptoada/src/live', import.meta.url)
@@ -12,6 +18,13 @@ export const LIVE_MUTANT_VARIABLE = 'LIVE_MUTANT_SOURCE';
 export type LiveApi = {
   readonly createLiveEvaluator: typeof createLiveEvaluator;
   readonly createLiveScheduler: typeof createLiveScheduler;
+};
+
+export type LiveAlertParts = {
+  readonly parseHitRate: typeof parseHitRate;
+  readonly alertPayloadSchema: typeof alertPayloadSchema;
+  readonly buildStepAlert: typeof buildStepAlert;
+  readonly isAlertableSignal: typeof isAlertableSignal;
 };
 
 export function resolveLiveSource(): string {
@@ -38,5 +51,31 @@ export async function loadLiveApi(): Promise<LiveApi> {
   return {
     createLiveEvaluator: createLiveEvaluatorMember as LiveApi['createLiveEvaluator'],
     createLiveScheduler: createLiveSchedulerMember as LiveApi['createLiveScheduler'],
+  };
+}
+
+// A leitura do acerto histórico e o esquema do conteúdo do alerta vivem ao lado do avaliador, então os mutantes os alcançam.
+export async function loadLiveAlertParts(): Promise<LiveAlertParts> {
+  const source = resolveLiveSource();
+  const hitRate: unknown = await import(`${source}/hit-rate.ts`);
+  const payload: unknown = await import(`${source}/alert-payload.schema.ts`);
+  const parseHitRateMember = readMember(hitRate, 'parseHitRate');
+  const schemaMember = readMember(payload, 'alertPayloadSchema');
+  const builder: unknown = await import(`${source}/build-step-alert.ts`);
+  const buildMember = readMember(builder, 'buildStepAlert');
+  const alertableMember = readMember(builder, 'isAlertableSignal');
+  if (
+    typeof parseHitRateMember !== 'function' ||
+    typeof schemaMember !== 'object' ||
+    typeof buildMember !== 'function' ||
+    typeof alertableMember !== 'function'
+  ) {
+    throw new Error('Módulo ao vivo sem as partes do alerta.');
+  }
+  return {
+    parseHitRate: parseHitRateMember as LiveAlertParts['parseHitRate'],
+    alertPayloadSchema: schemaMember as LiveAlertParts['alertPayloadSchema'],
+    buildStepAlert: buildMember as LiveAlertParts['buildStepAlert'],
+    isAlertableSignal: alertableMember as LiveAlertParts['isAlertableSignal'],
   };
 }

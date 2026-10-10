@@ -21,22 +21,26 @@ import {
 import { LIVE_COMMIT_OUTCOME, LIVE_PASS_KIND, LIVE_PROGRESS } from './live.constant.js';
 import type {
   GapConfirmation,
+  LiveAlertingSettings,
   LiveCommitOutcome,
   LivePassOutcome,
   LiveRunSession,
 } from './live-run.types.js';
 import { loadLiveContext, type LiveContext } from './load-live-context.js';
 import { resolveLiveCursor, type LiveCursor } from './resolve-live-cursor.js';
+import { collectStepAlerts, createHitRateReader, type HitRateReader } from './step-alerts.js';
 
 export type LivePassParams = {
   readonly session: LiveRunSession;
   readonly engine: Engine;
   readonly isGapConfirmed: GapConfirmation;
   readonly maxSteps: number;
+  readonly alerting?: LiveAlertingSettings | undefined;
 };
 
 type PassRun = LivePassParams & {
   readonly context: LiveContext;
+  readonly readHitRate: HitRateReader;
   readonly pickSentiment: SentimentPicker;
   readonly tracker: PositionTracker;
 };
@@ -96,7 +100,15 @@ async function stepOnce(
   });
   const buffer = createBatchBuffer();
   appendDecisions({ buffer, decisions: result.decisions, tracker: run.tracker });
+  const alerts = await collectStepAlerts({
+    alerting: run.alerting,
+    readHitRate: run.readHitRate,
+    candle,
+    result,
+    durationMilliseconds: context.durationMilliseconds,
+  });
   const commit = await run.session.commitStep({
+    alerts,
     rows: toRunResultRows(buffer),
     checkpoint: {
       engineState: parseJsonContainer(serializeEngineState(result.state)),
@@ -160,6 +172,7 @@ export async function runLivePass(params: LivePassParams): Promise<LivePassOutco
   const run: PassRun = {
     ...params,
     context,
+    readHitRate: createHitRateReader(params.session),
     pickSentiment: createSentimentPicker({ observations, source }),
     tracker: createPositionTracker(cursor.state.wallet.position),
   };

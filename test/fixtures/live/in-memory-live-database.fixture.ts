@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type {
+  HistoricalHitRate,
   LiveBlueprint,
   LiveCommitOutcome,
   LiveRunClaims,
@@ -7,6 +8,7 @@ import type {
   LiveRunSession,
 } from '../../../apps/worker-cryptoada/src/live/live-run.types.js';
 import type {
+  AlertInput,
   ClaimedLiveRun,
   EngineCheckpoint,
   RenewHeartbeatResult,
@@ -66,6 +68,8 @@ export type LiveScenario = {
   readonly tamper?: 'run_hash' | 'config_hash' | 'engine_version';
   readonly hooks?: LiveHooks;
   readonly kind?: RunRecord['kind'];
+  // O acerto histórico que a leitura do último walk-forward devolve; `'error'` é a leitura que falha.
+  readonly hitRate?: HistoricalHitRate | 'error';
 };
 
 export type InMemoryLiveState = {
@@ -73,6 +77,8 @@ export type InMemoryLiveState = {
   errorCode: string | undefined;
   checkpoint: StoredCheckpoint | undefined;
   results: StoredResults;
+  // Os alertas enfileirados pelos passos CONFIRMADOS, na chave (candle, lado) que o banco usa.
+  alerts: Map<string, AlertInput>;
   commits: number;
   claimedBy: string | undefined;
   isOwnerActive: boolean;
@@ -87,7 +93,12 @@ export type InMemoryLive = {
   readonly state: InMemoryLiveState;
   readonly addCandles: (candles: readonly EngineCandle[]) => void;
   readonly snapshot: () => Record<string, readonly unknown[]>;
-  readonly calls: { findCandles: number; listSentiment: number; commitStep: number };
+  readonly calls: {
+    findCandles: number;
+    listSentiment: number;
+    commitStep: number;
+    findHitRate: number;
+  };
   readonly controls: LiveControls;
 };
 
@@ -148,10 +159,16 @@ function commitStep(
   hooks?.beforeCommit?.(attempt);
   const stage = cloneResults(state.results);
   appendRows(stage, commit.rows);
+  const stagedAlerts = new Map(state.alerts);
+  for (const alert of commit.alerts) {
+    const key = `${alert.candleTime}|${alert.side}`;
+    if (!stagedAlerts.has(key)) stagedAlerts.set(key, alert);
+  }
   hooks?.afterAppend?.(attempt);
   const last = state.checkpoint?.lastCandleTime;
   if (last !== undefined && last >= commit.checkpoint.lastCandleTime) return 'already_recorded';
   state.results = stage;
+  state.alerts = stagedAlerts;
   state.checkpoint = {
     engineState: structuredClone(commit.checkpoint.engineState),
     lastCandleTime: commit.checkpoint.lastCandleTime,
@@ -200,6 +217,11 @@ function createSession(context: Context): LiveRunSession {
           (item) => item.observedAt <= query.until && item.createdAt <= query.until,
         ),
       );
+    },
+    findHitRate: (): Promise<HistoricalHitRate | undefined> => {
+      live.calls.findHitRate += 1;
+      if (scenario.hitRate === 'error') return Promise.reject(new Error('leitura indisponível'));
+      return Promise.resolve(scenario.hitRate);
     },
     commitStep: (commit): Promise<LiveCommitOutcome> => {
       try {
@@ -262,6 +284,7 @@ export function createInMemoryLive(scenario: LiveScenario): InMemoryLive {
     errorCode: undefined,
     checkpoint: undefined,
     results: createEmptyResults(),
+    alerts: new Map(),
     commits: 0,
     claimedBy: undefined,
     isOwnerActive: true,
@@ -282,7 +305,7 @@ export function createInMemoryLive(scenario: LiveScenario): InMemoryLive {
     runId,
     state,
     controls,
-    calls: { findCandles: 0, listSentiment: 0, commitStep: 0 },
+    calls: { findCandles: 0, listSentiment: 0, commitStep: 0, findHitRate: 0 },
     addCandles: (candles) => state.candles.push(...candles),
     snapshot: () => snapshotResults(state.results),
     database: { attach: () => Promise.resolve(undefined) },

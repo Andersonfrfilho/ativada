@@ -22,6 +22,10 @@ const EVALUATE = 'evaluate-live-run.ts';
 const FAILURE = 'describe-live-failure.ts';
 const SCHEDULER = 'live-scheduler.ts';
 const ADVANCE = `${LIVE_RECORDING_COPY}/advance-candle.ts`;
+const STEP_ALERTS = 'step-alerts.ts';
+const BUILD_ALERT = 'build-step-alert.ts';
+const HIT_RATE = 'hit-rate.ts';
+const PAYLOAD = 'alert-payload.schema.ts';
 
 function edit(file: string, find: string, replace: string, occurrences = 1): LiveSourceEdit[] {
   return [{ file, find, replace, occurrences }];
@@ -231,6 +235,126 @@ const MUTANTS: readonly LiveSourceMutant[] = [
   {
     name: 'SCHEDULER_STOP_DOES_NOT_RELEASE',
     edits: edit(SCHEDULER, '      await releaseBestEffort(dependencies);\n', ''),
+  },
+  {
+    name: 'ALERT_FOR_STALE_CANDLES',
+    edits: edit(STEP_ALERTS, '  if (!isFresh(params, alerting)) return [];\n', ''),
+  },
+  {
+    name: 'FRESHNESS_BOUNDARY_EXCLUSIVE',
+    edits: edit(
+      STEP_ALERTS,
+      'return age <= alerting.maxAgeCandles * params.durationMilliseconds;',
+      'return age < alerting.maxAgeCandles * params.durationMilliseconds;',
+    ),
+  },
+  {
+    name: 'FRESHNESS_MEASURED_FROM_THE_OPEN',
+    edits: edit(
+      STEP_ALERTS,
+      'alerting.now() - params.candle.closeTime',
+      'alerting.now() - params.candle.openTime',
+    ),
+  },
+  {
+    name: 'HIT_RATE_READ_FOR_EVERY_SIGNAL',
+    edits: edit(
+      STEP_ALERTS,
+      '    pending ??= session.findHitRate()',
+      '    pending = session.findHitRate()',
+    ),
+  },
+  {
+    name: 'HIT_RATE_FAILURE_BREAKS_THE_STEP',
+    edits: edit(STEP_ALERTS, '.findHitRate().catch(() => undefined);', '.findHitRate();'),
+  },
+  {
+    name: 'HIT_RATE_NEVER_ATTACHED',
+    edits: edit(BUILD_ALERT, 'hitRate: params.hitRate ?? null,', 'hitRate: null,'),
+  },
+  {
+    name: 'HOLD_RAISES_AN_ALERT',
+    edits: edit(
+      BUILD_ALERT,
+      'return signal !== null && signal.action !== SIGNAL_ACTION.HOLD;',
+      'return signal !== null;',
+    ),
+  },
+  {
+    name: 'STOP_ABOVE_THE_CLOSE',
+    edits: edit(BUILD_ALERT, 'close.minus(order.stopDistance)', 'close.plus(order.stopDistance)'),
+  },
+  {
+    name: 'TARGET_BELOW_THE_CLOSE',
+    edits: edit(
+      BUILD_ALERT,
+      'close.plus(order.targetDistance)',
+      'close.minus(order.targetDistance)',
+    ),
+  },
+  {
+    name: 'BUY_TAKES_ANY_NEW_ORDER_AS_ITS_ACTION',
+    edits: edit(BUILD_ALERT, '? order.purpose === ORDER_PURPOSE.ENTRY', '? true'),
+  },
+  {
+    name: 'SELL_TAKES_THE_PROTECTIVE_ORDER_AS_ITS_ACTION',
+    edits: edit(
+      BUILD_ALERT,
+      ': order.purpose === ORDER_PURPOSE.EXIT && order.type === ORDER_TYPE.MARKET',
+      ': order.purpose === ORDER_PURPOSE.EXIT',
+    ),
+  },
+  {
+    name: 'REFUSED_ORDER_COUNTS_AS_AN_ACTION',
+    edits: edit(BUILD_ALERT, '      order.status === ORDER_STATUS.CREATED &&\n', ''),
+  },
+  {
+    name: 'OPEN_POSITION_LEVELS_DROPPED',
+    edits: edit(
+      BUILD_ALERT,
+      'return { stopPrice: position?.stopPrice ?? null, targetPrice: position?.targetPrice ?? null };',
+      'return { stopPrice: null, targetPrice: null };',
+    ),
+  },
+  {
+    name: 'ALERT_REASON_REPLACED',
+    edits: edit(BUILD_ALERT, 'reason: signal.reason,', "reason: 'sinal',"),
+  },
+  {
+    name: 'ALERT_SIDE_ALWAYS_BUY',
+    edits: edit(BUILD_ALERT, 'side: signal.action,', "side: 'BUY',"),
+  },
+  {
+    name: 'ALERT_PRICE_IS_THE_OPEN',
+    edits: edit(BUILD_ALERT, 'closePrice: params.candle.close,', 'closePrice: params.candle.open,'),
+  },
+  {
+    name: 'ALERTS_NOT_HANDED_TO_THE_COMMIT',
+    edits: edit(
+      PASS,
+      '    alerts,\n    rows: toRunResultRows(buffer),',
+      '    alerts: [],\n    rows: toRunResultRows(buffer),',
+    ),
+  },
+  {
+    name: 'ALERTING_NOT_FORWARDED_TO_THE_PASS',
+    edits: edit(EVALUATE, '      alerting: dependencies.alerting,\n', ''),
+  },
+  {
+    name: 'ALERT_PAYLOAD_ACCEPTS_EXTRA_FIELDS',
+    edits: edit(PAYLOAD, 'z.strictObject({\n  symbol', 'z.looseObject({\n  symbol'),
+  },
+  {
+    name: 'HIT_RATE_WITHOUT_VALUE_IS_ACCEPTED',
+    edits: edit(
+      HIT_RATE,
+      'if (!parsed.success || parsed.data.winRate.value === null) return undefined;',
+      'if (!parsed.success) return undefined;',
+    ),
+  },
+  {
+    name: 'HIT_RATE_TRADES_DROPPED',
+    edits: edit(HIT_RATE, 'trades: parsed.data.trades }', 'trades: 0 }'),
   },
 ];
 

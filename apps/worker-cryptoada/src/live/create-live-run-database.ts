@@ -2,10 +2,12 @@
 import {
   createCandleRepository,
   createRunBatchRepository,
+  createRunMetricsRepository,
   createRunRepository,
   createSentimentObservationRepository,
   createStrategyRepository,
   resolveRunOwnerScope,
+  RUN_KIND,
   RUN_STATUS,
   RUN_TRANSITION_OUTCOME,
   type CandleSeriesKey,
@@ -16,7 +18,9 @@ import type { EngineCandle, StoredSentimentObservation } from '@cryptoada/strate
 import { isCandleTimeframe, toEngineCandle, toStoredSentiment } from '@cryptoada/run-recording';
 
 import { LIVE_COMMIT_OUTCOME } from './live.constant.js';
+import { parseHitRate } from './hit-rate.js';
 import type {
+  HistoricalHitRate,
   LiveBlueprint,
   LiveCommitOutcome,
   LiveRunDatabase,
@@ -31,6 +35,7 @@ type SessionTarget = {
   readonly handle: DatabaseHandle;
   readonly scope: OwnerScope;
   readonly runId: string;
+  readonly strategyVersionId: string;
   readonly series: CandleSeriesKey;
 };
 
@@ -48,6 +53,8 @@ async function commitStep(
       async (writer): Promise<LiveCommitOutcome> => {
         if ((await writer.readStatus()) !== RUN_STATUS.RUNNING) return LIVE_COMMIT_OUTCOME.STOPPED;
         await writer.appendResults(commit.rows);
+        // Na MESMA transação: o alerta nasce com o passo e some junto com ele se o passo for desfeito.
+        await writer.appendAlerts(commit.alerts);
         if (!(await writer.saveCheckpoint(commit.checkpoint))) throw new StepAlreadyRecordedError();
         // O aviso à API sai na MESMA transação: chega no COMMIT e some no ROLLBACK, então nunca precede nem sobrevive ao dado.
         await writer.publishStepEvents(commit.checkpoint.lastCandleTime);
@@ -95,6 +102,13 @@ function createSession(target: SessionTarget): LiveRunSession {
       return version === undefined ? undefined : { run, version };
     },
     readCheckpoint: () => runs.readCheckpoint(scope, runId),
+    findHitRate: async (): Promise<HistoricalHitRate | undefined> =>
+      parseHitRate(
+        await createRunMetricsRepository(handle).findLatestMetrics(scope, {
+          strategyVersionId: target.strategyVersionId,
+          kind: RUN_KIND.WALK_FORWARD,
+        }),
+      ),
     commitStep: (commit) => commitStep(target, commit),
     failRun: async (errorCode) =>
       (await runs.transitionRun(scope, { runId, to: RUN_STATUS.FAILED, errorCode })).outcome ===
@@ -116,7 +130,8 @@ export function createLiveRunDatabase(params: {
       const run = await createRunRepository(handle).findRun(scope, runId);
       if (run === undefined || !isCandleTimeframe(run.timeframe)) return undefined;
       const series = { exchange, symbol: run.symbol, timeframe: run.timeframe };
-      return createSession({ handle, scope, runId, series });
+      const strategyVersionId = run.strategyVersionId;
+      return createSession({ handle, scope, runId, strategyVersionId, series });
     },
   };
 }

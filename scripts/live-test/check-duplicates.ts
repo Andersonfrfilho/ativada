@@ -48,6 +48,7 @@ export async function checkDuplicates(context: LiveTestContext): Promise<void> {
   assertCondition(session !== undefined, 'sessão da simulação');
   const checkpoint = await session?.readCheckpoint();
   const refused = await session?.commitStep({
+    alerts: [],
     rows: {
       signals: [
         {

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type {
   GapConfirmation,
+  LiveAlertingSettings,
   LiveEvaluator,
   LiveRunClaims,
   LiveRunDatabase,
@@ -87,6 +88,7 @@ export type TestEvaluatorOptions = {
   readonly isGapConfirmed?: GapConfirmation;
   readonly maxStepsPerPass?: number;
   readonly logger?: TestLogger;
+  readonly alerting?: LiveAlertingSettings;
 };
 
 export async function createTestEvaluator(
@@ -103,6 +105,7 @@ export async function createTestEvaluator(
     isGapConfirmed: options.isGapConfirmed ?? ((): boolean => false),
     logger,
     ...(options.maxStepsPerPass === undefined ? {} : { maxStepsPerPass: options.maxStepsPerPass }),
+    ...(options.alerting === undefined ? {} : { alerting: options.alerting }),
   });
   return { evaluator, logger };
 }
