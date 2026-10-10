@@ -169,27 +169,26 @@ de BTCUSDT 1h (113 `BUY`, 57 `SELL`) e 207 de ETHUSDT 1d (60 `BUY`, 67 `SELL`).
 
 ## 5b. Metas (RF13)
 
-- `evaluateGoal` no `strategy-engine`: para cada (estratégia, par), roda janelas de `prazo` dias
-  com passo de 2 dias sobre 2 anos. A saída por meta **age no fechamento** do candle em que o
-  `equityPoint` atinge o alvo ou a perda máxima (esta medida no `equityAtLow`, lado pior) e **executa
-  em `t+1`** (comando `exit_position`, ADR 0002 §h) — nunca no preço do alvo. Puro e determinístico;
-  mesmo motor do backtest.
-- Custo, com as metades do motor (ADR 0002 §a): os SINAIS de cada (estratégia, par) são calculados UMA
-  vez em série contínua (`signalStep`, ~17,5 mil passos em `1h` para 2 anos); cada janela roda só a
-  carteira (`walletStep`, sem indicadores) sobre os sinais já calculados. Em `1h`: 5 pares × 4
-  estratégias × ~335 janelas × 30 dias × 24 candles ≈ 4,8 milhões de passos de carteira (a conta antiga
-  de "200 mil passos" supunha candle diário) + 20 × 17,5 mil ≈ 350 mil passos de sinal. Passo de carteira
-  é aritmética decimal de poucas ordens: meta de 2 µs a 5 µs, ~10 s a 25 s no `worker_thread`, medida na
-  T4b.1 (em `1d` fica abaixo de 1 s). Resultado guardado em cache por (versão da estratégia, par,
-  timeframe, meta, dia do último candle); se a medida não couber, a T4b.1 reduz o passo das janelas ou
-  restringe a meta a `4h`/`1d`.
-- "Próximo gatilho" é função pura por família: distância entre o valor atual do indicador e o limiar
-  que dispara o voto (ex.: média 9 a 1,2% da 21; máxima de 20 dias 4% acima do preço).
-- Tabela `goals`: `id uuid`, `user_id`, `target_rate numeric`, `horizon_days`, `max_loss_rate numeric`,
-  `amount numeric`, `strategy_version_id`, `symbol`, `run_id` (simulação ao vivo com meta),
-  `status varchar` (`active`/`reached`/`stopped`/`expired`), `created_at`, `ended_at`.
-- Rotas: `POST /v1/goals/evaluate` (sem gravar, devolve o ranking), `POST /v1/goals` (inicia a
-  simulação com meta), `GET /v1/goals`, `GET /v1/goals/:id`.
+Entregue nas T4b.1 a T4b.4; a definição fechada (fórmulas, arredondamento, veredito, desempenho) está no ADR 0002, seções
+"Metas (T4b.1)", "Próximo gatilho (T4b.2)", "Metas (T4b.3)" e "Simulação com meta (T4b.4)".
+
+- `evaluateGoal` no `strategy-engine`: para cada (estratégia, par), uma janela de `prazo` dias por candle de partida (passo
+  de 1 candle). A saída por meta **age no fechamento** do candle em que o `equityPoint` atinge o alvo ou a perda máxima
+  (esta medida no `equityAtLow`, lado pior, ANTES do alvo) e **executa no candle seguinte** (comandos `exit_position` e
+  `halt`, ADR 0002 §h) — nunca no preço do alvo. Puro e determinístico; mesmo motor do backtest.
+- Custo: os SINAIS de cada (estratégia, par) são calculados UMA vez em série contínua; cada janela só lê a trajetória da
+  carteira a partir da primeira compra, compartilhada entre janelas. A avaliação é só em `1d` (decisão da T4b.3: em `1h` o
+  custo não cabe em uma requisição), cache por (versão, par, meta, dia do último candle). Medido: 5 pares de uma
+  estratégia em 120 a 260 ms a frio e ~9 ms em cache.
+- "Próximo gatilho" é função pura por família: distância entre o valor atual do indicador e o limiar que dispara o voto,
+  nos estados aguardando entrada e comprado (`exact` quando há fórmula fechada, `indicative` no resto).
+- Tabela `goals` (migration 0014): `id uuid`, `user_id`, `symbol`, `target_rate numeric`, `horizon_days`,
+  `max_loss_rate numeric`, `is_active`, `created_at`, `updated_at`; `UNIQUE (id, user_id)`; teto de 20 por usuário.
+- Simulação com meta (migration 0015): `runs.goal_id` (FK composta, RESTRICT), `goal_outcome` e `goal_outcome_candle_time`;
+  a meta é fotografada em `runs.request.goal`; alerta `GOAL` na caixa de saída. Não existe `amount` nem `status` na meta: o
+  estado vive na simulação.
+- Rotas (seção 6): `GET/POST /v1/goals`, `GET/PATCH/DELETE /v1/goals/:goalId`, `GET /v1/goals/:goalId/evaluation` e
+  `goalId` em `POST /v1/runs`.
 
 ## 5c. Tempo real (RF16)
 
@@ -217,7 +216,10 @@ de BTCUSDT 1h (113 `BUY`, 57 `SELL`) e 207 de ETHUSDT 1d (60 `BUY`, 67 `SELL`).
 | `GET/POST` | `/v1/strategies` | Listar (por cursor) / criar (nome + configuração validada pelo motor; cria a versão 1) |
 | `GET` | `/v1/strategies/:id` | Estratégia com a versão mais recente |
 | `GET/POST` | `/v1/strategies/:id/versions` | Listar versões (da mais nova) / nova versão (configuração igual ⇒ a MESMA versão, `200`; nova ⇒ `201`) |
-| `POST` | `/v1/runs` | Criar backtest ou walk-forward (valida parâmetros, grade e janelas ANTES de aceitar, grava o pedido, enfileira, `202`); fila do usuário cheia ⇒ `429 RUN_QUEUE_FULL`; `live_paper` (T4.1) não leva período: nasce `queued` no candle em curso, sem fim, o worker a reivindica; aceita `survival: { floorRate, doubleRate }` (T4.3; padrão 0,8 e 2); `409 LIVE_RUN_LIMIT_REACHED` acima do teto de ativas; 20/min |
+| `POST` | `/v1/runs` | Criar backtest ou walk-forward (valida parâmetros, grade e janelas ANTES de aceitar, grava o pedido, enfileira, `202`); fila do usuário cheia ⇒ `429 RUN_QUEUE_FULL`; `live_paper` (T4.1) não leva período: nasce `queued` no candle em curso, sem fim, o worker a reivindica; aceita `survival: { floorRate, doubleRate }` (T4.3; padrão 0,8 e 2) e `goalId` (T4b.4: meta do dono, ligada e do mesmo par; `GET /v1/runs/:id` devolve `goalId` e `goalOutcome`); `409 LIVE_RUN_LIMIT_REACHED` acima do teto de ativas; 20/min |
+| `GET/POST` | `/v1/goals` | (T4b.3, RF13) Listar por cursor / criar meta (`symbol`, `targetRate`, `maxLossRate`, `horizonDays`); teto de 20 (`409 GOAL_LIMIT_REACHED`) |
+| `GET/PATCH/DELETE` | `/v1/goals/:goalId` | Ler / alterar parcialmente / apagar (`409 GOAL_IN_USE` se há simulação) |
+| `GET` | `/v1/goals/:goalId/evaluation` | Ranking estratégia × par com veredito `COMPRAR`/`SEGURAR`/`EVITAR` e situação atual (sinal e próximos gatilhos), em `1d`, com cache; 20/min |
 | `GET` | `/v1/runs` | Execuções do dono, por cursor (filtro `kind`) |
 | `GET` | `/v1/runs/:id` | Status, progresso, métricas, alerta de overfitting, avisos, `queuePosition` (`{ own, overall }` só para `queued`) e, na simulação ao vivo, `survival` (T4.3, RF09): piso e meta de dobro, o tempo até cada um quando atingido e o progresso enquanto não (ADR 0002 "Sobrevivência do saldo (T4.3)") |
 | `GET` | `/v1/runs/:id/equity` · `/trades` · `/signals` · `/orders` · `/fills` · `/windows` | Séries do painel, por cursor (`/windows` só no walk-forward) |

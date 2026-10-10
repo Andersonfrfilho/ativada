@@ -1498,6 +1498,61 @@ O alerta tem duas metades que só se encontram no banco: o **passo ao vivo** (`a
 
 **Prova.** `api-run-log-export` (18 contratos: cabeçalho, ordem completa em literal, decimais de 19 algarismos, ISO, injeção, RFC 4180, fluxo em 3 páginas, 3.000 linhas sem repetir nem perder, tetos, cota, 404 idêntico), 10 mutantes da API, `make database-test` e `make runlog-mutants` (10 mutantes contra Postgres real: ordem, cursor, linha extra, instante da ordem, float, filtro de dono de cada consulta) e `make api-runs-test` (19.999 linhas = sinais + ordens + preenchimentos do banco).
 
+## Metas (T4b.1)
+
+`evaluateGoal` (`packages/strategy-engine/src/goal/`) responde "com esta estratégia neste par, quantas vezes o saldo chegou à meta antes de perder o máximo tolerado, dentro do prazo?". Puro e determinístico, sem relógio, aleatoriedade nem `Math.exp/log/pow`; as taxas e os níveis usam `EngineDecimal`.
+
+| Peça | Decisão |
+|---|---|
+| Entrada | Série CONTÍGUA de candles (o motor recusa lacuna, `CANDLES_NOT_CONTIGUOUS`), estratégia, `RunSetup` e a meta `{ targetRate, maxLossRate, horizonDays }` validada por `parseGoalSpec` (alvo de `0` a `10`, prazo de 1 a 365 dias; fotografia estrita, campo a mais é `INVALID_GOAL`) |
+| Níveis | `alvo = saldo × (1 + alvoRate)` e `piso = saldo × (1 − perdaRate)`, ambos **arredondados para CIMA** a 8 casas (contra o usuário: o alvo é mais difícil e o piso é atingido mais cedo) |
+| Janelas | Uma janela por candle decidido cujo prazo inteiro cabe na série (passo de 1 candle). Os SINAIS saem UMA vez da série contínua (`signalStep`); a carteira de cada janela nasce livre e só a trajetória a partir da primeira compra é calculada, e é compartilhada entre as janelas com a mesma primeira compra (cache por índice da compra). A equivalência com rodar a janela inteira é provada pelo oráculo em `BigInt` |
+| Desfecho de uma janela | Por candle, nesta ordem: **perda máxima** (`equityAtLow ≤ piso`, o lado pior) ANTES do **alvo** (`equity ≥ alvo`, no fechamento), e por fim o **prazo** no último candle. Resultado líquido = valor final (a mínima se parou, o fechamento nos demais). A mesma regra é `judgeGoalPoint`/`judgeGoalStep` (`goal-progress.ts`), usada também pela simulação ao vivo (T4b.4) |
+| Resumo | Contagens inteiras (`windowCount`, `reachedCount`, `stoppedCount`, `expiredCount`), taxas **arredondadas para BAIXO** (`reachRate`) e **para CIMA** (`stopRate`) a 8 casas, mediana do resultado líquido e o mesmo desfecho para a compra-e-segura (`buyBenchmark`) |
+| Veredito | `COMPRAR` / `SEGURAR` / `EVITAR` de `GOAL_VERDICT_RULES`: ao menos 20 janelas; `COMPRAR` com alcance ≥ 50% e parada ≤ 25%; `EVITAR` com parada ≥ 40% e alcance ≤ 15%; o resto é `SEGURAR`. A comparação é por **contagens inteiras** (nunca pelas taxas arredondadas) |
+| Versão | `GOAL_VERSION = 'goal-1'`: mudar qualquer fórmula acima exige uma nova |
+
+**Prova.** Valores à mão, oráculo independente em `BigInt` (laço ingênuo que reconstrói a carteira de cada janela com `engine.step` inteiro) sobre `ethusdt-1d-400` e `btcusdt-1h-500` e séries sintéticas, e 64 mutantes da cópia de `src` (`goal-mutants.contract.test.ts`), todos mortos.
+
+## Próximo gatilho (T4b.2)
+
+`computeNextTriggers` (`packages/strategy-engine/src/trigger/`) diz, por família de indicador da estratégia, o que falta para a regra mudar o voto: **aguardando entrada** (carteira livre; o que faria votar COMPRA) e **comprado** (o que faria votar VENDA).
+
+| Peça | Decisão |
+|---|---|
+| Medida | `close_price`, `rsi`, `macd_gap`, `obv_gap`, `fear_greed_index`; direção `above`/`below`; limiar e distância em texto decimal de 8 casas |
+| Base | `exact`: o limiar é o fechamento que dispara a regra no candle seguinte (fórmula fechada; o cruzamento de médias exponenciais usa o fechamento e o teste de motor prova que ele vira o voto de produção). `indicative`: o valor atual do indicador contra o limiar, que se move quando o candle seguinte fechar |
+| Rede | Arredondamento sempre contra o usuário (distância para CIMA) e `TRIGGER_VERSION = 'trigger-1'` |
+| Situação | `computeLatestTriggers` devolve o sinal do último candle junto dos gatilhos (usado pela avaliação da T4b.3) |
+
+**Prova.** Valores à mão, teste de motor (aplicar o limiar exato vira o voto), `next-trigger-latest` e 36 mutantes mortos.
+
+## Metas (T4b.3)
+
+Migration `0014_goals`, `goals` com `UNIQUE (id, user_id)`, taxas `numeric` lidas e gravadas como texto exato, `symbol` VARCHAR, CHECKs de par, alvo, perda e prazo, teto de 20 metas por usuário sob disputa (linha do usuário travada na criação) e paginação por cursor `(created_at, id)`. LGPD: entra em `OWNED_TABLES`, na exportação (colunas) e na ordem de exclusão (antes de `users`).
+
+| Rota | Uso |
+|---|---|
+| `GET/POST /v1/goals` | Listar (cursor) / criar; o par precisa estar habilitado (`MARKET_SYMBOLS`); a meta passa pelo esquema do motor e os campos inválidos saem juntos; `409 GOAL_LIMIT_REACHED` acima do teto |
+| `GET/PATCH/DELETE /v1/goals/:goalId` | Ler / alterar parcialmente (`isActive` incluso, ao menos um campo) / apagar; meta com simulação NÃO se apaga: `409 GOAL_IN_USE` (RESTRICT da FK; o Postgres 18 sinaliza `23001`, as versões anteriores `23503`: o repositório aceita os dois) |
+| `GET /v1/goals/:goalId/evaluation` | Avalia a meta de cada estratégia do dono (as 5 mais novas) × cada par habilitado, em `1d`, sobre os últimos 1.100 dias de candles; devolve o ranking, o veredito e a situação atual (sinal e próximos gatilhos); 20/min (`GOAL_EVALUATION`) |
+
+Meta alheia, inexistente e id malformado são o MESMO `404 GOAL_NOT_FOUND` (ADR 0001 §e). O ranking (`rankGoalCombinations`) ordena por alcance decrescente e parada crescente por **multiplicação cruzada das contagens**, depois por mais janelas e, por fim, pela chave da combinação (estável); combinação sem janela vai por último. A avaliação fica em cache em memória por (versão da estratégia, par, meta, dia do último candle), com teto de 1.000 entradas. Medido com candles diários: 5 pares de uma estratégia de 120 a 260 ms a frio e ~9 ms em cache; no `make goals-test`, com 800 candles por par, 2 estratégias × 5 pares levam ~1,2 s a frio e ~40 ms em cache (o orçamento é de 1 s por estratégia).
+
+## Simulação com meta (T4b.4)
+
+`POST /v1/runs` aceita `goalId` só em `live_paper`: a meta tem de ser do dono (`404`), estar ligada (`409 GOAL_INACTIVE`) e ter o mesmo par da simulação (`400`). Os parâmetros da meta são **fotografados** em `runs.request.goal`: editar a meta depois não muda a simulação em curso. Migration `0015_goal_runs`: `runs.goal_id` (FK composta com o dono, RESTRICT), `goal_outcome` (`goal_reached | goal_stopped | goal_expired`) e `goal_outcome_candle_time`, com CHECKs (só ao vivo; desfecho e candle juntos), e o `side` de `alerts` aceita `GOAL`.
+
+| Peça | Decisão |
+|---|---|
+| Julgamento | A cada candle fechado o worker aplica `judgeGoalStep` ao `equityPoint` (perda pelo vale antes do alvo; prazo no último candle da meta; retomada tardia depois do prazo também expira; o aquecimento não conta) |
+| Saída | No desfecho, o MESMO passo reexecuta o motor com os comandos `exit_position` e `halt` (ids `goal:<runId>:<desfecho>:<tipo>`, `issuedAt` = fechamento do candle, motivos `goal_reached`/`goal_max_loss`/`goal_expired`): a posição é vendida na abertura do candle seguinte e a simulação para de entrar. Só a reexecução é gravada |
+| Atomicidade | Desfecho, comandos, linhas do passo, checkpoint e alerta vão na MESMA transação do candle (`recordGoalOutcome` só grava uma vez, em execução `running` com meta); depois dela, a execução é concluída (`completeRun`) quando a carteira assenta (sem posição nem ordem pendente) |
+| Alerta | Linha `GOAL` na caixa de saída do T4.5 (chave única execução + candle + lado + canal): **uma vez por desfecho**; o texto leva só mercado e meta (`formatGoalAlertMessage`), resultado arredondado para BAIXO a 8 casas |
+| Reinício | O worker novo retoma do checkpoint; desfecho e alerta não se repetem e as contagens são as da execução ininterrupta |
+
+**Prova.** 27 contratos do acompanhamento, 10 do avaliador (os três desfechos contra uma referência de produção em laço direto, reinício logo após o desfecho, nenhum duplicado), 12 do texto do alerta, 14 da API, 30 mutantes do worker, 45 do alerta do Telegram e os mutantes da API, todos mortos; `make database-test` (FK, CHECKs, desfecho uma vez, conclusão, lado `GOAL`) e `make goals-test` (API e Postgres reais: CRUD, isolamento, avaliação, os três desfechos iguais à varredura independente, entrega ao chat do dono e reinício).
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
