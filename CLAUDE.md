@@ -56,8 +56,16 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   estável (`CANDLE_ALREADY_PROCESSED` na retomada = pular). Sentimento entra por `observedAt` = disponibilidade;
   lacuna para a frente só com `confirmedGapCandles` exato. Todo motor novo passa `runEngineContract` (20
   verificações, 7 cenários) e todo indicador passa `expectIndicatorContract` (`test/fixtures/strategy-engine/`); a
-  referência e 26 motores defeituosos provam o harness. `zod@4.6.5` e `decimal.js@10.6.0` exatos e diretos; o
+  referência e 27 motores defeituosos provam o harness. `zod@4.6.5` e `decimal.js@10.6.0` exatos e diretos; o
   hash da versão é preso por teste de hash-dourado literal.
+- **Risco (T2.4, ADR 0002 §"Risco em produção").** `computePositionSize` é o ÚNICO dimensionamento do produto (a
+  spec 002 o reutiliza no envio da ordem): quantidade pelo valor em risco com a folga de arredondamento
+  descontada antes de dividir (perda no stop sem gap < `riskAmount`, débito < caixa), limitada por exposição,
+  caixa e participação no volume do candle de DECISÃO `t` (a ordem pendente guarda `decisionVolume`; nunca o
+  volume de `k`). `maxExposureRate` é teto POR CARTEIRA; o teto TOTAL entre pares NÃO é do motor, é do RiskGuard
+  da execução real (spec 002) e da camada de metas. `warnRunParameters` devolve avisos (tick que domina o
+  slippage, passo que zera ou engrossa a quantidade, mínimo acima do saldo). Provado por diferencial de 6.000
+  cenários contra o oráculo independente em `test/fixtures/strategy-engine/risk/` e por 18 mutantes.
 - Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account

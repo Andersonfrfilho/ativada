@@ -92,12 +92,12 @@ defesa: o harness (§g) prova o comportamento. Os únicos imports permitidos sã
 | `wallet.isHalted` | `true` depois de `halt` até um `resume` (§h): não abre entrada |
 | `wallet.cash` | saldo em USDT (texto decimal, nunca negativo) |
 | `wallet.position` | a posição aberta (no máximo uma, §e) com `entryPrice`, `quantity`, `stopPrice`, `targetPrice`, `entryFee` |
-| `wallet.pendingOrder` | a ordem pendente (no máximo uma): entrada guarda o VALOR EM RISCO (`riskAmount`), distâncias e, se limitada, `limitPrice`/`eligibleCandles`; saída guarda `exitReason`; `filledQuantity` reserva o preenchimento parcial da execução real (no simulado é `"0"`) |
+| `wallet.pendingOrder` | a ordem pendente (no máximo uma): entrada guarda o VALOR EM RISCO (`riskAmount`), distâncias, o volume do candle de decisão (`decisionVolume`, T2.4) e, se limitada, `limitPrice`/`eligibleCandles`; saída guarda `exitReason`; `filledQuantity` reserva o preenchimento parcial da execução real (no simulado é `"0"`) |
 | `wallet.benchmark` | "comprar e segurar" (quantidade e sobra de caixa) |
 
 O schema Zod do estado é estrito (`.strict()` em todo nível) e cobra os invariantes (R4): caixa ≥ 0;
 quantidade > 0; `stop < entrada < alvo`; entrada compra e saída vende; limitada ⇔ `limitPrice` e
-`eligibleCandles`; entrada ⇒ `riskAmount` e distâncias, sem `exitReason`; saída ⇒ mercado com
+`eligibleCandles`; entrada ⇒ `riskAmount`, distâncias e `decisionVolume`, sem `exitReason`; saída ⇒ mercado com
 `exitReason`, sem campos de entrada; entrada pendente só sem posição, saída pendente só com posição; as
 metades no mesmo candle; `firstSignalCandleOpenTime` ⇔ aquecimento concluído; régua ⇔ aquecimento
 concluído antes do último candle. Decimal no estado só na grafia canônica (`"00.10"`, `"1.0"` e `"-0"`
@@ -317,9 +317,9 @@ passo; dinheiro com 8 casas: débito para cima, crédito para baixo; taxa para c
 | Taxa | `ceil8(preço × quantidade × feeRate)`, nas duas pontas, em USDT |
 | Caixa | compra debita `ceil8(valor) + taxa`; venda credita `floor8(valor) − taxa` |
 | Decisão da entrada (fechamento de `t`) | `riskAmount = floor8(saldo × riskPerTrade)`; `stopDistance = ATR(t) × stopAtrMultiple`; `targetDistance = ATR(t) × targetAtrMultiple`. A ordem guarda o **valor em risco**, não um orçamento em USDT |
-| Tamanho (preenchimento em `t+1`, preço `P`) | `stop = tickDown(P − stopDistance)`; saída estimada `X = tickDown(stop × (1 − s))`; `quantidade = stepDown(riskAmount ÷ (P − X + P·feeRate + X·feeRate))`, depois limitada por `stepDown(min(saldo × maxExposureRate, saldo ÷ (1 + feeRate)) ÷ P)` e pela participação no volume; por fim desce passo a passo enquanto o débito passar do caixa ou a perda realizada no stop (com os arredondamentos do preenchimento) passar de `riskAmount` |
+| Tamanho (preenchimento em `t+1`, preço `P`) | `stop = tickDown(P − stopDistance)`; saída estimada `X = tickDown(stop × (1 − s))`; `quantidade = stepDown(riskAmount ÷ (P − X + P·feeRate + X·feeRate))`, depois limitada por exposição `stepDown(patrimônio × maxExposureRate ÷ P)`, caixa `stepDown((caixa − 2u) ÷ (1 + feeRate) ÷ P)` e participação no volume de `t`; a quantidade é o menor dos tetos. Não há laço de ajuste: a **folga de arredondamento** (`u = 1e-8`; débito soma 2 arredondamentos, perda soma 4) é descontada ANTES de dividir (`(riskAmount − 4u) ÷ …`), o que prova perda < `riskAmount` e débito < caixa com as regras do preenchimento. Implementado em `risk/` (T2.4, abaixo) |
 | "Até o stop" | A perda realizada numa saída pelo stop **sem gap** nunca passa de `riskPerTrade × saldo` (taxas e slippage de saída inclusos) — check `realized-risk`. O risco de **gap além do stop** fica fora de "até o stop": abertura abaixo do stop sai na abertura, pior |
-| Participação no volume (R3) | `quantidade ≤ stepDown(volume(k) × maxVolumeShare)`. O excesso não preenche: a ordem é **reduzida**, preenche como `filled` com `reason: volume_capped` |
+| Participação no volume (R3) | `quantidade ≤ stepDown(volume(t) × maxVolumeShare)`, com `t` o candle de **decisão**: o volume de `k` é desconhecido na abertura e o executor real não o tem (por isso a ordem guarda `decisionVolume`). O excesso não preenche: a ordem é **reduzida**, preenche como `filled` com `reason: volume_capped` |
 | Recusas | ATR ausente ou ≤ 0 ⇒ `rejected` (`zero_atr`) na decisão, sem pendente; `riskAmount` zero ⇒ `rejected` (`below_min_notional`); no preenchimento, `stop ≤ 0` ou `stop ≥ P × (1 − s)` ⇒ `rejected` (`invalid_stop`); `quantidade × P < minNotional` ⇒ `rejected` (`below_min_notional`) |
 | Stop e alvo | Calculados **no preenchimento**, do preço `P` com as distâncias do ATR de `t`: `stop = tickDown(P − stopDistance)`, `alvo = tickUp(P + targetDistance)`. Nenhum dado do futuro; o check `protective-prices` confere |
 | Saída no stop | Em qualquer candle: `tickDown(min(stop, abertura) × (1 − s))`. `mínima ≤ stop` (no toque) dispara; abertura ≤ stop (gap) sai na abertura, pior que o stop |
@@ -540,7 +540,7 @@ que rodam (a primeira que falha nomeia o defeito):
   recusas e participação no volume; preenchimentos de borda (toque no limite, 2º candle, alvo só tocado,
   gap acima do alvo, limitada no meio com a máxima além do alvo); entrada limitada pelo caixa; gap de alta
   na entrada seguido de stop.
-- 26 motores defeituosos (`REFERENCE_ENGINE_DEFECT`), cada um reprovado pela verificação certa (tabela no
+- 27 motores defeituosos (`REFERENCE_ENGINE_DEFECT`), cada um reprovado pela verificação certa (tabela no
   teste, que também exige cobertura de todo o catálogo).
 - `indicator-contract.fixture.ts` — `expectIndicatorContract` (aquecimento exato, convergência ≥
   aquecimento, lote = incremental, determinismo, retomada pelo snapshot), provado com uma média simples e
@@ -553,7 +553,7 @@ ajuste, a decisão e a prova:
 
 | # | Ajuste | Decisão | Prova (mutante reprovado) |
 |---|---|---|---|
-| A1 | Tamanho pelo RF05 (a T2.1 dava ≈1,06% no stop) | Pendente guarda `riskAmount`; quantidade no preenchimento pelo risco por unidade com saída estimada no stop e as duas taxas, limitada por exposição, caixa e volume; desce até a perda realizada caber. Gap além do stop fica fora de "até o stop" | `realized-risk`: `SIZE_AT_DECISION`, `IGNORES_FEES_IN_SIZE` |
+| A1 | Tamanho pelo RF05 (a T2.1 dava ≈1,06% no stop) | Pendente guarda `riskAmount`; quantidade no preenchimento pelo risco por unidade com saída estimada no stop e as duas taxas, limitada por exposição, caixa e volume; a T2.4 trocou o ajuste passo a passo pela folga de arredondamento descontada antes de dividir. Gap além do stop fica fora de "até o stop" | `realized-risk`: `SIZE_AT_DECISION`, `IGNORES_FEES_IN_SIZE`, `VOLUME_OF_FILL_CANDLE` (T2.4) |
 | A2 | Migração e persistência contraditórias | Migração = execução nova ligada (`migrated_from_run_id`), histórico imutável; ordem/posição por `DO UPDATE … WHERE` status monotônico; walk-forward com espaço de nome por janela e sinal único; backtest em lote; troca de versão com posição = `exit_position` + execução nova; réplica não reemite alerta (§b) | documental (plan §3); `restep-idempotent`: `RESTEP_NOT_IDEMPOTENT` |
 | A3 | Sentimento com lookahead | `observedAt` = disponibilidade; `sentiment_observations` append-only (T3.1); sinal grava a observação; guarda de inteiro 0..100 finito; idade exata `> 48 h` | `no-lookahead` (sentimento futuro): `SENTIMENT_LOOKAHEAD`; mutações de `src` (NaN aceito, 48 h com `>=`, seleção do futuro) reprovadas |
 | A4 | `execution`/`market` no hash da versão | `RunParameters` separado com `runHash` no estado; versão só com a lógica; `zod` exato e direto; hash-dourado literal; desvios do Bollinger em texto decimal | hash-dourado (mutação de default do Zod reprovada); teto 1e9 (mutação para 1e12 reprovada) |
@@ -716,6 +716,47 @@ Cada mutação de `src` foi aplicada à mão, reprovou algum teste e foi reverti
 | Bollinger com desvio errado (múltiplo aplicado duas vezes) | `Bollinger(3, 2) uses the population deviation` e o oráculo |
 | EMA com `α = 1/n` | `indicator ema > BTCUSDT 1h × 500: stays within 1e-8 of the high-precision oracle` |
 | Snapshot sem restaurar a janela (SMA) ou a sessão (VWAP) | `indicator sma > BTCUSDT 1h × 500: passes the indicator contract` (retomada do snapshot) e o equivalente da VWAP |
+
+## Risco em produção (T2.4)
+
+`packages/strategy-engine/src/risk/` — funções puras, texto decimal canônico na entrada e na saída.
+
+- **`computeProtectivePrices`** — `stop = tickDown(P − k·ATR)`, `alvo = tickUp(P + m·ATR)`, com `P` o preço de
+  PREENCHIMENTO (já com slippage) e o ATR do candle de DECISÃO `t`; a assinatura não recebe o fechamento de
+  `t` nem o ATR de `t+1`. Recusas tipadas: `zero_atr` (ATR ≤ 0), `invalid_stop` (stop bruto ≤ 0 ou
+  `stop ≥ P × (1 − slippage)`), `stop_below_tick` (stop positivo que o tick arredonda para zero).
+- **`computePositionSize`** — o ÚNICO dimensionamento do produto; a spec 002 o reutiliza no envio da ordem.
+  Saída `{ quantity, notional, estimatedStopLoss, constraint }` com `constraint ∈ none · exposure_capped ·
+  cash_capped · volume_capped · below_min_notional · invalid_stop · zero_risk`. A quantidade é o menor
+  entre risco, exposição, caixa e volume de `t`; empate vale o primeiro da lista; abaixo de `minNotional`
+  ou zero ⇒ `below_min_notional` com quantidade `0`. Garantia (RF05): a perda no stop SEM gap — taxas das
+  duas pontas e slippage de saída — é **menor** que `riskAmount`, e o débito menor que o caixa.
+- **Folga de arredondamento no lugar do laço.** Cada arredondamento de dinheiro erra no máximo `u = 1e-8`.
+  O débito soma 2 (valor e taxa, para cima); a perda soma 4 (os dois, o valor da saída para baixo e a taxa
+  de saída para cima). Descontar `4u` do risco e `2u` do caixa antes de dividir prova as duas
+  desigualdades, em tempo constante. Custo: em raros empates a quantidade fica um passo abaixo do máximo
+  exato, sempre contra o usuário. O laço "desce até caber" da T2.1b mascarava erros de fórmula (um
+  denominador errado era corrigido pelo laço) e podia custar milhões de voltas com passo fino.
+- **Exposição.** `maxExposureRate` é o teto POR CARTEIRA sobre o patrimônio (`quantidade × P ≤ maxExposureRate
+  × patrimônio`). O teto TOTAL entre pares **não é do motor**: quem o cobra é o RiskGuard da execução real
+  (spec 002) e a camada de metas no ao vivo.
+- **`warnRunParameters(runParameters, referencePrice)`** — avisos (nunca erros) que o backtest exibe:
+  `tick_dominates_slippage` (tick ÷ preço maior que o slippage configurado e ≥ 0,01%: tick 0,01 sobre 0,53
+  dá slippage efetivo de até ≈ 1,9%), `quantity_step_exceeds_balance` (um passo vale mais que o saldo: a
+  quantidade sempre zera), `quantity_step_coarse` (passo > 5% do saldo) e `min_notional_exceeds_balance`.
+
+**Prova.** (1) Contas à mão em 9 cenários de tamanho e 3 de proteção (`risk-hand-values`). (2) Teste
+DIFERENCIAL: produção × oráculo independente (`test/fixtures/strategy-engine/risk/reference-risk.fixture.ts`,
+que não importa `risk/`) em 6.000 cenários gerados por PRNG inteiro (mulberry32, semente fixa; preços de
+1e-5 a 1e5, ATR de 0 a 10% do preço, taxas e slippage de 0 a 0,5%, ticks e passos variados, caixa de 10 a
+1e9, volumes de 0 a ~1e15): resultados idênticos byte a byte, desvio máximo de quantidade `0`. (3)
+Propriedades sobre a mesma grade, sem consultar o oráculo: perda no stop ≤ risco, débito ≤ caixa,
+quantidade múltipla do passo, `notional ≥ minNotional`, exposição e participação no volume de `t`. (4) 18
+mutantes reprovados pelo diferencial (cópias de `src` com uma edição, mais três de ENTRADA em que o
+chamador dá o dado errado): taxa de saída fora do denominador, fechamento de `t` no lugar de `P`,
+quantidade para cima, sem teto de caixa / exposição / volume, `volume(k)`, `minNotional` ignorado, stop para
+cima, alvo para baixo, ATR de `t+1`, exposição sobre o caixa, saída sem slippage, débito para baixo, folgas
+de arredondamento removidas, ATR zero aceito, stop inválido aceito.
 
 ## Alternativas rejeitadas
 
