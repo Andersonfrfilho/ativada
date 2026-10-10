@@ -36,6 +36,9 @@ export const strategies = pgTable(
   (table) => [
     unique('strategies_id_user_id_unique').on(table.id, table.userId),
     index('strategies_user_id_created_at_idx').on(table.userId, table.createdAt),
+    uniqueIndex('strategies_user_id_example_unique')
+      .on(table.userId)
+      .where(sql`${table.isExample}`),
     check('strategies_name_not_blank_check', sql`length(btrim(${table.name})) > 0`),
   ],
 );

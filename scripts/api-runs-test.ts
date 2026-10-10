@@ -27,6 +27,7 @@ import {
 } from './api-runs-test/api-runs-test-context.js';
 import { checkBacktestFlow, type SeriesWindow } from './api-runs-test/check-backtest-flow.js';
 import { checkDocumentation } from './api-runs-test/check-docs.js';
+import { checkExampleStrategy } from './api-runs-test/check-example-strategy.js';
 import { checkIsolationOverHttp } from './api-runs-test/check-isolation.js';
 import { checkWalkForwardAndStops } from './api-runs-test/check-walk-forward.js';
 
@@ -63,6 +64,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
   try {
     const window = await seedMarket(context);
     const flow = await checkBacktestFlow(context, window);
+    await checkExampleStrategy(context, window);
     await checkIsolationOverHttp(context, flow, window);
     await checkWalkForwardAndStops(context, { classicVersionId: flow.versionId, window });
     await checkDocumentation(context);

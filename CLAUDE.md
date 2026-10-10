@@ -8,7 +8,7 @@ Contexto operacional do **CryptoAdA**. Produto e regras em `README.md`,
 Spec 001 em andamento (progresso real em `specs/001-simulador-e-sinais/evidence.md`). Prontos: Fase 0
 (fundação), Fase 0b (contas, login, isolamento entre usuários, LGPD) e Fase 1 (candles da Binance:
 backfill, Fear & Greed e stream ao vivo com recuperação de lacuna). Fase 2 (o motor em
-`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward e as rotas REST (T3.4); próximo passo: estratégia de exemplo por usuário (T3.5) e fila com tetos (T3.6).
+`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) e a estratégia de exemplo por usuário (T3.5); próximo passo: fila com tetos (T3.6).
 
 ## Stack decidida
 
@@ -43,7 +43,7 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `make down DOWN_FLAGS=--volumes` e `make up` (apaga os dados do Keycloak daquele ambiente). `make up`
   avisa quando o JSON é mais novo que o volume.
 - Alvos `*-test` (`migration-test`, `database-test`, `identity-test`, `session-test`, `admin-test`,
-  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`, `walkforward-test`, `api-runs-test`, `api-runs-mutants`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
+  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`, `walkforward-test`, `api-runs-test`, `api-runs-mutants`, `example-mutants`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
   `TERM`: Ctrl-C não deixa container vivo. Dois deles ao mesmo tempo disputam o mesmo projeto; rode um por vez.
 - `make check` roda `bun test` com `env -i`: teste que precisa de variável a declara; o `export` do `env.dev`
   não chega a ele.
@@ -148,6 +148,13 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `test/fixtures/api-routes/`: é por eles que os mutantes entram. Prova: contratos `test/api-*.contract.test.ts`, 36 mutantes
   da API (`api-routes-mutants`), `make api-runs-mutants` (11 filtros de dono removidos contra Postgres) e
   `make api-runs-test` (API de verdade: estratégia → backtest → séries → CSV → walk-forward → parada → isolamento).
+- **Estratégia de exemplo (T3.5, ADR 0002 §"Estratégia de exemplo (T3.5)").** `CLASSIC_SCOREBOARD_STRATEGY` (pacote do motor) é a
+  fonte ÚNICA do Placar clássico; o fixture de teste só a confere por hash. Todo usuário recebe UMA cópia editável (`is_example`)
+  no primeiro acesso: `createExampleSeedingUserResolver` (decorador do `UserResolver`) chama `seedExampleStrategy`, que num
+  `UPDATE` condicional da MARCA `users.example_strategy_seeded_at` (migration 0011) cria estratégia e versão 1 na mesma
+  transação; apagar, renomear ou editar não a traz de volta, falha desfaz a marca e NUNCA derruba o acesso. Todo teste novo de
+  API/LGPD que conte estratégias de um usuário que passou pela API conta o exemplo. Prova: `make database-test`,
+  `make example-mutants` (6 mutantes no Postgres) e `test/example-strategy*.contract.test.ts`.
 - Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account

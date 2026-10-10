@@ -14,6 +14,7 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'CLOCK_SKEW_TOLERANCE_MILLISECONDS',
   'DISPLAY_CURRENCY',
   'DISPLAY_NAME_MAX_LENGTH',
+  'EXAMPLE_SEED_OUTCOME',
   'InvalidUserIdError',
   'LINK_OUTCOME',
   'OpenCandleRejectedError',

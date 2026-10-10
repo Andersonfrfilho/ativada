@@ -132,6 +132,7 @@ export type {
 } from './run-results/run-batch.types.js';
 export { resolveRunOwnerScope } from './runs/run-owner.js';
 export { createStrategyRepository } from './strategies/strategy.repository.js';
+export { EXAMPLE_SEED_OUTCOME, type ExampleSeedOutcome } from './strategies/strategy.constant.js';
 export type {
   AddStrategyVersionParams,
   AddStrategyVersionResult,
@@ -140,6 +141,7 @@ export type {
   CreateStrategyWithVersionResult,
   ListStrategiesParams,
   ListVersionsParams,
+  SeedExampleStrategyParams,
   StrategiesPage,
   StrategyCursor,
   StrategyRecord,

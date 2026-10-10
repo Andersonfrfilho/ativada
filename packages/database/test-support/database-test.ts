@@ -44,6 +44,7 @@ import {
   checkWalkForwardWindowRules,
   checkWindowNamespace,
 } from './run-result-rule-checks.js';
+import { checkExampleStrategySeeding } from './example-strategy-checks.js';
 import { checkStrategyRepository } from './strategy-checks.js';
 import { checkStrategyPages } from './strategy-page-checks.js';
 import { checkProfileRepository } from './profile-checks.js';
@@ -112,6 +113,7 @@ async function checkBlockedAccount(handle: DatabaseHandle, client: Bun.SQL): Pro
 async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkStrategyRepository(context);
   await checkStrategyPages(context);
+  await checkExampleStrategySeeding(context);
   await checkRunRepository(context);
   const batch = await checkLargeBatch(context);
   await checkResultPagination(context, batch);

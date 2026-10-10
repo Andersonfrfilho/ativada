@@ -117,7 +117,7 @@ async function checkListsAndForgery(
   flow: BacktestFlowResult,
   window: SeriesWindow,
 ): Promise<void> {
-  const emptyStrategies = dataOf<unknown[]>(
+  const initialStrategies = dataOf<{ id: string; isExample: boolean }[]>(
     await context.call({ subject: SUBJECT_B, path: '/v1/strategies?limit=100' }),
     200,
   );
@@ -125,9 +125,10 @@ async function checkListsAndForgery(
     await context.call({ subject: SUBJECT_B, path: '/v1/runs?limit=100' }),
     200,
   );
+  const exampleOfB = initialStrategies[0];
   assertCondition(
-    emptyStrategies.length === 0 && emptyRuns.length === 0,
-    'B começa sem estratégias nem execuções',
+    initialStrategies.length === 1 && exampleOfB?.isExample === true && emptyRuns.length === 0,
+    'B começa só com a estratégia de exemplo dele e sem execuções',
   );
   const own = dataOf<{ strategy: { id: string }; version: { id: string } }>(
     await context.call({
@@ -160,14 +161,18 @@ async function checkListsAndForgery(
   const strategiesOfB = await idsOf(SUBJECT_B, '/v1/strategies?limit=100');
   const runsOfB = await idsOf(SUBJECT_B, '/v1/runs?limit=100');
   assertCondition(
-    strategiesOfB.join() === own.strategy.id && runsOfB.join() === ownRun.id,
-    'B vê só o que é dele',
+    strategiesOfB.length === 2 &&
+      strategiesOfB.includes(own.strategy.id) &&
+      strategiesOfB.includes(exampleOfB?.id ?? '') &&
+      runsOfB.join() === ownRun.id,
+    'B vê só o que é dele (a própria estratégia e o exemplo dele)',
   );
   const strategiesOfA = await idsOf(SUBJECT_A, '/v1/strategies?limit=100');
   const runsOfA = await idsOf(SUBJECT_A, '/v1/runs?limit=100');
   assertCondition(
     strategiesOfA.includes(flow.strategyId) &&
       !strategiesOfA.includes(own.strategy.id) &&
+      !strategiesOfA.includes(exampleOfB?.id ?? '') &&
       runsOfA.includes(flow.runId) &&
       !runsOfA.includes(ownRun.id),
     'a listagem de A tem as de A e nenhuma de B',

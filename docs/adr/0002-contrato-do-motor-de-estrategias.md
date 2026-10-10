@@ -1275,6 +1275,30 @@ páginas e esbarra nos 120/min por usuário; o painel (T5) deve usar o CSV ou a 
 (3) `WALK_FORWARD_TIMEOUT_SECONDS` (padrão 3.600) e `MARKET_EXCHANGE`/`MARKET_SYMBOLS`/`MARKET_TIMEFRAMES` entram no ambiente da
 API (os mesmos do cron e do worker). (4) O período do pedido é em milissegundos (como `from`/`to` dos candles).
 
+## Estratégia de exemplo (T3.5)
+
+Entregue em `packages/strategy-engine/src/classic-scoreboard.strategy.ts`, `packages/database/src/strategies/example-strategy-seed.ts`
+(migration 0011 com `.rollback.sql`) e `apps/api-cryptoada/src/strategies/{seed-example-strategy.use-case,example-seeding-user-resolver}.ts`.
+
+| Decisão | Valor | Motivo |
+|---|---|---|
+| Fonte única | `CLASSIC_SCOREBOARD_STRATEGY` (`name`, `description`, `version = createStrategyVersion(config)`) no pacote do motor; o fixture de teste (`classic-scoreboard.strategy.json`) segue como oráculo e o contrato prova o MESMO `configHash` (`7dc257e6…`) e a mesma configuração. A descrição não é persistida (não há coluna): serve à documentação e a telas futuras | A constante de produção não pode divergir do que o plano §4 descreve |
+| UMA vez só | `users.example_strategy_seeded_at` (a MARCA) + `UPDATE … WHERE example_strategy_seeded_at IS NULL AND deleted_at IS NULL AND blocked_at IS NULL RETURNING id`, e na MESMA transação `INSERT strategies (is_example) … ON CONFLICT DO NOTHING` e a versão 1. O `UPDATE` serializa os acessos simultâneos pelo lock da linha: o 2º relê, não casa e devolve `skipped`. Falha em qualquer ponto desfaz TUDO, inclusive a marca | Idempotente e à prova de corrida; a marca sobrevive a apagar, renomear ou editar |
+| Segunda trava | Índice único parcial `strategies (user_id) WHERE is_example`: no máximo uma linha de exemplo por usuário, mesmo apagada por soft delete | Defesa em profundidade; não substitui a marca (apagar a linha de vez só é segurado por ela) |
+| Quando semeia | Decorador do `UserResolver` (`createExampleSeedingUserResolver`) na `create-application`: depois de resolver a conta ATIVA, tenta semear; acessos simultâneos do mesmo usuário compartilham UMA tentativa em voo; sucesso fica lembrado no processo (conjunto limitado a 10.000 usuários, esvaziado ao encher); conta bloqueada ou apagada nunca é semeada. Vale para usuário novo (a linha de `users` nasce na mesma requisição) e para quem já existia (preguiçoso, no primeiro acesso depois do deploy) | Cobre "primeiro acesso" e "primeira listagem" sem tocar `resolveUserBySubject` (o caminho quente continua só leitura) |
+| Falha | NUNCA derruba o acesso: o erro vai ao log (`example strategy seeding failed`, só o erro; o logger já redige PII) e o próximo acesso tenta de novo | A semeadura é conveniência, não requisito de login |
+| Cópias | Cada usuário tem linhas próprias (estratégia e versão com ids diferentes); editar a de A não altera a de B | RF00b |
+| LGPD | A estratégia de exemplo é dado do dono como qualquer outra: entra na exportação (`strategies`, `strategy_versions`) e sai com a exclusão; a marca é dado técnico e fica fora da exportação. `make lgpd-test` passou a esperar a linha a mais por dono | RNF08 |
+
+**Prova.** `test/example-strategy.contract.test.ts` (constante = fixture por hash; caso de uso; decorador: simultâneos, cache,
+conta inativa, falha tolerada e repetida, usuários separados), 6 mutantes da API (`test/example-strategy-mutants.contract.test.ts`),
+`checkExampleStrategySeeding` no `make database-test` (20 acessos simultâneos → 1 estratégia e 1 versão; renomear, editar,
+apagar e até remover a linha não trazem o exemplo de volta; cópias independentes; falha desfaz a marca; conta inativa; índice
+parcial) e 6 mutantes do banco (`make example-mutants`: sem marca, sem índice, re-semeia, linha compartilhada, conta inativa
+semeada, marca fora da transação, todos contra Postgres real). `make api-runs-test`: usuário novo → `GET /v1/strategies` já lista o
+exemplo (`isExample: true`), um backtest com ele completa e 20 primeiros acessos simultâneos pela API deixam exatamente 1
+estratégia e 1 versão.
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |

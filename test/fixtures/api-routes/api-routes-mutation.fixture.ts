@@ -21,3 +21,12 @@ export const API_ROUTES_MUTANT_TARGET: MutantTarget = {
   ],
   sourceVariable: 'API_ROUTES_APP_SOURCE',
 };
+
+// A semeadura da estratégia de exemplo (T3.5): o mesmo `src` da API, julgado só pelo contrato dela.
+export const EXAMPLE_STRATEGY_MUTANT_TARGET: MutantTarget = {
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
+  directoryPrefix: 'example-',
+  judgeTestFiles: ['test/example-strategy.contract.test.ts'],
+  sourceVariable: 'API_ROUTES_APP_SOURCE',
+};

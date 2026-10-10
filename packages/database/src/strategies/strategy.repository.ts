@@ -6,6 +6,7 @@ import type { DatabaseExecutor } from '../database-executor.js';
 import { toJsonb } from '../jsonb.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
 import { strategies, strategyVersions } from '../schema/strategies.schema.js';
+import { seedExampleStrategy } from './example-strategy-seed.js';
 import {
   createStrategyWithFirstVersion,
   listStrategiesPage,
@@ -192,6 +193,7 @@ export function createStrategyRepository(handle: DatabaseHandle): StrategyReposi
     createStrategy: (scope, params) => createStrategy(database, scope, params),
     createStrategyWithFirstVersion: (scope, params) =>
       createStrategyWithFirstVersion(database, scope, params),
+    seedExampleStrategy: (scope, params) => seedExampleStrategy(database, scope, params),
     listStrategiesPage: (scope, params) => listStrategiesPage(database, scope, params),
     listVersionsPage: (scope, params) => listVersionsPage(database, scope, params),
     findStrategy: (scope, strategyId) => findStrategy(database, scope, strategyId),

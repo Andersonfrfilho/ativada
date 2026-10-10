@@ -2,6 +2,7 @@
 import {
   closeDatabase,
   createProfileRepository,
+  createStrategyRepository,
   openDatabase,
   pingDatabase,
   resolveUserBySubject,
@@ -12,18 +13,24 @@ import type { BacktestThreadRunner } from './backtest/backtest-thread-runner.js'
 import { createAccountRouteDependencies } from './account/create-account-route-dependencies.js';
 import { createAdminRouteDependencies } from './admin/create-admin-route-dependencies.js';
 import { createAccessTokenVerifier } from './authentication/access-token-verifier.js';
+import type { UserResolver } from './authentication/resolve-authenticated-user.js';
 import { createRemoteKeyResolver } from './authentication/remote-key-resolver.js';
 import type { Environment } from './environment.js';
 import { createRequestHandler, type RequestHandler } from './http/create-request-handler.js';
 import { createIdentityAdmin } from './identity/create-identity-admin.js';
 import type { Logger } from './logging/logger.js';
-import { UNEXPECTED_ERROR_LOG_MESSAGE } from './logging/logging.constant.js';
+import {
+  EXAMPLE_SEEDING_FAILED_LOG_MESSAGE,
+  UNEXPECTED_ERROR_LOG_MESSAGE,
+} from './logging/logging.constant.js';
 import { createGetProfileUseCase, createUpdateProfileUseCase } from './profile/profile.use-case.js';
 import { createTelegramRouteDependencies } from './telegram/create-telegram-route-dependencies.js';
 import { createRateLimiter } from './rate-limit/rate-limiter.js';
 import { createApplicationRunners } from './runs/create-application-runners.js';
 import type { RunDispatcher } from './runs/run-dispatcher.js';
 import { createSessionRouteDependencies } from './session/create-session-routes-dependencies.js';
+import { createExampleSeedingUserResolver } from './strategies/example-seeding-user-resolver.js';
+import { createSeedExampleStrategyUseCase } from './strategies/seed-example-strategy.use-case.js';
 import { createStreamTicketStore } from './stream/stream-ticket-store.js';
 import { createRouter, type Router } from './router/create-router.js';
 import { createApiRoutes } from './routes/create-api-routes.js';
@@ -68,6 +75,20 @@ function createVerifyAccessToken(environment: Environment): VerifyAccessToken {
   });
 }
 
+function createSeedingUserResolver(params: {
+  readonly database: DatabaseHandle;
+  readonly logger: Logger;
+}): UserResolver {
+  const { database, logger } = params;
+  return createExampleSeedingUserResolver({
+    resolveUser: (subject) => resolveUserBySubject(database, subject),
+    seedExampleStrategy: createSeedExampleStrategyUseCase({
+      strategies: createStrategyRepository(database),
+    }),
+    reportFailure: (error) => logger.error(EXAMPLE_SEEDING_FAILED_LOG_MESSAGE, { error }),
+  });
+}
+
 function createApiRouter(params: ApiRouterParams): Router {
   const { environment, logger, database, identity, verifyAccessToken } = params;
   const profileRepository = createProfileRepository(database);
@@ -98,7 +119,7 @@ function createApiRouter(params: ApiRouterParams): Router {
       isDocumentationEnabled: environment.ENV !== PRODUCTION_ENVIRONMENT,
     }),
     verifyAccessToken,
-    resolveUser: (subject) => resolveUserBySubject(database, subject),
+    resolveUser: createSeedingUserResolver({ database, logger }),
     rateLimiter: createRateLimiter({ now: () => Date.now() }),
     trustedProxyHops: environment.TRUSTED_PROXY_HOPS,
     reportUnexpectedError: (error, traceId) =>

@@ -6,6 +6,7 @@ import type {
   StrategyVersionRecord,
   VersionsPage,
 } from '../../../packages/database/src/index.js';
+import { EXAMPLE_SEED_OUTCOME } from '../../../packages/database/src/strategies/strategy.constant.js';
 import type { OwnerScope } from '../../../packages/database/src/ownership/owner-scope.js';
 import type { UserId } from '../../../packages/database/src/ownership/user-id.js';
 
@@ -27,6 +28,7 @@ export function createInMemoryStrategies(): InMemoryStrategies {
   const strategies: StoredStrategy[] = [];
   const versions: StoredVersion[] = [];
   const calls = { listStrategiesPage: 0, listVersionsPage: 0 };
+  const seededUsers = new Set<UserId>();
   let sequence = 0;
 
   function nextDate(): Date {
@@ -80,6 +82,13 @@ export function createInMemoryStrategies(): InMemoryStrategies {
       const strategy = insertStrategy(scope, params.name, params.isExample);
       const version = insertVersion(scope, { strategyId: strategy.id, ...params });
       return Promise.resolve({ strategy, version });
+    },
+    seedExampleStrategy: (scope, params) => {
+      if (seededUsers.has(scope.ownerUserId)) return Promise.resolve(EXAMPLE_SEED_OUTCOME.SKIPPED);
+      seededUsers.add(scope.ownerUserId);
+      const strategy = insertStrategy(scope, params.name, true);
+      insertVersion(scope, { strategyId: strategy.id, ...params });
+      return Promise.resolve(EXAMPLE_SEED_OUTCOME.SEEDED);
     },
     findStrategy: (scope, strategyId) => Promise.resolve(activeOf(scope, strategyId)?.record),
     listStrategies: (scope) =>

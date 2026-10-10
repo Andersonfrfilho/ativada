@@ -2,10 +2,8 @@
 import { attemptLoginRedirects } from '../admin-test/admin-login.js';
 import type { Actor } from '../admin-test/admin-test-context.js';
 import { buildAdminUrl, fetchMasterAdminToken } from '../identity-test/keycloak-client.js';
-import {
-  PERSISTENCE_EXPECTED_ROWS,
-  PERSISTENCE_TABLES,
-} from '../../packages/database/test-support/persistence-lgpd-checks.js';
+import { PERSISTENCE_TABLES } from '../../packages/database/test-support/persistence-lgpd-checks.js';
+import { expectedRowsOf } from './expected-rows.js';
 import { sendRequest } from '../identity-test/http-client.js';
 import { assertCondition } from '../identity-test/identity-test.error.js';
 import {
@@ -64,7 +62,7 @@ async function assertPersistenceRows(
 ): Promise<void> {
   for (const table of PERSISTENCE_TABLES) {
     const count = await countOwnedRows(context, { table, userId: params.userId });
-    const expected = params.isPurged ? 0 : PERSISTENCE_EXPECTED_ROWS[table];
+    const expected = params.isPurged ? 0 : expectedRowsOf(table);
     assertCondition(count === expected, `${table}: ${count} linhas (esperado ${expected})`);
   }
 }

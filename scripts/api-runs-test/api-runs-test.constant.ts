@@ -4,6 +4,8 @@ export const EXCHANGE = 'binance';
 export const SYMBOL = 'BTCUSDT';
 export const SUBJECT_A = 'subject-api-runs-a';
 export const SUBJECT_B = 'subject-api-runs-b';
+export const SUBJECT_EXAMPLE = 'subject-api-runs-example';
+export const SUBJECT_EXAMPLE_RACE = 'subject-api-runs-example-race';
 export const HEALTH_PATH = '/v1/health';
 export const HEALTH_BUDGET_MILLISECONDS = 100;
 // A rota de saúde tem 600/min por IP: uma amostra a cada 120 ms (500/min) fica abaixo.

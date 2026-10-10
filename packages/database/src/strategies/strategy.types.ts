@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { JsonContainer, JsonValue } from '../json-value.types.js';
 import type { OwnerScope } from '../ownership/owner-scope.js';
+import type { ExampleSeedOutcome } from './strategy.constant.js';
 
 export type StrategyRecord = {
   readonly id: string;
@@ -74,6 +75,12 @@ export type CreateStrategyWithVersionResult = {
   readonly version: StrategyVersionRecord;
 };
 
+export type SeedExampleStrategyParams = {
+  readonly name: string;
+  readonly config: JsonContainer;
+  readonly configHash: string;
+};
+
 export type StrategyRepository = {
   readonly createStrategy: (
     scope: OwnerScope,
@@ -84,6 +91,12 @@ export type StrategyRepository = {
     scope: OwnerScope,
     params: CreateStrategyWithVersionParams,
   ) => Promise<CreateStrategyWithVersionResult>;
+  // UMA vez só por usuário (marca em `users`): a estratégia de exemplo (`is_example`) e a versão 1, na mesma transação.
+  // `skipped` quando o usuário já a recebeu (mesmo que a tenha apagado) ou a conta está apagada ou bloqueada.
+  readonly seedExampleStrategy: (
+    scope: OwnerScope,
+    params: SeedExampleStrategyParams,
+  ) => Promise<ExampleSeedOutcome>;
   readonly listStrategiesPage: (
     scope: OwnerScope,
     params: ListStrategiesParams,

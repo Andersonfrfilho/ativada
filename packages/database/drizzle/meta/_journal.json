@@ -78,6 +78,13 @@
       "when": 1791628759628,
       "tag": "0010_run_request",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791633052902,
+      "tag": "0011_example_strategy_seed",
+      "breakpoints": true
     }
   ]
 }

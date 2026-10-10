@@ -4,6 +4,7 @@ export const TRUNCATED_VALUE = '[TRUNCATED]';
 export const CIRCULAR_VALUE = '[CIRCULAR]';
 export const MAX_LOG_DEPTH = 6;
 export const UNEXPECTED_ERROR_LOG_MESSAGE = 'unexpected error';
+export const EXAMPLE_SEEDING_FAILED_LOG_MESSAGE = 'example strategy seeding failed';
 export const DATABASE_ERROR_LOG_NAME = 'DatabaseError';
 
 export const SENSITIVE_KEYS: ReadonlySet<string> = new Set([

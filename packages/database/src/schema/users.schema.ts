@@ -29,6 +29,7 @@ export const users = pgTable(
     telegramChatId: varchar('telegram_chat_id', { length: 32 }),
     alertTelegramEnabled: boolean('alert_telegram_enabled').notNull().default(true),
     limits: jsonb('limits').notNull().default(DEFAULT_USER_LIMITS),
+    exampleStrategySeededAt: timestamp('example_strategy_seeded_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     blockedAt: timestamp('blocked_at', { withTimezone: true }),

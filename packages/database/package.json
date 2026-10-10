@@ -10,7 +10,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun run src/migrate.ts",
     "db:migration-test": "bun run test-support/migration-test.ts",
-    "db:database-test": "bun run test-support/database-test.ts"
+    "db:database-test": "bun run test-support/database-test.ts",
+    "db:example-strategy-test": "bun run test-support/example-strategy-test.ts"
   },
   "dependencies": {
     "@cryptoada/environment": "workspace:*",

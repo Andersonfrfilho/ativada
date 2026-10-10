@@ -268,6 +268,7 @@ type AuthenticatedUser = {
 | `deleted_at` | `timestamptz` nulo | passo 1 da exclusão (§h) |
 | `identity_deleted_at` | `timestamptz` nulo | passo 2 concluído: usuário apagado no Keycloak |
 | `data_purged_at` | `timestamptz` nulo | passo 3 concluído: dados de dono apagados e colunas pessoais anuladas |
+| `example_strategy_seeded_at` | `timestamptz` nulo | (T3.5, migration 0011) a MARCA de que o usuário já recebeu a estratégia de exemplo; preenchida na mesma transação que a cria e nunca zerada (apagar, renomear ou editar o exemplo não o traz de volta). Dado técnico: não entra na exportação |
 
 E-mail não é coluna. **Resolução por requisição — leitura primeiro, escrita só na primeira vez**
 (`resolveUserBySubject(subject)` em `@cryptoada/database`, T0.7, única função pública que devolve
@@ -288,6 +289,8 @@ a resposta é `401 ACCOUNT_DELETED` e **nada é recriado**: um access token aind
 uma conta apagada não ressuscita a conta. Com `blocked_at`, `403 ACCOUNT_BLOCKED`.
 
 O **rate limit por `sub` vem antes** dessa consulta (§g): um token válido em laço não chega ao banco.
+
+**Estratégia de exemplo no primeiro acesso (T3.5).** Depois da resolução, a API semeia o Placar clássico do usuário (ADR 0002 §"Estratégia de exemplo (T3.5)"): a resolução em si continua só leitura e `resolveUserBySubject` não muda; quem semeia é um decorador do `UserResolver` na API, que ignora conta apagada ou bloqueada, tenta UMA vez por usuário por processo e **nunca deixa a falha derrubar o acesso** (registra e tenta de novo no próximo).
 
 ### e) Isolamento por dono (D11)
 

@@ -110,6 +110,10 @@ export {
 } from './indicator-reading.js';
 export type { JsonValue } from './json-value.types.js';
 export {
+  CLASSIC_SCOREBOARD_STRATEGY,
+  type ExampleStrategy,
+} from './classic-scoreboard.strategy.js';
+export {
   createRunSetup,
   createStrategyVersion,
   hashRunParameters,

@@ -1,11 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { Actor } from '../admin-test/admin-test-context.js';
 import {
-  PERSISTENCE_EXPECTED_ROWS,
   PERSISTENCE_TABLES,
   SEEDED_REQUEST,
 } from '../../packages/database/test-support/persistence-lgpd-checks.js';
 import { assertCondition } from '../identity-test/identity-test.error.js';
+import { expectedRowsOf } from './expected-rows.js';
 import { readUserId } from './database-reads.js';
 import {
   CHAT_OF_A,
@@ -76,8 +76,10 @@ function assertOwnData(response: ExportResponse, own: Side): ExportBody {
 function assertPersistenceTables(tables: ExportBody['data']['tables']): void {
   for (const table of PERSISTENCE_TABLES) {
     const count = tables[table]?.length ?? -1;
-    assertCondition(count === PERSISTENCE_EXPECTED_ROWS[table], `exportação de ${table}: ${count}`);
+    assertCondition(count === expectedRowsOf(table), `exportação de ${table}: ${count}`);
   }
+  const examples = (tables['strategies'] ?? []).filter((row) => row['isExample'] === true);
+  assertCondition(examples.length === 1, `estratégia de exemplo na exportação: ${examples.length}`);
   const request = JSON.stringify(tables['runs']?.[0]?.['request']);
   assertCondition(
     request === JSON.stringify(SEEDED_REQUEST),

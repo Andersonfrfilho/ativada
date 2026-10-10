@@ -15,6 +15,7 @@ const EXPECTED_COLUMNS: readonly string[] = [
   'deleted_at',
   'display_currency',
   'display_name',
+  'example_strategy_seeded_at',
   'id',
   'identity_deleted_at',
   'keycloak_sub',

@@ -24,6 +24,8 @@ import type * as ErrorCatalogModule from '../../../apps/api-cryptoada/src/shared
 import type * as SecurityConstantModule from '../../../apps/api-cryptoada/src/http/http-security.constant.js';
 import type * as StrategyRoutesModule from '../../../apps/api-cryptoada/src/strategies/strategies.routes.js';
 import type * as StrategyUseCasesModule from '../../../apps/api-cryptoada/src/strategies/strategy.use-cases.js';
+import type * as SeedExampleModule from '../../../apps/api-cryptoada/src/strategies/seed-example-strategy.use-case.js';
+import type * as SeedingResolverModule from '../../../apps/api-cryptoada/src/strategies/example-seeding-user-resolver.js';
 
 const PRODUCTION_APP_SOURCE = new URL('../../../apps/api-cryptoada/src', import.meta.url).pathname;
 
@@ -51,6 +53,8 @@ export type ApiApp = {
   readonly runRoutes: typeof RunRoutesModule;
   readonly strategyRoutes: typeof StrategyRoutesModule;
   readonly strategyUseCases: typeof StrategyUseCasesModule;
+  readonly seedExample: typeof SeedExampleModule;
+  readonly seedingResolver: typeof SeedingResolverModule;
   readonly openApi: typeof BuildOpenApiModule;
   readonly undocumentedError: typeof UndocumentedErrorModule;
   readonly apiRoutes: typeof CreateApiRoutesModule;
@@ -89,6 +93,8 @@ export async function loadApiApp(): Promise<ApiApp> {
     runRoutes: await load('runs/runs.routes'),
     strategyRoutes: await load('strategies/strategies.routes'),
     strategyUseCases: await load('strategies/strategy.use-cases'),
+    seedExample: await load('strategies/seed-example-strategy.use-case'),
+    seedingResolver: await load('strategies/example-seeding-user-resolver'),
     openApi: await load('openapi/build-openapi-document'),
     undocumentedError: await load('openapi/undocumented-route.error'),
     apiRoutes: await load('routes/create-api-routes'),

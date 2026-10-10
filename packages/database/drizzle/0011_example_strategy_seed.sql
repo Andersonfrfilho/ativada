@@ -1,0 +1,2 @@
+ALTER TABLE "users" ADD COLUMN "example_strategy_seeded_at" timestamp with time zone;--> statement-breakpoint
+CREATE UNIQUE INDEX "strategies_user_id_example_unique" ON "strategies" USING btree ("user_id") WHERE "strategies"."is_example";
