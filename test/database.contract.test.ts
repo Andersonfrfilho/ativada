@@ -22,6 +22,7 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'RUN_TRANSITION_OUTCOME',
   'TIMEZONE_MAX_LENGTH',
   'USER_RESOLUTION_STATUS',
+  'WALK_FORWARD_WINDOW_STATUS',
   'closeDatabase',
   'createAccountDeletionRepository',
   'createAccountExportRepository',
