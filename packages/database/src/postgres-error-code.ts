@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 export const UNIQUE_VIOLATION_SQLSTATE = '23505';
+export const FOREIGN_KEY_VIOLATION_SQLSTATE = '23503';
 
 const SQLSTATE_PATTERN = /^[0-9A-Z]{5}$/;
 const MAX_CAUSE_DEPTH = 4;
@@ -26,6 +27,10 @@ export function readPostgresErrorCode(error: unknown): string | undefined {
 
 export function isUniqueViolation(error: unknown): boolean {
   return readPostgresErrorCode(error) === UNIQUE_VIOLATION_SQLSTATE;
+}
+
+export function isForeignKeyViolation(error: unknown): boolean {
+  return readPostgresErrorCode(error) === FOREIGN_KEY_VIOLATION_SQLSTATE;
 }
 
 const DRIZZLE_FAILED_QUERY_PREFIX = 'Failed query:';

@@ -3,6 +3,7 @@ import { MIGRATIONS_FOLDER } from '../src/database.constant.js';
 import { closeDatabase, openDatabase } from '../src/database-handle.js';
 import { applyMigrations } from '../src/migrate.js';
 import { readDatabaseUrl } from '../src/read-database-url.js';
+import { checkLiveRuns } from './live-run-checks.js';
 import { checkRunQueueClaims } from './run-queue-checks.js';
 import { checkRunQueueLifecycle } from './run-queue-lifecycle-checks.js';
 import { checkRunQueueReading } from './run-queue-reading-checks.js';
@@ -29,6 +30,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkRunQueueClaims(context);
     await checkRunQueueLifecycle(context);
     await checkRunQueueReading(context);
+    await checkLiveRuns(context);
   } finally {
     await client.close();
     await closeDatabase(handle);

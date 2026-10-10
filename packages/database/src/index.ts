@@ -148,6 +148,8 @@ export type {
   RunQueueRepository,
   RunQueueSummary,
 } from './run-queue/run-queue.types.js';
+export { createLiveRunRepository } from './live-runs/live-run.repository.js';
+export type * from './live-runs/live-run.types.js';
 export { createStrategyRepository } from './strategies/strategy.repository.js';
 export { EXAMPLE_SEED_OUTCOME, type ExampleSeedOutcome } from './strategies/strategy.constant.js';
 export type {
@@ -190,4 +192,8 @@ export {
   type IssueLinkCodeParams,
   type TelegramLinkRepository,
 } from './telegram/telegram-link.repository.js';
-export { isDatabaseError, readPostgresErrorCode } from './postgres-error-code.js';
+export {
+  isDatabaseError,
+  isForeignKeyViolation,
+  readPostgresErrorCode,
+} from './postgres-error-code.js';
