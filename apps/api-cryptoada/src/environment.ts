@@ -16,6 +16,10 @@ const ORIGIN_LIST_EXPECTATION =
   'lista de origens exatas separadas por vírgula (https://host[:porta], sem caminho nem barra final)';
 const URL_LIST_EXPECTATION = 'lista de URLs http:// ou https:// separadas por vírgula';
 const TEXT_LIST_EXPECTATION = 'lista de textos separados por vírgula';
+const BACKTEST_TIMEOUT_EXPECTATION = 'inteiro de segundos entre 5 e 86400';
+const MIN_BACKTEST_TIMEOUT_SECONDS = 5;
+const MAX_BACKTEST_TIMEOUT_SECONDS = 86_400;
+const DEFAULT_BACKTEST_TIMEOUT_SECONDS = 900;
 const PROXY_HOPS_EXPECTATION = 'inteiro entre 0 e 10';
 const TELEGRAM_SECRET_EXPECTATION = 'texto de 16 a 256 caracteres A-Z, a-z, 0-9, _ ou -';
 const TELEGRAM_PAIR_EXPECTATION =
@@ -116,6 +120,12 @@ export const environmentSchema = z
       .regex(TELEGRAM_SECRET_PATTERN, { error: TELEGRAM_SECRET_EXPECTATION })
       .optional(),
     TELEGRAM_API_BASE_URL: httpUrlSchema.default(DEFAULT_TELEGRAM_API_BASE_URL),
+    BACKTEST_TIMEOUT_SECONDS: z.coerce
+      .number({ error: BACKTEST_TIMEOUT_EXPECTATION })
+      .int({ error: BACKTEST_TIMEOUT_EXPECTATION })
+      .min(MIN_BACKTEST_TIMEOUT_SECONDS, { error: BACKTEST_TIMEOUT_EXPECTATION })
+      .max(MAX_BACKTEST_TIMEOUT_SECONDS, { error: BACKTEST_TIMEOUT_EXPECTATION })
+      .default(DEFAULT_BACKTEST_TIMEOUT_SECONDS),
   })
   .refine(
     (values) =>
@@ -142,4 +152,13 @@ export type Environment = z.infer<typeof environmentSchema>;
 
 export function loadEnvironment(): Environment {
   return parseEnvironment(environmentSchema, process.env);
+}
+
+// O que a thread do backtest lê do ambiente que a API lhe passa: só a conexão com o banco.
+export const backtestWorkerEnvironmentSchema = z.object({ DATABASE_URL: postgresUrlSchema });
+
+export type BacktestWorkerEnvironment = z.infer<typeof backtestWorkerEnvironmentSchema>;
+
+export function loadBacktestWorkerEnvironment(): BacktestWorkerEnvironment {
+  return parseEnvironment(backtestWorkerEnvironmentSchema, process.env);
 }

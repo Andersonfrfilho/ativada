@@ -18,6 +18,9 @@ const CONTEXT = 'load-backtest-context.ts';
 const STREAM = 'candle-stream.ts';
 const RESTORE = 'restore-checkpoint.ts';
 const EXECUTE = 'execute-backtest.ts';
+const RUNNER = 'backtest-thread-runner.ts';
+const SERVE = 'serve-backtest-worker.ts';
+const OUTCOME = 'thread-outcome.ts';
 
 function edit(file: string, find: string, replace: string, occurrences = 1): BacktestSourceEdit[] {
   return [{ file, find, replace, occurrences }];
@@ -157,6 +160,50 @@ const MUTANTS: readonly BacktestSourceMutant[] = [
       STREAM,
       'const span = params.pageCandles * params.durationMilliseconds;',
       'const span = params.durationMilliseconds;',
+    ),
+  },
+  {
+    name: 'THREAD_WITHOUT_TIMEOUT',
+    edits: edit(
+      RUNNER,
+      "() => this.settle({ kind: 'failure', errorCode: BACKTEST_ERROR_CODE.BACKTEST_TIMEOUT }),",
+      '() => undefined,',
+    ),
+  },
+  {
+    name: 'THREAD_NOT_TERMINATED',
+    edits: edit(RUNNER, 'this.worker?.terminate();', ''),
+  },
+  {
+    name: 'THREAD_DEATH_NOT_DETECTED',
+    edits: edit(RUNNER, "worker.addEventListener('close', () => this.crash());", ''),
+  },
+  {
+    name: 'SHUTDOWN_DOES_NOT_TERMINATE',
+    edits: edit(RUNNER, 'for (const run of running) run.terminate();', ''),
+  },
+  {
+    name: 'WORKER_EVENT_NOT_VALIDATED',
+    edits: edit(
+      RUNNER,
+      'return parsed.success ? parsed.data : undefined;',
+      "return parsed.success ? parsed.data : { type: 'ready' as const };",
+    ),
+  },
+  {
+    name: 'WORKER_REQUEST_NOT_VALIDATED',
+    edits: edit(SERVE, 'if (!request.success) {', 'if (false as boolean) {'),
+  },
+  {
+    name: 'WORKER_KEEPS_ITS_DATABASE_OPEN',
+    edits: edit(SERVE, 'await opened.close();', ''),
+  },
+  {
+    name: 'CRASH_NOT_RECORDED',
+    edits: edit(
+      OUTCOME,
+      'const isRecorded = await safeRecord(params.recordFailure, { runId, errorCode });',
+      'const isRecorded = false;',
     ),
   },
 ];

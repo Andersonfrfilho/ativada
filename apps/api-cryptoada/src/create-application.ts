@@ -7,6 +7,12 @@ import {
   resolveUserBySubject,
 } from '@cryptoada/database';
 
+import { failBacktestRun } from './backtest/run-backtest.js';
+import { createBacktestDatabase } from './backtest/create-backtest-database.js';
+import {
+  createBacktestThreadRunner,
+  type BacktestThreadRunner,
+} from './backtest/backtest-thread-runner.js';
 import { createAccountRouteDependencies } from './account/create-account-route-dependencies.js';
 import { createAdminRouteDependencies } from './admin/create-admin-route-dependencies.js';
 import { createAccessTokenVerifier } from './authentication/access-token-verifier.js';
@@ -26,6 +32,8 @@ import { createApiRoutes } from './routes/create-api-routes.js';
 
 export type Application = {
   readonly handler: RequestHandler;
+  // A fila (T3.6) e as rotas (T3.4) enfileiram backtests aqui; cada um roda numa `worker_thread`.
+  readonly backtestRunner: BacktestThreadRunner;
   readonly closeResources: () => Promise<void>;
 };
 
@@ -87,9 +95,25 @@ function createApiRouter(params: ApiRouterParams): Router {
   });
 }
 
+const MILLISECONDS_PER_SECOND = 1_000;
+
+function createApiBacktestRunner(
+  environment: Environment,
+  database: DatabaseHandle,
+): BacktestThreadRunner {
+  const backtestDatabase = createBacktestDatabase(database);
+  return createBacktestThreadRunner({
+    workerUrl: new URL('./backtest/backtest.worker.ts', import.meta.url).href,
+    workerEnvironment: { DATABASE_URL: environment.DATABASE_URL },
+    timeoutMilliseconds: environment.BACKTEST_TIMEOUT_SECONDS * MILLISECONDS_PER_SECOND,
+    recordFailure: (failure) => failBacktestRun({ database: backtestDatabase, ...failure }),
+  });
+}
+
 export function createApplication(params: CreateApplicationParams): Application {
   const { environment, logger } = params;
   const database = openDatabase(environment.DATABASE_URL);
+  const backtestRunner = createApiBacktestRunner(environment, database);
   const router = createApiRouter({
     environment,
     logger,
@@ -103,6 +127,10 @@ export function createApplication(params: CreateApplicationParams): Application 
       corsAllowedOrigins: environment.CORS_ALLOWED_ORIGINS,
       logger,
     }),
-    closeResources: () => closeDatabase(database),
+    backtestRunner,
+    closeResources: async (): Promise<void> => {
+      await backtestRunner.terminateAll();
+      await closeDatabase(database);
+    },
   };
 }

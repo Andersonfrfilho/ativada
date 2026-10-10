@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import type { createBacktestThreadRunner } from '../../../apps/api-cryptoada/src/backtest/backtest-thread-runner.js';
 import type {
   failBacktestRun,
   runBacktest,
@@ -34,5 +35,19 @@ function isBacktestApi(candidate: unknown): candidate is BacktestApi {
 export async function loadBacktestApi(): Promise<BacktestApi> {
   const module: unknown = await import(`${resolveBacktestSource()}/run-backtest.ts`);
   if (!isBacktestApi(module)) throw new Error('Módulo de backtest sem a API esperada.');
+  return module;
+}
+
+export type ThreadApi = {
+  readonly createBacktestThreadRunner: typeof createBacktestThreadRunner;
+};
+
+function isThreadApi(candidate: unknown): candidate is ThreadApi {
+  return typeof readMember(candidate, 'createBacktestThreadRunner') === 'function';
+}
+
+export async function loadThreadApi(): Promise<ThreadApi> {
+  const module: unknown = await import(`${resolveBacktestSource()}/backtest-thread-runner.ts`);
+  if (!isThreadApi(module)) throw new Error('Módulo da thread sem a API esperada.');
   return module;
 }

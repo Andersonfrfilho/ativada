@@ -14,6 +14,7 @@ export const BACKTEST_JUDGE_TEST_FILES: readonly string[] = [
   'test/backtest-failures.contract.test.ts',
   'test/backtest-continuity.contract.test.ts',
   'test/backtest-thread.contract.test.ts',
+  'test/backtest-thread.contract.test.ts',
 ];
 
 export type BacktestSourceEdit = {
