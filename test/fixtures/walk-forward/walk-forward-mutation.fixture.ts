@@ -101,3 +101,19 @@ export async function removeMutantCopies(target: MutantTarget): Promise<void> {
     entries.map((entry) => rm(`${target.mutantRoot}/${entry}`, { recursive: true, force: true })),
   );
 }
+
+// O caso de uso do walk-forward: a cópia leva o `src` INTEIRO da API, porque o módulo importa irmãos (`../backtest`).
+export const APP_MUTANT_TARGET: MutantTarget = {
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
+  // Dentro da app: é de lá que `@cryptoada/*` e `zod` se resolvem, como no módulo de produção.
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
+  directoryPrefix: 'walk-forward-',
+  judgeTestFiles: [
+    'test/walk-forward-use-case.contract.test.ts',
+    'test/walk-forward-continuity.contract.test.ts',
+    'test/walk-forward-failures.contract.test.ts',
+    'test/walk-forward-parity.contract.test.ts',
+    'test/walk-forward-threads.contract.test.ts',
+  ],
+  sourceVariable: 'WALK_FORWARD_APP_SOURCE',
+};

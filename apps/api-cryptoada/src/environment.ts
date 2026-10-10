@@ -20,6 +20,10 @@ const BACKTEST_TIMEOUT_EXPECTATION = 'inteiro de segundos entre 5 e 86400';
 const MIN_BACKTEST_TIMEOUT_SECONDS = 5;
 const MAX_BACKTEST_TIMEOUT_SECONDS = 86_400;
 const DEFAULT_BACKTEST_TIMEOUT_SECONDS = 900;
+const WALK_FORWARD_THREADS_EXPECTATION = 'inteiro entre 1 e 8';
+const MIN_WALK_FORWARD_THREADS = 1;
+const MAX_WALK_FORWARD_THREADS = 8;
+const DEFAULT_WALK_FORWARD_THREADS = 2;
 const PROXY_HOPS_EXPECTATION = 'inteiro entre 0 e 10';
 const TELEGRAM_SECRET_EXPECTATION = 'texto de 16 a 256 caracteres A-Z, a-z, 0-9, _ ou -';
 const TELEGRAM_PAIR_EXPECTATION =
@@ -85,6 +89,14 @@ const urlListSchema = z
   .transform(splitCommaSeparatedList)
   .pipe(z.array(httpUrlSchema).min(1, { error: URL_LIST_EXPECTATION }));
 
+// Quantas threads de busca o walk-forward usa (RNF02): o resultado não depende do número.
+const walkForwardThreadsSchema = z.coerce
+  .number({ error: WALK_FORWARD_THREADS_EXPECTATION })
+  .int({ error: WALK_FORWARD_THREADS_EXPECTATION })
+  .min(MIN_WALK_FORWARD_THREADS, { error: WALK_FORWARD_THREADS_EXPECTATION })
+  .max(MAX_WALK_FORWARD_THREADS, { error: WALK_FORWARD_THREADS_EXPECTATION })
+  .default(DEFAULT_WALK_FORWARD_THREADS);
+
 export const environmentSchema = z
   .object({
     ENV: environmentNameSchema,
@@ -126,6 +138,7 @@ export const environmentSchema = z
       .min(MIN_BACKTEST_TIMEOUT_SECONDS, { error: BACKTEST_TIMEOUT_EXPECTATION })
       .max(MAX_BACKTEST_TIMEOUT_SECONDS, { error: BACKTEST_TIMEOUT_EXPECTATION })
       .default(DEFAULT_BACKTEST_TIMEOUT_SECONDS),
+    WALK_FORWARD_THREADS: walkForwardThreadsSchema,
   })
   .refine(
     (values) =>
@@ -161,4 +174,16 @@ export type BacktestWorkerEnvironment = z.infer<typeof backtestWorkerEnvironment
 
 export function loadBacktestWorkerEnvironment(): BacktestWorkerEnvironment {
   return parseEnvironment(backtestWorkerEnvironmentSchema, process.env);
+}
+
+// O que a thread do walk-forward lê do ambiente que a API lhe passa: a conexão com o banco e as threads de busca.
+export const walkForwardWorkerEnvironmentSchema = z.object({
+  DATABASE_URL: postgresUrlSchema,
+  WALK_FORWARD_THREADS: walkForwardThreadsSchema,
+});
+
+export type WalkForwardWorkerEnvironment = z.infer<typeof walkForwardWorkerEnvironmentSchema>;
+
+export function loadWalkForwardWorkerEnvironment(): WalkForwardWorkerEnvironment {
+  return parseEnvironment(walkForwardWorkerEnvironmentSchema, process.env);
 }

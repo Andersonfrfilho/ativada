@@ -31,7 +31,7 @@ import { createResultReaders } from './database-result-readers.js';
 
 const TIMEFRAMES: readonly string[] = Object.values(ENGINE_TIMEFRAME);
 
-function isTimeframe(value: string): value is CandleRecord['timeframe'] {
+export function isTimeframe(value: string): value is CandleRecord['timeframe'] {
   return TIMEFRAMES.includes(value);
 }
 
@@ -49,18 +49,18 @@ function toEngineCandle(record: CandleRecord): EngineCandle {
   };
 }
 
-type SessionTarget = {
+export type SessionTarget = {
   readonly handle: DatabaseHandle;
   readonly scope: OwnerScope;
   readonly runId: string;
 };
 
-type LifecycleMethods = Pick<
+export type LifecycleMethods = Pick<
   BacktestRunSession,
   'findRun' | 'startRun' | 'readStatus' | 'readCheckpoint' | 'completeRun' | 'failRun'
 >;
 
-function createRunLifecycle(target: SessionTarget): LifecycleMethods {
+export function createRunLifecycle(target: SessionTarget): LifecycleMethods {
   const { handle, scope, runId } = target;
   const runs = createRunRepository(handle);
   const strategies = createStrategyRepository(handle);
@@ -90,7 +90,7 @@ function createRunLifecycle(target: SessionTarget): LifecycleMethods {
   };
 }
 
-function createMarketReaders(
+export function createMarketReaders(
   handle: DatabaseHandle,
   series: Omit<CandleSeriesKey, 'exchange'>,
 ): Pick<BacktestRunSession, 'findCandles' | 'listSentiment'> {
