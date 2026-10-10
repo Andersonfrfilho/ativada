@@ -89,6 +89,10 @@ export type { JsonContainer, JsonValue } from './json-value.types.js';
 export { RUN_KIND, RUN_STATUS, RUN_TRANSITION_OUTCOME } from './runs/run.constant.js';
 export type { RunKind, RunStatus } from './runs/run.constant.js';
 export { createRunRepository } from './runs/run.repository.js';
+export { createAlertRepository } from './alerts/alert.repository.js';
+export { ALERT_CHANNEL, ALERT_SIDE, ALERT_STATUS } from './alerts/alert.constant.js';
+export { createRunMetricsRepository } from './runs/run-metrics.repository.js';
+export type * from './alerts/alerts.public-types.js';
 export type {
   CreateRunParams,
   EngineCheckpoint,
@@ -184,17 +188,10 @@ export {
 } from './users/display-currency.constant.js';
 export { createProfileRepository, type ProfileRepository } from './users/profile.repository.js';
 export type { ProfilePatch, ProfileRecord } from './users/profile.types.js';
-export { LINK_OUTCOME, type LinkOutcome } from './telegram/telegram-link.constant.js';
-export {
-  createTelegramLinkConsumer,
-  type ConsumeLinkCodeParams,
-  type TelegramLinkConsumer,
-} from './telegram/telegram-link-consumer.js';
-export {
-  createTelegramLinkRepository,
-  type IssueLinkCodeParams,
-  type TelegramLinkRepository,
-} from './telegram/telegram-link.repository.js';
+export { LINK_OUTCOME } from './telegram/telegram-link.constant.js';
+export { createTelegramLinkConsumer } from './telegram/telegram-link-consumer.js';
+export { createTelegramLinkRepository } from './telegram/telegram-link.repository.js';
+export type * from './telegram/telegram.public-types.js';
 export {
   isDatabaseError,
   isForeignKeyViolation,

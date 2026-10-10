@@ -10,6 +10,9 @@ const ROLLBACK_SUFFIX = '.rollback.sql';
 const MIGRATION_FILE_PATTERN = /^\d{4}_.+\.sql$/;
 const CREATE_ENUM_TYPE_PATTERN = /CREATE\s+TYPE[^;]*\bAS\s+ENUM\b/i;
 const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
+  'ALERT_CHANNEL',
+  'ALERT_SIDE',
+  'ALERT_STATUS',
   'AUDIT_ACTOR_KIND',
   'CLOCK_SKEW_TOLERANCE_MILLISECONDS',
   'DISPLAY_CURRENCY',
@@ -32,6 +35,7 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'createAccountExportRepository',
   'createAccountPurgeRepository',
   'createAdminAccountRepository',
+  'createAlertRepository',
   'createAuditEventRepository',
   'createAuditRetentionRepository',
   'createBlockedAccountRepository',
@@ -40,6 +44,7 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'createProfileRepository',
   'createRunBatchRepository',
   'createRunEventListener',
+  'createRunMetricsRepository',
   'createRunQueueRepository',
   'createRunRepository',
   'createRunResultRepository',

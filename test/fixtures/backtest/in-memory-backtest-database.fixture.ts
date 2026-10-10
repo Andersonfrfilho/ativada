@@ -135,6 +135,7 @@ function createWriter(context: Context, stage: StoredResults, batch: number): Ru
   let stagedCheckpoint: StoredCheckpoint | undefined;
   return {
     publishStepEvents: (): Promise<number> => Promise.resolve(0),
+    appendAlerts: (): Promise<AppendResult> => Promise.resolve({ written: 0 }),
     readStatus: (): Promise<RunStatus> => {
       memory.log.push('status');
       return Promise.resolve(memory.state.status);

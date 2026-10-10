@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { and, eq } from 'drizzle-orm';
 
+import { writeAlerts } from '../alerts/alert-write.js';
 import type { DatabaseExecutor } from '../database-executor.js';
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
@@ -46,6 +47,14 @@ function createWriter(target: BatchTarget, status: RunStatus): RunBatchWriter {
   return {
     readStatus: () => Promise.resolve(status),
     appendResults: (rows) => appendResults(target, rows),
+    appendAlerts: async (rows) => ({
+      written: await writeAlerts({
+        executor: target.executor,
+        ownerUserId: target.scope.ownerUserId,
+        runId: target.runId,
+        rows,
+      }),
+    }),
     appendWindows: async (rows) => ({
       written: await writeWindows({
         executor: target.executor,

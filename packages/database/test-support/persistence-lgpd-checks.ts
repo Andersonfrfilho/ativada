@@ -1,5 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { DatabaseHandle } from '../src/database-handle.js';
+import { ALERT_CHANNEL, ALERT_SIDE } from '../src/alerts/alert.constant.js';
+import { readOpenDatabase, type DatabaseHandle } from '../src/database-handle.js';
+import { toJsonb } from '../src/jsonb.js';
+import { alerts } from '../src/schema/alerts.schema.js';
 import { createAccountExportRepository } from '../src/account/account-export.repository.js';
 import { RUN_KIND, RUN_STATUS } from '../src/runs/run.constant.js';
 import { createRunRepository } from '../src/runs/run.repository.js';
@@ -39,8 +42,10 @@ export const PERSISTENCE_TABLES = [
   'equity_points',
   'run_commands',
   'walk_forward_windows',
+  'alerts',
 ] as const;
 const ENGINE_STATE_MARKER = 'engine-state-marker';
+const ALERT_REASON_MARKER = 'alert-reason-marker';
 export const PERSISTENCE_EXPECTED_ROWS: Readonly<
   Record<(typeof PERSISTENCE_TABLES)[number], number>
 > = {
@@ -54,6 +59,7 @@ export const PERSISTENCE_EXPECTED_ROWS: Readonly<
   equity_points: 3,
   run_commands: 1,
   walk_forward_windows: 2,
+  alerts: 1,
 };
 
 export function strategyNameOf(owner: LifecycleOwner): string {
@@ -99,6 +105,26 @@ export async function seedOwnerPersistence(
   await results.appendEquityPoints(owner.scope, run.id, buildEquityPoints(3));
   await results.appendCommands(owner.scope, run.id, buildCommands(1));
   await results.appendWindows(owner.scope, run.id, buildWindows(2));
+  await seedAlert(handle, owner, run.id);
+}
+
+// Direto na tabela: o alerta é dado do dono (texto do motivo), e a semente não depende do vínculo do Telegram.
+async function seedAlert(
+  handle: DatabaseHandle,
+  owner: LifecycleOwner,
+  runId: string,
+): Promise<void> {
+  await readOpenDatabase(handle)
+    .database.insert(alerts)
+    .values({
+      id: Bun.randomUUIDv7(),
+      userId: owner.userId,
+      runId,
+      candleTime: 1,
+      side: ALERT_SIDE.BUY,
+      channel: ALERT_CHANNEL.TELEGRAM,
+      payload: toJsonb({ reason: ALERT_REASON_MARKER }),
+    });
 }
 
 export async function seedPersistenceOwners(
@@ -134,6 +160,7 @@ export async function checkPersistenceExport(
   }
   const text = JSON.stringify(data);
   assertCondition(text.includes(strategyNameOf(owners.ownerA)), 'estratégia de A na exportação');
+  assertCondition(text.includes(ALERT_REASON_MARKER), 'o alerta de A está na exportação');
   for (const foreign of [strategyNameOf(owners.ownerB), owners.ownerB.userId]) {
     assertCondition(!text.includes(foreign), `a exportação de A vazou ${foreign}`);
   }
@@ -167,6 +194,6 @@ export async function checkPersistencePurge(
     );
   }
   reportCheck(
-    'purga: as 10 tabelas de estratégia/execução/resultado de A vazias, as de B intactas',
+    'purga: as 11 tabelas de estratégia/execução/resultado/alerta de A vazias, as de B intactas',
   );
 }

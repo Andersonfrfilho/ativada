@@ -2,6 +2,7 @@
 import { getTableName } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 
+import { alerts } from '../schema/alerts.schema.js';
 import { auditEvents } from '../schema/audit-events.schema.js';
 import { candles } from '../schema/candles.schema.js';
 import { equityPoints } from '../schema/equity-points.schema.js';
@@ -18,28 +19,16 @@ import { telegramLinkCodes } from '../schema/telegram-link-codes.schema.js';
 import { users } from '../schema/users.schema.js';
 import { walkForwardWindows } from '../schema/walk-forward-windows.schema.js';
 
+export {
+  OWNED_TABLE_EXPORT_MODE,
+  OWNED_TABLE_EXPORTS,
+  type OwnedTableExportStep,
+} from './owned-table-exports.js';
+
 export type PseudonymizedTable = {
   readonly table: PgTable;
   readonly nullifiedColumns: readonly string[];
 };
-
-export const OWNED_TABLE_EXPORT_MODE = {
-  COLUMNS: 'columns',
-  EXCLUDED: 'excluded',
-} as const;
-
-export type OwnedTableExportStep = {
-  readonly table: PgTable;
-} & (
-  | {
-      readonly mode: typeof OWNED_TABLE_EXPORT_MODE.COLUMNS;
-      readonly columns: readonly string[];
-    }
-  | {
-      readonly mode: typeof OWNED_TABLE_EXPORT_MODE.EXCLUDED;
-      readonly reason: string;
-    }
-);
 
 export const OWNED_TABLES: readonly PgTable[] = [
   telegramLinkCodes,
@@ -53,133 +42,13 @@ export const OWNED_TABLES: readonly PgTable[] = [
   equityPoints,
   runCommands,
   walkForwardWindows,
-];
-
-function exportColumns(table: PgTable, columns: readonly string[]): OwnedTableExportStep {
-  return { table, mode: OWNED_TABLE_EXPORT_MODE.COLUMNS, columns };
-}
-
-// Cada tabela de dono declara aqui o que a exportação leva (lista de propriedades do schema Drizzle);
-// ficam de fora o hash do código de vínculo (segredo transitório), os hashes de configuração e de
-// parâmetros (derivados) e o `engineState` (estado técnico do motor, reconstruível).
-export const OWNED_TABLE_EXPORTS: readonly OwnedTableExportStep[] = [
-  {
-    table: telegramLinkCodes,
-    mode: OWNED_TABLE_EXPORT_MODE.COLUMNS,
-    columns: ['expiresAt', 'attempts', 'createdAt'],
-  },
-  exportColumns(strategies, ['id', 'name', 'isExample', 'createdAt', 'updatedAt', 'deletedAt']),
-  exportColumns(strategyVersions, ['id', 'strategyId', 'version', 'config', 'createdAt']),
-  exportColumns(runs, [
-    'id',
-    'strategyVersionId',
-    'kind',
-    'status',
-    'symbol',
-    'timeframe',
-    'runParameters',
-    'engineVersion',
-    'signalEngineVersion',
-    'metricsVersion',
-    'periodStart',
-    'periodEnd',
-    'lastCandleTime',
-    'metrics',
-    'progress',
-    'errorCode',
-    'migratedFromRunId',
-    'request',
-    'createdAt',
-    'startedAt',
-    'finishedAt',
-  ]),
-  exportColumns(signals, [
-    'runId',
-    'candleTime',
-    'action',
-    'score',
-    'regime',
-    'votes',
-    'indicators',
-    'sentimentObservation',
-    'reason',
-  ]),
-  exportColumns(orders, [
-    'runId',
-    'engineKey',
-    'side',
-    'type',
-    'purpose',
-    'status',
-    'reason',
-    'quantity',
-    'price',
-    'limitPrice',
-    'triggerPrice',
-    'riskAmount',
-    'stopDistance',
-    'targetDistance',
-    'eligibleCandles',
-    'createdCandleTime',
-    'expiresCandleTime',
-    'lastEventCandleTime',
-  ]),
-  exportColumns(fills, [
-    'runId',
-    'orderKey',
-    'positionKey',
-    'candleTime',
-    'side',
-    'price',
-    'quantity',
-    'notional',
-    'fee',
-  ]),
-  exportColumns(positions, [
-    'runId',
-    'engineKey',
-    'status',
-    'entryPrice',
-    'quantity',
-    'stopPrice',
-    'targetPrice',
-    'entryFee',
-    'exitPrice',
-    'exitFee',
-    'netProfit',
-    'exitReason',
-    'openedCandleTime',
-    'closedCandleTime',
-  ]),
-  exportColumns(equityPoints, ['runId', 'candleTime', 'equity', 'equityAtLow', 'benchmark']),
-  exportColumns(runCommands, [
-    'runId',
-    'commandId',
-    'kind',
-    'reason',
-    'issuedAt',
-    'candleTime',
-    'status',
-  ]),
-  exportColumns(walkForwardWindows, [
-    'runId',
-    'windowIndex',
-    'trainStart',
-    'trainEnd',
-    'testStart',
-    'testEnd',
-    'bestParams',
-    'status',
-    'inSample',
-    'outOfSample',
-    'eligibleCombinations',
-    'createdAt',
-  ]),
+  alerts,
 ];
 
 // Ordem da exclusão (ADR 0001 §h passo 3): filhas antes dos pais, porque a FK é ON DELETE RESTRICT.
 export const OWNED_TABLE_DELETION_ORDER: readonly PgTable[] = [
   telegramLinkCodes,
+  alerts,
   equityPoints,
   runCommands,
   walkForwardWindows,

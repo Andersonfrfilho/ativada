@@ -6,7 +6,7 @@ export
 COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
 
-.PHONY: help bootstrap config up down ps check contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants identity-logs
+.PHONY: help bootstrap config up down ps check contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants alert-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants identity-logs
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -157,6 +157,13 @@ example-mutants: ## Prova que a semeadura da estratégia de exemplo reprova 6 mu
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/example-mutants.ts
+
+alert-mutants: ## Prova que a caixa de saída dos alertas reprova 11 mutantes (sem vínculo, lado fora da chave, duplicata que estoura, sem arrendamento, tentativa não contada, chat de outro dono, alerta desligado, estado final reaberto, hora ignorada, FK sem dono, métricas de outro dono) contra um Postgres de teste descartável
+	set -a; . envs/env.test; set +a; \
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/alert-mutants.ts
 
 stream-api-test: ## Prova o WebSocket de tempo real contra a API real, o worker e um Postgres de teste descartável: NOTIFY do worker ao dono em menos de 10 s, nada ao outro usuário, ticket reutilizado e Origin errada recusados, teto de sockets, resync ao refazer o LISTEN, token vencido (4401) e renovado no socket, conta bloqueada (4403) e encerramento
 	set -a; . envs/env.test; set +a; \

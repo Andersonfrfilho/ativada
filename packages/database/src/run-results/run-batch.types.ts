@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import type { AlertInput } from '../alerts/alert.types.js';
 import type { JsonContainer } from '../json-value.types.js';
 import type { OwnerScope } from '../ownership/owner-scope.js';
 import type { RunStatus } from '../runs/run.constant.js';
@@ -34,6 +35,8 @@ export type RunBatchWriter = {
   // Lê o status com a linha da execução travada: um cancelamento concorrente espera o fim do lote.
   readonly readStatus: () => Promise<RunStatus>;
   readonly appendResults: (rows: RunResultRows) => Promise<AppendResult>;
+  // Alerta de sinal (RF10) na MESMA transação do passo: só nasce se o dono tem Telegram vinculado e alertas ligados.
+  readonly appendAlerts: (rows: readonly AlertInput[]) => Promise<AppendResult>;
   // O walk-forward grava a janela (e os resultados do teste dela) no mesmo lote que o checkpoint.
   readonly appendWindows: (rows: readonly WalkForwardWindowInput[]) => Promise<AppendResult>;
   // `false` quando a execução não está `running` ou o candle não avança o checkpoint.

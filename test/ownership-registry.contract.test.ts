@@ -129,6 +129,23 @@ describe('ownership registry (ADR 0001 §h)', () => {
       expect(step.columns).not.toContain('codeHash');
   });
 
+  test('alerts is owned, exported by columns and never carries the lease column', () => {
+    expect(ownedNames).toContain('alerts');
+    const step = OWNED_TABLE_EXPORTS.find((entry) => nameOf(entry.table) === 'alerts');
+    expect(step?.mode).toBe(OWNED_TABLE_EXPORT_MODE.COLUMNS);
+    if (step?.mode === OWNED_TABLE_EXPORT_MODE.COLUMNS) {
+      expect(step.columns).toContain('payload');
+      expect(step.columns).not.toContain('lockedUntil');
+      expect(step.columns).not.toContain('userId');
+    }
+  });
+
+  test('alerts is deleted before runs, because it references them', () => {
+    const order = OWNED_TABLE_DELETION_ORDER.map(nameOf);
+    expect(order.indexOf('alerts')).toBeGreaterThanOrEqual(0);
+    expect(order.indexOf('alerts')).toBeLessThan(order.indexOf('runs'));
+  });
+
   test('every owned table exposes the userId property the generic export and purge steps rely on', () => {
     for (const table of OWNED_TABLES) {
       const column = getTableColumns(table)[USER_ID_PROPERTY];

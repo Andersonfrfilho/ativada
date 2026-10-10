@@ -154,6 +154,7 @@ function createWriter(
   const { memory } = context;
   return {
     publishStepEvents: (): Promise<number> => Promise.resolve(0),
+    appendAlerts: (): Promise<AppendResult> => Promise.resolve({ written: 0 }),
     readStatus: (): Promise<RunStatus> => {
       memory.calls.log.push('status');
       return Promise.resolve(memory.state.status);

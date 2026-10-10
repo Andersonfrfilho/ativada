@@ -5,6 +5,7 @@ import { applyMigrations } from '../src/migrate.js';
 import { readDatabaseUrl } from '../src/read-database-url.js';
 import { checkPendingQueue, checkPurge, checkRemoveAndRetention } from './account-purge-checks.js';
 import { checkAdminRepositories } from './admin-checks.js';
+import { checkAlerts } from './alert-checks.js';
 import { checkAuditRetention, checkBlockedAccounts } from './cron-repository-checks.js';
 import {
   checkExport,
@@ -140,6 +141,7 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkRunQueueLifecycle(context);
   await checkRunQueueReading(context);
   await checkLiveRuns(context);
+  await checkAlerts(context);
 }
 
 async function runChecks(databaseUrl: string): Promise<void> {
