@@ -5,7 +5,10 @@ Contexto operacional do **CryptoAdA**. Produto e regras em `README.md`,
 
 ## Estado
 
-Só documentação. Nenhum código ainda. Próximo passo: `specs/001-simulador-e-sinais/tasks.md`, Fase 0.
+Spec 001 em andamento (progresso real em `specs/001-simulador-e-sinais/evidence.md`). Prontos: Fase 0
+(fundação), Fase 0b (contas, login, isolamento entre usuários, LGPD) e Fase 1 (candles da Binance:
+backfill, Fear & Greed e stream ao vivo com recuperação de lacuna). Próximo passo: Fase 2 (o motor em
+`packages/strategy-engine`).
 
 ## Stack decidida
 
