@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
+  BINANCE_SOURCE_NAME,
   HTTP_STATUS_IP_BANNED,
   HTTP_STATUS_SERVER_ERROR_MINIMUM,
   HTTP_STATUS_TOO_MANY_REQUESTS,
@@ -32,16 +33,17 @@ function readRetryAfterSeconds(response: Response): number | undefined {
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
 }
 
-function toTransportError(error: unknown): MarketDataError {
+function toTransportError(error: unknown, sourceName: string): MarketDataError {
   if (error instanceof Error && error.name === TIMEOUT_ERROR_NAME) {
-    return new MarketDataTimeoutError('A requisição à Binance excedeu o tempo limite.');
+    return new MarketDataTimeoutError(`A requisição a ${sourceName} excedeu o tempo limite.`);
   }
-  return new MarketDataNetworkError('Falha de rede ao consultar a Binance.');
+  return new MarketDataNetworkError(`Falha de rede ao consultar ${sourceName}.`);
 }
 
 export function createRequestExecutor(
   settings: ResolvedMarketDataSettings,
   gate: WeightGate,
+  sourceName: string = BINANCE_SOURCE_NAME,
 ): RequestExecutor {
   function backoffMilliseconds(attemptNumber: number): number {
     return Math.min(
@@ -55,14 +57,14 @@ export function createRequestExecutor(
     try {
       return { kind: 'success', body: await response.json() };
     } catch {
-      throw new MarketDataResponseError('Resposta da Binance não é JSON válido.');
+      throw new MarketDataResponseError(`Resposta de ${sourceName} não é JSON válido.`);
     }
   }
 
   function classifyFailure(response: Response, attemptNumber: number): AttemptOutcome {
     const retryAfterSeconds = readRetryAfterSeconds(response);
     if (response.status === HTTP_STATUS_IP_BANNED)
-      throw new MarketDataBannedError(retryAfterSeconds);
+      throw new MarketDataBannedError(retryAfterSeconds, sourceName);
     if (response.status === HTTP_STATUS_TOO_MANY_REQUESTS) {
       const delayMilliseconds =
         retryAfterSeconds === undefined
@@ -70,11 +72,15 @@ export function createRequestExecutor(
           : retryAfterSeconds * MILLISECONDS_PER_SECOND;
       return {
         kind: 'retry',
-        error: new MarketDataRateLimitError(retryAfterSeconds),
+        error: new MarketDataRateLimitError(retryAfterSeconds, sourceName),
         delayMilliseconds,
       };
     }
-    const error = new MarketDataHttpError(response.status, attemptNumber);
+    const error = new MarketDataHttpError({
+      status: response.status,
+      attempts: attemptNumber,
+      sourceName,
+    });
     if (response.status < HTTP_STATUS_SERVER_ERROR_MINIMUM) throw error;
     return { kind: 'retry', error, delayMilliseconds: backoffMilliseconds(attemptNumber) };
   }
@@ -88,7 +94,7 @@ export function createRequestExecutor(
     } catch (error) {
       return {
         kind: 'retry',
-        error: toTransportError(error),
+        error: toTransportError(error, sourceName),
         delayMilliseconds: backoffMilliseconds(attemptNumber),
       };
     }

@@ -16,20 +16,29 @@ export class MarketDataTimeoutError extends MarketDataError {}
 
 export class MarketDataNetworkError extends MarketDataError {}
 
+// Falha declarada pela própria fonte (ex.: `metadata.error` da alternative.me); a mensagem dela nunca é repetida.
+export class MarketDataSourceError extends MarketDataError {}
+
 export class MarketDataHttpError extends MarketDataError {
   readonly status: number;
 
-  constructor(status: number, attempts: number) {
-    super(`Binance respondeu HTTP ${status} após ${attempts} tentativa(s).`);
-    this.status = status;
+  constructor(params: {
+    readonly status: number;
+    readonly attempts: number;
+    readonly sourceName: string;
+  }) {
+    super(
+      `${params.sourceName} respondeu HTTP ${params.status} após ${params.attempts} tentativa(s).`,
+    );
+    this.status = params.status;
   }
 }
 
 export class MarketDataRateLimitError extends MarketDataError {
   readonly retryAfterSeconds: number | undefined;
 
-  constructor(retryAfterSeconds: number | undefined) {
-    super('Binance limitou a taxa de requisições (HTTP 429) e as tentativas acabaram.');
+  constructor(retryAfterSeconds: number | undefined, sourceName: string) {
+    super(`${sourceName} limitou a taxa de requisições (HTTP 429) e as tentativas acabaram.`);
     this.retryAfterSeconds = retryAfterSeconds;
   }
 }
@@ -38,8 +47,8 @@ export class MarketDataRateLimitError extends MarketDataError {
 export class MarketDataBannedError extends MarketDataError {
   readonly retryAfterSeconds: number | undefined;
 
-  constructor(retryAfterSeconds: number | undefined) {
-    super('Binance baniu o IP (HTTP 418); nenhuma nova tentativa foi feita.');
+  constructor(retryAfterSeconds: number | undefined, sourceName: string) {
+    super(`${sourceName} baniu o IP (HTTP 418); nenhuma nova tentativa foi feita.`);
     this.retryAfterSeconds = retryAfterSeconds;
   }
 }

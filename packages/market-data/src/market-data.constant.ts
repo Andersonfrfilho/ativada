@@ -2,6 +2,7 @@
 
 // Base só de dados de mercado públicos, sem restrição de região e sem chave (docs da Binance, "General API Information").
 export const BINANCE_MARKET_DATA_BASE_URL = 'https://data-api.binance.vision';
+export const BINANCE_SOURCE_NAME = 'Binance';
 export const KLINES_PATH = '/api/v3/klines';
 export const MAX_KLINES_PER_REQUEST = 1_000;
 export const USED_WEIGHT_HEADER = 'x-mbx-used-weight-1m';
@@ -21,3 +22,8 @@ export const DEFAULT_CLIENT_SETTINGS = {
   backoffBaseMilliseconds: 500,
   backoffMaxMilliseconds: 8_000,
 } as const;
+
+// Termos da alternative.me: API pública sem chave; exibir o índice exige crédito e link.
+export const FEAR_GREED_API_URL = 'https://api.alternative.me/fng/';
+export const FEAR_GREED_SOURCE_NAME = 'alternative.me';
+export const FEAR_GREED_FORMAT = 'json';
