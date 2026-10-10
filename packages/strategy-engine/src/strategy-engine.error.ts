@@ -86,3 +86,22 @@ export class EngineInputError extends StrategyEngineError {
     this.code = params.code;
   }
 }
+
+export const INDICATOR_ERROR_CODE = {
+  INVALID_CANDLE: 'INVALID_CANDLE',
+  INVALID_PARAMETER: 'INVALID_PARAMETER',
+  INVALID_SNAPSHOT: 'INVALID_SNAPSHOT',
+  NON_FINITE_RESULT: 'NON_FINITE_RESULT',
+} as const;
+
+export type IndicatorErrorCode = (typeof INDICATOR_ERROR_CODE)[keyof typeof INDICATOR_ERROR_CODE];
+
+// Dado ausente ou não finito, parâmetro inválido e snapshot alheio nunca viram `NaN` que atravessa.
+export class IndicatorError extends StrategyEngineError {
+  readonly code: IndicatorErrorCode;
+
+  constructor(params: { readonly code: IndicatorErrorCode; readonly message: string }) {
+    super(params.message);
+    this.code = params.code;
+  }
+}

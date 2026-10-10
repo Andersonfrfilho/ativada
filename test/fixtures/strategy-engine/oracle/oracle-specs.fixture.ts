@@ -40,8 +40,6 @@ export type OracleSpec<TParams> = {
   readonly computeReference: (candles: readonly IndicatorCandle[]) => ReferenceSeries;
   // Primeiro índice em que a referência alinhada vale (OBV começa a acumular no 2º candle).
   readonly referenceFromIndex?: number;
-  // A VWAP e a referência de RSI divergem do ADR em volume zero e platô: só séries reais.
-  readonly isReferenceRealOnly: boolean;
 };
 
 const PERIOD = 20;
@@ -55,7 +53,6 @@ export const SMA_SPEC: OracleSpec<{ readonly period: number }> = {
   horizon: { warmupCandles: 20, convergenceCandles: 20 },
   computeOracle: (candles) => computeSmaOracle(candles, { period: PERIOD }),
   computeReference: (candles) => referenceSma({ candles, period: PERIOD }),
-  isReferenceRealOnly: false,
 };
 
 export const EMA_SPEC: OracleSpec<{ readonly period: number }> = {
@@ -64,7 +61,6 @@ export const EMA_SPEC: OracleSpec<{ readonly period: number }> = {
   horizon: { warmupCandles: 21, convergenceCandles: 76 },
   computeOracle: (candles) => computeEmaOracle(candles, { period: 21 }),
   computeReference: (candles) => referenceEma({ candles, period: 21 }),
-  isReferenceRealOnly: false,
 };
 
 const MACD_PARAMS = { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 } as const;
@@ -76,7 +72,6 @@ export const MACD_SPEC: OracleSpec<typeof MACD_PARAMS> = {
   computeOracle: (candles) => computeMacdOracle(candles, MACD_PARAMS),
   floorOf: macdFloor,
   computeReference: (candles) => referenceMacd({ candles, ...MACD_PARAMS }),
-  isReferenceRealOnly: false,
 };
 
 export const DONCHIAN_SPEC: OracleSpec<{ readonly period: number }> = {
@@ -85,7 +80,6 @@ export const DONCHIAN_SPEC: OracleSpec<{ readonly period: number }> = {
   horizon: { warmupCandles: 20, convergenceCandles: 20 },
   computeOracle: (candles) => computeDonchianOracle(candles, { period: PERIOD }),
   computeReference: (candles) => referenceDonchian({ candles, period: PERIOD }),
-  isReferenceRealOnly: false,
 };
 
 export const RSI_SPEC: OracleSpec<{ readonly period: number }> = {
@@ -94,7 +88,6 @@ export const RSI_SPEC: OracleSpec<{ readonly period: number }> = {
   horizon: { warmupCandles: 15, convergenceCandles: 97 },
   computeOracle: (candles) => computeRsiOracle(candles, { period: WILDER_PERIOD }),
   computeReference: (candles) => referenceRsi({ candles, period: WILDER_PERIOD }),
-  isReferenceRealOnly: true,
 };
 
 const BOLLINGER_PARAMS = { period: PERIOD, deviations: BOLLINGER_DEVIATIONS } as const;
@@ -107,7 +100,6 @@ export const BOLLINGER_SPEC: OracleSpec<typeof BOLLINGER_PARAMS> = {
     computeBollingerOracle(candles, { period: PERIOD, deviations: BOLLINGER_DEVIATIONS_TEXT }),
   computeReference: (candles) =>
     referenceBollinger({ candles, period: PERIOD, deviations: BOLLINGER_DEVIATIONS }),
-  isReferenceRealOnly: false,
 };
 
 export const ZSCORE_SPEC: OracleSpec<{ readonly period: number }> = {
@@ -117,7 +109,6 @@ export const ZSCORE_SPEC: OracleSpec<{ readonly period: number }> = {
   computeOracle: (candles) => computeZScoreOracle(candles, { period: PERIOD }),
   floorOf: zScoreFloor,
   computeReference: (candles) => referenceZScore({ candles, period: PERIOD }),
-  isReferenceRealOnly: false,
 };
 
 export const VWAP_SPEC: OracleSpec<Record<string, never>> = {
@@ -126,7 +117,6 @@ export const VWAP_SPEC: OracleSpec<Record<string, never>> = {
   horizon: { warmupCandles: 1, convergenceCandles: 1 },
   computeOracle: computeVwapOracle,
   computeReference: (candles) => referenceVwap({ candles }),
-  isReferenceRealOnly: true,
 };
 
 export const OBV_SPEC: OracleSpec<Record<string, never>> = {
@@ -137,7 +127,6 @@ export const OBV_SPEC: OracleSpec<Record<string, never>> = {
   floorOf: obvFloor,
   computeReference: (candles) => referenceObv({ candles }),
   referenceFromIndex: 1,
-  isReferenceRealOnly: false,
 };
 
 export const ATR_SPEC: OracleSpec<{ readonly period: number }> = {
@@ -146,7 +135,6 @@ export const ATR_SPEC: OracleSpec<{ readonly period: number }> = {
   horizon: { warmupCandles: 14, convergenceCandles: 97 },
   computeOracle: (candles) => computeAtrOracle(candles, { period: WILDER_PERIOD }),
   computeReference: (candles) => referenceAtr({ candles, period: WILDER_PERIOD }),
-  isReferenceRealOnly: false,
 };
 
 export const ADX_SPEC: OracleSpec<{ readonly period: number }> = {
@@ -155,7 +143,6 @@ export const ADX_SPEC: OracleSpec<{ readonly period: number }> = {
   horizon: { warmupCandles: 27, convergenceCandles: 194 },
   computeOracle: (candles) => computeAdxOracle(candles, { period: WILDER_PERIOD }),
   computeReference: (candles) => referenceAdx({ candles, period: WILDER_PERIOD }),
-  isReferenceRealOnly: true,
 };
 
 export const TREND_AND_STATISTIC_SPECS = [

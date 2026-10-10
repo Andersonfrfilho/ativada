@@ -72,7 +72,17 @@ export {
 export type * from './engine-state.types.js';
 export type * from './engine.types.js';
 export * from './engine-vocabulary.constant.js';
+export { BOLLINGER_INDICATOR } from './bollinger.indicator.js';
+export { defineIndicator, type StatefulIndicatorSpec } from './define-indicator.js';
+export { DONCHIAN_INDICATOR } from './donchian.indicator.js';
+export { EMA_INDICATOR } from './ema.indicator.js';
+export { INDICATOR_NAME, type IndicatorName } from './indicator-name.constant.js';
+export type * from './indicator-params.types.js';
 export type * from './indicator.types.js';
+export { MACD_INDICATOR } from './macd.indicator.js';
+export { RSI_INDICATOR } from './rsi.indicator.js';
+export { SMA_INDICATOR } from './sma.indicator.js';
+export { Z_SCORE_INDICATOR } from './z-score.indicator.js';
 export type { JsonValue } from './json-value.types.js';
 export {
   createRunSetup,
