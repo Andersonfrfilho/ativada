@@ -11,16 +11,16 @@ import {
 } from '@cryptoada/database';
 import {
   createStrategyVersion,
+  ENGINE_TIMEFRAME_DURATION_MILLISECONDS,
   ENGINE_VERSION,
   METRICS_VERSION,
   SIGNAL_ENGINE_VERSION,
 } from '@cryptoada/strategy-engine';
 
-import { parseJsonContainer } from '../backtest/json-container.js';
+import { parseJsonContainer } from '@cryptoada/run-recording';
 import { StrategyVersionNotFoundError } from '../strategies/strategy.error.js';
 import { checkWalkForwardRequest } from './check-walk-forward-request.js';
 import type { CreateRunBody } from './create-run-request.schema.js';
-import { LiveRunsNotAvailableError } from './run.error.js';
 import { admitRun, type RunAdmissionDependencies } from './run-admission.js';
 import type { RunDispatcher } from './run-dispatcher.js';
 import { readQueuePosition, type RunQueuePositionDependencies } from './run-queue-position.js';
@@ -40,7 +40,15 @@ export type CreateRunDependencies = RunWarningDependencies &
 
 export type CreateRunUseCase = (scope: OwnerScope, body: CreateRunBody) => Promise<RunDetailView>;
 
-function toCreateParams(body: CreateRunBody): CreateRunParams {
+// A simulação ao vivo começa no candle que está aberto agora: o primeiro a ser avaliado é o que fechar a seguir, e os
+// anteriores (já fechados no banco) são o aquecimento do motor.
+function resolvePeriodStart(body: CreateRunBody, now: number): number {
+  if (body.periodStart !== undefined) return body.periodStart;
+  const duration = ENGINE_TIMEFRAME_DURATION_MILLISECONDS[body.setup.parameters.timeframe];
+  return Math.floor(now / duration) * duration;
+}
+
+function toCreateParams(body: CreateRunBody, now: number): CreateRunParams {
   const { parameters } = body.setup;
   return {
     strategyVersionId: body.strategyVersionId,
@@ -52,7 +60,7 @@ function toCreateParams(body: CreateRunBody): CreateRunParams {
     engineVersion: ENGINE_VERSION,
     signalEngineVersion: SIGNAL_ENGINE_VERSION,
     metricsVersion: METRICS_VERSION,
-    periodStart: body.periodStart,
+    periodStart: resolvePeriodStart(body, now),
     periodEnd: body.periodEnd,
     migratedFromRunId: undefined,
     // O pedido do walk-forward (grade e janelas) mora na linha: a thread o lê de lá (migration 0010).
@@ -101,6 +109,7 @@ function assertWalkForward(
   config: unknown,
 ): void {
   if (body.walkForward === undefined) return;
+  if (body.periodStart === undefined || body.periodEnd === undefined) return;
   checkWalkForwardRequest({
     config: createStrategyVersion(config).config,
     request: body.walkForward,
@@ -115,11 +124,17 @@ export function createCreateRunUseCase(dependencies: CreateRunDependencies): Cre
     const version = await dependencies.strategies.findVersion(scope, body.strategyVersionId);
     if (version === undefined) throw new StrategyVersionNotFoundError();
     await admitRun(dependencies, { scope, kind: body.kind });
-    if (body.kind === RUN_KIND.LIVE_PAPER) throw new LiveRunsNotAvailableError();
     assertWalkForward(dependencies, body, version.config);
-    const created = await dependencies.runs.createRun(scope, toCreateParams(body));
+    const created = await dependencies.runs.createRun(
+      scope,
+      toCreateParams(body, dependencies.now()),
+    );
     if (created === undefined) throw new StrategyVersionNotFoundError();
-    const run = await dispatchOrFail(dependencies, scope, created);
+    // A simulação ao vivo não passa pelo despachante: o worker a reivindica no banco (ADR 0002, T4.1).
+    const run =
+      body.kind === RUN_KIND.LIVE_PAPER
+        ? created
+        : await dispatchOrFail(dependencies, scope, created);
     const [warnings, queuePosition] = await Promise.all([
       readBestEffort(dependencies, {
         read: () => readRunWarnings(dependencies, run),

@@ -24,17 +24,6 @@ export class RunAlreadyFinishedError extends DomainError {
   }
 }
 
-// A simulação ao vivo chega na Fase 4 (spec 001); até lá a rota existe e responde 501, sem criar execução.
-export class LiveRunsNotAvailableError extends DomainError {
-  constructor() {
-    super({
-      code: RUN_ERROR_CODE.LIVE_RUNS_NOT_AVAILABLE,
-      message: 'A simulação ao vivo ainda não está disponível.',
-      status: HTTP_STATUS.NOT_IMPLEMENTED,
-    });
-  }
-}
-
 // Pedido de walk-forward recusado ANTES de aceitar (grade grande, período curto, grade inválida): o código vem do
 // motor e a mensagem só carrega contagens, nunca texto enviado pelo cliente.
 export class WalkForwardRequestRejectedError extends DomainError {

@@ -29,7 +29,7 @@ const RUN_NOT_FOUND = {
 export const RUN_DOCUMENTATION = {
   create: {
     summary:
-      'Cria uma execução (backtest ou walk-forward), enfileira e responde 202 com o id; a fila do usuário é limitada (429 `RUN_QUEUE_FULL`). `live_paper` responde 409 acima do teto de ativas e 501 até a Fase 4.',
+      'Cria uma execução (backtest, walk-forward ou simulação ao vivo) e responde 202 com o id. Backtest e walk-forward entram na fila do usuário, que é limitada (429 `RUN_QUEUE_FULL`). `live_paper` não leva período (começa no candle corrente e não tem fim), fica `queued` até um worker reivindicá-la e responde 409 `LIVE_RUN_LIMIT_REACHED` acima do teto de ativas.',
     tag: TAG,
     successes: [
       {
@@ -49,7 +49,6 @@ export const RUN_DOCUMENTATION = {
       { status: HTTP_STATUS.NOT_FOUND, code: STRATEGY_ERROR_CODE.STRATEGY_VERSION_NOT_FOUND },
       { status: HTTP_STATUS.CONFLICT, code: RUN_ERROR_CODE.LIVE_RUN_LIMIT_REACHED },
       { status: HTTP_STATUS.TOO_MANY_REQUESTS, code: RUN_ERROR_CODE.RUN_QUEUE_FULL },
-      { status: HTTP_STATUS.NOT_IMPLEMENTED, code: RUN_ERROR_CODE.LIVE_RUNS_NOT_AVAILABLE },
     ],
   },
   list: {
@@ -78,7 +77,8 @@ export const RUN_DOCUMENTATION = {
     errors: [RUN_NOT_FOUND],
   },
   stop: {
-    summary: 'Cancela uma execução `queued` ou `running` (idempotente).',
+    summary:
+      'Cancela uma execução `queued` ou `running`, inclusive a simulação ao vivo (idempotente); o worker a vê no passo seguinte e para.',
     tag: TAG,
     params: RUN_PARAMS,
     successes: [

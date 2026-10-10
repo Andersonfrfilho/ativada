@@ -225,7 +225,6 @@ describe('OpenAPI gerado da tabela de rotas', () => {
     expect(byOperation.get('post /v1/runs/{runId}/stop')?.get('409')).toStrictEqual([
       'RUN_ALREADY_FINISHED',
     ]);
-    expect(byOperation.get('post /v1/runs')?.get('501')).toStrictEqual(['LIVE_RUNS_NOT_AVAILABLE']);
     for (const code of [
       'REQUEST_VALIDATION_FAILED',
       'GRID_TOO_LARGE',

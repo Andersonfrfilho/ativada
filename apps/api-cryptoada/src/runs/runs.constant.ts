@@ -20,12 +20,14 @@ export const RUN_PARAMETERS_SCHEMA_VERSION_VALUE = 1;
 
 export const RUN_FIELD = {
   RUN_PARAMETERS: 'runParameters',
+  PERIOD_START: 'periodStart',
   GRID: 'grid',
   WINDOWS: 'windows',
   PERIOD_END: 'periodEnd',
 } as const;
 
 export const RUN_REASON = {
+  REQUIRED: 'required',
   PERIOD_END_MUST_BE_AFTER_START: 'must_be_after_period_start',
   NOT_ENABLED: 'not_enabled',
   GRID_REQUIRED: 'required_for_walk_forward',

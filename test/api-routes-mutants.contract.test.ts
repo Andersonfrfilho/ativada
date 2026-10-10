@@ -260,10 +260,34 @@ const MUTANTS: readonly SourceMutant[] = [
     ),
   },
   {
-    name: 'LIVE_RUN_ACCEPTED',
+    name: 'LIVE_RUN_DISPATCHED_TO_THE_BACKTEST_QUEUE',
     edits: edit(
       'runs/create-run.use-case.ts',
-      'if (body.kind === RUN_KIND.LIVE_PAPER) throw new LiveRunsNotAvailableError();',
+      'body.kind === RUN_KIND.LIVE_PAPER\n        ? created\n        : await dispatchOrFail(dependencies, scope, created);',
+      'await dispatchOrFail(dependencies, scope, created);',
+    ),
+  },
+  {
+    name: 'LIVE_RUN_ACCEPTS_A_PERIOD',
+    edits: edit(
+      'runs/create-run-request.schema.ts',
+      'if (isLive && value !== undefined) addIssue(context, [field], RUN_REASON.NOT_ALLOWED_FOR_KIND);',
+      '',
+    ),
+  },
+  {
+    name: 'LIVE_RUN_STARTS_AT_THE_PAST',
+    edits: edit(
+      'runs/create-run.use-case.ts',
+      'return Math.floor(now / duration) * duration;',
+      'return Math.floor(now / duration) * duration - duration;',
+    ),
+  },
+  {
+    name: 'BACKTEST_WITHOUT_PERIOD_ACCEPTED',
+    edits: edit(
+      'runs/create-run-request.schema.ts',
+      'if (!isLive && value === undefined) addIssue(context, [field], RUN_REASON.REQUIRED);',
       '',
     ),
   },

@@ -15,6 +15,7 @@ import {
 } from './fixtures/api-routes/runs-harness.fixture.js';
 
 const RUNS = '/v1/runs';
+const HOUR = 3_600_000;
 const PERIOD_START = Date.UTC(2024, 0, 1);
 const PERIOD_END = Date.UTC(2026, 0, 1);
 const GRID = { parameters: [{ path: 'thresholds.buy', values: ['1', '1.5', '2'] }] };
@@ -60,6 +61,29 @@ function backtestBody(overrides: Record<string, unknown> = {}): Record<string, u
     timeframe: '1h',
     periodStart: PERIOD_START,
     periodEnd: PERIOD_END,
+    ...overrides,
+  };
+}
+
+function bodyOf(kind: string, overrides: Record<string, unknown>): Record<string, unknown> {
+  if (kind === 'live_paper') return liveBody(overrides);
+  if (kind === 'walk_forward') return walkForwardBody(overrides);
+  return backtestBody(overrides);
+}
+
+function withoutKeys(
+  record: Record<string, unknown>,
+  keys: readonly string[],
+): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(record).filter(([key]) => !keys.includes(key)));
+}
+
+function liveBody(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    strategyVersionId: seededA.versionId,
+    kind: 'live_paper',
+    symbol: 'BTCUSDT',
+    timeframe: '1h',
     ...overrides,
   };
 }
@@ -293,17 +317,75 @@ describe('POST /v1/runs', () => {
     expect(((await response.json()) as ErrorBody).error.code).toBe('INVALID_WINDOW_CONFIG');
   });
 
-  test('live_paper responde 501 LIVE_RUNS_NOT_AVAILABLE e não cria nada', async () => {
-    const runsBefore = harness.runs.all().length;
-    const response = await harness.call({
-      subject: SUBJECT_A,
-      method: 'POST',
-      path: RUNS,
-      body: backtestBody({ kind: 'live_paper' }),
+  test('live_paper cria a execução `queued` a partir do relógio, sem período e sem despachar para a fila de backtests', async () => {
+    const dispatchedBefore = harness.dispatched.length;
+    const { status, body } = await post(SUBJECT_A, liveBody());
+    const data = (body as RunBody).data;
+    expect(status).toBe(202);
+    expect(data).toMatchObject({
+      kind: 'live_paper',
+      status: 'queued',
+      periodEnd: null,
+      lastCandleTime: null,
+      errorCode: null,
+      queuePosition: null,
     });
-    expect(response.status).toBe(501);
-    expect(((await response.json()) as ErrorBody).error.code).toBe('LIVE_RUNS_NOT_AVAILABLE');
+    expect(data['periodStart']).toBe(Math.floor(harness.clock.now / HOUR) * HOUR);
+    expect(harness.dispatched).toHaveLength(dispatchedBefore);
+    expect(harness.runs.all().find((run) => run.id === data.id)?.kind).toBe('live_paper');
+  });
+
+  test('live_paper não aceita período: o início é o candle corrente e não há fim', async () => {
+    const runsBefore = harness.runs.all().length;
+    for (const field of ['periodStart', 'periodEnd']) {
+      const { status, body } = await post(SUBJECT_A, liveBody({ [field]: PERIOD_START }));
+      const details = (body as ErrorBody).error.details ?? [];
+      expect(status).toBe(400);
+      expect(details).toContainEqual({ field, reason: 'not_allowed_for_kind' });
+    }
     expect(harness.runs.all()).toHaveLength(runsBefore);
+  });
+
+  test('backtest e walk-forward exigem o período inteiro', async () => {
+    const withoutPeriod = withoutKeys(backtestBody(), ['periodStart', 'periodEnd']);
+    const { status, body } = await post(SUBJECT_A, withoutPeriod);
+    const details = (body as ErrorBody).error.details ?? [];
+    expect(status).toBe(400);
+    expect(details).toContainEqual({ field: 'periodStart', reason: 'required' });
+    expect(details).toContainEqual({ field: 'periodEnd', reason: 'required' });
+  });
+
+  test('a simulação ao vivo pode ser lida e parada (idempotente); outro usuário recebe o 404 do inexistente', async () => {
+    const created = (await post(SUBJECT_A, liveBody())).body as RunBody;
+    const runId = created.data.id;
+    const read = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${runId}` }),
+    );
+    expect((read.body as RunBody).data).toMatchObject({ kind: 'live_paper', status: 'queued' });
+    const foreignStop = await harness.call({
+      subject: SUBJECT_B,
+      method: 'POST',
+      path: `${RUNS}/${runId}/stop`,
+    });
+    const missingStop = await harness.call({
+      subject: SUBJECT_B,
+      method: 'POST',
+      path: `${RUNS}/${MISSING_ID}/stop`,
+    });
+    await expectIndistinguishableNotFound({
+      expectedCode: 'RUN_NOT_FOUND',
+      foreignResourceResponse: foreignStop,
+      missingResourceResponse: missingStop,
+    });
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const stopped = await harness.call({
+        subject: SUBJECT_A,
+        method: 'POST',
+        path: `${RUNS}/${runId}/stop`,
+      });
+      expect(stopped.status).toBe(200);
+      expect((await readJson(stopped)).body).toMatchObject({ data: { status: 'cancelled' } });
+    }
   });
 
   test('versão de estratégia de OUTRO dono: 404 STRATEGY_VERSION_NOT_FOUND idêntico ao inexistente (inclusive live_paper)', async () => {
@@ -313,21 +395,13 @@ describe('POST /v1/runs', () => {
         subject: SUBJECT_B,
         method: 'POST',
         path: RUNS,
-        body: backtestBody({
-          kind,
-          strategyVersionId: seededA.versionId,
-          ...(kind === 'walk_forward' ? { grid: GRID, timeframe: '1d' } : {}),
-        }),
+        body: bodyOf(kind, { strategyVersionId: seededA.versionId }),
       });
       const missing = await harness.call({
         subject: SUBJECT_B,
         method: 'POST',
         path: RUNS,
-        body: backtestBody({
-          kind,
-          strategyVersionId: MISSING_ID,
-          ...(kind === 'walk_forward' ? { grid: GRID, timeframe: '1d' } : {}),
-        }),
+        body: bodyOf(kind, { strategyVersionId: MISSING_ID }),
       });
       await expectIndistinguishableNotFound({
         expectedCode: 'STRATEGY_VERSION_NOT_FOUND',

@@ -18,6 +18,7 @@ import { expectIndistinguishableNotFound } from './fixtures/not-found-response.f
 const RUNS = '/v1/runs';
 const PERIOD_START = Date.UTC(2024, 0, 1);
 const PERIOD_END = Date.UTC(2026, 0, 1);
+const LIVE_OVERRIDES = { kind: 'live_paper' } as const;
 const QUEUE_LIMIT = 3;
 const GRID = { parameters: [{ path: 'thresholds.buy', values: ['1', '1.5', '2'] }] };
 
@@ -68,7 +69,7 @@ function body(
   seeded: SeededStrategy,
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
-  return {
+  const merged = {
     strategyVersionId: seeded.versionId,
     kind: 'backtest',
     symbol: 'BTCUSDT',
@@ -77,6 +78,11 @@ function body(
     periodEnd: PERIOD_END,
     ...overrides,
   };
+  if (merged.kind !== 'live_paper') return merged;
+  // A simulação ao vivo começa no candle corrente e não tem fim: o corpo não leva período.
+  return Object.fromEntries(
+    Object.entries(merged).filter(([key]) => key !== 'periodStart' && key !== 'periodEnd'),
+  );
 }
 
 async function post(
@@ -178,16 +184,15 @@ describe('POST /v1/runs: simulação ao vivo acima do teto (LIVE_RUN_LIMIT_REACH
     }
   }
 
-  test('abaixo do teto (padrão 5) a rota continua 501 até a Fase 4', async () => {
+  test('abaixo do teto (padrão 5) a simulação ao vivo é aceita', async () => {
     await seedLiveRuns(SUBJECT_A, seededA, 4);
-    const response = await post(SUBJECT_A, seededA, { kind: 'live_paper' });
-    expect(response.status).toBe(501);
-    expect((response.body as ErrorBody).error.code).toBe('LIVE_RUNS_NOT_AVAILABLE');
+    const response = await post(SUBJECT_A, seededA, LIVE_OVERRIDES);
+    expect(response.status).toBe(202);
   });
 
   test('no teto (5 ativas) responde 409 LIVE_RUN_LIMIT_REACHED', async () => {
     await seedLiveRuns(SUBJECT_A, seededA, 5);
-    const response = await post(SUBJECT_A, seededA, { kind: 'live_paper' });
+    const response = await post(SUBJECT_A, seededA, LIVE_OVERRIDES);
     expect(response.status).toBe(409);
     expect((response.body as ErrorBody).error.code).toBe('LIVE_RUN_LIMIT_REACHED');
   });
@@ -195,10 +200,10 @@ describe('POST /v1/runs: simulação ao vivo acima do teto (LIVE_RUN_LIMIT_REACH
   test('o teto vem de users.limits do dono, e o outro usuário não é afetado', async () => {
     harness.limits.set(USER_A_ID, { maxActiveLivePaperRuns: 2 });
     await seedLiveRuns(SUBJECT_A, seededA, 2);
-    expect((await post(SUBJECT_A, seededA, { kind: 'live_paper' })).status).toBe(409);
-    expect((await post(SUBJECT_B, seededB, { kind: 'live_paper' })).status).toBe(501);
+    expect((await post(SUBJECT_A, seededA, LIVE_OVERRIDES)).status).toBe(409);
+    expect((await post(SUBJECT_B, seededB, LIVE_OVERRIDES)).status).toBe(202);
     harness.limits.set(USER_A_ID, { maxActiveLivePaperRuns: 'muitas' });
-    expect((await post(SUBJECT_A, seededA, { kind: 'live_paper' })).status).toBe(501);
+    expect((await post(SUBJECT_A, seededA, LIVE_OVERRIDES)).status).toBe(202);
   });
 
   test('só as ATIVAS contam: a encerrada libera a vaga', async () => {
@@ -208,7 +213,7 @@ describe('POST /v1/runs: simulação ao vivo acima do teto (LIVE_RUN_LIMIT_REACH
       .all()
       .filter((run) => run.kind === 'live_paper' && run.status === 'queued');
     harness.runs.updateRun(live?.id ?? '', { status: 'completed', finishedAt: new Date() });
-    expect((await post(SUBJECT_A, seededA, { kind: 'live_paper' })).status).toBe(501);
+    expect((await post(SUBJECT_A, seededA, LIVE_OVERRIDES)).status).toBe(202);
   });
 
   test('a simulação ao vivo não consome a fila de backtests', async () => {

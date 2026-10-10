@@ -109,7 +109,6 @@ async function checkQueueLimits(api: ApiRunsContext, context: QueueTestContext):
       kind: 'live_paper',
       symbol: SYMBOL,
       timeframe: '1h',
-      ...context.heavy,
     },
   });
   const liveCode = (live.json as { error: { code: string } }).error.code;

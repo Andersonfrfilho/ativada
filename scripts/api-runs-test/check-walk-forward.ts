@@ -82,21 +82,22 @@ async function checkRejections(context: ApiRunsContext, versionId: string): Prom
     periodEnd: Date.UTC(2023, 8, 1),
     grid: SCENARIO_GRID,
   });
-  const live = await postRun(context, {
+  // A simulação ao vivo começa no candle corrente e não tem fim: período no corpo é recusado.
+  const liveWithPeriod = await postRun(context, {
     ...base,
     kind: 'live_paper',
     periodStart: SCENARIO_START,
     periodEnd: SCENARIO_END,
   });
-  const codes = [tooLarge, tooShort, live].map(
+  const codes = [tooLarge, tooShort, liveWithPeriod].map(
     (r) => (r.json as { error: { code: string } }).error.code,
   );
   assertCondition(
-    codes.join() === 'GRID_TOO_LARGE,PERIOD_TOO_SHORT,LIVE_RUNS_NOT_AVAILABLE',
+    codes.join() === 'GRID_TOO_LARGE,PERIOD_TOO_SHORT,REQUEST_VALIDATION_FAILED',
     `recusas antes de aceitar: ${codes.join()}`,
   );
   assertCondition(
-    [tooLarge.status, tooShort.status, live.status].join() === '400,400,501',
+    [tooLarge.status, tooShort.status, liveWithPeriod.status].join() === '400,400,400',
     'status das recusas',
   );
   const stored: unknown =
@@ -106,7 +107,7 @@ async function checkRejections(context: ApiRunsContext, versionId: string): Prom
     'nenhuma execução criada pelas recusas',
   );
   reportLine(
-    'walk-forward recusado ANTES de aceitar (grade grande 400, período curto 400, live_paper 501) sem criar execução',
+    'walk-forward recusado ANTES de aceitar (grade grande 400, período curto 400, live_paper com período 400) sem criar execução',
   );
 }
 

@@ -52,8 +52,9 @@ export type CreateRunBody = {
   readonly strategyVersionId: string;
   readonly kind: RunKind;
   readonly setup: RunSetup;
-  readonly periodStart: number;
-  readonly periodEnd: number;
+  // Ausentes na simulação ao vivo: ela começa no candle corrente e não tem fim.
+  readonly periodStart: number | undefined;
+  readonly periodEnd: number | undefined;
   readonly walkForward: WalkForwardBody | undefined;
 };
 
@@ -62,8 +63,8 @@ type ParsedBody = {
   readonly kind: RunKind;
   readonly symbol: string;
   readonly timeframe: string;
-  readonly periodStart: number;
-  readonly periodEnd: number;
+  readonly periodStart?: number | undefined;
+  readonly periodEnd?: number | undefined;
   readonly runParameters?: ParametersInput;
   readonly grid?: unknown;
   readonly windows?: z.infer<typeof windowsBodySchema> | undefined;
@@ -73,6 +74,22 @@ type Context = z.RefinementCtx;
 
 function addIssue(context: Context, path: readonly (string | number)[], message: string): void {
   context.addIssue({ code: 'custom', path: [...path], message });
+}
+
+function checkPeriod(body: ParsedBody, context: Context): void {
+  const isLive = body.kind === RUN_KIND.LIVE_PAPER;
+  const fields = [
+    [RUN_FIELD.PERIOD_START, body.periodStart],
+    [RUN_FIELD.PERIOD_END, body.periodEnd],
+  ] as const;
+  for (const [field, value] of fields) {
+    if (isLive && value !== undefined) addIssue(context, [field], RUN_REASON.NOT_ALLOWED_FOR_KIND);
+    if (!isLive && value === undefined) addIssue(context, [field], RUN_REASON.REQUIRED);
+  }
+  const { periodStart, periodEnd } = body;
+  if (periodStart !== undefined && periodEnd !== undefined && periodEnd <= periodStart) {
+    addIssue(context, [RUN_FIELD.PERIOD_END], RUN_REASON.PERIOD_END_MUST_BE_AFTER_START);
+  }
 }
 
 function checkKindFields(body: ParsedBody, context: Context): void {
@@ -86,9 +103,7 @@ function checkKindFields(body: ParsedBody, context: Context): void {
   if (!isWalkForward && body.windows !== undefined) {
     addIssue(context, [RUN_FIELD.WINDOWS], RUN_REASON.NOT_ALLOWED_FOR_KIND);
   }
-  if (body.periodEnd <= body.periodStart) {
-    addIssue(context, [RUN_FIELD.PERIOD_END], RUN_REASON.PERIOD_END_MUST_BE_AFTER_START);
-  }
+  checkPeriod(body, context);
 }
 
 type ParametersInput = z.infer<typeof runParametersBodySchema> | undefined;
@@ -154,8 +169,8 @@ export function createRunRequestSchema(enabled: EnabledMarkets): z.ZodType<Creat
       timeframe: z
         .enum(ENGINE_TIMEFRAME)
         .refine(enabledOnly(enabled.timeframes), { error: RUN_REASON.NOT_ENABLED }),
-      periodStart: epochMillisecondsSchema,
-      periodEnd: epochMillisecondsSchema,
+      periodStart: epochMillisecondsSchema.optional(),
+      periodEnd: epochMillisecondsSchema.optional(),
       runParameters: checkedRunParametersSchema.optional(),
       grid: z.unknown().optional(),
       windows: windowsBodySchema.optional(),
