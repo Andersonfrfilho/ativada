@@ -1,0 +1,9 @@
+{
+  "name": "@cryptoada/worker-cryptoada",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@cryptoada/environment": "workspace:*"
+  }
+}

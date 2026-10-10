@@ -1,0 +1,12 @@
+{
+  "name": "@cryptoada/api-cryptoada",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@cryptoada/database": "workspace:*",
+    "@cryptoada/environment": "workspace:*",
+    "@cryptoada/identity-admin": "workspace:*",
+    "jose": "6.2.12"
+  }
+}
