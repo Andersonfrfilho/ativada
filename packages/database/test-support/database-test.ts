@@ -6,10 +6,36 @@ import { readDatabaseUrl } from '../src/read-database-url.js';
 import { checkPendingQueue, checkPurge, checkRemoveAndRetention } from './account-purge-checks.js';
 import { checkAdminRepositories } from './admin-checks.js';
 import { checkAuditRetention, checkBlockedAccounts } from './cron-repository-checks.js';
-import { checkExport, checkMarkDeleted, seedLifecycleOwners } from './account-lifecycle-checks.js';
+import {
+  checkExport,
+  checkMarkDeleted,
+  seedLifecycleOwners,
+  type LifecycleCheckContext,
+} from './account-lifecycle-checks.js';
 import { checkCandleRepository } from './candle-checks.js';
 import { checkMissingOpenTimes } from './candle-gap-checks.js';
 import { checkSentimentRepository } from './sentiment-checks.js';
+import { checkSentimentObservations } from './sentiment-observation-checks.js';
+import { checkPersistenceIsolation } from './persistence-isolation-checks.js';
+import {
+  checkPersistenceExport,
+  checkPersistencePurge,
+  seedPersistenceOwners,
+} from './persistence-lgpd-checks.js';
+import { checkRunRepository } from './run-checks.js';
+import {
+  checkBatchIsAtomic,
+  checkLargeBatch,
+  checkOversizedOrderBatch,
+} from './run-result-batch-checks.js';
+import { checkResultPagination } from './run-result-page-checks.js';
+import {
+  checkCommandsAndForeignKey,
+  checkOrderMonotonicity,
+  checkPositionMonotonicity,
+  checkWindowNamespace,
+} from './run-result-rule-checks.js';
+import { checkStrategyRepository } from './strategy-checks.js';
 import { checkProfileRepository } from './profile-checks.js';
 import { checkTelegramLink, checkTelegramRaces } from './telegram-checks.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
@@ -73,6 +99,20 @@ async function checkBlockedAccount(handle: DatabaseHandle, client: Bun.SQL): Pro
   reportCheck('blocked_at preenchido -> estado blocked');
 }
 
+async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
+  await checkStrategyRepository(context);
+  await checkRunRepository(context);
+  const batch = await checkLargeBatch(context);
+  await checkResultPagination(context, batch);
+  await checkOversizedOrderBatch(context);
+  await checkBatchIsAtomic(context);
+  await checkOrderMonotonicity(context);
+  await checkPositionMonotonicity(context);
+  await checkWindowNamespace(context);
+  await checkCommandsAndForeignKey(context);
+  await checkPersistenceIsolation(context);
+}
+
 async function runChecks(databaseUrl: string): Promise<void> {
   await applyMigrations({ databaseUrl, migrationsFolder: MIGRATIONS_FOLDER });
   const handle = openDatabase(databaseUrl);
@@ -87,16 +127,21 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkAdminRepositories({ handle, client, assertCondition, reportCheck });
     const lifecycle = { handle, client, assertCondition, reportCheck };
     const owners = await seedLifecycleOwners(lifecycle);
+    await seedPersistenceOwners(lifecycle, owners);
     await checkExport(lifecycle, owners);
+    await checkPersistenceExport(lifecycle, owners);
     await checkMarkDeleted(lifecycle, owners);
     await checkPendingQueue(lifecycle);
     await checkPurge(lifecycle, owners);
+    await checkPersistencePurge(lifecycle, owners);
     await checkRemoveAndRetention(lifecycle, owners);
     await checkBlockedAccounts(lifecycle);
     await checkAuditRetention(lifecycle);
     await checkCandleRepository(lifecycle);
     await checkMissingOpenTimes(lifecycle);
     await checkSentimentRepository(lifecycle);
+    await checkSentimentObservations(lifecycle);
+    await checkPersistence(lifecycle);
   } finally {
     await client.close();
     await closeDatabase(handle);
@@ -118,7 +163,7 @@ try {
   await main();
 } catch (error: unknown) {
   process.stderr.write(
-    `database-test: FALHOU - ${error instanceof Error ? error.message : String(error)}\n`,
+    `database-test: FALHOU - ${error instanceof Error ? error.message : String(error)}\n${error instanceof Error && error.cause instanceof Error ? error.cause.message : ''}\n`,
   );
   process.exitCode = 1;
 }
