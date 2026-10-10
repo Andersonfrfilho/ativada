@@ -24,6 +24,7 @@ export const REFERENCE_ENGINE_DEFECT = {
   IGNORES_FEES_IN_SIZE: 'ignores-fees-in-size',
   STOP_FROM_DECISION_CLOSE: 'stop-from-decision-close',
   OVERSPENDS_CASH: 'overspends-cash',
+  VOLUME_OF_FILL_CANDLE: 'volume-of-fill-candle',
   LIMIT_FILLS_ON_TOUCH: 'limit-fills-on-touch',
   TARGET_ON_TOUCH: 'target-on-touch',
   GAP_TARGET_AT_OPEN: 'gap-target-at-open',

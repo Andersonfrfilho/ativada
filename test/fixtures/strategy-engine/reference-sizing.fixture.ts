@@ -68,6 +68,15 @@ function riskPerUnit(input: SizingInput, stop: EngineDecimalValue): EngineDecima
   return price.minus(stopExit).plus(price.times(fee)).plus(stopExit.times(fee));
 }
 
+// R3 (arquiteto): o volume que vale é o do candle de DECISÃO `t`; o do preenchimento é desconhecido na
+// abertura. O defeito VOLUME_OF_FILL_CANDLE usa o do candle `k` (o que o executor real não tem).
+function volumeOfSizing(input: SizingInput): EngineDecimalValue {
+  if (input.context.defect === REFERENCE_ENGINE_DEFECT.VOLUME_OF_FILL_CANDLE) {
+    return toEngineDecimal(input.context.candle.volume);
+  }
+  return toEngineDecimal(requireText(input.order.decisionVolume, 'volume de decisão'));
+}
+
 function cashBound(input: SizingInput): EngineDecimalValue {
   const { run, config, defect } = input.context;
   const cash = toEngineDecimal(input.draft.state.cash);
@@ -111,7 +120,7 @@ function fitQuantity(
 }
 
 export function sizeEntry(input: SizingInput): SizedEntry | RejectedEntry {
-  const { run, candle } = input.context;
+  const { run } = input.context;
   const base = protectionBase(input);
   const stop = tickDown(
     base.minus(requireText(input.order.stopDistance, 'distância do stop')),
@@ -124,7 +133,7 @@ export function sizeEntry(input: SizingInput): SizedEntry | RejectedEntry {
   const riskAmount = toEngineDecimal(requireText(input.order.riskAmount, 'valor em risco'));
   const byRisk = stepDown(riskAmount.dividedBy(riskPerUnit(input, stop)), run);
   const byCash = cashBound(input);
-  const byVolume = stepDown(toEngineDecimal(candle.volume).times(run.maxVolumeShare), run);
+  const byVolume = stepDown(volumeOfSizing(input).times(run.maxVolumeShare), run);
   const unbounded = EngineDecimal.min(byRisk, byCash);
   const quantity = fitQuantity(input, EngineDecimal.min(unbounded, byVolume), stop);
   if (quantity.lte(0) || quantity.times(input.price).lessThan(run.minNotional)) {

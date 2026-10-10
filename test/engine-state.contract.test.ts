@@ -84,6 +84,7 @@ const PENDING_BUY: PendingOrderState = {
   stopDistance: '4',
   targetDistance: '6',
   eligibleCandles: null,
+  decisionVolume: '100000',
   filledQuantity: '0',
   exitReason: null,
 };
@@ -95,6 +96,7 @@ const PENDING_SELL: PendingOrderState = {
   riskAmount: null,
   stopDistance: null,
   targetDistance: null,
+  decisionVolume: null,
   exitReason: 'signal',
 };
 
@@ -189,6 +191,17 @@ describe('engine state', () => {
         withWallet({ pendingOrder: { ...PENDING_BUY, eligibleCandles: 2 } }),
       ],
       ['entrada sem risco', withWallet({ pendingOrder: { ...PENDING_BUY, riskAmount: null } })],
+      [
+        'entrada sem volume de decisão',
+        withWallet({ pendingOrder: { ...PENDING_BUY, decisionVolume: null } }),
+      ],
+      [
+        'saída com volume de decisão',
+        withWallet({
+          position: OPEN_POSITION,
+          pendingOrder: { ...PENDING_SELL, decisionVolume: '1' },
+        }),
+      ],
       [
         'saída sem motivo',
         withWallet({

@@ -25,6 +25,7 @@ import {
   sameDecimal,
   sellCredit,
   stopExitPrice,
+  stepDown,
   tickDown,
   tickUp,
   toEngineDecimal,
@@ -97,6 +98,24 @@ function isStopWithoutGap(
   return closed.exitReason === 'stop' && toEngineDecimal(entry.step.candle.open).greaterThan(stop);
 }
 
+// R3: a quantidade de uma entrada nunca passa da participação máxima no volume do candle de DECISÃO
+// (`t`, o da criação da ordem). O volume do candle de preenchimento é desconhecido na abertura.
+function assertVolumeShare(timeline: Timeline, entry: TimelineEntry, fill: FillDecision): void {
+  const order = orderOf(timeline, fill);
+  if (fill.side !== 'buy' || order === undefined) return;
+  const decision = timeline.entries.find(
+    (candidate) => candidate.step.candle.openTime === order.createdCandleOpenTime,
+  );
+  const allowed = stepDown(
+    toEngineDecimal(decision?.step.candle.volume ?? '0').times(timeline.run.maxVolumeShare),
+    timeline.run,
+  );
+  assertContract(
+    toEngineDecimal(fill.quantity).lte(allowed),
+    `Passo ${entry.index}: quantidade ${fill.quantity} passa da participação no volume do candle de decisão (${allowed.toFixed()}).`,
+  );
+}
+
 // RF05: a perda realizada no stop sem gap (com taxas e slippage de saída) nunca passa de
 // riskPerTrade × saldo da decisão. Gap além do stop fica fora de "até o stop".
 export function checkRealizedRisk(context: CheckContext): void {
@@ -110,6 +129,7 @@ export function checkRealizedRisk(context: CheckContext): void {
   const stops = new Map<string, string>();
   for (const entry of timeline.entries) {
     for (const fill of entry.step.result.decisions.fills) {
+      assertVolumeShare(timeline, entry, fill);
       if (fill.side === 'buy') cashAtEntry.set(fill.positionKey, ledger.cash);
       applyFill(ledger, fill, timeline);
     }

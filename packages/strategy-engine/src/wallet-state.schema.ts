@@ -50,7 +50,10 @@ const OPEN_POSITION_SCHEMA = z
 
 function checkEntryOrder(order: PendingOrderState, context: IssueSink): void {
   const hasSizing =
-    order.riskAmount !== null && order.stopDistance !== null && order.targetDistance !== null;
+    order.riskAmount !== null &&
+    order.stopDistance !== null &&
+    order.targetDistance !== null &&
+    order.decisionVolume !== null;
   if (!hasSizing || order.exitReason !== null) {
     reportIssue(context, ['riskAmount'], 'Entrada exige risco e distâncias, sem motivo de saída.');
   }
@@ -68,7 +71,10 @@ function checkEntryOrder(order: PendingOrderState, context: IssueSink): void {
 
 function checkExitOrder(order: PendingOrderState, context: IssueSink): void {
   const hasEntryFields =
-    order.riskAmount !== null || order.stopDistance !== null || order.limitPrice !== null;
+    order.riskAmount !== null ||
+    order.stopDistance !== null ||
+    order.limitPrice !== null ||
+    order.decisionVolume !== null;
   if (order.exitReason === null || hasEntryFields || order.type !== ENTRY_ORDER_TYPE.MARKET) {
     reportIssue(context, ['exitReason'], 'Saída é a mercado, com motivo e sem campos de entrada.');
   }
@@ -86,6 +92,7 @@ const PENDING_ORDER_SCHEMA = z
     stopDistance: POSITIVE_DECIMAL_STATE_TEXT_SCHEMA.nullable(),
     targetDistance: POSITIVE_DECIMAL_STATE_TEXT_SCHEMA.nullable(),
     eligibleCandles: z.number().int().positive().nullable(),
+    decisionVolume: NON_NEGATIVE_DECIMAL_STATE_TEXT_SCHEMA.nullable(),
     filledQuantity: NON_NEGATIVE_DECIMAL_STATE_TEXT_SCHEMA,
     exitReason: z.enum(EXIT_REASON).nullable(),
   })

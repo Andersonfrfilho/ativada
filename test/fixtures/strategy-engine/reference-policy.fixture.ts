@@ -47,6 +47,7 @@ function emptyEntry(draft: WalletDraft, context: WalletContext): PendingOrderSta
     stopDistance: null,
     targetDistance: null,
     eligibleCandles: null,
+    decisionVolume: null,
     filledQuantity: NO_FILL,
     exitReason: null,
   };
@@ -76,6 +77,7 @@ function buildEntryOrder(
     riskAmount: formatEngineDecimal(riskAmount),
     stopDistance: formatEngineDecimal(atrValue.times(config.risk.stopAtrMultiple)),
     targetDistance: formatEngineDecimal(atrValue.times(config.risk.targetAtrMultiple)),
+    decisionVolume: formatEngineDecimal(toEngineDecimal(candle.volume)),
     filledQuantity: isStashingClose ? candle.close : NO_FILL,
   };
   if (config.entry.orderType !== ENTRY_ORDER_TYPE.LIMIT) return sized;
@@ -141,6 +143,7 @@ function createExit(draft: WalletDraft, context: WalletContext, exitReason: Exit
     stopDistance: null,
     targetDistance: null,
     eligibleCandles: null,
+    decisionVolume: null,
     filledQuantity: NO_FILL,
     exitReason,
   };

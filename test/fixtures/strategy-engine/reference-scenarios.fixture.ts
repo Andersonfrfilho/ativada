@@ -42,16 +42,17 @@ export const SELL_AND_COMMANDS_PRICES: readonly CandleSpec[] = [
 ];
 
 // Mercado: ATR zero, stop inválido (ATR menor que o slippage), volume que não paga o mínimo,
-// volume que limita a quantidade.
+// volume que limita a quantidade. O volume que vale é o do candle de DECISÃO (`t`), nunca o do
+// candle de preenchimento: decide em 5 (volume 0,01) e em 6 (volume 30); o preenchimento tem volume alto.
 export const REJECTIONS_PRICES: readonly CandleSpec[] = [
   FLAT,
   FLAT,
   FLAT,
   NARROW,
   NARROW,
-  ['100', '104', '96', '100'],
-  ['100', '101', '99', '100', '0.01'],
+  ['100', '104', '96', '100', '0.01'],
   ['100', '101', '99', '100', '30'],
+  QUIET,
   QUIET,
 ];
 

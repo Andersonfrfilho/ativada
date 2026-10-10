@@ -32,6 +32,8 @@ export type PendingOrderState = {
   readonly stopDistance: string | null;
   readonly targetDistance: string | null;
   readonly eligibleCandles: number | null;
+  // Volume do candle de decisão `t`: a participação no volume usa ele, não o do candle de preenchimento.
+  readonly decisionVolume: string | null;
   readonly filledQuantity: string;
   readonly exitReason: ExitReason | null;
 };
