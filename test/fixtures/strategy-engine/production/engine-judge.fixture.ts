@@ -123,6 +123,7 @@ export function judgeEngineApiAgainstReference(params: JudgeParams): JudgeVerdic
   const report = compareWalletImplementations({
     production: api.walletStep,
     reference: REFERENCE_WALLET,
+    shouldStopAtFirst: true,
     ...(params.flowCount === undefined ? {} : { count: params.flowCount }),
   });
   const divergence = report.divergences[0];

@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
-    "test": "bun test"
+    "test": "bun test",
+    "test:full": "FULL_CONTRACT=1 bun test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

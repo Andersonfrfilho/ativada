@@ -6,7 +6,7 @@ export
 COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
 
-.PHONY: help bootstrap config up down ps check migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test identity-logs
+.PHONY: help bootstrap config up down ps check contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test identity-logs
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -35,6 +35,9 @@ check: ## Gate completo: formato, lint, tipos e testes
 	bun run lint
 	bun run typecheck
 	env -i PATH="$$PATH" HOME="$$HOME" bun test
+
+contract-full: ## Bateria completa do motor: todo corte nos checks de lookahead e retomada (FULL_CONTRACT=1)
+	env -i PATH="$$PATH" HOME="$$HOME" FULL_CONTRACT=1 bun test
 
 migration-test: ## Aplica e desfaz as migrations num Postgres de teste descartável
 	set -a; . envs/env.test; set +a; \

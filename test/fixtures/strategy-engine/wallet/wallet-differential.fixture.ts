@@ -107,11 +107,13 @@ export function candleOf(recorded: RecordedWalletStep): EngineCandle {
   return recorded.step.candle;
 }
 
-// Estado e decisões IGUAIS byte a byte: compara o JSON do resultado inteiro de cada passo.
+// Estado e decisões IGUAIS byte a byte: compara o JSON do resultado inteiro de cada passo. Com
+// `shouldStopAtFirst` para na primeira divergência (o juiz de mutantes só precisa de uma).
 export function compareWalletImplementations(params: {
   readonly production: WalletImplementation;
   readonly reference: WalletImplementation;
   readonly count?: number;
+  readonly shouldStopAtFirst?: boolean;
 }): DifferentialReport {
   const divergences: Divergence[] = [];
   let flows = 0;
@@ -132,6 +134,7 @@ export function compareWalletImplementations(params: {
         reference: expected,
       });
     });
+    if (params.shouldStopAtFirst === true && divergences.length > 0) break;
   }
   return { flows, steps, divergences };
 }

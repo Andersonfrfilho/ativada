@@ -355,9 +355,13 @@ describe('production engine: the guards, the differential and the harness reject
   });
 
   test(
-    'the production code survives the same gauntlet',
+    'the production code survives the same gauntlet (the 3.000 flows run in the differential tests)',
     () => {
-      expect(judgeEngineApiAgainstReference({ api: PRODUCTION_ENGINE_API })).toBeUndefined();
+      const verdict = judgeEngineApiAgainstReference({
+        api: PRODUCTION_ENGINE_API,
+        flowCount: MUTANT_FLOW_COUNT,
+      });
+      expect(verdict).toBeUndefined();
     },
     MUTANT_TIMEOUT_MILLISECONDS,
   );

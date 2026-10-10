@@ -10,6 +10,11 @@ import {
 } from '../../../packages/strategy-engine/src/index.js';
 import { stateAt, stateBefore } from './engine-contract-checks.fixture.js';
 import {
+  isFullContract,
+  LOOKAHEAD_HORIZON_CANDLES,
+  selectCutIndexes,
+} from './engine-cuts.fixture.js';
+import {
   buildStepInput,
   decisionsStampedUpTo,
   FUTURE_PERTURBATION,
@@ -51,15 +56,19 @@ function assertPastUnchanged(params: {
   );
 }
 
-// Para cada corte: futuro ×1,37, ×0,63, constante, permutado, e sentimento futuro espelhado.
+// Para cada corte: futuro ×1,37, ×0,63, constante, permutado, e sentimento futuro espelhado. A execução
+// perturbada para alguns candles depois do corte: só o prefixo é comparado.
 export function checkNoLookahead(context: CheckContext): void {
   const { scenario } = context;
-  for (let cutIndex = 0; cutIndex < scenario.candles.length - 1; cutIndex += 1) {
+  for (const cutIndex of selectCutIndexes(context)) {
+    const horizon = isFullContract()
+      ? scenario.candles.length
+      : cutIndex + 1 + LOOKAHEAD_HORIZON_CANDLES;
     for (const perturbation of Object.values(FUTURE_PERTURBATION)) {
       const mutatedRun = runSteps({
         engine: context.createEngine(),
         scenario,
-        candles: mutateCandlesAfter(scenario.candles, cutIndex, perturbation),
+        candles: mutateCandlesAfter(scenario.candles, cutIndex, perturbation).slice(0, horizon),
       });
       assertPastUnchanged({ context, mutatedRun, cutIndex, label: `candles (${perturbation})` });
     }
@@ -67,15 +76,17 @@ export function checkNoLookahead(context: CheckContext): void {
     const mutatedRun = runSteps({
       engine: context.createEngine(),
       scenario,
+      candles: scenario.candles.slice(0, horizon),
       sentiment: mutateSentimentAfter(scenario.sentiment, cutCloseTime),
     });
     assertPastUnchanged({ context, mutatedRun, cutIndex, label: 'o sentimento futuro' });
   }
 }
 
+// Retomar do estado serializado em cada corte dá a execução contínua (só a continuação é comparada).
 export function checkResume(context: CheckContext): void {
   const { scenario, baseline } = context;
-  for (let cutIndex = 0; cutIndex < scenario.candles.length - 1; cutIndex += 1) {
+  for (const cutIndex of selectCutIndexes(context)) {
     const restored = deserializeEngineState(serializeEngineState(stateAt(baseline, cutIndex)));
     const continuation = runSteps({
       engine: context.createEngine(),
@@ -83,9 +94,8 @@ export function checkResume(context: CheckContext): void {
       candles: scenario.candles.slice(cutIndex + 1),
       initialState: restored,
     });
-    const resumedRun = [...baseline.slice(0, cutIndex + 1), ...continuation];
     assertContract(
-      serializeRun(resumedRun) === serializeRun(baseline),
+      serializeRun(continuation) === serializeRun(baseline.slice(cutIndex + 1)),
       `Retomar do estado serializado após o índice ${cutIndex} divergiu da execução contínua.`,
     );
   }
