@@ -51,4 +51,5 @@ export const LIVE_LOG = {
   RUN_RETRY: 'live run will be retried',
   TICK_FAILED: 'live tick failed',
   RELEASED: 'live runs released on shutdown',
+  RELEASE_FAILED: 'live release failed',
 } as const;

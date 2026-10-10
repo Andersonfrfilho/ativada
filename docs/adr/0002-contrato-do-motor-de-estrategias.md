@@ -1376,11 +1376,11 @@ sinais, 27 ordens, 27 preenchimentos, 14 posições, 307 pontos de patrimônio, 
 207, digest `7c8849814fd68407…`; **~3 ms por passo** com o Postgres local (500 passos em ~1,3 s). Uma execução ao vivo interrompida e
 retomada é igual à contínua, que é igual ao backtest.
 
-**Prova.** 53 contratos sem banco (`test/live-evaluator*.contract.test.ts`, `test/live-scheduler.contract.test.ts`,
+**Prova.** 54 contratos sem banco (`test/live-evaluator*.contract.test.ts`, `test/live-scheduler.contract.test.ts`,
 `test/live-parity.contract.test.ts`: passo por candle, queda dentro de cada ponto sensível, posse perdida, assunção, encerramento
 gracioso, cancelamento, conta inativa, FK, lacuna que espera e que se confirma, candle repetido, histórico curto, hashes, versão do
 motor, checkpoint de outra execução, sentimento com corte de inserção, erro de banco repetível e defeito de dado que falha, texto do erro
-que não vaza) e **32 mutantes** do avaliador e do agendador (`test/live-mutants.contract.test.ts`) reprovados — o juiz roda uma cópia do
+que não vaza) e **33 mutantes** do avaliador e do agendador (`test/live-mutants.contract.test.ts`) reprovados — o juiz roda uma cópia do
 módulo (com a cópia do pacote de gravação ao lado) num processo à parte. No banco, `make database-test` e `make queue-test` (checks
 `live-run-checks.ts`: marca com dono e batimento, teto por usuário, 200 rodadas × 6 workers disputando a única vaga, `SKIP LOCKED`,
 assunção por batimento vencido, vencido não ocupa vaga, conta inativa, devolução) e `make queue-mutants` (+10 mutantes do banco: teto

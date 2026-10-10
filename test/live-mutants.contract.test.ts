@@ -221,8 +221,16 @@ const MUTANTS: readonly LiveSourceMutant[] = [
     edits: edit(SCHEDULER, '      await state.current;\n', ''),
   },
   {
+    name: 'SCHEDULER_RELEASE_ERROR_ESCAPES_THE_SHUTDOWN',
+    edits: edit(
+      SCHEDULER,
+      'dependencies.logger.error(LIVE_LOG.RELEASE_FAILED, { errorName: readErrorName(error) });',
+      'throw error;',
+    ),
+  },
+  {
     name: 'SCHEDULER_STOP_DOES_NOT_RELEASE',
-    edits: edit(SCHEDULER, '      await dependencies.evaluator.release();\n', ''),
+    edits: edit(SCHEDULER, '      await releaseBestEffort(dependencies);\n', ''),
   },
 ];
 

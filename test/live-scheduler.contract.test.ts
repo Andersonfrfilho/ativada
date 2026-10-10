@@ -15,6 +15,7 @@ type ControlledEvaluator = LiveEvaluator & {
   readonly calls: { ticks: number; releases: number; inFlight: number; maxInFlight: number };
   readonly gate: { promise: Promise<void>; open: () => void };
   failNext: boolean;
+  failRelease: boolean;
 };
 
 function createControlledEvaluator(): ControlledEvaluator {
@@ -28,6 +29,7 @@ function createControlledEvaluator(): ControlledEvaluator {
     calls,
     gate,
     failNext: false,
+    failRelease: false,
     tick: async () => {
       calls.ticks += 1;
       calls.inFlight += 1;
@@ -42,6 +44,7 @@ function createControlledEvaluator(): ControlledEvaluator {
     },
     release: () => {
       calls.releases += 1;
+      if (evaluator.failRelease) return Promise.reject(new Error('segredo-xyz postgres://u:p@h/b'));
       return Promise.resolve(1);
     },
   };
@@ -107,6 +110,19 @@ describe('agendador da avaliação ao vivo', () => {
     evaluator.gate.open();
     await stopping;
     expect(evaluator.calls.releases).toBe(1);
+  });
+
+  test('banco fora do ar no encerramento: o erro vai ao log só com o nome e o encerramento termina (o batimento vence e outra instância assume)', async () => {
+    const evaluator = createControlledEvaluator();
+    evaluator.gate.open();
+    evaluator.failRelease = true;
+    const { scheduler, logger } = await buildScheduler(evaluator);
+    await scheduler.stop();
+    expect(evaluator.calls.releases).toBe(1);
+    expect(logger.entries.filter((entry) => entry.message === 'live release failed')).toHaveLength(
+      1,
+    );
+    expect(JSON.stringify(logger.entries)).not.toContain('segredo');
   });
 
   test('depois de parado, pedido nenhum dispara ronda', async () => {

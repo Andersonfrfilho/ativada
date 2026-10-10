@@ -35,6 +35,16 @@ async function runTick(dependencies: LiveSchedulerDependencies): Promise<void> {
   }
 }
 
+// Devolver à fila é cortesia: com o banco fora do ar o erro vai ao log (só o nome) e o encerramento termina mesmo assim; o
+// batimento vence e outra instância assume do checkpoint (ADR 0002, T3.6).
+async function releaseBestEffort(dependencies: LiveSchedulerDependencies): Promise<void> {
+  try {
+    await dependencies.evaluator.release();
+  } catch (error: unknown) {
+    dependencies.logger.error(LIVE_LOG.RELEASE_FAILED, { errorName: readErrorName(error) });
+  }
+}
+
 // Rondas nunca se sobrepõem; um pedido que chega durante uma ronda roda logo depois dela.
 async function drain(
   dependencies: LiveSchedulerDependencies,
@@ -71,7 +81,7 @@ export function createLiveScheduler(dependencies: LiveSchedulerDependencies): Li
       state.isStopped = true;
       if (state.timer !== undefined) clearInterval(state.timer);
       await state.current;
-      await dependencies.evaluator.release();
+      await releaseBestEffort(dependencies);
     },
   };
 }

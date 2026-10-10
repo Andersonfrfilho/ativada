@@ -178,7 +178,7 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   motivo `gap`) quando ela o marcou como inalcançável (`unfillable`); FK violada/execução sumida = encerrada sem erro; erro de banco repete,
   erro tipado grava só o código (nunca o texto). `POST /v1/runs` com `live_paper` NÃO leva período (começa no candle em curso, sem fim); o
   agendador (`LIVE_POLL_SECONDS` 5, `LIVE_HEARTBEAT_TIMEOUT_SECONDS` 60) roda uma ronda por intervalo e uma por candle gravado. Teste novo do
-  avaliador usa `loadLiveApi()` (`test/fixtures/live/`): é por ele que os 32 mutantes entram. Prova: 53 contratos, `make live-test` (Postgres
+  avaliador usa `loadLiveApi()` (`test/fixtures/live/`): é por ele que os 33 mutantes entram. Prova: 54 contratos, `make live-test` (Postgres
   descartável, API real, worker em processo à parte morto por SIGKILL, paridade com o backtest nos dois conjuntos reais, ~3 ms por passo),
   `make live-mutants` (6 mutantes do adaptador) e `make queue-mutants` (+10 da reivindicação ao vivo).
 - **Sobrevivência do saldo (T4.3, ADR 0002 §"Sobrevivência do saldo (T4.3)").** `computeBalanceSurvival` (`packages/strategy-engine/src/survival/`,
