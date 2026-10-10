@@ -28,6 +28,8 @@ export type ApiResponse = {
 
 export type CallParams = {
   readonly subject?: string;
+  // Declarações extras do token (por exemplo, o papel `admin` e `acr`).
+  readonly claims?: Readonly<Record<string, unknown>>;
   readonly method?: string;
   readonly path: string;
   readonly body?: unknown;
@@ -60,7 +62,7 @@ async function request(
   if (params.subject !== undefined) {
     headers.set(
       'Authorization',
-      `Bearer ${await signTestToken({ key, claims: { sub: params.subject } })}`,
+      `Bearer ${await signTestToken({ key, claims: { sub: params.subject, ...params.claims } })}`,
     );
   }
   const response = await fetch(`${baseUrl}${params.path}`, {
