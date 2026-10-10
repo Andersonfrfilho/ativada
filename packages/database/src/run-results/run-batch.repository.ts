@@ -14,6 +14,7 @@ import {
   writeSignals,
   writeWindows,
 } from './run-result-append.js';
+import { publishStepEvents } from '../run-events/publish-step-events.js';
 import { writeOrders, writePositions } from './run-result-upsert.js';
 import type { RunBatchRepository, RunBatchWriter, RunResultRows } from './run-batch.types.js';
 import type { AppendResult } from './run-result.types.js';
@@ -55,6 +56,13 @@ function createWriter(target: BatchTarget, status: RunStatus): RunBatchWriter {
     }),
     saveCheckpoint: (params) =>
       saveCheckpoint(target.executor, target.scope, { runId: target.runId, ...params }),
+    publishStepEvents: (candleTime) =>
+      publishStepEvents({
+        executor: target.executor,
+        ownerUserId: target.scope.ownerUserId,
+        runId: target.runId,
+        candleTime,
+      }),
   };
 }
 

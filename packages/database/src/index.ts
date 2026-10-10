@@ -130,6 +130,9 @@ export type {
   RunResultRows,
 } from './run-results/run-batch.types.js';
 export { resolveRunOwnerScope } from './runs/run-owner.js';
+export { RUN_EVENT_KIND } from './run-events/run-event.constant.js';
+export { createRunEventListener } from './run-events/run-event-listener.js';
+export type * from './run-events/run-events.public-types.js';
 export { createRunQueueRepository } from './run-queue/run-queue.repository.js';
 export {
   RUN_ORPHAN_POLICY,

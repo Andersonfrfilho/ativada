@@ -38,6 +38,8 @@ export type RunBatchWriter = {
   readonly appendWindows: (rows: readonly WalkForwardWindowInput[]) => Promise<AppendResult>;
   // `false` quando a execução não está `running` ou o candle não avança o checkpoint.
   readonly saveCheckpoint: (params: BatchCheckpointParams) => Promise<boolean>;
+  // Avisa a API (NOTIFY na mesma transação) do que o passo do candle gravou; devolve quantos avisos saíram.
+  readonly publishStepEvents: (candleTime: number) => Promise<number>;
 };
 
 export type RunBatchRepository = {

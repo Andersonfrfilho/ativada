@@ -10,6 +10,7 @@ import { checkApi } from './live-test/check-api.js';
 import { checkAtomicStep } from './live-test/check-atomic-step.js';
 import { checkClosedAccounts } from './live-test/check-closed-accounts.js';
 import { checkDuplicates } from './live-test/check-duplicates.js';
+import { checkStepEvents } from './live-test/check-events.js';
 import { checkTypedFailures } from './live-test/check-failures.js';
 import { checkGaps } from './live-test/check-gaps.js';
 import { checkParity } from './live-test/check-parity.js';
@@ -30,6 +31,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkRestart(context);
     await checkAtomicStep(context);
     await checkDuplicates(context);
+    await checkStepEvents(context);
     await checkClosedAccounts(context);
     await checkTwoWorkers(context);
     await checkGaps(context);

@@ -29,6 +29,10 @@ export type MutantTarget = {
   readonly judgeTestFiles: readonly string[];
   readonly sourceVariable: string;
   readonly extraEnvironment?: Readonly<Record<string, string>>;
+  // Um mutante que trava o juiz conta como reprovado: depois deste tempo o processo é encerrado (exit 124).
+  readonly judgeTimeoutMilliseconds?: number;
+  // O mutante já está morto no primeiro teste que falha: o juiz para aí (`bun test --bail`) em vez de rodar o resto.
+  readonly shouldBailOnFirstFailure?: boolean;
 };
 
 export const ENGINE_MUTANT_TARGET: MutantTarget = {
@@ -68,7 +72,8 @@ export async function runSourceMutant(
   const directory = `${target.mutantRoot}/${target.directoryPrefix}${mutant.name.toLowerCase()}`;
   await cp(target.sourceDirectory, directory, { recursive: true });
   for (const edit of mutant.edits) await applyEdit(directory, mutant.name, edit);
-  const child = Bun.spawn([process.execPath, 'test', ...target.judgeTestFiles], {
+  const bailArguments = target.shouldBailOnFirstFailure === true ? ['--bail'] : [];
+  const child = Bun.spawn([process.execPath, 'test', ...bailArguments, ...target.judgeTestFiles], {
     cwd: REPOSITORY_ROOT,
     env: {
       PATH: Bun.env.PATH ?? '',
@@ -79,15 +84,26 @@ export async function runSourceMutant(
     stdout: 'pipe',
     stderr: 'pipe',
   });
+  let isKilledByTimeout = false;
+  const timer =
+    target.judgeTimeoutMilliseconds === undefined
+      ? undefined
+      : setTimeout(() => {
+          isKilledByTimeout = true;
+          child.kill();
+        }, target.judgeTimeoutMilliseconds);
   const [output, errors, exitCode] = await Promise.all([
     new Response(child.stdout).text(),
     new Response(child.stderr).text(),
     child.exited,
   ]);
+  clearTimeout(timer);
   const report = `${output}\n${errors}`;
   return {
     exitCode,
-    failedTests: report.split('\n').filter((line) => line.startsWith('(fail)')).length,
+    failedTests: isKilledByTimeout
+      ? 1
+      : report.split('\n').filter((line) => line.startsWith('(fail)')).length,
     hasLoadError: report.includes('Unhandled error between tests'),
   };
 }

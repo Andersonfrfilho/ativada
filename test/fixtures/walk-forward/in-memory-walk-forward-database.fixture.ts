@@ -153,6 +153,7 @@ function createWriter(
 ): RunBatchWriter {
   const { memory } = context;
   return {
+    publishStepEvents: (): Promise<number> => Promise.resolve(0),
     readStatus: (): Promise<RunStatus> => {
       memory.calls.log.push('status');
       return Promise.resolve(memory.state.status);

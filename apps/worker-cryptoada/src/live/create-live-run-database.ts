@@ -49,6 +49,8 @@ async function commitStep(
         if ((await writer.readStatus()) !== RUN_STATUS.RUNNING) return LIVE_COMMIT_OUTCOME.STOPPED;
         await writer.appendResults(commit.rows);
         if (!(await writer.saveCheckpoint(commit.checkpoint))) throw new StepAlreadyRecordedError();
+        // O aviso à API sai na MESMA transação: chega no COMMIT e some no ROLLBACK, então nunca precede nem sobrevive ao dado.
+        await writer.publishStepEvents(commit.checkpoint.lastCandleTime);
         return LIVE_COMMIT_OUTCOME.COMMITTED;
       },
     );
