@@ -6,7 +6,7 @@ export
 COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
 
-.PHONY: help bootstrap config up down ps check migration-test database-test identity-test session-test admin-test lgpd-test identity-logs
+.PHONY: help bootstrap config up down ps check migration-test database-test identity-test session-test admin-test lgpd-test backfill-test identity-logs
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -77,6 +77,13 @@ lgpd-test: ## Prova exportar e apagar a conta (API, cron, Postgres, Keycloak e M
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test && bun --env-file=envs/env.test run scripts/lgpd-test.ts
+
+backfill-test: ## Prova o backfill retomável de candles (cron real, Postgres de teste descartável e Binance falsa local)
+	set -a; . envs/env.test; set +a; \
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/backfill-test.ts
 
 identity-logs: ## Segue os logs do Keycloak do ambiente atual
 	$(COMPOSE) logs -f keycloak

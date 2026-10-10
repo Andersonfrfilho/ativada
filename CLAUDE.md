@@ -40,7 +40,7 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `make down DOWN_FLAGS=--volumes` e `make up` (apaga os dados do Keycloak daquele ambiente). `make up`
   avisa quando o JSON é mais novo que o volume.
 - Alvos `*-test` (`migration-test`, `database-test`, `identity-test`, `session-test`, `admin-test`,
-  `lgpd-test`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
+  `lgpd-test`, `backfill-test`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
   `TERM`: Ctrl-C não deixa container vivo. Dois deles ao mesmo tempo disputam o mesmo projeto; rode um por vez.
 - `make check` roda `bun test` com `env -i`: teste que precisa de variável a declara; o `export` do `env.dev`
   não chega a ele.
@@ -48,8 +48,14 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account
   (ADR 0001 §q). Atribuir o papel direto, sem o grupo, deixa a conta sem essa proteção.
-- O cron (`apps/cron-crypto`) roda três tarefas em sequência e sai `1` se qualquer uma falhar:
-  `purge-deleted-accounts`, `reconcile-blocked-accounts`, `expire-audit-events`.
+- O cron (`apps/cron-crypto`) roda quatro tarefas em sequência e sai `1` se qualquer uma falhar:
+  `purge-deleted-accounts`, `reconcile-blocked-accounts`, `expire-audit-events`, `backfill-candles`.
+  `CRON_TASKS` (lista separada por vírgula) roda só as nomeadas. O backfill percorre cada par
+  (`MARKET_SYMBOLS` x `MARKET_TIMEFRAMES`, padrão BTCUSDT/ETHUSDT em 15m/1h/4h/1d) em sequência, acha as
+  lacunas em SQL (`findMissingOpenTimes`), baixa só o que falta e grava cada página ao chegar; `BACKFILL_YEARS`
+  (1 a 5, padrão 2) e `BINANCE_BASE_URL` (padrão `https://data-api.binance.vision`, https em produção).
+  Lacuna que a Binance não tem sai no log como `unfillable`, sem laço de retry. `make backfill-test` prova
+  isso com o cron real, Postgres descartável e uma Binance falsa local.
 
 ## Regras que não se negociam
 
