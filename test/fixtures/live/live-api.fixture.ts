@@ -6,6 +6,14 @@ import type {
 } from '../../../apps/worker-cryptoada/src/live/build-step-alert.js';
 import type { alertPayloadSchema } from '../../../apps/worker-cryptoada/src/live/alert-payload.schema.js';
 import type { parseHitRate } from '../../../apps/worker-cryptoada/src/live/hit-rate.js';
+import type {
+  buildGoalCommands,
+  decideGoalStep,
+  isWalletSettled,
+  loadGoalTracking,
+} from '../../../apps/worker-cryptoada/src/live/goal-step.js';
+import type { buildGoalAlert } from '../../../apps/worker-cryptoada/src/live/goal-alert.js';
+import type { goalAlertPayloadSchema } from '../../../apps/worker-cryptoada/src/live/alert-payload.schema.js';
 import type { createLiveScheduler } from '../../../apps/worker-cryptoada/src/live/live-scheduler.js';
 
 const PRODUCTION_SOURCE = new URL('../../../apps/worker-cryptoada/src/live', import.meta.url)
@@ -25,6 +33,15 @@ export type LiveAlertParts = {
   readonly alertPayloadSchema: typeof alertPayloadSchema;
   readonly buildStepAlert: typeof buildStepAlert;
   readonly isAlertableSignal: typeof isAlertableSignal;
+};
+
+export type LiveGoalParts = {
+  readonly loadGoalTracking: typeof loadGoalTracking;
+  readonly decideGoalStep: typeof decideGoalStep;
+  readonly buildGoalCommands: typeof buildGoalCommands;
+  readonly isWalletSettled: typeof isWalletSettled;
+  readonly buildGoalAlert: typeof buildGoalAlert;
+  readonly goalAlertPayloadSchema: typeof goalAlertPayloadSchema;
 };
 
 export function resolveLiveSource(): string {
@@ -78,4 +95,24 @@ export async function loadLiveAlertParts(): Promise<LiveAlertParts> {
     buildStepAlert: buildMember as LiveAlertParts['buildStepAlert'],
     isAlertableSignal: alertableMember as LiveAlertParts['isAlertableSignal'],
   };
+}
+
+// A decisão da meta no passo ao vivo (alvo, perda máxima, prazo), os comandos de saída e o alerta de desfecho.
+export async function loadLiveGoalParts(): Promise<LiveGoalParts> {
+  const source = resolveLiveSource();
+  const step: unknown = await import(`${source}/goal-step.ts`);
+  const alert: unknown = await import(`${source}/goal-alert.ts`);
+  const payload: unknown = await import(`${source}/alert-payload.schema.ts`);
+  const members = {
+    loadGoalTracking: readMember(step, 'loadGoalTracking'),
+    decideGoalStep: readMember(step, 'decideGoalStep'),
+    buildGoalCommands: readMember(step, 'buildGoalCommands'),
+    isWalletSettled: readMember(step, 'isWalletSettled'),
+    buildGoalAlert: readMember(alert, 'buildGoalAlert'),
+    goalAlertPayloadSchema: readMember(payload, 'goalAlertPayloadSchema'),
+  };
+  if (Object.values(members).some((member) => member === undefined)) {
+    throw new Error('Módulo ao vivo sem as partes da meta.');
+  }
+  return members as LiveGoalParts;
 }

@@ -13,3 +13,9 @@ export {
   type RankableCombination,
   type RankableEvaluation,
 } from './goal-ranking.js';
+export {
+  goalFinalValue,
+  judgeGoalPoint,
+  judgeGoalStep,
+  type JudgeGoalStepParams,
+} from './goal-progress.js';

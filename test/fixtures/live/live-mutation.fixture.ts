@@ -21,6 +21,8 @@ export const LIVE_JUDGE_TEST_FILES: readonly string[] = [
   'test/live-alerts.contract.test.ts',
   'test/live-alert-parts.contract.test.ts',
   'test/live-scheduler.contract.test.ts',
+  'test/live-goal-step.contract.test.ts',
+  'test/live-goal-evaluator.contract.test.ts',
 ];
 
 export type LiveSourceEdit = {

@@ -20,6 +20,7 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'EXAMPLE_SEED_OUTCOME',
   'GOAL_CREATE_OUTCOME',
   'GOAL_DELETE_OUTCOME',
+  'GOAL_RUN_OUTCOME',
   'InvalidUserIdError',
   'LINK_OUTCOME',
   'OpenCandleRejectedError',

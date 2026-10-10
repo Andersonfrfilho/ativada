@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 export const UNIQUE_VIOLATION_SQLSTATE = '23505';
 export const FOREIGN_KEY_VIOLATION_SQLSTATE = '23503';
+// O Postgres 18 sinaliza o RESTRICT de uma FK com 23001; as versões anteriores, com 23503.
+export const RESTRICT_VIOLATION_SQLSTATE = '23001';
 
 const SQLSTATE_PATTERN = /^[0-9A-Z]{5}$/;
 const MAX_CAUSE_DEPTH = 4;
@@ -31,6 +33,11 @@ export function isUniqueViolation(error: unknown): boolean {
 
 export function isForeignKeyViolation(error: unknown): boolean {
   return readPostgresErrorCode(error) === FOREIGN_KEY_VIOLATION_SQLSTATE;
+}
+
+export function isRestrictViolation(error: unknown): boolean {
+  const sqlState = readPostgresErrorCode(error);
+  return sqlState === RESTRICT_VIOLATION_SQLSTATE || sqlState === FOREIGN_KEY_VIOLATION_SQLSTATE;
 }
 
 const DRIZZLE_FAILED_QUERY_PREFIX = 'Failed query:';

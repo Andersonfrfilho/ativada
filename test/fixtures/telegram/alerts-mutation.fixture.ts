@@ -15,6 +15,7 @@ const PAYLOAD_COPY_IMPORT = "'./alert-payload.schema.js'";
 export const ALERTS_JUDGE_TEST_FILES: readonly string[] = [
   'test/telegram-client.contract.test.ts',
   'test/alert-message.contract.test.ts',
+  'test/goal-alert-message.contract.test.ts',
   'test/alert-dispatcher.contract.test.ts',
   'test/alert-scheduler.contract.test.ts',
 ];

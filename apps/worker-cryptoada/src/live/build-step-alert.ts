@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { AlertInput, AlertSide } from '@cryptoada/database';
+import type { AlertInput, SignalAlertSide } from '@cryptoada/database';
 import {
   EngineDecimal,
   formatEngineDecimal,
@@ -73,7 +73,7 @@ function protectionOf(params: BuildStepAlertParams, order: OrderEvent | undefine
 }
 
 // Só BUY e SELL geram alerta; HOLD e candle sem sinal (aquecimento) não geram nada.
-export type AlertableSignal = SignalDecision & { readonly action: AlertSide };
+export type AlertableSignal = SignalDecision & { readonly action: SignalAlertSide };
 
 export function isAlertableSignal(signal: SignalDecision | null): signal is AlertableSignal {
   return signal !== null && signal.action !== SIGNAL_ACTION.HOLD;

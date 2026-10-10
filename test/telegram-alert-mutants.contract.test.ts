@@ -17,6 +17,9 @@ const FORMAT = 'format-alert-message.ts';
 const DISPATCHER = 'alert-dispatcher.ts';
 const SCHEDULER = 'alert-scheduler.ts';
 const CONSTANTS = 'alerts.constant.ts';
+const GOAL_FORMAT = 'format-goal-alert-message.ts';
+const PERCENT = 'format-percent.ts';
+const PAYLOAD_SCHEMA = 'alert-payload.schema.ts';
 
 function edit(file: string, find: string, replace: string, occurrences = 1): AlertsSourceEdit[] {
   return [{ file, find, replace, occurrences }];
@@ -85,11 +88,11 @@ const MUTANTS: readonly AlertsSourceMutant[] = [
   },
   {
     name: 'HIT_RATE_NOT_SCALED_TO_PERCENT',
-    edits: edit(FORMAT, 'const PERCENT_FACTOR = 100;', 'const PERCENT_FACTOR = 1;'),
+    edits: edit(PERCENT, 'const PERCENT_FACTOR = 100;', 'const PERCENT_FACTOR = 1;'),
   },
   {
     name: 'HIT_RATE_TRUNCATED_INSTEAD_OF_ROUNDED',
-    edits: edit(FORMAT, 'EngineDecimal.ROUND_HALF_UP', 'EngineDecimal.ROUND_DOWN'),
+    edits: edit(PERCENT, 'EngineDecimal.ROUND_HALF_UP', 'EngineDecimal.ROUND_DOWN'),
   },
   {
     name: 'MISSING_HIT_RATE_SHOWN_AS_ZERO',
@@ -167,8 +170,8 @@ const MUTANTS: readonly AlertsSourceMutant[] = [
     name: 'PAYLOAD_NOT_VALIDATED',
     edits: edit(
       DISPATCHER,
-      'const payload = alertPayloadSchema.safeParse(alert.payload);',
-      'const payload = { success: true, data: alert.payload } as never as ReturnType<typeof alertPayloadSchema.safeParse>;',
+      'const signal = alertPayloadSchema.safeParse(alert.payload);',
+      'const signal = { success: true, data: alert.payload } as never as ReturnType<typeof alertPayloadSchema.safeParse>;',
     ),
   },
   {
@@ -245,6 +248,78 @@ const MUTANTS: readonly AlertsSourceMutant[] = [
       SCHEDULER,
       'while (state.isRequested && !state.isStopped) {',
       'while (state.isRequested) {',
+    ),
+  },
+  {
+    name: 'GOAL_ALERT_SENT_WITH_THE_SIGNAL_TEXT',
+    edits: edit(DISPATCHER, 'if (alert.side === ALERT_SIDE.GOAL) {', 'if (false as boolean) {'),
+  },
+  {
+    name: 'GOAL_PAYLOAD_NOT_VALIDATED',
+    edits: edit(
+      DISPATCHER,
+      'return goal.success ? formatGoalAlertMessage(goal.data) : undefined;',
+      'return formatGoalAlertMessage(alert.payload as never);',
+    ),
+  },
+  {
+    name: 'GOAL_OUTCOME_UNKNOWN_ACCEPTED',
+    edits: edit(PAYLOAD_SCHEMA, 'outcome: z.enum(GOAL_RUN_OUTCOME),', 'outcome: z.string(),'),
+  },
+  {
+    name: 'GOAL_PAYLOAD_ACCEPTS_EXTRA_FIELDS',
+    edits: edit(
+      PAYLOAD_SCHEMA,
+      'export const goalAlertPayloadSchema = z.strictObject({',
+      'export const goalAlertPayloadSchema = z.object({',
+    ),
+  },
+  {
+    name: 'GOAL_RESULT_WITHOUT_SIGN',
+    edits: edit(
+      PERCENT,
+      "return text.startsWith('-') || new EngineDecimal(rate).isZero() ? text : `+${text}`;",
+      'return text;',
+    ),
+  },
+  {
+    name: 'GOAL_ZERO_RESULT_WITH_PLUS',
+    edits: edit(
+      PERCENT,
+      "text.startsWith('-') || new EngineDecimal(rate).isZero() ? text",
+      "text.startsWith('-') ? text",
+    ),
+  },
+  {
+    name: 'GOAL_TITLES_SWAPPED',
+    edits: edit(
+      GOAL_FORMAT,
+      "[GOAL_RUN_OUTCOME.REACHED]: 'Meta atingida',",
+      "[GOAL_RUN_OUTCOME.REACHED]: 'Perda máxima atingida',",
+    ),
+  },
+  {
+    name: 'GOAL_RESULT_VERB_SWAPPED',
+    edits: edit(
+      GOAL_FORMAT,
+      "[GOAL_RUN_OUTCOME.STOPPED]: 'A simulação caiu a',",
+      "[GOAL_RUN_OUTCOME.STOPPED]: 'A simulação chegou a',",
+    ),
+  },
+  {
+    name: 'GOAL_WITHOUT_THE_DISCLAIMER',
+    edits: edit(
+      GOAL_FORMAT,
+      '    CLOSING_LINE,\n    DISCLAIMER,\n  ].join',
+      '    CLOSING_LINE,\n  ].join',
+    ),
+  },
+  {
+    name: 'GOAL_TARGET_SHOWN_AS_LOSS',
+    edits: edit(
+      GOAL_FORMAT,
+      'Meta: ${formatPercent(payload.targetRate)} em ${payload.horizonDays} dias, perda máxima de ${formatPercent(payload.maxLossRate)}.',
+      'Meta: ${formatPercent(payload.maxLossRate)} em ${payload.horizonDays} dias, perda máxima de ${formatPercent(payload.targetRate)}.',
     ),
   },
 ];

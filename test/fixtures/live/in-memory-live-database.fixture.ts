@@ -3,6 +3,7 @@ import type {
   HistoricalHitRate,
   LiveBlueprint,
   LiveCommitOutcome,
+  LiveGoalCommit,
   LiveRunClaims,
   LiveRunDatabase,
   LiveRunSession,
@@ -11,6 +12,7 @@ import type {
   AlertInput,
   ClaimedLiveRun,
   EngineCheckpoint,
+  GoalRunOutcome,
   RenewHeartbeatResult,
   RunRecord,
   RunStatus,
@@ -70,6 +72,15 @@ export type LiveScenario = {
   readonly kind?: RunRecord['kind'];
   // O acerto histórico que a leitura do último walk-forward devolve; `'error'` é a leitura que falha.
   readonly hitRate?: HistoricalHitRate | 'error';
+  // A execução nasce atrelada a uma meta: a fotografia dela mora no pedido, como a API a grava.
+  readonly goal?: {
+    readonly goalId: string;
+    readonly spec: {
+      readonly targetRate: string;
+      readonly maxLossRate: string;
+      readonly horizonDays: number;
+    };
+  };
 };
 
 export type InMemoryLiveState = {
@@ -84,6 +95,9 @@ export type InMemoryLiveState = {
   isOwnerActive: boolean;
   isHeartbeatExpired: boolean;
   candles: EngineCandle[];
+  // O desfecho da meta gravado pelo passo confirmado (uma vez só).
+  goalOutcome: { outcome: GoalRunOutcome; candleTime: number } | undefined;
+  goalOutcomeWrites: number;
 };
 
 export type InMemoryLive = {
@@ -123,9 +137,13 @@ function buildBlueprint(scenario: LiveScenario, runId: string): LiveBlueprint {
     progress: 0,
     errorCode: undefined,
     migratedFromRunId: undefined,
-    request: undefined,
+    request:
+      scenario.goal === undefined ? undefined : { goal: structuredClone(scenario.goal.spec) },
     createdAt: new Date(0),
     startedAt: undefined,
+    goalId: scenario.goal?.goalId,
+    goalOutcome: undefined,
+    goalOutcomeCandleTime: undefined,
     finishedAt: undefined,
   };
   const strategy = scenario.strategy ?? CLASSIC_STRATEGY;
@@ -175,8 +193,22 @@ function commitStep(
     progress: commit.checkpoint.progress,
   };
   state.commits = attempt;
+  applyGoalCommit(state, commit.goal);
   hooks?.afterCommit?.(attempt, live.controls);
   return 'committed';
+}
+
+// O que o banco faz com a meta no MESMO passo: grava o desfecho uma vez e conclui a execução quando a saída se completou.
+function applyGoalCommit(state: InMemoryLiveState, goal: LiveGoalCommit | undefined): void {
+  if (goal === undefined) return;
+  if (goal.outcome !== undefined && state.goalOutcome === undefined) {
+    state.goalOutcome = { ...goal.outcome };
+    state.goalOutcomeWrites += 1;
+  }
+  if (goal.shouldComplete) {
+    state.status = 'completed';
+    state.claimedBy = undefined;
+  }
 }
 
 function readCheckpoint(state: InMemoryLiveState): EngineCheckpoint | undefined {
@@ -196,7 +228,15 @@ function createSession(context: Context): LiveRunSession {
   const { state } = live;
   return {
     findRun: () =>
-      Promise.resolve({ ...blueprint, run: { ...blueprint.run, status: state.status } }),
+      Promise.resolve({
+        ...blueprint,
+        run: {
+          ...blueprint.run,
+          status: state.status,
+          goalOutcome: state.goalOutcome?.outcome,
+          goalOutcomeCandleTime: state.goalOutcome?.candleTime,
+        },
+      }),
     readCheckpoint: () => Promise.resolve(readCheckpoint(state)),
     findCandles: (window): Promise<readonly EngineCandle[]> => {
       live.calls.findCandles += 1;
@@ -290,6 +330,8 @@ export function createInMemoryLive(scenario: LiveScenario): InMemoryLive {
     isOwnerActive: true,
     isHeartbeatExpired: false,
     candles: [...scenario.candles],
+    goalOutcome: undefined,
+    goalOutcomeWrites: 0,
   };
   const controls: LiveControls = {
     cancel: () => {

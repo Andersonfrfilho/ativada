@@ -75,7 +75,12 @@ export { RUN_KIND, RUN_STATUS, RUN_TRANSITION_OUTCOME } from './runs/run.constan
 export type { RunKind, RunStatus } from './runs/run.constant.js';
 export { createRunRepository } from './runs/run.repository.js';
 export { createGoalRepository } from './goals/goal.repository.js';
-export { GOAL_CREATE_OUTCOME, GOAL_DELETE_OUTCOME } from './goals/goal.constant.js';
+export {
+  GOAL_CREATE_OUTCOME,
+  GOAL_DELETE_OUTCOME,
+  GOAL_RUN_OUTCOME,
+} from './goals/goal.constant.js';
+export type { GoalRunOutcome } from './goals/goal.constant.js';
 export type * from './goals/goal.types.js';
 export { createAlertRepository } from './alerts/alert.repository.js';
 export { ALERT_CHANNEL, ALERT_SIDE, ALERT_STATUS } from './alerts/alert.constant.js';

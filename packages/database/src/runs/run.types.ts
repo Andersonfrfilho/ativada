@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { JsonContainer, JsonValue } from '../json-value.types.js';
 import type { OwnerScope } from '../ownership/owner-scope.js';
+import type { GoalRunOutcome } from '../goals/goal.constant.js';
 import type { RunKind, RunStatus } from './run.constant.js';
 
 export type RunRecord = {
@@ -24,6 +25,10 @@ export type RunRecord = {
   readonly migratedFromRunId: string | undefined;
   // O pedido da execução (a grade e as janelas do walk-forward); nulo no backtest.
   readonly request: JsonValue | undefined;
+  // A meta a que a simulação ao vivo está atrelada e como ela terminou (`goalOutcome` e o candle do desfecho: ambos ou nenhum).
+  readonly goalId: string | undefined;
+  readonly goalOutcome: GoalRunOutcome | undefined;
+  readonly goalOutcomeCandleTime: number | undefined;
   readonly createdAt: Date;
   readonly startedAt: Date | undefined;
   readonly finishedAt: Date | undefined;
@@ -43,6 +48,8 @@ export type CreateRunParams = {
   readonly periodEnd: number | undefined;
   readonly migratedFromRunId: string | undefined;
   readonly request?: JsonContainer | undefined;
+  // Só a simulação ao vivo: a meta do dono a que ela fica atrelada (a FK composta recusa meta de outro dono).
+  readonly goalId?: string | undefined;
 };
 
 export type EngineCheckpoint = {

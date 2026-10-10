@@ -2,6 +2,7 @@
 import type {
   Engine,
   EngineCandle,
+  EngineCommand,
   EngineState,
   RunSetup,
   StepResult,
@@ -20,6 +21,8 @@ export type AdvanceCandleParams = {
   readonly previousOpenTime: number | null;
   readonly durationMilliseconds: number;
   readonly pickSentiment: SentimentPicker;
+  // Ordens externas ao placar (meta, usuário): agem no fechamento deste candle e executam em t+1.
+  readonly commands?: readonly EngineCommand[] | undefined;
 };
 
 export type AdvancedCandle = {
@@ -52,6 +55,7 @@ export function advanceCandle(params: AdvanceCandleParams): AdvancedCandle {
     state: params.state,
     candle,
     sentiment: params.pickSentiment(candle),
+    commands: params.commands,
     confirmedGapCandles: gapCandles > 0 ? gapCandles : undefined,
   });
   return { result, gapCandles };

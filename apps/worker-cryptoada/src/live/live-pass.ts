@@ -1,24 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { RUN_STATUS } from '@cryptoada/database';
-import {
-  advanceCandle,
-  appendDecisions,
-  createBatchBuffer,
-  createPositionTracker,
-  createSentimentPicker,
-  parseJsonContainer,
-  toRunResultRows,
-  type PositionTracker,
-  type SentimentPicker,
-} from '@cryptoada/run-recording';
-import {
-  serializeEngineState,
-  type Engine,
-  type EngineCandle,
-  type EngineState,
-} from '@cryptoada/strategy-engine';
+import { createPositionTracker, createSentimentPicker } from '@cryptoada/run-recording';
+import type { Engine, EngineCandle, EngineState } from '@cryptoada/strategy-engine';
 
-import { LIVE_COMMIT_OUTCOME, LIVE_PASS_KIND, LIVE_PROGRESS } from './live.constant.js';
+import { LIVE_COMMIT_OUTCOME, LIVE_PASS_KIND } from './live.constant.js';
 import type {
   GapConfirmation,
   LiveAlertingSettings,
@@ -28,7 +13,9 @@ import type {
 } from './live-run.types.js';
 import { loadLiveContext, type LiveContext } from './load-live-context.js';
 import { resolveLiveCursor, type LiveCursor } from './resolve-live-cursor.js';
-import { collectStepAlerts, createHitRateReader, type HitRateReader } from './step-alerts.js';
+import { loadGoalTracking } from './goal-step.js';
+import { stepOnce, type StepRun } from './live-step.js';
+import { createHitRateReader } from './step-alerts.js';
 
 export type LivePassParams = {
   readonly session: LiveRunSession;
@@ -38,12 +25,7 @@ export type LivePassParams = {
   readonly alerting?: LiveAlertingSettings | undefined;
 };
 
-type PassRun = LivePassParams & {
-  readonly context: LiveContext;
-  readonly readHitRate: HitRateReader;
-  readonly pickSentiment: SentimentPicker;
-  readonly tracker: PositionTracker;
-};
+type PassRun = LivePassParams & StepRun;
 
 function outcome(kind: LivePassOutcome['kind'], steps: number): LivePassOutcome {
   return { kind, steps };
@@ -82,43 +64,6 @@ function findUnconfirmedGap(run: PassRun, cursor: LiveCursor, candle: EngineCand
   return run.isGapConfirmed({ symbol, timeframe, openTimes }) ? [] : openTimes;
 }
 
-async function stepOnce(
-  run: PassRun,
-  cursor: LiveCursor,
-  candle: EngineCandle,
-): Promise<{ readonly commit: LiveCommitOutcome; readonly next: LiveCursor }> {
-  const { context } = run;
-  const { result } = advanceCandle({
-    engine: run.engine,
-    strategy: context.strategy,
-    setup: context.setup,
-    state: cursor.state,
-    candle,
-    previousOpenTime: cursor.previousOpenTime,
-    durationMilliseconds: context.durationMilliseconds,
-    pickSentiment: run.pickSentiment,
-  });
-  const buffer = createBatchBuffer();
-  appendDecisions({ buffer, decisions: result.decisions, tracker: run.tracker });
-  const alerts = await collectStepAlerts({
-    alerting: run.alerting,
-    readHitRate: run.readHitRate,
-    candle,
-    result,
-    durationMilliseconds: context.durationMilliseconds,
-  });
-  const commit = await run.session.commitStep({
-    alerts,
-    rows: toRunResultRows(buffer),
-    checkpoint: {
-      engineState: parseJsonContainer(serializeEngineState(result.state)),
-      lastCandleTime: candle.openTime,
-      progress: LIVE_PROGRESS,
-    },
-  });
-  return { commit, next: { state: result.state, previousOpenTime: candle.openTime } };
-}
-
 function settle(commit: LiveCommitOutcome, steps: number): LivePassOutcome {
   if (commit === LIVE_COMMIT_OUTCOME.ALREADY_RECORDED) {
     return outcome(steps > 0 ? LIVE_PASS_KIND.ADVANCED : LIVE_PASS_KIND.IDLE, steps);
@@ -145,6 +90,16 @@ async function stepThrough(
     steps += 1;
   }
   return outcome(steps > 0 ? LIVE_PASS_KIND.ADVANCED : LIVE_PASS_KIND.IDLE, steps);
+}
+
+function createGoalProgress(context: LiveContext): PassRun['goal'] {
+  const tracking = loadGoalTracking({
+    run: context.run,
+    setup: context.setup,
+    durationMilliseconds: context.durationMilliseconds,
+  });
+  if (tracking === undefined) return undefined;
+  return { tracking, isOutcomeRecorded: context.run.goalOutcome !== undefined };
 }
 
 // Uma ronda de UMA simulação: do último candle gravado até o último candle fechado que o banco tem, um passo (uma
@@ -175,6 +130,7 @@ export async function runLivePass(params: LivePassParams): Promise<LivePassOutco
     readHitRate: createHitRateReader(params.session),
     pickSentiment: createSentimentPicker({ observations, source }),
     tracker: createPositionTracker(cursor.state.wallet.position),
+    goal: createGoalProgress(context),
   };
   return stepThrough(run, cursor, candles);
 }

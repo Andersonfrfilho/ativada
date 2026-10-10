@@ -56,6 +56,9 @@ async function commitStep(
         // Na MESMA transação: o alerta nasce com o passo e some junto com ele se o passo for desfeito.
         await writer.appendAlerts(commit.alerts);
         if (!(await writer.saveCheckpoint(commit.checkpoint))) throw new StepAlreadyRecordedError();
+        // A meta fecha no MESMO passo: o desfecho (uma vez) e a conclusão, quando a saída já se completou.
+        if (commit.goal?.outcome !== undefined) await writer.recordGoalOutcome(commit.goal.outcome);
+        if (commit.goal?.shouldComplete === true) await writer.completeRun();
         // O aviso à API sai na MESMA transação: chega no COMMIT e some no ROLLBACK, então nunca precede nem sobrevive ao dado.
         await writer.publishStepEvents(commit.checkpoint.lastCandleTime);
         return LIVE_COMMIT_OUTCOME.COMMITTED;

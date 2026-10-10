@@ -120,6 +120,9 @@ function buildRecords(scenario: WalkForwardScenario): {
     request: scenario.request === undefined ? undefined : structuredClone(scenario.request),
     createdAt: new Date(0),
     startedAt: undefined,
+    goalId: undefined,
+    goalOutcome: undefined,
+    goalOutcomeCandleTime: undefined,
     finishedAt: undefined,
   };
   const version: StrategyVersionRecord = {
@@ -155,6 +158,8 @@ function createWriter(
   return {
     publishStepEvents: (): Promise<number> => Promise.resolve(0),
     appendAlerts: (): Promise<AppendResult> => Promise.resolve({ written: 0 }),
+    recordGoalOutcome: (): Promise<boolean> => Promise.resolve(false),
+    completeRun: (): Promise<boolean> => Promise.resolve(false),
     readStatus: (): Promise<RunStatus> => {
       memory.calls.log.push('status');
       return Promise.resolve(memory.state.status);

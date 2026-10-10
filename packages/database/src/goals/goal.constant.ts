@@ -13,3 +13,11 @@ export const GOAL_DELETE_OUTCOME = {
   NOT_FOUND: 'not_found',
   IN_USE: 'in_use',
 } as const;
+
+// Como uma simulação ao vivo atrelada a uma meta terminou: o alvo veio, a perda máxima tocou, ou o prazo venceu.
+export const GOAL_RUN_OUTCOME = {
+  REACHED: 'goal_reached',
+  STOPPED: 'goal_stopped',
+  EXPIRED: 'goal_expired',
+} as const;
+export type GoalRunOutcome = (typeof GOAL_RUN_OUTCOME)[keyof typeof GOAL_RUN_OUTCOME];

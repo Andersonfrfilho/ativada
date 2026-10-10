@@ -6,6 +6,7 @@ import type { DatabaseExecutor } from '../database-executor.js';
 import { readJsonb, toJsonb, toNullableJsonb } from '../jsonb.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
 import { runs } from '../schema/runs.schema.js';
+import { goals } from '../schema/goals.schema.js';
 import { strategyVersions } from '../schema/strategies.schema.js';
 import { RUN_STATUS } from './run.constant.js';
 import { listRuns } from './run-list.js';
@@ -33,6 +34,19 @@ async function isOwnedVersion(
   return rows.length > 0;
 }
 
+async function isOwnedGoal(
+  executor: DatabaseExecutor,
+  scope: OwnerScope,
+  goalId: string,
+): Promise<boolean> {
+  const rows = await executor
+    .select({ id: goals.id })
+    .from(goals)
+    .where(and(ownerCondition(scope, goals.userId), eq(goals.id, goalId)))
+    .limit(1);
+  return rows.length > 0;
+}
+
 async function createRun(
   executor: DatabaseExecutor,
   scope: OwnerScope,
@@ -41,6 +55,8 @@ async function createRun(
   if (!(await isOwnedVersion(executor, scope, params.strategyVersionId))) return undefined;
   const origin = params.migratedFromRunId;
   if (origin !== undefined && !(await isOwnedRun(executor, scope, origin))) return undefined;
+  const goalId = params.goalId;
+  if (goalId !== undefined && !(await isOwnedGoal(executor, scope, goalId))) return undefined;
   const rows = await executor
     .insert(runs)
     .values({
@@ -59,6 +75,7 @@ async function createRun(
       periodEnd: params.periodEnd ?? null,
       migratedFromRunId: origin ?? null,
       request: toNullableJsonb(params.request),
+      goalId: goalId ?? null,
     })
     .returning(RUN_COLUMNS);
   const created = rows[0];

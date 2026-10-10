@@ -4,7 +4,7 @@ import { and, count, desc, eq, sql, type SQL } from 'drizzle-orm';
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import type { DatabaseExecutor } from '../database-executor.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
-import { isForeignKeyViolation } from '../postgres-error-code.js';
+import { isRestrictViolation } from '../postgres-error-code.js';
 import { goals } from '../schema/goals.schema.js';
 import { users } from '../schema/users.schema.js';
 import {
@@ -136,7 +136,7 @@ async function deleteGoal(
       .returning({ id: goals.id });
     return rows.length > 0 ? GOAL_DELETE_OUTCOME.DELETED : GOAL_DELETE_OUTCOME.NOT_FOUND;
   } catch (error: unknown) {
-    if (isForeignKeyViolation(error)) return GOAL_DELETE_OUTCOME.IN_USE;
+    if (isRestrictViolation(error)) return GOAL_DELETE_OUTCOME.IN_USE;
     throw error;
   }
 }

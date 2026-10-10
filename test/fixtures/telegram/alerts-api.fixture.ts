@@ -2,6 +2,7 @@
 import type { createAlertDispatcher } from '../../../apps/worker-cryptoada/src/alerts/alert-dispatcher.js';
 import type { createAlertScheduler } from '../../../apps/worker-cryptoada/src/alerts/alert-scheduler.js';
 import type { formatAlertMessage } from '../../../apps/worker-cryptoada/src/alerts/format-alert-message.js';
+import type { formatGoalAlertMessage } from '../../../apps/worker-cryptoada/src/alerts/format-goal-alert-message.js';
 import type { createTelegramClient } from '../../../apps/worker-cryptoada/src/alerts/telegram-client.js';
 
 const PRODUCTION_SOURCE = new URL('../../../apps/worker-cryptoada/src/alerts', import.meta.url)
@@ -16,6 +17,7 @@ export type AlertsApi = {
   readonly createAlertScheduler: typeof createAlertScheduler;
   readonly createTelegramClient: typeof createTelegramClient;
   readonly formatAlertMessage: typeof formatAlertMessage;
+  readonly formatGoalAlertMessage: typeof formatGoalAlertMessage;
 };
 
 export function resolveAlertsSource(): string {
@@ -51,6 +53,10 @@ export async function loadAlertsApi(): Promise<AlertsApi> {
       'format-alert-message.ts',
       'formatAlertMessage',
     )) as AlertsApi['formatAlertMessage'],
+    formatGoalAlertMessage: (await loadMember(
+      'format-goal-alert-message.ts',
+      'formatGoalAlertMessage',
+    )) as AlertsApi['formatGoalAlertMessage'],
   };
 }
 

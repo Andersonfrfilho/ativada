@@ -94,6 +94,8 @@ function pageOf<TRow, TCursor>(
 
 export function createInMemoryRuns(
   strategies: Pick<StrategyRepository, 'findVersion'>,
+  // Chamado quando uma execução fica atrelada a uma meta: a FK RESTRICT do banco, que impede apagar a meta.
+  onGoalLinked: (goalId: string) => void = () => undefined,
 ): InMemoryRuns {
   const runs: StoredRun[] = [];
   const stores = new Map<string, ResultStore>();
@@ -148,6 +150,9 @@ export function createInMemoryRuns(
       errorCode: undefined,
       migratedFromRunId: params.migratedFromRunId,
       request: params.request === undefined ? undefined : structuredClone(params.request),
+      goalId: params.goalId,
+      goalOutcome: undefined,
+      goalOutcomeCandleTime: undefined,
       createdAt: new Date(EPOCH_MILLISECONDS + sequence * MILLISECONDS_PER_ROW),
       startedAt: undefined,
       finishedAt: undefined,
@@ -160,6 +165,7 @@ export function createInMemoryRuns(
         return undefined;
       }
       const record = toRecord(params);
+      if (params.goalId !== undefined) onGoalLinked(params.goalId);
       runs.push({ userId: scope.ownerUserId, record, sequence });
       return record;
     },

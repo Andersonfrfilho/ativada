@@ -7,7 +7,10 @@ import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
 import { runs } from '../schema/runs.schema.js';
 import type { RunStatus } from '../runs/run.constant.js';
+import { recordGoalOutcome } from '../runs/run-goal.js';
 import { saveCheckpoint } from '../runs/run.repository.js';
+import { transitionRun } from '../runs/run-transition.js';
+import { RUN_STATUS as RUN_STATUS_VALUES, RUN_TRANSITION_OUTCOME } from '../runs/run.constant.js';
 import {
   writeCommands,
   writeEquityPoints,
@@ -65,6 +68,15 @@ function createWriter(target: BatchTarget, status: RunStatus): RunBatchWriter {
     }),
     saveCheckpoint: (params) =>
       saveCheckpoint(target.executor, target.scope, { runId: target.runId, ...params }),
+    recordGoalOutcome: (params) =>
+      recordGoalOutcome(target.executor, target.scope, { runId: target.runId, ...params }),
+    completeRun: async () =>
+      (
+        await transitionRun(target.executor, target.scope, {
+          runId: target.runId,
+          to: RUN_STATUS_VALUES.COMPLETED,
+        })
+      ).outcome === RUN_TRANSITION_OUTCOME.TRANSITIONED,
     publishStepEvents: (candleTime) =>
       publishStepEvents({
         executor: target.executor,

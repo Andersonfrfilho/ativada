@@ -2,7 +2,8 @@
 import type { AlertRepository, ClaimedAlert } from '@cryptoada/database';
 import { readErrorName } from '@cryptoada/environment';
 
-import { alertPayloadSchema } from '../live/alert-payload.schema.js';
+import { ALERT_SIDE } from '@cryptoada/database';
+import { alertPayloadSchema, goalAlertPayloadSchema } from '../live/alert-payload.schema.js';
 import type { WorkerLogger } from '../logging/worker-logger.js';
 import {
   ALERT_BACKOFF_BASE_MILLISECONDS,
@@ -14,6 +15,7 @@ import {
   ALERT_RETRY_AFTER_CAP_MILLISECONDS,
 } from './alerts.constant.js';
 import { formatAlertMessage } from './format-alert-message.js';
+import { formatGoalAlertMessage } from './format-goal-alert-message.js';
 import type { TelegramClient, TelegramSendResult } from './telegram-client.js';
 
 const BACKOFF_FACTOR = 2;
@@ -71,6 +73,18 @@ async function settleFailure(
   return 'retried';
 }
 
+// O texto do alerta, pelo conteúdo gravado (sinal ou desfecho de meta); conteúdo que não bate com o esquema não é enviado.
+function renderAlertText(alert: ClaimedAlert): string | undefined {
+  if (alert.side === ALERT_SIDE.GOAL) {
+    const goal = goalAlertPayloadSchema.safeParse(alert.payload);
+    return goal.success ? formatGoalAlertMessage(goal.data) : undefined;
+  }
+  const signal = alertPayloadSchema.safeParse(alert.payload);
+  return signal.success
+    ? formatAlertMessage({ side: alert.side, payload: signal.data })
+    : undefined;
+}
+
 async function deliver(context: Context): Promise<Outcome> {
   const { alerts, alert, client, logger } = context;
   if (alert.chatId === undefined) {
@@ -78,13 +92,12 @@ async function deliver(context: Context): Promise<Outcome> {
     logger.info(ALERT_LOG.SKIPPED, { alertId: alert.id, code: ALERT_ERROR_CODE.NO_LINK });
     return 'skipped';
   }
-  const payload = alertPayloadSchema.safeParse(alert.payload);
-  if (!payload.success) {
+  const text = renderAlertText(alert);
+  if (text === undefined) {
     await alerts.markFailed({ alertId: alert.id, errorCode: ALERT_ERROR_CODE.BAD_PAYLOAD });
     logger.warn(ALERT_LOG.GAVE_UP, { alertId: alert.id, code: ALERT_ERROR_CODE.BAD_PAYLOAD });
     return 'failed';
   }
-  const text = formatAlertMessage({ side: alert.side, payload: payload.data });
   const result = await client.sendMessage({ chatId: alert.chatId, text });
   if (result.kind !== 'sent') return settleFailure(context, result);
   await alerts.markSent({ alertId: alert.id, now: new Date(context.now()) });

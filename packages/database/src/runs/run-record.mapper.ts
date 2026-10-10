@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { readJsonb } from '../jsonb.js';
 import { runs } from '../schema/runs.schema.js';
+import type { GoalRunOutcome } from '../goals/goal.constant.js';
 import type { RunKind, RunStatus } from './run.constant.js';
 import type { RunRecord } from './run.types.js';
 
@@ -25,6 +26,9 @@ export const RUN_COLUMNS = {
   errorCode: runs.errorCode,
   migratedFromRunId: runs.migratedFromRunId,
   request: runs.request,
+  goalId: runs.goalId,
+  goalOutcome: runs.goalOutcome,
+  goalOutcomeCandleTime: runs.goalOutcomeCandleTime,
   createdAt: runs.createdAt,
   startedAt: runs.startedAt,
   finishedAt: runs.finishedAt,
@@ -50,6 +54,9 @@ export type RunRow = {
   readonly errorCode: string | null;
   readonly migratedFromRunId: string | null;
   readonly request: unknown;
+  readonly goalId: string | null;
+  readonly goalOutcome: string | null;
+  readonly goalOutcomeCandleTime: number | null;
   readonly createdAt: Date;
   readonly startedAt: Date | null;
   readonly finishedAt: Date | null;
@@ -67,6 +74,9 @@ export function toRunRecord(row: RunRow): RunRecord {
     errorCode: row.errorCode ?? undefined,
     migratedFromRunId: row.migratedFromRunId ?? undefined,
     request: row.request === null ? undefined : readJsonb(row.request),
+    goalId: row.goalId ?? undefined,
+    goalOutcome: (row.goalOutcome ?? undefined) as GoalRunOutcome | undefined,
+    goalOutcomeCandleTime: row.goalOutcomeCandleTime ?? undefined,
     startedAt: row.startedAt ?? undefined,
     finishedAt: row.finishedAt ?? undefined,
   };

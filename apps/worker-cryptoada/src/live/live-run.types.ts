@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type {
   AlertInput,
+  GoalRunOutcome,
   BatchCheckpointParams,
   EngineCheckpoint,
   LiveRunRepository,
@@ -29,12 +30,20 @@ export type LiveSentimentQuery = { readonly source: string; readonly until: numb
 
 export type LiveBlueprint = { readonly run: RunRecord; readonly version: StrategyVersionRecord };
 
+// A meta da simulação neste passo, na MESMA transação do candle: o desfecho decidido (uma vez) e se a execução termina.
+export type LiveGoalCommit = {
+  readonly outcome?: { readonly outcome: GoalRunOutcome; readonly candleTime: number } | undefined;
+  // A saída por meta já se completou (sem posição nem ordem pendente): a execução vira concluída junto com o passo.
+  readonly shouldComplete: boolean;
+};
+
 // Um passo = UMA transação: as linhas que o candle gerou e o checkpoint (estado do motor + último candle).
 export type LiveStepCommit = {
   readonly rows: RunResultRows;
   readonly checkpoint: BatchCheckpointParams;
   // Alertas de sinal do candle (RF10): entram na mesma transação, então reentrega do passo nunca os repete.
   readonly alerts: readonly AlertInput[];
+  readonly goal?: LiveGoalCommit;
 };
 
 // Taxa de acerto fora da amostra do último walk-forward concluído da versão (texto decimal exato) e as operações dela.

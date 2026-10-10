@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { GOAL_RUN_OUTCOME } from '@cryptoada/database';
 import { z } from '@cryptoada/environment';
 
 export const SIMULATED_ACTION = { ENTER: 'enter', EXIT: 'exit', NONE: 'none' } as const;
@@ -22,3 +23,18 @@ export const alertPayloadSchema = z.strictObject({
 });
 
 export type AlertPayload = z.infer<typeof alertPayloadSchema>;
+
+// O alerta do desfecho de uma meta: só mercado e a meta, em texto decimal exato.
+export const goalAlertPayloadSchema = z.strictObject({
+  symbol: z.string().min(1),
+  timeframe: z.string().min(1),
+  outcome: z.enum(GOAL_RUN_OUTCOME),
+  targetRate: z.string().min(1),
+  maxLossRate: z.string().min(1),
+  horizonDays: z.number().int().positive(),
+  initialBalance: z.string().min(1),
+  finalValue: z.string().min(1),
+  resultRate: z.string().min(1),
+});
+
+export type GoalAlertPayload = z.infer<typeof goalAlertPayloadSchema>;

@@ -1,6 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { AlertSide } from '@cryptoada/database';
-import { EngineDecimal } from '@cryptoada/strategy-engine';
+import type { SignalAlertSide } from '@cryptoada/database';
 
 import {
   SIMULATED_ACTION,
@@ -8,32 +7,25 @@ import {
   type SimulatedAction,
 } from '../live/alert-payload.schema.js';
 import { TELEGRAM_MESSAGE_MAX_LENGTH } from './alerts.constant.js';
+import { formatPercent } from './format-percent.js';
 
-const SIDE_LABEL: Readonly<Record<AlertSide, string>> = { BUY: 'COMPRA', SELL: 'VENDA' };
+const SIDE_LABEL: Readonly<Record<SignalAlertSide, string>> = { BUY: 'COMPRA', SELL: 'VENDA' };
 const REGIME_LABEL: Readonly<Record<string, string>> = {
   trending: 'tendência',
   ranging: 'lateral',
   none: 'indefinido',
 };
 const UNKNOWN_REGIME_LABEL = 'indefinido';
-const PERCENT_FACTOR = 100;
-const PERCENT_DECIMAL_PLACES = 1;
 const ELLIPSIS = '…';
 const DISCLAIMER = 'Simulação: sinal de regra, não é recomendação de investimento.';
 const NO_HIT_RATE = 'Acerto histórico: sem walk-forward concluído para esta versão.';
 
-function simulatedActionText(side: AlertSide, action: SimulatedAction): string {
+function simulatedActionText(side: SignalAlertSide, action: SimulatedAction): string {
   if (action === SIMULATED_ACTION.ENTER) return 'entrar comprado na abertura do próximo candle';
   if (action === SIMULATED_ACTION.EXIT) return 'sair da posição na abertura do próximo candle';
   return side === 'BUY'
     ? 'nenhuma (carteira já posicionada ou entrada bloqueada)'
     : 'nenhuma (sem posição aberta para vender)';
-}
-
-// Taxa de 0 a 1 em texto decimal exato vira porcentagem com uma casa e vírgula: o número nunca passa por float.
-function formatPercent(rate: string): string {
-  const percent = new EngineDecimal(rate).times(PERCENT_FACTOR);
-  return `${percent.toFixed(PERCENT_DECIMAL_PLACES, EngineDecimal.ROUND_HALF_UP).replace('.', ',')}%`;
 }
 
 function hitRateLine(hitRate: AlertPayload['hitRate']): string {
@@ -54,7 +46,7 @@ function fitReason(params: { readonly reason: string; readonly fixedLength: numb
 }
 
 export type FormatAlertMessageParams = {
-  readonly side: AlertSide;
+  readonly side: SignalAlertSide;
   readonly payload: AlertPayload;
 };
 

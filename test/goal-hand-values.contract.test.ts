@@ -99,6 +99,41 @@ describe('o desfecho de uma janela, candle a candle', () => {
   });
 });
 
+describe('o veredito de um candle da meta (o mesmo da avaliação e da simulação ao vivo)', () => {
+  const levels = { target: decimal('10300'), stop: decimal('9500') };
+
+  test.each([
+    ['nada ainda', point('10100', '9900'), 3, 30, undefined],
+    ['alvo no fechamento', point('10300'), 3, 30, 'reached'],
+    ['alvo só na máxima não vale', point('10299.99999999'), 3, 30, undefined],
+    ['perda máxima pela mínima', point('10100', '9500'), 3, 30, 'stopped'],
+    ['perda uma casa acima não vale', point('10100', '9500.00000001'), 3, 30, undefined],
+    ['perda e alvo juntos: a perda', point('10400', '9400'), 3, 30, 'stopped'],
+    ['prazo no último candle', point('10100', '9900'), 30, 30, 'expired'],
+    ['prazo depois do último candle (retomada tardia)', point('10100', '9900'), 31, 30, 'expired'],
+    ['um candle antes do prazo', point('10100', '9900'), 29, 30, undefined],
+    ['alvo no último candle vence o prazo', point('10300'), 30, 30, 'reached'],
+    ['perda no último candle vence o prazo', point('10100', '9400'), 30, 30, 'stopped'],
+  ] as const)('%s', (_name, candle, candlesElapsed, horizonCandles, expected) => {
+    expect(api.judgeGoalStep({ levels, point: candle, candlesElapsed, horizonCandles })).toBe(
+      expected,
+    );
+  });
+
+  test('o valor do desfecho: a mínima na perda máxima, o fechamento no alvo e no prazo', () => {
+    const candle = point('10100', '9400');
+    expect(api.goalFinalValue('stopped', candle).toFixed()).toBe('9400');
+    expect(api.goalFinalValue('reached', candle).toFixed()).toBe('10100');
+    expect(api.goalFinalValue('expired', candle).toFixed()).toBe('10100');
+  });
+
+  test('o veredito do ponto sozinho não olha o prazo', () => {
+    expect(api.judgeGoalPoint(levels, point('10100', '9900'))).toBeUndefined();
+    expect(api.judgeGoalPoint(levels, point('10300'))).toBe('reached');
+    expect(api.judgeGoalPoint(levels, point('10100', '9500'))).toBe('stopped');
+  });
+});
+
 describe('o resumo das janelas: taxas contra o usuário, mediana arredondada para cima', () => {
   const INITIAL = decimal('10000');
   const DAY_MILLISECONDS = 86_400_000;
