@@ -29,6 +29,7 @@ const COMPOSITE_FOREIGN_KEYS: readonly CompositeForeignKey[] = [
   { child: 'positions', column: 'run_id', parent: 'runs' },
   { child: 'equity_points', column: 'run_id', parent: 'runs' },
   { child: 'run_commands', column: 'run_id', parent: 'runs' },
+  { child: 'walk_forward_windows', column: 'run_id', parent: 'runs' },
 ];
 
 const OWNED_TABLE_NAMES: readonly string[] = [
@@ -41,6 +42,7 @@ const OWNED_TABLE_NAMES: readonly string[] = [
   'positions',
   'equity_points',
   'run_commands',
+  'walk_forward_windows',
 ];
 
 const NATURAL_KEYS: Readonly<Record<string, readonly (readonly string[])[]>> = {
@@ -54,6 +56,7 @@ const NATURAL_KEYS: Readonly<Record<string, readonly (readonly string[])[]>> = {
   positions: [['run_id', 'engine_key']],
   equity_points: [['run_id', 'candle_time']],
   run_commands: [['run_id', 'command_id']],
+  walk_forward_windows: [['run_id', 'window_index']],
   sentiment_observations: [['source', 'date', 'observed_at']],
 };
 

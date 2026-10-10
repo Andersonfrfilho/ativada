@@ -14,6 +14,7 @@ import type {
   PositionStatus,
   Regime,
   SignalAction,
+  WalkForwardWindowStatus,
 } from './run-result.constant.js';
 
 // Decimais (preço, quantidade, patrimônio, pontuação) são texto canônico, como o motor os emite.
@@ -91,6 +92,21 @@ export type CommandInput = {
   readonly status: CommandStatus;
 };
 
+// Uma janela do walk-forward (RF08): o plano (instantes em ms, fim exclusivo), os parâmetros escolhidos no
+// ajuste (nulos quando nenhum foi elegível) e os resumos do ajuste e do teste.
+export type WalkForwardWindowInput = {
+  readonly windowIndex: number;
+  readonly trainStart: number;
+  readonly trainEnd: number;
+  readonly testStart: number;
+  readonly testEnd: number;
+  readonly bestParams: JsonContainer | undefined;
+  readonly status: WalkForwardWindowStatus;
+  readonly inSample: JsonContainer;
+  readonly outOfSample: JsonContainer;
+  readonly eligibleCombinations: number;
+};
+
 // `written` conta linhas inseridas ou avançadas; o reenvio idêntico devolve 0.
 export type AppendResult = { readonly written: number };
 
@@ -128,9 +144,11 @@ export type RunResultRepository = {
   readonly appendPositions: AppendOf<PositionInput>;
   readonly appendEquityPoints: AppendOf<EquityPointInput>;
   readonly appendCommands: AppendOf<CommandInput>;
+  readonly appendWindows: AppendOf<WalkForwardWindowInput>;
   readonly listSignals: ListOf<SignalInput, number>;
   readonly listOrders: ListOf<OrderInput, OrderCursor>;
   readonly listFills: ListOf<FillInput, FillCursor>;
   readonly listPositions: ListOf<PositionInput, PositionCursor>;
   readonly listEquityPoints: ListOf<EquityPointInput, number>;
+  readonly listWindows: ListOf<WalkForwardWindowInput, number>;
 };

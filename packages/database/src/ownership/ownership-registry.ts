@@ -16,6 +16,7 @@ import { signals } from '../schema/signals.schema.js';
 import { strategies, strategyVersions } from '../schema/strategies.schema.js';
 import { telegramLinkCodes } from '../schema/telegram-link-codes.schema.js';
 import { users } from '../schema/users.schema.js';
+import { walkForwardWindows } from '../schema/walk-forward-windows.schema.js';
 
 export type PseudonymizedTable = {
   readonly table: PgTable;
@@ -51,6 +52,7 @@ export const OWNED_TABLES: readonly PgTable[] = [
   positions,
   equityPoints,
   runCommands,
+  walkForwardWindows,
 ];
 
 function exportColumns(table: PgTable, columns: readonly string[]): OwnedTableExportStep {
@@ -158,6 +160,20 @@ export const OWNED_TABLE_EXPORTS: readonly OwnedTableExportStep[] = [
     'candleTime',
     'status',
   ]),
+  exportColumns(walkForwardWindows, [
+    'runId',
+    'windowIndex',
+    'trainStart',
+    'trainEnd',
+    'testStart',
+    'testEnd',
+    'bestParams',
+    'status',
+    'inSample',
+    'outOfSample',
+    'eligibleCombinations',
+    'createdAt',
+  ]),
 ];
 
 // Ordem da exclusão (ADR 0001 §h passo 3): filhas antes dos pais, porque a FK é ON DELETE RESTRICT.
@@ -165,6 +181,7 @@ export const OWNED_TABLE_DELETION_ORDER: readonly PgTable[] = [
   telegramLinkCodes,
   equityPoints,
   runCommands,
+  walkForwardWindows,
   fills,
   positions,
   orders,

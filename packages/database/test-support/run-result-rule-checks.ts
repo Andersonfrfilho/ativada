@@ -13,6 +13,7 @@ import {
   buildCommands,
   buildOrders,
   buildPositions,
+  buildWindows,
   captureErrorCode,
   resolvePersistenceOwner,
   seedRun,
@@ -20,6 +21,7 @@ import {
 
 const FOREIGN_KEY_VIOLATION = '23503';
 const CHECK_VIOLATION = '23514';
+const UNIQUE_VIOLATION = '23505';
 
 type OrderRow = {
   readonly status: string;
@@ -265,6 +267,11 @@ export async function checkCommandsAndForeignKey(context: LifecycleCheckContext)
       (): Promise<unknown> =>
         client`INSERT INTO run_commands (id, user_id, run_id, command_id, kind, reason, issued_at, candle_time, status) VALUES (${Bun.randomUUIDv7()}, ${other.userId}, ${run.id}, 'x', 'halt', 'user_stop', 1, 1, 'applied')`,
     ],
+    [
+      'walk_forward_windows',
+      (): Promise<unknown> =>
+        client`INSERT INTO walk_forward_windows (id, user_id, run_id, window_index, train_start, train_end, test_start, test_end, best_params, status, in_sample, out_of_sample, eligible_combinations) VALUES (${Bun.randomUUIDv7()}, ${other.userId}, ${run.id}, 0, 1, 2, 2, 3, '{}'::jsonb, 'ok', '{}'::jsonb, '{}'::jsonb, 1)`,
+    ],
   ];
   for (const [table, attempt] of attempts) {
     const code = await attempt().then(
@@ -277,6 +284,119 @@ export async function checkCommandsAndForeignKey(context: LifecycleCheckContext)
     );
   }
   reportCheck(
-    'FK composta: o banco recusa as 6 tabelas de resultado com user_id diferente do dono do run_id',
+    'FK composta: o banco recusa as 7 tabelas de resultado com user_id diferente do dono do run_id',
+  );
+}
+
+type WindowInsert = {
+  readonly index: number;
+  readonly train: readonly [number, number];
+  readonly test: readonly [number, number];
+  readonly status: string;
+  readonly hasParams: boolean;
+  readonly eligible: number;
+};
+
+function insertWindow(
+  context: LifecycleCheckContext,
+  target: { readonly userId: string; readonly runId: string },
+  window: WindowInsert,
+): Promise<unknown> {
+  const { client } = context;
+  const params = window.hasParams ? '{"combinationIndex":0}' : null;
+  return client`INSERT INTO walk_forward_windows (id, user_id, run_id, window_index, train_start, train_end, test_start, test_end, best_params, status, in_sample, out_of_sample, eligible_combinations) VALUES (${Bun.randomUUIDv7()}, ${target.userId}, ${target.runId}, ${window.index}, ${window.train[0]}, ${window.train[1]}, ${window.test[0]}, ${window.test[1]}, ${params}::jsonb, ${window.status}, '{}'::jsonb, '{}'::jsonb, ${window.eligible})`;
+}
+
+export async function checkWalkForwardWindowRules(context: LifecycleCheckContext): Promise<void> {
+  const { handle, assertCondition, reportCheck } = context;
+  const owner = await resolvePersistenceOwner(handle, 'subject-mono-owner');
+  const results = createRunResultRepository(handle);
+  const run = await seedRun(handle, owner);
+  const target = { userId: owner.userId, runId: run.id };
+  const first = await results.appendWindows(owner.scope, run.id, buildWindows(3));
+  const again = await results.appendWindows(owner.scope, run.id, buildWindows(3));
+  assertCondition(first?.written === 3 && again?.written === 0, 'janela concluída é imutável');
+  const page = await results.listWindows(owner.scope, run.id, { limit: 2, after: undefined });
+  const rest = await results.listWindows(owner.scope, run.id, {
+    limit: 2,
+    after: page?.nextCursor,
+  });
+  assertCondition(
+    page?.items.map((item) => item.windowIndex).join() === '0,1' &&
+      rest?.items.map((item) => item.windowIndex).join() === '2' &&
+      rest.nextCursor === undefined,
+    'leitura paginada por window_index',
+  );
+  const overlapping = await captureErrorCode(
+    insertWindow(context, target, {
+      index: 9,
+      train: [1, 10],
+      test: [9, 12],
+      status: 'ok',
+      hasParams: true,
+      eligible: 1,
+    }),
+  );
+  assertCondition(
+    overlapping === CHECK_VIOLATION,
+    `ajuste invade o teste -> ${String(overlapping)}`,
+  );
+  const idle = await captureErrorCode(
+    insertWindow(context, target, {
+      index: 10,
+      train: [1, 10],
+      test: [10, 12],
+      status: 'no_eligible_parameters',
+      hasParams: true,
+      eligible: 0,
+    }),
+  );
+  assertCondition(idle === CHECK_VIOLATION, `sem elegível mas com parâmetros -> ${String(idle)}`);
+  const orphan = await captureErrorCode(
+    insertWindow(context, target, {
+      index: 11,
+      train: [1, 10],
+      test: [10, 12],
+      status: 'ok',
+      hasParams: false,
+      eligible: 2,
+    }),
+  );
+  assertCondition(orphan === CHECK_VIOLATION, `ok sem parâmetros -> ${String(orphan)}`);
+  const count = await captureErrorCode(
+    insertWindow(context, target, {
+      index: 12,
+      train: [1, 10],
+      test: [10, 12],
+      status: 'no_eligible_parameters',
+      hasParams: false,
+      eligible: 3,
+    }),
+  );
+  assertCondition(count === CHECK_VIOLATION, `sem elegível com contagem -> ${String(count)}`);
+  const parked = await captureErrorCode(
+    insertWindow(context, target, {
+      index: 13,
+      train: [1, 10],
+      test: [10, 12],
+      status: 'no_eligible_parameters',
+      hasParams: false,
+      eligible: 0,
+    }),
+  );
+  assertCondition(parked === undefined, `janela parada válida -> ${String(parked)}`);
+  const duplicate = await captureErrorCode(
+    insertWindow(context, target, {
+      index: 13,
+      train: [1, 10],
+      test: [10, 12],
+      status: 'no_eligible_parameters',
+      hasParams: false,
+      eligible: 0,
+    }),
+  );
+  assertCondition(duplicate === UNIQUE_VIOLATION, `índice repetido -> ${String(duplicate)}`);
+  reportCheck(
+    'walk_forward_windows: imutável por (run_id, window_index), paginada, ajuste termina antes do teste, parâmetros ⇔ status ok',
   );
 }

@@ -12,6 +12,7 @@ import {
   buildOrders,
   buildPositions,
   buildSignals,
+  buildWindows,
   candleTimeAt,
   resolvePersistenceOwner,
   seedRun,
@@ -33,7 +34,15 @@ function buildRows(): RunResultRows {
   };
 }
 
-const RESULT_TABLES = ['signals', 'orders', 'fills', 'positions', 'equity_points', 'run_commands'];
+const RESULT_TABLES = [
+  'signals',
+  'orders',
+  'fills',
+  'positions',
+  'equity_points',
+  'run_commands',
+  'walk_forward_windows',
+];
 
 async function countRows(client: Bun.SQL, runId: string): Promise<number> {
   let total = 0;
@@ -147,6 +156,46 @@ export async function checkBatchCommitAndRollback(context: LifecycleCheckContext
     'lote que falhou moveu o checkpoint',
   );
   reportCheck('runInBatch: resultados e checkpoint na mesma transação; falha desfaz tudo');
+}
+
+export async function checkWindowBatchIsAtomic(context: LifecycleCheckContext): Promise<void> {
+  const { handle, client, assertCondition, reportCheck } = context;
+  const { owner, runId } = await startRun(context, 'subject-batch-window');
+  const batches = createRunBatchRepository(handle);
+  const [window] = buildWindows(1);
+  if (window === undefined) throw new Error('janela base ausente');
+  let failure: unknown;
+  try {
+    await batches.runInBatch(owner.scope, runId, async (writer) => {
+      await writer.appendWindows([window]);
+      await writer.saveCheckpoint({
+        engineState: { marker: 'window-0' },
+        lastCandleTime: window.testEnd,
+        progress: 30,
+      });
+      throw new Error(FORGED_ERROR);
+    });
+  } catch (error: unknown) {
+    failure = error;
+  }
+  assertCondition(failure instanceof Error, 'o erro da janela não propagou');
+  assertCondition((await countRows(client, runId)) === 0, 'janela de lote que falhou ficou');
+  const lost = await createRunRepository(handle).readCheckpoint(owner.scope, runId);
+  assertCondition(lost?.lastCandleTime === undefined, 'checkpoint de lote que falhou ficou');
+  const written = await batches.runInBatch(owner.scope, runId, async (writer) => {
+    const appended = await writer.appendWindows([window]);
+    const saved = await writer.saveCheckpoint({
+      engineState: { marker: 'window-0' },
+      lastCandleTime: window.testEnd,
+      progress: 30,
+    });
+    return { appended: appended.written, saved };
+  });
+  assertCondition(
+    written?.appended === 1 && written.saved,
+    'janela e checkpoint não gravaram juntos',
+  );
+  reportCheck('runInBatch: a janela do walk-forward e o checkpoint dela vão na mesma transação');
 }
 
 export async function checkBatchGuards(context: LifecycleCheckContext): Promise<void> {

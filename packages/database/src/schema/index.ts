@@ -13,3 +13,4 @@ export { positions } from './positions.schema.js';
 export { equityPoints } from './equity-points.schema.js';
 export { runCommands } from './run-commands.schema.js';
 export { sentimentObservations } from './sentiment-observations.schema.js';
+export { walkForwardWindows } from './walk-forward-windows.schema.js';

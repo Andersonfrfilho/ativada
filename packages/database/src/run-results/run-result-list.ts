@@ -28,19 +28,19 @@ import type {
   SignalInput,
 } from './run-result.types.js';
 
-type ListRequest<TCursor> = {
+export type ListRequest<TCursor> = {
   readonly executor: DatabaseExecutor;
   readonly scope: OwnerScope;
   readonly runId: string;
   readonly params: ListResultsParams<TCursor>;
 };
 
-function clampLimit(limit: number): number {
+export function clampLimit(limit: number): number {
   return Math.min(Math.max(Math.trunc(limit), 1), RESULT_PAGE_MAXIMUM_SIZE);
 }
 
 // Lê uma linha a mais para saber se há próxima página sem uma contagem à parte.
-function toPage<TRow, TItem, TCursor>(
+export function toPage<TRow, TItem, TCursor>(
   rows: readonly TRow[],
   limit: number,
   mapping: { readonly toItem: (row: TRow) => TItem; readonly cursorOf: (row: TRow) => TCursor },

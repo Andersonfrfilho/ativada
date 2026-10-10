@@ -144,6 +144,7 @@ function createWriter(context: Context, stage: StoredResults, batch: number): Ru
       }
       return Promise.resolve({ written: appendRows(stage, rows) });
     },
+    appendWindows: (): Promise<AppendResult> => Promise.resolve({ written: 0 }),
     saveCheckpoint: (params): Promise<boolean> => {
       memory.log.push('checkpoint');
       if (shouldFail(failure, 'saveCheckpoint', batch)) {

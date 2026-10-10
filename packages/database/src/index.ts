@@ -117,7 +117,12 @@ export type {
   ResultPage,
   RunResultRepository,
   SignalInput,
+  WalkForwardWindowInput,
 } from './run-results/run-result.types.js';
+export {
+  WALK_FORWARD_WINDOW_STATUS,
+  type WalkForwardWindowStatus,
+} from './run-results/run-result.constant.js';
 export { createRunBatchRepository } from './run-results/run-batch.repository.js';
 export type {
   BatchCheckpointParams,

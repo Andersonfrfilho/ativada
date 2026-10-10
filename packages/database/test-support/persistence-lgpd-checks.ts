@@ -18,6 +18,7 @@ import {
   buildPositions,
   buildRunParams,
   buildSignals,
+  buildWindows,
   hashOf,
 } from './persistence-seed.js';
 
@@ -31,6 +32,7 @@ export const PERSISTENCE_TABLES = [
   'positions',
   'equity_points',
   'run_commands',
+  'walk_forward_windows',
 ] as const;
 const ENGINE_STATE_MARKER = 'engine-state-marker';
 export const PERSISTENCE_EXPECTED_ROWS: Readonly<
@@ -45,6 +47,7 @@ export const PERSISTENCE_EXPECTED_ROWS: Readonly<
   positions: 1,
   equity_points: 3,
   run_commands: 1,
+  walk_forward_windows: 2,
 };
 
 export function strategyNameOf(owner: LifecycleOwner): string {
@@ -83,6 +86,7 @@ export async function seedOwnerPersistence(
   await results.appendPositions(owner.scope, run.id, buildPositions(1));
   await results.appendEquityPoints(owner.scope, run.id, buildEquityPoints(3));
   await results.appendCommands(owner.scope, run.id, buildCommands(1));
+  await results.appendWindows(owner.scope, run.id, buildWindows(2));
 }
 
 export async function seedPersistenceOwners(
@@ -150,5 +154,7 @@ export async function checkPersistencePurge(
       `${table}: B tem ${ofB} linhas (esperado ${PERSISTENCE_EXPECTED_ROWS[table]})`,
     );
   }
-  reportCheck('purga: as 9 tabelas de estratégia/execução/resultado de A vazias, as de B intactas');
+  reportCheck(
+    'purga: as 10 tabelas de estratégia/execução/resultado de A vazias, as de B intactas',
+  );
 }

@@ -28,6 +28,7 @@ import {
   buildPositions,
   buildRunParams,
   buildSignals,
+  buildWindows,
   hashOf,
   resolvePersistenceOwner,
   seedRun,
@@ -35,7 +36,15 @@ import {
   type PersistenceOwner,
 } from './persistence-seed.js';
 
-const RESULT_TABLES = ['signals', 'orders', 'fills', 'positions', 'equity_points', 'run_commands'];
+const RESULT_TABLES = [
+  'signals',
+  'orders',
+  'fills',
+  'positions',
+  'equity_points',
+  'run_commands',
+  'walk_forward_windows',
+];
 const FIRST_PAGE = { limit: 10, after: undefined } as const;
 
 function outcomeOf(isGranted: boolean): AccessOutcome {
@@ -130,11 +139,13 @@ function buildRunContract(context: LifecycleCheckContext, owners: Owners): Cross
     appendEquityPoints: (scope, runId) =>
       results.appendEquityPoints(scope, runId, buildEquityPoints(1)),
     appendCommands: (scope, runId) => results.appendCommands(scope, runId, buildCommands(1)),
+    appendWindows: (scope, runId) => results.appendWindows(scope, runId, buildWindows(1)),
     listSignals: (scope, runId) => results.listSignals(scope, runId, FIRST_PAGE),
     listOrders: (scope, runId) => results.listOrders(scope, runId, FIRST_PAGE),
     listFills: (scope, runId) => results.listFills(scope, runId, FIRST_PAGE),
     listPositions: (scope, runId) => results.listPositions(scope, runId, FIRST_PAGE),
     listEquityPoints: (scope, runId) => results.listEquityPoints(scope, runId, FIRST_PAGE),
+    listWindows: (scope, runId) => results.listWindows(scope, runId, FIRST_PAGE),
     readCheckpoint: (scope, runId) => runs.readCheckpoint(scope, runId),
     findRun: (scope, runId) => runs.findRun(scope, runId),
   };

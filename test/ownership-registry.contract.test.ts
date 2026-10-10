@@ -205,6 +205,7 @@ describe('ownership registry — estratégias, execuções e resultados (T3.1)',
     'positions',
     'equity_points',
     'run_commands',
+    'walk_forward_windows',
   ];
   const deletionOrder = OWNED_TABLE_DELETION_ORDER.map(nameOf);
 
@@ -232,6 +233,7 @@ describe('ownership registry — estratégias, execuções e resultados (T3.1)',
       'positions',
       'orders',
       'signals',
+      'walk_forward_windows',
     ];
     for (const name of resultTables) {
       expect(deletionOrder.indexOf(name)).toBeLessThan(deletionOrder.indexOf('runs'));

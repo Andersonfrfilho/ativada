@@ -4,6 +4,7 @@ import type { fills } from '../schema/fills.schema.js';
 import type { orders } from '../schema/orders.schema.js';
 import type { positions } from '../schema/positions.schema.js';
 import type { signals } from '../schema/signals.schema.js';
+import type { walkForwardWindows } from '../schema/walk-forward-windows.schema.js';
 import type {
   ExitReason,
   OrderPurpose,
@@ -14,8 +15,15 @@ import type {
   PositionStatus,
   Regime,
   SignalAction,
+  WalkForwardWindowStatus,
 } from './run-result.constant.js';
-import type { FillInput, OrderInput, PositionInput, SignalInput } from './run-result.types.js';
+import type {
+  FillInput,
+  OrderInput,
+  PositionInput,
+  SignalInput,
+  WalkForwardWindowInput,
+} from './run-result.types.js';
 
 export function toSignalInput(row: typeof signals.$inferSelect): SignalInput {
   return {
@@ -81,5 +89,20 @@ export function toPositionInput(row: typeof positions.$inferSelect): PositionInp
     exitReason: (row.exitReason ?? undefined) as ExitReason | undefined,
     openedCandleTime: row.openedCandleTime,
     closedCandleTime: row.closedCandleTime ?? undefined,
+  };
+}
+
+export function toWindowInput(row: typeof walkForwardWindows.$inferSelect): WalkForwardWindowInput {
+  return {
+    windowIndex: row.windowIndex,
+    trainStart: row.trainStart,
+    trainEnd: row.trainEnd,
+    testStart: row.testStart,
+    testEnd: row.testEnd,
+    bestParams: row.bestParams === null ? undefined : readJsonContainer(row.bestParams),
+    status: row.status as WalkForwardWindowStatus,
+    inSample: readJsonContainer(row.inSample),
+    outOfSample: readJsonContainer(row.outOfSample),
+    eligibleCombinations: row.eligibleCombinations,
   };
 }

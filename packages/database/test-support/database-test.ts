@@ -34,12 +34,14 @@ import {
   checkCancelWaitsForTheBatch,
   checkCompletionSetsFullProgress,
   checkRunOwnerResolution,
+  checkWindowBatchIsAtomic,
 } from './run-batch-checks.js';
 import { checkResultPagination } from './run-result-page-checks.js';
 import {
   checkCommandsAndForeignKey,
   checkOrderMonotonicity,
   checkPositionMonotonicity,
+  checkWalkForwardWindowRules,
   checkWindowNamespace,
 } from './run-result-rule-checks.js';
 import { checkStrategyRepository } from './strategy-checks.js';
@@ -116,11 +118,13 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkOrderMonotonicity(context);
   await checkPositionMonotonicity(context);
   await checkWindowNamespace(context);
+  await checkWalkForwardWindowRules(context);
   await checkCommandsAndForeignKey(context);
   await checkPersistenceIsolation(context);
   await checkRunOwnerResolution(context);
   await checkBatchCommitAndRollback(context);
   await checkBatchGuards(context);
+  await checkWindowBatchIsAtomic(context);
   await checkCancelWaitsForTheBatch(context);
   await checkCompletionSetsFullProgress(context);
 }

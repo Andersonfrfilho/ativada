@@ -82,3 +82,10 @@ export const RESULT_INSERT_MAXIMUM_PARAMETERS = 60_000;
 export const RESULT_PAGE_MAXIMUM_SIZE = 5_000;
 export const ENGINE_KEY_MAX_LENGTH = 64;
 export const COMMAND_ID_MAX_LENGTH = 64;
+
+export const WALK_FORWARD_WINDOW_STATUS = {
+  OK: 'ok',
+  NO_ELIGIBLE_PARAMETERS: 'no_eligible_parameters',
+} as const;
+export type WalkForwardWindowStatus =
+  (typeof WALK_FORWARD_WINDOW_STATUS)[keyof typeof WALK_FORWARD_WINDOW_STATUS];

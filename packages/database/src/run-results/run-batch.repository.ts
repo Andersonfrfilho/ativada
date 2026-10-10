@@ -7,7 +7,13 @@ import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
 import { runs } from '../schema/runs.schema.js';
 import type { RunStatus } from '../runs/run.constant.js';
 import { saveCheckpoint } from '../runs/run.repository.js';
-import { writeCommands, writeEquityPoints, writeFills, writeSignals } from './run-result-append.js';
+import {
+  writeCommands,
+  writeEquityPoints,
+  writeFills,
+  writeSignals,
+  writeWindows,
+} from './run-result-append.js';
 import { writeOrders, writePositions } from './run-result-upsert.js';
 import type { RunBatchRepository, RunBatchWriter, RunResultRows } from './run-batch.types.js';
 import type { AppendResult } from './run-result.types.js';
@@ -39,6 +45,14 @@ function createWriter(target: BatchTarget, status: RunStatus): RunBatchWriter {
   return {
     readStatus: () => Promise.resolve(status),
     appendResults: (rows) => appendResults(target, rows),
+    appendWindows: async (rows) => ({
+      written: await writeWindows({
+        executor: target.executor,
+        ownerUserId: target.scope.ownerUserId,
+        runId: target.runId,
+        rows,
+      }),
+    }),
     saveCheckpoint: (params) =>
       saveCheckpoint(target.executor, target.scope, { runId: target.runId, ...params }),
   };

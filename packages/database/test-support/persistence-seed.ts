@@ -17,6 +17,7 @@ import {
   POSITION_STATUS,
   REGIME,
   SIGNAL_ACTION,
+  WALK_FORWARD_WINDOW_STATUS,
 } from '../src/run-results/run-result.constant.js';
 import type {
   CommandInput,
@@ -25,6 +26,7 @@ import type {
   OrderInput,
   PositionInput,
   SignalInput,
+  WalkForwardWindowInput,
 } from '../src/run-results/run-result.types.js';
 import { createRunRepository } from '../src/runs/run.repository.js';
 import { createStrategyRepository } from '../src/strategies/strategy.repository.js';
@@ -207,4 +209,25 @@ export async function captureErrorCode(query: PromiseLike<unknown>): Promise<str
   } catch (error: unknown) {
     return readPostgresErrorCode(error);
   }
+}
+
+const WINDOW_TRAIN_CANDLES = 10;
+const WINDOW_TEST_CANDLES = 4;
+
+export function buildWindows(count: number): readonly WalkForwardWindowInput[] {
+  return Array.from({ length: count }, (_unused, index) => ({
+    windowIndex: index,
+    trainStart: candleTimeAt(index * WINDOW_TEST_CANDLES),
+    trainEnd: candleTimeAt(index * WINDOW_TEST_CANDLES + WINDOW_TRAIN_CANDLES),
+    testStart: candleTimeAt(index * WINDOW_TEST_CANDLES + WINDOW_TRAIN_CANDLES),
+    testEnd: candleTimeAt(index * WINDOW_TEST_CANDLES + WINDOW_TRAIN_CANDLES + WINDOW_TEST_CANDLES),
+    bestParams: {
+      combinationIndex: index,
+      assignment: [{ path: 'risk.atrPeriod', value: 10 + index }],
+    },
+    status: WALK_FORWARD_WINDOW_STATUS.OK,
+    inSample: { trades: 12 + index, sharpe: '1.25' },
+    outOfSample: { scale: '1', sharpe: '0.4' },
+    eligibleCombinations: 3,
+  }));
 }

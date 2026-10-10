@@ -10,6 +10,7 @@ import type {
   OrderInput,
   PositionInput,
   SignalInput,
+  WalkForwardWindowInput,
 } from './run-result.types.js';
 
 // Tudo o que um lote do motor produziu, nas seis tabelas de resultado.
@@ -33,6 +34,8 @@ export type RunBatchWriter = {
   // Lê o status com a linha da execução travada: um cancelamento concorrente espera o fim do lote.
   readonly readStatus: () => Promise<RunStatus>;
   readonly appendResults: (rows: RunResultRows) => Promise<AppendResult>;
+  // O walk-forward grava a janela (e os resultados do teste dela) no mesmo lote que o checkpoint.
+  readonly appendWindows: (rows: readonly WalkForwardWindowInput[]) => Promise<AppendResult>;
   // `false` quando a execução não está `running` ou o candle não avança o checkpoint.
   readonly saveCheckpoint: (params: BatchCheckpointParams) => Promise<boolean>;
 };

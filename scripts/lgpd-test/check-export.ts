@@ -128,7 +128,7 @@ export async function checkExports(context: LgpdContext, owners: LgpdOwners): Pr
   assertAuditAsTarget(bodyOfA);
   reportLgpdStep(
     'GET /v1/me/export de A',
-    'attachment no-store com perfil, e-mail, chat, código pendente (sem hash), as 9 tabelas de estratégia/execução/resultado (sem estado do motor) e a auditoria como alvo sem IP do admin; nada de B',
+    'attachment no-store com perfil, e-mail, chat, código pendente (sem hash), as 10 tabelas de estratégia/execução/resultado (sem estado do motor) e a auditoria como alvo sem IP do admin; nada de B',
   );
   const exportOfB = await fetchExport(context, owners.ownerB);
   assertOwnData(exportOfB, sideOfB);

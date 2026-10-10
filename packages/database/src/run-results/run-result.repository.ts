@@ -3,7 +3,13 @@ import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import type { DatabaseExecutor } from '../database-executor.js';
 import type { OwnerScope } from '../ownership/owner-scope.js';
 import { isOwnedRun } from '../runs/run-ownership.js';
-import { writeCommands, writeEquityPoints, writeFills, writeSignals } from './run-result-append.js';
+import {
+  writeCommands,
+  writeEquityPoints,
+  writeFills,
+  writeSignals,
+  writeWindows,
+} from './run-result-append.js';
 import {
   listEquityPoints,
   listFills,
@@ -11,6 +17,7 @@ import {
   listPositions,
   listSignals,
 } from './run-result-list.js';
+import { listWindows } from './run-window-list.js';
 import { writeOrders, writePositions } from './run-result-upsert.js';
 import type { WriteRequest } from './run-result-write.types.js';
 import type {
@@ -74,10 +81,12 @@ export function createRunResultRepository(handle: DatabaseHandle): RunResultRepo
     appendPositions: appender(database, writePositions),
     appendEquityPoints: appender(database, writeEquityPoints),
     appendCommands: appender(database, writeCommands),
+    appendWindows: appender(database, writeWindows),
     listSignals: lister(database, listSignals),
     listOrders: lister(database, listOrders),
     listFills: lister(database, listFills),
     listPositions: lister(database, listPositions),
     listEquityPoints: lister(database, listEquityPoints),
+    listWindows: lister(database, listWindows),
   };
 }
