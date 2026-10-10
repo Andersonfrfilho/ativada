@@ -2,12 +2,12 @@
 import { z } from '@cryptoada/environment';
 
 import type { Candle } from './candle.types.js';
+import { DECIMAL_STRING_SCHEMA, TIMESTAMP_SCHEMA } from './decimal.schema.js';
 import { MarketDataResponseError } from './market-data.error.js';
 import type { Timeframe } from './timeframe.constant.js';
 
-const DECIMAL_PATTERN = /^\d+(\.\d+)?$/;
-const decimalString = z.string().regex(DECIMAL_PATTERN);
-const timestamp = z.number().int().nonnegative();
+const decimalString = DECIMAL_STRING_SCHEMA;
+const timestamp = TIMESTAMP_SCHEMA;
 
 // Tupla posicional documentada pela Binance: 12 posições, as 5 últimas não são usadas aqui.
 const klineRowSchema = z.tuple([

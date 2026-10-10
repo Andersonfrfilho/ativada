@@ -5,16 +5,19 @@ export const PRODUCTION_ENVIRONMENT = 'production';
 export const MINIMUM_PRODUCTION_SECRET_LENGTH = 32;
 
 const HTTPS_PROTOCOL = 'https:';
+const SECURE_WEBSOCKET_PROTOCOL = 'wss:';
 const ACCEPTED_SSL_MODES: readonly string[] = ['require', 'verify-ca', 'verify-full'];
 const DEVELOPMENT_MARKERS: readonly string[] = ['_dev_only', '_test_only'];
 
 const HTTPS_REASON = 'em produção deve ser https://';
+const WSS_REASON = 'em produção deve ser wss://';
 const SSL_MODE_REASON = 'em produção deve exigir TLS (sslmode=require)';
 const SECRET_REASON = `em produção deve ter ao menos ${MINIMUM_PRODUCTION_SECRET_LENGTH} caracteres`;
 const MARKER_REASON = 'em produção não pode manter valor de desenvolvimento';
 
 export type ProductionProfile = {
   readonly urlVariables: readonly string[];
+  readonly webSocketUrlVariables?: readonly string[];
   readonly secretVariables: readonly string[];
   readonly databaseUrlVariable: string;
 };
@@ -35,6 +38,10 @@ function isHttpsUrl(value: string): boolean {
   return URL.canParse(value) && new URL(value).protocol === HTTPS_PROTOCOL;
 }
 
+function isSecureWebSocketUrl(value: string): boolean {
+  return URL.canParse(value) && new URL(value).protocol === SECURE_WEBSOCKET_PROTOCOL;
+}
+
 function addViolation(context: z.RefinementCtx, variable: string, reason: string): void {
   context.addIssue({ code: 'custom', message: reason, path: [variable] });
 }
@@ -49,6 +56,11 @@ export function checkProductionRules(
   for (const variable of profile.urlVariables) {
     const texts = textsOf(values[variable]);
     if (!texts.every(isHttpsUrl)) addViolation(context, variable, HTTPS_REASON);
+  }
+  for (const variable of profile.webSocketUrlVariables ?? []) {
+    if (!textsOf(values[variable]).every(isSecureWebSocketUrl)) {
+      addViolation(context, variable, WSS_REASON);
+    }
   }
   const databaseUrl = textsOf(values[profile.databaseUrlVariable])[0] ?? '';
   if (!hasRequiredSslMode(databaseUrl)) {

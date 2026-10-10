@@ -1,10 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { KLINES_PATH, MAX_KLINES_PER_REQUEST } from './market-data.constant.js';
+import { KLINES_PATH, MAX_KLINES_PER_REQUEST, SYMBOL_PATTERN } from './market-data.constant.js';
 import { MarketDataInvalidRequestError } from './market-data.error.js';
 import type { FetchKlinesParams } from './market-data.types.js';
 import { TIMEFRAME_DURATION_MILLISECONDS } from './timeframe.constant.js';
-
-const SYMBOL_PATTERN = /^[A-Z0-9]{2,20}$/;
 
 function assertTimestamp(name: string, value: number | undefined): void {
   if (value === undefined) return;

@@ -11,4 +11,9 @@ export {
   PRODUCTION_ENVIRONMENT,
   type ProductionProfile,
 } from './production-rules.js';
-export { environmentNameSchema, httpUrlSchema, nonEmptyTextSchema } from './common-schemas.js';
+export {
+  environmentNameSchema,
+  httpUrlSchema,
+  nonEmptyTextSchema,
+  webSocketUrlSchema,
+} from './common-schemas.js';
