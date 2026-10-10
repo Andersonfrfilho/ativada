@@ -2,7 +2,6 @@
 import {
   BACKFILL_TASK_NAME,
   CRON_ENTRYPOINT,
-  FINISHED_MESSAGE,
   type BackfillTimeframe,
 } from './backfill-test.constant.js';
 
@@ -22,8 +21,8 @@ export type BackfillRunParams = {
   readonly years: number;
 };
 
-function findSummary(output: string): Readonly<Record<string, unknown>> {
-  const line = output.split('\n').find((candidate) => candidate.includes(FINISHED_MESSAGE));
+function findSummary(output: string, taskName: string): Readonly<Record<string, unknown>> {
+  const line = output.split('\n').find((candidate) => candidate.includes(`${taskName} finished`));
   if (line === undefined) return {};
   const parsed: unknown = JSON.parse(line);
   return typeof parsed === 'object' && parsed !== null
@@ -31,19 +30,15 @@ function findSummary(output: string): Readonly<Record<string, unknown>> {
     : {};
 }
 
-// O mesmo ponto de entrada de produção, só com a tarefa de backfill e a Binance falsa.
-export async function runBackfill(params: BackfillRunParams): Promise<BackfillRun> {
+export type CronTaskRunParams = {
+  readonly taskName: string;
+  readonly environment: Readonly<Record<string, string>>;
+};
+
+export async function runCronTask(params: CronTaskRunParams): Promise<BackfillRun> {
   const child = Bun.spawn([process.execPath, 'run', CRON_ENTRYPOINT], {
     cwd: REPOSITORY_ROOT,
-    env: {
-      ...Bun.env,
-      DATABASE_URL: params.databaseUrl,
-      CRON_TASKS: BACKFILL_TASK_NAME,
-      BINANCE_BASE_URL: params.baseUrl,
-      MARKET_SYMBOLS: params.symbols.join(','),
-      MARKET_TIMEFRAMES: params.timeframes.join(','),
-      BACKFILL_YEARS: String(params.years),
-    },
+    env: { ...Bun.env, CRON_TASKS: params.taskName, ...params.environment },
     stdout: 'pipe',
     stderr: 'pipe',
   });
@@ -52,5 +47,19 @@ export async function runBackfill(params: BackfillRunParams): Promise<BackfillRu
     new Response(child.stderr).text(),
   ]);
   const exitCode = await child.exited;
-  return { exitCode, output: `${stdout}${stderr}`, summary: findSummary(stdout) };
+  return { exitCode, output: `${stdout}${stderr}`, summary: findSummary(stdout, params.taskName) };
+}
+
+// O mesmo ponto de entrada de produção, só com a tarefa de backfill e a Binance falsa.
+export function runBackfill(params: BackfillRunParams): Promise<BackfillRun> {
+  return runCronTask({
+    taskName: BACKFILL_TASK_NAME,
+    environment: {
+      DATABASE_URL: params.databaseUrl,
+      BINANCE_BASE_URL: params.baseUrl,
+      MARKET_SYMBOLS: params.symbols.join(','),
+      MARKET_TIMEFRAMES: params.timeframes.join(','),
+      BACKFILL_YEARS: String(params.years),
+    },
+  });
 }

@@ -78,7 +78,7 @@ lgpd-test: ## Prova exportar e apagar a conta (API, cron, Postgres, Keycloak e M
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test && bun --env-file=envs/env.test run scripts/lgpd-test.ts
 
-backfill-test: ## Prova o backfill retomável de candles (cron real, Postgres de teste descartável e Binance falsa local)
+backfill-test: ## Prova o backfill retomável de candles e o Fear & Greed diário (cron real, Postgres de teste descartável, Binance e alternative.me falsas locais)
 	set -a; . envs/env.test; set +a; \
 	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
 	trap 'exit 130' INT; \

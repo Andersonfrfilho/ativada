@@ -13,6 +13,7 @@ import {
 } from '../packages/database/test-support/temporary-database.js';
 import { TEMPORARY_DATABASE_PREFIX } from './backfill-test/backfill-test.constant.js';
 import type { BackfillContext } from './backfill-test/backfill-test-context.js';
+import { checkFearGreedSync } from './backfill-test/check-fear-greed.js';
 import { checkHoleIsFilledAndRerunIsIdle } from './backfill-test/check-hole-and-rerun.js';
 import { checkResumeAfterFailure } from './backfill-test/check-resume.js';
 import { checkTwoYearsOfDailyAndHourly } from './backfill-test/check-two-years.js';
@@ -35,6 +36,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkResumeAfterFailure(context);
     await checkTwoYearsOfDailyAndHourly(context);
     await checkUnfillableGapIsReportedOnce(context);
+    await checkFearGreedSync(context);
   } finally {
     await server.stop();
     await sql.close();

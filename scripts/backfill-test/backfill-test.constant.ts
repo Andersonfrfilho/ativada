@@ -2,7 +2,6 @@
 export const TEMPORARY_DATABASE_PREFIX = 'crypto_backfill_';
 export const CRON_ENTRYPOINT = 'apps/cron-cryptoada/src/main.ts';
 export const BACKFILL_TASK_NAME = 'backfill-candles';
-export const FINISHED_MESSAGE = `${BACKFILL_TASK_NAME} finished`;
 export const KLINES_PATH = '/api/v3/klines';
 export const PAGE_SIZE = 1_000;
 export const EXCHANGE = 'binance';
@@ -23,3 +22,9 @@ export const CLOCK_SAFETY_MARGIN = {
   AFTER_BOUNDARY_MILLISECONDS: 5_000,
   BEFORE_BOUNDARY_MILLISECONDS: 120_000,
 } as const;
+
+export const FEAR_GREED_TASK_NAME = 'sync-fear-greed';
+export const FEAR_GREED_PATH = '/fng/';
+export const FEAR_GREED_HISTORY_DAYS = 40;
+export const FEAR_GREED_REFRESH_DAYS = 14;
+export const MILLISECONDS_PER_DAY = 24 * MILLISECONDS_PER_HOUR;
