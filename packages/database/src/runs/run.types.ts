@@ -22,6 +22,8 @@ export type RunRecord = {
   readonly progress: number;
   readonly errorCode: string | undefined;
   readonly migratedFromRunId: string | undefined;
+  // O pedido da execução (a grade e as janelas do walk-forward); nulo no backtest.
+  readonly request: JsonValue | undefined;
   readonly createdAt: Date;
   readonly startedAt: Date | undefined;
   readonly finishedAt: Date | undefined;
@@ -40,6 +42,7 @@ export type CreateRunParams = {
   readonly periodStart: number;
   readonly periodEnd: number | undefined;
   readonly migratedFromRunId: string | undefined;
+  readonly request?: JsonContainer | undefined;
 };
 
 export type EngineCheckpoint = {

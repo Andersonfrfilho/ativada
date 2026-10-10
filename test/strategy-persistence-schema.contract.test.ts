@@ -159,6 +159,16 @@ describe('persistência de estratégias e execuções — esquema (T3.1)', () =>
     expect(indexes).toContainEqual([USER_ID_COLUMN, 'created_at', 'id']);
   });
 
+  test('runs guarda o pedido da execução em request jsonb nulo (migration 0010)', () => {
+    const request = getTableConfig(findTable('runs')).columns.find(
+      (column) => column.name === 'request',
+    );
+    expect({ type: request?.getSQLType(), notNull: request?.notNull }).toStrictEqual({
+      type: 'jsonb',
+      notNull: false,
+    });
+  });
+
   test('sentiment_observations é dado público: sem user_id, com a chave de append-only', () => {
     const config = getTableConfig(findTable('sentiment_observations'));
     expect(columnNames(config.columns)).not.toContain(USER_ID_COLUMN);

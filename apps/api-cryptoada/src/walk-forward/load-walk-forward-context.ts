@@ -24,6 +24,7 @@ import type { WalkForwardRequest } from './walk-forward.types.js';
 import {
   hashWalkForwardRequest,
   normalizeRequest,
+  resolveRequest,
   WALK_FORWARD_REQUEST_SCHEMA,
   type NormalizedWalkForwardRequest,
 } from './walk-forward-request.schema.js';
@@ -136,7 +137,7 @@ export function loadWalkForwardContext(params: LoadContextParams): WalkForwardCo
   const base = parseStrategy(blueprint);
   const setup = parseSetup(blueprint.run);
   assertConsistency(blueprint, base, setup);
-  const request = parseRequest(params.request);
+  const request = parseRequest(resolveRequest(blueprint.run.request, params.request));
   const durationMilliseconds = ENGINE_TIMEFRAME_DURATION_MILLISECONDS[setup.parameters.timeframe];
   const { combinations } = expandWalkForwardGrid({ base: base.config, grid: request.grid });
   const maxLeadInCandles = Math.max(

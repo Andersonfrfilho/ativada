@@ -9,6 +9,7 @@ import {
   createInMemoryWalkForward,
   type InMemoryWalkForward,
   type WalkForwardHooks,
+  type WalkForwardScenario,
 } from './in-memory-walk-forward-database.fixture.js';
 
 export const SCENARIO_START = Date.UTC(2023, 0, 1);
@@ -53,6 +54,7 @@ export type ScenarioParams = {
   readonly hooks?: WalkForwardHooks;
   readonly kind?: string;
   readonly tamper?: 'run_hash' | 'config_hash';
+  readonly request?: WalkForwardScenario['request'];
   readonly warmUpDays?: number;
   readonly periodEnd?: number;
   readonly candleCount?: number;
@@ -112,6 +114,7 @@ export function buildWalkForwardScenario(params: ScenarioParams = {}): BuiltScen
     ...(params.hooks === undefined ? {} : { hooks: params.hooks }),
     ...(params.kind === undefined ? {} : { kind: params.kind }),
     ...(params.tamper === undefined ? {} : { tamper: params.tamper }),
+    ...(params.request === undefined ? {} : { request: params.request }),
   });
   return {
     memory,

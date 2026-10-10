@@ -1,9 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { createHash } from 'node:crypto';
 
+import type { JsonValue } from '@cryptoada/database';
 import { canonicalJson, DEFAULT_MIN_TRADES_PER_WINDOW } from '@cryptoada/strategy-engine';
 import { z } from '@cryptoada/environment';
 
+import { WALK_FORWARD_ERROR_CODE } from './walk-forward.constant.js';
+import { WalkForwardRunError } from './walk-forward.error.js';
 import type { WalkForwardRequest } from './walk-forward.types.js';
 
 const MONTHS_MAXIMUM = 120;
@@ -19,6 +22,20 @@ export const WALK_FORWARD_REQUEST_SCHEMA = z.strictObject({
   stepMonths: monthsSchema.optional(),
   minTradesPerWindow: z.int().min(1).max(MIN_TRADES_MAXIMUM).optional(),
 });
+
+// O pedido efetivo: o gravado na linha da execução (validado), ou as opções quando a linha não tem pedido.
+export function resolveRequest(
+  stored: JsonValue | undefined,
+  fallback: WalkForwardRequest,
+): WalkForwardRequest {
+  if (stored === undefined) return fallback;
+  const parsed = WALK_FORWARD_REQUEST_SCHEMA.safeParse(stored);
+  if (parsed.success) return parsed.data;
+  throw new WalkForwardRunError(
+    WALK_FORWARD_ERROR_CODE.INVALID_WINDOW_CONFIG,
+    'O pedido gravado na execução é inválido.',
+  );
+}
 
 export type NormalizedWalkForwardRequest = {
   readonly grid: unknown;

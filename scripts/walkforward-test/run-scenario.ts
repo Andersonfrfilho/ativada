@@ -26,7 +26,7 @@ export async function runScenario(
   const run = await newRun(context, scenario);
   const runner = createTestRunner(context, options);
   const startedAt = performance.now();
-  const outcome = await runner.run(run.id, scenario.request);
+  const outcome = await runner.run(run.id);
   const wallMilliseconds = performance.now() - startedAt;
   return {
     runId: run.id,

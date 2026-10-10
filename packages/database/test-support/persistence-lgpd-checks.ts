@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { DatabaseHandle } from '../src/database-handle.js';
 import { createAccountExportRepository } from '../src/account/account-export.repository.js';
-import { RUN_STATUS } from '../src/runs/run.constant.js';
+import { RUN_KIND, RUN_STATUS } from '../src/runs/run.constant.js';
 import { createRunRepository } from '../src/runs/run.repository.js';
 import { createRunResultRepository } from '../src/run-results/run-result.repository.js';
 import { createStrategyRepository } from '../src/strategies/strategy.repository.js';
@@ -21,6 +21,12 @@ import {
   buildWindows,
   hashOf,
 } from './persistence-seed.js';
+
+// O pedido do walk-forward é dado do usuário: entra na exportação e some com a exclusão da conta.
+export const SEEDED_REQUEST = {
+  grid: { parameters: [{ path: 'thresholds.buy', values: ['1', '1.5'] }] },
+  trainMonths: 6,
+} as const;
 
 export const PERSISTENCE_TABLES = [
   'strategies',
@@ -70,7 +76,13 @@ export async function seedOwnerPersistence(
     configHash: hashOf(JSON.stringify(config)),
   });
   const runs = createRunRepository(handle);
-  const run = await runs.createRun(owner.scope, buildRunParams(added?.version.id ?? ''));
+  const run = await runs.createRun(
+    owner.scope,
+    buildRunParams(added?.version.id ?? '', {
+      kind: RUN_KIND.WALK_FORWARD,
+      request: SEEDED_REQUEST,
+    }),
+  );
   if (run === undefined) throw new Error('execução do ciclo de vida não criada');
   await runs.transitionRun(owner.scope, { runId: run.id, to: RUN_STATUS.RUNNING });
   await runs.saveCheckpoint(owner.scope, {

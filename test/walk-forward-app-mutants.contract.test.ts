@@ -25,6 +25,7 @@ const COLLECTION = 'walk-forward/test-collection.ts';
 const PROGRESS = 'walk-forward/walk-forward-progress.ts';
 const REQUEST = 'walk-forward/walk-forward-request.schema.ts';
 const POOL = 'walk-forward/search-thread-pool.ts';
+const MESSAGES = 'walk-forward/walk-forward-messages.ts';
 
 function edit(file: string, find: string, replace: string, occurrences = 1): SourceEdit[] {
   return [{ file, find, replace, occurrences }];
@@ -153,6 +154,30 @@ const MUTANTS: readonly SourceMutant[] = [
   {
     name: 'REQUEST_HASH_CONSTANT',
     edits: edit(REQUEST, '.update(canonicalJson(fingerprint))', ".update('constant')"),
+  },
+  {
+    name: 'ROW_REQUEST_IGNORED_OPTIONS_WIN',
+    edits: edit(
+      REQUEST,
+      'if (stored === undefined) return fallback;',
+      'if (stored !== null) return fallback;',
+    ),
+  },
+  {
+    name: 'INVALID_ROW_REQUEST_FALLS_BACK_TO_OPTIONS',
+    edits: edit(
+      REQUEST,
+      'if (parsed.success) return parsed.data;',
+      'if (parsed.success) return parsed.data;\n  if (fallback.grid !== undefined) return fallback;',
+    ),
+  },
+  {
+    name: 'THREAD_MESSAGE_ACCEPTS_EXTRA_FIELDS',
+    edits: edit(
+      MESSAGES,
+      'export const WALK_FORWARD_REQUEST_MESSAGE_SCHEMA = z.strictObject({',
+      'export const WALK_FORWARD_REQUEST_MESSAGE_SCHEMA = z.object({',
+    ),
   },
   {
     name: 'INVALID_THREAD_EVENT_IGNORED',

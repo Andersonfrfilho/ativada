@@ -98,7 +98,7 @@ async function checkResponsiveness(
     const latencies: number[] = [];
     let isRunning = true;
     const pending = createTestRunner(context, { threads: 2 })
-      .run(run.id, scenario.request)
+      .run(run.id)
       .finally(() => {
         isRunning = false;
       });

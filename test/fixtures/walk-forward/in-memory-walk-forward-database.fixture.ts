@@ -56,6 +56,8 @@ export type WalkForwardScenario = {
   readonly kind?: string;
   readonly tamper?: 'run_hash' | 'config_hash';
   readonly hooks?: WalkForwardHooks;
+  // O pedido gravado na linha da execução (`runs.request`); ausente = linha sem pedido.
+  readonly request?: RunRecord['request'];
 };
 
 export type WalkForwardControls = { readonly cancel: () => void };
@@ -115,6 +117,7 @@ function buildRecords(scenario: WalkForwardScenario): {
     progress: 0,
     errorCode: undefined,
     migratedFromRunId: undefined,
+    request: scenario.request === undefined ? undefined : structuredClone(scenario.request),
     createdAt: new Date(0),
     startedAt: undefined,
     finishedAt: undefined,

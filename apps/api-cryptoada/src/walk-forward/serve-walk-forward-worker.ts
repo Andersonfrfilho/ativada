@@ -64,7 +64,6 @@ async function runOnce(params: {
       database: opened.database,
       runId: request.runId,
       options: {
-        ...request.request,
         threads: params.dependencies.threads,
         onProgress: (progress) =>
           post({ type: WALK_FORWARD_MESSAGE_TYPE.PROGRESS, runId: request.runId, progress }),
@@ -102,7 +101,7 @@ async function handleMessage(
   }
 }
 
-// Entrada da thread: um pedido `{ runId, request }` por vez, eventos validados de volta. O resultado vai para o
+// Entrada da thread: um pedido `{ runId }` por vez (o pedido da execução vem da linha), eventos validados de volta. O resultado vai para o
 // banco, nunca pela mensagem.
 export function serveWalkForwardWorker(dependencies: WalkForwardWorkerDependencies): void {
   if (parentPort === null) throw new Error('serveWalkForwardWorker só roda dentro de uma thread.');

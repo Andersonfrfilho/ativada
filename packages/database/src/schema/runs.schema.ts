@@ -55,6 +55,7 @@ export const runs = pgTable(
     progress: integer('progress').notNull().default(0),
     errorCode: varchar('error_code', { length: 64 }),
     migratedFromRunId: uuid('migrated_from_run_id'),
+    request: jsonb('request'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     startedAt: timestamp('started_at', { withTimezone: true }),
     finishedAt: timestamp('finished_at', { withTimezone: true }),

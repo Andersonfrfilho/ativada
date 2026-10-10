@@ -114,6 +114,7 @@ export const APP_MUTANT_TARGET: MutantTarget = {
     'test/walk-forward-failures.contract.test.ts',
     'test/walk-forward-parity.contract.test.ts',
     'test/walk-forward-threads.contract.test.ts',
+    'test/walk-forward-persisted-request.contract.test.ts',
   ],
   sourceVariable: 'WALK_FORWARD_APP_SOURCE',
 };

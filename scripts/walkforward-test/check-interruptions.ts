@@ -50,7 +50,7 @@ export async function checkCancellation(
         void runs.transitionRun(context.owner.scope, { runId: run.id, to: RUN_STATUS.CANCELLED });
       },
     });
-    const outcome = await runner.run(run.id, REQUEST);
+    const outcome = await runner.run(run.id);
     assertCondition(
       outcome.status === 'cancelled',
       `cancelamento ${label} terminou ${outcome.status}`,
@@ -97,13 +97,13 @@ export async function checkResume(
         void doomed.terminateAll();
       },
     });
-    const first = await doomed.run(run.id, REQUEST);
+    const first = await doomed.run(run.id);
     assertCondition(first.status === 'terminated', `queda ${label}: terminou ${first.status}`);
     const orphan = await readPersisted(context, run.id);
     assertCondition(orphan.status === 'running', `queda ${label}: ficou ${orphan.status}`);
     const stored = orphan.counts['windows'] ?? 0;
     const startedAt = performance.now();
-    const outcome = await createTestRunner(context, { threads: 2 }).run(run.id, REQUEST);
+    const outcome = await createTestRunner(context, { threads: 2 }).run(run.id);
     const resumeMilliseconds = performance.now() - startedAt;
     assertCondition(
       outcome.status === 'completed',

@@ -3,6 +3,7 @@ import type { Actor } from '../admin-test/admin-test-context.js';
 import {
   PERSISTENCE_EXPECTED_ROWS,
   PERSISTENCE_TABLES,
+  SEEDED_REQUEST,
 } from '../../packages/database/test-support/persistence-lgpd-checks.js';
 import { assertCondition } from '../identity-test/identity-test.error.js';
 import { readUserId } from './database-reads.js';
@@ -77,6 +78,11 @@ function assertPersistenceTables(tables: ExportBody['data']['tables']): void {
     const count = tables[table]?.length ?? -1;
     assertCondition(count === PERSISTENCE_EXPECTED_ROWS[table], `exportação de ${table}: ${count}`);
   }
+  const request = JSON.stringify(tables['runs']?.[0]?.['request']);
+  assertCondition(
+    request === JSON.stringify(SEEDED_REQUEST),
+    `a exportação da execução não traz o pedido (grade e janelas): ${request}`,
+  );
 }
 
 async function assertNothingForeign(

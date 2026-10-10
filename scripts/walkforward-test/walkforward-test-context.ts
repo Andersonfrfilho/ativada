@@ -150,6 +150,8 @@ export type NewRunParams = {
   readonly periodEnd: number;
   readonly costs?: { readonly feeRate: string; readonly slippageRate: string };
   readonly owner?: TestOwner;
+  // O pedido (grade e janelas) mora na linha da execução; a thread o lê de lá.
+  readonly request?: WalkForwardRequest;
 };
 
 export async function createWalkForwardRun(
@@ -177,6 +179,8 @@ export async function createWalkForwardRun(
     periodStart: params.periodStart,
     periodEnd: params.periodEnd,
     migratedFromRunId: undefined,
+    request:
+      params.request === undefined ? undefined : parseJsonContainer(JSON.stringify(params.request)),
   });
   if (run === undefined) throw new Error('execução não foi criada');
   return run;
@@ -211,5 +215,6 @@ export async function newRun(
     periodStart: scenario.periodStart,
     periodEnd: scenario.periodEnd,
     ...(scenario.costs === undefined ? {} : { costs: scenario.costs }),
+    request: scenario.request,
   });
 }

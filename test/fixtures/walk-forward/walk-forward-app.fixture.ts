@@ -3,6 +3,7 @@ import type * as CandleSeriesModule from '../../../apps/api-cryptoada/src/walk-f
 import type * as CreateSearcherModule from '../../../apps/api-cryptoada/src/walk-forward/create-searcher.js';
 import type * as ErrorModule from '../../../apps/api-cryptoada/src/walk-forward/walk-forward.error.js';
 import type * as RunModule from '../../../apps/api-cryptoada/src/walk-forward/run-walk-forward.js';
+import type * as MessagesModule from '../../../apps/api-cryptoada/src/walk-forward/walk-forward-messages.js';
 import type * as SignalSeriesModule from '../../../apps/api-cryptoada/src/walk-forward/signal-series.js';
 import type * as ThreadPoolModule from '../../../apps/api-cryptoada/src/walk-forward/search-thread-pool.js';
 import type * as WalletModule from '../../../apps/api-cryptoada/src/walk-forward/run-window-wallet.js';
@@ -23,6 +24,7 @@ export type WalkForwardApp = {
   readonly wallet: typeof WalletModule;
   readonly series: typeof CandleSeriesModule;
   readonly error: typeof ErrorModule;
+  readonly messages: typeof MessagesModule;
 };
 
 export async function loadWalkForwardApp(): Promise<WalkForwardApp> {
@@ -37,5 +39,6 @@ export async function loadWalkForwardApp(): Promise<WalkForwardApp> {
     wallet: (await load('run-window-wallet')) as typeof WalletModule,
     series: (await load('candle-series')) as typeof CandleSeriesModule,
     error: (await load('walk-forward.error')) as typeof ErrorModule,
+    messages: (await load('walk-forward-messages')) as typeof MessagesModule,
   };
 }

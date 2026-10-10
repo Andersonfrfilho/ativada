@@ -244,6 +244,13 @@ describe('ownership registry — estratégias, execuções e resultados (T3.1)',
     );
   });
 
+  test('the run request (grid and windows) is user data: exported, with no hash next to it', () => {
+    const step = OWNED_TABLE_EXPORTS.find((entry) => nameOf(entry.table) === 'runs');
+    const columns = step?.mode === OWNED_TABLE_EXPORT_MODE.COLUMNS ? step.columns : [];
+    expect(columns).toContain('request');
+    expect(columns).not.toContain('runHash');
+  });
+
   test('the export carries neither the technical engine state nor the owner id', () => {
     const exported = OWNED_TABLE_EXPORTS.filter((entry) =>
       persistenceTables.includes(nameOf(entry.table)),

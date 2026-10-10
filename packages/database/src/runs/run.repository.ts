@@ -3,7 +3,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import type { DatabaseExecutor } from '../database-executor.js';
-import { readJsonb, toJsonb } from '../jsonb.js';
+import { readJsonb, toJsonb, toNullableJsonb } from '../jsonb.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
 import { runs } from '../schema/runs.schema.js';
 import { strategyVersions } from '../schema/strategies.schema.js';
@@ -58,6 +58,7 @@ async function createRun(
       periodStart: params.periodStart,
       periodEnd: params.periodEnd ?? null,
       migratedFromRunId: origin ?? null,
+      request: toNullableJsonb(params.request),
     })
     .returning(RUN_COLUMNS);
   const created = rows[0];

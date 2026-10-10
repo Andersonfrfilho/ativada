@@ -18,20 +18,11 @@ export const WALK_FORWARD_MESSAGE_TYPE = {
 const runIdSchema = z.uuid();
 const countSchema = z.int().min(0);
 const millisecondsSchema = z.number().min(0);
-const monthsSchema = z.int().min(1).max(120);
-
-// Entrada da thread: o identificador e o PEDIDO (a grade e as janelas). Nada de dono, token nem conexão atravessa a
-// fronteira; a grade é validada de novo pelo catálogo fechado do motor lá dentro.
+// Entrada da thread: só o identificador. O PEDIDO (a grade e as janelas) mora na linha da execução (`runs.request`) e a
+// thread o lê de lá; nada de pedido, dono, token nem conexão atravessa a fronteira.
 export const WALK_FORWARD_REQUEST_MESSAGE_SCHEMA = z.strictObject({
   type: z.literal(WALK_FORWARD_MESSAGE_TYPE.RUN),
   runId: runIdSchema,
-  request: z.strictObject({
-    grid: z.unknown(),
-    trainMonths: monthsSchema.optional(),
-    testMonths: monthsSchema.optional(),
-    stepMonths: monthsSchema.optional(),
-    minTradesPerWindow: z.int().min(1).max(10_000).optional(),
-  }),
 });
 
 const phasesSchema = z.strictObject({

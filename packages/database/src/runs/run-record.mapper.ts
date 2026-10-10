@@ -24,6 +24,7 @@ export const RUN_COLUMNS = {
   progress: runs.progress,
   errorCode: runs.errorCode,
   migratedFromRunId: runs.migratedFromRunId,
+  request: runs.request,
   createdAt: runs.createdAt,
   startedAt: runs.startedAt,
   finishedAt: runs.finishedAt,
@@ -48,6 +49,7 @@ export type RunRow = {
   readonly progress: number;
   readonly errorCode: string | null;
   readonly migratedFromRunId: string | null;
+  readonly request: unknown;
   readonly createdAt: Date;
   readonly startedAt: Date | null;
   readonly finishedAt: Date | null;
@@ -64,6 +66,7 @@ export function toRunRecord(row: RunRow): RunRecord {
     metrics: row.metrics === null ? undefined : readJsonb(row.metrics),
     errorCode: row.errorCode ?? undefined,
     migratedFromRunId: row.migratedFromRunId ?? undefined,
+    request: row.request === null ? undefined : readJsonb(row.request),
     startedAt: row.startedAt ?? undefined,
     finishedAt: row.finishedAt ?? undefined,
   };

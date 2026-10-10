@@ -5,11 +5,9 @@ import {
   createWalkForwardThreadRunner,
   type WalkForwardThreadRunner,
 } from '../apps/api-cryptoada/src/walk-forward/walk-forward-thread-runner.js';
-import { SCENARIO_GRID } from './fixtures/walk-forward/walk-forward-scenarios.fixture.js';
 
 const RUN_ID = '018f0000-0000-7000-8000-0000000000f1';
 const TIMEOUT_MILLISECONDS = 60_000;
-const REQUEST = { grid: SCENARIO_GRID, minTradesPerWindow: 2 } as const;
 
 function workerUrl(name: string): string {
   return new URL(`./fixtures/walk-forward/${name}.ts`, import.meta.url).href;
@@ -42,7 +40,7 @@ describe('walk-forward: a thread coordenadora', () => {
       const failures: Recorded[] = [];
       const progress: number[] = [];
       const runner = createRunner({ worker: 'test-walk-forward.worker', failures, progress });
-      const outcome = await runner.run(RUN_ID, REQUEST);
+      const outcome = await runner.run(RUN_ID);
       expect(outcome.status).toBe('completed');
       if (outcome.status !== 'completed') return;
       expect(outcome).toMatchObject({ windows: 4, combinations: 12 });
@@ -55,19 +53,18 @@ describe('walk-forward: a thread coordenadora', () => {
     TIMEOUT_MILLISECONDS,
   );
 
-  test('pedido fora do esquema é recusado dentro da thread, com código estável', async () => {
+  test('pedido gravado fora do esquema falha dentro da thread, com código estável', async () => {
     const failures: Recorded[] = [];
-    const runner = createRunner({ worker: 'test-walk-forward.worker', failures });
-    const outcome = await runner.run(RUN_ID, { grid: SCENARIO_GRID, trainMonths: 0 });
+    const runner = createRunner({ worker: 'invalid-request-walk-forward.worker', failures });
+    const outcome = await runner.run(RUN_ID);
     expect(outcome.status).toBe('failed');
-    expect(outcome.status === 'failed' && outcome.errorCode).toBe('WALK_FORWARD_INVALID_REQUEST');
-    expect(failures).toEqual([{ runId: RUN_ID, errorCode: 'WALK_FORWARD_INVALID_REQUEST' }]);
+    expect(outcome.status === 'failed' && outcome.errorCode).toBe('INVALID_WINDOW_CONFIG');
   });
 
   test('a thread que morre vira WORKER_CRASHED, gravado pela thread principal', async () => {
     const failures: Recorded[] = [];
     const runner = createRunner({ worker: 'crashing-walk-forward.worker', failures });
-    const outcome = await runner.run(RUN_ID, REQUEST);
+    const outcome = await runner.run(RUN_ID);
     expect(outcome.status === 'failed' && outcome.errorCode).toBe('WORKER_CRASHED');
     expect(failures).toEqual([{ runId: RUN_ID, errorCode: 'WORKER_CRASHED' }]);
   });
@@ -75,7 +72,7 @@ describe('walk-forward: a thread coordenadora', () => {
   test('evento fora do esquema também derruba a execução', async () => {
     const failures: Recorded[] = [];
     const runner = createRunner({ worker: 'rude-walk-forward.worker', failures });
-    const outcome = await runner.run(RUN_ID, REQUEST);
+    const outcome = await runner.run(RUN_ID);
     expect(outcome.status === 'failed' && outcome.errorCode).toBe('WORKER_CRASHED');
   });
 
@@ -86,7 +83,7 @@ describe('walk-forward: a thread coordenadora', () => {
       timeoutMilliseconds: 300,
       failures,
     });
-    const outcome = await runner.run(RUN_ID, REQUEST);
+    const outcome = await runner.run(RUN_ID);
     expect(outcome.status === 'failed' && outcome.errorCode).toBe('WALK_FORWARD_TIMEOUT');
     expect(failures).toEqual([{ runId: RUN_ID, errorCode: 'WALK_FORWARD_TIMEOUT' }]);
   });
@@ -94,7 +91,7 @@ describe('walk-forward: a thread coordenadora', () => {
   test('o encerramento da API termina a thread e deixa a execução como estava', async () => {
     const failures: Recorded[] = [];
     const runner = createRunner({ worker: 'silent-walk-forward.worker', failures });
-    const pending = runner.run(RUN_ID, REQUEST);
+    const pending = runner.run(RUN_ID);
     await runner.terminateAll();
     const outcome = await pending;
     expect(outcome.status).toBe('terminated');

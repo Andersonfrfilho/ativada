@@ -89,6 +89,7 @@ function buildBlueprint(params: BuildRunParams): RunBlueprint {
     progress: 0,
     errorCode: undefined,
     migratedFromRunId: undefined,
+    request: undefined,
     createdAt: new Date(0),
     startedAt: undefined,
     finishedAt: undefined,

@@ -88,6 +88,7 @@ export const OWNED_TABLE_EXPORTS: readonly OwnedTableExportStep[] = [
     'progress',
     'errorCode',
     'migratedFromRunId',
+    'request',
     'createdAt',
     'startedAt',
     'finishedAt',

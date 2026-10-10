@@ -88,6 +88,38 @@ async function checkCreateAndTransitions(context: LifecycleCheckContext): Promis
   );
 }
 
+// O pedido do walk-forward (grade e janelas) mora na linha: nasce com a execução, volta idêntico na leitura e é nulo
+// quando a execução não tem pedido (backtest).
+async function checkRequest(context: LifecycleCheckContext): Promise<void> {
+  const { handle, client, assertCondition, reportCheck } = context;
+  const owner = await resolvePersistenceOwner(handle, 'subject-run-request-owner');
+  const runs = createRunRepository(handle);
+  const version = await seedStrategyVersion(handle, owner);
+  const request = {
+    grid: { parameters: [{ path: 'thresholds.buy', values: ['1', '1.5'] }] },
+    trainMonths: 6,
+  };
+  const walkForward = await runs.createRun(
+    owner.scope,
+    buildRunParams(version.id, { kind: RUN_KIND.WALK_FORWARD, request }),
+  );
+  assertCondition(
+    JSON.stringify(walkForward?.request) === JSON.stringify(request),
+    'o pedido gravado volta idêntico',
+  );
+  const found = await runs.findRun(owner.scope, walkForward?.id ?? '');
+  assertCondition(
+    JSON.stringify(found?.request) === JSON.stringify(request),
+    'findRun traz o pedido',
+  );
+  const rows: unknown =
+    await client`SELECT jsonb_typeof(request) AS kind FROM runs WHERE id = ${walkForward?.id ?? ''}`;
+  assertCondition((rows as readonly TypeRow[])[0]?.kind === 'object', 'request é jsonb objeto');
+  const backtest = await runs.createRun(owner.scope, buildRunParams(version.id));
+  assertCondition(backtest?.request === undefined, 'sem pedido, request é nulo');
+  reportCheck('runs.request: grava, devolve idêntico e é nulo sem pedido');
+}
+
 async function checkCheckpoint(context: LifecycleCheckContext): Promise<void> {
   const { handle, assertCondition, reportCheck } = context;
   const owner = await resolvePersistenceOwner(handle, 'subject-run-owner');
@@ -259,6 +291,7 @@ async function checkLineageAndConstraints(context: LifecycleCheckContext): Promi
 
 export async function checkRunRepository(context: LifecycleCheckContext): Promise<void> {
   await checkCreateAndTransitions(context);
+  await checkRequest(context);
   await checkCheckpoint(context);
   await checkListing(context);
   await checkLineageAndConstraints(context);

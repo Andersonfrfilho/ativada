@@ -1,6 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { WALK_FORWARD_ERROR_CODE } from './walk-forward.constant.js';
-import type { WalkForwardRequest } from './walk-forward.types.js';
 import {
   WALK_FORWARD_EVENT_SCHEMA,
   WALK_FORWARD_MESSAGE_TYPE,
@@ -24,7 +23,7 @@ export type WalkForwardThreadRunnerParams = {
 };
 
 export type WalkForwardThreadRunner = {
-  readonly run: (runId: string, request: WalkForwardRequest) => Promise<WalkForwardThreadOutcome>;
+  readonly run: (runId: string) => Promise<WalkForwardThreadOutcome>;
   readonly terminateAll: () => Promise<void>;
 };
 
@@ -55,7 +54,6 @@ class ThreadRun {
   constructor(
     private readonly params: WalkForwardThreadRunnerParams,
     private readonly runId: string,
-    private readonly request: WalkForwardRequest,
   ) {
     this.outcome = new Promise((resolve) => {
       this.resolveOutcome = resolve;
@@ -98,7 +96,6 @@ class ThreadRun {
       return this.worker?.postMessage({
         type: WALK_FORWARD_MESSAGE_TYPE.RUN,
         runId: this.runId,
-        request: this.request,
       });
     }
     if (event.type === WALK_FORWARD_MESSAGE_TYPE.PROGRESS) {
@@ -124,8 +121,8 @@ export function createWalkForwardThreadRunner(
 ): WalkForwardThreadRunner {
   const active = new Set<ThreadRun>();
   return {
-    async run(runId, request): Promise<WalkForwardThreadOutcome> {
-      const run = new ThreadRun(params, runId, request);
+    async run(runId): Promise<WalkForwardThreadOutcome> {
+      const run = new ThreadRun(params, runId);
       active.add(run);
       try {
         return await run.outcome;

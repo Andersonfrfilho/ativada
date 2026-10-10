@@ -9,10 +9,11 @@ import type {
 } from './walk-forward.constant.js';
 import type { WalkForwardDatabase } from './walk-forward-database.types.js';
 
-// O PEDIDO do walk-forward: a grade e as janelas moram na execução, não na versão da estratégia (ADR 0002). É
-// entrada de `runWalkForward` (e da thread); o checkpoint guarda o hash dela para recusar uma retomada com outro.
+// O PEDIDO do walk-forward: a grade e as janelas moram na execução (`runs.request`), não na versão da estratégia
+// (ADR 0002). A linha vale: estas opções só são usadas quando a linha não tem pedido (linha anterior à migration 0010
+// e testes); o checkpoint guarda o hash do pedido efetivo para recusar uma retomada com outro.
 export type WalkForwardRequest = {
-  readonly grid: unknown;
+  readonly grid?: unknown;
   readonly trainMonths?: number | undefined;
   readonly testMonths?: number | undefined;
   readonly stepMonths?: number | undefined;
