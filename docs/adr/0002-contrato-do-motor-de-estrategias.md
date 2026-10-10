@@ -1,7 +1,7 @@
 # ADR 0002 — Contrato do motor de estratégias
 
 **Status:** aceito com ajustes (T2.1 proposto; revisão do `architect` aplicada na T2.1b — seção
-"Revisão do arquiteto") · **Data:** 2026-10-10
+"Revisão do arquiteto"; revisão da Fase 2 aplicada na T2.6 — seção "Revisão da Fase 2") · **Data:** 2026-10-10
 
 ## Contexto
 
@@ -90,6 +90,7 @@ defesa: o harness (§g) prova o comportamento. Os únicos imports permitidos sã
 | `wallet.firstSignalCandleOpenTime` | candle do primeiro sinal; a régua compra na abertura seguinte |
 | `wallet.sequence` | contador das chaves determinísticas (`<prefixo>order-N`, `<prefixo>position-N`) |
 | `wallet.isHalted` | `true` depois de `halt` até um `resume` (§h): não abre entrada |
+| `wallet.processedCommandIds` | os últimos 64 `commandId` processados, do mais antigo ao mais novo, sem repetição: o `commandId` repetido num passo posterior é ignorado (§h) |
 | `wallet.cash` | saldo em USDT (texto decimal, nunca negativo) |
 | `wallet.position` | a posição aberta (no máximo uma, §e) com `entryPrice`, `quantity`, `stopPrice`, `targetPrice`, `entryFee` |
 | `wallet.pendingOrder` | a ordem pendente (no máximo uma): entrada guarda o VALOR EM RISCO (`riskAmount`), distâncias, o volume do candle de decisão (`decisionVolume`, T2.4) e, se limitada, `limitPrice`/`eligibleCandles`; saída guarda `exitReason`; `filledQuantity` reserva o preenchimento parcial da execução real (no simulado é `"0"`) |
@@ -112,11 +113,11 @@ corrente — nenhuma decisão é carimbada no passado:
 | Campo | Conteúdo | Tabela (plan §3) |
 |---|---|---|
 | `signal` | `null` no aquecimento; depois, um por candle: `action`, `score`, `regime`, `votes[]` (`ruleId`, `family`, `vote`, `weight`, `isMissing`), `indicators` (ids com espaço de nome, achatados), `sentiment` (a observação usada, nula se ausente/velha), `reason` | `signals` (único por `run_id, candle_time`) |
-| `commands[]` | comandos aplicados: `commandId`, `kind`, `reason`, `issuedAt` | `run_commands` (T3.1) |
+| `commands[]` | comandos do passo: `commandId`, `kind`, `reason`, `issuedAt` e `status` (`applied`, ou `ignored_duplicate` quando o `commandId` já foi processado) | `run_commands` (T3.1) |
 | `orders[]` | eventos do ciclo de vida: `created`, `filled`, `cancelled`, `expired`, `rejected` (com `reason`), por `orderKey`; `price`/`quantity` só no `filled`; `triggerPrice` (stop/alvo) só nas saídas protetoras; `riskAmount`, `stopDistance`, `targetDistance`, `limitPrice`, `eligibleCandles` na entrada | `orders` (status monotônico) |
 | `fills[]` | `orderKey`, `positionKey`, lado, `price`, `quantity`, `notional`, `fee` | `fills` |
 | `openedPositions[]` / `closedPositions[]` | abertura (preço, quantidade, stop, alvo, taxa) e fechamento (preço de saída, taxas, `netProfit`, `exitReason`) | `positions` |
-| `equityPoint` | `equity` e `benchmark` a valor de liquidação no fechamento, e `equityAtLow` (liquidação na mínima do candle, lado pior — perda máxima da meta e piso do RF09) | `equity_points` |
+| `equityPoint` | `equity` e `benchmark` a valor de liquidação no fechamento, e `equityAtLow` (o vale do candle: o menor entre a posição que EXISTIU durante o candle valorada na mínima e o valor ao fim do passo, §e — perda máxima da meta e piso do RF09) | `equity_points` |
 
 **Guarda de entrada (`assertStepInput`, `assertSignalStepInput`, `assertWalletStepInput`).** Recusa em voz
 alta com `EngineInputError.code` estável — o chamador distingue "já processado, pule" de "entrada
@@ -124,7 +125,7 @@ errada, pare":
 
 | Código | Quando |
 |---|---|
-| `CONFIG_HASH_MISMATCH` / `RUN_HASH_MISMATCH` | estado de outra versão da estratégia / de outros parâmetros |
+| `CONFIG_HASH_MISMATCH` / `RUN_HASH_MISMATCH` | estado de outra versão da estratégia / de outros parâmetros, ou conteúdo que não bate com o hash declarado: o motor RECALCULA o SHA-256 canônico de `config` e de `parameters` (um por objeto: cache em `WeakMap`, não um por passo) no `step` e no `walletStep` avulso |
 | `CANDLE_WRONG_MARKET` | candle de outro par ou timeframe que o da execução |
 | `CANDLE_INSANE` | preço não positivo, mínima acima do corpo, corpo acima da máxima, volume negativo, decimal com sinal, expoente ou vírgula, tempo não inteiro ou negativo (nunca um `DecimalError` cru) |
 | `CANDLE_OFF_GRID` | `openTime % duração ≠ 0` ou `closeTime ≠ openTime + duração − 1` |
@@ -136,10 +137,17 @@ errada, pare":
 | `COMMAND_INVALID` | comando com `commandId` repetido ou vazio, `issuedAt` depois do fechamento, tipo ou motivo desconhecido |
 | `EXECUTION_REPORTS_UNSUPPORTED` | relatório da corretora num motor que só simula (a referência recusa) |
 
+O `step` também recusa, com `EngineStateError(invalid_state)`, o estado em que `signal.lastCandleOpenTime` difere de
+`wallet.lastCandleOpenTime` (as metades andam juntas; antes só o `validateEngineState` conferia).
+
 **Lacuna.** O ao vivo só avança sobre uma lacuna CONFIRMADA (o worker já tentou o REST e a Binance não
 tem o candle — `unfillable`); o backtest declara a mesma lacuna ao ler o banco. Sem a declaração exata,
 o motor recusa: um candle que só "ainda não chegou" nunca vira lacuna no ao vivo e lacuna no backtest
 (paridade). Validade de limitada e aquecimento contam candles processados, não horas.
+
+**O que a carteira faz numa lacuna confirmada** (T2.6, §e). Não sabemos o que aconteceu nos candles ausentes, então a
+lacuna nunca é boa notícia: com posição aberta o stop é assumido TOCADO e a posição sai na abertura do candle
+seguinte à lacuna; as ordens pendentes caducam; nenhuma entrada nasce nesse candle.
 
 **O laço é o mesmo.** O backtest chama `step` para cada candle lido do banco; o ao vivo chama `step`
 para cada candle fechado que chega. Não existe `runBacktest` com outra lógica.
@@ -264,29 +272,36 @@ O pré-aquecimento é derivado da lógica (§c), não um campo.
 | `symbol` | `^[A-Z0-9]{2,16}USDT$` (saldo em USDT — D7) | obrigatório |
 | `timeframe` | `15m`/`1h`/`4h`/`1d` | obrigatório |
 | `sentimentSource` | texto de 1 a 64 caracteres: a fonte das observações de sentimento que a execução lê (§f); entra no `runHash` | obrigatório |
-| `initialBalance` | [10, 10⁹] — `numeric(24,8)` guarda 16 dígitos inteiros; 10⁹ deixa folga para quantidade × preço e taxa sem estourar a coluna | 10 000 |
-| `feeRate` / `slippageRate` | [0, 1%] / [0, 5%] | 0,1% / 0,05% |
-| `tickSize`, `quantityStep`, `minNotional` | filtros da corretora | 0,01 / 0,00001 / 5 (BTCUSDT) |
+| `initialBalance` | [10, 10⁹], no máximo 8 casas — `numeric(24,8)` guarda 16 dígitos inteiros; 10⁹ deixa folga para quantidade × preço e taxa sem estourar a coluna | 10 000 |
+| `feeRate` / `slippageRate` | [0, 1%] / [0, 5%], no máximo 8 casas | 0,1% / 0,05% |
+| `tickSize`, `quantityStep`, `minNotional` | filtros da corretora, no máximo 8 casas (o dinheiro é `numeric(24,8)` e a carteira mede 8) | 0,01 / 0,00001 / 5 (BTCUSDT) |
 | `maxVolumeShare` | (0, 1] | 1% |
 
 Saldo, taxa e slippage são entrada do backtest (RF07); cada par de uma meta tem valor fictício próprio
 (RF13); os filtros mudam na corretora (spec 002) — nada disso muda a versão da estratégia.
 
 - **Tipos.** Todo valor não inteiro que entra em conta de dinheiro ou de pontuação é **texto decimal**
-  (`"0.001"`, sem expoente nem vírgula; até 18 dígitos inteiros e 12 decimais), devolvido canônico.
+  (`"0.001"`, sem expoente nem vírgula; até 18 dígitos inteiros e 12 decimais, exceto dinheiro, taxas e filtros da
+  corretora, que têm no máximo 8), devolvido canônico.
   Parâmetros de indicador são `number`, exceto os desvios do Bollinger: **texto decimal com uma casa**
   (`"2.3"`), porque `multipleOf(0.1)` em float recusaria `0.3`.
 - **Hashes.** `hashStrategyConfig` e `hashRunParameters` = SHA-256 hexadecimal do JSON canônico do valor
   **reparseado** (defaults preenchidos, decimais canônicos, chaves ordenadas). Grafias equivalentes,
   ordem de chaves e defaults omitidos dão o mesmo hash; qualquer mudança de significado dá outro. O
   estado guarda os dois (`configHash`, `runHash`). `strategy_versions` ganha linha nova só quando o
-  `configHash` difere; `runs` guarda `run_parameters jsonb` e `run_hash`.
+  `configHash` difere; `runs` guarda `run_parameters jsonb` e `run_hash`. O hash declarado em `StrategyVersion` e
+  `RunSetup` não é confiado: o motor o recalcula (T2.6) e recusa o rótulo que não bate com o conteúdo.
 - **Zod fixo.** O hash depende da semântica do Zod (defaults, transformações): `zod` é dependência direta
   em versão **exata** (4.6.5, a mesma resolvida no repositório), e um teste de **hash-dourado literal**
   (Placar clássico, configuração mínima com o JSON canônico literal, parâmetros de exemplo e mínimos)
   avisa se uma atualização mudar o hash.
 - **Evolução do schema.** `schemaVersion: 2` nascerá como outro membro aceito, com `upgrade(v1) → v2`;
   versões antigas continuam parseáveis para sempre.
+- **Sentimento no backtest (T2.6, desenho da T3.1).** O corte de inserção `createdAt <= insertionCutoff` compara com o
+  instante em que a observação ficaria conhecida. Numa carga histórica `sentiment_observations.created_at` é o
+  instante ESTIMADO de publicação (data do dado + atraso de publicação conservador), NUNCA o horário da carga: com o
+  horário da carga, `createdAt <= início da execução` não selecionaria nada num histórico recarregado hoje. O
+  `insertionCutoff` do backtest é o fechamento do candle (o ao vivo grava `created_at` = `observed_at`).
 - **Teto do walk-forward.** `MAX_WALK_FORWARD_COMBINATIONS = 200` (RNF02), parâmetro da execução de
   walk-forward (T3.3).
 - **Exemplo.** O "Placar clássico" (só a lógica) está em
@@ -326,7 +341,9 @@ passo; dinheiro com 8 casas: débito para cima, crédito para baixo; taxa para c
 | Saída no alvo | `máxima > alvo` (precisa passar) sai ao preço do alvo, sem slippage. **Gap acima do alvo** (`abertura > alvo`, posição vinda de antes) também sai ao preço do alvo: é o comportamento de uma ordem de alvo que está no livro (preenche no preço dela), não pessimismo |
 | Stop e alvo no mesmo candle | **Vale o stop** (constituição §3) |
 | Candle de entrada | A posição aberta na abertura é avaliada contra stop e alvo no próprio candle. A limitada preenchida **no meio** do candle é avaliada só contra o stop: a máxima pode ter acontecido antes do preenchimento |
-| Patrimônio | `caixa + floor8(q × tickDown(preço × (1 − s))) − taxa` no fechamento (`equity`) e na mínima (`equityAtLow`); a régua "comprar e segurar" usa a mesma fórmula no fechamento, comprada com todo o saldo na abertura seguinte ao primeiro sinal |
+| Patrimônio | `caixa + floor8(q × tickDown(preço × (1 − s))) − taxa` no fechamento (`equity`); a régua "comprar e segurar" usa a mesma fórmula no fechamento, comprada com todo o saldo na abertura seguinte ao primeiro sinal |
+| Vale do candle (`equityAtLow`, T2.6) | `min( valoração na mínima do candle com a posição que EXISTIU durante o candle, equity ao fim do passo )`. A ordem dos extremos dentro do candle é desconhecida, então vale o lado pior. **Contam**: a posição aberta antes do candle e ainda aberta ao fim; a que sai pelo ALVO no candle (valorada na mínima, com o caixa de ANTES da venda); a entrada a mercado preenchida na abertura e a limitada preenchida no meio do candle. **Não contam**: a posição que sai por ordem PENDENTE na abertura (sai antes da mínima), por STOP (o patrimônio mínimo observável é o da saída no preço do stop, que já é o valor de fechamento do passo) ou pela lacuna (sai na abertura). Sem posição que conte, `equityAtLow = equity` |
+| Lacuna confirmada (T2.6) | `confirmedGapCandles > 0`: as ordens pendentes (entrada, saída, limitadas) são CANCELADAS (`cancelled`, `reason: gap`); com posição aberta o stop é assumido tocado e ela fecha na ABERTURA do candle pós-lacuna a `tickDown(min(stop, abertura) × (1 − s))` (`exitReason: gap`, taxa normal; ordem de mercado `created` + `filled`, `reason: gap`); nenhuma entrada nova nesse candle (o `BUY` fica gravado no sinal). O alvo NÃO é honrado através da lacuna: o pior caso vale |
 
 **Eventos de ordem.** `created` traz a decisão (risco, distâncias, limite, validade) sem preço;
 `filled` traz `price` e `quantity`. Saída por stop ou alvo emite `created` + `filled` no mesmo candle,
@@ -344,7 +361,8 @@ par por estratégia" (RF05) é invariante do estado.
 | `HOLD` | nada | segue até preencher ou expirar | nada; stop e alvo seguem valendo |
 
 Uma ordem a mercado nunca fica pendente além de um candle. Se a posição saiu por stop no candle `k`, um
-`BUY` no fechamento de `k` pode criar nova entrada para `k+1`.
+`BUY` no fechamento de `k` pode criar nova entrada para `k+1`. Exceções que suprimem a entrada nova: o candle
+pós-lacuna (acima) e o candle de um `halt` ou `exit_position` aplicado (§h).
 
 ### f) Regime e placar
 
@@ -432,8 +450,9 @@ A T2.3 implementa o formato e o prende por tabela de cenários.
   ponto decimal, regras na ordem da configuração separadas por `, `, lista vazia = `nenhuma`; a regra sem
   dado aparece só em `sem dado`. ADX truncado em uma casa por `formatTruncatedAdx` (24,96 ⇒ `24.9`).
   Sem `toLocale*`, `Intl` nem relógio.
-- **`SIGNAL_ENGINE_VERSION = 'signal-1'`** prende o dourado do Placar clássico
-  (`test/fixtures/strategy-engine/golden/classic-scoreboard-signals.signal-1.json`): saída diferente sem
+- **`SIGNAL_ENGINE_VERSION = 'signal-2'`** (era `signal-1` na T2.3; a T2.5 acrescentou `configHash` e
+  `confirmedGapCandles` ao `SignalDecision`) prende o dourado do Placar clássico
+  (`test/fixtures/strategy-engine/golden/classic-scoreboard-signals.signal-2.json`): saída diferente sem
   trocar a versão reprova; trocar a versão exige gravar o novo dourado. A T2.5 integra a versão à
   `engineVersion` do motor completo.
 - **Prova** (T2.3): tabela de cenários escrita à mão (`scoreboard-scenarios`), tabela de votos por tipo,
@@ -483,7 +502,8 @@ que rodam (a primeira que falha nomeia o defeito):
 | `stop-before-target` | Stop tocado sai pelo stop; alvo só com o stop intacto e o preço acima do alvo (nunca no candle de uma limitada preenchida no meio) |
 | `gap-beyond-stop` | Stop sai a `tickDown(min(stop, abertura) × (1 − s))`; alvo sempre ao preço do alvo |
 | `limit-orders` | Limitada preenche só dentro da validade, pelo preço da regra do candle (1º elegível ou depois), cruzando, e expira exatamente no N-ésimo candle |
-| `signal-policy` | A tabela de sinais e comandos de §e/§h no fechamento de cada candle |
+| `signal-policy` | A tabela de sinais e comandos de §e/§h no fechamento de cada candle, incluindo a supressão de entrada por `halt`/`exit_position` e o `commandId` repetido ignorado |
+| `gap-policy` | Numa lacuna confirmada a posição aberta sai pela fórmula da lacuna, a pendente caduca com motivo `gap` e nenhuma entrada nasce (T2.6) |
 | `required-events` | O cenário de fato exercitou o que promete (cenário que não dispara o evento reprova) |
 
 ### h) Fronteira de domínio, comandos e execução real
@@ -501,9 +521,15 @@ que rodam (a primeira que falha nomeia o defeito):
   - `exit_position` — cancela a entrada viva e cria venda a mercado para `t+1` (`exitReason: command`);
     sem posição, só cancela.
 
+  `exit_position` e `halt` aplicados SUPRIMEM qualquer entrada nova no candle deles (mesmo um `BUY` no mesmo
+  fechamento, mesmo um `resume` depois do `halt` no mesmo passo). O `commandId` é idempotente ENTRE passos: a
+  carteira guarda os últimos 64 (`wallet.processedCommandIds`); o repetido num passo posterior é ignorado, sem
+  efeito nenhum, e sai em `decisions.commands[]` com `status: ignored_duplicate`. Fora da janela de 64, o
+  identificador volta a ser aplicável (limite assumido).
+
   Motivos: `goal_reached`, `goal_max_loss`, `goal_expired`, `user_stop`, `user_resume`, `kill_switch`,
-  `window_end`. Cada comando aplicado vira `decisions.commands[]`; `commandId` repetido no mesmo passo é
-  recusado. **O kill switch da spec 002 age FORA do motor** (cancela as ordens na corretora e desarma);
+  `window_end`. Cada comando vira `decisions.commands[]` (`status` `applied` ou `ignored_duplicate`); `commandId` repetido no
+  mesmo passo é recusado. **O kill switch da spec 002 age FORA do motor** (cancela as ordens na corretora e desarma);
   o motor fica sabendo pelo relatório "posição fechada externamente" (abaixo), nunca por atalho.
 - **Execução real (spec 002) — decisão.** O executor real roda a SUA instância do MESMO `step`, por
   usuário, alimentada por candles + sentimento + comandos + **relatórios da corretora**
@@ -529,19 +555,27 @@ que rodam (a primeira que falha nomeia o defeito):
 
 ### Harness, referência e motores defeituosos
 
-- `engine-contract.fixture.ts` — `runEngineContract({ createEngine, scenarios })` roda as 20 verificações
-  de §g em cada cenário; `runEngineCheck` roda uma só. Cenários carregam `strategy`, `run`, `candles`,
+- `engine-contract.fixture.ts` — `runEngineContract({ createEngine, scenarios })` roda as 21 verificações
+  de §g em cada cenário (a 21ª, `gap-policy`, entrou na T2.6); `runEngineCheck` roda uma só. Cenários carregam `strategy`, `run`, `candles`,
   `sentiment` (observações, selecionadas por candle como o chamador real faz) e `commands` (por candle).
 - `reference-engine.fixture.ts` (+ `reference-signal`, `reference-wallet`, `reference-fills`,
   `reference-sizing`, `reference-policy`) — motor de referência: compra em todo fechamento, vende quando o
   candle cai 3% ou mais da abertura, "ganância" (Fear & Greed fresco ≥ 80) segura a compra; implementa
-  comandos e todo o modelo de §e. Passa o harness em sete cenários (`reference-scenarios.fixture.ts`):
+  comandos e todo o modelo de §e. Passa o harness em dez cenários (`reference-scenarios.fixture.ts`; os três últimos são da T2.6: `exit_position` na carteira livre e duas lacunas, uma com posição aberta e outra com a limitada viva):
   mercado com stop/gap/alvo; limitada com expiração e gap; caminhos de SELL, comandos e sentimento;
   recusas e participação no volume; preenchimentos de borda (toque no limite, 2º candle, alvo só tocado,
   gap acima do alvo, limitada no meio com a máxima além do alvo); entrada limitada pelo caixa; gap de alta
   na entrada seguido de stop.
-- 27 motores defeituosos (`REFERENCE_ENGINE_DEFECT`), cada um reprovado pela verificação certa (tabela no
-  teste, que também exige cobertura de todo o catálogo).
+- 33 motores defeituosos (`REFERENCE_ENGINE_DEFECT`; 27 da T2.1 e 6 da T2.6: vale ignorando a posição que saiu,
+  vale contando o stop, lacuna que mantém a posição, lacuna que mantém a pendente, `exit_position` que deixa
+  entrar, comando repetido reaplicado), cada um reprovado pela verificação certa (tabela no teste, que também
+  exige cobertura de todo o catálogo).
+- **Cortes amostrados (T2.6).** `no-lookahead` e `resume` reexecutam o cenário por corte (O(n²)). Por padrão cortam
+  onde o motor decide algo (os 3 primeiros candles, as bordas do pré-aquecimento, todo candle com sinal não-`HOLD`,
+  ordem, preenchimento ou comando, e ~8 índices espaçados) e a execução perturbada para 3 candles depois do corte
+  (só o prefixo é comparado; o horizonte existe para pegar o defeito que carimba no passado). `FULL_CONTRACT=1`
+  (`make contract-full`, `bun run test:full`) roda todo corte, sem truncar. O poder de detecção é o mesmo:
+  os 33 defeitos e os 51 mutantes de produção continuam reprovados na versão amostrada.
 - `indicator-contract.fixture.ts` — `expectIndicatorContract` (aquecimento exato, convergência ≥
   aquecimento, lote = incremental, determinismo, retomada pelo snapshot), provado com uma média simples e
   três indicadores defeituosos.
@@ -766,7 +800,7 @@ decimais e os tipos).
 
 - **`createEngine()`** devolve o `Engine` do contrato: `step = assertStepInput → signalStep → runWalletStep`, e
   `signalStep`/`walletStep` expostos para o walk-forward e as metas. `ENGINE_VERSION = 'engine-1'` é o que o estado
-  grava (estado de outra versão ⇒ `engine_mismatch` ⇒ migração, §b). A semântica do sinal continua versionada à
+  grava (estado de outra versão ⇒ `engine_mismatch` ⇒ migração, §b). A T2.6 passou a versão a `engine-2` (abaixo). A semântica do sinal continua versionada à
   parte: **`SIGNAL_ENGINE_VERSION` passou a `signal-2`** (e o dourado do sinal foi regravado) porque o
   `SignalDecision` ganhou dois campos, abaixo.
 - **`walletStep` avulso confere o que o `step` já conferiu** (herdado da revisão do arquiteto). O sinal carrega
@@ -826,6 +860,45 @@ decimais e os tipos).
   contínua byte a byte nos dois conjuntos reais, e a execução em lotes de 1, 5 e 50 candles (motor novo e estado
   vindo do JSON a cada lote) é idêntica.
 
+## Revisão da Fase 2 (T2.6)
+
+O `code-reviewer` reprovou a Fase 2 (T2.1–T2.5) com 1 bloqueante e 7 importantes. Cada item, a decisão e a prova.
+`ENGINE_VERSION` passou a `engine-2` (o comportamento mudou: vale, lacuna, comandos e `commandId`) e o dourado
+foi regravado; `SIGNAL_ENGINE_VERSION` continua `signal-2` (o sinal não mudou).
+
+| # | Achado | Decisão | Prova |
+|---|---|---|---|
+| B1 | `equityAtLow` ignorava a posição que sai no mesmo candle: toda barra vencedora escondia o vale e o drawdown/perda máxima ficavam subestimados (constituição §3) | `equityAtLow = min(valoração na mínima da posição que existiu durante o candle, valor ao fim do passo)`; regra completa em §e ("Vale do candle") | contas à mão (`wallet-equity-low`: 10 136,45387706 de fechamento contra 9 934,11523824 no vale do cenário do revisor); referência, harness (`fees-and-slippage` reconcilia por razão de caixa), propriedades e oráculo bigint; mutantes `EQUITY_LOW_IGNORES_EXITING_POSITION` e `EQUITY_LOW_COUNTS_STOP_AT_LOW` (e os defeitos de mesmo nome na referência) |
+| I1 | `runHash`/`configHash` eram rótulos: `{...run, parameters:{feeRate:'0.5'}}` com o mesmo `runHash` era aceito | o motor recalcula o SHA-256 canônico de `config` e `parameters` uma vez por objeto (`WeakMap`) no `step` e no `walletStep` avulso | `engine-hash-recompute` (parâmetros e estratégia adulterados recusados; objeto reusado não reenumera); mutantes `RUN_HASH_NOT_RECOMPUTED`, `CONFIG_HASH_NOT_RECOMPUTED`, `HASH_CACHE_DISABLED`, `STEP_DOES_NOT_RECOMPUTE_THE_HASHES` |
+| I2 | lacuna confirmada deixava a posição sem proteção e sem saída | §e "Lacuna confirmada": stop assumido tocado, saída na abertura pós-lacuna, pendências canceladas, sem entrada | `wallet-gap-policy` (contas à mão); check `gap-policy` do harness com 2 cenários; 3.000 fluxos do diferencial com cobertura mínima de `gap-exit` e `gap-cancel`; mutantes `GAP_KEEPS_POSITION`, `GAP_KEEPS_PENDING`, `GAP_ALLOWS_ENTRY`, `GAP_EXIT_AT_THE_STOP_NOT_THE_OPEN`, `GAP_NEEDS_TWO_CANDLES` |
+| I3 | `exit_position` não impedia entrada no mesmo candle | `exit_position` e `halt` aplicados suprimem qualquer entrada nova nesse candle; sem posição, `exit_position` só cancela pendências | `wallet-command-policy`; check `signal-policy`; mutante `EXIT_COMMAND_ALLOWS_ENTRY` (e o defeito da referência) |
+| I4 | o arredondamento a 8 casas das taxas da carteira não era exercido (M19 `sellCredit` com `moneyUp` e M41 `buyDebit` com `moneyDown` sobreviviam: tick 0,01 × passo 0,00001 dá notional de 7 casas, o arredondamento era um no-op) | cenário com `tickSize` 1e-8 e `quantityStep` 0,001 (notional de 11 casas), contas à mão de `buyDebit`, `sellCredit`, `entryFee`, `exitFee`, `netProfit` e do patrimônio; o gerador de fluxos ganha o perfil de notional fino | `wallet-rounding-hand-values`; mutantes `SELL_CREDIT_ROUNDED_UP` e `BUY_DEBIT_ROUNDED_DOWN` reprovados pelo diferencial, pelas contas à mão e pelo oráculo |
+| I5 | aritmética de dinheiro duplicada (`risk/trade-cost.ts` × `wallet/wallet-pricing.ts`; `risk/rounding.ts`) | UMA implementação em `src/money.ts` (`moneyUp/Down`, `floor/ceilToIncrement`, taxa, débito e crédito) importada por `risk/` e `wallet/` | diferenciais da T2.4 (6.000 cenários) e da T2.5 (3.000 fluxos) e todos os mutantes seguem verdes |
+| I6 | a referência compartilhava código com a produção (primitivas de arredondamento, guardas) | oráculo de contabilidade em `bigint` (unidades de 1e-8; notional em 1e-16) em `test/fixtures/strategy-engine/oracle-bigint/`, ~200 linhas, sem importar nada de `src` nem de `reference-*`: replica caixa, `netProfit` e patrimônio (fechamento e vale) dos preenchimentos que o motor emitiu | confere passo a passo os cenários do harness, as 3.000 sequências do diferencial e os dois conjuntos reais; primitivos testados com valores à mão (negativos, exatamente no múltiplo, incremento de 12 casas recusado); reprova sozinho 4 mutantes de dinheiro e de vale; um teste varre os imports do oráculo |
+| I7 | `RunParameters` aceitava incrementos de 12 casas, mas o dinheiro é `numeric(24,8)` | no máximo 8 casas em `tickSize`, `quantityStep`, `minNotional`, `initialBalance`, `feeRate` e `slippageRate`; avisos novos `fee_rate_is_zero` e `slippage_rate_is_zero` ("resultados otimistas") | `run-parameters-places`, `risk-warnings`; o hash dourado não mudou (os valores de exemplo cabiam em 8 casas) |
+| I8 | no backtest, `selectAvailableSentiment` com `createdAt <= início da execução` não selecionaria nada num histórico recarregado hoje | só documental, desenho da T3.1: na carga histórica `sentiment_observations.created_at` = instante ESTIMADO de publicação (data do dado + atraso de publicação conservador), nunca o horário da carga (§d) | linha da T3.1 do `tasks.md` |
+| a | `commandId` só era único dentro do passo | a carteira guarda os últimos 64 (`processedCommandIds`); o repetido num passo posterior sai como `ignored_duplicate` (§h) | check `signal-policy`; fluxos de "tempestade de comandos" no diferencial (passam de 64 identificadores e repetem alguns já esquecidos); mutantes `DUPLICATE_COMMAND_REAPPLIED`, `COMMAND_HISTORY_UNBOUNDED`, `COMMAND_HISTORY_ONE_TOO_SHORT` |
+| b | `step` não conferia `signal.lastCandleOpenTime === wallet.lastCandleOpenTime` | `assertStepInput` recusa com `invalid_state` | `engine-step-halves`; guarda do harness; mutante `STEP_ACCEPTS_THE_HALVES_AT_DIFFERENT_CANDLES` |
+| c | §f2 citava `signal-1` | corrigido para `signal-2` e o nome real do dourado | — |
+| d | exports sem uso | `assertSentiment`, `collectIndicatorHorizons`, `previousValueId`, `buildWalletContext`, `normalizeZero` e `DECIMAL_STATE_TEXT_SCHEMA` deixam de ser exportados | `tsc` e a suíte |
+
+**Riscos ACEITOS (T2.6).**
+
+- A SAÍDA não tem teto de participação no volume; só a entrada tem (§e, "Participação no volume"). Uma posição
+  grande num candle de volume pequeno sai inteira ao preço da regra. Otimista nesse ponto; a execução real (spec 002)
+  mede o impacto de verdade e recalibra.
+- A convergência com ε = 1e-3 (§c) faz o MESMO candle poder dar EMA/RSI diferentes em ~0,1% conforme o ponto de
+  partida do backtest: o peso residual do primeiro candle não é zero. O resultado de um backtest depende da janela;
+  duas janelas que se sobrepõem divergem nos primeiros sinais da sobreposição. O pré-aquecimento (`leadInCandles`)
+  limita o erro, não o elimina.
+- A janela de idempotência de `commandId` é de 64 identificadores: um identificador esquecido volta a ser aplicável.
+  Os chamadores (metas, usuário) geram identificadores únicos por instante; reutilizar um depois de 64 comandos é
+  erro do chamador.
+
+**Medida do harness (T2.6).** `production-engine` 34,7 s → 7,2 s e `production-engine-mutants` 34,0 s → 5,8 s com
+os cortes amostrados e o juiz que para na primeira divergência (a suíte inteira, 124 s → ~68 s, já com os testes
+novos e o oráculo).
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
@@ -875,5 +948,6 @@ decimais e os tipos).
 | Taxa em BNB ou cobrada no ativo comprado | Modelada em USDT nas duas pontas; a spec 002 reconcilia com a taxa reportada |
 | Gap acima do alvo ao preço do alvo e participação no volume calibrados sem dado real | Reavaliar com a sombra da spec 002 |
 | Atraso de publicação do Fear & Greed histórico (24 h) pode ser conservador demais | Configurável no cron; mudar gera observações novas (append-only, fonte distinta), nunca reescreve |
+| Saída sem teto de participação no volume; EMA/RSI do mesmo candle variam ~0,1% com a janela do backtest (ε = 1e-3) | Riscos aceitos na T2.6 (seção "Revisão da Fase 2") |
 | Semântica de `executionReports` sem implementação | Tipos fixados; a spec 002 implementa e acrescenta cenários ao harness |
 | Formato exato do texto de motivo | Fixado em §f; a T2.3 implementa e prende por tabela |

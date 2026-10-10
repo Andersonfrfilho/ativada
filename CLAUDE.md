@@ -54,9 +54,10 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   no volume são `RunParameters` (`runHash`). A entrada guarda o VALOR EM RISCO e a quantidade nasce no
   preenchimento (perda no stop sem gap ≤ `riskPerTrade × saldo`). Recusa de entrada tem `EngineInputError.code`
   estável (`CANDLE_ALREADY_PROCESSED` na retomada = pular). Sentimento entra por `observedAt` = disponibilidade;
-  lacuna para a frente só com `confirmedGapCandles` exato. Todo motor novo passa `runEngineContract` (20
-  verificações, 7 cenários) e todo indicador passa `expectIndicatorContract` (`test/fixtures/strategy-engine/`); a
-  referência e 27 motores defeituosos provam o harness. `zod@4.6.5` e `decimal.js@10.6.0` exatos e diretos; o
+  lacuna para a frente só com `confirmedGapCandles` exato. Todo motor novo passa `runEngineContract` (21
+  verificações, 10 cenários) e todo indicador passa `expectIndicatorContract` (`test/fixtures/strategy-engine/`); a
+  referência e 33 motores defeituosos provam o harness. Os checks de corte (`no-lookahead`, `resume`) são amostrados
+  por padrão; `make contract-full` (ou `bun run test:full`, `FULL_CONTRACT=1`) roda todo corte. `zod@4.6.5` e `decimal.js@10.6.0` exatos e diretos; o
   hash da versão é preso por teste de hash-dourado literal.
 - **Risco (T2.4, ADR 0002 §"Risco em produção").** `computePositionSize` é o ÚNICO dimensionamento do produto (a
   spec 002 o reutiliza no envio da ordem): quantidade pelo valor em risco com a folga de arredondamento
@@ -66,14 +67,25 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   da execução real (spec 002) e da camada de metas. `warnRunParameters` devolve avisos (tick que domina o
   slippage, passo que zera ou engrossa a quantidade, mínimo acima do saldo). Provado por diferencial de 6.000
   cenários contra o oráculo independente em `test/fixtures/strategy-engine/risk/` e por 18 mutantes.
-- **Motor em produção (T2.5, ADR 0002 §"Motor em produção").** `createEngine()` (`engine-1`) = `signalStep ∘
+- **Motor em produção (T2.5, ADR 0002 §"Motor em produção").** `createEngine()` (`engine-2`) = `signalStep ∘
   walletStep`; a corretora simulada mora em `packages/strategy-engine/src/wallet/` (`simulatedFillModel`, política de
   sinal e comandos, régua, patrimônio com `equityAtLow`). O `walletStep` AVULSO confere hashes (o sinal carrega
   `configHash` e a lacuna ecoada; o estado da carteira carrega `configHash` e `runHash`) e a contiguidade do candle;
   mexer no sinal ou nessa guarda exige `SIGNAL_ENGINE_VERSION`/`ENGINE_VERSION` novos e o dourado regravado
   (`test/fixtures/strategy-engine/golden/`). Prova: diferencial byte a byte contra a referência em 3.000 fluxos,
-  propriedades, harness de 20 verificações no motor completo e 33 mutantes de produção
+  propriedades, harness de 21 verificações no motor completo e 51 mutantes de produção
   (`test/production-engine-mutants.contract.test.ts`).
+- **Revisão da Fase 2 (T2.6, ADR 0002 §"Revisão da Fase 2").** `equityAtLow` é o vale: o menor entre a posição que
+  existiu durante o candle valorada na mínima (inclui a que sai pelo ALVO no candle; stop, venda pendente e lacuna
+  não contam) e o patrimônio ao fim do passo. O motor RECALCULA `configHash`/`runHash` (um SHA-256 por objeto) e
+  confere que sinal e carteira estão no mesmo candle. Lacuna confirmada: stop assumido tocado, a posição sai na
+  abertura pós-lacuna (`exitReason: gap`), pendências caducam (`reason: gap`), nenhuma entrada nesse candle.
+  `exit_position` e `halt` suprimem a entrada do próprio candle; `commandId` é idempotente entre passos (últimos 64 em
+  `wallet.processedCommandIds`; repetido sai como `ignored_duplicate`). A aritmética de dinheiro vive só em
+  `src/money.ts`. `RunParameters` aceita no máximo 8 casas em dinheiro, taxas e filtros; `warnRunParameters` avisa de
+  taxa e slippage zero. O oráculo `bigint` (`test/fixtures/strategy-engine/oracle-bigint/`, sem importar `src` nem
+  `reference-*`) replica caixa, lucro e patrimônio dos preenchimentos e confere harness, diferencial e conjuntos reais.
+  Na carga histórica de sentimento `created_at` é o instante ESTIMADO de publicação, nunca o da carga (T3.1).
 - Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account
