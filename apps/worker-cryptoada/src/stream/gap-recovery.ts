@@ -1,13 +1,15 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { CandleRepository } from '@cryptoada/database';
+import { MILLISECONDS_PER_SECOND } from '@cryptoada/environment';
 import {
+  MarketDataBannedError,
   TIMEFRAME_DURATION_MILLISECONDS,
   type MarketDataClient,
   type Timeframe,
 } from '@cryptoada/market-data';
 
 import type { WorkerLogger } from '../logging/worker-logger.js';
-import { WORKER_LOG } from '../worker.constant.js';
+import { DEFAULT_BAN_SECONDS, MAXIMUM_BAN_SECONDS, WORKER_LOG } from '../worker.constant.js';
 import {
   groupConsecutiveOpenTimes,
   type OpenTimeInterval,
@@ -28,6 +30,12 @@ export type GapRecoveryDependencies = {
   readonly lookbackMilliseconds: number;
   // Aberturas que a Binance não tem: perguntar de novo a cada verificação só gastaria peso.
   readonly unfillable: Set<string>;
+};
+
+export type RecoveryOutcome = {
+  readonly failures: number;
+  // Presente quando a exchange baniu o IP: nenhuma chamada nova antes disto passar.
+  readonly banMilliseconds?: number;
 };
 
 type Pair = { readonly symbol: string; readonly timeframe: Timeframe };
@@ -104,7 +112,12 @@ async function recoverPair(dependencies: GapRecoveryDependencies, pair: Pair): P
   }
 }
 
-export async function recoverGaps(dependencies: GapRecoveryDependencies): Promise<number> {
+function computeBanMilliseconds(error: MarketDataBannedError): number {
+  const seconds = Math.min(error.retryAfterSeconds ?? DEFAULT_BAN_SECONDS, MAXIMUM_BAN_SECONDS);
+  return seconds * MILLISECONDS_PER_SECOND;
+}
+
+export async function recoverGaps(dependencies: GapRecoveryDependencies): Promise<RecoveryOutcome> {
   await dependencies.refreshClock();
   let failures = 0;
   for (const symbol of dependencies.symbols) {
@@ -117,8 +130,11 @@ export async function recoverGaps(dependencies: GapRecoveryDependencies): Promis
           pairId: `${symbol}/${timeframe}`,
           errorName: error instanceof Error ? error.name : 'UnknownError',
         });
+        if (error instanceof MarketDataBannedError) {
+          return { failures, banMilliseconds: computeBanMilliseconds(error) };
+        }
       }
     }
   }
-  return failures;
+  return { failures };
 }

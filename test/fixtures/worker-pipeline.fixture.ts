@@ -13,7 +13,7 @@ import {
   createInMemoryCandleRepository,
   type InMemoryCandleRepository,
 } from './in-memory-candle-repository.fixture.js';
-import { createManualClock, createRecordingSleep, type ManualClock } from './wait-for.fixture.js';
+import { createManualClock, type ManualClock } from './wait-for.fixture.js';
 
 export const PIPELINE_BASE = Date.parse('2026-10-01T00:00:00.000Z');
 export const PIPELINE_HOUR = 3_600_000;
@@ -47,6 +47,8 @@ export type Pipeline = {
   readonly repository: InMemoryCandleRepository;
   readonly worker: Worker;
   readonly delays: number[];
+  // Quantas chamadas REST já haviam chegado ao servidor quando cada espera foi pedida.
+  readonly restRequestsAtSleep: number[];
   readonly logs: (message: string) => LogEntry[];
   readonly closeNextCandle: () => number;
   readonly storedOpenTimes: (symbol: string) => readonly number[];
@@ -82,7 +84,13 @@ export function startPipeline(options: PipelineOptions = {}): Pipeline {
   const seed = buildSeed(options, symbols);
   const repository = createInMemoryCandleRepository({ now: clock.now, seed });
   const entries: LogEntry[] = [];
-  const recorder = createRecordingSleep();
+  const delays: number[] = [];
+  const restRequestsAtSleep: number[] = [];
+  const recordedSleep = (milliseconds: number): Promise<void> => {
+    delays.push(milliseconds);
+    restRequestsAtSleep.push(server.restRequests.length);
+    return Bun.sleep(1);
+  };
   let serverClockRefreshes = 0;
   const serverClock = {
     now: (): number => clock.now() + (options.serverClockOffsetMilliseconds ?? 0),
@@ -112,7 +120,7 @@ export function startPipeline(options: PipelineOptions = {}): Pipeline {
     timing: {
       gapCheckIntervalMilliseconds: options.gapCheckIntervalMilliseconds,
       now: clock.now,
-      sleep: recorder.sleep,
+      sleep: recordedSleep,
       random: () => 0.5,
       backoffBaseMilliseconds: 100,
       backoffMaxMilliseconds: 400,
@@ -125,7 +133,8 @@ export function startPipeline(options: PipelineOptions = {}): Pipeline {
     clock,
     repository,
     worker,
-    delays: recorder.delays,
+    delays,
+    restRequestsAtSleep,
     logs,
     closeNextCandle: (): number => {
       clock.advance(PIPELINE_HOUR);

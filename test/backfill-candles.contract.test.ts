@@ -128,6 +128,59 @@ describe('backfill-candles: progress is persisted page by page', () => {
   });
 });
 
+describe('backfill-candles: an IP ban (418) aborts the whole run', () => {
+  const RETRY_AFTER_SECONDS = 120;
+
+  async function runBanned(retryAfterSeconds: number | undefined): Promise<{
+    readonly harness: ReturnType<typeof createBackfillHarness>;
+    readonly exitCode: number;
+  }> {
+    const harness = createBackfillHarness({ symbols: ['AAAUSDT', 'BBBUSDT'] });
+    harness.grid.banFromCall = 2;
+    harness.grid.banRetryAfterSeconds = retryAfterSeconds;
+    const exitCode = await runCronTasks(
+      [{ name: 'backfill-candles', run: harness.run }],
+      createCronLogger({
+        appName: 'cron-cryptoada',
+        write: (line) => void harness.lines.push(line),
+      }),
+    );
+    return { harness, exitCode };
+  }
+
+  test('stops in the middle of a pair: no further request, the next pair is never tried, exit 1', async () => {
+    const { harness, exitCode } = await runBanned(RETRY_AFTER_SECONDS);
+    expect(exitCode).toBe(EXIT_CODE.FAILURE);
+    expect(harness.grid.calls).toHaveLength(2);
+    expect(harness.grid.calls.every((call) => call.symbol === 'AAAUSDT')).toBe(true);
+    expect(harness.lines.join('')).toContain('MarketDataBannedError');
+  });
+
+  test('logs when the ban ends, if Binance said so', async () => {
+    const { harness } = await runBanned(RETRY_AFTER_SECONDS);
+    const entry = harness.lines
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+      .find((candidate) => candidate.message === 'backfill banned');
+    expect(entry).toMatchObject({
+      symbol: 'AAAUSDT',
+      timeframe: '1h',
+      retryAfterSeconds: RETRY_AFTER_SECONDS,
+      bannedUntil: new Date(BACKFILL_NOW + RETRY_AFTER_SECONDS * 1_000).toISOString(),
+    });
+  });
+
+  test('without Retry-After there is no end-of-ban date, but the run still aborts', async () => {
+    const { harness, exitCode } = await runBanned(undefined);
+    const entry = harness.lines
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+      .find((candidate) => candidate.message === 'backfill banned');
+    expect(entry).toBeDefined();
+    expect(entry).not.toHaveProperty('bannedUntil');
+    expect(exitCode).toBe(EXIT_CODE.FAILURE);
+    expect(harness.grid.calls).toHaveLength(2);
+  });
+});
+
 describe('backfill-candles: pairs are isolated and sequential', () => {
   test('one pair failing does not stop the other and the cron exits 1', async () => {
     const harness = createBackfillHarness({ symbols: ['AAAUSDT', 'BBBUSDT'] });

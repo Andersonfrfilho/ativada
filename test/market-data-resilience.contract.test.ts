@@ -4,6 +4,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   createMarketDataClient,
   MarketDataBannedError,
+  MAXIMUM_RETRY_AFTER_SECONDS,
   type FetchImplementation,
   type MarketDataClient,
   MarketDataHttpError,
@@ -163,5 +164,59 @@ describe('market-data resilience contract', () => {
     await client.fetchKlines(REQUEST);
     await client.fetchKlines(REQUEST);
     expect(clock.sleeps).toEqual([]);
+  });
+
+  test('Retry-After on a 429 is capped at 300 s', async () => {
+    const { client, clock } = buildClient([
+      { status: 429, headers: { 'retry-after': '3600' } },
+      OK,
+    ]);
+    await client.fetchKlines(REQUEST);
+    expect(MAXIMUM_RETRY_AFTER_SECONDS).toBe(300);
+    expect(clock.sleeps).toEqual([300_000]);
+  });
+
+  test('a used weight exactly at the threshold waits (the comparison is strict on the safe side)', async () => {
+    const { client, clock } = buildClient(
+      [{ status: 200, body: [], headers: { 'x-mbx-used-weight-1m': '90' } }, OK],
+      { weightCeiling: 100, weightSafetyMargin: 10 },
+    );
+    await client.fetchKlines(REQUEST);
+    await client.fetchKlines(REQUEST);
+    expect(clock.sleeps).toEqual([45_000]);
+  });
+
+  test('a used weight one below the threshold does not wait', async () => {
+    const { client, clock } = buildClient(
+      [{ status: 200, body: [], headers: { 'x-mbx-used-weight-1m': '89' } }, OK],
+      { weightCeiling: 100, weightSafetyMargin: 10 },
+    );
+    await client.fetchKlines(REQUEST);
+    await client.fetchKlines(REQUEST);
+    expect(clock.sleeps).toEqual([]);
+  });
+
+  test('a weight read in an earlier minute window does not block the next window', async () => {
+    const { client, clock } = buildClient(
+      [{ status: 200, body: [], headers: { 'x-mbx-used-weight-1m': '95' } }, OK],
+      { weightCeiling: 100, weightSafetyMargin: 10 },
+    );
+    await client.fetchKlines(REQUEST);
+    clock.advance(60_000);
+    await client.fetchKlines(REQUEST);
+    expect(clock.sleeps).toEqual([]);
+  });
+
+  test.each([
+    ['429', { status: 429, headers: { 'retry-after': '1', 'x-mbx-used-weight-1m': '95' } }],
+    ['503', { status: 503, headers: { 'x-mbx-used-weight-1m': '95' } }],
+  ] as const)('the weight header of a %s response is recorded too', async (_name, failure) => {
+    const { client, clock } = buildClient([failure, OK], {
+      weightCeiling: 100,
+      weightSafetyMargin: 10,
+      backoffBaseMilliseconds: 1_000,
+    });
+    await client.fetchKlines(REQUEST);
+    expect(clock.sleeps).toEqual([1_000, 44_000]);
   });
 });

@@ -9,6 +9,7 @@ const DURATION_BY_INTERVAL: Readonly<Record<string, number>> = {
   '1d': 86_400_000,
 };
 const HTTP_SERVER_ERROR = 500;
+const HTTP_IP_BANNED = 418;
 
 export type GridCall = {
   readonly symbol: string;
@@ -36,6 +37,8 @@ export type FakeBinanceGrid = {
   readonly maxInFlight: () => number;
   failFromCall: number | undefined;
   failingSymbol: string | undefined;
+  banFromCall: number | undefined;
+  banRetryAfterSeconds: number | undefined;
 };
 
 function isWithheld(
@@ -88,6 +91,8 @@ export function createFakeBinanceGrid(options: FakeBinanceGridOptions): FakeBina
     maxInFlight: (): number => maxInFlight,
     failFromCall: undefined,
     failingSymbol: undefined,
+    banFromCall: undefined,
+    banRetryAfterSeconds: undefined,
     fetchImplementation: async (url) => {
       const call = readCall(url);
       calls.push(call);
@@ -96,6 +101,12 @@ export function createFakeBinanceGrid(options: FakeBinanceGridOptions): FakeBina
       try {
         if (options.delayMilliseconds !== undefined)
           await new Promise((resolve) => setTimeout(resolve, options.delayMilliseconds));
+        if (grid.banFromCall !== undefined && calls.length >= grid.banFromCall) {
+          const headers = new Headers();
+          if (grid.banRetryAfterSeconds !== undefined)
+            headers.set('retry-after', String(grid.banRetryAfterSeconds));
+          return new Response('{}', { status: HTTP_IP_BANNED, headers });
+        }
         const isFailing =
           (grid.failFromCall !== undefined && calls.length >= grid.failFromCall) ||
           grid.failingSymbol === call.symbol;

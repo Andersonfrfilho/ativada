@@ -16,10 +16,16 @@ export type WeightGate = {
 export function createWeightGate(params: WeightGateParams): WeightGate {
   const threshold = params.ceiling - params.safetyMargin;
   let lastUsedWeight = 0;
+  let lastWeightWindow: number | undefined;
+
+  function currentWindow(): number {
+    return Math.floor(params.now() / WEIGHT_WINDOW_MILLISECONDS);
+  }
 
   async function waitIfNeeded(): Promise<void> {
+    // O peso lido numa janela anterior já zerou na Binance: não bloqueia a janela atual.
+    if (lastWeightWindow !== currentWindow()) return;
     if (lastUsedWeight < threshold) return;
-    // A Binance zera o peso a cada minuto cheio do relógio.
     const remainingInWindow =
       WEIGHT_WINDOW_MILLISECONDS - (params.now() % WEIGHT_WINDOW_MILLISECONDS);
     lastUsedWeight = 0;
@@ -30,7 +36,9 @@ export function createWeightGate(params: WeightGateParams): WeightGate {
     const header = response.headers.get(USED_WEIGHT_HEADER);
     if (header === null) return;
     const used = Number(header);
-    if (Number.isFinite(used)) lastUsedWeight = used;
+    if (!Number.isFinite(used)) return;
+    lastUsedWeight = used;
+    lastWeightWindow = currentWindow();
   }
 
   return { waitIfNeeded, record };

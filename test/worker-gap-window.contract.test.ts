@@ -91,7 +91,7 @@ describe('worker: the gap check covers a lookback window, not "from the latest s
       ),
     });
     const downloaded: number[] = [];
-    const failures = await recoverGaps({
+    const outcome = await recoverGaps({
       repository,
       client: {
         fetchKlinesRange: async (params) => {
@@ -112,7 +112,7 @@ describe('worker: the gap check covers a lookback window, not "from the latest s
       lookbackMilliseconds: 3 * PIPELINE_HOUR,
       unfillable: new Set<string>(),
     });
-    expect(failures).toBe(0);
+    expect(outcome).toStrictEqual({ failures: 0 });
     expect(downloaded).toStrictEqual([lost, lost]);
     expect(repository.stored().map((candle) => candle.openTime)).toContain(lost);
   });

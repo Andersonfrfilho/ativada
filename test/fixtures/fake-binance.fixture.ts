@@ -17,6 +17,7 @@ export type FakeClock = {
   readonly now: () => number;
   readonly sleep: (milliseconds: number) => Promise<void>;
   readonly sleeps: number[];
+  readonly advance: (milliseconds: number) => void;
 };
 
 export function createFakeClock(startMilliseconds: number): FakeClock {
@@ -33,6 +34,9 @@ export function createFakeClock(startMilliseconds: number): FakeClock {
       return Promise.resolve();
     },
     sleeps,
+    advance: (milliseconds: number): void => {
+      current += milliseconds;
+    },
   };
 }
 

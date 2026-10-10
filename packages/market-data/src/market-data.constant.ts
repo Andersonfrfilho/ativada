@@ -9,6 +9,8 @@ export const MAX_KLINES_PER_REQUEST = 1_000;
 export const USED_WEIGHT_HEADER = 'x-mbx-used-weight-1m';
 export const RETRY_AFTER_HEADER = 'retry-after';
 export const WEIGHT_WINDOW_MILLISECONDS = 60_000;
+// Retry-After de 429 acima disto é tratado como este teto: o processo não pode dormir uma hora sem ser cancelável.
+export const MAXIMUM_RETRY_AFTER_SECONDS = 300;
 export const MILLISECONDS_PER_SECOND = 1_000;
 export const HTTP_STATUS_TOO_MANY_REQUESTS = 429;
 export const HTTP_STATUS_IP_BANNED = 418;

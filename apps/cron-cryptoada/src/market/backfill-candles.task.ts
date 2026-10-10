@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { Timeframe } from '@cryptoada/market-data';
+import { MILLISECONDS_PER_SECOND } from '@cryptoada/environment';
+import { MarketDataBannedError, type Timeframe } from '@cryptoada/market-data';
 
 import { backfillPair, type BackfillPair, type BackfillPairDependencies } from './backfill-pair.js';
 import { BACKFILL_LOG } from './market.constant.js';
@@ -24,6 +25,27 @@ function listPairs(dependencies: BackfillCandlesDependencies): readonly Backfill
   );
 }
 
+function reportBan(
+  dependencies: BackfillCandlesDependencies,
+  pair: BackfillPair,
+  error: MarketDataBannedError,
+): MarketDataBannedError {
+  const { retryAfterSeconds } = error;
+  dependencies.logger.error(BACKFILL_LOG.BANNED, {
+    symbol: pair.symbol,
+    timeframe: pair.timeframe,
+    ...(retryAfterSeconds === undefined
+      ? {}
+      : {
+          retryAfterSeconds,
+          bannedUntil: new Date(
+            dependencies.now() + retryAfterSeconds * MILLISECONDS_PER_SECOND,
+          ).toISOString(),
+        }),
+  });
+  return error;
+}
+
 export function createBackfillCandlesTask(
   dependencies: BackfillCandlesDependencies,
 ): BackfillCandlesTask {
@@ -40,6 +62,8 @@ export function createBackfillCandlesTask(
         inserted += result.inserted;
         unfillable += result.unfillable;
       } catch (error: unknown) {
+        // Banido, cada requisição nova só estende a punição: a execução inteira para.
+        if (error instanceof MarketDataBannedError) throw reportBan(dependencies, pair, error);
         failures += 1;
         dependencies.logger.error(BACKFILL_LOG.PAIR_FAILED, {
           symbol: pair.symbol,

@@ -21,6 +21,7 @@ export {
   BINANCE_STREAM_BASE_URL,
   FEAR_GREED_API_URL,
   MAX_KLINES_PER_REQUEST,
+  MAXIMUM_RETRY_AFTER_SECONDS,
 } from './market-data.constant.js';
 export {
   MarketDataBannedError,

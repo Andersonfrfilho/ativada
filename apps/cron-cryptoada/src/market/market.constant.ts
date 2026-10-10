@@ -16,5 +16,6 @@ export const SYMBOL_PATTERN = /^[A-Z0-9]{5,20}$/;
 export const BACKFILL_LOG = {
   UNFILLABLE: 'backfill gap unfillable',
   PAIR_FAILED: 'backfill pair failed',
+  BANNED: 'backfill banned',
   SERVER_CLOCK_UNAVAILABLE: 'server clock unavailable, using the local clock',
 } as const;

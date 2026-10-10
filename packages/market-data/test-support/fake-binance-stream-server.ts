@@ -7,6 +7,7 @@ const SERVER_TIME_PATH = '/api/v3/time';
 const STREAM_PATH = '/stream';
 const STREAMS_PARAMETER = 'streams';
 const HTTP_NOT_FOUND = 404;
+const HTTP_IP_BANNED = 418;
 const HTTP_SERVER_ERROR = 500;
 const HTTP_SERVICE_UNAVAILABLE = 503;
 const DEFAULT_PAGE_LIMIT = 500;
@@ -34,6 +35,11 @@ export type SetHistoryParams = {
   readonly openTimes: readonly number[];
 };
 
+export type BanRestParams = {
+  readonly requests: number;
+  readonly retryAfterSeconds?: number;
+};
+
 export type FakeBinanceStreamServer = {
   readonly restUrl: string;
   readonly streamUrl: string;
@@ -48,6 +54,7 @@ export type FakeBinanceStreamServer = {
   readonly setHistory: (params: SetHistoryParams) => void;
   readonly holdRest: () => () => void;
   readonly failRest: (times: number) => void;
+  readonly banRest: (params: BanRestParams) => void;
   // Quanto a hora que o servidor devolve em /api/v3/time se afasta do relógio real.
   readonly setServerClockSkew: (milliseconds: number) => void;
   readonly serverTimeRequestCount: () => number;
@@ -135,6 +142,7 @@ export function startFakeBinanceStreamServer(): FakeBinanceStreamServer {
   let totalConnections = 0;
   let isRefusing = false;
   let restFailuresLeft = 0;
+  let restBan: { requestsLeft: number; retryAfterSeconds: number | undefined } | undefined;
   let restGate: Promise<void> | undefined;
   let serverClockSkew = 0;
   let serverTimeRequests = 0;
@@ -143,6 +151,13 @@ export function startFakeBinanceStreamServer(): FakeBinanceStreamServer {
     const request = readRestRequest(url);
     restRequests.push(request);
     if (restGate !== undefined) await restGate;
+    if (restBan !== undefined && restBan.requestsLeft > 0) {
+      restBan.requestsLeft -= 1;
+      const headers = new Headers();
+      if (restBan.retryAfterSeconds !== undefined)
+        headers.set('retry-after', String(restBan.retryAfterSeconds));
+      return new Response('{}', { status: HTTP_IP_BANNED, headers });
+    }
     if (restFailuresLeft > 0) {
       restFailuresLeft -= 1;
       return new Response('{}', { status: HTTP_SERVER_ERROR });
@@ -212,6 +227,9 @@ export function startFakeBinanceStreamServer(): FakeBinanceStreamServer {
     },
     failRest: (times): void => {
       restFailuresLeft = times;
+    },
+    banRest: (params): void => {
+      restBan = { requestsLeft: params.requests, retryAfterSeconds: params.retryAfterSeconds };
     },
     setServerClockSkew: (milliseconds): void => {
       serverClockSkew = milliseconds;

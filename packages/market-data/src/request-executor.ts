@@ -4,6 +4,7 @@ import {
   HTTP_STATUS_IP_BANNED,
   HTTP_STATUS_SERVER_ERROR_MINIMUM,
   HTTP_STATUS_TOO_MANY_REQUESTS,
+  MAXIMUM_RETRY_AFTER_SECONDS,
   MILLISECONDS_PER_SECOND,
   RETRY_AFTER_HEADER,
   TIMEOUT_ERROR_NAME,
@@ -53,7 +54,6 @@ export function createRequestExecutor(
   }
 
   async function readBody(response: Response): Promise<AttemptOutcome> {
-    gate.record(response);
     try {
       return { kind: 'success', body: await response.json() };
     } catch {
@@ -69,7 +69,7 @@ export function createRequestExecutor(
       const delayMilliseconds =
         retryAfterSeconds === undefined
           ? backoffMilliseconds(attemptNumber)
-          : retryAfterSeconds * MILLISECONDS_PER_SECOND;
+          : Math.min(retryAfterSeconds, MAXIMUM_RETRY_AFTER_SECONDS) * MILLISECONDS_PER_SECOND;
       return {
         kind: 'retry',
         error: new MarketDataRateLimitError(retryAfterSeconds, sourceName),
@@ -98,6 +98,7 @@ export function createRequestExecutor(
         delayMilliseconds: backoffMilliseconds(attemptNumber),
       };
     }
+    gate.record(response);
     if (response.ok) return readBody(response);
     return classifyFailure(response, attemptNumber);
   }

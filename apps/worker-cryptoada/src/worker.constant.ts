@@ -17,6 +17,11 @@ export const MILLISECONDS_PER_MINUTE = 60_000;
 export const MILLISECONDS_PER_HOUR = 3_600_000;
 export const CANDLE_WRITE_MAX_ATTEMPTS = 3;
 export const CANDLE_WRITE_RETRY_BASE_MILLISECONDS = 200;
+// Sem Retry-After, a menor punição de IP da Binance (2 min) é o chão razoável.
+export const DEFAULT_BAN_SECONDS = 120;
+// Teto de segurança: um Retry-After absurdo não pode adormecer o worker por dias.
+export const MAXIMUM_BAN_SECONDS = 86_400;
+export const BAN_SLEEP_SLICE_MILLISECONDS = 30_000;
 export const SHUTDOWN_TIMEOUT_MILLISECONDS = 10_000;
 // As primeiras descartadas sempre saem no log; depois, uma a cada 100, para um feed quebrado não inundar.
 export const MALFORMED_LOG_ALWAYS_UNTIL = 10;
@@ -34,6 +39,7 @@ export const WORKER_LOG = {
   GAP_RECOVERED: 'gap recovered',
   GAP_RECOVERY_FINISHED: 'gap recovery finished',
   GAP_RECOVERY_FAILED: 'gap recovery failed',
+  GAP_RECOVERY_BANNED: 'gap recovery paused: IP banned by the exchange',
   GAP_RECOVERY_RETRY: 'gap recovery retry scheduled',
   SERVER_CLOCK_UNAVAILABLE: 'server clock unavailable, using the local clock',
   SHUTDOWN_STARTED: 'shutdown started',
