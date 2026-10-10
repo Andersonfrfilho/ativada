@@ -975,7 +975,7 @@ Python puro (`python3 -I`, módulo `decimal`, contexto de 40 algarismos, sem bib
 posições que o motor exportou. Uso, da raiz do repositório:
 
 ```text
-bun run scripts/export-metrics-input.ts "BTCUSDT 1h × 500" > tmp/metrics-btc.json
+mkdir -p tmp && bun run scripts/export-metrics-input.ts "BTCUSDT 1h × 500" > tmp/metrics-btc.json
 python3 -I test/fixtures/strategy-engine/oracle/metrics_reference.py tmp/metrics-btc.json \
   test/fixtures/strategy-engine/golden/classic-scoreboard-metrics.metrics-1.engine-2.json "BTCUSDT 1h × 500"
 ```
@@ -983,6 +983,68 @@ python3 -I test/fixtures/strategy-engine/oracle/metrics_reference.py tmp/metrics
 O script imprime cada métrica do Python ao lado da do dourado e sai com código 1 se alguma diferir mais que 1e-9. Não
 roda na CI (Python não é dependência do repositório); o resultado conferido fica registrado nos números do dourado e na
 seção "Prova" abaixo.
+
+**Prova (T2.6-metricas).**
+
+- **Contas à mão** (`metrics-return-risk`, `metrics-drawdown`, `metrics-trades`): a série A tem períodos de +10%, −2%,
+  +6%, −1% e +2% (média 0,03; desvio amostral √(0,01 ÷ 4) = 0,05; desvio de queda √(0,0005 ÷ 5) = 0,01), o que dá
+  Sharpe 60 e Sortino 300 (o timeframe de 3 155 760 ms tem 10 000 períodos por ano, raiz exata 100), queda de 2% no
+  fechamento e de 5% na mínima. O livro de 7 operações dá taxa de acerto 3 ÷ 7, profit factor 1,8, expectativa 80 ÷ 7,
+  sequência de 3 perdas, taxas 31,7 (a da posição aberta incluída) e exposição 11 ÷ 20. Bordas: zero operações, só
+  vitórias (`no_losses`), só perdas (profit factor 0), série plana, retornos iguais que não terminam (−2/3 e 1/7 − 1: a
+  igualdade exata evita um "desvio" de 1e-40), um ponto, período de 29 dias e 30 dias exatos, queda sem recuperação,
+  posição aberta no fim, duas quedas de mesma profundidade (a mais antiga), volta exata ao pico.
+- **Propriedades** (`metrics-properties`): 2 000 séries de passeio aleatório por PRNG inteiro (mulberry32, semente
+  20 261 010; centavos inteiros, lacunas de tempo, operações disjuntas e posição aberta). Invariantes: determinismo e
+  entrada intacta; queda em [0, 1) e `maxDrawdownAtLow ≥ maxDrawdownAtClose`; taxa de acerto e exposição em [0, 1];
+  profit factor, perda média, razão ganho/perda, taxas e somas brutas não negativas; `grossProfit − grossLoss =
+  netProfit`; instantes ordenados; razões, quedas, Sharpe e Sortino IGUAIS quando o saldo é multiplicado por 3 ou por
+  1 000; acrescentar um ponto no fim nunca diminui a queda máxima; a queda máxima é igual à força bruta sobre todos os
+  pares pico/vale (600 séries); com o patrimônio final igual à contabilidade a reconciliação fecha.
+- **Dourado** (`classic-scoreboard-metrics.metrics-1.engine-2.json`, preso a `METRICS_VERSION` e `ENGINE_VERSION`): o
+  Placar clássico com saldo 10 000, taxa 0,1% e slippage 0,05% sobre os dois conjuntos reais, pelo motor completo. Bate
+  com o dourado do motor da T2.5 (operações, vitórias, taxas, patrimônio final, quedas e retorno de comprar e segurar,
+  em 8 casas) e a reconciliação fecha sem tolerância nos dois. Regravar: `bun run scripts/record-metrics-golden.ts`.
+
+| Métrica | BTCUSDT 1h × 500 | ETHUSDT 1d × 400 |
+|---|---|---|
+| pontos (candles decididos) / dias | 307 / 12,8 | 207 / 206,0 |
+| retorno total | −4,4217% | −2,5058% |
+| comprar e segurar / excesso | +12,3458% / −16,7675% | −8,3800% / +5,8742% |
+| retorno anualizado | `null` (`period_too_short`) | −4,3998% |
+| Sharpe / Sortino | −5,6835 / −7,1300 | −1,0325 / −1,3762 |
+| queda máx. no fechamento / na mínima | 6,0983% / 6,2414% | 4,1866% / 4,3058% |
+| duração da queda (candles; sem recuperação) | 273 | 197 |
+| operações / vitórias / derrotas | 13 / 4 / 9 | 10 / 3 / 7 |
+| taxa de acerto / profit factor | 30,77% / 0,4114 | 30,00% / 0,6263 |
+| expectativa / ganho médio / perda média | −39,48 / 89,69 / 96,89 | −25,06 / 139,99 / 95,79 |
+| razão ganho/perda / maior sequência de perdas | 0,9257 / 4 | 1,4614 / 4 |
+| taxas pagas | 153,1433697 | 20,94468677 |
+| exposição / operações por ano | 51,47% / `null` | 33,33% / 17,73 |
+| posição aberta no fim | sim (+71,07365016 não realizado) | não |
+| lucro líquido das fechadas + não realizado = variação | −513,24722162 + 71,07365016 = −442,17357146 | −250,57655867 + 0 = −250,57655867 |
+
+- **Conferência independente.** `metrics_reference.py` (Python 3.14, `python3 -I`, `decimal`) recalculou os dois
+  conjuntos a partir dos pontos e das operações exportados do motor e bateu com o dourado em TODAS as métricas
+  (retornos, Sharpe, Sortino, quedas com pico, vale e duração, taxa de acerto, profit factor, médias, expectativa,
+  razão, sequência, taxas, exposição e operações por ano), dentro de 1e-9 (diferença real: abaixo de 1e-12, só o
+  arredondamento do dourado). O script não é importado por nada e não roda na CI; ele sai com código 1 se algo
+  divergir (provado alterando o dourado).
+- **31 mutantes de produção** (`metrics-mutants`: cópia do `src` com uma edição, os testes de métrica relançados num
+  processo à parte; o controle sem edição passa e nenhum mutante falha por erro de carga), todos reprovados: Sharpe com
+  `n` no lugar de `n − 1`; Sortino sobre só os períodos negativos; Sharpe sem o teste de igualdade exata; ano de 365
+  dias; períodos por ano sem a raiz; fator de anualização esquecido; queda na mínima medida no fechamento; pico tirado da
+  mínima; empate de queda que fica com a mais nova; pico que guarda o primeiro toque; recuperação que exige máxima nova;
+  duração que acaba no vale; profit factor invertido; taxa de acerto contando a posição aberta; taxas sem a de entrada;
+  taxas sem a da posição aberta; exposição que conta o candle da saída; exposição que ignora a posição aberta;
+  anualização de período curto; limiar de 30 dias exclusivo; operações por ano de período curto; limiar de 29 dias;
+  excesso invertido; régua tirada do patrimônio; sequência de perdas que conta resultado zero ou que é a última; perda
+  bruta com sinal; resultado zero contado como ganho; expectativa sem o lado da perda; perda média sobre todas as
+  operações; reconciliação que ignora o não realizado.
+- **Decisões que a implementação fixou** (todas no ADR acima): o pico inclui o fechamento do próprio candle, de modo
+  que uma queda medida na mínima de um candle que fecha em máxima nova se recupera dentro dele (duração 0); o pico passa
+  a ser o último ponto que alcançou o valor máximo, de modo que a volta exata ao pico encerra a queda anterior; a
+  exposição conta fechamentos com posição, então uma operação aberta e fechada no mesmo candle (stop) não conta.
 
 ## Alternativas rejeitadas
 

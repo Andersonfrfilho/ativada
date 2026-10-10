@@ -1,9 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { parseEquityPoints } from '../packages/strategy-engine/src/metrics/metrics-input.js';
-import { computeReturnMetrics } from '../packages/strategy-engine/src/metrics/return-metrics.js';
-import { computeRiskRatios } from '../packages/strategy-engine/src/metrics/risk-ratios.js';
+import { loadMetricsApi } from './fixtures/strategy-engine/metrics/metrics-api.fixture.js';
 import {
   METRICS_BASE_TIME,
   MILLISECONDS_PER_DAY,
@@ -13,6 +11,7 @@ import {
   equitySeries,
 } from './fixtures/strategy-engine/metrics/metrics-series.fixture.js';
 
+const { computeReturnMetrics, computeRiskRatios, parseEquityPoints } = await loadMetricsApi();
 const TIMEFRAME = SQUARE_ROOT_TIMEFRAME;
 const INITIAL_BALANCE = '100';
 
@@ -188,6 +187,13 @@ describe('Sharpe and Sortino that are not defined', () => {
 
   test('equal non-terminating returns (−2/3, −2/3) are exactly equal: no rounding noise as deviation', () => {
     const ratios = ratiosOf(['9', '3', '1']);
+    expect(ratios.sharpe).toStrictEqual({ value: null, reason: 'zero_volatility' });
+    expect(ratios.sortino.value).toBe('-100');
+  });
+
+  test('three equal non-terminating returns (1/7 − 1 each): the mean is not rounding noise', () => {
+    // 3 × r e ÷ 3 não devolvem r em 40 algarismos: sem a igualdade exata o "desvio" seria 1e-40 e o Sharpe, enorme.
+    const ratios = ratiosOf(['343', '49', '7', '1']);
     expect(ratios.sharpe).toStrictEqual({ value: null, reason: 'zero_volatility' });
     expect(ratios.sortino.value).toBe('-100');
   });

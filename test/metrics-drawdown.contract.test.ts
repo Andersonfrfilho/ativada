@@ -1,8 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { computeDrawdowns } from '../packages/strategy-engine/src/metrics/drawdown.js';
-import { parseEquityPoints } from '../packages/strategy-engine/src/metrics/metrics-input.js';
+import { loadMetricsApi } from './fixtures/strategy-engine/metrics/metrics-api.fixture.js';
 import {
   METRICS_BASE_TIME,
   SQUARE_ROOT_TIMEFRAME,
@@ -10,6 +9,7 @@ import {
   type PointSpec,
 } from './fixtures/strategy-engine/metrics/metrics-series.fixture.js';
 
+const { computeDrawdowns, parseEquityPoints } = await loadMetricsApi();
 const TIMEFRAME = SQUARE_ROOT_TIMEFRAME;
 
 function at(index: number): number {

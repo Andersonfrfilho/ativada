@@ -7,8 +7,8 @@ Contexto operacional do **CryptoAdA**. Produto e regras em `README.md`,
 
 Spec 001 em andamento (progresso real em `specs/001-simulador-e-sinais/evidence.md`). Prontos: Fase 0
 (fundação), Fase 0b (contas, login, isolamento entre usuários, LGPD) e Fase 1 (candles da Binance:
-backfill, Fear & Greed e stream ao vivo com recuperação de lacuna). Próximo passo: Fase 2 (o motor em
-`packages/strategy-engine`).
+backfill, Fear & Greed e stream ao vivo com recuperação de lacuna). Fase 2 (o motor em
+`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); próximo passo: fechamento da Fase 2 e Fase 3 (backtest).
 
 ## Stack decidida
 
@@ -86,6 +86,17 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   taxa e slippage zero. O oráculo `bigint` (`test/fixtures/strategy-engine/oracle-bigint/`, sem importar `src` nem
   `reference-*`) replica caixa, lucro e patrimônio dos preenchimentos e confere harness, diferencial e conjuntos reais.
   Na carga histórica de sentimento `created_at` é o instante ESTIMADO de publicação, nunca o da carga (T3.1).
+- **Métricas (T2.6-metricas, ADR 0002 §"Métricas").** `computeRunMetrics({ equityPoints, closedPositions, openPosition, run })`
+  em `packages/strategy-engine/src/metrics/` (`METRICS_VERSION = 'metrics-1'`): puro, decimal exato, sem `Math.exp/log/pow`
+  (potência e raiz são `EngineDecimal.pow/.sqrt`). Tudo sai em TEXTO; derivado de divisão/raiz/potência é arredondado UMA
+  vez a 12 casas, soma de dinheiro é exata; o que não se define é `{ value: null, reason }`, nunca `NaN`. Sharpe usa `n−1`
+  e anualiza por √(365,25 dias ÷ timeframe); Sortino usa o desvio de queda sobre TODOS os períodos; `maxDrawdownAtLow` (pico =
+  máximo corrente do fechamento) é o relatório honesto e o das metas; anualizado e operações por ano são `null` abaixo de
+  30 dias; `feesPaid` inclui a taxa da posição aberta; `reconcileRunMetrics` exige em decimal exato que realizado + não
+  realizado = patrimônio final − saldo inicial. Mudar fórmula exige `metrics-2` e o dourado regravado
+  (`bun run scripts/record-metrics-golden.ts`). Prova: contas à mão, 2.000 séries de propriedades, dourado dos dois conjuntos
+  reais, 31 mutantes (`test/metrics-mutants.contract.test.ts`) e o oráculo Python
+  `test/fixtures/strategy-engine/oracle/metrics_reference.py` (uso no ADR; não roda na CI).
 - Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account

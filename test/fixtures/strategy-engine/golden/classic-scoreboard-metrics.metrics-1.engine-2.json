@@ -1,0 +1,227 @@
+{
+  "metricsVersion": "metrics-1",
+  "engineVersion": "engine-2",
+  "run": {
+    "initialBalance": "10000",
+    "feeRate": "0.001",
+    "slippageRate": "0.0005",
+    "tickSize": "0.01",
+    "quantityStep": "0.00001",
+    "minNotional": "5",
+    "maxVolumeShare": "0.01"
+  },
+  "datasets": {
+    "BTCUSDT 1h × 500": {
+      "version": "metrics-1",
+      "initialBalance": "10000",
+      "period": {
+        "candles": 307,
+        "startTime": 1736384400000,
+        "endTime": 1737486000000,
+        "elapsedMilliseconds": 1101600000,
+        "periodsPerYear": "8766"
+      },
+      "finalEquity": "9557.82642854",
+      "totalReturn": {
+        "value": "-0.044217357146",
+        "reason": null
+      },
+      "benchmarkReturn": {
+        "value": "0.12345808792",
+        "reason": null
+      },
+      "excessReturn": {
+        "value": "-0.167675445066",
+        "reason": null
+      },
+      "annualizedReturn": {
+        "value": null,
+        "reason": "period_too_short"
+      },
+      "sharpe": {
+        "value": "-5.683467058879",
+        "reason": null
+      },
+      "sortino": {
+        "value": "-7.130021485375",
+        "reason": null
+      },
+      "maxDrawdownAtClose": {
+        "depth": "0.060983396636",
+        "peakTime": 1736503200000,
+        "troughTime": 1737468000000,
+        "recoveryTime": null,
+        "durationCandles": 273,
+        "durationMilliseconds": 982800000
+      },
+      "maxDrawdownAtLow": {
+        "depth": "0.062414353579",
+        "peakTime": 1736503200000,
+        "troughTime": 1737471600000,
+        "recoveryTime": null,
+        "durationCandles": 273,
+        "durationMilliseconds": 982800000
+      },
+      "trades": 13,
+      "wins": 4,
+      "losses": 9,
+      "winRate": {
+        "value": "0.307692307692",
+        "reason": null
+      },
+      "profitFactor": {
+        "value": "0.41142067325",
+        "reason": null
+      },
+      "averageTrade": {
+        "value": "-39.480555509231",
+        "reason": null
+      },
+      "expectancy": {
+        "value": "-39.480555509231",
+        "reason": null
+      },
+      "averageWin": {
+        "value": "89.6907637875",
+        "reason": null
+      },
+      "averageLoss": {
+        "value": "96.890030752222",
+        "reason": null
+      },
+      "payoffRatio": {
+        "value": "0.925696514813",
+        "reason": null
+      },
+      "maxConsecutiveLosses": 4,
+      "feesPaid": "153.1433697",
+      "grossProfit": "358.76305515",
+      "grossLoss": "872.01027677",
+      "netProfit": "-513.24722162",
+      "exitReasonCounts": {
+        "stop": 8,
+        "target": 3,
+        "signal": 2,
+        "command": 0,
+        "gap": 0
+      },
+      "exposure": {
+        "value": "0.514657980456",
+        "reason": null
+      },
+      "tradesPerYear": {
+        "value": null,
+        "reason": "period_too_short"
+      },
+      "openPosition": {
+        "openedCandleOpenTime": 1737468000000,
+        "entryFee": "3.29099818",
+        "unrealizedProfit": "71.07365016"
+      }
+    },
+    "ETHUSDT 1d × 400": {
+      "version": "metrics-1",
+      "initialBalance": "10000",
+      "period": {
+        "candles": 207,
+        "startTime": 1720742400000,
+        "endTime": 1738540800000,
+        "elapsedMilliseconds": 17798400000,
+        "periodsPerYear": "365.25"
+      },
+      "finalEquity": "9749.42344133",
+      "totalReturn": {
+        "value": "-0.025057655867",
+        "reason": null
+      },
+      "benchmarkReturn": {
+        "value": "-0.083799654093",
+        "reason": null
+      },
+      "excessReturn": {
+        "value": "0.058741998226",
+        "reason": null
+      },
+      "annualizedReturn": {
+        "value": "-0.043997546873",
+        "reason": null
+      },
+      "sharpe": {
+        "value": "-1.032539700419",
+        "reason": null
+      },
+      "sortino": {
+        "value": "-1.376164860851",
+        "reason": null
+      },
+      "maxDrawdownAtClose": {
+        "depth": "0.04186581226",
+        "peakTime": 1721520000000,
+        "troughTime": 1730505600000,
+        "recoveryTime": null,
+        "durationCandles": 197,
+        "durationMilliseconds": 17020800000
+      },
+      "maxDrawdownAtLow": {
+        "depth": "0.043057538716",
+        "peakTime": 1721520000000,
+        "troughTime": 1730419200000,
+        "recoveryTime": null,
+        "durationCandles": 197,
+        "durationMilliseconds": 17020800000
+      },
+      "trades": 10,
+      "wins": 3,
+      "losses": 7,
+      "winRate": {
+        "value": "0.3",
+        "reason": null
+      },
+      "profitFactor": {
+        "value": "0.626303286594",
+        "reason": null
+      },
+      "averageTrade": {
+        "value": "-25.057655867",
+        "reason": null
+      },
+      "expectancy": {
+        "value": "-25.057655867",
+        "reason": null
+      },
+      "averageWin": {
+        "value": "139.9859981",
+        "reason": null
+      },
+      "averageLoss": {
+        "value": "95.790650424286",
+        "reason": null
+      },
+      "payoffRatio": {
+        "value": "1.461374335386",
+        "reason": null
+      },
+      "maxConsecutiveLosses": 4,
+      "feesPaid": "20.94468677",
+      "grossProfit": "419.9579943",
+      "grossLoss": "670.53455297",
+      "netProfit": "-250.57655867",
+      "exitReasonCounts": {
+        "stop": 6,
+        "target": 3,
+        "signal": 1,
+        "command": 0,
+        "gap": 0
+      },
+      "exposure": {
+        "value": "0.333333333333",
+        "reason": null
+      },
+      "tradesPerYear": {
+        "value": "17.730582524272",
+        "reason": null
+      },
+      "openPosition": null
+    }
+  }
+}

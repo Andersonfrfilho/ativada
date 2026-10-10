@@ -2,13 +2,12 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
-  computeRunMetrics,
   EXIT_REASON,
   METRICS_VERSION,
-  reconcileRunMetrics,
   type ComputeRunMetricsParams,
   type RunMetrics,
 } from '../packages/strategy-engine/src/index.js';
+import { loadMetricsApi } from './fixtures/strategy-engine/metrics/metrics-api.fixture.js';
 import {
   METRICS_BASE_TIME,
   MILLISECONDS_PER_DAY,
@@ -17,6 +16,7 @@ import {
 } from './fixtures/strategy-engine/metrics/metrics-series.fixture.js';
 import { buildTrades } from './fixtures/strategy-engine/metrics/metrics-trades.fixture.js';
 
+const { computeRunMetrics, reconcileRunMetrics } = await loadMetricsApi();
 const TWO_DAYS = 2 * MILLISECONDS_PER_DAY;
 const NO_TRADES = { value: null, reason: 'no_trades' } as const;
 
