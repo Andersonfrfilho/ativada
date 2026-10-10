@@ -116,6 +116,7 @@ describe('public tables without an owner', () => {
     expect(UNOWNED_PUBLIC_TABLES.map((table) => getTableName(table)).sort()).toStrictEqual([
       'candles',
       'sentiment_daily',
+      'sentiment_observations',
     ]);
   });
 });

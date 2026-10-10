@@ -57,6 +57,9 @@ const NATURAL_KEYS: Readonly<Record<string, readonly (readonly string[])[]>> = {
   sentiment_observations: [['source', 'date', 'observed_at']],
 };
 
+const UNIQUE_PARENT_NAMES: readonly string[] = ['strategies', 'strategy_versions', 'runs'];
+const NATURAL_KEY_CASES: [string, readonly (readonly string[])[]][] = Object.entries(NATURAL_KEYS);
+
 function isPgTable(value: unknown): value is PgTable {
   return is(value, PgTable);
 }
@@ -73,6 +76,11 @@ function columnNames(columns: readonly AnyPgColumn[]): readonly string[] {
   return columns.map((column) => column.name);
 }
 
+function indexColumnName(column: unknown): string {
+  if (typeof column !== 'object' || column === null || !('name' in column)) return '';
+  return typeof column.name === 'string' ? column.name : '';
+}
+
 function uniqueColumnSets(table: PgTable): readonly (readonly string[])[] {
   const config = getTableConfig(table);
   return [
@@ -80,34 +88,35 @@ function uniqueColumnSets(table: PgTable): readonly (readonly string[])[] {
     ...config.primaryKeys.map((key) => columnNames(key.columns)),
     ...config.indexes
       .filter((index) => index.config.unique)
-      .map((index) =>
-        index.config.columns.map((column) => ('name' in column ? column.name : String(column))),
-      ),
+      .map((index) => index.config.columns.map(indexColumnName)),
   ];
 }
 
 describe('persistência de estratégias e execuções — esquema (T3.1)', () => {
-  test.each(OWNED_TABLE_NAMES)('%s exige user_id NOT NULL com FK RESTRICT para users', (name) => {
-    const config = getTableConfig(findTable(name));
-    const userId = config.columns.find((column) => column.name === USER_ID_COLUMN);
-    expect({ name, isRequired: userId?.notNull }).toStrictEqual({ name, isRequired: true });
-    const toUsers = config.foreignKeys.filter(
-      (key) =>
-        getTableName(key.reference().foreignTable) === 'users' &&
-        columnNames(key.reference().columns).join() === USER_ID_COLUMN,
-    );
-    expect(toUsers).toHaveLength(1);
-    expect(toUsers[0]?.onDelete).toBe(RESTRICT);
-  });
+  test.each([...OWNED_TABLE_NAMES])(
+    '%s exige user_id NOT NULL com FK RESTRICT para users',
+    (name) => {
+      const config = getTableConfig(findTable(name));
+      const userId = config.columns.find((column) => column.name === USER_ID_COLUMN);
+      expect({ name, isRequired: userId?.notNull }).toStrictEqual({ name, isRequired: true });
+      const toUsers = config.foreignKeys.filter(
+        (key) =>
+          getTableName(key.reference().foreignTable) === 'users' &&
+          columnNames(key.reference().columns).join() === USER_ID_COLUMN,
+      );
+      expect(toUsers).toHaveLength(1);
+      expect(toUsers[0]?.onDelete).toBe(RESTRICT);
+    },
+  );
 
-  test.each(['strategies', 'strategy_versions', 'runs'])(
+  test.each([...UNIQUE_PARENT_NAMES])(
     '%s declara UNIQUE (id, user_id) para a FK composta das filhas',
     (name) => {
       expect(uniqueColumnSets(findTable(name))).toContainEqual(PARENT_KEY);
     },
   );
 
-  test.each(COMPOSITE_FOREIGN_KEYS)(
+  test.each([...COMPOSITE_FOREIGN_KEYS])(
     '$child.$column referencia $parent por (id, user_id) com ON DELETE RESTRICT',
     ({ child, column, parent }) => {
       const keys = getTableConfig(findTable(child)).foreignKeys.map((key) => ({
@@ -125,16 +134,15 @@ describe('persistência de estratégias e execuções — esquema (T3.1)', () =>
     },
   );
 
-  test.each(Object.entries(NATURAL_KEYS))('%s tem as chaves naturais únicas', (name, keys) => {
+  test.each(NATURAL_KEY_CASES)('%s tem as chaves naturais únicas', (name, keys) => {
     const found = uniqueColumnSets(findTable(name));
     for (const key of keys) expect(found).toContainEqual([...key]);
   });
 
-  test.each(OWNED_TABLE_NAMES)('%s tem índice que começa por user_id', (name) => {
-    const leadingColumns = getTableConfig(findTable(name)).indexes.map((index) => {
-      const first = index.config.columns[0];
-      return first !== undefined && 'name' in first ? first.name : undefined;
-    });
+  test.each([...OWNED_TABLE_NAMES])('%s tem índice que começa por user_id', (name) => {
+    const leadingColumns = getTableConfig(findTable(name)).indexes.map((index) =>
+      indexColumnName(index.config.columns[0]),
+    );
     expect({ name, hasOwnerIndex: leadingColumns.includes(USER_ID_COLUMN) }).toStrictEqual({
       name,
       hasOwnerIndex: true,
@@ -143,7 +151,7 @@ describe('persistência de estratégias e execuções — esquema (T3.1)', () =>
 
   test('runs tem índice por usuário e data para a listagem do painel', () => {
     const indexes = getTableConfig(findTable('runs')).indexes.map((index) =>
-      index.config.columns.map((column) => ('name' in column ? column.name : String(column))),
+      index.config.columns.map(indexColumnName),
     );
     expect(indexes).toContainEqual([USER_ID_COLUMN, 'created_at', 'id']);
   });
@@ -151,9 +159,9 @@ describe('persistência de estratégias e execuções — esquema (T3.1)', () =>
   test('sentiment_observations é dado público: sem user_id, com a chave de append-only', () => {
     const config = getTableConfig(findTable('sentiment_observations'));
     expect(columnNames(config.columns)).not.toContain(USER_ID_COLUMN);
-    expect(columnNames(config.columns)).toEqual(
-      expect.arrayContaining(['date', 'fear_greed', 'observed_at', 'source', 'created_at']),
-    );
+    for (const column of ['date', 'fear_greed', 'observed_at', 'source', 'created_at']) {
+      expect(columnNames(config.columns)).toContain(column);
+    }
   });
 
   test('o PK de dono é uuid e equity_points usa a chave natural (run_id, candle_time)', () => {

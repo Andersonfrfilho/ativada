@@ -77,6 +77,56 @@ export type {
   FindFearGreedParams,
   SentimentRepository,
 } from './sentiment/sentiment.types.js';
+export { createSentimentObservationRepository } from './sentiment/sentiment-observation.repository.js';
+export type {
+  AppendObservationsResult,
+  FindAvailableObservationParams,
+  SentimentObservationInput,
+  SentimentObservationRecord,
+  SentimentObservationRepository,
+} from './sentiment/sentiment-observation.types.js';
+export type { JsonContainer, JsonValue } from './json-value.types.js';
+export { RUN_KIND, RUN_STATUS, RUN_TRANSITION_OUTCOME } from './runs/run.constant.js';
+export type { RunKind, RunStatus } from './runs/run.constant.js';
+export { createRunRepository } from './runs/run.repository.js';
+export type {
+  CreateRunParams,
+  EngineCheckpoint,
+  FailOrphanedRunsParams,
+  ListRunsParams,
+  RunCursor,
+  RunRecord,
+  RunRepository,
+  RunsPage,
+  SaveCheckpointParams,
+  TransitionRunParams,
+  TransitionRunResult,
+} from './runs/run.types.js';
+export { createRunResultRepository } from './run-results/run-result.repository.js';
+export type {
+  AppendResult,
+  CommandInput,
+  EquityPointInput,
+  FillCursor,
+  FillInput,
+  ListResultsParams,
+  OrderCursor,
+  OrderInput,
+  PositionCursor,
+  PositionInput,
+  ResultPage,
+  RunResultRepository,
+  SignalInput,
+} from './run-results/run-result.types.js';
+export { createStrategyRepository } from './strategies/strategy.repository.js';
+export type {
+  AddStrategyVersionParams,
+  AddStrategyVersionResult,
+  CreateStrategyParams,
+  StrategyRecord,
+  StrategyRepository,
+  StrategyVersionRecord,
+} from './strategies/strategy.types.js';
 export { InvalidUserIdError } from './ownership/invalid-user-id.error.js';
 export type { OwnerScope } from './ownership/owner-scope.js';
 export type { UserId } from './ownership/user-id.js';
