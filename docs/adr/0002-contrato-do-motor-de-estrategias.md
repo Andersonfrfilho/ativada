@@ -1153,13 +1153,13 @@ threads) e `packages/database` (migration 0009, `walk_forward_windows`). O walk-
 
 | Decisão | Valor | Motivo |
 |---|---|---|
-| Pedido | `options` de `runWalkForward` = grade, `trainMonths`/`testMonths`/`stepMonths`, `minTradesPerWindow` (+ `threads`, `now`, `engine`, `onProgress`). A grade fica na execução, não na versão da estratégia; a linha `runs` ainda não tem coluna para ela, então o chamador (T3.4/T3.6) a guarda e a repassa; o checkpoint guarda o HASH do pedido e uma retomada com outro é `OPTIONS_MISMATCH` | Não alterar `run_parameters` (o `runHash` das carteiras) |
+| Pedido | `options` de `runWalkForward` = grade, `trainMonths`/`testMonths`/`stepMonths`, `minTradesPerWindow` (+ `threads`, `now`, `engine`, `onProgress`). A grade fica na execução, não na versão da estratégia. **Desde a T3.4 o pedido mora na linha (`runs.request`, migration 0010)** e a thread o lê de lá: as opções só valem quando a linha não tem pedido (linha anterior à 0010 e contratos em memória); o checkpoint guarda o HASH do pedido efetivo e uma retomada com outro é `OPTIONS_MISMATCH` | Não alterar `run_parameters` (o `runHash` das carteiras)
 | Busca | Uma unidade = uma combinação: o sinal sai UMA vez da série contínua (do aquecimento da combinação ao fim do último AJUSTE) e a carteira roda por janela, devolvendo `{ trades, sharpe, maxDrawdownAtLow, points }` por janela. Até `WALK_FORWARD_THREADS` (env, padrão 2, 1–8) threads (`search.worker.ts`), mensagens `z.strictObject`; o resultado é função pura da combinação e NÃO depende do número de threads | A ordem janela × combinação exigiria todos os sinais de todas as combinações em memória |
 | Checkpoint | Busca: `runs.engine_state` guarda os resumos das combinações avaliadas (`last_candle_time` = começo do primeiro ajuste + combinações avaliadas), um commit por combinação. Teste: por janela, na MESMA transação (`commitUnit`: status → janela → resultados → checkpoint, com a execução travada), `last_candle_time` = fim do teste. Janela concluída não é refeita; as gravadas formam um prefixo e o patrimônio carregado vem da última | O progresso vai de 0 a 99 por (janela × combinação) e 100 só em `completed` |
 | Teste | Para a janela, escolhe, refaz o ajuste da escolhida (as métricas completas vão em `in_sample`; o Sharpe reproduzido precisa bater com o resumo da busca) e roda o teste com `halt` (`window_end`) no último candle. Sinais, ordens, preenchimentos, posições, comandos e patrimônio (encadeado) do TESTE são gravados com `engine_key`/`command_id` `w<i>:`; o âncora (candle anterior ao teste) não grava sinal nem patrimônio | O âncora é do teste anterior: colidiria na chave natural |
 | Cancelamento e falha | O status é lido dentro de cada unidade; `cancelled` para sem gravar a seguinte e sem erro. Falha vira `failed` com código estável (`GRID_TOO_LARGE`, `NO_VALID_COMBINATIONS`, `INVALID_GRID`, `INVALID_WINDOW_CONFIG`, `PERIOD_TOO_SHORT`, `NO_CANDLES`, `INSUFFICIENT_HISTORY`, `OPTIONS_MISMATCH`, `SEARCH_WORKER_FAILED`, `WALK_FORWARD_TIMEOUT`, `WORKER_CRASHED`, …) e a mensagem original NUNCA sai | Erro de driver traz consulta, URL ou segredo |
 | Relatório gravado | `runs.metrics` = métricas fora da amostra + `overfitting` + `walkForward` (janelas, elegíveis, liquidadas no fim da janela). Sai do que ficou GRAVADO (janelas e `equity_points`), então a execução retomada e a contínua passam pelo mesmo caminho | Idêntico byte a byte |
-| Coordenadora | `walk-forward.worker.ts` abre o próprio banco e cria as threads de busca (worker aninhado, validado no Bun 1.3.14); o pedido viaja na mensagem de `run`; `walk-forward-thread-runner.ts` termina a thread no tempo limite e no encerramento (a execução fica `running`, recuperável) | RNF02: nada disso roda na thread da API |
+| Coordenadora | `walk-forward.worker.ts` abre o próprio banco e cria as threads de busca (worker aninhado, validado no Bun 1.3.14); a mensagem de `run` leva só o `runId` (o pedido vem da linha, T3.4); `walk-forward-thread-runner.ts` termina a thread no tempo limite e no encerramento (a execução fica `running`, recuperável) | RNF02: nada disso roda na thread da API |
 
 **Paridade com o motor completo por janela.** `test/walk-forward-parity.contract.test.ts` compara, decisão por decisão (patrimônio,
 ordens, preenchimentos, posições abertas e fechadas, comandos), o pipeline (sinal calculado uma vez + `walletStep` por
@@ -1201,12 +1201,79 @@ do caso grande: indicadores do sinal, a carteira por janela e `computeRunMetrics
 das janelas (1,7 s) e o relatório (0,15 s) são desprezíveis. Não foi otimizado às cegas; o caminho natural é mais threads
 (8 dão ≈ 4× sobre 1) e reduzir o custo decimal das métricas de ajuste.
 
-**Suposições registradas.** (1) A bolsa é `binance`. (2) O pedido não é persistido na linha da execução (ver "Pedido"). (3)
+**Suposições registradas.** (1) A bolsa é `binance`. (2) O pedido é persistido na linha da execução (T3.4, ver "Pedido"). (3)
 Posição aberta no fim do teste é liquidada ali (e contada como operação), em vez de atravessar a fronteira. (4) O ajuste
 inclui o ponto do candle-âncora (retorno do primeiro candle); o teste encadeado o descarta e usa o retorno de fronteira.
 (5) O âncora de uma janela cai no candle imediatamente anterior ao período; se ali há lacuna ela é declarada ao motor.
 (6) `no_eligible_parameters` roda a carteira parada sobre os sinais da primeira combinação só para ter os candles e a
 régua.
+
+## Rotas REST de mercado, estratégias e execuções (T3.4)
+
+Entregue em `apps/api-cryptoada/src/{markets,strategies,runs,openapi,docs}/` e `packages/database` (migration 0010,
+`listStrategiesPage`, `listVersionsPage`, `createStrategyWithFirstVersion`, `limit` na leitura de candles). Todas as rotas são
+`access: 'user'` (as de documentação, públicas e só fora de produção), com o envelope de sempre e `Cache-Control: no-store`.
+
+**Pedido persistido (`runs.request`).** `jsonb` nulo, migration 0010 com `.rollback.sql`. Walk-forward grava
+`{ grid, trainMonths?, testMonths?, stepMonths?, minTradesPerWindow? }` (validado por Zod na API ANTES de aceitar); backtest e
+simulação ao vivo gravam nulo (o backtest já recebia só o `runId`: o pedido dele é a própria linha). A mensagem das duas threads
+passou a levar só `{ runId }` (`z.strictObject`; campo a mais é recusado). A coluna é dado do usuário: entra em
+`OWNED_TABLE_EXPORTS` (exportação LGPD) e sai com a exclusão da conta. Queda no meio + retomada usa o MESMO pedido gravado
+(contrato em memória e `make walkforward-test`).
+
+**`RunDispatcher`.** Porta `dispatch({ runId, kind }) → Promise<void>` (resolve quando a execução foi ENTREGUE, não quando
+terminou; rejeita se não foi possível entregar). A implementação padrão (`createDirectRunDispatcher`) inicia a `worker_thread`
+de backtest ou de walk-forward na hora e a rota responde `202`; NÃO há teto por usuário nem fila — **o ponto de troca da T3.6** é
+a fábrica em `create-application.ts` (`createApplicationRunners`). Falha ao despachar: a execução vira `failed` com
+`DISPATCH_FAILED` na mesma requisição (nunca fica `queued` para sempre); a resposta é `202` com `status: failed`.
+
+| Decisão | Valor | Motivo |
+|---|---|---|
+| Validação | Corpo `z.strictObject`; TODOS os problemas de uma vez só com `field` e `reason` (nunca o valor enviado); a configuração da estratégia e os `runParameters` são conferidos pelos esquemas do MOTOR dentro do mesmo passo do corpo; regras entre campos (período, grade só em walk-forward) saem juntas na 2ª fase | RF03/RF07, RNF04 |
+| Antes de aceitar (walk-forward) | `expandWalkForwardGrid` contra a configuração-base e `planWalkForwardWindows` sobre o período cortado no candle fechado: `GRID_TOO_LARGE` (teto de 200 combinações VÁLIDAS), `NO_VALID_COMBINATIONS`, `INVALID_GRID` (texto fixo: a mensagem do motor cita o caminho enviado), `INVALID_WINDOW_CONFIG`, `PERIOD_TOO_SHORT`, todos `400`; nada é criado | RNF02, ADR 0002 §Walk-forward |
+| `live_paper` | `501 LIVE_RUNS_NOT_AVAILABLE` até a Fase 4, DEPOIS da validação e da conferência da versão (versão alheia continua `404`) | Não revelar existência |
+| Avisos | `warnRunParameters` contra o preço (`open`) do PRIMEIRO candle do período, na criação e na leitura (mesma conta); sem candle, sem avisos de preço | Determinístico e sem gravar |
+| Recurso alheio | `404` com o mesmo `<RECURSO>_NOT_FOUND`, mesma mensagem e mesmo tamanho de corpo do inexistente e do id malformado (UUID só em minúsculas, como no banco); `STRATEGY_NOT_FOUND`, `STRATEGY_VERSION_NOT_FOUND`, `RUN_NOT_FOUND` | ADR 0001 §e |
+| Paginação | Cursor opaco (JSON em base64url validado por Zod), `limit` 1 a 100 (padrão 50), cursor adulterado ou parâmetro desconhecido ou repetido é `400`; as séries leem UMA página do repositório por chamada | Sem carregar a série em memória |
+| Estratégias | `createStrategyWithFirstVersion` grava a estratégia e a versão 1 na MESMA transação; configuração igual (mesmo hash) devolve a MESMA versão (`200`), nova é `201`; as views nunca levam hash nem dono | RF03 |
+| Parar | `POST /v1/runs/:id/stop` cancela `queued`/`running` de qualquer tipo; já cancelada responde igual (idempotente); `completed`/`failed` é `409 RUN_ALREADY_FINISHED`; a thread vê o `cancelled` entre lotes (backtest) ou unidades (walk-forward) | RF11 |
+| CSV | `GET /v1/runs/:id/export.csv?table=trades\|signals\|fills\|equity\|windows` (padrão `trades`), em FLUXO por páginas de 1.000 (a 1ª página é lida antes de responder, para o `404` sair antes do corpo), `text/csv; charset=utf-8`, anexo, `no-store`, CRLF, cabeçalho fixo; decimais como texto exato (negativo incluso); célula de texto iniciada por `=`, `+`, `-`, `@`, tab ou CR leva apóstrofo; teto de 1.000.000 linhas e 60 s ABORTA o fluxo (nunca um arquivo cortado que parece completo); nunca `user_id` nem hash | RF12, OWASP CSV injection |
+| Limites | Criação de execução 20/min (`EXECUTION_CREATION`), candles 60/min (`CANDLE_QUERY`), exportação 10/min (`RUN_EXPORT`), além dos 120/min por usuário | ADR 0001 §g |
+| Candles | `symbol` e `timeframe` só os de `MARKET_SYMBOLS`/`MARKET_TIMEFRAMES` do ambiente; `from` incluído e `to` excluído; no máximo 5.000 candles (o intervalo é recusado antes de ir ao banco); texto decimal | RF01 |
+
+**OpenAPI 3.1 e Scalar.** O documento é GERADO da tabela de rotas (`buildOpenApiDocument`): cada rota declara
+`documentation` (resumo, esquemas Zod de parâmetros, consulta, corpo e resposta, e os erros próprios); o gerador converte com
+`z.toJSONSchema` (`input` para o que a rota aceita, `output` para o que devolve), acrescenta os erros comuns pelo `access`
+(401, 403, 429, 500, 503) e RECUSA gerar se alguma rota não tem documentação (lista as rotas). Os mesmos esquemas validam a
+requisição, então a documentação não diverge; os contratos conferem cada resposta real contra o esquema documentado.
+`GET /v1/openapi.json` e `GET /v1/docs` (HTML do Scalar) existem SÓ fora de `ENV=production`: em produção nem entram na tabela
+(`404 ROUTE_NOT_FOUND`) nem no documento. **Scalar `1.72.1`**: a última versão estável publicada há mais de duas semanas em
+2026-10-10 (publicada em 2026-09-25; as `1.72.2` a `1.73.1` são de 2026-09-29 a 2026-10-07) e anterior às mais novas, escolhida
+EXATA (nada de `latest`/`1`), carregada de `https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.72.1/dist/browser/standalone.js`
+(o arquivo original, não o minificado dinamicamente pelo jsDelivr, que o próprio CDN desaconselha para SRI) com `integrity`
+`sha384-U11tb2XnKvmwt8RlTvnwUnYgrN+ur4Xyh9htLhjajWNR/Oyl5AX5DEz00qRmlrmK` — o mesmo byte do tarball do npm. A CSP da página
+(e só dela; as demais rotas seguem com `default-src 'none'`) é `default-src 'none'`, `script-src 'nonce-<N>'` mais o pacote
+fixado, `style-src 'nonce-<N>'`, `connect-src 'self'`, `img-src 'self' data:`: sem `unsafe-inline` nem `unsafe-eval`. O nonce muda a
+cada resposta e o Scalar o lê de `<meta property="csp-nonce">` para os estilos que injeta. Conferido num navegador real
+(2026-10-10): a página carrega o documento e navega; o Scalar aplica alguns `style` inline em ATRIBUTOS que a CSP bloqueia
+(ruído no console, sem efeito visível) e aceitar isso é preferível a `unsafe-inline`. Trocar a versão exige trocar o hash.
+
+**Prova.** Contratos por grupo de rota com repositórios em memória (`test/api-{markets,strategies,runs,run-series,run-export,openapi,docs-page}.contract.test.ts`):
+sucesso, validação (todos os erros de uma vez, sem eco), limites, paginação, rate limit, `401` sem token, contrato negativo entre
+usuários em CADA rota que endereça recurso (404 comparado com o do inexistente por `expectIndistinguishableNotFound`), CSV com
+fórmula, aborto por teto; **36 mutantes** da API (`test/api-routes-mutants.contract.test.ts`: rota sem `access`, rota
+pública, 404 distinguível, `userId` aceito no corpo, CSV sem proteção ou com proteção parcial, cursor sem teto, OpenAPI incompleto,
+documentação ligada em produção, CSP frouxa ou vazando, versão idêntica duplicada, execução que fica `queued`, grade não validada,
+pedido não gravado, entre outros) e **11 mutantes de repositório** (`make api-runs-mutants`: filtro de dono removido em cada
+repositório que alguma rota usa, contra Postgres real). `make api-runs-test` sobe a API de verdade (token assinado por JWKS
+local) e percorre estratégia → versão → backtest de 2 anos → séries → CSV → walk-forward → parada → isolamento entre usuários,
+com `GET /v1/health` abaixo de 100 ms durante.
+
+**Suposições registradas.** (1) Teto de página 100 também nas séries: um gráfico de 2 anos em `1h` (17.520 pontos) pede 176
+páginas e esbarra nos 120/min por usuário; o painel (T5) deve usar o CSV ou a T5 sobe o teto das séries com uma constante
+(`MAX_PAGE_SIZE`). (2) O padrão da fonte de sentimento é `alternative.me` quando `runParameters.sentimentSource` não é enviado.
+(3) `WALK_FORWARD_TIMEOUT_SECONDS` (padrão 3.600) e `MARKET_EXCHANGE`/`MARKET_SYMBOLS`/`MARKET_TIMEFRAMES` entram no ambiente da
+API (os mesmos do cron e do worker). (4) O período do pedido é em milissegundos (como `from`/`to` dos candles).
 
 ## Alternativas rejeitadas
 

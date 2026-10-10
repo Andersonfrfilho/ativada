@@ -67,7 +67,7 @@ type EngineStep = (input: StepInput) => StepResult; // estado entra, estado sai 
 | `telegram_link_codes` | `id`, `user_id` (único), `code_hash` (único), `expires_at`, `attempts`, `created_at` — vínculo do chat por código de uso único; só o hash é guardado |
 | `strategies` | (T3.1, migration 0007) `id uuid` v7, `user_id`, `name varchar(120)`, `is_example bool`, `created_at`, `updated_at`, `deleted_at` nulo (soft delete: a estratégia some da listagem e não aceita versão nova, as versões e execuções ficam); `UNIQUE (id, user_id)` |
 | `strategy_versions` | (T3.1) `id uuid`, `user_id`, `strategy_id` (FK composta `(strategy_id, user_id)`), `version int ≥ 1`, `config jsonb`, `config_hash varchar(64)` (CHECK SHA-256 hexadecimal), `created_at`; único (`strategy_id`, `version`) e único (`strategy_id`, `config_hash`): **configuração igual (mesmo hash) devolve a MESMA versão**, nunca uma nova (`addVersion` é idempotente; o `FOR UPDATE` na estratégia serializa a numeração); `UNIQUE (id, user_id)` |
-| `runs` | (T3.1) `id uuid`, `user_id`, `strategy_version_id` (FK composta), `kind varchar` (`backtest`/`walk_forward`/`live_paper`, CHECK), `status varchar` (`queued`/`running`/`completed`/`failed`/`cancelled`, CHECK; só avança: `queued → running → completed`, `queued|running → failed|cancelled`; estado final não muda), `symbol`, `timeframe` (CHECK nos quatro), `run_parameters jsonb`, `run_hash varchar(64)`, `engine_version`, `signal_engine_version`, `metrics_version`, `period_start` bigint, `period_end` bigint **nulo** (o ao vivo não tem fim), `engine_state jsonb` nulo (checkpoint do motor), `last_candle_time` (monotônico), `metrics jsonb` nulo, `progress int 0..100`, `error_code` nulo, `migrated_from_run_id uuid` nulo (FK composta para `runs`: a execução que esta replicou com outro motor; a antiga fica imutável — ADR 0002 §b), `created_at`, `started_at`, `finished_at` (CHECK: preenchido se e só se o status é final); `UNIQUE (id, user_id)`. Os campos copiados `initial_balance`/`fee_rate`/`slippage_rate` do desenho antigo saíram: a fonte é `run_parameters` |
+| `runs` | (T3.1) `id uuid`, `user_id`, `strategy_version_id` (FK composta), `kind varchar` (`backtest`/`walk_forward`/`live_paper`, CHECK), `status varchar` (`queued`/`running`/`completed`/`failed`/`cancelled`, CHECK; só avança: `queued → running → completed`, `queued|running → failed|cancelled`; estado final não muda), `symbol`, `timeframe` (CHECK nos quatro), `run_parameters jsonb`, `run_hash varchar(64)`, `engine_version`, `signal_engine_version`, `metrics_version`, `period_start` bigint, `period_end` bigint **nulo** (o ao vivo não tem fim), `engine_state jsonb` nulo (checkpoint do motor), `last_candle_time` (monotônico), `metrics jsonb` nulo, `progress int 0..100`, `error_code` nulo, `migrated_from_run_id uuid` nulo (FK composta para `runs`: a execução que esta replicou com outro motor; a antiga fica imutável — ADR 0002 §b), `request jsonb` nulo (T3.4, migration 0010: o pedido do walk-forward — grade e janelas —, validado por Zod na API e lido pela thread; nulo no backtest), `created_at`, `started_at`, `finished_at` (CHECK: preenchido se e só se o status é final); `UNIQUE (id, user_id)`. Os campos copiados `initial_balance`/`fee_rate`/`slippage_rate` do desenho antigo saíram: a fonte é `run_parameters` |
 | `run_commands` | (T3.1) `id uuid`, `user_id`, `run_id` (FK composta), `command_id varchar(64)` (único com `run_id`), `kind` (`exit_position`/`halt`/`resume`), `reason`, `issued_at` bigint, `candle_time` bigint (candle em cujo fechamento agiu), `status` (`applied`/`ignored_duplicate`) — entrada persistida do passo e trilha; `DO NOTHING`: o primeiro registro do `command_id` vale |
 | `signals` | (T3.1) `id uuid`, `user_id`, `run_id` (FK composta), `candle_time` bigint, `action` (`BUY`/`SELL`/`HOLD`), `score numeric`, `regime` (`trending`/`ranging`/`none`), `votes jsonb`, `indicators jsonb` (ids com espaço de nome, achatados), `sentiment_observation jsonb` nulo (a observação usada: valor, `observed_at`, fonte), `reason text` · único (`run_id`, `candle_time`), `INSERT … ON CONFLICT DO NOTHING` (imutável) |
 | `orders` | (T3.1) `id uuid`, `user_id`, `run_id` (FK composta), `engine_key varchar(64)` (único com `run_id`; `w<índice>:order-N` no walk-forward, sem colisão entre janelas), `side`, `type` (`market`/`limit`/`stop`/`target`), `purpose` (`entry`/`exit`), `status` (`created`/`filled`/`cancelled`/`expired`/`rejected`), `reason` nulo (`below_min_notional`, `zero_atr`, `invalid_stop`, `opposite_signal`, `command`, `gap`, `volume_capped`), `quantity`, `price`, `limit_price`, `trigger_price`, `risk_amount`, `stop_distance`, `target_distance` (todos `numeric` nulos), `eligible_candles`, `created_candle_time`, `expires_candle_time` nulo, `last_event_candle_time` · `INSERT … ON CONFLICT (run_id, engine_key) DO UPDATE … WHERE` o status novo é posterior ao gravado e o dono é o mesmo (monotônico: `created` < qualquer estado final; um final nunca vira outro final nem volta a `created`); os campos nulos do evento novo não apagam o que o anterior trouxe (`coalesce`) |
@@ -206,14 +206,17 @@ de BTCUSDT 1h (113 `BUY`, 57 `SELL`) e 207 de ETHUSDT 1d (60 `BUY`, 67 `SELL`).
 
 | Método | Rota | Uso |
 |---|---|---|
-| `GET` | `/v1/markets/candles?symbol&timeframe&from&to` | Candles para gráfico |
-| `GET/POST` | `/v1/strategies` | Listar / criar |
-| `POST` | `/v1/strategies/:id/versions` | Nova versão |
-| `POST` | `/v1/runs` | Criar backtest, walk-forward ou simulação ao vivo |
-| `GET` | `/v1/runs/:id` | Status e métricas |
-| `GET` | `/v1/runs/:id/equity` · `/trades` · `/signals` | Séries do painel |
-| `POST` | `/v1/runs/:id/stop` | Parar simulação ao vivo |
-| `GET` | `/v1/runs/:id/export.csv` | Registro completo |
+| `GET` | `/v1/markets/candles?symbol&timeframe&from&to` | Candles para gráfico (pares e timeframes habilitados; `from` incluído, `to` excluído; até 5.000; texto decimal; 60/min) |
+| `GET/POST` | `/v1/strategies` | Listar (por cursor) / criar (nome + configuração validada pelo motor; cria a versão 1) |
+| `GET` | `/v1/strategies/:id` | Estratégia com a versão mais recente |
+| `GET/POST` | `/v1/strategies/:id/versions` | Listar versões (da mais nova) / nova versão (configuração igual ⇒ a MESMA versão, `200`; nova ⇒ `201`) |
+| `POST` | `/v1/runs` | Criar backtest ou walk-forward (valida parâmetros, grade e janelas ANTES de aceitar, grava o pedido, despacha, `202`); `live_paper` ⇒ `501` até a Fase 4; 20/min |
+| `GET` | `/v1/runs` | Execuções do dono, por cursor (filtro `kind`) |
+| `GET` | `/v1/runs/:id` | Status, progresso, métricas, alerta de overfitting e avisos |
+| `GET` | `/v1/runs/:id/equity` · `/trades` · `/signals` · `/orders` · `/fills` · `/windows` | Séries do painel, por cursor (`/windows` só no walk-forward) |
+| `POST` | `/v1/runs/:id/stop` | Cancelar execução `queued`/`running` (idempotente; `409` se já terminou) |
+| `GET` | `/v1/runs/:id/export.csv?table=trades\|signals\|fills\|equity\|windows` | Registro em CSV, em fluxo, com proteção contra injeção de fórmula |
+| `GET` | `/v1/openapi.json` · `/v1/docs` | OpenAPI 3.1 gerado das rotas e página do Scalar — SÓ fora de produção |
 | `WS` | `/v1/stream` | Sinal, operação e saldo em tempo real — só do usuário do token |
 | `GET/PATCH` | `/v1/me` | Perfil e preferências |
 | `POST/DELETE` | `/v1/me/telegram-link` | Gera código de vínculo do Telegram / desvincula o chat |
@@ -234,8 +237,9 @@ ticket, fecha no `exp` do token com `4401` a menos que o painel renove o token p
 socket, e fecha com `4403` quando a conta é bloqueada ou apagada. Recurso de outro usuário responde
 `404` com o mesmo `<RESOURCE>_NOT_FOUND` de recurso inexistente (ADR 0001 §e).
 
-Envelope `{ data }` / `{ error: { code, message } }`. OpenAPI gerado das rotas, servido com Scalar
-fora de produção.
+Envelope `{ data }` / `{ error: { code, message, details? } }`; listas levam `pagination: { nextCursor, perPage }` (cursor
+opaco, `limit` 1 a 100). O OpenAPI 3.1 é GERADO da tabela de rotas e servido com Scalar `1.72.1` fora de produção (ADR 0002,
+"Rotas REST de mercado, estratégias e execuções (T3.4)"); toda rota declara a própria documentação e o gerador recusa rota sem ela.
 
 ## 7. Testes
 

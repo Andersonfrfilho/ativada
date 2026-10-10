@@ -8,7 +8,7 @@ Contexto operacional do **CryptoAdA**. Produto e regras em `README.md`,
 Spec 001 em andamento (progresso real em `specs/001-simulador-e-sinais/evidence.md`). Prontos: Fase 0
 (fundação), Fase 0b (contas, login, isolamento entre usuários, LGPD) e Fase 1 (candles da Binance:
 backfill, Fear & Greed e stream ao vivo com recuperação de lacuna). Fase 2 (o motor em
-`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); próximo passo: fechamento da Fase 2 e Fase 3 (backtest).
+`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward e as rotas REST (T3.4); próximo passo: estratégia de exemplo por usuário (T3.5) e fila com tetos (T3.6).
 
 ## Stack decidida
 
@@ -43,7 +43,7 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `make down DOWN_FLAGS=--volumes` e `make up` (apaga os dados do Keycloak daquele ambiente). `make up`
   avisa quando o JSON é mais novo que o volume.
 - Alvos `*-test` (`migration-test`, `database-test`, `identity-test`, `session-test`, `admin-test`,
-  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`, `walkforward-test`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
+  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`, `walkforward-test`, `api-runs-test`, `api-runs-mutants`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
   `TERM`: Ctrl-C não deixa container vivo. Dois deles ao mesmo tempo disputam o mesmo projeto; rode um por vez.
 - `make check` roda `bun test` com `env -i`: teste que precisa de variável a declara; o `export` do `env.dev`
   não chega a ele.
@@ -128,7 +128,7 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   em `apps/api-cryptoada/src/walk-forward/`: `runWalkForward({ database, runId, options })` (porta `WalkForwardDatabase`,
   `createWalkForwardDatabase`), busca por combinação em até `WALK_FORWARD_THREADS` threads (`search.worker.ts`, mensagens
   `z.strictObject`; o resultado NÃO depende do número) e a coordenadora `walk-forward.worker.ts` +
-  `walk-forward-thread-runner.ts` (o pedido — grade e janelas — viaja na mensagem e entra no checkpoint por hash). O sinal
+  `walk-forward-thread-runner.ts` (a mensagem leva só o `runId`: o pedido — grade e janelas — mora em `runs.request` desde a T3.4 e entra no checkpoint por hash). O sinal
   sai UMA vez por combinação da série contínua e a carteira roda por janela (`walletStep` avulso, chaves `w<i>:`);
   o relatório principal (`runs.metrics`) é o FORA DA AMOSTRA concatenado e `metrics.overfitting` guarda o alerta. Cada
   janela grava a linha de `walk_forward_windows`, os resultados do teste e o checkpoint na MESMA transação
@@ -136,6 +136,18 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   e com threads de verdade), 28 mutantes do domínio e 18 da execução, paridade com o motor completo por janela
   (sintético e os dois conjuntos reais) e `make walkforward-test`. Teste novo que carregue o módulo usa
   `loadWalkForwardApp()` / `loadWalkForwardEngineApi()`: é por eles que os mutantes entram.
+- **Rotas REST de mercado, estratégias e execuções (T3.4, ADR 0002 §"Rotas REST…").** `apps/api-cryptoada/src/{markets,strategies,runs}/`
+  (rotas `create*Routes`, casos de uso com repositório injetado, `*.docs.ts` com a documentação OpenAPI da rota) e
+  `openapi/` + `docs/` (documento gerado da tabela; `/v1/openapi.json` e `/v1/docs` só fora de produção, Scalar `1.72.1` com
+  SRI e CSP própria). **Toda rota nova declara `access` E `documentation`** (o gerador recusa rota sem ela e o contrato
+  `api-openapi` reprova a tabela). `POST /v1/runs` despacha pela porta `RunDispatcher` (`runs/run-dispatcher.ts`; a
+  implementação padrão não tem teto: **a T3.6 troca `createApplicationRunners`**) e grava o pedido do walk-forward em
+  `runs.request`. Recurso alheio, inexistente ou id malformado dão o MESMO `404` (UUID só em minúsculas); validação devolve
+  todos os erros sem eco de valores; listas por cursor com `limit` ≤ 100; CSV em fluxo com proteção contra injeção de
+  fórmula. Teste novo de rota usa `loadApiApp()` (`test/fixtures/api-routes/`) e os repositórios em memória de
+  `test/fixtures/api-routes/`: é por eles que os mutantes entram. Prova: contratos `test/api-*.contract.test.ts`, 36 mutantes
+  da API (`api-routes-mutants`), `make api-runs-mutants` (11 filtros de dono removidos contra Postgres) e
+  `make api-runs-test` (API de verdade: estratégia → backtest → séries → CSV → walk-forward → parada → isolamento).
 - Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account

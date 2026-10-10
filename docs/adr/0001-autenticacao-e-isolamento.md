@@ -410,7 +410,8 @@ papel `admin` (só à mão no Keycloak). **Não bloqueia a si mesmo** (`409 CANN
 - **Chaves e limites iniciais:** autenticado → por `sub`, 120 req/min; criação de execução
   (`POST /v1/runs`, `POST /v1/goals/evaluate`) → por `sub`, 20/min; rotas de sessão (`/v1/session*`) e
   tickets de stream → por IP, 10/min; convite (`POST /v1/admin/invitations`) → por ator, 10/h; sem token
-  → por IP, 30/min. Excedido → `429 RATE_LIMITED` com `Retry-After`.
+  → por IP, 30/min; candles (`GET /v1/markets/candles`) → por `sub`, 60/min; exportação CSV da execução → por `sub`, 10/min
+  (T3.4). Excedido → `429 RATE_LIMITED` com `Retry-After`.
 - **O que o código faz de fato (T0.9b):** sem token, ou com cabeçalho fora do formato `Bearer x.y.z` (ou maior
   que o teto), o IP é cobrado **antes** de qualquer verificação e o `jwtVerify` nem roda. Token bem formado
   mas inválido paga o custo da verificação local (assinatura contra a JWKS em cache, sem rede) e só depois é
