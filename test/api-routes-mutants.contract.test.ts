@@ -271,8 +271,8 @@ const MUTANTS: readonly SourceMutant[] = [
     name: 'WARNINGS_NOT_RETURNED_ON_CREATION',
     edits: edit(
       'runs/create-run.use-case.ts',
-      'warnings: await readRunWarnings(dependencies, run)',
-      'warnings: []',
+      'read: () => readRunWarnings(dependencies, run),',
+      'read: () => Promise.resolve([]),',
     ),
   },
   {

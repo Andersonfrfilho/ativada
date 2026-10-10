@@ -42,6 +42,7 @@ export type DomainRouteParams = {
   readonly database: DatabaseHandle;
   readonly dispatcher: RunDispatcher;
   readonly now: () => number;
+  readonly reportUnexpectedError: (error: unknown) => void;
 };
 
 function createStrategyDependencies(database: DatabaseHandle): StrategyRouteDependencies {
@@ -76,6 +77,7 @@ function createRunDependencies(
       dispatcher: params.dispatcher,
       queuePerUserLimit: environment.RUN_QUEUE_PER_USER_LIMIT,
       now: params.now,
+      reportUnexpectedError: params.reportUnexpectedError,
     }),
     listRuns: createListRunsUseCase(shared),
     getRun: createGetRunUseCase(shared),

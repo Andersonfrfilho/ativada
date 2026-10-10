@@ -35,6 +35,7 @@ export type CreateRunDependencies = RunWarningDependencies &
     readonly runs: Pick<RunRepository, 'createRun' | 'transitionRun'>;
     readonly dispatcher: RunDispatcher;
     readonly now: () => number;
+    readonly reportUnexpectedError: (error: unknown) => void;
   };
 
 export type CreateRunUseCase = (scope: OwnerScope, body: CreateRunBody) => Promise<RunDetailView>;
@@ -81,6 +82,19 @@ async function dispatchOrFail(
   }
 }
 
+// Avisos e posição enfeitam uma criação que já aconteceu: se a leitura falha, a execução não pode virar 500.
+async function readBestEffort<TValue>(
+  dependencies: CreateRunDependencies,
+  params: { readonly read: () => Promise<TValue>; readonly fallback: TValue },
+): Promise<TValue> {
+  try {
+    return await params.read();
+  } catch (error: unknown) {
+    dependencies.reportUnexpectedError(error);
+    return params.fallback;
+  }
+}
+
 function assertWalkForward(
   dependencies: CreateRunDependencies,
   body: CreateRunBody,
@@ -106,10 +120,16 @@ export function createCreateRunUseCase(dependencies: CreateRunDependencies): Cre
     const created = await dependencies.runs.createRun(scope, toCreateParams(body));
     if (created === undefined) throw new StrategyVersionNotFoundError();
     const run = await dispatchOrFail(dependencies, scope, created);
-    return {
-      ...toRunView(run),
-      warnings: await readRunWarnings(dependencies, run),
-      queuePosition: await readQueuePosition(dependencies, scope, run),
-    };
+    const [warnings, queuePosition] = await Promise.all([
+      readBestEffort(dependencies, {
+        read: () => readRunWarnings(dependencies, run),
+        fallback: [],
+      }),
+      readBestEffort(dependencies, {
+        read: () => readQueuePosition(dependencies, scope, run),
+        fallback: null,
+      }),
+    ]);
+    return { ...toRunView(run), warnings, queuePosition };
   };
 }

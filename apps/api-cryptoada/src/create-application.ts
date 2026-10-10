@@ -103,6 +103,7 @@ function createApiRouter(params: ApiRouterParams): Router {
     database,
     dispatcher: params.dispatcher,
     now: () => Date.now(),
+    reportUnexpectedError: (error) => logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { error }),
   });
   return createRouter({
     routes: createApiRoutes({

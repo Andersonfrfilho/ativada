@@ -43,6 +43,7 @@ export const EXCHANGE = 'binance';
 export const NOW = Date.UTC(2026, 9, 1);
 export const HOUR = 3_600_000;
 const DEFAULT_QUEUE_PER_USER_LIMIT = 20;
+const UNAVAILABLE_DATABASE = 'banco indisponível';
 export const CLASSIC_CONFIG: unknown = classicStrategy;
 
 export type CallParams = {
@@ -68,6 +69,7 @@ export type RunsHarness = {
   readonly dispatched: RunDispatchRequest[];
   readonly limits: InMemoryRunQueue['limits'];
   readonly dispatch: { shouldFail: boolean };
+  readonly failures: { candles: boolean; queuePosition: boolean };
   readonly clock: { now: number };
   readonly routes: readonly Route[];
   readonly reportedErrors: unknown[];
@@ -116,6 +118,7 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
   const candles = createInMemoryCandleSeries(options.candles ?? []);
   const dispatched: RunDispatchRequest[] = [];
   const dispatch = { shouldFail: false };
+  const failures = { candles: false, queuePosition: false };
   const clock = { now: NOW };
   const reportedErrors: unknown[] = [];
   const enabled = { symbols: [...ENABLED_SYMBOLS], timeframes: [...ENABLED_TIMEFRAMES] };
@@ -156,6 +159,20 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
       enabled,
       createRun: app.createRun.createCreateRunUseCase({
         ...runDeps,
+        candles: {
+          findCandles: (params) =>
+            failures.candles
+              ? Promise.reject(new Error(UNAVAILABLE_DATABASE))
+              : candles.repository.findCandles(params),
+        },
+        queue: {
+          ...queue.port,
+          findQueuePosition: (scope, runId) =>
+            failures.queuePosition
+              ? Promise.reject(new Error(UNAVAILABLE_DATABASE))
+              : queue.port.findQueuePosition(scope, runId),
+        },
+        reportUnexpectedError: (error) => reportedErrors.push(error),
         strategies: strategies.repository,
         dispatcher,
         queuePerUserLimit: options.queuePerUserLimit ?? DEFAULT_QUEUE_PER_USER_LIMIT,
@@ -215,6 +232,7 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     dispatched,
     limits: queue.limits,
     dispatch,
+    failures,
     clock,
     routes,
     reportedErrors,

@@ -32,6 +32,7 @@ type RunBody = {
     id: string;
     status: string;
     queuePosition: { own: number; overall: number } | null;
+    warnings: unknown[];
   };
 };
 
@@ -58,6 +59,9 @@ beforeEach(() => {
     }
   }
   harness.limits.clear();
+  harness.failures.candles = false;
+  harness.failures.queuePosition = false;
+  harness.reportedErrors.length = 0;
 });
 
 function body(
@@ -236,6 +240,25 @@ describe('GET /v1/runs/:id: posição na fila', () => {
     harness.clock.now += 4_000;
     const created = (await post(SUBJECT_A, seededA)).body as RunBody;
     expect(created.data.queuePosition).toStrictEqual({ own: 1, overall: 2 });
+  });
+
+  test('a leitura da posição falhar NÃO derruba a criação: 202 sem posição e o erro é reportado', async () => {
+    harness.failures.queuePosition = true;
+    const response = await post(SUBJECT_A, seededA);
+    expect(response.status).toBe(202);
+    expect((response.body as RunBody).data.queuePosition).toBeNull();
+    expect(harness.runs.all().filter((run) => run.status === 'queued')).toHaveLength(1);
+    expect(harness.reportedErrors).toHaveLength(1);
+  });
+
+  test('a leitura dos avisos falhar NÃO derruba a criação: 202 sem avisos, com a posição, e o erro é reportado', async () => {
+    harness.failures.candles = true;
+    const response = await post(SUBJECT_A, seededA);
+    const data = (response.body as RunBody).data;
+    expect(response.status).toBe(202);
+    expect(data.warnings).toStrictEqual([]);
+    expect(data.queuePosition).toStrictEqual({ own: 1, overall: 1 });
+    expect(harness.reportedErrors).toHaveLength(1);
   });
 
   test('quem não está na fila (running ou final) tem queuePosition null', async () => {

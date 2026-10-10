@@ -189,8 +189,24 @@ const MUTANTS: readonly SourceMutant[] = [
     name: 'QUEUE_POSITION_MISSING_FROM_THE_CREATION',
     edits: edit(
       'runs/create-run.use-case.ts',
-      'queuePosition: await readQueuePosition(dependencies, scope, run),',
-      'queuePosition: null,',
+      'read: () => readQueuePosition(dependencies, scope, run),',
+      'read: () => Promise.resolve(null),',
+    ),
+  },
+  {
+    name: 'CREATION_FAILS_WHEN_THE_EXTRAS_FAIL',
+    edits: edit(
+      'runs/create-run.use-case.ts',
+      '    dependencies.reportUnexpectedError(error);\n    return params.fallback;',
+      '    throw error;',
+    ),
+  },
+  {
+    name: 'EXTRAS_FAILURE_NOT_REPORTED',
+    edits: edit(
+      'runs/create-run.use-case.ts',
+      '    dependencies.reportUnexpectedError(error);\n',
+      '',
     ),
   },
 ];
