@@ -168,4 +168,8 @@ export * from './strategy-engine.error.js';
 export { computeRunMetrics } from './metrics/compute-run-metrics.js';
 export * from './metrics/metrics.constant.js';
 export type * from './metrics/metrics.types.js';
+export {
+  computeOpenPositionMetrics,
+  type ComputeOpenPositionMetricsParams,
+} from './metrics/open-position-metrics.js';
 export { reconcileRunMetrics } from './metrics/reconcile-run-metrics.js';
