@@ -1435,6 +1435,33 @@ configuração guardada e relida, campos inválidos sem eco, só ao vivo, tempo 
 sem o campo, 404 idêntico entre donos) e 7 mutantes da API reprovados; `make live-test` compara a rota da API real com a função pura
 sobre a curva que o worker gravou no Postgres (piso 99% tocado em 140.400.000 ms e meta 100,4% em 118.800.000 ms, em 306 candles reais).
 
+## Tempo real (T4.4 e T4.7)
+
+| Peça | Decisão | Motivo |
+|---|---|---|
+| Escutador de `LISTEN` | Cliente do protocolo Postgres v3 próprio (`packages/database/src/notifications/`): SCRAM-SHA-256, TLS por `upgradeTLS`, só `trust` e SCRAM, reconexão com backoff e jitter, RE-LISTEN | O `Bun.SQL` 1.3.14 não tem `listen`/`notify` em runtime (os tipos 1.4.2 mentem); dependência npm é proibida |
+| Aviso do worker | `pg_notify('run_events', {runId, kind, eventId})` na mesma transação do passo (`publishStepEvents`); `kind` ∈ `signal`, `trade`, `balance`; `eventId` é o uuid da linha (saldo: o `candle_time`) | Atomicidade: sem aviso de passo desfeito; payload sem dado pessoal |
+| Entrega | A API resolve o dono pelo banco e entrega ao hub `userId → sockets`; sem broadcast; queda do LISTEN = `resync` para todos | ADR 0001 §e e §r |
+| Ticker | UMA conexão ao stream combinado `<par>@miniTicker` (~KB/s); `!miniTicker@arr` traria o mercado inteiro | Custo e superfície |
+| Agregação | Janela por par: o último tick de cada segundo é publicado (100 ticks em 1 s = 1 publicação); tick repetido (mesmo `eventTime`) é descartado; `change24h` em BigInt, 4 casas, meio afastando do zero | Teto de 1 atualização/s/par sem perder o último valor |
+| Porta | `PriceTickListener` recebe cada tick agregado uma vez (a futura spec de alertas assina nela) | Desacoplar consumidor |
+| Assinatura | `{type:'subscribe', pairs}` limitado à lista suportada e a `STREAM_MAX_PAIRS_PER_SOCKET` (10); par inexistente = erro tipado `PAIR_NOT_SUPPORTED` | Impedir assinatura aberta |
+| Dado velho | Sem tick por `TICKER_STALE_SECONDS` (10) o par é selado `stale: true`; volta ao normal no próximo tick | O usuário não decide com preço parado sem saber |
+| Relógio | `serverTime` usa o desvio do relógio já medido (`createServerClock`) | Uma fonte de verdade para o tempo |
+| Env | `TICKER_STREAM_ENABLED` (padrão `false`), `STREAM_MAX_PAIRS_PER_SOCKET`, `TICKER_STALE_SECONDS`, `BINANCE_BASE_URL`, `BINANCE_STREAM_URL` (https/wss em produção) | Ticker desligado por padrão: o worker segue sem depender dele |
+
+**Prova.** Contratos do protocolo (codificador, decodificador, SCRAM contra vetores da RFC 7677, URL de conexão) e um Postgres falso em
+memória; Postgres 18 real em `make database-test` (SCRAM, `require`, `prefer`, queda e reconexão); `stream-endpoint` (26 casos com
+servidor real), `stream-hub`, `stream-sweep`, dispatcher, `market-stream` (23), `stream-market-endpoint` (12) e `market-stream-pipeline`
+(Binance falsa → API → socket, p95 de publicação **1002 ms**, p50 493 ms, máximo 1003 ms, contra o teto de 2 s). Mutantes reprovados
+(cópia do src): 8 do banco (`make stream-mutants`), 50 do stream, 25 do ticker e 28 do pub/sub da API. `make stream-api-test` roda a
+API e o worker reais, o fake Keycloak e a Binance falsa.
+
+**Limitações conhecidas.** TLS do escutador (`require` e `verify-full`) só foi verificado à mão contra um Postgres com certificado, não
+em teste automático. Mensagem acima do teto fecha com 1006 no cliente do Bun (o servidor registra o motivo), e o cliente do Bun mostra
+1000 no lugar de 1001. Uma instância de API (tickets, hub e rate limit em memória). O ticker é público e agregado por instância.
+
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |

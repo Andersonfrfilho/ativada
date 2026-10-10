@@ -8,7 +8,7 @@ Contexto operacional do **CryptoAdA**. Produto e regras em `README.md`,
 Spec 001 em andamento (progresso real em `specs/001-simulador-e-sinais/evidence.md`). Prontos: Fase 0
 (fundação), Fase 0b (contas, login, isolamento entre usuários, LGPD) e Fase 1 (candles da Binance:
 backfill, Fear & Greed e stream ao vivo com recuperação de lacuna). Fase 2 (o motor em
-`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) a estratégia de exemplo por usuário (T3.5) e a fila durável de execuções com tetos por usuário (T3.6); Fase 4 com a simulação ao vivo no worker (T4.1), a paridade com o backtest (T4.2) e a sobrevivência do saldo (T4.3, piso e meta de dobro em `GET /v1/runs/:id`); próximo passo: T4.4 (`LISTEN/NOTIFY` → WebSocket).
+`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) a estratégia de exemplo por usuário (T3.5) e a fila durável de execuções com tetos por usuário (T3.6); Fase 4 com a simulação ao vivo no worker (T4.1), a paridade com o backtest (T4.2) e a sobrevivência do saldo (T4.3, piso e meta de dobro em `GET /v1/runs/:id`); tempo real com `LISTEN/NOTIFY` → WebSocket `GET /v1/stream` (T4.4) e o ticker público da Binance (T4.7); próximo passo: T4.5.
 
 ## Stack decidida
 
@@ -44,7 +44,7 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `make down DOWN_FLAGS=--volumes` e `make up` (apaga os dados do Keycloak daquele ambiente). `make up`
   avisa quando o JSON é mais novo que o volume.
 - Alvos `*-test` (`migration-test`, `database-test`, `identity-test`, `session-test`, `admin-test`,
-  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`, `walkforward-test`, `api-runs-test`, `api-runs-mutants`, `example-mutants`, `queue-test`, `queue-mutants`, `live-test`, `live-mutants`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
+  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`, `walkforward-test`, `api-runs-test`, `api-runs-mutants`, `example-mutants`, `queue-test`, `queue-mutants`, `live-test`, `live-mutants`, `stream-api-test`, `stream-mutants`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
   `TERM`: Ctrl-C não deixa container vivo. Dois deles ao mesmo tempo disputam o mesmo projeto; rode um por vez.
 - `make check` roda `bun test` com `env -i`: teste que precisa de variável a declara; o `export` do `env.dev`
   não chega a ele.
@@ -241,3 +241,11 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `eslint-disable` não funciona (`noInlineConfig`). Hoje há zero exceções. `test/code-size-limits.contract.test.ts` prova
   cada regra por sonda e por mutação do limite.
 - Uma task por vez, tirada do `tasks.md`. Task só fecha com evidência em `evidence.md`.
+- **Tempo real (T4.4 e T4.7, ADR 0001 §r e ADR 0002 "Tempo real").** O `Bun.SQL` 1.3.14 NÃO tem `listen`/`notify` (os tipos mentem):
+  `packages/database/src/notifications/` é o escutador próprio (protocolo v3, SCRAM-SHA-256, TLS, backoff, RE-LISTEN). O worker emite
+  `pg_notify` na transação do passo; a API entrega por dono (`apps/api-cryptoada/src/stream/`) e manda `resync` se o LISTEN cai. Ticket por
+  `POST /v1/stream/tickets` (Bearer), consumido no upgrade; `Origin` na allowlist; 4401 token vencido, 4403 conta bloqueada ou apagada, 4408
+  sem pong, 1001 no desligamento. Ticker em `packages/market-data/src/ticker/` e `apps/api-cryptoada/src/market-stream/`; ligado por
+  `TICKER_STREAM_ENABLED=true`. Env novo: `STREAM_MAX_SOCKETS_PER_USER`, `STREAM_MAX_PAIRS_PER_SOCKET` (10), `TICKER_STALE_SECONDS` (10),
+  `TICKER_STREAM_ENABLED`, `BINANCE_BASE_URL`, `BINANCE_STREAM_URL` na API. `make stream-api-test` sobe tudo e prova entrega, resync,
+  handshake, ticker, vencimento, bloqueio e desligamento; `make stream-mutants` prova o escutador. Mutante do stream/ticker: `test/*-mutants.*`.

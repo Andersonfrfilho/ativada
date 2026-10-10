@@ -603,7 +603,7 @@ Cada task abaixo só fecha com estes itens atendidos e provados (contrato ou ver
   execuções (T3.6)"). Conta apagada ou bloqueada: a fila não reivindica as execuções dela e as `running` são canceladas.
 - `NOTIFY` leva só `{ runId, kind, eventId }`; a API resolve o dono pelo banco e nunca confia em
   `userId` do payload; na reconexão do listener o painel rebusca.
-- Confirmar na Fase 3 se `Bun.SQL` suporta `LISTEN`; se não suportar, ADR antes de qualquer dependência.
+- Confirmar na Fase 3 se `Bun.SQL` suporta `LISTEN`; se não suportar, ADR antes de qualquer dependência. **Cumprido na T4.4:** não suporta no 1.3.14; escutador próprio sem dependência (§r).
 - WebSocket: ticket redigido no log, `Origin` validado, fechar com `4403` ao bloquear ou apagar a conta
   (registro em memória `userId → sockets`), renovação de token por mensagem dentro do socket em vez de
   reconectar a cada 5 min.
@@ -719,7 +719,7 @@ O resultado de uma troca fica na memória por 10 s (chave: SHA-256 do refresh); 
 **Env novo da API (validado no boot):** `KEYCLOAK_TOKEN_URL`, `KEYCLOAK_LOGOUT_URL`,
 `KEYCLOAK_SESSION_CLIENT_ID`, `KEYCLOAK_SESSION_CLIENT_SECRET`, `SESSION_ALLOWED_REDIRECT_URIS`.
 
-**Pendente.** O consumo do ticket no handshake do WebSocket (`consumeTicket`) entra na T4.4/T4.7; aqui
+**Cumprido na T4.4 (§r).** O consumo do ticket no handshake do WebSocket (`consumeTicket`) entrou na T4.4; aqui
 estão a função e o contrato (uso único, expirado, inexistente). Dois pontos em memória (deduplicação e
 tickets) valem para uma instância da API (§g).
 
@@ -959,6 +959,30 @@ Keycloak, porque o import não altera um realm existente; aplicar é `make down 
 podem imprimir). `no-console` passou a valer em `apps/*/src` e `packages/*/src`; um contrato prende que
 `src` não tem esses arquivos nem chamada a `console`. A superfície pública de `@cryptoada/database` ganhou
 só `createBlockedAccountRepository` e `createAuditRetentionRepository`.
+
+### r) Resultados e desvios da T4.4 e da T4.7 (`/v1/stream`)
+
+- **Premissa falsa.** O item de §k "confirmar se `Bun.SQL` suporta `LISTEN`" foi confirmado como **não** no Bun 1.3.14: os tipos de
+  1.4.2 declaram `listen`/`notify`, o runtime não os tem. Sem dependência nova (regra do repositório), `packages/database/src/notifications/`
+  fala o protocolo Postgres v3 por `Bun.connect`: SSLRequest e `upgradeTLS`, autenticação `trust` ou SCRAM-SHA-256 (Web Crypto), nunca
+  senha em texto puro nem MD5, `sslmode` honrado (`require` nunca cai para texto puro), reconexão com espera exponencial e jitter, RE-LISTEN.
+- **Ticket.** `POST /v1/stream/tickets` (Bearer) guarda `{ userId, keycloakSubject, expiração da sessão }`; `GET /v1/stream?ticket=` recusa
+  ANTES do upgrade, nesta ordem: 426 sem `Upgrade`, rate limit por IP (30/min), `Origin` fora da allowlist 403, ticket ausente ou
+  desconhecido 401, API sem LISTEN confirmado 503, consumo (uso único; recusa por `Origin` não gasta o ticket), conta bloqueada ou apagada
+  403, teto de sockets por usuário 429. Desvio de §e: o ticket é pedido com **Bearer**, não por cookie + CSRF, porque a API só tem o
+  token handler da T0.7 e o painel guarda o access token em memória.
+- **Fan-out.** O dono vem do banco (`resolveRunOwnerScope`), com uma consulta por `runId` em voo; o hub é `userId → sockets`; não existe
+  broadcast. O `NOTIFY` leva só `{ runId, kind, eventId }` e sai na MESMA transação do passo (`pg_notify`), então não há aviso de passo
+  desfeito nem passo sem aviso.
+- **Vida do socket.** O token vence no socket: `{type:'renew', ticket}` (do mesmo usuário) estende, senão `4401`; bloquear ou apagar a
+  conta fecha com `4403` (§n estendida) e a renovação reconfere a conta; sem pong no prazo `4408`; mensagem acima do teto fecha; limite de
+  mensagens por minuto; `SIGTERM` fecha com `1001` (graça de 2 s e `stop(true)`, porque o `stop()` do Bun não resolve com socket aberto).
+- **Resync.** Quando a conexão do LISTEN cai, todo socket recebe `resync`, e de novo ao voltar: o painel rebusca, nada é reenviado.
+- **Pendência da §m cumprida:** `consumeTicket` está no handshake. Continua valendo: tickets, rate limit e sockets em memória exigem
+  ADR para mais de uma instância.
+- **Medido** (`make stream-api-test`, API e worker reais, Postgres real): sinal do worker no dono em 6 ms (teto 10 s); nenhum aviso
+  cruza entre donos; 4401 em 4,96 s com token de 4 s; bloqueio fecha com 4403 na hora.
+
 
 ## Alternativas rejeitadas
 

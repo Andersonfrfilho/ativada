@@ -192,6 +192,8 @@ de BTCUSDT 1h (113 `BUY`, 57 `SELL`) e 207 de ETHUSDT 1d (60 `BUY`, 67 `SELL`).
 
 ## 5c. Tempo real (RF16)
 
+> **Entregue na T4.4 e T4.7** (ADR 0001 §r, ADR 0002 "Tempo real"): o `LISTEN` usa escutador próprio porque o `Bun.SQL` 1.3.14 não o tem; o ticker usa `<par>@miniTicker`; o ticket é pedido com Bearer.
+
 - **Preços não passam pelo banco.** A API abre UMA conexão com o stream combinado de ticker da Binance
   (`<par>@miniTicker`) para os pares habilitados, com reconexão e espera exponencial, e repassa pelo
   pub/sub nativo do `Bun.serve` (tópico `market:<PAR>`). Cada instância da API tem sua conexão; não há
