@@ -24,7 +24,7 @@ packages/environment/   validação Zod do env; `process.env` só em environment
 packages/identity-admin/ cliente da Admin API do Keycloak (API e cron o compartilham)
 packages/market-data/    cliente REST de klines e stream WebSocket de klines da Binance (Zod, peso, retry, reconexão; cron e worker o compartilham)
 packages/strategy-engine/  indicadores, placar de votos, risco, corretora simulada, métricas —
-                           o MESMO código roda no backtest e no ao vivo
+                           o MESMO código roda no backtest e no ao vivo (contrato: ADR 0002)
 ```
 
 Postgres + Drizzle. Keycloak 26.8.0 (OIDC) para login, realm em `realm/`; Mailpit v1.31.4 como SMTP de dev.
@@ -47,6 +47,11 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `TERM`: Ctrl-C não deixa container vivo. Dois deles ao mesmo tempo disputam o mesmo projeto; rode um por vez.
 - `make check` roda `bun test` com `env -i`: teste que precisa de variável a declara; o `export` do `env.dev`
   não chega a ele.
+- **Motor de estratégias (ADR 0002).** `step(StepInput) → StepResult` é puro (sem relógio, aleatoriedade nem
+  I/O; o teste de fronteira varre o `src`), o estado é JSON canônico versionado e decimal (`decimal.js`) nunca
+  aparece no estado nem nas decisões, só texto. Todo motor novo passa `runEngineContract` e todo indicador passa
+  `expectIndicatorContract` (`test/fixtures/strategy-engine/`); a referência "sempre comprado" e doze motores
+  defeituosos provam o harness. Zod chega ao pacote por `@cryptoada/environment`.
 - Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account

@@ -17,7 +17,7 @@
 
 | Peça | Papel |
 |---|---|
-| `packages/strategy-engine` | Puro, sem I/O: indicadores, votos, regime, risco, corretora simulada, métricas, walk-forward |
+| `packages/strategy-engine` | Puro, sem I/O: indicadores, votos, regime, risco, corretora simulada, métricas, walk-forward. Contrato no ADR 0002 (T2.1): `step(StepInput) → StepResult` puro, `EngineState` versionado em JSON canônico, schema Zod versionado da configuração com hash SHA-256, modelo de preenchimento D6; depende só de `@cryptoada/environment` (Zod) e `decimal.js@10.6.0`. Harness de contrato em `test/fixtures/strategy-engine/` |
 | `packages/database` | Drizzle (driver `Bun.sql`), schema, migrations com `rollback.sql` obrigatório, cliente; usado por API, worker e cron |
 | `packages/environment` | Validação Zod do ambiente (`parseEnvironment`, `runWithEnvironment`, `postgresUrlSchema`); lista todas as variáveis inválidas e nunca imprime valores |
 | `packages/identity-admin` | Cliente da Admin API do Keycloak (service account `cryptoada-api-service`): convidar, bloquear, apagar e encerrar sessões de usuário; compartilhado pela API e pelo cron, porque uma app não importa código de outra (ADR 0001 §h) |
@@ -51,6 +51,7 @@ type EngineStep = (input: StepInput) => StepResult; // estado entra, estado sai 
 | D11 | Autorização por objeto num único ponto: todo método de repositório de recurso de usuário recebe `OwnerScope` como primeiro parâmetro. Defesa em camadas (ADR 0001 §c): (1) o escopo e o `UserId` só nascem dentro de `@cryptoada/database`, cujo índice público exporta só os tipos e a app os recebe por retorno de função do pacote (`resolveUserBySubject` → `{ userId, scope }`); (2) o lint de `apps/*/src` é lista de bloqueio com as brechas conhecidas fechadas por sonda (Drizzle, `Bun.SQL` em todas as formas, `import()` dinâmico no backend, subcaminhos, asserção, *type guard* e sobrecarga que devolve `UserId`/`OwnerScope`/`AccountId`); (3) contrato negativo por rota | Chamar repositório sem escopo de dono não compila e a app não recebe o escopo por nenhum caminho que o pacote não tenha emitido; as camadas se cobrem entre si e a lista de brechas conhecidas está no ADR, sem afirmar impossibilidade absoluta |
 | D13 | `ENV=production` exige configuração explícita (ADR 0001 §g e §p): `TRUSTED_PROXY_HOPS` sem default (1 ou mais atrás de proxy), todas as URLs `https://`, `DATABASE_URL` com `sslmode=require`, segredos de 32+ caracteres e nenhum valor `_dev_only`/`_test_only`; vale para API e cron e a falha de boot não ecoa valores | Um default seguro em dev vira IP errado no rate limit e TLS desligado em produção sem que nada falhe |
 | D12 | Worker avalia todas as simulações ativas do par no mesmo candle e roteia alertas pelo dono | Um stream de mercado para todos (RNF06) |
+| D15 | Contrato do motor no ADR 0002: estado explícito e serializável (retomada pelo snapshot; migração replica do início), preenchimento com arredondamento sempre contra o usuário, stop no toque e alvo só ao passar, gap preenche na abertura, quantidade calculada no preenchimento a partir do orçamento decidido em `t` | Paridade backtest × ao vivo e retomada sem duplicar viram propriedade testável (`runEngineContract`), não disciplina |
 | D14 | Fear & Greed vem da alternative.me (`sync-fear-greed` no cron, `sentiment_daily`). Os termos exigem crédito: a T5.2, e qualquer tela que exiba o índice, mostra "Fear & Greed Index por alternative.me" com link para https://alternative.me/crypto/fear-and-greed-index/ (RF01) | Termos de uso da fonte; sem o crédito o índice não pode aparecer |
 
 ## 3. Modelo de dados
@@ -63,11 +64,11 @@ type EngineStep = (input: StepInput) => StepResult; // estado entra, estado sai 
 | `telegram_link_codes` | `id`, `user_id` (único), `code_hash` (único), `expires_at`, `attempts`, `created_at` — vínculo do chat por código de uso único; só o hash é guardado |
 | `strategies` | `id uuid`, `user_id`, `name`, `is_example bool`, `created_at` |
 | `strategy_versions` | `id uuid`, `user_id`, `strategy_id`, `version int`, `config jsonb` (validado por Zod), `created_at` |
-| `runs` | `id uuid`, `strategy_version_id`, `kind varchar` (`backtest`/`walk_forward`/`live_paper`), `symbol`, `timeframe`, `period_start/end`, `initial_balance numeric`, `fee_rate`, `slippage_rate`, `status varchar`, `metrics jsonb`, `last_candle_time` |
-| `signals` | `id uuid`, `run_id`, `candle_time`, `action varchar`, `score numeric`, `votes jsonb`, `indicators jsonb`, `reason text` · único (`run_id`, `candle_time`) |
-| `orders` | `id uuid`, `run_id`, `signal_id`, `side`, `type`, `price`, `quantity`, `status`, `created_candle_time`, `expires_candle_time` |
-| `fills` | `id uuid`, `user_id`, `order_id`, `price`, `quantity`, `fee`, `filled_at` |
-| `positions` | `id uuid`, `run_id`, `symbol`, `entry_price`, `quantity`, `stop_price`, `target_price`, `opened_at`, `closed_at`, `exit_reason` |
+| `runs` | `id uuid`, `strategy_version_id`, `kind varchar` (`backtest`/`walk_forward`/`live_paper`), `symbol`, `timeframe`, `period_start/end`, `initial_balance numeric`, `fee_rate`, `slippage_rate`, `status varchar`, `metrics jsonb`, `last_candle_time`, `engine_version varchar`, `engine_state jsonb` (estado canônico do motor, gravado na mesma transação das decisões — ADR 0002 §a) |
+| `signals` | `id uuid`, `run_id`, `candle_time`, `action varchar`, `score numeric`, `regime varchar`, `votes jsonb`, `indicators jsonb`, `reason text` · único (`run_id`, `candle_time`) |
+| `orders` | `id uuid`, `run_id`, `signal_id`, `engine_key varchar` (único com `run_id`), `side`, `type` (`market`/`limit`/`stop`/`target`), `purpose` (`entry`/`exit`), `price`, `limit_price`, `quote_budget numeric`, `quantity`, `status`, `reason`, `created_candle_time`, `eligible_candles`, `expires_candle_time` |
+| `fills` | `id uuid`, `user_id`, `order_id`, `side`, `price`, `quantity`, `notional numeric`, `fee`, `filled_at` |
+| `positions` | `id uuid`, `run_id`, `engine_key varchar` (único com `run_id`), `symbol`, `entry_price`, `quantity`, `stop_price`, `target_price`, `entry_fee`, `exit_price`, `exit_fee`, `net_profit numeric`, `opened_at`, `closed_at`, `exit_reason` (`stop`/`target`/`signal`/`command`) |
 | `equity_points` | `run_id`, `time`, `equity numeric`, `benchmark numeric` |
 | `walk_forward_windows` | `user_id`, `run_id`, `index`, `train_start/end`, `test_start/end`, `best_params jsonb`, `in_sample jsonb`, `out_of_sample jsonb` |
 | `alerts` | `id uuid`, `signal_id`, `channel`, `sent_at`, `status` |
@@ -177,6 +178,9 @@ fora de produção.
 
 - **Contrato do motor**: indicadores contra valores de referência; sem lookahead (mutar candle
   futuro não muda decisão passada); determinismo; stop antes de alvo; taxa e slippage aplicados.
+  Todo motor passa `runEngineContract` (`test/fixtures/strategy-engine/engine-contract.fixture.ts`, ADR
+  0002 §f) e todo indicador passa `expectIndicatorContract`; o harness é provado por doze motores
+  defeituosos que ele reprova pela verificação certa.
 - **Paridade**: o mesmo período rodado em modo backtest e em modo ao vivo reproduzido produz
   operações idênticas.
 - **Integração**: backfill com lacuna; worker reinicia sem duplicar operação; NOTIFY chega ao WS.
