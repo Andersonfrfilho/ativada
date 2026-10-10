@@ -2,51 +2,19 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
-  createFearGreedClient,
-  MarketDataHttpError,
   MarketDataInvalidRequestError,
-  MarketDataNetworkError,
   MarketDataResponseError,
   MarketDataSourceError,
-  MarketDataTimeoutError,
-  type FearGreedClient,
-  type FetchImplementation,
 } from '../packages/market-data/src/index.js';
-import { createFakeClock, type FakeClock } from './fixtures/fake-binance.fixture.js';
+import { buildClient, failureOf } from './fixtures/fear-greed-client.fixture.js';
 import {
   buildFearGreedBody,
   buildFearGreedItem,
-  createFearGreedFetch,
-  FEAR_GREED_BASE_URL,
   loadRealFearGreedResponse,
   type FearGreedReply,
-  type RecordedFearGreedCall,
 } from './fixtures/fear-greed.fixture.js';
 
 const SECRET_MARKER = 'segredo-que-nao-pode-vazar';
-
-function buildClient(
-  script: readonly FearGreedReply[],
-  overrides: Record<string, number> = {},
-): { client: FearGreedClient; clock: FakeClock; calls: RecordedFearGreedCall[] } {
-  const clock = createFakeClock(0);
-  const scripted = createFearGreedFetch(script);
-  const client = createFearGreedClient({
-    baseUrl: FEAR_GREED_BASE_URL,
-    fetchImplementation: scripted.fetchImplementation,
-    sleep: clock.sleep,
-    maxAttempts: 3,
-    backoffBaseMilliseconds: 100,
-    backoffMaxMilliseconds: 150,
-    ...overrides,
-  });
-  return { client, clock, calls: scripted.calls };
-}
-
-async function failureOf(reply: FearGreedReply): Promise<unknown> {
-  const { client } = buildClient([reply], { maxAttempts: 1 });
-  return client.fetchFearGreed({ limit: 5 }).catch((error: unknown) => error);
-}
 
 function bodyWith(item: Record<string, unknown>): FearGreedReply {
   return { status: 200, body: buildFearGreedBody([item]) };
@@ -134,73 +102,5 @@ describe('fear-greed client: third-party responses are never trusted', () => {
       expect(
         await client.fetchFearGreed({ limit }).catch((error: unknown) => error),
       ).toBeInstanceOf(MarketDataInvalidRequestError);
-  });
-});
-
-describe('fear-greed client: transport', () => {
-  test('requests the configured limit (0 means the whole history) in JSON format', async () => {
-    const { client, calls } = buildClient([{ status: 200, body: buildFearGreedBody([]) }]);
-    await client.fetchFearGreed({ limit: 0 });
-    await client.fetchFearGreed({ limit: 14 });
-    expect(calls.map((call) => call.url.searchParams.get('limit'))).toStrictEqual(['0', '14']);
-    expect(calls.every((call) => call.url.searchParams.get('format') === 'json')).toBe(true);
-    expect(calls.every((call) => call.url.pathname === '/fng/')).toBe(true);
-  });
-
-  test('5xx is retried with a capped exponential backoff and stops at the attempt ceiling', async () => {
-    const { client, clock, calls } = buildClient([{ status: 503, body: {} }]);
-    const failure = await client.fetchFearGreed({ limit: 5 }).catch((error: unknown) => error);
-    expect(failure).toBeInstanceOf(MarketDataHttpError);
-    expect(calls).toHaveLength(3);
-    expect(clock.sleeps).toStrictEqual([100, 150]);
-  });
-
-  test('a 5xx followed by success recovers', async () => {
-    const ok = { status: 200, body: buildFearGreedBody([]) };
-    const { client, calls } = buildClient([{ status: 502, body: {} }, ok]);
-    expect(await client.fetchFearGreed({ limit: 5 })).toStrictEqual([]);
-    expect(calls).toHaveLength(2);
-  });
-
-  test('a 4xx is not retried', async () => {
-    const { client, calls } = buildClient([{ status: 400, body: {} }]);
-    expect(
-      await client.fetchFearGreed({ limit: 5 }).catch((error: unknown) => error),
-    ).toBeInstanceOf(MarketDataHttpError);
-    expect(calls).toHaveLength(1);
-  });
-
-  test('a network error is retried and then typed', async () => {
-    const { client, calls } = buildClient([{ error: new TypeError('fetch failed') }]);
-    expect(
-      await client.fetchFearGreed({ limit: 5 }).catch((error: unknown) => error),
-    ).toBeInstanceOf(MarketDataNetworkError);
-    expect(calls).toHaveLength(3);
-  });
-
-  test('a request that outlives requestTimeoutMilliseconds is aborted by its signal', async () => {
-    const hangingFetch: FetchImplementation = (_url, init) =>
-      new Promise<Response>((_resolve, reject) => {
-        init.signal.addEventListener(
-          'abort',
-          () => reject(new DOMException('timed out', 'TimeoutError')),
-          { once: true },
-        );
-      });
-    const client = createFearGreedClient({
-      baseUrl: FEAR_GREED_BASE_URL,
-      fetchImplementation: hangingFetch,
-      sleep: createFakeClock(0).sleep,
-      maxAttempts: 1,
-      requestTimeoutMilliseconds: 20,
-    });
-    expect(
-      await client.fetchFearGreed({ limit: 5 }).catch((error: unknown) => error),
-    ).toBeInstanceOf(MarketDataTimeoutError);
-  });
-
-  test('errors name alternative.me, never Binance', async () => {
-    const failure = await failureOf({ status: 503, body: {} });
-    expect((failure as Error).message).not.toContain('Binance');
   });
 });
