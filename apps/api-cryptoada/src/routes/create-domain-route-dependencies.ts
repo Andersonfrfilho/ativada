@@ -1,14 +1,29 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
   createCandleRepository,
+  createGoalRepository,
   createRunRepository,
   createRunQueueRepository,
   createRunResultRepository,
+  createSentimentObservationRepository,
   createStrategyRepository,
   type DatabaseHandle,
 } from '@cryptoada/database';
 
+import { evaluateGoal } from '@cryptoada/strategy-engine';
+
 import type { Environment } from '../environment.js';
+import { createGoalEvaluationCache } from '../goals/goal-evaluation-cache.js';
+import { createGoalEvaluationUseCase } from '../goals/goal-evaluation.use-case.js';
+import { MAX_GOALS_PER_USER } from '../goals/goal.constant.js';
+import {
+  createCreateGoalUseCase,
+  createDeleteGoalUseCase,
+  createGetGoalUseCase,
+  createListGoalsUseCase,
+  createUpdateGoalUseCase,
+} from '../goals/goal.use-cases.js';
+import type { GoalRouteDependencies } from '../goals/goals.routes.js';
 import { createListCandlesUseCase } from '../markets/list-candles.use-case.js';
 import type { MarketRouteDependencies } from '../markets/markets.routes.js';
 import { createCreateRunUseCase } from '../runs/create-run.use-case.js';
@@ -34,6 +49,7 @@ import type { StrategyRouteDependencies } from '../strategies/strategies.routes.
 export type DomainRouteDependencies = {
   readonly markets: MarketRouteDependencies;
   readonly strategies: StrategyRouteDependencies;
+  readonly goals: GoalRouteDependencies;
   readonly runs: RunRoutesBundle;
 };
 
@@ -53,6 +69,31 @@ function createStrategyDependencies(database: DatabaseHandle): StrategyRouteDepe
     getStrategy: createGetStrategyUseCase(dependencies),
     listVersions: createListVersionsUseCase(dependencies),
     addVersion: createAddVersionUseCase(dependencies),
+  };
+}
+
+function createGoalDependencies(params: DomainRouteParams): GoalRouteDependencies {
+  const { database, environment } = params;
+  const goals = createGoalRepository(database);
+  const dependencies = { goals, maxGoals: MAX_GOALS_PER_USER };
+  return {
+    enabledSymbols: environment.MARKET_SYMBOLS,
+    createGoal: createCreateGoalUseCase(dependencies),
+    listGoals: createListGoalsUseCase(dependencies),
+    getGoal: createGetGoalUseCase(dependencies),
+    updateGoal: createUpdateGoalUseCase(dependencies),
+    deleteGoal: createDeleteGoalUseCase(dependencies),
+    evaluateGoal: createGoalEvaluationUseCase({
+      goals,
+      strategies: createStrategyRepository(database),
+      candles: createCandleRepository(database),
+      sentiments: createSentimentObservationRepository(database),
+      exchange: environment.MARKET_EXCHANGE,
+      symbols: environment.MARKET_SYMBOLS,
+      now: params.now,
+      cache: createGoalEvaluationCache(),
+      evaluate: evaluateGoal,
+    }),
   };
 }
 
@@ -108,6 +149,7 @@ export function createDomainRouteDependencies(params: DomainRouteParams): Domain
       }),
     },
     strategies: createStrategyDependencies(database),
+    goals: createGoalDependencies(params),
     runs: createRunDependencies(params, enabled),
   };
 }

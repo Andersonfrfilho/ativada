@@ -28,6 +28,11 @@ import type * as DocsConstantModule from '../../../apps/api-cryptoada/src/docs/d
 import type * as ErrorCatalogModule from '../../../apps/api-cryptoada/src/shared/errors/error-code-catalog.js';
 import type * as SecurityConstantModule from '../../../apps/api-cryptoada/src/http/http-security.constant.js';
 import type * as StrategyRoutesModule from '../../../apps/api-cryptoada/src/strategies/strategies.routes.js';
+import type * as GoalCandlesModule from '../../../apps/api-cryptoada/src/goals/goal-evaluation-candles.js';
+import type * as GoalCacheModule from '../../../apps/api-cryptoada/src/goals/goal-evaluation-cache.js';
+import type * as GoalEvaluationModule from '../../../apps/api-cryptoada/src/goals/goal-evaluation.use-case.js';
+import type * as GoalRoutesModule from '../../../apps/api-cryptoada/src/goals/goals.routes.js';
+import type * as GoalUseCasesModule from '../../../apps/api-cryptoada/src/goals/goal.use-cases.js';
 import type * as StrategyUseCasesModule from '../../../apps/api-cryptoada/src/strategies/strategy.use-cases.js';
 import type * as SeedExampleModule from '../../../apps/api-cryptoada/src/strategies/seed-example-strategy.use-case.js';
 import type * as SeedingResolverModule from '../../../apps/api-cryptoada/src/strategies/example-seeding-user-resolver.js';
@@ -63,6 +68,11 @@ export type ApiApp = {
   readonly runRoutes: typeof RunRoutesModule;
   readonly strategyRoutes: typeof StrategyRoutesModule;
   readonly strategyUseCases: typeof StrategyUseCasesModule;
+  readonly goalRoutes: typeof GoalRoutesModule;
+  readonly goalUseCases: typeof GoalUseCasesModule;
+  readonly goalEvaluation: typeof GoalEvaluationModule;
+  readonly goalCache: typeof GoalCacheModule;
+  readonly goalCandles: typeof GoalCandlesModule;
   readonly seedExample: typeof SeedExampleModule;
   readonly seedingResolver: typeof SeedingResolverModule;
   readonly openApi: typeof BuildOpenApiModule;
@@ -108,6 +118,11 @@ export async function loadApiApp(): Promise<ApiApp> {
     runRoutes: await load('runs/runs.routes'),
     strategyRoutes: await load('strategies/strategies.routes'),
     strategyUseCases: await load('strategies/strategy.use-cases'),
+    goalRoutes: await load('goals/goals.routes'),
+    goalUseCases: await load('goals/goal.use-cases'),
+    goalEvaluation: await load('goals/goal-evaluation.use-case'),
+    goalCache: await load('goals/goal-evaluation-cache'),
+    goalCandles: await load('goals/goal-evaluation-candles'),
     seedExample: await load('strategies/seed-example-strategy.use-case'),
     seedingResolver: await load('strategies/example-seeding-user-resolver'),
     openApi: await load('openapi/build-openapi-document'),

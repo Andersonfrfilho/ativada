@@ -47,3 +47,15 @@ export const RUN_QUEUE_MUTANT_TARGET: MutantTarget = {
   ],
   sourceVariable: 'API_ROUTES_APP_SOURCE',
 };
+
+export const GOALS_MUTANT_TARGET: MutantTarget = {
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
+  directoryPrefix: 'goals-',
+  judgeTestFiles: [
+    'test/api-goals.contract.test.ts',
+    'test/api-goal-evaluation.contract.test.ts',
+    'test/api-openapi.contract.test.ts',
+  ],
+  sourceVariable: 'API_ROUTES_APP_SOURCE',
+};

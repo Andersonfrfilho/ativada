@@ -54,11 +54,19 @@ export type CallParams = {
   readonly rawBody?: string;
 };
 
+// O que as rotas extras de um teste compartilham com as do harness: os mesmos repositórios em memória e o mesmo relógio.
+export type HarnessParts = {
+  readonly strategies: InMemoryStrategies;
+  readonly candles: InMemoryCandles;
+  readonly clock: { now: number };
+};
+
 export type RunsHarnessOptions = {
   readonly queuePerUserLimit?: number;
   readonly candles?: readonly CandleRecord[];
   readonly csvLimits?: { maxRows?: number; maxDurationMilliseconds?: number };
-  readonly extraRoutes?: (app: ApiApp) => readonly Route[];
+  readonly extraRoutes?: (app: ApiApp, parts: HarnessParts) => readonly Route[];
+  readonly symbols?: readonly string[];
 };
 
 export type RunsHarness = {
@@ -121,7 +129,10 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
   const failures = { candles: false, queuePosition: false };
   const clock = { now: NOW };
   const reportedErrors: unknown[] = [];
-  const enabled = { symbols: [...ENABLED_SYMBOLS], timeframes: [...ENABLED_TIMEFRAMES] };
+  const enabled = {
+    symbols: [...(options.symbols ?? ENABLED_SYMBOLS)],
+    timeframes: [...ENABLED_TIMEFRAMES],
+  };
   const scopeOf = (subject: string): OwnerScope =>
     createOwnerScope(userIdFromDatabase(USER_IDS[subject] ?? USER_A_ID));
   const dispatcher = {
@@ -191,7 +202,7 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
         ...(options.csvLimits === undefined ? {} : { limits: options.csvLimits }),
       }),
     ),
-    ...(options.extraRoutes?.(app) ?? []),
+    ...(options.extraRoutes?.(app, { strategies, candles, clock }) ?? []),
   ];
   const verifyAccessToken = app.tokenVerifier.createAccessTokenVerifier({
     settings: {

@@ -51,6 +51,15 @@ export function buildApiRouteDependencies(
       listVersions: notUsed,
       addVersion: notUsed,
     },
+    goals: {
+      enabledSymbols: ENABLED_MARKETS.symbols,
+      createGoal: notUsed,
+      listGoals: notUsed,
+      getGoal: notUsed,
+      updateGoal: notUsed,
+      deleteGoal: notUsed,
+      evaluateGoal: notUsed,
+    },
     runs: {
       routes: {
         enabled: ENABLED_MARKETS,
