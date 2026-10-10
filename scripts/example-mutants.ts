@@ -32,9 +32,9 @@ const MUTANTS: readonly DatabaseMutant[] = [
     edits: [
       {
         file: SEED,
-        find: '        id: Bun.randomUUIDv7(),\n        userId: scope.ownerUserId,\n        name: params.name,\n        isExample: true,',
+        find: '      id: Bun.randomUUIDv7(),\n      userId: scope.ownerUserId,\n      name: params.name,\n      isExample: true,',
         replace:
-          "        id: '0192f3a1-7c4e-7b2a-9d3f-5e6a7b8c9d00',\n        userId: scope.ownerUserId,\n        name: params.name,\n        isExample: true,",
+          "      id: '0192f3a1-7c4e-7b2a-9d3f-5e6a7b8c9d00',\n      userId: scope.ownerUserId,\n      name: params.name,\n      isExample: true,",
       },
     ],
   },
