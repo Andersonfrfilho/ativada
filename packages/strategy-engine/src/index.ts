@@ -136,6 +136,11 @@ export {
   type StoredSentimentObservation,
 } from './sentiment.js';
 export { ruleLabel } from './rule-label.js';
+export { computePositionSize } from './risk/position-size.js';
+export { computeProtectivePrices } from './risk/protective-prices.js';
+export * from './risk/risk.constant.js';
+export type * from './risk/risk.types.js';
+export { warnRunParameters } from './risk/run-parameter-warnings.js';
 export {
   evaluateScoreboard,
   type ScoreboardEvaluation,

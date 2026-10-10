@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { posix } from 'node:path';
+
 import { describe, expect, test } from 'bun:test';
 
 import {
@@ -78,6 +80,12 @@ function findImpurity(text: string): RegExp | undefined {
 
 type Manifest = { readonly dependencies?: Readonly<Record<string, string>> };
 
+// Relativo que continua dentro de `src` (o subdiretório `risk/` importa `../engine-decimal.js`).
+function isInsideEngine(path: string, specifier: string): boolean {
+  if (!specifier.startsWith('.')) return false;
+  return !posix.join(posix.dirname(path), specifier).startsWith('..');
+}
+
 async function readEngineSources(): Promise<readonly { path: string; text: string }[]> {
   const sources: { path: string; text: string }[] = [];
   for await (const relativePath of new Bun.Glob('**/*.ts').scan({
@@ -103,7 +111,9 @@ describe('strategy engine boundary', () => {
     const offending = (await readEngineSources()).flatMap(({ path, text }) =>
       [...text.matchAll(IMPORT_PATTERN)]
         .map((match) => match[1] ?? '')
-        .filter((specifier) => !specifier.startsWith('./') && !ALLOWED_IMPORTS.includes(specifier))
+        .filter(
+          (specifier) => !isInsideEngine(path, specifier) && !ALLOWED_IMPORTS.includes(specifier),
+        )
         .map((specifier) => `${path}: ${specifier}`),
     );
     expect(offending).toStrictEqual([]);

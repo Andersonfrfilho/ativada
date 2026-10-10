@@ -8,9 +8,8 @@ import {
 } from '../../../packages/strategy-engine/src/index.js';
 import { REFERENCE_ENGINE_DEFECT } from './reference-engine-defect.fixture.js';
 import { requireText, type WalletContext, type WalletDraft } from './reference-orders.fixture.js';
+import { referencePositionSize } from './risk/reference-risk.fixture.js';
 import {
-  buyDebit,
-  lossAtStop,
   marketSellPrice,
   formatEngineDecimal,
   stepDown,
@@ -96,27 +95,44 @@ function isSizedWrong(input: SizingInput): boolean {
   );
 }
 
-// Arredondamento de dinheiro pode passar o teto por centavos de satoshi: desce passo a passo até caber
-// no caixa e no valor em risco (a perda realizada no stop, com as mesmas regras do preenchimento).
-function fitQuantity(
-  input: SizingInput,
-  quantity: EngineDecimalValue,
-  stop: EngineDecimalValue,
-): EngineDecimalValue {
+type SizedQuantity = { readonly quantity: EngineDecimalValue; readonly isVolumeCapped: boolean };
+
+// Motores defeituosos de tamanho: fórmulas erradas de propósito, sem a folga de arredondamento.
+function sizeWrongly(input: SizingInput, stop: EngineDecimalValue): SizedQuantity {
   const { run } = input.context;
-  if (isSizedWrong(input)) return quantity;
-  const cash = toEngineDecimal(input.draft.state.cash);
   const riskAmount = toEngineDecimal(requireText(input.order.riskAmount, 'valor em risco'));
-  const stopExit = marketSellPrice(formatEngineDecimal(stop), run);
-  const step = toEngineDecimal(run.quantityStep);
-  let fitted = quantity;
-  const exceeds = (candidate: EngineDecimalValue): boolean =>
-    buyDebit(candidate.times(input.price), run).greaterThan(cash) ||
-    lossAtStop({ quantity: candidate, entryPrice: input.price, stopExit, run }).greaterThan(
-      riskAmount,
-    );
-  while (fitted.greaterThan(0) && exceeds(fitted)) fitted = fitted.minus(step);
-  return fitted;
+  const byRisk = stepDown(riskAmount.dividedBy(riskPerUnit(input, stop)), run);
+  const byVolume = stepDown(volumeOfSizing(input).times(run.maxVolumeShare), run);
+  const unbounded = EngineDecimal.min(byRisk, cashBound(input));
+  return {
+    quantity: EngineDecimal.min(unbounded, byVolume),
+    isVolumeCapped: byVolume.lessThan(unbounded),
+  };
+}
+
+// Caminho correto: o oráculo puro do risco (a mesma fórmula que a produção, T2.4, é provada contra).
+function sizeCorrectly(input: SizingInput, stop: EngineDecimalValue): SizedQuantity {
+  const { run, config } = input.context;
+  const cash = input.draft.state.cash;
+  const result = referencePositionSize({
+    riskAmount: requireText(input.order.riskAmount, 'valor em risco'),
+    entryPrice: formatEngineDecimal(input.price),
+    stopPrice: formatEngineDecimal(stop),
+    feeRate: run.feeRate,
+    slippageRate: run.slippageRate,
+    cash,
+    equity: cash,
+    maxExposureRate: config.risk.maxExposureRate,
+    candleVolume: formatEngineDecimal(volumeOfSizing(input)),
+    maxVolumeShare: run.maxVolumeShare,
+    quantityStep: run.quantityStep,
+    tickSize: run.tickSize,
+    minNotional: run.minNotional,
+  });
+  return {
+    quantity: toEngineDecimal(result.quantity),
+    isVolumeCapped: result.constraint === ORDER_EVENT_REASON.VOLUME_CAPPED,
+  };
 }
 
 export function sizeEntry(input: SizingInput): SizedEntry | RejectedEntry {
@@ -130,21 +146,16 @@ export function sizeEntry(input: SizingInput): SizedEntry | RejectedEntry {
   if (stop.lte(0) || stop.gte(highestStop)) {
     return { kind: 'rejected', reason: ORDER_EVENT_REASON.INVALID_STOP };
   }
-  const riskAmount = toEngineDecimal(requireText(input.order.riskAmount, 'valor em risco'));
-  const byRisk = stepDown(riskAmount.dividedBy(riskPerUnit(input, stop)), run);
-  const byCash = cashBound(input);
-  const byVolume = stepDown(volumeOfSizing(input).times(run.maxVolumeShare), run);
-  const unbounded = EngineDecimal.min(byRisk, byCash);
-  const quantity = fitQuantity(input, EngineDecimal.min(unbounded, byVolume), stop);
-  if (quantity.lte(0) || quantity.times(input.price).lessThan(run.minNotional)) {
+  const sized = isSizedWrong(input) ? sizeWrongly(input, stop) : sizeCorrectly(input, stop);
+  if (sized.quantity.lte(0) || sized.quantity.times(input.price).lessThan(run.minNotional)) {
     return { kind: 'rejected', reason: ORDER_EVENT_REASON.BELOW_MIN_NOTIONAL };
   }
   const targetDistance = requireText(input.order.targetDistance, 'distância do alvo');
   return {
     kind: 'sized',
-    quantity,
+    quantity: sized.quantity,
     stop,
     target: tickUp(base.plus(targetDistance), run),
-    isVolumeCapped: byVolume.lessThan(unbounded),
+    isVolumeCapped: sized.isVolumeCapped,
   };
 }
