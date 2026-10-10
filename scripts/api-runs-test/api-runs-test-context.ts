@@ -30,6 +30,8 @@ export type CallParams = {
   readonly subject?: string;
   // Declarações extras do token (por exemplo, o papel `admin` e `acr`).
   readonly claims?: Readonly<Record<string, unknown>>;
+  // Validade do access token em segundos (o padrão é 5 min): o stream fecha o socket quando o token vence.
+  readonly lifetimeSeconds?: number;
   readonly method?: string;
   readonly path: string;
   readonly body?: unknown;
@@ -62,7 +64,13 @@ async function request(
   if (params.subject !== undefined) {
     headers.set(
       'Authorization',
-      `Bearer ${await signTestToken({ key, claims: { sub: params.subject, ...params.claims } })}`,
+      `Bearer ${await signTestToken({
+        key,
+        claims: { sub: params.subject, ...params.claims },
+        ...(params.lifetimeSeconds === undefined
+          ? {}
+          : { lifetimeSeconds: params.lifetimeSeconds }),
+      })}`,
     );
   }
   const response = await fetch(`${baseUrl}${params.path}`, {
