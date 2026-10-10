@@ -290,7 +290,10 @@ const MESSAGE_MUTANTS: readonly SourceMutant[] = [
       '    socket.close(WEBSOCKET_CLOSE_CODE.POLICY_VIOLATION, CLOSE_REASON.MESSAGE_FLOOD);\n    return;',
     ),
   },
-  { name: 'CLIENT_MESSAGE_NOT_STRICT', edits: edit(SCHEMA, 'z.strictObject({', 'z.object({') },
+  {
+    name: 'CLIENT_MESSAGE_NOT_STRICT',
+    edits: [{ file: SCHEMA, find: 'z.strictObject({', replace: 'z.object({', occurrences: 3 }],
+  },
 ];
 
 const ENDPOINT_MUTANTS: readonly SourceMutant[] = [
