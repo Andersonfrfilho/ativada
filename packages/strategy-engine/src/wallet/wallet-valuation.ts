@@ -36,7 +36,7 @@ export function buyBenchmark(draft: WalletDraft, context: WalletContext): void {
   };
 }
 
-function benchmarkValue(draft: WalletDraft, context: WalletContext): string {
+export function benchmarkValue(draft: WalletDraft, context: WalletContext): string {
   const { benchmark } = draft.state;
   const { parameters, candle } = context;
   if (benchmark === null) return parameters.initialBalance;
