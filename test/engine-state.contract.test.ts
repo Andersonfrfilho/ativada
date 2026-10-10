@@ -2,14 +2,12 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
-  assertStepInput,
   canonicalJson,
   createInitialEngineState,
   decimalFromIndicator,
   deserializeEngineState,
   ENGINE_STATE_ERROR_CODE,
   EngineDecimal,
-  EngineInputError,
   EngineStateError,
   formatEngineDecimal,
   ROUNDING_DIRECTION,
@@ -17,31 +15,42 @@ import {
   roundToIncrement,
   serializeEngineState,
   type EngineState,
-  type StepInput,
+  type OpenPositionState,
+  type PendingOrderState,
 } from '../packages/strategy-engine/src/index.js';
 import {
-  buildCandles,
+  buildReferenceRun,
   buildReferenceStrategy,
 } from './fixtures/strategy-engine/engine-scenarios.fixture.js';
 
 const ENGINE_VERSION = 'contract-test-1';
 const STRATEGY = buildReferenceStrategy({ orderType: 'market' });
-const [FIRST_CANDLE, SECOND_CANDLE] = buildCandles([
-  ['100', '101', '99', '100'],
-  ['100', '101', '99', '100'],
-]);
-
-function requireCandle<TValue>(value: TValue | undefined): TValue {
-  if (value === undefined) throw new Error('Candle ausente.');
-  return value;
-}
+const RUN = buildReferenceRun();
+const LEAD_IN = 3;
 
 function initialState(): EngineState {
   return createInitialEngineState({
     strategy: STRATEGY,
+    run: RUN,
     engineVersion: ENGINE_VERSION,
-    leadInCandles: 9,
+    leadInCandles: LEAD_IN,
   });
+}
+
+// Estado depois de N candles com o aquecimento concluído (régua comprada se passou do aquecimento).
+function tradingState(processedCandles: number): EngineState {
+  const state = initialState();
+  const lastCandleOpenTime = processedCandles * 3_600_000;
+  return {
+    ...state,
+    signal: { ...state.signal, processedCandles, lastCandleOpenTime },
+    wallet: {
+      ...state.wallet,
+      lastCandleOpenTime,
+      firstSignalCandleOpenTime: processedCandles >= LEAD_IN ? 3 * 3_600_000 : null,
+      benchmark: processedCandles > LEAD_IN ? { quantity: '1', cash: '1' } : null,
+    },
+  };
 }
 
 function captureStateError(run: () => unknown): EngineStateError {
@@ -54,16 +63,7 @@ function captureStateError(run: () => unknown): EngineStateError {
   throw new Error('Deveria ter falhado com EngineStateError.');
 }
 
-function stepInput(overrides: Partial<StepInput>): StepInput {
-  return {
-    strategy: STRATEGY,
-    state: initialState(),
-    candle: requireCandle(FIRST_CANDLE),
-    ...overrides,
-  };
-}
-
-const OPEN_POSITION = {
+const OPEN_POSITION: OpenPositionState = {
   positionKey: 'position-1',
   openedCandleOpenTime: 0,
   entryPrice: '100.05',
@@ -73,29 +73,66 @@ const OPEN_POSITION = {
   entryFee: '0.1',
 };
 
+const PENDING_BUY: PendingOrderState = {
+  orderKey: 'order-1',
+  side: 'buy',
+  type: 'market',
+  purpose: 'entry',
+  createdCandleOpenTime: 0,
+  limitPrice: null,
+  riskAmount: '100',
+  stopDistance: '4',
+  targetDistance: '6',
+  eligibleCandles: null,
+  filledQuantity: '0',
+  exitReason: null,
+};
+
+const PENDING_SELL: PendingOrderState = {
+  ...PENDING_BUY,
+  side: 'sell',
+  purpose: 'exit',
+  riskAmount: null,
+  stopDistance: null,
+  targetDistance: null,
+  exitReason: 'signal',
+};
+
+function withWallet(patch: Partial<EngineState['wallet']>): EngineState {
+  const state = tradingState(5);
+  return { ...state, wallet: { ...state.wallet, ...patch } };
+}
+
 describe('engine state', () => {
-  test('starts empty, bound to the strategy version and the engine version', () => {
+  test('starts empty, bound to the strategy version, the run parameters and the engine version', () => {
     expect(initialState()).toStrictEqual({
       version: 1,
       engineVersion: ENGINE_VERSION,
       configHash: STRATEGY.configHash,
-      leadInCandles: 9,
-      processedCandles: 0,
-      lastCandleOpenTime: null,
-      sequence: 0,
-      isHalted: false,
-      cash: '10000',
-      position: null,
-      pendingOrder: null,
-      benchmark: null,
-      indicators: {},
+      runHash: RUN.runHash,
+      signal: { leadInCandles: 3, processedCandles: 0, lastCandleOpenTime: null, indicators: {} },
+      wallet: {
+        keyPrefix: '',
+        lastCandleOpenTime: null,
+        firstSignalCandleOpenTime: null,
+        sequence: 0,
+        isHalted: false,
+        cash: '10000',
+        position: null,
+        pendingOrder: null,
+        benchmark: null,
+      },
     });
   });
 
   test('round-trips through canonical JSON byte for byte', () => {
-    const state = { ...initialState(), indicators: { ema: { value: 0.1 + 0.2, count: 3 } } };
+    const base = initialState();
+    const state = {
+      ...base,
+      signal: { ...base.signal, indicators: { 'risk:atr': { value: 0.1 + 0.2 } } },
+    };
     const text = serializeEngineState(state);
-    expect(text.startsWith('{"benchmark":null,"cash":"10000","configHash":')).toBe(true);
+    expect(text.startsWith('{"configHash":')).toBe(true);
     expect(deserializeEngineState(text)).toStrictEqual(state);
     expect(serializeEngineState(deserializeEngineState(text))).toBe(text);
   });
@@ -114,90 +151,92 @@ describe('engine state', () => {
     ).toBe(ENGINE_STATE_ERROR_CODE.INVALID_STATE);
   });
 
-  test('rejects states that break the single-position invariants', () => {
-    const pendingBuy = {
-      orderKey: 'order-1',
-      side: 'buy',
-      type: 'market',
-      purpose: 'entry',
-      createdCandleOpenTime: 0,
-      limitPrice: null,
-      quoteBudget: '100',
-      stopDistance: '4',
-      targetDistance: '6',
-      eligibleCandles: null,
-      exitReason: null,
-    } as const;
-    const withBoth = { ...initialState(), position: OPEN_POSITION, pendingOrder: pendingBuy };
-    const pendingSellWithoutPosition = {
-      ...initialState(),
-      pendingOrder: { ...pendingBuy, side: 'sell', purpose: 'exit', exitReason: 'signal' },
-    } as const;
-    const processedWithoutTime = { ...initialState(), processedCandles: 1 };
-    for (const broken of [withBoth, pendingSellWithoutPosition, processedWithoutTime]) {
-      expect(captureStateError(() => serializeEngineState(broken)).code).toBe(
-        ENGINE_STATE_ERROR_CODE.INVALID_STATE,
-      );
+  test('accepts the valid shapes the invariants allow', () => {
+    for (const valid of [
+      withWallet({ position: OPEN_POSITION }),
+      withWallet({ pendingOrder: PENDING_BUY }),
+      withWallet({ position: OPEN_POSITION, pendingOrder: PENDING_SELL }),
+      withWallet({
+        pendingOrder: { ...PENDING_BUY, type: 'limit', limitPrice: '99', eligibleCandles: 2 },
+      }),
+      tradingState(3),
+    ]) {
+      expect(() => serializeEngineState(valid)).not.toThrow();
+    }
+  });
+
+  test('rejects every state that breaks an invariant (R4)', () => {
+    const broken: readonly (readonly [string, EngineState])[] = [
+      ['entrada com posição', withWallet({ position: OPEN_POSITION, pendingOrder: PENDING_BUY })],
+      ['saída sem posição', withWallet({ pendingOrder: PENDING_SELL })],
+      [
+        'processado sem tempo',
+        { ...initialState(), signal: { ...initialState().signal, processedCandles: 1 } },
+      ],
+      ['caixa negativo', withWallet({ cash: '-0.01' })],
+      ['quantidade zero', withWallet({ position: { ...OPEN_POSITION, quantity: '0' } })],
+      ['stop acima da entrada', withWallet({ position: { ...OPEN_POSITION, stopPrice: '101' } })],
+      [
+        'alvo abaixo da entrada',
+        withWallet({ position: { ...OPEN_POSITION, targetPrice: '100' } }),
+      ],
+      [
+        'limitada sem preço',
+        withWallet({ pendingOrder: { ...PENDING_BUY, type: 'limit', eligibleCandles: 2 } }),
+      ],
+      [
+        'mercado com validade',
+        withWallet({ pendingOrder: { ...PENDING_BUY, eligibleCandles: 2 } }),
+      ],
+      ['entrada sem risco', withWallet({ pendingOrder: { ...PENDING_BUY, riskAmount: null } })],
+      [
+        'saída sem motivo',
+        withWallet({
+          position: OPEN_POSITION,
+          pendingOrder: { ...PENDING_SELL, exitReason: null },
+        }),
+      ],
+      ['decimal com zero à esquerda', withWallet({ cash: '00.10' })],
+      ['decimal com zero à direita', withWallet({ cash: '1.0' })],
+      ['zero negativo', withWallet({ position: { ...OPEN_POSITION, entryFee: '-0' } })],
+      [
+        'régua sem aquecimento',
+        {
+          ...tradingState(3),
+          wallet: { ...tradingState(3).wallet, benchmark: { quantity: '1', cash: '1' } },
+        },
+      ],
+      ['régua faltando depois do aquecimento', withWallet({ benchmark: null })],
+      ['metades em candles diferentes', withWallet({ lastCandleOpenTime: 1 })],
+      [
+        'sinal antes do aquecimento',
+        { ...tradingState(2), wallet: { ...tradingState(2).wallet, firstSignalCandleOpenTime: 0 } },
+      ],
+      ['prefixo de chave inválido', withWallet({ keyPrefix: 'W 3' })],
+    ];
+    for (const [label, state] of broken) {
+      const error = captureStateError(() => serializeEngineState(state));
+      expect([label, error.code]).toStrictEqual([label, ENGINE_STATE_ERROR_CODE.INVALID_STATE]);
     }
   });
 
   test('never serializes something that would not come back the same', () => {
+    const base = initialState();
     const withMap = {
-      ...initialState(),
-      indicators: { cache: new Map() },
+      ...base,
+      signal: { ...base.signal, indicators: { cache: new Map() } },
     } as unknown as EngineState;
     const withDecimal = {
-      ...initialState(),
-      cash: new EngineDecimal('1'),
+      ...base,
+      wallet: { ...base.wallet, cash: new EngineDecimal('1') },
     } as unknown as EngineState;
-    const withUndefined = { ...initialState(), benchmark: undefined } as unknown as EngineState;
+    const withUndefined = {
+      ...base,
+      wallet: { ...base.wallet, benchmark: undefined },
+    } as unknown as EngineState;
     for (const broken of [withMap, withDecimal, withUndefined]) {
       expect(() => serializeEngineState(broken)).toThrow(EngineStateError);
     }
-  });
-});
-
-describe('step input guard', () => {
-  test('accepts the next candle and a sentiment observed up to the close', () => {
-    const candle = requireCandle(FIRST_CANDLE);
-    const sentiment = { value: 40, observedAt: candle.closeTime };
-    expect(() =>
-      assertStepInput({ input: stepInput({ sentiment }), engineVersion: ENGINE_VERSION }),
-    ).not.toThrow();
-  });
-
-  test('refuses what would break the contract', () => {
-    const first = requireCandle(FIRST_CANDLE);
-    const second = requireCandle(SECOND_CANDLE);
-    const processed = {
-      ...initialState(),
-      processedCandles: 1,
-      lastCandleOpenTime: second.openTime,
-    };
-    const inputs: readonly StepInput[] = [
-      stepInput({ strategy: { ...STRATEGY, configHash: 'f'.repeat(64) } }),
-      stepInput({ candle: { ...first, symbol: 'ETHUSDT' } }),
-      stepInput({ candle: { ...first, timeframe: '4h' } }),
-      stepInput({
-        candle: { ...first, openTime: first.openTime + 1, closeTime: first.closeTime + 1 },
-      }),
-      stepInput({ candle: { ...first, closeTime: first.closeTime + 1 } }),
-      stepInput({ state: processed, candle: second }),
-      stepInput({ state: processed, candle: first }),
-      stepInput({ sentiment: { value: 40, observedAt: first.closeTime + 1 } }),
-    ];
-    for (const input of inputs) {
-      expect(() => assertStepInput({ input, engineVersion: ENGINE_VERSION })).toThrow(
-        EngineInputError,
-      );
-    }
-  });
-
-  test('refuses a state written by another engine version', () => {
-    const error = captureStateError(() =>
-      assertStepInput({ input: stepInput({}), engineVersion: 'other-2' }),
-    );
-    expect(error.code).toBe(ENGINE_STATE_ERROR_CODE.ENGINE_MISMATCH);
   });
 });
 

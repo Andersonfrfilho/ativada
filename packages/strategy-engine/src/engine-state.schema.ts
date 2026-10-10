@@ -1,86 +1,71 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { z } from '@cryptoada/environment';
+import { z } from 'zod';
 
-import { DECIMAL_STATE_TEXT_SCHEMA } from './decimal-text.schema.js';
-import { CUSTOM_ISSUE_CODE, ENGINE_STATE_VERSION } from './engine.constant.js';
+import { ENGINE_STATE_VERSION } from './engine.constant.js';
+import type { EngineState } from './engine-state.types.js';
 import {
-  ENTRY_ORDER_TYPE,
-  EXIT_REASON,
-  ORDER_PURPOSE,
-  ORDER_SIDE,
-} from './engine-vocabulary.constant.js';
+  COUNT_SCHEMA,
+  type IssueSink,
+  reportIssue,
+  TIME_SCHEMA,
+  WALLET_STATE_SCHEMA,
+} from './wallet-state.schema.js';
 
-const PENDING_ORDER_PATH = ['pendingOrder'];
-const TIME_SCHEMA = z.number().int().nonnegative();
-const COUNT_SCHEMA = z.number().int().nonnegative();
-const KEY_SCHEMA = z.string().min(1).max(64);
+const HASH_SCHEMA = z.string().regex(/^[0-9a-f]{64}$/);
 
-const OPEN_POSITION_SCHEMA = z.strictObject({
-  positionKey: KEY_SCHEMA,
-  openedCandleOpenTime: TIME_SCHEMA,
-  entryPrice: DECIMAL_STATE_TEXT_SCHEMA,
-  quantity: DECIMAL_STATE_TEXT_SCHEMA,
-  stopPrice: DECIMAL_STATE_TEXT_SCHEMA,
-  targetPrice: DECIMAL_STATE_TEXT_SCHEMA,
-  entryFee: DECIMAL_STATE_TEXT_SCHEMA,
-});
+const SIGNAL_STATE_SCHEMA = z
+  .strictObject({
+    leadInCandles: z.number().int().positive(),
+    processedCandles: COUNT_SCHEMA,
+    lastCandleOpenTime: TIME_SCHEMA.nullable(),
+    indicators: z.record(z.string(), z.json()),
+  })
+  .superRefine((signal, context) => {
+    if ((signal.processedCandles === 0) !== (signal.lastCandleOpenTime === null)) {
+      reportIssue(
+        context,
+        ['lastCandleOpenTime'],
+        'lastCandleOpenTime é nulo se, e só se, nenhum candle foi processado.',
+      );
+    }
+  });
 
-const PENDING_ORDER_SCHEMA = z.strictObject({
-  orderKey: KEY_SCHEMA,
-  side: z.enum(ORDER_SIDE),
-  type: z.enum(ENTRY_ORDER_TYPE),
-  purpose: z.enum(ORDER_PURPOSE),
-  createdCandleOpenTime: TIME_SCHEMA,
-  limitPrice: DECIMAL_STATE_TEXT_SCHEMA.nullable(),
-  quoteBudget: DECIMAL_STATE_TEXT_SCHEMA.nullable(),
-  stopDistance: DECIMAL_STATE_TEXT_SCHEMA.nullable(),
-  targetDistance: DECIMAL_STATE_TEXT_SCHEMA.nullable(),
-  eligibleCandles: COUNT_SCHEMA.nullable(),
-  exitReason: z.enum(EXIT_REASON).nullable(),
-});
-
-const BENCHMARK_SCHEMA = z.strictObject({
-  quantity: DECIMAL_STATE_TEXT_SCHEMA,
-  cash: DECIMAL_STATE_TEXT_SCHEMA,
-});
+// As duas metades andam juntas: mesmo último candle, sinal começa ao fim do aquecimento e a régua
+// "comprar e segurar" existe se, e só se, o aquecimento terminou antes do último candle.
+function checkHalvesAgree(state: EngineState, context: IssueSink): void {
+  const { signal, wallet } = state;
+  if (wallet.lastCandleOpenTime !== signal.lastCandleOpenTime) {
+    reportIssue(
+      context,
+      ['wallet', 'lastCandleOpenTime'],
+      'Carteira e sinal em candles diferentes.',
+    );
+  }
+  const isWarm = signal.processedCandles >= signal.leadInCandles;
+  if (isWarm !== (wallet.firstSignalCandleOpenTime !== null)) {
+    reportIssue(
+      context,
+      ['wallet', 'firstSignalCandleOpenTime'],
+      'Início do sinal fora do aquecimento.',
+    );
+  }
+  const isPastWarmup = signal.processedCandles > signal.leadInCandles;
+  if (isPastWarmup !== (wallet.benchmark !== null)) {
+    reportIssue(
+      context,
+      ['wallet', 'benchmark'],
+      'Régua existe se, e só se, o aquecimento terminou.',
+    );
+  }
+}
 
 export const ENGINE_STATE_SCHEMA = z
   .strictObject({
     version: z.literal(ENGINE_STATE_VERSION),
-    engineVersion: KEY_SCHEMA,
-    configHash: z.string().regex(/^[0-9a-f]{64}$/),
-    leadInCandles: z.number().int().positive(),
-    processedCandles: COUNT_SCHEMA,
-    lastCandleOpenTime: TIME_SCHEMA.nullable(),
-    sequence: COUNT_SCHEMA,
-    isHalted: z.boolean(),
-    cash: DECIMAL_STATE_TEXT_SCHEMA,
-    position: OPEN_POSITION_SCHEMA.nullable(),
-    pendingOrder: PENDING_ORDER_SCHEMA.nullable(),
-    benchmark: BENCHMARK_SCHEMA.nullable(),
-    indicators: z.record(z.string(), z.json()),
+    engineVersion: z.string().min(1).max(64),
+    configHash: HASH_SCHEMA,
+    runHash: HASH_SCHEMA,
+    signal: SIGNAL_STATE_SCHEMA,
+    wallet: WALLET_STATE_SCHEMA,
   })
-  .superRefine((state, context) => {
-    if ((state.processedCandles === 0) !== (state.lastCandleOpenTime === null)) {
-      context.addIssue({
-        code: CUSTOM_ISSUE_CODE,
-        message: 'lastCandleOpenTime é nulo se, e só se, nenhum candle foi processado.',
-        path: ['lastCandleOpenTime'],
-      });
-    }
-    const pendingSide = state.pendingOrder?.side;
-    if (pendingSide === ORDER_SIDE.BUY && state.position !== null) {
-      context.addIssue({
-        code: CUSTOM_ISSUE_CODE,
-        message: 'Entrada pendente com posição aberta.',
-        path: PENDING_ORDER_PATH,
-      });
-    }
-    if (pendingSide === ORDER_SIDE.SELL && state.position === null) {
-      context.addIssue({
-        code: CUSTOM_ISSUE_CODE,
-        message: 'Saída pendente sem posição.',
-        path: PENDING_ORDER_PATH,
-      });
-    }
-  });
+  .superRefine((state, context) => checkHalvesAgree(state, context));

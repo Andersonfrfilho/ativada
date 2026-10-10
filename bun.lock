@@ -85,8 +85,8 @@
       "name": "@cryptoada/strategy-engine",
       "version": "0.0.0",
       "dependencies": {
-        "@cryptoada/environment": "workspace:*",
         "decimal.js": "10.6.0",
+        "zod": "4.6.5",
       },
     },
   },

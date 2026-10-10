@@ -73,10 +73,16 @@ export const ORDER_EVENT_REASON = {
   INVALID_STOP: 'invalid_stop',
   OPPOSITE_SIGNAL: 'opposite_signal',
   COMMAND: EXIT_REASON.COMMAND,
+  // Preenchimento reduzido à participação máxima no volume do candle (a ordem continua `filled`).
+  VOLUME_CAPPED: 'volume_capped',
 } as const;
 export type OrderEventReason = (typeof ORDER_EVENT_REASON)[keyof typeof ORDER_EVENT_REASON];
 
-export const COMMAND_KIND = { EXIT_POSITION: 'exit_position', HALT: 'halt' } as const;
+export const COMMAND_KIND = {
+  EXIT_POSITION: 'exit_position',
+  HALT: 'halt',
+  RESUME: 'resume',
+} as const;
 export type CommandKind = (typeof COMMAND_KIND)[keyof typeof COMMAND_KIND];
 
 export const COMMAND_REASON = {
@@ -85,6 +91,8 @@ export const COMMAND_REASON = {
   GOAL_EXPIRED: 'goal_expired',
   USER_STOP: 'user_stop',
   KILL_SWITCH: 'kill_switch',
+  WINDOW_END: 'window_end',
+  USER_RESUME: 'user_resume',
 } as const;
 export type CommandReason = (typeof COMMAND_REASON)[keyof typeof COMMAND_REASON];
 
@@ -93,3 +101,12 @@ export type EntryOrderType = (typeof ENTRY_ORDER_TYPE)[keyof typeof ENTRY_ORDER_
 
 export const REGIME_FILTER_KIND = { NONE: REGIME.NONE, ADX: 'adx' } as const;
 export type RegimeFilterKind = (typeof REGIME_FILTER_KIND)[keyof typeof REGIME_FILTER_KIND];
+
+// Fatos da corretora (spec 002) que entram no passo como dado: o passo continua puro.
+export const EXECUTION_REPORT_KIND = {
+  FILL: 'fill',
+  ORDER_REJECTED: 'order_rejected',
+  POSITION_CLOSED_EXTERNALLY: 'position_closed_externally',
+} as const;
+export type ExecutionReportKind =
+  (typeof EXECUTION_REPORT_KIND)[keyof typeof EXECUTION_REPORT_KIND];

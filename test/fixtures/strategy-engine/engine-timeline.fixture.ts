@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type {
-  ExecutionConfig,
   FillDecision,
   OpenedPositionDecision,
   OrderEvent,
+  RunParameters,
 } from '../../../packages/strategy-engine/src/index.js';
 import type { EngineRun, EngineScenario, RecordedStep } from './engine-contract-types.fixture.js';
 
@@ -16,7 +16,7 @@ export type TimelineEntry = {
 export type Timeline = {
   readonly entries: readonly TimelineEntry[];
   readonly createdOrders: ReadonlyMap<string, OrderEvent & { readonly createdIndex: number }>;
-  readonly execution: ExecutionConfig;
+  readonly run: RunParameters;
 };
 
 function registerCreatedOrders(
@@ -42,7 +42,7 @@ export function buildTimeline(scenario: EngineScenario, run: EngineRun): Timelin
     for (const closed of step.result.decisions.closedPositions) alive.delete(closed.positionKey);
     return entry;
   });
-  return { entries, createdOrders, execution: scenario.strategy.config.execution };
+  return { entries, createdOrders, run: scenario.run.parameters };
 }
 
 export function orderOf(timeline: Timeline, fill: FillDecision): OrderEvent | undefined {

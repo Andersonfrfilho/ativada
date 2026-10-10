@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ENGINE_STATE_VERSION } from './engine.constant.js';
 import type {
+  EntryOrderType,
   ExitReason,
   OrderPurpose,
   OrderSide,
-  EntryOrderType,
 } from './engine-vocabulary.constant.js';
 import type { JsonValue } from './json-value.types.js';
 
@@ -19,6 +19,8 @@ export type OpenPositionState = {
 };
 
 // No máximo uma: entrada pendente só com a carteira zerada, saída pendente só com posição aberta.
+// A entrada guarda o VALOR EM RISCO; a quantidade nasce no preenchimento (ADR 0002 §c).
+// `filledQuantity` reserva o preenchimento parcial da execução real (no simulado é sempre "0").
 export type PendingOrderState = {
   readonly orderKey: string;
   readonly side: OrderSide;
@@ -26,10 +28,11 @@ export type PendingOrderState = {
   readonly purpose: OrderPurpose;
   readonly createdCandleOpenTime: number;
   readonly limitPrice: string | null;
-  readonly quoteBudget: string | null;
+  readonly riskAmount: string | null;
   readonly stopDistance: string | null;
   readonly targetDistance: string | null;
   readonly eligibleCandles: number | null;
+  readonly filledQuantity: string;
   readonly exitReason: ExitReason | null;
 };
 
@@ -38,19 +41,34 @@ export type BenchmarkState = {
   readonly cash: string;
 };
 
-// Estado imutável e serializável em JSON: retomar dele dá o mesmo resultado da execução contínua.
-export type EngineState = {
-  readonly version: typeof ENGINE_STATE_VERSION;
-  readonly engineVersion: string;
-  readonly configHash: string;
+// Parte do sinal: depende só de candles e sentimento (indicadores, aquecimento).
+export type SignalState = {
   readonly leadInCandles: number;
   readonly processedCandles: number;
   readonly lastCandleOpenTime: number | null;
+  readonly indicators: Readonly<Record<string, JsonValue>>;
+};
+
+// Parte da carteira: ordens, posição, caixa e régua; `keyPrefix` dá espaço de nome às chaves
+// (`w3:order-0` no walk-forward por janela).
+export type WalletState = {
+  readonly keyPrefix: string;
+  readonly lastCandleOpenTime: number | null;
+  readonly firstSignalCandleOpenTime: number | null;
   readonly sequence: number;
   readonly isHalted: boolean;
   readonly cash: string;
   readonly position: OpenPositionState | null;
   readonly pendingOrder: PendingOrderState | null;
   readonly benchmark: BenchmarkState | null;
-  readonly indicators: Readonly<Record<string, JsonValue>>;
+};
+
+// Estado imutável e serializável em JSON: retomar dele dá o mesmo resultado da execução contínua.
+export type EngineState = {
+  readonly version: typeof ENGINE_STATE_VERSION;
+  readonly engineVersion: string;
+  readonly configHash: string;
+  readonly runHash: string;
+  readonly signal: SignalState;
+  readonly wallet: WalletState;
 };

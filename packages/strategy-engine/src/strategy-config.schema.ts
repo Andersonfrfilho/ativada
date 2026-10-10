@@ -1,12 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { z } from '@cryptoada/environment';
+import { z } from 'zod';
 
 import { decimalTextSchema } from './decimal-text.schema.js';
-import {
-  ENGINE_TIMEFRAME,
-  RULE_DISCRIMINATOR,
-  STRATEGY_CONFIG_SCHEMA_VERSION,
-} from './engine.constant.js';
+import { RULE_DISCRIMINATOR, STRATEGY_CONFIG_SCHEMA_VERSION } from './engine.constant.js';
 import { ENTRY_ORDER_TYPE, REGIME_FILTER_KIND } from './engine-vocabulary.constant.js';
 import { INDICATOR_PERIOD_SCHEMA, STRATEGY_RULES_SCHEMA } from './strategy-rule.schema.js';
 
@@ -36,15 +32,8 @@ const RANGING_WEIGHTS = {
   volume: NEUTRAL_WEIGHT,
   sentiment: NEUTRAL_WEIGHT,
 };
-// Teto dos filtros de preço e quantidade da corretora (tick e passo).
-const MAX_EXCHANGE_INCREMENT = '1000000';
-// 1% de risco por operação (RF05) e tick de 0,01 do BTCUSDT: mesmo número, papéis diferentes.
+// 1% de risco por operação (RF05).
 const ONE_HUNDREDTH = '0.01';
-const POSITIVE_INCREMENT_SCHEMA = decimalTextSchema({
-  minimum: ZERO,
-  maximum: MAX_EXCHANGE_INCREMENT,
-  isMinimumExclusive: true,
-});
 
 const ADX_REGIME_SCHEMA = z.strictObject({
   kind: z.literal(REGIME_FILTER_KIND.ADX),
@@ -99,35 +88,18 @@ const RISK_SCHEMA = z
   })
   .prefault({});
 
-const EXECUTION_SCHEMA = z
-  .strictObject({
-    initialBalance: decimalTextSchema({ minimum: '10', maximum: '1000000000000' }).default('10000'),
-    feeRate: decimalTextSchema({ minimum: ZERO, maximum: ONE_HUNDREDTH }).default('0.001'),
-    slippageRate: decimalTextSchema({ minimum: ZERO, maximum: '0.05' }).default('0.0005'),
-    tickSize: POSITIVE_INCREMENT_SCHEMA.default(ONE_HUNDREDTH),
-    quantityStep: POSITIVE_INCREMENT_SCHEMA.default('0.00001'),
-    minNotional: decimalTextSchema({ minimum: ZERO, maximum: '1000000000' }).default('5'),
-  })
-  .prefault({});
-
 const THRESHOLDS_SCHEMA = z.strictObject({
   buy: decimalTextSchema({ minimum: ZERO, maximum: '100', isMinimumExclusive: true }),
   sell: decimalTextSchema({ minimum: '-100', maximum: ZERO, isMaximumExclusive: true }),
 });
 
-// Saldo em USDT (plan D7): só pares cotados em USDT.
-const MARKET_SCHEMA = z.strictObject({
-  symbol: z.string().regex(/^[A-Z0-9]{2,16}USDT$/, 'Use um par cotado em USDT, como "BTCUSDT".'),
-  timeframe: z.enum(ENGINE_TIMEFRAME),
-});
-
+// A versão da estratégia é só a lógica (RF03): par, timeframe, saldo, taxa, slippage e filtros da
+// corretora são parâmetros da execução (RunParameters), com hash próprio (ADR 0002 §d).
 export const STRATEGY_CONFIG_SCHEMA = z.strictObject({
   schemaVersion: z.literal(STRATEGY_CONFIG_SCHEMA_VERSION),
-  market: MARKET_SCHEMA,
   rules: STRATEGY_RULES_SCHEMA,
   regime: REGIME_SCHEMA,
   thresholds: THRESHOLDS_SCHEMA,
   entry: ENTRY_SCHEMA,
   risk: RISK_SCHEMA,
-  execution: EXECUTION_SCHEMA,
 });

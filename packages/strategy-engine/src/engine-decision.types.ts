@@ -1,5 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import type { SentimentObservation } from './engine-candle.types.js';
 import type {
+  CommandKind,
+  CommandReason,
   ExitReason,
   OrderEventReason,
   OrderPurpose,
@@ -20,6 +23,8 @@ export type SignalVote = {
   readonly isMissing: boolean;
 };
 
+// `indicators` usa os ids com espaço de nome (`rule:<id>`, `risk:atr`, `regime:adx`) e achata os de
+// várias saídas (`rule:macd-12-26-9.signal`); `sentiment` é a observação usada (nula se ausente/velha).
 export type SignalDecision = {
   readonly candleOpenTime: number;
   readonly action: SignalAction;
@@ -27,10 +32,12 @@ export type SignalDecision = {
   readonly regime: Regime;
   readonly votes: readonly SignalVote[];
   readonly indicators: Readonly<Record<string, number | null>>;
+  readonly sentiment: SentimentObservation | null;
   readonly reason: string;
 };
 
-// Evento do ciclo de vida da ordem; o chamador grava a ordem por `orderKey` e atualiza o status.
+// Evento do ciclo de vida da ordem; o chamador grava a ordem por `orderKey` com status monotônico.
+// `price`/`quantity` só no `filled`; `triggerPrice` é o stop ou o alvo de uma saída protetora.
 export type OrderEvent = {
   readonly orderKey: string;
   readonly candleOpenTime: number;
@@ -40,7 +47,12 @@ export type OrderEvent = {
   readonly purpose: OrderPurpose;
   readonly createdCandleOpenTime: number;
   readonly limitPrice: string | null;
-  readonly quoteBudget: string | null;
+  readonly triggerPrice: string | null;
+  readonly price: string | null;
+  readonly quantity: string | null;
+  readonly riskAmount: string | null;
+  readonly stopDistance: string | null;
+  readonly targetDistance: string | null;
   readonly eligibleCandles: number | null;
   readonly reason: OrderEventReason | null;
 };
@@ -79,18 +91,32 @@ export type ClosedPositionDecision = {
   readonly exitReason: ExitReason;
 };
 
-// Patrimônio a valor de liquidação no fechamento (com slippage e taxa de saída), e a régua.
+// Patrimônio a valor de liquidação no fechamento e na mínima (lado pior, para perda máxima e piso).
 export type EquityPointDecision = {
   readonly candleOpenTime: number;
   readonly equity: string;
+  readonly equityAtLow: string;
   readonly benchmark: string;
 };
 
-export type StepDecisions = {
-  readonly signal: SignalDecision | null;
+// Trilha do comando aplicado no fechamento do candle (idempotência e auditoria pelo `commandId`).
+export type AppliedCommandDecision = {
+  readonly commandId: string;
+  readonly candleOpenTime: number;
+  readonly issuedAt: number;
+  readonly kind: CommandKind;
+  readonly reason: CommandReason;
+};
+
+export type WalletDecisions = {
+  readonly commands: readonly AppliedCommandDecision[];
   readonly orders: readonly OrderEvent[];
   readonly fills: readonly FillDecision[];
   readonly openedPositions: readonly OpenedPositionDecision[];
   readonly closedPositions: readonly ClosedPositionDecision[];
   readonly equityPoint: EquityPointDecision | null;
+};
+
+export type StepDecisions = WalletDecisions & {
+  readonly signal: SignalDecision | null;
 };

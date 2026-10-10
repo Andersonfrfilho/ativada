@@ -17,11 +17,64 @@ import { loadClassicScoreboard } from './fixtures/strategy-engine/engine-scenari
 
 const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
 const ENGINE_SOURCE = 'packages/strategy-engine/src';
-const ALLOWED_IMPORTS: readonly string[] = ['@cryptoada/environment', 'decimal.js', 'node:crypto'];
+const ALLOWED_IMPORTS: readonly string[] = ['zod', 'decimal.js', 'node:crypto'];
 const IMPORT_PATTERN = /from\s+'([^']+)'/g;
-// Relógio, aleatoriedade, rede, disco, processo e console: nada disso cabe num motor puro.
-const IMPURE_PATTERN =
-  /\bDate\.now\b|\bnew Date\b|\bMath\.random\b|\bperformance\.now\b|\bfetch\(|\bsetTimeout\b|\bsetInterval\b|\bprocess\.|\bBun\.|\bconsole\./;
+const NODE_CRYPTO_IMPORT_PATTERN = /import\s+(type\s+)?\{([^}]*)\}\s+from\s+'node:crypto'/g;
+// Relógio, aleatoriedade, rede, disco, processo, console, locale, carga dinâmica e matemática com
+// precisão dependente de implementação: nada disso cabe num motor puro. É rede, não a única defesa.
+const IMPURE_PATTERNS: readonly RegExp[] = [
+  /\bDate\.now\b/,
+  /\bDate\(/,
+  /\bglobalThis\.Date\b/,
+  /\bMath\.random\b/,
+  /\bperformance\.now\b/,
+  /\bcrypto\.randomUUID\b/,
+  /\bgetRandomValues\b/,
+  /\brandomBytes\b/,
+  /\bfetch\(/,
+  /\bsetTimeout\b/,
+  /\bsetInterval\b/,
+  /\bprocess\./,
+  /\bBun\./,
+  /\bconsole\./,
+  /\btoLocale[A-Za-z]*\(/,
+  /\bIntl\./,
+  /\blocaleCompare\b/,
+  /\brequire\(/,
+  /\bimport\(/,
+  /\bMath\.(exp|expm1|log|log1p|log2|log10|pow|cbrt|sinh|cosh|tanh|sin|cos|tan|atan2?|hypot)\b/,
+  /[^/*]\*\*[^/]/,
+];
+const FORBIDDEN_SAMPLES: readonly string[] = [
+  'Date.now()',
+  'new Date()',
+  'const day = Date();',
+  'globalThis.Date',
+  'Math.random()',
+  'performance.now()',
+  'crypto.randomUUID()',
+  'crypto.getRandomValues(buffer)',
+  'randomBytes(16)',
+  'await fetch(url)',
+  'setTimeout(run, 1)',
+  'setInterval(run, 1)',
+  'process.env.X',
+  'Bun.file(path)',
+  'console.log(value)',
+  'value.toLocaleString()',
+  'Intl.NumberFormat',
+  'a.localeCompare(b)',
+  "require('x')",
+  "await import('./x.js')",
+  'Math.exp(1)',
+  'Math.log(2)',
+  'Math.pow(2, 3)',
+  'const square = side ** 2;',
+];
+
+function findImpurity(text: string): RegExp | undefined {
+  return IMPURE_PATTERNS.find((pattern) => pattern.test(text));
+}
 
 type Manifest = { readonly dependencies?: Readonly<Record<string, string>> };
 
@@ -39,14 +92,11 @@ async function readEngineSources(): Promise<readonly { path: string; text: strin
 }
 
 describe('strategy engine boundary', () => {
-  test('depends only on the environment package (Zod) and an exact decimal.js', async () => {
+  test('depends only on exact versions of decimal.js and zod (the hash depends on Zod semantics)', async () => {
     const manifest = (await Bun.file(
       `${REPOSITORY_ROOT}packages/strategy-engine/package.json`,
     ).json()) as Manifest;
-    expect(manifest.dependencies).toStrictEqual({
-      '@cryptoada/environment': 'workspace:*',
-      'decimal.js': '10.6.0',
-    });
+    expect(manifest.dependencies).toStrictEqual({ 'decimal.js': '10.6.0', zod: '4.6.5' });
   });
 
   test('source imports nothing but relative files and the allowed modules', async () => {
@@ -59,11 +109,29 @@ describe('strategy engine boundary', () => {
     expect(offending).toStrictEqual([]);
   });
 
-  test('source never reads the clock, randomness, network, disk or process', async () => {
+  test('source never reads the clock, randomness, locale, network, disk or process', async () => {
     const offending = (await readEngineSources())
-      .filter(({ text }) => IMPURE_PATTERN.test(text))
-      .map(({ path }) => path);
+      .map(({ path, text }) => [path, findImpurity(text)?.source] as const)
+      .filter(([, pattern]) => pattern !== undefined);
     expect(offending).toStrictEqual([]);
+  });
+
+  test('the impurity net catches every forbidden sample (probe)', () => {
+    const missed = FORBIDDEN_SAMPLES.filter((sample) => findImpurity(sample) === undefined);
+    expect(missed).toStrictEqual([]);
+    expect(findImpurity('/** comentário */ const total = left * right;')).toBeUndefined();
+  });
+
+  test('node:crypto is imported only for createHash', async () => {
+    const names = (await readEngineSources()).flatMap(({ text }) =>
+      [...text.matchAll(NODE_CRYPTO_IMPORT_PATTERN)].flatMap((match) =>
+        (match[2] ?? '')
+          .split(',')
+          .map((name) => name.trim())
+          .filter((name) => name !== ''),
+      ),
+    );
+    expect(new Set(names)).toStrictEqual(new Set(['createHash']));
   });
 
   test('a market-data candle is an engine candle and the timeframes agree', () => {

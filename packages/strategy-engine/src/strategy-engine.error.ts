@@ -48,5 +48,41 @@ export class EngineStateError extends StrategyEngineError {
   }
 }
 
+export class RunParametersError extends StrategyEngineError {
+  readonly issues: readonly StrategyConfigIssue[];
+
+  constructor(issues: readonly StrategyConfigIssue[]) {
+    super(`Parâmetros da execução inválidos: ${issues.length} problema(s).`);
+    this.issues = issues;
+  }
+}
+
+// Código estável por recusa: o chamador distingue "já processado, pule" de "entrada errada, pare".
+export const ENGINE_INPUT_ERROR_CODE = {
+  CONFIG_HASH_MISMATCH: 'CONFIG_HASH_MISMATCH',
+  RUN_HASH_MISMATCH: 'RUN_HASH_MISMATCH',
+  CANDLE_WRONG_MARKET: 'CANDLE_WRONG_MARKET',
+  CANDLE_OFF_GRID: 'CANDLE_OFF_GRID',
+  CANDLE_INSANE: 'CANDLE_INSANE',
+  CANDLE_ALREADY_PROCESSED: 'CANDLE_ALREADY_PROCESSED',
+  CANDLE_OUT_OF_ORDER: 'CANDLE_OUT_OF_ORDER',
+  CANDLE_GAP_UNCONFIRMED: 'CANDLE_GAP_UNCONFIRMED',
+  SENTIMENT_INVALID: 'SENTIMENT_INVALID',
+  SENTIMENT_FROM_FUTURE: 'SENTIMENT_FROM_FUTURE',
+  SIGNAL_MISMATCH: 'SIGNAL_MISMATCH',
+  COMMAND_INVALID: 'COMMAND_INVALID',
+  EXECUTION_REPORTS_UNSUPPORTED: 'EXECUTION_REPORTS_UNSUPPORTED',
+} as const;
+
+export type EngineInputErrorCode =
+  (typeof ENGINE_INPUT_ERROR_CODE)[keyof typeof ENGINE_INPUT_ERROR_CODE];
+
 // Entrada do passo que violaria o contrato: candle fora de ordem, de outro par, dado do futuro.
-export class EngineInputError extends StrategyEngineError {}
+export class EngineInputError extends StrategyEngineError {
+  readonly code: EngineInputErrorCode;
+
+  constructor(params: { readonly code: EngineInputErrorCode; readonly message: string }) {
+    super(params.message);
+    this.code = params.code;
+  }
+}

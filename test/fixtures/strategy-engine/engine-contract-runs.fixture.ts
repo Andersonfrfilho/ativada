@@ -2,19 +2,28 @@
 import {
   EngineDecimal,
   formatEngineDecimal,
+  selectAvailableSentiment,
+  SENTIMENT_STALE_AFTER_MILLISECONDS,
   toEngineDecimal,
   type Engine,
   type EngineCandle,
   type EngineState,
+  type SentimentObservation,
   type StepDecisions,
-  type StrategyVersion,
+  type StepInput,
 } from '../../../packages/strategy-engine/src/index.js';
-import type { EngineRun, RecordedStep } from './engine-contract-types.fixture.js';
+import type {
+  EngineRun,
+  EngineScenario,
+  RecordedStep,
+  ScenarioCommands,
+} from './engine-contract-types.fixture.js';
 
 export type RunStepsParams = {
   readonly engine: Engine;
-  readonly strategy: StrategyVersion;
-  readonly candles: readonly EngineCandle[];
+  readonly scenario: EngineScenario;
+  readonly candles?: readonly EngineCandle[];
+  readonly sentiment?: readonly SentimentObservation[];
   readonly initialState?: EngineState;
   readonly shouldFreezeInputs?: boolean;
 };
@@ -25,14 +34,48 @@ export function deepFreeze<TValue>(value: TValue): TValue {
   return Object.freeze(value);
 }
 
+// O que o chamador real faz por candle: sentimento disponível no fechamento e comandos daquele candle.
+export function buildStepInput(params: {
+  readonly scenario: EngineScenario;
+  readonly state: EngineState;
+  readonly candle: EngineCandle;
+  readonly sentiment: readonly SentimentObservation[];
+}): StepInput {
+  const { scenario, candle } = params;
+  return {
+    strategy: scenario.strategy,
+    run: scenario.run,
+    state: params.state,
+    candle,
+    sentiment: selectAvailableSentiment({
+      observations: params.sentiment,
+      closeTime: candle.closeTime,
+    }),
+    commands: commandsAt(scenario.commands, candle.openTime),
+  };
+}
+
+export function commandsAt(commands: ScenarioCommands, openTime: number): StepInput['commands'] {
+  return commands[openTime] ?? [];
+}
+
 export function runSteps(params: RunStepsParams): RecordedStep[] {
-  const { engine, strategy } = params;
-  let state = params.initialState ?? engine.createInitialState(strategy);
+  const { engine, scenario } = params;
+  const candles = params.candles ?? scenario.candles;
+  const sentiment = params.sentiment ?? scenario.sentiment;
+  let state =
+    params.initialState ??
+    engine.createInitialState({ strategy: scenario.strategy, run: scenario.run });
   const steps: RecordedStep[] = [];
-  for (const candle of params.candles) {
-    const input = { strategy, state, candle };
+  for (const candle of candles) {
+    const input = buildStepInput({ scenario, state, candle, sentiment });
     const result = engine.step(params.shouldFreezeInputs === true ? deepFreeze(input) : input);
-    steps.push({ candle, result });
+    steps.push({
+      candle,
+      sentiment: input.sentiment,
+      commands: input.commands ?? [],
+      result,
+    });
     state = result.state;
   }
   return steps;
@@ -59,28 +102,78 @@ export function serializeRun(run: EngineRun): string {
   return JSON.stringify(run.map((step) => step.result));
 }
 
-const FUTURE_PRICE_FACTOR = '1.37';
+export const FUTURE_PERTURBATION = {
+  SCALE_UP: 'scale-up',
+  SCALE_DOWN: 'scale-down',
+  CONSTANT: 'constant',
+  PERMUTED: 'permuted',
+} as const;
 
-function scalePrice(price: string): string {
-  return formatEngineDecimal(toEngineDecimal(price).times(FUTURE_PRICE_FACTOR));
+export type FuturePerturbation = (typeof FUTURE_PERTURBATION)[keyof typeof FUTURE_PERTURBATION];
+
+const SCALE_FACTOR: Readonly<Record<string, string>> = {
+  [FUTURE_PERTURBATION.SCALE_UP]: '1.37',
+  [FUTURE_PERTURBATION.SCALE_DOWN]: '0.63',
+};
+
+function scaleCandle(candle: EngineCandle, factor: string): EngineCandle {
+  const scale = (price: string): string =>
+    formatEngineDecimal(toEngineDecimal(price).times(factor));
+  return {
+    ...candle,
+    open: scale(candle.open),
+    high: scale(candle.high),
+    low: scale(candle.low),
+    close: scale(candle.close),
+    volume: formatEngineDecimal(new EngineDecimal(candle.volume).plus(1)),
+  };
 }
 
-// Futuro adulterado e ainda válido (máxima e mínima continuam envolvendo abertura e fechamento).
+function flatCandle(candle: EngineCandle, price: string): EngineCandle {
+  return { ...candle, open: price, high: price, low: price, close: price };
+}
+
+function withPricesOf(candle: EngineCandle, source: EngineCandle): EngineCandle {
+  const { open, high, low, close, volume } = source;
+  return { ...candle, open, high, low, close, volume };
+}
+
+// Futuro adulterado e ainda válido (máxima e mínima envolvem abertura e fechamento; grade intacta).
 export function mutateCandlesAfter(
   candles: readonly EngineCandle[],
   cutIndex: number,
+  perturbation: FuturePerturbation,
 ): EngineCandle[] {
-  return candles.map((candle, index) =>
-    index <= cutIndex
-      ? candle
-      : {
-          ...candle,
-          open: scalePrice(candle.open),
-          high: scalePrice(candle.high),
-          low: scalePrice(candle.low),
-          close: scalePrice(candle.close),
-          volume: formatEngineDecimal(new EngineDecimal(candle.volume).plus(1)),
-        },
+  const future = candles.slice(cutIndex + 1);
+  const anchor = candles[cutIndex]?.close ?? '1';
+  const mutated = future.map((candle, index) => {
+    if (perturbation === FUTURE_PERTURBATION.CONSTANT) return flatCandle(candle, anchor);
+    if (perturbation === FUTURE_PERTURBATION.PERMUTED) {
+      return withPricesOf(candle, future[future.length - 1 - index] ?? candle);
+    }
+    return scaleCandle(candle, SCALE_FACTOR[perturbation] ?? '1');
+  });
+  return [...candles.slice(0, cutIndex + 1), ...mutated];
+}
+
+// Sentimento que só fica disponível depois do corte: valor espelhado (20 ↔ 80) e uma observação nova.
+export function mutateSentimentAfter(
+  observations: readonly SentimentObservation[],
+  cutCloseTime: number,
+): SentimentObservation[] {
+  const mirrored = observations.map((observation) =>
+    observation.observedAt > cutCloseTime
+      ? { ...observation, value: 100 - observation.value }
+      : observation,
+  );
+  const injected = { value: 99, observedAt: cutCloseTime + 1, source: 'perturbation' };
+  return [...mirrored, injected];
+}
+
+export function isFresh(observation: SentimentObservation | undefined, closeTime: number): boolean {
+  return (
+    observation !== undefined &&
+    closeTime - observation.observedAt <= SENTIMENT_STALE_AFTER_MILLISECONDS
   );
 }
 
@@ -100,6 +193,7 @@ function stampDecisions(decisions: StepDecisions): StampedDecision[] {
     stamped.push({ kind: 'equity', time: point.candleOpenTime, value: point });
   }
   const lists = [
+    ['command', decisions.commands],
     ['order', decisions.orders],
     ['fill', decisions.fills],
     ['opened', decisions.openedPositions],

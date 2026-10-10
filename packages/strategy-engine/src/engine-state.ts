@@ -2,32 +2,50 @@
 import { canonicalJson } from './canonical-json.js';
 import { ENGINE_STATE_VERSION } from './engine.constant.js';
 import { ENGINE_STATE_SCHEMA } from './engine-state.schema.js';
-import type { EngineState } from './engine-state.types.js';
+import type { EngineState, SignalState, WalletState } from './engine-state.types.js';
 import { toConfigIssues } from './parse-strategy-config.js';
-import type { StrategyVersion } from './strategy-config.types.js';
+import type { RunSetup, StrategyVersion } from './strategy-config.types.js';
 import { ENGINE_STATE_ERROR_CODE, EngineStateError } from './strategy-engine.error.js';
 
 export type CreateInitialEngineStateParams = {
   readonly strategy: StrategyVersion;
+  readonly run: RunSetup;
   readonly engineVersion: string;
   readonly leadInCandles: number;
 };
+
+export type CreateInitialWalletStateParams = {
+  readonly run: RunSetup;
+  readonly keyPrefix?: string;
+};
+
+export function createInitialSignalState(leadInCandles: number): SignalState {
+  return { leadInCandles, processedCandles: 0, lastCandleOpenTime: null, indicators: {} };
+}
+
+// Carteira nova sobre um sinal já aquecido (walk-forward por janela, meta): `keyPrefix` evita colisão.
+export function createInitialWalletState(params: CreateInitialWalletStateParams): WalletState {
+  return {
+    keyPrefix: params.keyPrefix ?? '',
+    lastCandleOpenTime: null,
+    firstSignalCandleOpenTime: null,
+    sequence: 0,
+    isHalted: false,
+    cash: params.run.parameters.initialBalance,
+    position: null,
+    pendingOrder: null,
+    benchmark: null,
+  };
+}
 
 export function createInitialEngineState(params: CreateInitialEngineStateParams): EngineState {
   return validateEngineState({
     version: ENGINE_STATE_VERSION,
     engineVersion: params.engineVersion,
     configHash: params.strategy.configHash,
-    leadInCandles: params.leadInCandles,
-    processedCandles: 0,
-    lastCandleOpenTime: null,
-    sequence: 0,
-    isHalted: false,
-    cash: params.strategy.config.execution.initialBalance,
-    position: null,
-    pendingOrder: null,
-    benchmark: null,
-    indicators: {},
+    runHash: params.run.runHash,
+    signal: createInitialSignalState(params.leadInCandles),
+    wallet: createInitialWalletState({ run: params.run }),
   });
 }
 

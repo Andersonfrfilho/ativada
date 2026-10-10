@@ -15,8 +15,10 @@ export type EngineCandle = {
   readonly volume: string;
 };
 
-// Sentimento externo (Fear & Greed): só entra se já tinha sido publicado no fechamento do candle.
+// Sentimento externo (Fear & Greed), linha imutável de `sentiment_observations`: `observedAt` é o
+// instante em que o valor ficou DISPONÍVEL (coleta ao vivo, ou data + atraso de publicação no histórico).
 export type SentimentObservation = {
   readonly value: number;
   readonly observedAt: number;
+  readonly source: string;
 };

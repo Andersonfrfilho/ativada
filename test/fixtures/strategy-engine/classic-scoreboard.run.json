@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "symbol": "BTCUSDT",
+  "timeframe": "1h",
+  "initialBalance": "10000",
+  "feeRate": "0.001",
+  "slippageRate": "0.0005",
+  "tickSize": "0.01",
+  "quantityStep": "0.00001",
+  "minNotional": "5",
+  "maxVolumeShare": "0.01"
+}

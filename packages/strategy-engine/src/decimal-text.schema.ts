@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { z } from '@cryptoada/environment';
+import { z } from 'zod';
 
 import { formatEngineDecimal, toEngineDecimal } from './engine-decimal.js';
 
@@ -11,6 +11,7 @@ export type DecimalBounds = {
   readonly maximum: string;
   readonly isMinimumExclusive?: boolean;
   readonly isMaximumExclusive?: boolean;
+  readonly maximumDecimalPlaces?: number;
 };
 
 function isWithinBounds(text: string, bounds: DecimalBounds): boolean {
@@ -22,13 +23,17 @@ function isWithinBounds(text: string, bounds: DecimalBounds): boolean {
     bounds.isMinimumExclusive === true ? value.greaterThan(minimum) : value.gte(minimum);
   const isBelowMaximum =
     bounds.isMaximumExclusive === true ? value.lessThan(maximum) : value.lte(maximum);
-  return isAboveMinimum && isBelowMaximum;
+  const hasAllowedPlaces =
+    value.decimalPlaces() <= (bounds.maximumDecimalPlaces ?? Number.POSITIVE_INFINITY);
+  return isAboveMinimum && isBelowMaximum && hasAllowedPlaces;
 }
 
 function describeBounds(bounds: DecimalBounds): string {
   const opening = bounds.isMinimumExclusive === true ? '(' : '[';
   const closing = bounds.isMaximumExclusive === true ? ')' : ']';
-  return `${opening}${bounds.minimum}, ${bounds.maximum}${closing}`;
+  const places =
+    bounds.maximumDecimalPlaces === undefined ? '' : `, até ${bounds.maximumDecimalPlaces} casa(s)`;
+  return `${opening}${bounds.minimum}, ${bounds.maximum}${closing}${places}`;
 }
 
 // A saída é canônica ("0.0010" vira "0.001"): grafias equivalentes dão o mesmo hash de versão.
@@ -42,4 +47,19 @@ export function decimalTextSchema(
     .transform((text) => formatEngineDecimal(toEngineDecimal(text)));
 }
 
-export const DECIMAL_STATE_TEXT_SCHEMA = z.string().regex(/^-?\d+(\.\d+)?$/);
+// Estado e decisões só carregam a grafia canônica: "00.10", "1.0" e "-0" são recusados.
+const CANONICAL_DECIMAL_PATTERN = /^-?(0|[1-9]\d*)(\.\d*[1-9])?$/;
+const NEGATIVE_ZERO = '-0';
+
+export const DECIMAL_STATE_TEXT_SCHEMA = z
+  .string()
+  .regex(CANONICAL_DECIMAL_PATTERN, 'Decimal fora da grafia canônica.')
+  .refine((text) => text !== NEGATIVE_ZERO, 'Zero negativo não é canônico.');
+export const NON_NEGATIVE_DECIMAL_STATE_TEXT_SCHEMA = DECIMAL_STATE_TEXT_SCHEMA.refine(
+  (text) => !text.startsWith('-'),
+  'Valor negativo.',
+);
+export const POSITIVE_DECIMAL_STATE_TEXT_SCHEMA = NON_NEGATIVE_DECIMAL_STATE_TEXT_SCHEMA.refine(
+  (text) => text !== '0',
+  'Valor precisa ser positivo.',
+);

@@ -3,27 +3,23 @@ import {
   EngineDecimal,
   EXIT_REASON,
   ORDER_EVENT_REASON,
-  ORDER_PURPOSE,
   ORDER_SIDE,
   ORDER_STATUS,
   ORDER_TYPE,
-  type ClosedPositionDecision,
-  type EngineCandle,
   type EngineDecimalValue,
-  type EngineState,
   type ExitReason,
-  type FillDecision,
-  type OpenedPositionDecision,
   type OrderEvent,
-  type OrderEventReason,
-  type OrderType,
   type PendingOrderState,
-  type StrategyConfig,
 } from '../../../packages/strategy-engine/src/index.js';
+import { REFERENCE_ENGINE_DEFECT } from './reference-engine-defect.fixture.js';
 import {
-  REFERENCE_ENGINE_DEFECT,
-  type ReferenceEngineDefect,
-} from './reference-engine-defect.fixture.js';
+  orderEvent,
+  protectiveExitEvents,
+  requireText,
+  takeKey,
+  type WalletContext,
+  type WalletDraft,
+} from './reference-orders.fixture.js';
 import {
   feeOf,
   formatEngineDecimal,
@@ -31,146 +27,47 @@ import {
   marketSellPrice,
   moneyDown,
   moneyUp,
-  stepDown,
-  tickDown,
+  stopExitPrice,
   tickUp,
   toEngineDecimal,
 } from './reference-pricing.fixture.js';
-
-export type ReferenceDraft = {
-  state: EngineState;
-  readonly orders: OrderEvent[];
-  readonly fills: FillDecision[];
-  readonly openedPositions: OpenedPositionDecision[];
-  readonly closedPositions: ClosedPositionDecision[];
-  isIntraCandleEntry: boolean;
-};
-
-export type ReferenceContext = {
-  readonly config: StrategyConfig;
-  readonly candle: EngineCandle;
-  readonly defect: ReferenceEngineDefect;
-};
+import { sizeEntry, type SizedEntry } from './reference-sizing.fixture.js';
 
 type EntryFill = { readonly order: PendingOrderState; readonly price: EngineDecimalValue };
 type ExitFill = {
   readonly price: EngineDecimalValue;
   readonly reason: ExitReason;
-  readonly type: OrderType;
+  readonly events: (quantity: string) => OrderEvent[];
 };
 
-export function requireText(value: string | null, name: string): string {
-  if (value === null) throw new Error(`Ordem pendente sem ${name}.`);
-  return value;
-}
-
-export function takeKey(draft: ReferenceDraft, prefix: string): string {
-  const key = `${prefix}-${draft.state.sequence}`;
-  draft.state = { ...draft.state, sequence: draft.state.sequence + 1 };
-  return key;
-}
-
-export function orderEvent(params: {
-  readonly order: PendingOrderState;
-  readonly context: ReferenceContext;
-  readonly status: OrderEvent['status'];
-  readonly reason?: OrderEventReason;
-}): OrderEvent {
-  const { order } = params;
-  return {
-    orderKey: order.orderKey,
-    candleOpenTime: params.context.candle.openTime,
-    status: params.status,
-    side: order.side,
-    type: order.type,
-    purpose: order.purpose,
-    createdCandleOpenTime: order.createdCandleOpenTime,
-    limitPrice: order.limitPrice,
-    quoteBudget: order.quoteBudget,
-    eligibleCandles: order.eligibleCandles,
-    reason: params.reason ?? null,
-  };
-}
-
-function strategyFee(notional: EngineDecimalValue, context: ReferenceContext): EngineDecimalValue {
+function strategyFee(notional: EngineDecimalValue, context: WalletContext): EngineDecimalValue {
   if (context.defect === REFERENCE_ENGINE_DEFECT.IGNORES_FEE) return new EngineDecimal(0);
-  return feeOf(notional, context.config.execution);
+  return feeOf(notional, context.run);
 }
 
-function affordableQuantity(
-  fill: EntryFill,
-  context: ReferenceContext,
-  cash: EngineDecimalValue,
-): EngineDecimalValue {
-  const execution = context.config.execution;
-  const step = toEngineDecimal(execution.quantityStep);
-  let quantity = stepDown(
-    toEngineDecimal(requireText(fill.order.quoteBudget, 'orçamento')).dividedBy(fill.price),
-    execution,
-  );
-  const debitOf = (candidate: EngineDecimalValue): EngineDecimalValue => {
-    const notional = candidate.times(fill.price);
-    return moneyUp(notional).plus(strategyFee(notional, context));
-  };
-  while (quantity.greaterThan(0) && debitOf(quantity).greaterThan(cash)) {
-    quantity = quantity.minus(step);
-  }
-  return quantity;
-}
-
-function rejectEntry(
-  draft: ReferenceDraft,
-  fill: EntryFill,
-  context: ReferenceContext,
-): (reason: OrderEventReason) => void {
-  return (reason: OrderEventReason): void => {
+export function openPosition(draft: WalletDraft, fill: EntryFill, context: WalletContext): void {
+  const sized = sizeEntry({ draft, context, order: fill.order, price: fill.price });
+  if (sized.kind === 'rejected') {
     draft.orders.push(
-      orderEvent({ order: fill.order, context, status: ORDER_STATUS.REJECTED, reason }),
+      orderEvent({
+        order: fill.order,
+        context,
+        status: ORDER_STATUS.REJECTED,
+        reason: sized.reason,
+      }),
     );
-  };
-}
-
-export function openPosition(
-  draft: ReferenceDraft,
-  fill: EntryFill,
-  context: ReferenceContext,
-): void {
-  const execution = context.config.execution;
-  const reject = rejectEntry(draft, fill, context);
-  const quantity = affordableQuantity(fill, context, toEngineDecimal(draft.state.cash));
-  const notional = quantity.times(fill.price);
-  if (quantity.lte(0) || notional.lessThan(toEngineDecimal(execution.minNotional))) {
-    reject(ORDER_EVENT_REASON.BELOW_MIN_NOTIONAL);
     return;
   }
-  const stopDistance = toEngineDecimal(requireText(fill.order.stopDistance, 'distância do stop'));
-  const stop = tickDown(fill.price.minus(stopDistance), execution);
-  if (stop.lte(0)) {
-    reject(ORDER_EVENT_REASON.INVALID_STOP);
-    return;
-  }
-  const targetDistance = toEngineDecimal(
-    requireText(fill.order.targetDistance, 'distância do alvo'),
-  );
-  recordOpening(draft, context, {
-    order: fill.order,
-    price: fill.price,
-    quantity,
-    stop,
-    target: tickUp(fill.price.plus(targetDistance), execution),
-  });
+  recordOpening(draft, context, fill, sized);
 }
 
 function recordOpening(
-  draft: ReferenceDraft,
-  context: ReferenceContext,
-  opening: EntryFill & {
-    readonly quantity: EngineDecimalValue;
-    readonly stop: EngineDecimalValue;
-    readonly target: EngineDecimalValue;
-  },
+  draft: WalletDraft,
+  context: WalletContext,
+  fill: EntryFill,
+  sized: SizedEntry,
 ): void {
-  const notional = opening.quantity.times(opening.price);
+  const notional = sized.quantity.times(fill.price);
   const fee = strategyFee(notional, context);
   const positionKey =
     context.defect === REFERENCE_ENGINE_DEFECT.READS_CLOCK
@@ -179,17 +76,26 @@ function recordOpening(
   const position = {
     positionKey,
     openedCandleOpenTime: context.candle.openTime,
-    entryPrice: formatEngineDecimal(opening.price),
-    quantity: formatEngineDecimal(opening.quantity),
-    stopPrice: formatEngineDecimal(opening.stop),
-    targetPrice: formatEngineDecimal(opening.target),
+    entryPrice: formatEngineDecimal(fill.price),
+    quantity: formatEngineDecimal(sized.quantity),
+    stopPrice: formatEngineDecimal(sized.stop),
+    targetPrice: formatEngineDecimal(sized.target),
     entryFee: formatEngineDecimal(fee),
   };
   const cash = toEngineDecimal(draft.state.cash).minus(moneyUp(notional)).minus(fee);
   draft.state = { ...draft.state, cash: formatEngineDecimal(cash), position };
-  draft.orders.push(orderEvent({ order: opening.order, context, status: ORDER_STATUS.FILLED }));
+  draft.orders.push(
+    orderEvent({
+      order: fill.order,
+      context,
+      status: ORDER_STATUS.FILLED,
+      price: position.entryPrice,
+      quantity: position.quantity,
+      reason: sized.isVolumeCapped ? ORDER_EVENT_REASON.VOLUME_CAPPED : null,
+    }),
+  );
   draft.fills.push({
-    orderKey: opening.order.orderKey,
+    orderKey: fill.order.orderKey,
     positionKey,
     candleOpenTime: context.candle.openTime,
     side: ORDER_SIDE.BUY,
@@ -198,22 +104,19 @@ function recordOpening(
     notional: formatEngineDecimal(notional),
     fee: position.entryFee,
   });
+  const { positionKey: key, entryPrice, quantity, stopPrice, targetPrice, entryFee } = position;
   draft.openedPositions.push({
-    positionKey,
+    positionKey: key,
     candleOpenTime: context.candle.openTime,
-    entryPrice: position.entryPrice,
-    quantity: position.quantity,
-    stopPrice: position.stopPrice,
-    targetPrice: position.targetPrice,
-    entryFee: position.entryFee,
+    entryPrice,
+    quantity,
+    stopPrice,
+    targetPrice,
+    entryFee,
   });
 }
 
-export function closePosition(
-  draft: ReferenceDraft,
-  exit: ExitFill,
-  context: ReferenceContext,
-): void {
+function closePosition(draft: WalletDraft, exit: ExitFill, context: WalletContext): void {
   const position = draft.state.position;
   if (position === null) throw new Error('Saída sem posição aberta.');
   const quantity = toEngineDecimal(position.quantity);
@@ -223,25 +126,11 @@ export function closePosition(
   const entryCost = moneyUp(quantity.times(toEngineDecimal(position.entryPrice))).plus(
     toEngineDecimal(position.entryFee),
   );
-  const exitOrder: PendingOrderState = {
-    orderKey: takeKey(draft, 'order'),
-    side: ORDER_SIDE.SELL,
-    type: ORDER_TYPE.MARKET,
-    purpose: ORDER_PURPOSE.EXIT,
-    createdCandleOpenTime: context.candle.openTime,
-    limitPrice: formatEngineDecimal(exit.price),
-    quoteBudget: null,
-    stopDistance: null,
-    targetDistance: null,
-    eligibleCandles: null,
-    exitReason: exit.reason,
-  };
-  draft.orders.push({
-    ...orderEvent({ order: exitOrder, context, status: ORDER_STATUS.FILLED }),
-    type: exit.type,
-  });
+  const events = exit.events(position.quantity);
+  draft.orders.push(...events);
+  const orderKey = events.at(-1)?.orderKey ?? '';
   draft.fills.push({
-    orderKey: exitOrder.orderKey,
+    orderKey,
     positionKey: position.positionKey,
     candleOpenTime: context.candle.openTime,
     side: ORDER_SIDE.SELL,
@@ -266,27 +155,11 @@ export function closePosition(
   draft.state = { ...draft.state, cash: formatEngineDecimal(cash), position: null };
 }
 
-function entryMarketPrice(context: ReferenceContext): EngineDecimalValue {
+export function entryMarketPrice(context: WalletContext, open: string): EngineDecimalValue {
   if (context.defect === REFERENCE_ENGINE_DEFECT.IGNORES_SLIPPAGE) {
-    return tickUp(toEngineDecimal(context.candle.open), context.config.execution);
+    return tickUp(toEngineDecimal(open), context.run);
   }
-  return marketBuyPrice(context.candle.open, context.config.execution);
-}
-
-function advanceLimitOrder(
-  draft: ReferenceDraft,
-  order: PendingOrderState,
-  context: ReferenceContext,
-): void {
-  const eligible = requireEligible(order);
-  const remaining =
-    context.defect === REFERENCE_ENGINE_DEFECT.LIMIT_NEVER_EXPIRES ? eligible : eligible - 1;
-  if (remaining > 0) {
-    draft.state = { ...draft.state, pendingOrder: { ...order, eligibleCandles: remaining } };
-    return;
-  }
-  draft.state = { ...draft.state, pendingOrder: null };
-  draft.orders.push(orderEvent({ order, context, status: ORDER_STATUS.EXPIRED }));
+  return marketBuyPrice(open, context.run);
 }
 
 function requireEligible(order: PendingOrderState): number {
@@ -294,25 +167,48 @@ function requireEligible(order: PendingOrderState): number {
   return order.eligibleCandles;
 }
 
-// Ordem pendente decidida no fechamento anterior: mercado na abertura, limitada se o candle cruzar.
-export function executePendingOrder(draft: ReferenceDraft, context: ReferenceContext): void {
-  const order = draft.state.pendingOrder;
-  if (order === null) return;
-  if (order.side === ORDER_SIDE.SELL) throw new Error('A referência nunca sai por sinal.');
-  if (order.type === ORDER_TYPE.MARKET) {
-    draft.state = { ...draft.state, pendingOrder: null };
-    openPosition(draft, { order, price: entryMarketPrice(context) }, context);
+function advanceLimitOrder(
+  draft: WalletDraft,
+  order: PendingOrderState,
+  context: WalletContext,
+): void {
+  const eligible = requireEligible(order);
+  const { defect } = context;
+  const remaining =
+    defect === REFERENCE_ENGINE_DEFECT.LIMIT_NEVER_EXPIRES ? eligible : eligible - 1;
+  const expiresAt = defect === REFERENCE_ENGINE_DEFECT.LIMIT_EXPIRES_OFF_BY_ONE ? 1 : 0;
+  if (remaining > expiresAt) {
+    draft.state = { ...draft.state, pendingOrder: { ...order, eligibleCandles: remaining } };
     return;
   }
+  draft.state = { ...draft.state, pendingOrder: null };
+  draft.orders.push(orderEvent({ order, context, status: ORDER_STATUS.EXPIRED }));
+}
+
+function isFirstEligibleCandle(order: PendingOrderState, context: WalletContext): boolean {
+  const { entry } = context.config;
+  return entry.orderType === ORDER_TYPE.LIMIT && order.eligibleCandles === entry.expiryCandles;
+}
+
+// Limitada: melhora de preço só no primeiro candle elegível (abertura abaixo do limite); depois, a
+// ordem já está no livro e preenche a L, nunca melhor. No meio do candle, só se a mínima CRUZAR L.
+function executeLimitOrder(
+  draft: WalletDraft,
+  order: PendingOrderState,
+  context: WalletContext,
+): void {
+  const { candle, defect } = context;
   const limit = toEngineDecimal(requireText(order.limitPrice, 'preço limite'));
-  const open = toEngineDecimal(context.candle.open);
-  if (open.lte(limit)) {
+  if (toEngineDecimal(candle.open).lte(limit)) {
     draft.state = { ...draft.state, pendingOrder: null };
-    const price = EngineDecimal.min(limit, entryMarketPrice(context));
-    openPosition(draft, { order, price }, context);
-    return;
+    const improved = EngineDecimal.min(limit, entryMarketPrice(context, candle.open));
+    const price = isFirstEligibleCandle(order, context) ? improved : limit;
+    return openPosition(draft, { order, price }, context);
   }
-  if (toEngineDecimal(context.candle.low).lessThan(limit)) {
+  const low = toEngineDecimal(candle.low);
+  const crosses =
+    defect === REFERENCE_ENGINE_DEFECT.LIMIT_FILLS_ON_TOUCH ? low.lte(limit) : low.lessThan(limit);
+  if (crosses) {
     draft.state = { ...draft.state, pendingOrder: null };
     openPosition(draft, { order, price: limit }, context);
     draft.isIntraCandleEntry = draft.state.position !== null;
@@ -321,46 +217,129 @@ export function executePendingOrder(draft: ReferenceDraft, context: ReferenceCon
   advanceLimitOrder(draft, order, context);
 }
 
-function stopExitPrice(
-  context: ReferenceContext,
-  stop: string,
-  isGap: boolean,
-): EngineDecimalValue {
-  const usesOpen = isGap && context.defect !== REFERENCE_ENGINE_DEFECT.STOP_PRICE_ON_GAP;
-  return marketSellPrice(usesOpen ? context.candle.open : stop, context.config.execution);
+function executePendingExit(
+  draft: WalletDraft,
+  order: PendingOrderState,
+  context: WalletContext,
+): void {
+  draft.state = { ...draft.state, pendingOrder: null };
+  const price = marketSellPrice(context.candle.open, context.run);
+  closePosition(
+    draft,
+    {
+      price,
+      reason: order.exitReason ?? EXIT_REASON.SIGNAL,
+      events: (quantity) => [
+        orderEvent({
+          order,
+          context,
+          status: ORDER_STATUS.FILLED,
+          price: formatEngineDecimal(price),
+          quantity,
+        }),
+      ],
+    },
+    context,
+  );
 }
 
-function closeAtStop(draft: ReferenceDraft, context: ReferenceContext, isGap: boolean): void {
-  const stop = draft.state.position?.stopPrice ?? '0';
-  const price = stopExitPrice(context, stop, isGap);
-  closePosition(draft, { price, reason: EXIT_REASON.STOP, type: ORDER_TYPE.STOP }, context);
+// Ordem pendente decidida no fechamento anterior: mercado na abertura, limitada se o candle cruzar.
+export function executePendingOrder(draft: WalletDraft, context: WalletContext): void {
+  const order = draft.state.pendingOrder;
+  if (order === null) return;
+  if (order.side === ORDER_SIDE.SELL) return executePendingExit(draft, order, context);
+  if (order.type === ORDER_TYPE.MARKET) {
+    draft.state = { ...draft.state, pendingOrder: null };
+    openPosition(draft, { order, price: entryMarketPrice(context, context.candle.open) }, context);
+    return;
+  }
+  executeLimitOrder(draft, order, context);
 }
 
-function closeAtTarget(draft: ReferenceDraft, context: ReferenceContext): void {
-  const price = toEngineDecimal(draft.state.position?.targetPrice ?? '0');
-  closePosition(draft, { price, reason: EXIT_REASON.TARGET, type: ORDER_TYPE.TARGET }, context);
+function closeProtective(
+  draft: WalletDraft,
+  context: WalletContext,
+  exit: {
+    readonly price: EngineDecimalValue;
+    readonly reason: ExitReason;
+    readonly trigger: string;
+  },
+): void {
+  const orderKey = takeKey(draft, 'order');
+  const type = exit.reason === EXIT_REASON.STOP ? ORDER_TYPE.STOP : ORDER_TYPE.TARGET;
+  const price = formatEngineDecimal(exit.price);
+  closePosition(
+    draft,
+    {
+      price: exit.price,
+      reason: exit.reason,
+      events: (quantity) =>
+        protectiveExitEvents({
+          orderKey,
+          context,
+          type,
+          triggerPrice: exit.trigger,
+          price,
+          quantity,
+        }),
+    },
+    context,
+  );
+}
+
+function closeAtStop(draft: WalletDraft, context: WalletContext, stop: string): void {
+  const { candle, run, defect } = context;
+  const isGap = toEngineDecimal(candle.open).lte(stop);
+  const price =
+    isGap && defect === REFERENCE_ENGINE_DEFECT.STOP_PRICE_ON_GAP
+      ? marketSellPrice(stop, run)
+      : stopExitPrice(stop, candle.open, run);
+  closeProtective(draft, context, { price, reason: EXIT_REASON.STOP, trigger: stop });
+}
+
+function closeAtTarget(draft: WalletDraft, context: WalletContext, isGap: boolean): void {
+  const target = draft.state.position?.targetPrice ?? '0';
+  const isAtOpen = isGap && context.defect === REFERENCE_ENGINE_DEFECT.GAP_TARGET_AT_OPEN;
+  const price = toEngineDecimal(isAtOpen ? context.candle.open : target);
+  closeProtective(draft, context, { price, reason: EXIT_REASON.TARGET, trigger: target });
+}
+
+function isTargetPassed(
+  draft: WalletDraft,
+  context: WalletContext,
+  target: EngineDecimalValue,
+): boolean {
+  const { candle, defect } = context;
+  const high = toEngineDecimal(candle.high);
+  const passes =
+    defect === REFERENCE_ENGINE_DEFECT.TARGET_ON_TOUCH
+      ? high.gte(target)
+      : high.greaterThan(target);
+  const isEntryCandle = draft.state.position?.openedCandleOpenTime === candle.openTime;
+  const isBlocked =
+    isEntryCandle &&
+    draft.isIntraCandleEntry &&
+    defect !== REFERENCE_ENGINE_DEFECT.INTRA_CANDLE_LIMIT_TARGET;
+  return passes && !isBlocked;
 }
 
 // Stop no toque, alvo só se o candle passar dele; os dois no mesmo candle: vale o stop (lado pior).
-export function evaluateProtectiveExits(draft: ReferenceDraft, context: ReferenceContext): void {
+// Gap acima do alvo: a ordem de alvo está no livro e preenche ao preço do alvo.
+export function evaluateProtectiveExits(draft: WalletDraft, context: WalletContext): void {
   const position = draft.state.position;
   if (position === null) return;
   const { candle } = context;
   const stop = toEngineDecimal(position.stopPrice);
   const target = toEngineDecimal(position.targetPrice);
+  const open = toEngineDecimal(candle.open);
   const isEntryCandle = position.openedCandleOpenTime === candle.openTime;
-  if (!isEntryCandle && toEngineDecimal(candle.open).lte(stop))
-    return closeAtStop(draft, context, true);
-  if (!isEntryCandle && toEngineDecimal(candle.open).greaterThan(target)) {
-    return closeAtTarget(draft, context);
-  }
+  if (!isEntryCandle && open.lte(stop)) return closeAtStop(draft, context, position.stopPrice);
+  if (!isEntryCandle && open.greaterThan(target)) return closeAtTarget(draft, context, true);
   const isStopHit = toEngineDecimal(candle.low).lte(stop);
-  const isTargetHit =
-    toEngineDecimal(candle.high).greaterThan(target) &&
-    !(isEntryCandle && draft.isIntraCandleEntry);
+  const isTargetHit = isTargetPassed(draft, context, target);
   if (context.defect === REFERENCE_ENGINE_DEFECT.TARGET_BEFORE_STOP && isTargetHit) {
-    return closeAtTarget(draft, context);
+    return closeAtTarget(draft, context, false);
   }
-  if (isStopHit) return closeAtStop(draft, context, false);
-  if (isTargetHit) closeAtTarget(draft, context);
+  if (isStopHit) return closeAtStop(draft, context, position.stopPrice);
+  if (isTargetHit) closeAtTarget(draft, context, false);
 }

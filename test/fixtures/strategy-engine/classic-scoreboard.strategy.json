@@ -1,6 +1,5 @@
 {
   "schemaVersion": 1,
-  "market": { "symbol": "BTCUSDT", "timeframe": "1h" },
   "rules": [
     { "id": "ema-9-21", "kind": "ema_cross", "fastPeriod": 9, "slowPeriod": 21 },
     { "id": "macd-12-26-9", "kind": "macd", "fastPeriod": 12, "slowPeriod": 26, "signalPeriod": 9 },
@@ -24,13 +23,5 @@
     "targetAtrMultiple": "3",
     "riskPerTrade": "0.01",
     "maxExposureRate": "1"
-  },
-  "execution": {
-    "initialBalance": "10000",
-    "feeRate": "0.001",
-    "slippageRate": "0.0005",
-    "tickSize": "0.01",
-    "quantityStep": "0.00001",
-    "minNotional": "5"
   }
 }

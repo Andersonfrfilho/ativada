@@ -22,7 +22,11 @@ function assertWarmup<TParams, TValue extends IndicatorValue>(
   params: IndicatorContractParams<TParams, TValue>,
   series: readonly (TValue | undefined)[],
 ): void {
-  const { warmupCandles } = params.definition.create(params.params);
+  const { warmupCandles, convergenceCandles } = params.definition.create(params.params);
+  // Convergência é horizonte de pré-aquecimento: inteira e nunca menor que o aquecimento.
+  if (!Number.isInteger(convergenceCandles) || convergenceCandles < warmupCandles) {
+    throw new Error('Convergência menor que o aquecimento.');
+  }
   if (params.candles.length < warmupCandles + 2)
     throw new Error('Série curta demais para o contrato.');
   series.forEach((value, index) => {
@@ -71,6 +75,7 @@ export const SIMPLE_AVERAGE_DEFECT = {
   NONE: 'none',
   WRONG_WARMUP: 'wrong-warmup',
   LOSSY_SNAPSHOT: 'lossy-snapshot',
+  SHORT_CONVERGENCE: 'short-convergence',
 } as const;
 export type SimpleAverageDefect =
   (typeof SIMPLE_AVERAGE_DEFECT)[keyof typeof SIMPLE_AVERAGE_DEFECT];
@@ -88,6 +93,8 @@ export function createSimpleAverageDefinition(
     let window = [...initialWindow];
     return {
       warmupCandles: defect === SIMPLE_AVERAGE_DEFECT.WRONG_WARMUP ? period - 1 : period,
+      // Janela finita: depois de `period` candles o primeiro já não pesa nada.
+      convergenceCandles: defect === SIMPLE_AVERAGE_DEFECT.SHORT_CONVERGENCE ? period - 1 : period,
       update: (candle): number | undefined => {
         window = [...window.slice(-(period - 1)), candle.close];
         if (window.length < period) return undefined;

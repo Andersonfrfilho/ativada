@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { z } from '@cryptoada/environment';
+import { z } from 'zod';
 
+import { decimalTextSchema } from './decimal-text.schema.js';
 import { CUSTOM_ISSUE_CODE, MAX_STRATEGY_RULES, RULE_DISCRIMINATOR } from './engine.constant.js';
 import { RULE_KIND } from './engine-vocabulary.constant.js';
 
@@ -56,7 +57,8 @@ const BOLLINGER_RULE_SCHEMA = z.strictObject({
   id: RULE_ID_SCHEMA,
   kind: z.literal(RULE_KIND.BOLLINGER),
   period: INDICATOR_PERIOD_SCHEMA,
-  deviations: z.number().min(0.5).max(5).multipleOf(0.1),
+  // Texto decimal com uma casa: `multipleOf(0.1)` em float recusaria 0.3 (0.30000000000000004).
+  deviations: decimalTextSchema({ minimum: '0.5', maximum: '5', maximumDecimalPlaces: 1 }),
 });
 
 const OBV_TREND_RULE_SCHEMA = z.strictObject({
