@@ -12,8 +12,9 @@ precisa ser medida, não suposta.
 
 ## Objetivo
 
-Um executor que leva os sinais da spec 001 a uma corretora por API, com travas obrigatórias,
-percorrendo testnet → sombra → real pequeno, sempre com uma pessoa decidindo cada passagem.
+Um executor que roda, por usuário, o mesmo motor de estratégias da spec 001 e leva as ordens dele a
+uma corretora por API, com travas obrigatórias, percorrendo testnet → sombra → real pequeno, sempre com
+uma pessoa decidindo cada passagem.
 
 ## Fora de escopo
 
@@ -80,14 +81,16 @@ Aumentar teto é decisão humana registrada.
 - Responde em até 5 s e confirma o estado final consultando a corretora.
 
 ### RF06 — Ordens
-- Só ordem limitada, com preço do sinal ± tolerância configurável e expiração.
+- Só ordem limitada, com o preço decidido pelo motor ± tolerância configurável e expiração.
 - Ordem a mercado só no stop, e só se o operador ligar essa opção.
 - Respeita incremento mínimo de preço, quantidade e valor mínimo da corretora (filtros do par).
 
 ### RF07 — Idempotência
-- `clientOrderId` determinístico derivado do id do sinal.
+- `clientOrderId` determinístico derivado da ordem do motor (`run_id + engine_key`, ADR 0002 §h).
 - Antes de reenviar qualquer ordem após erro ou reconexão, consulta a corretora por esse id.
-- Um sinal nunca gera duas ordens.
+- Uma ordem do motor nunca gera duas ordens na corretora.
+- O que a corretora reporta (preenchimento, rejeição, posição fechada fora do robô) é gravado e entra no
+  passo seguinte do motor como dado; o motor nunca é "corrigido" por fora.
 
 ### RF08 — Reconciliação
 - A cada N minutos e no boot: saldo e ordens da corretora × registro interno.

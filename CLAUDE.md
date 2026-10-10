@@ -47,11 +47,17 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `TERM`: Ctrl-C não deixa container vivo. Dois deles ao mesmo tempo disputam o mesmo projeto; rode um por vez.
 - `make check` roda `bun test` com `env -i`: teste que precisa de variável a declara; o `export` do `env.dev`
   não chega a ele.
-- **Motor de estratégias (ADR 0002).** `step(StepInput) → StepResult` é puro (sem relógio, aleatoriedade nem
-  I/O; o teste de fronteira varre o `src`), o estado é JSON canônico versionado e decimal (`decimal.js`) nunca
-  aparece no estado nem nas decisões, só texto. Todo motor novo passa `runEngineContract` e todo indicador passa
-  `expectIndicatorContract` (`test/fixtures/strategy-engine/`); a referência "sempre comprado" e doze motores
-  defeituosos provam o harness. Zod chega ao pacote por `@cryptoada/environment`.
+- **Motor de estratégias (ADR 0002, revisado na T2.1b).** `step ≡ walletStep ∘ signalStep`, puro (sem relógio,
+  aleatoriedade, locale nem I/O; o teste de fronteira varre o `src` com sonda), estado JSON canônico versionado em
+  duas partes (sinal e carteira); decimal (`decimal.js`) nunca aparece no estado nem nas decisões, só texto. A
+  versão da estratégia é só a lógica (`configHash`); par, timeframe, saldo, taxa, slippage, filtros e participação
+  no volume são `RunParameters` (`runHash`). A entrada guarda o VALOR EM RISCO e a quantidade nasce no
+  preenchimento (perda no stop sem gap ≤ `riskPerTrade × saldo`). Recusa de entrada tem `EngineInputError.code`
+  estável (`CANDLE_ALREADY_PROCESSED` na retomada = pular). Sentimento entra por `observedAt` = disponibilidade;
+  lacuna para a frente só com `confirmedGapCandles` exato. Todo motor novo passa `runEngineContract` (20
+  verificações, 7 cenários) e todo indicador passa `expectIndicatorContract` (`test/fixtures/strategy-engine/`); a
+  referência e 26 motores defeituosos provam o harness. `zod@4.6.5` e `decimal.js@10.6.0` exatos e diretos; o
+  hash da versão é preso por teste de hash-dourado literal.
 - Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account

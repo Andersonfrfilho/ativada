@@ -17,7 +17,7 @@
 
 | Peça | Papel |
 |---|---|
-| `packages/strategy-engine` | Puro, sem I/O: indicadores, votos, regime, risco, corretora simulada, métricas, walk-forward. Contrato no ADR 0002 (T2.1): `step(StepInput) → StepResult` puro, `EngineState` versionado em JSON canônico, schema Zod versionado da configuração com hash SHA-256, modelo de preenchimento D6; depende só de `@cryptoada/environment` (Zod) e `decimal.js@10.6.0`. Harness de contrato em `test/fixtures/strategy-engine/` |
+| `packages/strategy-engine` | Puro, sem I/O: indicadores (implementação própria), votos, regime, risco, corretora simulada, métricas, walk-forward. Contrato no ADR 0002 (T2.1, revisado na T2.1b): `step ≡ walletStep ∘ signalStep`, puro; `EngineState` versionado em JSON canônico, em duas partes (sinal e carteira); versão da estratégia (só a lógica, `configHash`) separada dos `RunParameters` (par, timeframe, saldo, taxa, slippage, filtros, participação no volume; `runHash`); tamanho da posição pelo valor em risco no preenchimento; sentimento por disponibilidade; comandos (`halt`/`resume`/`exit_position`) e tipos de relatório da corretora; recusas com código estável. Depende só de `decimal.js@10.6.0` e `zod@4.6.5` (exatos). Harness de contrato em `test/fixtures/strategy-engine/` |
 | `packages/database` | Drizzle (driver `Bun.sql`), schema, migrations com `rollback.sql` obrigatório, cliente; usado por API, worker e cron |
 | `packages/environment` | Validação Zod do ambiente (`parseEnvironment`, `runWithEnvironment`, `postgresUrlSchema`); lista todas as variáveis inválidas e nunca imprime valores |
 | `packages/identity-admin` | Cliente da Admin API do Keycloak (service account `cryptoada-api-service`): convidar, bloquear, apagar e encerrar sessões de usuário; compartilhado pela API e pelo cron, porque uma app não importa código de outra (ADR 0001 §h) |
@@ -28,10 +28,12 @@
 | `apps/frontend-cryptoada` | React 19 + Vite, PWA |
 
 O motor é o mesmo para backtest e ao vivo: o backtest alimenta candles do banco num laço; o ao vivo
-alimenta um candle por vez. A interface é uma só:
+alimenta um candle por vez. A interface é uma só, com duas metades para quem calcula o sinal uma vez e
+várias carteiras sobre ele (metas, walk-forward):
 
 ```ts
 type EngineStep = (input: StepInput) => StepResult; // estado entra, estado sai — sem I/O
+// step ≡ walletStep ∘ signalStep (ADR 0002 §a)
 ```
 
 ## 2. Decisões
@@ -41,7 +43,7 @@ type EngineStep = (input: StepInput) => StepResult; // estado entra, estado sai 
 | D1 | Bun + TypeScript estrito, monorepo com workspaces | Padrão do ecossistema |
 | D2 | Postgres + Drizzle; candles em tabela com PK composta | Consulta por intervalo é o caso dominante |
 | D3 | `decimal.js` para dinheiro e quantidade | Constituição §6 |
-| D4 | Indicadores via `trading-signals` (TS nativo, mantido) — confirmar na T2.2 | Evitar reimplementar matemática; `technicalindicators` está sem manutenção |
+| D4 | Indicadores com implementação própria no `strategy-engine`, só com `+ − × ÷` e `Math.sqrt`, janelas recalculadas; `trading-signals` entra só como oráculo de referência nos testes (devDependency da T2.2) — ADR 0002 §c | Reprodução byte a byte entre runtimes: biblioteca usa `Math.pow`/`exp` e somatórios corridos; a referência externa continua conferindo os valores |
 | D5 | Sem fila externa na etapa 1: o stream da Binance é a entrada do worker; worker→API por `LISTEN/NOTIFY` | Multiusuário, mas uma instância de API e um worker na etapa 1: o volume cabe no Postgres e RabbitMQ seria peso sem ganho. Mais de uma instância exige ADR (estado em memória da API: rate limit, tickets, sockets) |
 | D6 | Execução em `t+1` na abertura; stop antes do alvo no mesmo candle | Constituição §3 e §4 |
 | D7 | Saldo em USDT; exibição em R$ pela cotação USDT/BRL do momento | Pares cotados em USDT têm mais liquidez e histórico |
@@ -51,7 +53,7 @@ type EngineStep = (input: StepInput) => StepResult; // estado entra, estado sai 
 | D11 | Autorização por objeto num único ponto: todo método de repositório de recurso de usuário recebe `OwnerScope` como primeiro parâmetro. Defesa em camadas (ADR 0001 §c): (1) o escopo e o `UserId` só nascem dentro de `@cryptoada/database`, cujo índice público exporta só os tipos e a app os recebe por retorno de função do pacote (`resolveUserBySubject` → `{ userId, scope }`); (2) o lint de `apps/*/src` é lista de bloqueio com as brechas conhecidas fechadas por sonda (Drizzle, `Bun.SQL` em todas as formas, `import()` dinâmico no backend, subcaminhos, asserção, *type guard* e sobrecarga que devolve `UserId`/`OwnerScope`/`AccountId`); (3) contrato negativo por rota | Chamar repositório sem escopo de dono não compila e a app não recebe o escopo por nenhum caminho que o pacote não tenha emitido; as camadas se cobrem entre si e a lista de brechas conhecidas está no ADR, sem afirmar impossibilidade absoluta |
 | D13 | `ENV=production` exige configuração explícita (ADR 0001 §g e §p): `TRUSTED_PROXY_HOPS` sem default (1 ou mais atrás de proxy), todas as URLs `https://`, `DATABASE_URL` com `sslmode=require`, segredos de 32+ caracteres e nenhum valor `_dev_only`/`_test_only`; vale para API e cron e a falha de boot não ecoa valores | Um default seguro em dev vira IP errado no rate limit e TLS desligado em produção sem que nada falhe |
 | D12 | Worker avalia todas as simulações ativas do par no mesmo candle e roteia alertas pelo dono | Um stream de mercado para todos (RNF06) |
-| D15 | Contrato do motor no ADR 0002: estado explícito e serializável (retomada pelo snapshot; migração replica do início), preenchimento com arredondamento sempre contra o usuário, stop no toque e alvo só ao passar, gap preenche na abertura, quantidade calculada no preenchimento a partir do orçamento decidido em `t` | Paridade backtest × ao vivo e retomada sem duplicar viram propriedade testável (`runEngineContract`), não disciplina |
+| D15 | Contrato do motor no ADR 0002: estado explícito e serializável em duas partes (retomada pelo snapshot; migração = execução nova ligada à anterior, replicada do início), preenchimento com arredondamento sempre contra o usuário, stop no toque e alvo só ao passar, stop sai a `min(stop, abertura)` com slippage, melhora de preço da limitada só no 1º candle, quantidade calculada no preenchimento a partir do VALOR EM RISCO decidido em `t` (perda no stop sem gap ≤ 1% do saldo, RF05), participação máxima no volume, lacuna só confirmada | Paridade backtest × ao vivo e retomada sem duplicar viram propriedade testável (`runEngineContract`, 20 verificações, 26 mutantes reprovados), não disciplina |
 | D14 | Fear & Greed vem da alternative.me (`sync-fear-greed` no cron, `sentiment_daily`). Os termos exigem crédito: a T5.2, e qualquer tela que exiba o índice, mostra "Fear & Greed Index por alternative.me" com link para https://alternative.me/crypto/fear-and-greed-index/ (RF01) | Termos de uso da fonte; sem o crédito o índice não pode aparecer |
 
 ## 3. Modelo de dados
@@ -59,17 +61,19 @@ type EngineStep = (input: StepInput) => StepResult; // estado entra, estado sai 
 | Tabela | Campos principais |
 |---|---|
 | `candles` | `exchange`, `symbol`, `timeframe`, `open_time` bigint em ms (PK composta, cobre a leitura do mais recente), `close_time`, `open/high/low/close numeric(24,8)`, `volume numeric(32,8)`, `trade_count`, `created_at`; CHECK `close_time > open_time`, `high >= low`, `open` e `close` entre `low` e `high` (migration 0006), `timeframe in ('15m','1h','4h','1d')`. Candle fechado é imutável (`ON CONFLICT DO NOTHING`); candle aberto (`close_time` além de agora + 5 s de tolerância de relógio) é rejeitado pelo repositório. Leitura por `[from, to)` |
-| `sentiment_daily` | `date` PK, `fear_greed smallint` (CHECK 0..100), `classification` varchar nulo, `created_at`; o valor do dia é atualizado (`DO UPDATE`) |
+| `sentiment_daily` | `date` PK, `fear_greed smallint` (CHECK 0..100), `classification` varchar nulo, `created_at`; o valor do dia é atualizado (`DO UPDATE`) — **só para exibição**, o motor não lê daqui |
+| `sentiment_observations` | (T3.1) append-only, imutável: `id`, `date`, `fear_greed smallint` (CHECK 0..100), `observed_at` bigint em ms (instante em que o valor ficou DISPONÍVEL: coleta ao vivo, ou data + atraso de publicação conservador configurável no cron, padrão 24 h, no histórico), `source varchar` (inclui a regra do atraso), `created_at`; único (`source`, `date`, `observed_at`). É a fonte do motor (ADR 0002 §f): o backtest seleciona a última com `observed_at ≤ close_time`; mudar o atraso gera linhas novas, nunca reescreve |
 | `users` | `id uuid`, `keycloak_sub varchar(255)` (único), `display_name`, `display_currency`, `timezone`, `telegram_chat_id` (nulo até vincular; único quando preenchido), `alert_telegram_enabled`, `limits jsonb`, `created_at`, `updated_at`, `blocked_at`, `deleted_at`, `identity_deleted_at`, `data_purged_at` (ADR 0001 §d, §h) |
 | `telegram_link_codes` | `id`, `user_id` (único), `code_hash` (único), `expires_at`, `attempts`, `created_at` — vínculo do chat por código de uso único; só o hash é guardado |
 | `strategies` | `id uuid`, `user_id`, `name`, `is_example bool`, `created_at` |
 | `strategy_versions` | `id uuid`, `user_id`, `strategy_id`, `version int`, `config jsonb` (validado por Zod), `created_at` |
-| `runs` | `id uuid`, `strategy_version_id`, `kind varchar` (`backtest`/`walk_forward`/`live_paper`), `symbol`, `timeframe`, `period_start/end`, `initial_balance numeric`, `fee_rate`, `slippage_rate`, `status varchar`, `metrics jsonb`, `last_candle_time`, `engine_version varchar`, `engine_state jsonb` (estado canônico do motor, gravado na mesma transação das decisões — ADR 0002 §a) |
-| `signals` | `id uuid`, `run_id`, `candle_time`, `action varchar`, `score numeric`, `regime varchar`, `votes jsonb`, `indicators jsonb`, `reason text` · único (`run_id`, `candle_time`) |
-| `orders` | `id uuid`, `run_id`, `signal_id`, `engine_key varchar` (único com `run_id`), `side`, `type` (`market`/`limit`/`stop`/`target`), `purpose` (`entry`/`exit`), `price`, `limit_price`, `quote_budget numeric`, `quantity`, `status`, `reason`, `created_candle_time`, `eligible_candles`, `expires_candle_time` |
+| `runs` | `id uuid`, `strategy_version_id`, `kind varchar` (`backtest`/`walk_forward`/`live_paper`), `run_parameters jsonb` (os `RunParameters` reparseados: par, timeframe, saldo, taxa, slippage, filtros, participação no volume), `run_hash varchar(64)`, `symbol`, `timeframe`, `initial_balance numeric`, `fee_rate`, `slippage_rate` (cópias para consulta; a fonte é `run_parameters`), `period_start/end`, `status varchar`, `metrics jsonb`, `last_candle_time`, `engine_version varchar`, `engine_state jsonb` (estado canônico do motor), `migrated_from_run_id uuid` nulo (FK composta para a execução que esta replicou com outra versão do motor; a antiga fica imutável — ADR 0002 §b) |
+| `run_commands` | (T3.1) `id uuid`, `run_id`, `command_id varchar` (único com `run_id`), `kind`, `reason`, `issued_at`, `candle_time` (candle em cujo fechamento agiu) — entrada persistida do passo e trilha |
+| `signals` | `id uuid`, `run_id`, `candle_time`, `action varchar`, `score numeric`, `regime varchar`, `votes jsonb`, `indicators jsonb` (ids com espaço de nome, achatados), `sentiment jsonb` nulo (a observação usada: valor, `observed_at`, fonte), `reason text` · único (`run_id`, `candle_time`), `INSERT … ON CONFLICT DO NOTHING` (imutável) |
+| `orders` | `id uuid`, `run_id`, `signal_id`, `engine_key varchar` (único com `run_id`; `w<índice>:order-N` no walk-forward), `side`, `type` (`market`/`limit`/`stop`/`target`), `purpose` (`entry`/`exit`), `price`, `quantity`, `limit_price`, `trigger_price`, `risk_amount numeric`, `stop_distance`, `target_distance`, `status`, `reason` (inclui `volume_capped`), `created_candle_time`, `eligible_candles`, `expires_candle_time` · `INSERT … ON CONFLICT (run_id, engine_key) DO UPDATE … WHERE` o status novo é posterior ao gravado (monotônico: `created` < terminal) |
 | `fills` | `id uuid`, `user_id`, `order_id`, `side`, `price`, `quantity`, `notional numeric`, `fee`, `filled_at` |
-| `positions` | `id uuid`, `run_id`, `engine_key varchar` (único com `run_id`), `symbol`, `entry_price`, `quantity`, `stop_price`, `target_price`, `entry_fee`, `exit_price`, `exit_fee`, `net_profit numeric`, `opened_at`, `closed_at`, `exit_reason` (`stop`/`target`/`signal`/`command`) |
-| `equity_points` | `run_id`, `time`, `equity numeric`, `benchmark numeric` |
+| `positions` | `id uuid`, `run_id`, `engine_key varchar` (único com `run_id`), `symbol`, `entry_price`, `quantity`, `stop_price`, `target_price`, `entry_fee`, `exit_price`, `exit_fee`, `net_profit numeric`, `opened_at`, `closed_at`, `exit_reason` (`stop`/`target`/`signal`/`command`) · upsert monotônico (aberta → fechada) |
+| `equity_points` | `run_id`, `time`, `equity numeric`, `equity_at_low numeric` (liquidação na mínima do candle: perda máxima da meta e piso do RF09), `benchmark numeric` · imutável por (`run_id`, `time`) |
 | `walk_forward_windows` | `user_id`, `run_id`, `index`, `train_start/end`, `test_start/end`, `best_params jsonb`, `in_sample jsonb`, `out_of_sample jsonb` |
 | `alerts` | `id uuid`, `signal_id`, `channel`, `sent_at`, `status` |
 | `price_alerts` | `id uuid`, `user_id`, `symbol`, `direction`, `value numeric`, `origin`, `is_enabled`, `triggered_at` (RF14) |
@@ -86,6 +90,12 @@ dono divergente do pai. Índices começam por `user_id`. `candles` e `sentiment_
 `audit_events` é pseudonimizada na exclusão (ADR 0001 §h, §i).
 
 Sem ENUM nativo (VARCHAR), PK UUID v7. Toda migration com rollback.
+
+**Persistência do motor (ADR 0002 §b).** Ao vivo: uma transação por passo (decisões + `engine_state` +
+`last_candle_time`); `CANDLE_ALREADY_PROCESSED` na retomada é "pule", não erro. Backtest: grava em LOTE,
+com checkpoint do `engine_state` a cada lote (RNF01), mesmas chaves e mesmo upsert monotônico. Réplica
+não reemite alerta: o chamador suprime alerta de sinal cujo `candle_time` já existia. Trocar a versão da
+estratégia com posição aberta = `exit_position` e encerrar a execução; a versão nova inicia outra.
 
 ## 4. Estratégia de exemplo — "Placar clássico"
 
@@ -110,11 +120,19 @@ Limiar: compra ≥ +2, venda ≤ −2. Risco: stop 2×ATR, alvo 3×ATR, 1% por o
 ## 5b. Metas (RF13)
 
 - `evaluateGoal` no `strategy-engine`: para cada (estratégia, par), roda janelas de `prazo` dias
-  com passo de 2 dias sobre 2 anos, com saída forçada no alvo e na perda máxima. Puro e
-  determinístico; mesmo motor do backtest.
-- Custo: 5 pares × 4 estratégias × ~335 janelas × 30 dias ≈ 200 mil passos — roda no `worker_thread`
-  da API em menos de 1 s; resultado guardado em cache por (versão da estratégia, par, timeframe,
-  meta, dia do último candle).
+  com passo de 2 dias sobre 2 anos. A saída por meta **age no fechamento** do candle em que o
+  `equityPoint` atinge o alvo ou a perda máxima (esta medida no `equityAtLow`, lado pior) e **executa
+  em `t+1`** (comando `exit_position`, ADR 0002 §h) — nunca no preço do alvo. Puro e determinístico;
+  mesmo motor do backtest.
+- Custo, com as metades do motor (ADR 0002 §a): os SINAIS de cada (estratégia, par) são calculados UMA
+  vez em série contínua (`signalStep`, ~17,5 mil passos em `1h` para 2 anos); cada janela roda só a
+  carteira (`walletStep`, sem indicadores) sobre os sinais já calculados. Em `1h`: 5 pares × 4
+  estratégias × ~335 janelas × 30 dias × 24 candles ≈ 4,8 milhões de passos de carteira (a conta antiga
+  de "200 mil passos" supunha candle diário) + 20 × 17,5 mil ≈ 350 mil passos de sinal. Passo de carteira
+  é aritmética decimal de poucas ordens: meta de 2 µs a 5 µs, ~10 s a 25 s no `worker_thread`, medida na
+  T4b.1 (em `1d` fica abaixo de 1 s). Resultado guardado em cache por (versão da estratégia, par,
+  timeframe, meta, dia do último candle); se a medida não couber, a T4b.1 reduz o passo das janelas ou
+  restringe a meta a `4h`/`1d`.
 - "Próximo gatilho" é função pura por família: distância entre o valor atual do indicador e o limiar
   que dispara o voto (ex.: média 9 a 1,2% da 21; máxima de 20 dias 4% acima do preço).
 - Tabela `goals`: `id uuid`, `user_id`, `target_rate numeric`, `horizon_days`, `max_loss_rate numeric`,
@@ -179,8 +197,10 @@ fora de produção.
 - **Contrato do motor**: indicadores contra valores de referência; sem lookahead (mutar candle
   futuro não muda decisão passada); determinismo; stop antes de alvo; taxa e slippage aplicados.
   Todo motor passa `runEngineContract` (`test/fixtures/strategy-engine/engine-contract.fixture.ts`, ADR
-  0002 §f) e todo indicador passa `expectIndicatorContract`; o harness é provado por doze motores
-  defeituosos que ele reprova pela verificação certa.
+  0002 §g, 20 verificações em sete cenários) e todo indicador passa `expectIndicatorContract`; o harness
+  é provado por 26 motores defeituosos que ele reprova pela verificação certa. A T2.5 acrescenta o teste
+  diferencial do `FillModel` (produção × referência, mesmo fluxo, saída idêntica) e o golden do Placar
+  clássico preso à `engineVersion`.
 - **Paridade**: o mesmo período rodado em modo backtest e em modo ao vivo reproduzido produz
   operações idênticas.
 - **Integração**: backfill com lacuna; worker reinicia sem duplicar operação; NOTIFY chega ao WS.
@@ -195,7 +215,7 @@ fora de produção.
 | Overfitting dar falsa confiança | Walk-forward obrigatório e relatório fora da amostra como principal |
 | Divergência backtest × ao vivo | Motor único + teste de paridade |
 | Rate limit da Binance no backfill | Controle de peso por minuto, backoff, retomada |
-| `trading-signals` não ter algum indicador | T2.2 confere; o que faltar é implementado com teste de referência |
+| Indicador próprio divergir da referência externa | `trading-signals` como oráculo nos testes da T2.2 (tolerância declarada por indicador) |
 | WebSocket da Binance cair | Reconexão com backoff e backfill da lacuna pelo REST |
 | Um usuário ver dado de outro | D11 (filtro obrigatório no tipo) + contrato negativo por rota |
 | Walk-forward de um usuário travar os outros | Fila de jobs com teto por usuário (RF00b) |
