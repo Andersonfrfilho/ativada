@@ -97,6 +97,52 @@ describe('postgres wire frame reader', () => {
   });
 });
 
+describe('postgres wire frame reader — cost and ceiling', () => {
+  const EMPTY_FRAME_BYTES = 5;
+
+  function emptyFrames(count: number): Uint8Array {
+    return Uint8Array.from({ length: count }, (_unused, index) =>
+      index % EMPTY_FRAME_BYTES === 0 ? 78 : index % EMPTY_FRAME_BYTES === 4 ? 4 : 0,
+    );
+  }
+
+  test('a 64 KB chunk of thousands of 5-byte frames is read in linear time', () => {
+    const frameCount = 13_000;
+    const chunk = emptyFrames(frameCount * EMPTY_FRAME_BYTES);
+    const reader = createFrameReader();
+    const startedAt = performance.now();
+    const frames = reader.push(chunk);
+    const elapsed = performance.now() - startedAt;
+    expect(frames).toHaveLength(frameCount);
+    expect(elapsed).toBeLessThan(50);
+  });
+
+  test('the cost grows linearly: 100,000 tiny frames in one chunk stay far from quadratic', () => {
+    const frameCount = 100_000;
+    const chunk = emptyFrames(frameCount * EMPTY_FRAME_BYTES);
+    const reader = createFrameReader({ maxFramesPerPush: frameCount });
+    const startedAt = performance.now();
+    const frames = reader.push(chunk);
+    const elapsed = performance.now() - startedAt;
+    expect(frames).toHaveLength(frameCount);
+    expect(elapsed).toBeLessThan(250);
+  });
+
+  test('the remainder after the last whole frame is kept for the next chunk', () => {
+    const reader = createFrameReader();
+    const whole = Uint8Array.from([...frame('Z', 73), ...frame('C', 'LISTEN', 0)]);
+    const cut = whole.length - 3;
+    expect(reader.push(whole.slice(0, cut)).map((item) => item.type)).toStrictEqual(['Z']);
+    expect(reader.push(whole.slice(cut)).map((item) => item.type)).toStrictEqual(['C']);
+  });
+
+  test('more frames than the per-chunk ceiling is a protocol error', () => {
+    const reader = createFrameReader({ maxFramesPerPush: 10 });
+    expect(reader.push(emptyFrames(10 * EMPTY_FRAME_BYTES))).toHaveLength(10);
+    expect(() => reader.push(emptyFrames(11 * EMPTY_FRAME_BYTES))).toThrow();
+  });
+});
+
 describe('postgres wire decoding', () => {
   test('notification response yields channel and payload', () => {
     const body = bytesOf(...int32(77), 'run_events', 0, '{"a":1}', 0);

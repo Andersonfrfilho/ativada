@@ -103,6 +103,7 @@ export function createApplication(params: CreateApplicationParams): Application 
     dispatcher,
     ticketStore,
     closeUserSockets: (userId) => void stream.endpoint.closeUser(userId),
+    readListenerHealth: stream.readListenerHealth,
   });
   return {
     handler: createRequestHandler({

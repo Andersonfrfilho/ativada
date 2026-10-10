@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { RunQueueSummary } from '../../packages/database/src/run-queue/run-queue.types.js';
+import type { ListenerHealth } from '../../apps/api-cryptoada/src/stream/listener-health.js';
 import type { ApiRouteDependencies } from '../../apps/api-cryptoada/src/routes/create-api-routes.js';
 import { createStreamTicketStore } from '../../apps/api-cryptoada/src/stream/stream-ticket-store.js';
 
@@ -18,15 +19,19 @@ export const EMPTY_QUEUE_SUMMARY: RunQueueSummary = {
   },
 };
 
+export const HEALTHY_LISTENER: ListenerHealth = { state: 'up', reason: null };
+
 export function buildApiRouteDependencies(
   checkDatabase: () => Promise<boolean>,
   isDocumentationEnabled = false,
   queueSummary: RunQueueSummary = EMPTY_QUEUE_SUMMARY,
+  listenerHealth: ListenerHealth = HEALTHY_LISTENER,
 ): ApiRouteDependencies {
   const notUsed = (): Promise<never> => Promise.reject(new Error('not used'));
   return {
     checkDatabase,
     readRunQueueSummary: () => Promise.resolve(queueSummary),
+    readListenerHealth: () => listenerHealth,
     session: {
       createSession: notUsed,
       refreshSession: notUsed,

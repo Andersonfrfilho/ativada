@@ -2,6 +2,7 @@
 import {
   AUTHENTICATION_CODE,
   DEFAULT_MAX_FRAME_BYTES,
+  DEFAULT_MAX_FRAMES_PER_PUSH,
   ERROR_FIELD_SQLSTATE,
   ERROR_FIELD_TERMINATOR,
   FRAME_HEADER_BYTES,
@@ -14,7 +15,10 @@ const TEXT_DECODER = new TextDecoder();
 
 export type WireFrame = { readonly type: string; readonly body: Uint8Array };
 
-export type FrameReaderOptions = { readonly maxFrameBytes?: number };
+export type FrameReaderOptions = {
+  readonly maxFrameBytes?: number;
+  readonly maxFramesPerPush?: number;
+};
 
 export type FrameReader = { readonly push: (chunk: Uint8Array) => readonly WireFrame[] };
 
@@ -27,25 +31,31 @@ function appendChunk(pending: Uint8Array, chunk: Uint8Array): Uint8Array {
 }
 
 // O tamanho declarado é conferido antes de qualquer espera: um servidor hostil não faz o processo acumular memória.
+// Lê por deslocamento e corta o resto uma única vez no fim, e o teto de quadros por leitura limita o trabalho de um
+// pedaço cheio de quadros mínimos.
 export function createFrameReader(options: FrameReaderOptions = {}): FrameReader {
   const maxFrameBytes = options.maxFrameBytes ?? DEFAULT_MAX_FRAME_BYTES;
+  const maxFramesPerPush = options.maxFramesPerPush ?? DEFAULT_MAX_FRAMES_PER_PUSH;
   let pending: Uint8Array = new Uint8Array(0);
   return {
     push: (chunk): readonly WireFrame[] => {
-      pending = appendChunk(pending, chunk);
+      const buffer = appendChunk(pending, chunk);
+      const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
       const frames: WireFrame[] = [];
-      while (pending.length >= FRAME_HEADER_BYTES) {
-        const view = new DataView(pending.buffer, pending.byteOffset, pending.byteLength);
-        const length = view.getInt32(1);
+      let offset = 0;
+      while (buffer.length - offset >= FRAME_HEADER_BYTES) {
+        const length = view.getInt32(offset + 1);
         if (length < INT32_BYTES || length > maxFrameBytes) throw new WireProtocolError();
-        const total = 1 + length;
-        if (pending.length < total) break;
+        const end = offset + 1 + length;
+        if (end > buffer.length) break;
+        if (frames.length >= maxFramesPerPush) throw new WireProtocolError();
         frames.push({
-          type: String.fromCharCode(pending[0] ?? NULL_BYTE),
-          body: pending.slice(FRAME_HEADER_BYTES, total),
+          type: String.fromCharCode(buffer[offset] ?? NULL_BYTE),
+          body: buffer.slice(offset + FRAME_HEADER_BYTES, end),
         });
-        pending = pending.slice(total);
+        offset = end;
       }
+      pending = buffer.slice(offset);
       return frames;
     },
   };

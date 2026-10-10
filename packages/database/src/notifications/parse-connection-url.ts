@@ -47,6 +47,11 @@ function readSslMode(parsed: URL): SslMode {
   return mode;
 }
 
+function stripIpv6Brackets(hostname: string): string {
+  const isIpv6Literal = hostname.startsWith('[') && hostname.endsWith(']');
+  return isIpv6Literal ? hostname.slice(1, -1) : hostname;
+}
+
 export function parseConnectionUrl(databaseUrl: string): ConnectionSettings {
   if (!URL.canParse(databaseUrl)) throw new InvalidConnectionUrlError();
   const parsed = new URL(databaseUrl);
@@ -57,7 +62,7 @@ export function parseConnectionUrl(databaseUrl: string): ConnectionSettings {
     throw new InvalidConnectionUrlError();
   }
   return {
-    host: parsed.hostname,
+    host: stripIpv6Brackets(parsed.hostname),
     port: parsed.port === '' ? DEFAULT_PORT : Number(parsed.port),
     user,
     password: decodeURIComponent(parsed.password),

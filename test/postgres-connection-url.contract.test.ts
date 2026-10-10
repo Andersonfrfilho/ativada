@@ -24,6 +24,13 @@ describe('postgres connection URL', () => {
     expect(settings.host).toBe('127.0.0.1');
   });
 
+  test('an IPv6 literal host loses its brackets, so it can be dialed and matched to the certificate', () => {
+    const settings = parseConnectionUrl('postgres://u:p@[::1]:5433/d');
+    expect(settings.host).toBe('::1');
+    expect(settings.port).toBe(5433);
+    expect(parseConnectionUrl('postgres://u:p@[2001:db8::7]/d').host).toBe('2001:db8::7');
+  });
+
   test('percent-decodes user and password', () => {
     const settings = parseConnectionUrl('postgres://us%40er:p%3Ass%2Fw@h/d');
     expect(settings.user).toBe('us@er');

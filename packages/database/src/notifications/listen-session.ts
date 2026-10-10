@@ -6,7 +6,9 @@ import {
   type SessionContext,
 } from './listen-session.types.js';
 import { handleAuthentication } from './listen-session-auth.js';
-import { SSL_ACCEPTED_BYTE, SSL_REFUSED_BYTE, BACKEND_MESSAGE } from './postgres-wire.constant.js';
+import { endSession, isEnded } from './listen-session-end.js';
+import { handleSslAnswer, sendStartup } from './listen-session-startup.js';
+import { BACKEND_MESSAGE } from './postgres-wire.constant.js';
 import { SSL_MODE } from './parse-connection-url.js';
 import {
   createFrameReader,
@@ -15,65 +17,11 @@ import {
   decodeNotification,
   type WireFrame,
 } from './postgres-wire-decode.js';
-import {
-  encodeQuery,
-  encodeSslRequest,
-  encodeStartup,
-  encodeTerminate,
-} from './postgres-wire-encode.js';
-import { SESSION_END_REASON, type SessionEndReason } from './session-end.js';
+import { encodeQuery, encodeSslRequest } from './postgres-wire-encode.js';
+import { SESSION_END_REASON } from './session-end.js';
 
-const APPLICATION_NAME = 'cryptoada-listener';
 const AUTH_FAILURE_SQLSTATE_CLASS = '28';
 const AUTH_PHASES: readonly string[] = [SESSION_PHASE.STARTUP, SESSION_PHASE.AUTHENTICATING];
-
-function isEnded(ctx: SessionContext): boolean {
-  return ctx.phase === SESSION_PHASE.ENDED;
-}
-
-function endSession(ctx: SessionContext, reason: SessionEndReason, sqlState?: string): void {
-  if (isEnded(ctx)) return;
-  ctx.phase = SESSION_PHASE.ENDED;
-  if (reason === SESSION_END_REASON.STOPPED) ctx.transport?.write(encodeTerminate());
-  ctx.transport?.close();
-  ctx.params.handlers.onEnded({ reason, sqlState, wasListening: ctx.wasListening });
-}
-
-function sendStartup(ctx: SessionContext): void {
-  if (isEnded(ctx)) return;
-  const { settings } = ctx.params;
-  ctx.phase = SESSION_PHASE.STARTUP;
-  ctx.transport?.write(
-    encodeStartup({
-      user: settings.user,
-      database: settings.database,
-      applicationName: APPLICATION_NAME,
-    }),
-  );
-}
-
-function handleSslAnswer(ctx: SessionContext, answer: number | undefined): void {
-  const { sslMode, host } = ctx.params.settings;
-  if (answer === SSL_ACCEPTED_BYTE) {
-    ctx.phase = SESSION_PHASE.TLS;
-    const upgrade = ctx.transport?.upgradeToTls({
-      shouldVerify: sslMode === SSL_MODE.VERIFY,
-      serverName: host,
-    });
-    upgrade?.then(
-      () => {
-        if (ctx.phase === SESSION_PHASE.TLS) sendStartup(ctx);
-      },
-      () => endSession(ctx, SESSION_END_REASON.TLS_FAILED),
-    );
-  } else if (answer === SSL_REFUSED_BYTE && sslMode === SSL_MODE.PREFER) {
-    sendStartup(ctx);
-  } else if (answer === SSL_REFUSED_BYTE) {
-    endSession(ctx, SESSION_END_REASON.TLS_UNAVAILABLE);
-  } else {
-    endSession(ctx, SESSION_END_REASON.PROTOCOL_ERROR);
-  }
-}
 
 function handleServerError(ctx: SessionContext, body: Uint8Array): void {
   const sqlState = decodeErrorSqlState(body);
@@ -194,6 +142,7 @@ export function startListenSession(params: ListenSessionParams): ListenSession {
     phase: SESSION_PHASE.CONNECTING,
     transport: undefined,
     scram: undefined,
+    isServerVerified: false,
     wasListening: false,
     isPingPending: false,
     lastCheckedPhase: undefined,

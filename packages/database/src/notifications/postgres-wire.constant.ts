@@ -8,6 +8,8 @@ export const INT32_BYTES = 4;
 export const FRAME_HEADER_BYTES = 5;
 // Uma notificação carrega no máximo 8.000 bytes; o resto do que o servidor manda nesta conexão é pequeno.
 export const DEFAULT_MAX_FRAME_BYTES = 65_536;
+// Um pedaço de 64 KB cabe no máximo 13.107 quadros de 5 bytes; o teto dá folga e barra o resto.
+export const DEFAULT_MAX_FRAMES_PER_PUSH = 16_384;
 
 export const BACKEND_MESSAGE = {
   AUTHENTICATION: 'R',

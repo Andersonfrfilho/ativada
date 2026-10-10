@@ -3,6 +3,7 @@ import { RUN_KIND } from '@cryptoada/database';
 import { z } from '@cryptoada/environment';
 
 import type { RouteDocumentation } from '../openapi/route-documentation.types.js';
+import { LISTENER_STATE } from '../stream/listener-health.js';
 import { HTTP_STATUS } from '../shared/http/http.constant.js';
 
 const TAG = 'Saúde';
@@ -38,7 +39,7 @@ export const HEALTH_DOCUMENTATION = {
   },
   adminHealth: {
     summary:
-      'Saúde das dependências e contagens agregadas da fila de execuções (por estado e tipo), só números (administrador).',
+      'Saúde das dependências, estado do escutador de tempo real (com o motivo de uma falha fatal, sem segredo) e contagens agregadas da fila de execuções, só números (administrador).',
     tag: TAG,
     successes: [
       {
@@ -47,6 +48,10 @@ export const HEALTH_DOCUMENTATION = {
         schema: z.strictObject({
           status: z.enum(['ok', 'degraded']),
           checks: z.strictObject({ database: z.enum(['up', 'down']) }),
+          listener: z.strictObject({
+            state: z.enum([LISTENER_STATE.UP, LISTENER_STATE.RECONNECTING, LISTENER_STATE.FAILED]),
+            reason: z.string().nullable(),
+          }),
           runs: RUN_QUEUE_SUMMARY_SCHEMA.nullable(),
         }),
       },

@@ -21,6 +21,9 @@ const SCRAM = `${NOTIFICATIONS}/scram-sha-256.ts`;
 const URL_FILE = `${NOTIFICATIONS}/parse-connection-url.ts`;
 const SESSION = `${NOTIFICATIONS}/listen-session.ts`;
 const AUTH = `${NOTIFICATIONS}/listen-session-auth.ts`;
+const STARTUP = `${NOTIFICATIONS}/listen-session-startup.ts`;
+const SESSION_END = `${NOTIFICATIONS}/session-end.ts`;
+const END = `${NOTIFICATIONS}/listen-session-end.ts`;
 const LISTENER = `${NOTIFICATIONS}/notification-listener.ts`;
 const EVENT_SCHEMA = 'run-events/run-event.schema.ts';
 
@@ -171,19 +174,19 @@ const SESSION_MUTANTS: readonly SourceMutant[] = [
   {
     name: 'REQUIRED_TLS_FALLS_BACK_TO_PLAINTEXT',
     edits: edit(
-      SESSION,
+      STARTUP,
       '    endSession(ctx, SESSION_END_REASON.TLS_UNAVAILABLE);',
       '    sendStartup(ctx);',
     ),
   },
   {
     name: 'CERTIFICATE_NEVER_VERIFIED',
-    edits: edit(SESSION, 'shouldVerify: sslMode === SSL_MODE.VERIFY,', 'shouldVerify: false,'),
+    edits: edit(STARTUP, 'shouldVerify: sslMode === SSL_MODE.VERIFY,', 'shouldVerify: false,'),
   },
   {
     name: 'FAILED_HANDSHAKE_CONTINUES_IN_PLAINTEXT',
     edits: edit(
-      SESSION,
+      STARTUP,
       '() => endSession(ctx, SESSION_END_REASON.TLS_FAILED),',
       '() => sendStartup(ctx),',
     ),
@@ -191,7 +194,7 @@ const SESSION_MUTANTS: readonly SourceMutant[] = [
   {
     name: 'PREFER_NEVER_FALLS_BACK',
     edits: edit(
-      SESSION,
+      STARTUP,
       '} else if (answer === SSL_REFUSED_BYTE && sslMode === SSL_MODE.PREFER) {',
       '} else if (false as boolean) {',
     ),
@@ -199,6 +202,82 @@ const SESSION_MUTANTS: readonly SourceMutant[] = [
   {
     name: 'DISABLE_STILL_ASKS_FOR_TLS',
     edits: edit(SESSION, 'if (settings.sslMode === SSL_MODE.DISABLE) {', 'if (false as boolean) {'),
+  },
+  {
+    name: 'OK_WITHOUT_SASL_FINAL_ACCEPTED',
+    edits: edit(AUTH, ': ctx.isServerVerified;', ': true;'),
+  },
+  {
+    name: 'OK_WITHOUT_SASL_ACCEPTED_DESPITE_THE_PASSWORD',
+    edits: edit(
+      AUTH,
+      'ctx.scram === undefined ? ctx.params.settings.password.length === 0 :',
+      'ctx.scram === undefined ? true :',
+    ),
+  },
+  {
+    name: 'FRAME_READER_COPIES_THE_REMAINDER_PER_FRAME',
+    edits: edit(
+      DECODE,
+      '        offset = end;\n',
+      '        offset = end;\n        void buffer.slice(offset);\n',
+    ),
+  },
+  {
+    name: 'FRAME_COUNT_PER_CHUNK_NOT_CAPPED',
+    edits: edit(
+      DECODE,
+      '        if (frames.length >= maxFramesPerPush) throw new WireProtocolError();\n',
+      '',
+    ),
+  },
+  {
+    name: 'IPV6_BRACKETS_KEPT',
+    edits: edit(URL_FILE, 'host: stripIpv6Brackets(parsed.hostname),', 'host: parsed.hostname,'),
+  },
+  {
+    name: 'FATAL_REASON_NEVER_SET',
+    edits: edit(
+      LISTENER,
+      'state.fatalReason = isFatalSessionEnd(end) ? end.reason : undefined;',
+      'state.fatalReason = undefined;',
+    ),
+  },
+  {
+    name: 'FATAL_REASON_NEVER_CLEARED',
+    edits: edit(LISTENER, '          state.fatalReason = undefined;\n', ''),
+  },
+  {
+    name: 'FATAL_RETRY_KEEPS_THE_SHORT_BACKOFF',
+    edits: edit(
+      LISTENER,
+      'const capped = state.fatalReason === undefined ? growing : max;',
+      'const capped = growing;',
+    ),
+  },
+  {
+    name: 'WRONG_PASSWORD_NOT_FATAL',
+    edits: edit(SESSION_END, '  SESSION_END_REASON.AUTHENTICATION_FAILED,\n', ''),
+  },
+  {
+    name: 'UNSUPPORTED_AUTHENTICATION_NOT_FATAL',
+    edits: edit(
+      SESSION_END,
+      '  SESSION_END_REASON.UNSUPPORTED_AUTHENTICATION,\n  SESSION_END_REASON.TLS_UNAVAILABLE,',
+      '  SESSION_END_REASON.TLS_UNAVAILABLE,',
+    ),
+  },
+  {
+    name: 'TLS_UNAVAILABLE_NOT_FATAL',
+    edits: edit(SESSION_END, '  SESSION_END_REASON.TLS_UNAVAILABLE,\n];', '];'),
+  },
+  {
+    name: 'CONNECTION_FAILURE_COUNTS_AS_FATAL',
+    edits: edit(
+      SESSION_END,
+      '  SESSION_END_REASON.TLS_UNAVAILABLE,\n];',
+      '  SESSION_END_REASON.TLS_UNAVAILABLE,\n  SESSION_END_REASON.CONNECTION_FAILED,\n];',
+    ),
   },
   {
     name: 'CLEARTEXT_PASSWORD_IS_SENT',
@@ -239,7 +318,7 @@ const SESSION_MUTANTS: readonly SourceMutant[] = [
   {
     name: 'STOP_WITHOUT_TERMINATE',
     edits: edit(
-      SESSION,
+      END,
       'if (reason === SESSION_END_REASON.STOPPED) ctx.transport?.write(encodeTerminate());',
       '',
     ),
@@ -302,7 +381,7 @@ const LISTENER_MUTANTS: readonly SourceMutant[] = [
   { name: 'CLOSE_KEEPS_RECONNECTING', edits: edit(LISTENER, '      state.isClosed = true;\n', '') },
   {
     name: 'CLOSE_LEAVES_READY_PENDING',
-    edits: edit(LISTENER, '      releaseReady();\n      await done;', '      await done;'),
+    edits: edit(LISTENER, '      state.releaseReady();\n      await done;', '      await done;'),
   },
   {
     name: 'LISTENING_FLAG_STAYS_AFTER_LOSS',

@@ -44,6 +44,7 @@ export type SessionContext = {
   phase: SessionPhase;
   transport: PostgresTransport | undefined;
   scram: ScramClient | undefined;
+  isServerVerified: boolean;
   wasListening: boolean;
   isPingPending: boolean;
   lastCheckedPhase: SessionPhase | undefined;

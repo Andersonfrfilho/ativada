@@ -162,6 +162,7 @@ export async function createAdminHarness(): Promise<AdminHarness> {
       ...createHealthRoutes({
         checkDatabase: () => Promise.resolve(true),
         readRunQueueSummary: () => Promise.resolve(EMPTY_QUEUE_SUMMARY),
+        readListenerHealth: () => ({ state: 'up', reason: null }),
       }),
       ...createProfileRoutes({
         getProfile: createGetProfileUseCase(users.profiles),

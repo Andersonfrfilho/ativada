@@ -20,6 +20,7 @@ import { createRateLimiter } from '../rate-limit/rate-limiter.js';
 import { STREAM_LOG_MESSAGE } from './stream.constant.js';
 import { createStreamEndpoint, type StreamEndpoint } from './create-stream-endpoint.js';
 import { createRunEventDispatcher, type RunEventDispatcher } from './run-event-dispatcher.js';
+import { logListenerLoss, toListenerHealth, type ListenerHealth } from './listener-health.js';
 import { toStreamLimits } from './stream-environment.js';
 import type { StreamTicketStore } from './stream-ticket-store.js';
 
@@ -36,6 +37,8 @@ export type ApplicationStream = {
   readonly addPriceTickListener: (listener: PriceTickListener) => () => void;
   // Abre o escutador de NOTIFY e o varredor de ping/expiração; o endpoint só aceita sockets depois do LISTEN confirmado.
   readonly start: () => void;
+  // O estado do escutador de NOTIFY para o `/v1/admin/health`: falha de configuração aparece ali, não só no log.
+  readonly readListenerHealth: () => ListenerHealth;
   readonly close: () => Promise<void>;
 };
 
@@ -59,7 +62,7 @@ function openRunEventListener(wiring: ListenerWiring): NotificationListener {
     },
     onLost: (end) => {
       if (end.wasListening) endpoint.handleListenerLost();
-      logger.warn(STREAM_LOG_MESSAGE, { event: 'stream.listener.lost', ...end });
+      logListenerLoss(logger, end);
     },
     onHandlerError: wiring.reportError,
   });
@@ -114,6 +117,7 @@ export function createApplicationStream(params: ApplicationStreamParams): Applic
         environment.STREAM_PING_INTERVAL_SECONDS * MILLISECONDS_PER_SECOND;
       sweeper = setInterval(endpoint.sweep, intervalMilliseconds);
     },
+    readListenerHealth: () => toListenerHealth(listener),
     close: async (): Promise<void> => {
       clearInterval(sweeper);
       endpoint.closeAll();

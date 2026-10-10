@@ -45,6 +45,7 @@ function until(condition: () => boolean, description: string): Promise<void> {
 const CHANNEL = 'test_channel';
 const PASSWORD = 'segredo-de-teste';
 const URL_TEMPLATE = 'postgres://app:segredo-de-teste@127.0.0.1:5432/crypto';
+const URL_WITHOUT_PASSWORD = 'postgres://app@127.0.0.1:5432/crypto';
 const BASE_DELAY = 50;
 const MAX_DELAY = 200;
 
@@ -64,15 +65,18 @@ afterEach(async () => {
 
 function open(
   fake: FakePostgres,
-  overrides: Partial<NotificationListenerSettings> & { readonly urlSuffix?: string } = {},
+  overrides: Partial<NotificationListenerSettings> & {
+    readonly urlSuffix?: string;
+    readonly hasPassword?: boolean;
+  } = {},
 ): Opened {
   const notifications: string[] = [];
   const listening: Opened['listening'][number][] = [];
   const lost: SessionEnd[] = [];
   const delays: number[] = [];
-  const { urlSuffix, ...settingsOverrides } = overrides;
+  const { urlSuffix, hasPassword = false, ...settingsOverrides } = overrides;
   const listener = createNotificationListener({
-    databaseUrl: `${URL_TEMPLATE}${urlSuffix ?? ''}`,
+    databaseUrl: `${fake.authentication === 'trust' && !hasPassword ? URL_WITHOUT_PASSWORD : URL_TEMPLATE}${urlSuffix ?? ''}`,
     channel: CHANNEL,
     openTransport: fake.openTransport,
     onNotification: (payload) => void notifications.push(payload),
@@ -207,6 +211,28 @@ describe('notification listener — authentication', () => {
     },
   );
 
+  test('a server that answers ok without ever proving itself (no SASLFinal) is refused', async () => {
+    const fake = fakeWith({ authentication: 'scram-without-final', password: PASSWORD });
+    const { listener, lost } = open(fake);
+    await until(() => lost.length >= 1, 'recusa do servidor sem prova');
+    expect(lost[0]).toStrictEqual({
+      reason: 'authentication_failed',
+      sqlState: undefined,
+      wasListening: false,
+    });
+    expect(listener.isListening()).toBe(false);
+    expect(fake.connections[0]?.queries).toStrictEqual([]);
+  });
+
+  test('a configured password is never trusted to a server that asks for none', async () => {
+    const fake = fakeWith({ authentication: 'trust' });
+    const { listener, lost } = open(fake, { hasPassword: true });
+    await until(() => lost.length >= 1, 'recusa do trust com senha configurada');
+    expect(lost[0]?.reason).toBe('authentication_failed');
+    expect(listener.isListening()).toBe(false);
+    expect(fake.connections[0]?.queries).toStrictEqual([]);
+  });
+
   test('a server error at startup is reported by SQLSTATE only', async () => {
     const fake = fakeWith({ authentication: 'too-many-connections' });
     const { lost } = open(fake);
@@ -216,6 +242,51 @@ describe('notification listener — authentication', () => {
       sqlState: '53300',
       wasListening: false,
     });
+  });
+});
+
+describe('notification listener — fatal reasons', () => {
+  test('a wrong password is fatal until a connection finally listens', async () => {
+    const fake = fakeWith({ authentication: 'scram', password: 'outra-senha' });
+    const { listener, lost } = open(fake);
+    expect(listener.fatalReason()).toBeUndefined();
+    await until(() => lost.length >= 1, 'falha de autenticação');
+    await until(() => listener.fatalReason() === 'authentication_failed', 'motivo fatal');
+    fake.setPassword(PASSWORD);
+    await settle(listener.ready, 'ready');
+    expect(listener.fatalReason()).toBeUndefined();
+  });
+
+  test('unsupported authentication and unavailable TLS are fatal too', async () => {
+    const md5 = fakeWith({ authentication: 'md5', password: PASSWORD });
+    const first = open(md5);
+    await until(() => first.listener.fatalReason() === 'unsupported_authentication', 'md5 fatal');
+    const plain = fakeWith({ authentication: 'trust', tls: 'unsupported' });
+    const second = open(plain, { urlSuffix: '?sslmode=require' });
+    await until(
+      () => second.listener.fatalReason() === 'tls_unavailable',
+      'TLS indisponível fatal',
+    );
+  });
+
+  test('a refused connection or a dropped one is transient, never fatal', async () => {
+    const fake = fakeWith({ authentication: 'trust' });
+    fake.setRefusing(true);
+    const { listener, lost } = open(fake);
+    await until(() => lost.length >= 2, 'duas recusas');
+    expect(listener.fatalReason()).toBeUndefined();
+    fake.setRefusing(false);
+    await settle(listener.ready, 'ready');
+    fake.dropConnections();
+    await until(() => lost.length >= 3, 'queda');
+    expect(listener.fatalReason()).toBeUndefined();
+  });
+
+  test('a fatal reason retries at the ceiling at once, instead of hammering the server', async () => {
+    const fake = fakeWith({ authentication: 'scram', password: 'outra-senha' });
+    const { delays } = open(fake);
+    await until(() => delays.length >= 3, 'três esperas');
+    expect(delays.slice(0, 3)).toStrictEqual([MAX_DELAY, MAX_DELAY, MAX_DELAY]);
   });
 });
 

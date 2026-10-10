@@ -4,7 +4,12 @@ import { startListenSession } from './listen-session.js';
 import type { ListenSession } from './listen-session.types.js';
 import { parseConnectionUrl } from './parse-connection-url.js';
 import type { OpenTransport } from './postgres-transport.types.js';
-import { SESSION_END_REASON, type SessionEnd } from './session-end.js';
+import {
+  isFatalSessionEnd,
+  SESSION_END_REASON,
+  type SessionEnd,
+  type SessionEndReason,
+} from './session-end.js';
 
 const CHANNEL_PATTERN = /^[a-z_][a-z0-9_]{0,62}$/;
 const DEFAULT_RECONNECT_BASE_MILLISECONDS = 1_000;
@@ -33,6 +38,8 @@ export type NotificationListener = {
   // Resolve no primeiro LISTEN confirmado (ou no `close`); nunca rejeita: a conexão é refeita até dar certo.
   readonly ready: Promise<void>;
   readonly isListening: () => boolean;
+  // O motivo fatal da última tentativa (senha errada, autenticação ou TLS indisponíveis); some quando um LISTEN é confirmado.
+  readonly fatalReason: () => SessionEndReason | undefined;
   readonly close: () => Promise<void>;
 };
 
@@ -52,6 +59,7 @@ type LoopState = {
   readonly releaseReady: () => void;
   isClosed: boolean;
   isListening: boolean;
+  fatalReason: SessionEndReason | undefined;
   hasListenedBefore: boolean;
   attempt: number;
   consecutiveFailures: number;
@@ -83,6 +91,7 @@ function runSession(state: LoopState): Promise<SessionEnd> {
         onNotification: (payload) => guarded(state, () => settings.onNotification(payload)),
         onListening: () => {
           state.isListening = true;
+          state.fatalReason = undefined;
           state.consecutiveFailures = 0;
           const isReconnect = state.hasListenedBefore;
           state.hasListenedBefore = true;
@@ -107,7 +116,9 @@ function backoffDelay(state: LoopState): number {
   const { settings } = state;
   const base = settings.reconnectBaseMilliseconds ?? DEFAULT_RECONNECT_BASE_MILLISECONDS;
   const max = settings.reconnectMaxMilliseconds ?? DEFAULT_RECONNECT_MAX_MILLISECONDS;
-  const capped = Math.min(base * 2 ** state.consecutiveFailures, max);
+  const growing = Math.min(base * 2 ** state.consecutiveFailures, max);
+  // Falha fatal não passa sozinha: tentar de novo é só para quando alguém corrigir a configuração, sem martelar o servidor.
+  const capped = state.fatalReason === undefined ? growing : max;
   const random = settings.random ?? Math.random;
   state.consecutiveFailures += 1;
   return Math.round(capped / 2 + (capped / 2) * random());
@@ -130,15 +141,17 @@ async function runLoop(state: LoopState): Promise<void> {
     const end = await runSession(state);
     state.session = undefined;
     if (state.isClosed) return;
+    state.fatalReason = isFatalSessionEnd(end) ? end.reason : undefined;
     guarded(state, () => state.settings.onLost(end));
     await wait(state, backoffDelay(state));
   }
 }
 
-export function createNotificationListener(
-  settings: NotificationListenerSettings,
-): NotificationListener {
-  if (!CHANNEL_PATTERN.test(settings.channel)) throw new InvalidChannelError();
+function createLoopState(settings: NotificationListenerSettings): {
+  readonly state: LoopState;
+  readonly ready: Promise<void>;
+  readonly signalClosed: () => void;
+} {
   let releaseReady: () => void = () => undefined;
   const ready = new Promise<void>((resolve) => {
     releaseReady = resolve;
@@ -154,22 +167,32 @@ export function createNotificationListener(
     releaseReady,
     isClosed: false,
     isListening: false,
+    fatalReason: undefined,
     hasListenedBefore: false,
     attempt: 0,
     consecutiveFailures: 0,
     session: undefined,
     cancelWait: () => undefined,
   };
+  return { state, ready, signalClosed };
+}
+
+export function createNotificationListener(
+  settings: NotificationListenerSettings,
+): NotificationListener {
+  if (!CHANNEL_PATTERN.test(settings.channel)) throw new InvalidChannelError();
+  const { state, ready, signalClosed } = createLoopState(settings);
   const done = runLoop(state);
   return {
     ready,
     isListening: () => state.isListening,
+    fatalReason: () => state.fatalReason,
     close: async (): Promise<void> => {
       state.isClosed = true;
       state.session?.stop();
       state.cancelWait();
       signalClosed();
-      releaseReady();
+      state.releaseReady();
       await done;
     },
   };

@@ -27,6 +27,7 @@ import type { RunDispatcher } from './runs/run-dispatcher.js';
 import { createSessionRouteDependencies } from './session/create-session-routes-dependencies.js';
 import { createExampleSeedingUserResolver } from './strategies/example-seeding-user-resolver.js';
 import { createSeedExampleStrategyUseCase } from './strategies/seed-example-strategy.use-case.js';
+import type { ListenerHealth } from './stream/listener-health.js';
 import type { StreamTicketStore } from './stream/stream-ticket-store.js';
 import { createRouter, type Router } from './router/create-router.js';
 import { createApiRoutes, type ApiRouteDependencies } from './routes/create-api-routes.js';
@@ -43,6 +44,7 @@ export type ApiRouterParams = {
   readonly dispatcher: RunDispatcher;
   readonly ticketStore: StreamTicketStore;
   readonly closeUserSockets: (userId: string) => void;
+  readonly readListenerHealth: () => ListenerHealth;
 };
 
 function createSeedingUserResolver(params: {
@@ -102,6 +104,7 @@ export function createApiRouter(params: ApiRouterParams): Router {
     routes: createApiRoutes({
       checkDatabase: () => pingDatabase(database),
       readRunQueueSummary: () => createRunQueueRepository(database).readQueueSummary(),
+      readListenerHealth: params.readListenerHealth,
       session: createSessionRouteDependencies({ environment, verifyAccessToken }),
       ...createScopedDependencies({
         database,

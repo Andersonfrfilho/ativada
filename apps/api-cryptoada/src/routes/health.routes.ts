@@ -6,6 +6,7 @@ import { ROUTE_ACCESS } from '../router/route-access.constant.js';
 import type { Route } from '../router/route.types.js';
 import { HTTP_METHOD, HTTP_STATUS } from '../shared/http/http.constant.js';
 import type { RouteResult } from '../shared/http/response-envelope.js';
+import { LISTENER_STATE, type ListenerHealth } from '../stream/listener-health.js';
 import { HEALTH_DOCUMENTATION } from './health.docs.js';
 
 export const HEALTH_PATH = '/v1/health';
@@ -18,6 +19,7 @@ export type HealthRouteDependencies = {
   readonly checkDatabase: () => Promise<boolean>;
   // Contagens AGREGADAS da fila de execuções (por estado e tipo): nenhum dado de usuário.
   readonly readRunQueueSummary: () => Promise<RunQueueSummary>;
+  readonly readListenerHealth: () => ListenerHealth;
 };
 
 async function readRuns(dependencies: HealthRouteDependencies): Promise<RunQueueSummary | null> {
@@ -46,11 +48,14 @@ export function createHealthRoutes(dependencies: HealthRouteDependencies): reado
       documentation: HEALTH_DOCUMENTATION.adminHealth,
       handler: async (): Promise<RouteResult> => {
         const isDatabaseUp = await dependencies.checkDatabase();
+        const listener = dependencies.readListenerHealth();
+        const isHealthy = isDatabaseUp && listener.state !== LISTENER_STATE.FAILED;
         return {
           status: HTTP_STATUS.OK,
           data: {
-            status: isDatabaseUp ? HEALTH_STATUS.OK : HEALTH_STATUS.DEGRADED,
+            status: isHealthy ? HEALTH_STATUS.OK : HEALTH_STATUS.DEGRADED,
             checks: { database: isDatabaseUp ? DEPENDENCY_STATE.UP : DEPENDENCY_STATE.DOWN },
+            listener,
             runs: isDatabaseUp ? await readRuns(dependencies) : null,
           },
         };

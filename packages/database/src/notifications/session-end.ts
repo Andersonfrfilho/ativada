@@ -21,3 +21,14 @@ export type SessionEnd = {
   readonly sqlState: string | undefined;
   readonly wasListening: boolean;
 };
+
+const FATAL_END_REASONS: readonly SessionEndReason[] = [
+  SESSION_END_REASON.AUTHENTICATION_FAILED,
+  SESSION_END_REASON.UNSUPPORTED_AUTHENTICATION,
+  SESSION_END_REASON.TLS_UNAVAILABLE,
+];
+
+// Falha de configuração, não de rede: refazer a conexão não a conserta sozinho, então alguém precisa ser avisado.
+export function isFatalSessionEnd(end: SessionEnd): boolean {
+  return FATAL_END_REASONS.includes(end.reason);
+}

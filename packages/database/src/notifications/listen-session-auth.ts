@@ -53,19 +53,32 @@ function continueScram(ctx: SessionContext, data: string, outcome: Authenticatio
 function finishScram(ctx: SessionContext, data: string, outcome: AuthenticationOutcome): void {
   try {
     ctx.scram?.verifyServerFinal(data);
+    ctx.isServerVerified = true;
   } catch (error: unknown) {
     failOnScramError(error, outcome);
   }
 }
 
-// Só SCRAM-SHA-256 e `trust`: a senha em texto puro ou em MD5 nunca é enviada.
+// Como o `require_auth` do libpq: com senha configurada, o `ok` só vale depois de o servidor provar quem é (SASLFinal
+// verificado); um `ok` sem SASL, ou com SASL sem prova, é um servidor que dispensa a senha que deveria exigir.
+function acceptAuthenticationOk(ctx: SessionContext, outcome: AuthenticationOutcome): void {
+  const isProven =
+    ctx.scram === undefined ? ctx.params.settings.password.length === 0 : ctx.isServerVerified;
+  if (!isProven) {
+    outcome.end(SESSION_END_REASON.AUTHENTICATION_FAILED);
+    return;
+  }
+  ctx.phase = SESSION_PHASE.AWAITING_READY;
+}
+
+// Só SCRAM-SHA-256 e `trust` sem senha: a senha em texto puro ou em MD5 nunca é enviada.
 export function handleAuthentication(
   ctx: SessionContext,
   authentication: Authentication,
   outcome: AuthenticationOutcome,
 ): void {
   if (authentication.kind === 'ok') {
-    ctx.phase = SESSION_PHASE.AWAITING_READY;
+    acceptAuthenticationOk(ctx, outcome);
   } else if (authentication.kind === 'sasl') {
     if (authentication.mechanisms.includes(SCRAM_MECHANISM)) startScram(ctx);
     else outcome.end(SESSION_END_REASON.UNSUPPORTED_AUTHENTICATION);

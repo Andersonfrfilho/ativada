@@ -19,7 +19,14 @@ const SERVER_KEY_LABEL = 'Server Key';
 const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER = new TextDecoder();
 
-export type FakeAuthentication = 'trust' | 'scram' | 'md5' | 'cleartext' | 'too-many-connections';
+export type FakeAuthentication =
+  | 'trust'
+  | 'scram'
+  // Aceita a prova do cliente e responde `AuthenticationOk` sem o SASLFinal: um servidor que não prova quem é.
+  | 'scram-without-final'
+  | 'md5'
+  | 'cleartext'
+  | 'too-many-connections';
 export type FakeTls = 'unsupported' | 'supported' | 'handshake-fails';
 
 export type FakePostgresOptions = {
@@ -43,6 +50,7 @@ export type FakeConnectionRecord = {
 
 export type FakePostgres = {
   readonly openTransport: OpenTransport;
+  readonly authentication: FakeAuthentication;
   readonly connections: FakeConnectionRecord[];
   readonly notify: (payload: string, channel?: string) => void;
   readonly dropConnections: () => void;
@@ -196,7 +204,7 @@ class FakeConnection {
   private startAuthentication(): void {
     const mode = this.server.authentication;
     if (mode === 'trust') this.sendToClient(...READY_SEQUENCE);
-    else if (mode === 'scram') {
+    else if (mode === 'scram' || mode === 'scram-without-final') {
       this.sendToClient(authentication(10, cString(SCRAM_MECHANISM), Uint8Array.of(0)));
     } else if (mode === 'md5') this.sendToClient(authentication(5, randomBytes(4)));
     else if (mode === 'cleartext') this.sendToClient(authentication(3));
@@ -260,7 +268,9 @@ class FakeConnection {
       return;
     }
     const serverSignature = hmac(hmac(salted, SERVER_KEY_LABEL), authMessage).toString('base64');
-    this.sendToClient(authentication(12, TEXT_ENCODER.encode(`v=${serverSignature}`)));
+    if (this.server.authentication !== 'scram-without-final') {
+      this.sendToClient(authentication(12, TEXT_ENCODER.encode(`v=${serverSignature}`)));
+    }
     this.sendToClient(...READY_SEQUENCE);
   }
 
@@ -350,6 +360,7 @@ export function createInMemoryPostgres(options: FakePostgresOptions): FakePostgr
 
   return {
     openTransport,
+    authentication: options.authentication,
     connections,
     notify: (payload, channel = 'test_channel'): void => {
       const bytes = message('A', int32(4242), cString(channel), cString(payload));
