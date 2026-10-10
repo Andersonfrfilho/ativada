@@ -9,6 +9,12 @@ export type {
   FearGreedPoint,
   FetchFearGreedParams,
 } from './fear-greed.types.js';
+export {
+  createServerClock,
+  type ServerClock,
+  type ServerClockSettings,
+  type ServerClockWarning,
+} from './server-clock.js';
 export { createKlineStream } from './create-kline-stream.js';
 export {
   BINANCE_MARKET_DATA_BASE_URL,

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { closeDatabase, createCandleRepository, openDatabase } from '@cryptoada/database';
 import { MILLISECONDS_PER_SECOND, runWithEnvironment } from '@cryptoada/environment';
-import { createMarketDataClient } from '@cryptoada/market-data';
+import { createMarketDataClient, createServerClock } from '@cryptoada/market-data';
 
 import { loadEnvironment, type Environment } from './environment.js';
 import { WORKSPACE_NAME } from './index.js';
@@ -17,12 +17,17 @@ function startWorker(environment: Environment): void {
     write: (line) => process.stdout.write(line),
   });
   const database = openDatabase(environment.DATABASE_URL);
+  const serverClock = createServerClock({
+    baseUrl: environment.BINANCE_BASE_URL,
+    onWarning: (warning) => logger.warn(WORKER_LOG.SERVER_CLOCK_UNAVAILABLE, warning),
+  });
   const worker = createWorker({
     exchange: environment.MARKET_EXCHANGE,
     symbols: environment.MARKET_SYMBOLS,
     timeframes: environment.MARKET_TIMEFRAMES,
     repository: createCandleRepository(database),
-    client: createMarketDataClient({ baseUrl: environment.BINANCE_BASE_URL }),
+    client: createMarketDataClient({ baseUrl: environment.BINANCE_BASE_URL, clock: serverClock }),
+    serverClock,
     logger,
     streamBaseUrl: environment.BINANCE_STREAM_URL,
     staleAfterMilliseconds: environment.STREAM_STALE_SECONDS * MILLISECONDS_PER_SECOND,

@@ -33,6 +33,7 @@ export function createMarketDataClient(clientSettings: MarketDataClientSettings)
 
   async function fetchPage(params: FetchKlinesParams): Promise<KlinesPage> {
     assertValidKlinesParams(params);
+    await settings.clock?.refreshIfStale();
     const body = await executor.fetchJson(buildKlinesUrl(settings.baseUrl, params));
     const candles = parseKlinesResponse({
       body,

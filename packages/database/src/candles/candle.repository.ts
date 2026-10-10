@@ -7,6 +7,7 @@ import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import { candles } from '../schema/candles.schema.js';
 import {
   CANDLE_INSERT_BATCH_SIZE,
+  CLOCK_SKEW_TOLERANCE_MILLISECONDS,
   CANDLE_TIMEFRAME_DURATION_MILLISECONDS,
 } from './candle.constant.js';
 import type {
@@ -36,7 +37,6 @@ function splitIntoBatches(records: readonly CandleRecord[]): readonly (readonly 
   return batches;
 }
 
-// Candle fechado é imutável: DO NOTHING mantém o gravado e `inserted` conta só as linhas novas.
 type ExpectedOpenTimeRow = { readonly openTime: string | number | bigint };
 
 async function selectMissingOpenTimes(
@@ -68,9 +68,10 @@ export function createCandleRepository(
   const { database } = readOpenDatabase(handle);
   const now = options.now ?? Date.now;
   return {
+    // Não atualiza (candle fechado é imutável): DO NOTHING mantém o gravado e `inserted` conta só as novas.
     upsertCandles: async (records): Promise<UpsertCandlesResult> => {
-      const currentTime = now();
-      const openCandle = records.find((record) => record.closeTime >= currentTime);
+      const latestAcceptableCloseTime = now() + CLOCK_SKEW_TOLERANCE_MILLISECONDS;
+      const openCandle = records.find((record) => record.closeTime > latestAcceptableCloseTime);
       if (openCandle !== undefined) throw new OpenCandleRejectedError(openCandle.openTime);
       let inserted = 0;
       for (const batch of splitIntoBatches(records)) {

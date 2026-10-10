@@ -28,6 +28,7 @@ export function createBackfillCandlesTask(
   dependencies: BackfillCandlesDependencies,
 ): BackfillCandlesTask {
   return async () => {
+    await dependencies.refreshClock();
     const pairs = listPairs(dependencies);
     let inserted = 0;
     let unfillable = 0;

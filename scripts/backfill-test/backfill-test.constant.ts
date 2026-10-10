@@ -3,6 +3,7 @@ export const TEMPORARY_DATABASE_PREFIX = 'crypto_backfill_';
 export const CRON_ENTRYPOINT = 'apps/cron-cryptoada/src/main.ts';
 export const BACKFILL_TASK_NAME = 'backfill-candles';
 export const KLINES_PATH = '/api/v3/klines';
+export const SERVER_TIME_PATH = '/api/v3/time';
 export const PAGE_SIZE = 1_000;
 export const EXCHANGE = 'binance';
 export const HTTP_SERVER_ERROR = 500;

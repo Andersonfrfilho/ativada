@@ -34,6 +34,8 @@ export type PipelineOptions = {
   readonly seedOpenTime?: number;
   readonly gapLookbackHours?: number;
   readonly gapCheckIntervalMilliseconds?: number;
+  // Quanto o relógio da Binance está à frente do local (negativo: atrás).
+  readonly serverClockOffsetMilliseconds?: number;
   // Preenche a janela de retrocesso antes da semente: o histórico anterior não é o assunto do teste.
   readonly shouldPrefillWindow?: boolean;
   readonly wrapRepository?: (repository: InMemoryCandleRepository) => PipelineRepository;
@@ -49,6 +51,7 @@ export type Pipeline = {
   readonly closeNextCandle: () => number;
   readonly storedOpenTimes: (symbol: string) => readonly number[];
   readonly finishedRecoveries: () => number;
+  readonly serverClockRefreshes: () => number;
 };
 
 function buildSeed(options: PipelineOptions, symbols: readonly string[]): CandleRecord[] {
@@ -80,6 +83,14 @@ export function startPipeline(options: PipelineOptions = {}): Pipeline {
   const repository = createInMemoryCandleRepository({ now: clock.now, seed });
   const entries: LogEntry[] = [];
   const recorder = createRecordingSleep();
+  let serverClockRefreshes = 0;
+  const serverClock = {
+    now: (): number => clock.now() + (options.serverClockOffsetMilliseconds ?? 0),
+    refresh: (): Promise<void> => {
+      serverClockRefreshes += 1;
+      return Promise.resolve();
+    },
+  };
   const worker = createWorker({
     exchange: PIPELINE_EXCHANGE,
     symbols,
@@ -97,6 +108,7 @@ export function startPipeline(options: PipelineOptions = {}): Pipeline {
     streamBaseUrl: server.streamUrl,
     staleAfterMilliseconds: 5_000,
     gapLookbackHours: options.gapLookbackHours ?? DEFAULT_LOOKBACK_HOURS,
+    serverClock,
     timing: {
       gapCheckIntervalMilliseconds: options.gapCheckIntervalMilliseconds,
       now: clock.now,
@@ -126,6 +138,7 @@ export function startPipeline(options: PipelineOptions = {}): Pipeline {
         .map((candle) => candle.openTime)
         .sort((left, right) => left - right),
     finishedRecoveries: (): number => logs(WORKER_LOG.GAP_RECOVERY_FINISHED).length,
+    serverClockRefreshes: (): number => serverClockRefreshes,
   };
 }
 

@@ -21,6 +21,7 @@ export type GapRecoveryDependencies = {
   readonly client: Pick<MarketDataClient, 'fetchKlinesRange'>;
   readonly logger: WorkerLogger;
   readonly now: () => number;
+  readonly refreshClock: () => Promise<void>;
   readonly exchange: string;
   readonly symbols: readonly string[];
   readonly timeframes: readonly Timeframe[];
@@ -104,6 +105,7 @@ async function recoverPair(dependencies: GapRecoveryDependencies, pair: Pair): P
 }
 
 export async function recoverGaps(dependencies: GapRecoveryDependencies): Promise<number> {
+  await dependencies.refreshClock();
   let failures = 0;
   for (const symbol of dependencies.symbols) {
     for (const timeframe of dependencies.timeframes) {

@@ -5,6 +5,7 @@ export type CronLogFields = Readonly<Record<string, string | number | boolean>>;
 
 export type CronLogger = {
   readonly info: (message: string, fields?: CronLogFields) => void;
+  readonly warn: (message: string, fields?: CronLogFields) => void;
   readonly error: (message: string, fields?: CronLogFields) => void;
 };
 
@@ -30,6 +31,7 @@ export function createCronLogger(options: CronLoggerOptions): CronLogger {
 
   return {
     info: (message, fields) => log('info', message, fields),
+    warn: (message, fields) => log('warn', message, fields),
     error: (message, fields) => log('error', message, fields),
   };
 }

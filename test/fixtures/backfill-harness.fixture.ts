@@ -37,6 +37,7 @@ export type BackfillHarness = {
   readonly repository: InMemoryCandleRepository;
   readonly grid: FakeBinanceGrid;
   readonly lines: string[];
+  readonly events: string[];
 };
 
 export function buildGridCandle(params: {
@@ -62,6 +63,7 @@ export function buildGridCandle(params: {
 
 export function createBackfillHarness(options: BackfillHarnessOptions = {}): BackfillHarness {
   const lines: string[] = [];
+  const events: string[] = [];
   const repository = createInMemoryCandleRepository({
     now: () => BACKFILL_NOW,
     ...(options.seed === undefined ? {} : { seed: options.seed }),
@@ -84,10 +86,14 @@ export function createBackfillHarness(options: BackfillHarnessOptions = {}): Bac
     }),
     logger: createCronLogger({ appName: 'cron-cryptoada', write: (line) => void lines.push(line) }),
     now: () => BACKFILL_NOW,
+    refreshClock: () => {
+      events.push(`clock-refresh:${grid.calls.length}`);
+      return Promise.resolve();
+    },
     exchange: BACKFILL_EXCHANGE,
     symbols: options.symbols ?? ['BTCUSDT'],
     timeframes: options.timeframes ?? ['1h'],
     years: options.years ?? 2,
   });
-  return { run: task, repository, grid, lines };
+  return { run: task, repository, grid, lines, events };
 }

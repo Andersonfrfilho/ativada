@@ -58,6 +58,7 @@ export {
   pingDatabase,
   type DatabaseHandle,
 } from './database-handle.js';
+export { CLOCK_SKEW_TOLERANCE_MILLISECONDS } from './candles/candle.constant.js';
 export { createCandleRepository } from './candles/candle.repository.js';
 export type {
   CandleRecord,

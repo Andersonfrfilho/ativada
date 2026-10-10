@@ -5,6 +5,7 @@ import {
   createCancellableSleep,
   createKlineStream,
   type MarketDataClient,
+  type ServerClock,
   type Timeframe,
 } from '@cryptoada/market-data';
 
@@ -49,6 +50,7 @@ export type WorkerDependencies = {
   readonly staleAfterMilliseconds: number;
   readonly gapLookbackHours?: number | undefined;
   readonly gapCheckMinutes?: number | undefined;
+  readonly serverClock?: Pick<ServerClock, 'now' | 'refresh'> | undefined;
   readonly timing?: WorkerTiming;
 };
 
@@ -71,9 +73,19 @@ export function createWorker(dependencies: WorkerDependencies): Worker {
     (dependencies.gapCheckMinutes ?? DEFAULT_STREAM_GAP_CHECK_MINUTES) * MILLISECONDS_PER_MINUTE;
   const lookbackMilliseconds =
     (dependencies.gapLookbackHours ?? DEFAULT_STREAM_GAP_LOOKBACK_HOURS) * MILLISECONDS_PER_HOUR;
+  const marketNow = dependencies.serverClock?.now ?? now;
+  const refreshClock =
+    dependencies.serverClock?.refresh ?? ((): Promise<void> => Promise.resolve());
   const unfillable = new Set<string>();
   const recovery = createRecoveryRunner({
-    recover: () => recoverGaps({ ...dependencies, now, lookbackMilliseconds, unfillable }),
+    recover: () =>
+      recoverGaps({
+        ...dependencies,
+        now: marketNow,
+        refreshClock,
+        lookbackMilliseconds,
+        unfillable,
+      }),
     logger,
     sleep,
     random,

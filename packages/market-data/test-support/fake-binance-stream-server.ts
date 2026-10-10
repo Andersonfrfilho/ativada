@@ -3,6 +3,7 @@ import { TIMEFRAME_DURATION_MILLISECONDS, type Timeframe } from '../src/index.js
 
 const LOOPBACK_HOST = '127.0.0.1';
 const KLINES_PATH = '/api/v3/klines';
+const SERVER_TIME_PATH = '/api/v3/time';
 const STREAM_PATH = '/stream';
 const STREAMS_PARAMETER = 'streams';
 const HTTP_NOT_FOUND = 404;
@@ -47,6 +48,9 @@ export type FakeBinanceStreamServer = {
   readonly setHistory: (params: SetHistoryParams) => void;
   readonly holdRest: () => () => void;
   readonly failRest: (times: number) => void;
+  // Quanto a hora que o servidor devolve em /api/v3/time se afasta do relógio real.
+  readonly setServerClockSkew: (milliseconds: number) => void;
+  readonly serverTimeRequestCount: () => number;
   readonly stop: () => Promise<void>;
 };
 
@@ -132,6 +136,8 @@ export function startFakeBinanceStreamServer(): FakeBinanceStreamServer {
   let isRefusing = false;
   let restFailuresLeft = 0;
   let restGate: Promise<void> | undefined;
+  let serverClockSkew = 0;
+  let serverTimeRequests = 0;
 
   async function serveKlines(url: URL): Promise<Response> {
     const request = readRestRequest(url);
@@ -157,6 +163,10 @@ export function startFakeBinanceStreamServer(): FakeBinanceStreamServer {
     fetch: (incoming, server): Response | Promise<Response> | undefined => {
       const url = new URL(incoming.url);
       if (url.pathname === KLINES_PATH) return serveKlines(url);
+      if (url.pathname === SERVER_TIME_PATH) {
+        serverTimeRequests += 1;
+        return Response.json({ serverTime: Date.now() + serverClockSkew });
+      }
       if (url.pathname !== STREAM_PATH)
         return new Response('not found', { status: HTTP_NOT_FOUND });
       if (isRefusing) return new Response('refused', { status: HTTP_SERVICE_UNAVAILABLE });
@@ -203,6 +213,10 @@ export function startFakeBinanceStreamServer(): FakeBinanceStreamServer {
     failRest: (times): void => {
       restFailuresLeft = times;
     },
+    setServerClockSkew: (milliseconds): void => {
+      serverClockSkew = milliseconds;
+    },
+    serverTimeRequestCount: (): number => serverTimeRequests,
     // O stop(true) do Bun nunca resolve depois que o servidor fechou um socket: não se espera a promessa.
     stop: (): Promise<void> => {
       void listener.stop(true);

@@ -108,6 +108,7 @@ describe('worker: the gap check covers a lookback window, not "from the latest s
       exchange: 'binance',
       symbols: ['BTCUSDT'],
       timeframes: ['1h'],
+      refreshClock: () => Promise.resolve(),
       lookbackMilliseconds: 3 * PIPELINE_HOUR,
       unfillable: new Set<string>(),
     });
@@ -126,6 +127,28 @@ describe('worker: the gap check covers a lookback window, not "from the latest s
     await waitFor(() => pipeline.finishedRecoveries() === 2, 'recovery after the drop');
     expect(requestsAfterFirst).toBe(1);
     expect(pipeline.server.restRequests).toHaveLength(requestsAfterFirst);
+  });
+});
+
+describe('worker: the gap check uses the server clock', () => {
+  test('a local clock ahead of the server does not make the still-open candle look missing', async () => {
+    pipeline = startPipeline({ serverClockOffsetMilliseconds: -3_000 });
+    publishHistory();
+    await waitFor(() => pipeline.finishedRecoveries() === 1, 'first recovery finished');
+    pipeline.clock.advance(PIPELINE_HOUR / 2 + 1_000);
+    pipeline.server.dropConnections();
+    await waitFor(() => pipeline.finishedRecoveries() === 2, 'recovery after the drop');
+    expect(pipeline.server.restRequests).toHaveLength(0);
+  });
+
+  test('refreshes the server clock at the start of every recovery run', async () => {
+    pipeline = startPipeline();
+    publishHistory();
+    await waitFor(() => pipeline.finishedRecoveries() === 1, 'first recovery finished');
+    expect(pipeline.serverClockRefreshes()).toBe(1);
+    pipeline.server.dropConnections();
+    await waitFor(() => pipeline.finishedRecoveries() === 2, 'recovery after the drop');
+    expect(pipeline.serverClockRefreshes()).toBe(2);
   });
 });
 

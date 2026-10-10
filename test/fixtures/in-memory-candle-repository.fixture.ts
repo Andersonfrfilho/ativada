@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
+  CLOCK_SKEW_TOLERANCE_MILLISECONDS,
   OpenCandleRejectedError,
   type CandleRecord,
   type CandleRepository,
@@ -32,7 +33,9 @@ export function createInMemoryCandleRepository(options: {
     stored: (): readonly CandleRecord[] => [...rows.values()],
     upsertCandles: (candles): Promise<UpsertCandlesResult> => {
       upsertSizes.push(candles.length);
-      const openCandle = candles.find((candle) => candle.closeTime >= options.now());
+      const openCandle = candles.find(
+        (candle) => candle.closeTime > options.now() + CLOCK_SKEW_TOLERANCE_MILLISECONDS,
+      );
       if (openCandle !== undefined)
         return Promise.reject(new OpenCandleRejectedError(openCandle.openTime));
       let inserted = 0;

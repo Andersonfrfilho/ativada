@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { Candle } from './candle.types.js';
+import type { ServerClock } from './server-clock.js';
 import type { Timeframe } from './timeframe.constant.js';
 
 export type FetchImplementation = (
@@ -11,6 +12,8 @@ export type MarketDataClientSettings = {
   readonly baseUrl?: string;
   readonly fetchImplementation?: FetchImplementation;
   readonly now?: () => number;
+  // Hora do servidor: quando informado, vale no lugar de `now` para decidir o que já fechou.
+  readonly clock?: Pick<ServerClock, 'now' | 'refreshIfStale'>;
   readonly sleep?: (milliseconds: number) => Promise<void>;
   readonly weightCeiling?: number;
   readonly weightSafetyMargin?: number;
@@ -41,4 +44,5 @@ export type MarketDataClient = {
   readonly fetchKlinesRange: (params: FetchKlinesRangeParams) => Promise<readonly Candle[]>;
 };
 
-export type ResolvedMarketDataSettings = Required<MarketDataClientSettings>;
+export type ResolvedMarketDataSettings = Required<Omit<MarketDataClientSettings, 'clock'>> &
+  Pick<MarketDataClientSettings, 'clock'>;

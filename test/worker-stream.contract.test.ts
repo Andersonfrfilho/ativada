@@ -66,6 +66,15 @@ describe('worker: closed candles from the stream', () => {
     });
   });
 
+  test('a closed candle is not lost when the local clock is a few seconds behind', async () => {
+    await startConnected();
+    const openTime = pipeline.closeNextCandle();
+    pipeline.clock.advance(-(PIPELINE_HOUR / 2 + 3_000));
+    sendClosed(openTime);
+    await waitFor(() => pipeline.storedOpenTimes('BTCUSDT').includes(openTime), 'candle stored');
+    expect(pipeline.logs(WORKER_LOG.CANDLE_WRITE_FAILED)).toHaveLength(0);
+  });
+
   test('ignores an open candle: nothing is written', async () => {
     await startConnected();
     const openTime = pipeline.closeNextCandle();

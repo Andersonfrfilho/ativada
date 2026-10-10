@@ -35,6 +35,7 @@ export const WORKER_LOG = {
   GAP_RECOVERY_FINISHED: 'gap recovery finished',
   GAP_RECOVERY_FAILED: 'gap recovery failed',
   GAP_RECOVERY_RETRY: 'gap recovery retry scheduled',
+  SERVER_CLOCK_UNAVAILABLE: 'server clock unavailable, using the local clock',
   SHUTDOWN_STARTED: 'shutdown started',
   SHUTDOWN_TIMED_OUT: 'shutdown timed out',
   SHUTDOWN_COMPLETE: 'shutdown complete',

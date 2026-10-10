@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { CLOCK_SKEW_TOLERANCE_MILLISECONDS } from '../src/candles/candle.constant.js';
 import { createCandleRepository } from '../src/candles/candle.repository.js';
 import { OpenCandleRejectedError } from '../src/candles/open-candle-rejected.error.js';
 import type { CandleRecord } from '../src/candles/candle.types.js';
@@ -122,7 +123,10 @@ async function checkRangeAndLatest(context: CandleCheckContext): Promise<void> {
 async function checkRejections(context: CandleCheckContext): Promise<void> {
   const { handle, client, assertCondition, reportCheck } = context;
   const repository = createCandleRepository(handle, { now: () => NOW_MILLISECONDS });
-  const openCandle = { ...buildCandle('REJECTEDUSDT', 0), closeTime: NOW_MILLISECONDS };
+  const openCandle = {
+    ...buildCandle('REJECTEDUSDT', 0),
+    closeTime: NOW_MILLISECONDS + CLOCK_SKEW_TOLERANCE_MILLISECONDS + 1,
+  };
   const openRejection = await repository
     .upsertCandles([openCandle])
     .catch((error: unknown) => error);

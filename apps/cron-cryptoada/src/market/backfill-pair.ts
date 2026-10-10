@@ -19,6 +19,7 @@ export type BackfillPairDependencies = {
   readonly client: Pick<MarketDataClient, 'fetchKlinesRange'>;
   readonly logger: CronLogger;
   readonly now: () => number;
+  readonly refreshClock: () => Promise<void>;
   readonly exchange: string;
   readonly years: number;
 };

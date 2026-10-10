@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+// Copyright (c) 2026 Ada Technology. All rights reserved.
 import { BINANCE_MARKET_DATA_BASE_URL, DEFAULT_CLIENT_SETTINGS } from './market-data.constant.js';
 import type { MarketDataClientSettings, ResolvedMarketDataSettings } from './market-data.types.js';
 
@@ -7,7 +8,8 @@ export function resolveSettings(settings: MarketDataClientSettings): ResolvedMar
     baseUrl: settings.baseUrl ?? BINANCE_MARKET_DATA_BASE_URL,
     fetchImplementation:
       settings.fetchImplementation ?? ((url, init): Promise<Response> => fetch(url, init)),
-    now: settings.now ?? Date.now,
+    now: settings.clock?.now ?? settings.now ?? Date.now,
+    ...(settings.clock === undefined ? {} : { clock: settings.clock }),
     sleep:
       settings.sleep ??
       ((milliseconds): Promise<void> =>

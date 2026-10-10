@@ -31,3 +31,7 @@ export const FEAR_GREED_FORMAT = 'json';
 
 // Stream combinado só de dados de mercado (sem user data stream), indicado pela documentação de WebSocket Streams da Binance.
 export const BINANCE_STREAM_BASE_URL = 'wss://data-stream.binance.vision';
+
+export const SERVER_TIME_PATH = '/api/v3/time';
+export const DEFAULT_SERVER_CLOCK_REFRESH_MILLISECONDS = 600_000;
+export const SERVER_TIME_TIMEOUT_MILLISECONDS = 5_000;

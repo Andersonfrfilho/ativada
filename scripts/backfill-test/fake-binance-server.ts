@@ -4,6 +4,7 @@ import {
   HTTP_SERVER_ERROR,
   KLINES_PATH,
   LOOPBACK_HOST,
+  SERVER_TIME_PATH,
   type BackfillTimeframe,
 } from './backfill-test.constant.js';
 
@@ -98,6 +99,7 @@ export function startFakeBinanceServer(): FakeBinanceServer {
     port: 0,
     fetch: (incoming): Response => {
       const url = new URL(incoming.url);
+      if (url.pathname === SERVER_TIME_PATH) return Response.json({ serverTime: Date.now() });
       if (url.pathname !== KLINES_PATH) return new Response('not found', { status: 404 });
       const request = readRequest(url);
       requests.push(request);

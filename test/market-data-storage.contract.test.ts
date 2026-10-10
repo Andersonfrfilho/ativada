@@ -4,6 +4,7 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import {
   closeDatabase,
   createCandleRepository,
+  CLOCK_SKEW_TOLERANCE_MILLISECONDS,
   OpenCandleRejectedError,
   openDatabase,
   type CandleRecord,
@@ -46,22 +47,39 @@ afterAll(async () => {
 });
 
 describe('candle repository: a candle that has not closed is never stored (constitution §3)', () => {
-  test('rejects closeTime equal to now', async () => {
-    const openCandle = buildCandle({ closeTime: NOW_MILLISECONDS });
+  test('rejects a closeTime beyond now plus the clock skew tolerance', async () => {
+    const openCandle = buildCandle({
+      closeTime: NOW_MILLISECONDS + CLOCK_SKEW_TOLERANCE_MILLISECONDS + 1,
+    });
     expect(await captureRejection(repository.upsertCandles([openCandle]))).toBeInstanceOf(
       OpenCandleRejectedError,
     );
   });
 
-  test('rejects closeTime in the future', async () => {
-    const openCandle = buildCandle({ closeTime: NOW_MILLISECONDS + 1 });
-    expect(await captureRejection(repository.upsertCandles([openCandle]))).toBeInstanceOf(
-      OpenCandleRejectedError,
-    );
+  test('keeps a closed stream candle when the local clock is behind, up to the tolerance', async () => {
+    for (const closeTime of [
+      NOW_MILLISECONDS,
+      NOW_MILLISECONDS + CLOCK_SKEW_TOLERANCE_MILLISECONDS,
+    ]) {
+      const outcome = await captureRejection(
+        repository.upsertCandles([buildCandle({ closeTime })]),
+      );
+      expect(outcome).not.toBeInstanceOf(OpenCandleRejectedError);
+    }
+  });
+
+  test('the tolerance is five seconds', () => {
+    expect(CLOCK_SKEW_TOLERANCE_MILLISECONDS).toBe(5_000);
   });
 
   test('rejects the whole batch when only one candle is open, before touching the database', async () => {
-    const batch = [buildCandle({}), buildCandle({ openTime: 1, closeTime: NOW_MILLISECONDS })];
+    const batch = [
+      buildCandle({}),
+      buildCandle({
+        openTime: 1,
+        closeTime: NOW_MILLISECONDS + 3 * CLOCK_SKEW_TOLERANCE_MILLISECONDS,
+      }),
+    ];
     expect(await captureRejection(repository.upsertCandles(batch))).toBeInstanceOf(
       OpenCandleRejectedError,
     );

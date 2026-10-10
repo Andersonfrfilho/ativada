@@ -64,6 +64,14 @@ describe('backfill-candles: an empty database', () => {
   });
 });
 
+describe('backfill-candles: the clock', () => {
+  test('refreshes the server clock once, before the first request', async () => {
+    const harness = createBackfillHarness();
+    await harness.run();
+    expect(harness.events).toStrictEqual(['clock-refresh:0']);
+  });
+});
+
 describe('backfill-candles: only what is missing is requested', () => {
   test('two holes cost exactly two requests, bounded by the holes', async () => {
     const seed = withoutHours(
