@@ -109,6 +109,7 @@ describe('step input guard', () => {
           state: {
             ...afterFirst(),
             signal: { ...afterFirst().signal, lastCandleOpenTime: third.openTime },
+            wallet: { ...afterFirst().wallet, lastCandleOpenTime: third.openTime },
           },
           candle: second,
         },
