@@ -43,7 +43,7 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `make down DOWN_FLAGS=--volumes` e `make up` (apaga os dados do Keycloak daquele ambiente). `make up`
   avisa quando o JSON é mais novo que o volume.
 - Alvos `*-test` (`migration-test`, `database-test`, `identity-test`, `session-test`, `admin-test`,
-  `lgpd-test`, `backfill-test`, `stream-test`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
+  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
   `TERM`: Ctrl-C não deixa container vivo. Dois deles ao mesmo tempo disputam o mesmo projeto; rode um por vez.
 - `make check` roda `bun test` com `env -i`: teste que precisa de variável a declara; o `export` do `env.dev`
   não chega a ele.
@@ -109,6 +109,19 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   TRUNCATE), com `created_at` = instante em que o valor ficou conhecido. Prova: `make database-test` (lote sintético de
   17.520 + 4.000 + 300 em ~1 s, monotonicidade, isolamento, FK composta, paginação), `make lgpd-test` (exportação e
   purga das 9 tabelas) e os contratos `strategy-persistence-schema` e `ownership-registry`.
+- **Backtest em `worker_thread` (T3.2, ADR 0002 §"Backtest em `worker_thread` (T3.2)").** `apps/api-cryptoada/src/backtest/`:
+  `runBacktest({ database, runId })` é o caso de uso (porta `BacktestDatabase`, adaptador `createBacktestDatabase`; o escopo
+  do dono nasce em `attach` por `resolveRunOwnerScope`, SÓ para `runId` enfileirado pela API) e `backtest.worker.ts` +
+  `backtest-thread-runner.ts` rodam na thread (Bun `Worker`, `{ runId }` e eventos `z.strictObject`, timeout
+  `BACKTEST_TIMEOUT_SECONDS` padrão 900, `terminateAll()` no encerramento). Cada lote de 2.000 passos é UMA transação
+  (`createRunBatchRepository.runInBatch`: status → resultados → checkpoint, com a execução travada); cancelamento é lido
+  dentro dela; falha vira `failed` com código estável e NUNCA leva o texto do erro; lacuna do banco é declarada ao motor;
+  retomada do checkpoint dá o resultado da execução contínua. Métricas saem do que ficou gravado
+  (`computeOpenPositionMetrics` fecha a posição aberta). Prova: contratos em memória (`test/backtest-*.contract.test.ts`),
+  28 mutantes (`test/backtest-mutants.contract.test.ts`) e `make backtest-test` (17.520 candles ~3,4 s de ponta a ponta;
+  determinismo, paridade com o motor direto, golden dos dois conjuntos reais, isolamento, cancelamento, thread que morre,
+  timeout, órfã retomada e `/v1/health` < 100 ms). Teste novo em `test/backtest-*` que carregue o módulo usa
+  `loadBacktestApi()`: é por ele que os mutantes entram.
 - Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account

@@ -1072,6 +1072,64 @@ linhas e deixa a contagem e o digest das seis tabelas idênticos.
 ordem de exclusão `equity_points`, `run_commands`, `fills`, `positions`, `orders`, `signals`, `runs`,
 `strategy_versions`, `strategies`; `sentiment_observations` é pública (`UNOWNED_PUBLIC_TABLES`).
 
+## Backtest em `worker_thread` (T3.2)
+
+Entregue em `apps/api-cryptoada/src/backtest/` (caso de uso e thread) e em `packages/database` (`resolveRunOwnerScope`,
+`createRunBatchRepository`). O backtest é UM laço sobre o `Engine.step` de produção, o mesmo do ao vivo; não existe
+`runBacktest` com outra lógica (§a). O que a implementação fixou:
+
+| Decisão | Valor | Motivo |
+|---|---|---|
+| Dono da execução | `resolveRunOwnerScope(handle, runId)` devolve o `OwnerScope` do dono (ou `undefined` para `runId` malformado, inexistente, ou dono apagado/bloqueado). A thread nunca cunha `UserId`; o escopo nasce na sessão (`attach`) e o caso de uso nunca o vê | A thread só recebe um `runId`. **Só vale para `runId` enfileirado pela API depois de autorizar o usuário** (ADR 0001 §e, regra 8) |
+| Uma transação por lote | `runInBatch(scope, runId, work)`: trava a linha da execução (`FOR UPDATE`), entrega ao `work` um escritor preso ao dono e o caso de uso faz, nesta ordem, **status → resultados → checkpoint** (`engine_state`, `last_candle_time`, `progress`). Falha em qualquer passo desfaz o lote inteiro | ADR 0002 §b: o backtest grava em LOTE (2.000 passos), não por passo. O checkpoint só existe depois dos resultados que ele resume; o lote inteiro ou nada |
+| Cancelamento | O status é lido DENTRO da transação do lote, com a execução travada: `cancelled` ⇒ para sem gravar o lote em curso, sem erro, mantendo os lotes anteriores. Um cancelamento concorrente espera o fim do lote e vale depois dele | Sem janela entre "ainda corre" e "gravou". Latência do cancelamento = um lote (~0,3 s) |
+| Falha | Qualquer erro vira `failed` com `error_code` estável (`NO_CANDLES`, `INSUFFICIENT_HISTORY`, `HASH_MISMATCH`, `ENGINE_REJECTED_INPUT`, `ENGINE_STATE_UNUSABLE`, `BACKTEST_UNEXPECTED`, …, e `BACKTEST_TIMEOUT`/`WORKER_CRASHED` da thread). A mensagem do erro original NUNCA sai: só código e texto escrito por nós | Erro de driver traz consulta, URL ou segredo (RNF04). O que os lotes anteriores gravaram fica (nada se apaga) |
+| Hashes | `configHash` e `runHash` gravados são RECALCULADOS do conteúdo (`createStrategyVersion`, `createRunSetup`) e comparados com os das linhas, antes de carregar um candle | O motor só confere o rótulo que recebe, e o rótulo nasce no próprio caso de uso: sem esta conferência uma linha adulterada rodaria |
+| Pré-aquecimento | `leadInCandles` do `computeStrategyLeadInCandles`; carga de `[period_start − leadIn × duração, period_end)`. **Largada nova confere ANTES de qualquer passo ou gravação**: sem candle fechado no período ⇒ `NO_CANDLES`; menos de `leadIn` candles no aquecimento ⇒ `INSUFFICIENT_HISTORY` com a contagem (`94 de 194`) | Resultado calculado sobre menos dados é pior que falha tipada (§c, "Riscos aceitos") |
+| Lacuna | Entre candles consecutivos do banco, `(abertura − abertura anterior) ÷ duração − 1` > 0 vira `confirmedGapCandles` (a lacuna confirmada de §a); na retomada, a comparação parte do último candle do checkpoint | "Nunca pula candle em silêncio": sem a declaração exata o motor recusa (`CANDLE_GAP_UNCONFIRMED`) |
+| Candle aberto | O fim do período é `min(period_end, início do candle em curso)` pelo relógio injetado: candle com fechamento depois do relógio não entra | Paridade com o ao vivo, que só vê vela `x = true` |
+| Páginas | Uma consulta por janela de tempo de `batchSize` candles (nunca por candle, nunca tudo de uma vez); janela vazia é pulada | Sem N+1: 17.520 candles = 9 consultas de candle |
+| Sentimento | `listAvailable` uma vez (fonte da execução, até o fechamento do período) e, por candle, `selectAvailableSentiment` do motor com `insertionCutoff` = fechamento do candle | Regra de §d: observação inserida depois do fechamento não vale naquele candle |
+| Métricas | `computeRunMetrics` sobre o que ficou GRAVADO (pontos de patrimônio e operações fechadas, lidos por páginas de 5.000) e `computeOpenPositionMetrics` (novo no motor: as mesmas primitivas da carteira) para a posição aberta | Execução retomada e contínua passam pelo mesmo caminho; o dourado de métricas confere a posição aberta ao último dígito |
+| Conclusão | `completed` grava `metrics` e `progress = 100` (`transitionRun` passou a fixar o progresso na conclusão); `engine_version` e `metrics_version` da linha são conferidos antes (`ENGINE_VERSION_MISMATCH`) | A linha nasce com as versões do motor que a vai executar; outra versão ⇒ execução nova ligada à anterior (§b) |
+| Retomada | `running` com checkpoint retoma do `engine_state` (validado: motor, `configHash`, `runHash` e último candle conferem, senão `ENGINE_STATE_UNUSABLE`) carregando só os candles depois dele; `running` sem checkpoint recomeça do zero (nenhum lote chegou a gravar). A proteção (stop e alvo) da posição aberta vem do estado | Resultado IDÊNTICO ao da execução contínua, qualquer que seja o corte e o tamanho do lote (prova abaixo) |
+
+**A thread.** `backtest.worker.ts` abre o PRÓPRIO banco (`DATABASE_URL`, validada por Zod em `environment.ts`) e o fecha ao
+terminar. Pedido `{ type: 'run', runId }` (UUID) e eventos (`ready`, `progress`, `completed`, `cancelled`, `failed`) são
+`z.strictObject` validados nas DUAS direções: nenhum evento carrega estado do motor, resultado, texto livre nem dado de
+usuário. O lado da API (`createBacktestThreadRunner`) usa o `Worker` do Bun, termina a thread no timeout
+(`BACKTEST_TIMEOUT_SECONDS`, 5 a 86.400, **padrão 900**) e marca `failed` com `BACKTEST_TIMEOUT`; thread que morre
+(`process.exit`, exceção não capturada, evento fora do esquema) vira `WORKER_CRASHED`, também gravado pela thread
+principal; `terminateAll()` roda no encerramento gracioso da API e deixa a execução `running` com checkpoint
+(recuperável: a retomada acima, ou `failOrphanedRuns` no boot, T3.6). A API não bloqueia: `GET /v1/health` responde em
+menos de 100 ms durante o backtest.
+
+**Medida (RNF01) e prova.** `make backtest-test` (Postgres descartável, thread de produção, 17.520 candles `1h` de
+BTCUSDT sintéticos de semente fixa + 740 observações de Fear & Greed): **~3,4 s de ponta a ponta** (`runner.run` até
+`completed`), contra o teto de 5 s. Decomposição: partida da thread ~40 ms, carga ~70 ms, motor ~540 ms, **gravação ~2,5 s**
+(17.327 sinais e 17.327 pontos de patrimônio dominam), métricas ~240 ms, resto ~35 ms. A gravação em lote é o gargalo; o
+motor não é. Duas execuções dão o mesmo digest (sinais, ordens, preenchimentos, posições, patrimônio, métricas, estado do
+motor e candle do checkpoint); o gravado é idêntico ao do mesmo motor rodado direto em memória; os dois conjuntos reais
+(`BTCUSDT 1h × 500`, `ETHUSDT 1d × 400`) produzem métricas IGUAIS ao dourado `metrics-1`/`engine-2` e ao da T2.5
+(**o período começa no candle `leadIn` = 194, que é exatamente onde o dourado deixa de aquecer, então a diferença é nula**;
+com outro `period_start` o aquecimento mudaria o primeiro sinal e o resultado deixaria de ser comparável ao dourado, ver
+"Riscos aceitos" da T2.6). Contratos sem banco (`test/backtest-*.contract.test.ts`, repositório em memória que emula a
+transação e o status) cobrem lotes, checkpoint, cancelamento, falha, lacuna, histórico insuficiente, hashes, candle
+aberto, sentimento e retomada (cortes em todos os 12 primeiros lotes, inclusive com posição aberta); **28 mutantes**
+(`test/backtest-mutants.contract.test.ts`) são reprovados: lacuna ignorada ou com contagem errada, candle aberto aceito,
+checkpoint antes do lote, lote fora de UMA transação, status não verificado entre lotes, cancelamento tratado como falha,
+hash de execução ou de versão não conferido, aquecimento menor que o `leadIn`, histórico insuficiente ou período vazio
+não conferidos, posição aberta avaliada no preço errado, erro engolido, texto do erro que viaja, posição retomada
+esquecida, checkpoint não validado, corte de inserção do sentimento ignorado, uma consulta por candle, thread sem
+timeout, thread não terminada, morte da thread não detectada, encerramento que não termina, evento e pedido da thread
+sem validação, banco da thread que não fecha e queda não registrada.
+
+**Suposições registradas.** (1) A bolsa é `binance` (única suportada; `runs` não guarda exchange). (2) Cauda sem candle
+(o banco acaba antes de `period_end`) NÃO é erro: a execução termina no último candle fechado e `last_candle_time` mostra
+onde parou; lacuna no MEIO, ao contrário, é declarada. (3) `orders.expires_candle_time` fica nulo no backtest: a validade
+da limitada já está em `eligible_candles`. (4) A janela de aquecimento exige `leadIn` candles PRESENTES, sem buraco;
+buraco no aquecimento é `INSUFFICIENT_HISTORY` e não lacuna.
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
@@ -1106,7 +1164,7 @@ ordem de exclusão `equity_points`, `run_commands`, `fills`, `positions`, `order
 - T3.1 cria as colunas e tabelas de §a/§b/§d (`runs.engine_state`, `engine_version`, `run_parameters`,
   `run_hash`, `migrated_from_run_id`, `engine_key` em `orders` e `positions`, `signals.regime`,
   `signals.sentiment_observation`, `equity_points.equity_at_low`, `run_commands`, `sentiment_observations`).
-- T3.2 (backtest) e T4.1 (ao vivo) são laços sobre `step` com a persistência de §b; T4.2 (paridade)
+- T3.2 (backtest, entregue: seção "Backtest em `worker_thread` (T3.2)") e T4.1 (ao vivo) são laços sobre `step` com a persistência de §b; T4.2 (paridade)
   compara as duas execuções com os mesmos `leadInCandles` e as mesmas lacunas declaradas.
 - Mudar a semântica do motor exige nova `engineVersion` e novo golden; execuções em curso migram (§b).
 - `@cryptoada/strategy-engine` depende só de `decimal.js@10.6.0` e `zod@4.6.5`.
