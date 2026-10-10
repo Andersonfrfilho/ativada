@@ -3,6 +3,7 @@ import type { OwnerScope } from '@cryptoada/database';
 
 import type { AuthenticatedUser } from '../authentication/authenticated-user.js';
 import type { AuthenticationLevel } from '../authentication/authentication.constant.js';
+import type { RouteDocumentation } from '../openapi/route-documentation.types.js';
 import type { RateLimitCharge, RateLimitPolicy } from '../rate-limit/rate-limit-policy.constant.js';
 import type { HttpMethod } from '../shared/http/http.constant.js';
 import type { RouteResult } from '../shared/http/response-envelope.js';
@@ -27,6 +28,8 @@ type RouteBase = {
   readonly path: string;
   readonly rateLimitPolicy?: RateLimitPolicy;
   readonly rateLimitCharge?: RateLimitCharge;
+  // O que o OpenAPI gerado diz desta rota (T3.4); o gerador recusa a tabela com rota sem documentação.
+  readonly documentation?: RouteDocumentation;
 };
 
 export type PublicRoute = RouteBase & {

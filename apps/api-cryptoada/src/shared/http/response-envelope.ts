@@ -8,6 +8,8 @@ export type RouteResult = {
   readonly data?: unknown;
   readonly pagination?: unknown;
   readonly headers?: Readonly<Record<string, string>>;
+  // Corpo cru, sem envelope (CSV em fluxo, HTML da documentação). O `Cache-Control: no-store` continua.
+  readonly rawBody?: string | ReadableStream<Uint8Array>;
 };
 
 const INTERNAL_ERROR_MESSAGE = 'Erro interno. Tente novamente em instantes.';
@@ -16,6 +18,9 @@ export function buildSuccessResponse(result: RouteResult): Response {
   const headers = { ...result.headers, [HTTP_HEADER.CACHE_CONTROL]: NO_STORE_CACHE_CONTROL };
   if (result.status === HTTP_STATUS.NO_CONTENT)
     return new Response(null, { status: HTTP_STATUS.NO_CONTENT, headers });
+  if (result.rawBody !== undefined) {
+    return new Response(result.rawBody, { status: result.status, headers });
+  }
   const paginationField = result.pagination === undefined ? {} : { pagination: result.pagination };
   return Response.json(
     { data: result.data, ...paginationField },

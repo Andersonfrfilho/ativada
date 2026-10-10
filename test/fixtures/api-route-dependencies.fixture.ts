@@ -2,6 +2,11 @@
 import type { ApiRouteDependencies } from '../../apps/api-cryptoada/src/routes/create-api-routes.js';
 import { createStreamTicketStore } from '../../apps/api-cryptoada/src/stream/stream-ticket-store.js';
 
+const ENABLED_MARKETS = {
+  symbols: ['BTCUSDT', 'ETHUSDT'],
+  timeframes: ['15m', '1h', '4h', '1d'],
+};
+
 export function buildApiRouteDependencies(
   checkDatabase: () => Promise<boolean>,
 ): ApiRouteDependencies {
@@ -24,5 +29,31 @@ export function buildApiRouteDependencies(
       unblockAccount: notUsed,
     },
     streamTicketStore: createStreamTicketStore({ now: () => Date.now() }),
+    markets: { enabled: ENABLED_MARKETS, listCandles: notUsed },
+    strategies: {
+      createStrategy: notUsed,
+      listStrategies: notUsed,
+      getStrategy: notUsed,
+      listVersions: notUsed,
+      addVersion: notUsed,
+    },
+    runs: {
+      routes: {
+        enabled: ENABLED_MARKETS,
+        createRun: notUsed,
+        listRuns: notUsed,
+        getRun: notUsed,
+        stopRun: notUsed,
+      },
+      series: {
+        equity: notUsed,
+        trades: notUsed,
+        signals: notUsed,
+        orders: notUsed,
+        fills: notUsed,
+        windows: notUsed,
+      },
+      exportRunCsv: notUsed,
+    },
   };
 }

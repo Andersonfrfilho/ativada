@@ -7,12 +7,7 @@ import {
   resolveUserBySubject,
 } from '@cryptoada/database';
 
-import { failBacktestRun } from './backtest/run-backtest.js';
-import { createBacktestDatabase } from './backtest/create-backtest-database.js';
-import {
-  createBacktestThreadRunner,
-  type BacktestThreadRunner,
-} from './backtest/backtest-thread-runner.js';
+import type { BacktestThreadRunner } from './backtest/backtest-thread-runner.js';
 import { createAccountRouteDependencies } from './account/create-account-route-dependencies.js';
 import { createAdminRouteDependencies } from './admin/create-admin-route-dependencies.js';
 import { createAccessTokenVerifier } from './authentication/access-token-verifier.js';
@@ -25,15 +20,21 @@ import { UNEXPECTED_ERROR_LOG_MESSAGE } from './logging/logging.constant.js';
 import { createGetProfileUseCase, createUpdateProfileUseCase } from './profile/profile.use-case.js';
 import { createTelegramRouteDependencies } from './telegram/create-telegram-route-dependencies.js';
 import { createRateLimiter } from './rate-limit/rate-limiter.js';
+import { createApplicationRunners } from './runs/create-application-runners.js';
+import type { RunDispatcher } from './runs/run-dispatcher.js';
 import { createSessionRouteDependencies } from './session/create-session-routes-dependencies.js';
 import { createStreamTicketStore } from './stream/stream-ticket-store.js';
 import { createRouter, type Router } from './router/create-router.js';
 import { createApiRoutes } from './routes/create-api-routes.js';
+import { createDomainRouteDependencies } from './routes/create-domain-route-dependencies.js';
+import type { WalkForwardThreadRunner } from './walk-forward/walk-forward-thread-runner.js';
 
 export type Application = {
   readonly handler: RequestHandler;
-  // A fila (T3.6) e as rotas (T3.4) enfileiram backtests aqui; cada um roda numa `worker_thread`.
+  // As rotas de execução despacham pela porta `RunDispatcher`; a fila com tetos por usuário (T3.6) a troca. Cada
+  // execução roda numa `worker_thread` destes executores.
   readonly backtestRunner: BacktestThreadRunner;
+  readonly walkForwardRunner: WalkForwardThreadRunner;
   readonly closeResources: () => Promise<void>;
 };
 
@@ -52,6 +53,7 @@ type ApiRouterParams = {
   readonly database: DatabaseHandle;
   readonly identity: IdentityAdmin;
   readonly verifyAccessToken: VerifyAccessToken;
+  readonly dispatcher: RunDispatcher;
 };
 
 function createVerifyAccessToken(environment: Environment): VerifyAccessToken {
@@ -68,6 +70,12 @@ function createVerifyAccessToken(environment: Environment): VerifyAccessToken {
 function createApiRouter(params: ApiRouterParams): Router {
   const { environment, logger, database, identity, verifyAccessToken } = params;
   const profileRepository = createProfileRepository(database);
+  const domain = createDomainRouteDependencies({
+    environment,
+    database,
+    dispatcher: params.dispatcher,
+    now: () => Date.now(),
+  });
   return createRouter({
     routes: createApiRoutes({
       checkDatabase: () => pingDatabase(database),
@@ -85,6 +93,7 @@ function createApiRouter(params: ApiRouterParams): Router {
       }),
       admin: createAdminRouteDependencies({ identity, database }),
       streamTicketStore: createStreamTicketStore({ now: () => Date.now() }),
+      ...domain,
     }),
     verifyAccessToken,
     resolveUser: (subject) => resolveUserBySubject(database, subject),
@@ -95,31 +104,21 @@ function createApiRouter(params: ApiRouterParams): Router {
   });
 }
 
-const MILLISECONDS_PER_SECOND = 1_000;
-
-function createApiBacktestRunner(
-  environment: Environment,
-  database: DatabaseHandle,
-): BacktestThreadRunner {
-  const backtestDatabase = createBacktestDatabase(database);
-  return createBacktestThreadRunner({
-    workerUrl: new URL('./backtest/backtest.worker.ts', import.meta.url).href,
-    workerEnvironment: { DATABASE_URL: environment.DATABASE_URL },
-    timeoutMilliseconds: environment.BACKTEST_TIMEOUT_SECONDS * MILLISECONDS_PER_SECOND,
-    recordFailure: (failure) => failBacktestRun({ database: backtestDatabase, ...failure }),
-  });
-}
-
 export function createApplication(params: CreateApplicationParams): Application {
   const { environment, logger } = params;
   const database = openDatabase(environment.DATABASE_URL);
-  const backtestRunner = createApiBacktestRunner(environment, database);
+  const runners = createApplicationRunners({
+    environment,
+    database,
+    reportUnexpectedError: (error) => logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { error }),
+  });
   const router = createApiRouter({
     environment,
     logger,
     database,
     identity: createIdentityAdmin({ environment, now: () => Date.now() }),
     verifyAccessToken: createVerifyAccessToken(environment),
+    dispatcher: runners.dispatcher,
   });
   return {
     handler: createRequestHandler({
@@ -127,9 +126,13 @@ export function createApplication(params: CreateApplicationParams): Application 
       corsAllowedOrigins: environment.CORS_ALLOWED_ORIGINS,
       logger,
     }),
-    backtestRunner,
+    backtestRunner: runners.backtestRunner,
+    walkForwardRunner: runners.walkForwardRunner,
     closeResources: async (): Promise<void> => {
-      await backtestRunner.terminateAll();
+      await Promise.all([
+        runners.backtestRunner.terminateAll(),
+        runners.walkForwardRunner.terminateAll(),
+      ]);
       await closeDatabase(database);
     },
   };
