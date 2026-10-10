@@ -899,6 +899,91 @@ foi regravado; `SIGNAL_ENGINE_VERSION` continua `signal-2` (o sinal não mudou).
 os cortes amostrados e o juiz que para na primeira divergência (a suíte inteira, 124 s → ~68 s, já com os testes
 novos e o oráculo).
 
+## Métricas (T2.6-metricas)
+
+`packages/strategy-engine/src/metrics/`: funções PURAS, decimal exato (`EngineDecimal`, 40 algarismos), sem
+`Math.exp`, `Math.log` nem `Math.pow` (a potência fracionária e a raiz são `EngineDecimal.pow` e `.sqrt`,
+determinísticas em qualquer runtime), sem relógio nem locale. `METRICS_VERSION = 'metrics-1'`; `runs.metrics` (plan §3)
+grava essa versão junto de `ENGINE_VERSION`. Mudar uma fórmula exige `metrics-2` e o dourado regravado.
+
+**Interface.** `computeRunMetrics({ equityPoints, closedPositions, openPosition, run })` devolve `RunMetrics`.
+`equityPoints` são os `EquityPointDecision` do motor em ordem de tempo (um por candle decidido, a partir do primeiro
+sinal); `closedPositions` são as `ClosedPositionDecision` em ordem de saída; `openPosition` é a posição ainda aberta no
+fim (`openedCandleOpenTime`, `entryFee`, `unrealizedProfit`) ou `null` (campo obrigatório: quem chama decide, e a taxa
+da posição aberta não some por esquecimento); `run` traz `initialBalance` e `timeframeMilliseconds`
+(`ENGINE_TIMEFRAME_DURATION_MILLISECONDS`). Entrada que viola o contrato (ponto fora de ordem, patrimônio ≤ 0,
+`equityAtLow` acima de `equity`, posições sobrepostas, texto não decimal) lança `StrategyEngineError`: é erro de quem
+chama, nunca um número torto.
+
+**Números e arredondamento (sem arredondamento escondido).** Toda saída numérica é TEXTO decimal canônico
+(`formatEngineDecimal`: sem expoente, sem zeros à direita). Soma de dinheiro (`netProfit`, `grossProfit`, `grossLoss`,
+`feesPaid`) é EXATA, sem arredondar. Toda grandeza que sai de uma divisão, raiz ou potência (retornos, razões, médias,
+drawdown, Sharpe, Sortino, fração de exposição) é calculada a 40 algarismos e arredondada UMA vez, para 12 casas
+(`METRICS_DECIMAL_PLACES`, `ROUND_HALF_UP`); nenhuma métrica é composta a partir de outra já arredondada. Valor que não
+se define é `{ value: null, reason }` (nunca `NaN`, `Infinity` nem um `"0"` fingindo); valor definido é
+`{ value: "…", reason: null }`.
+
+| Motivo (`reason`) | Quando |
+|---|---|
+| `no_equity_points` | nenhum ponto de patrimônio (o aquecimento não acabou) |
+| `insufficient_returns` | menos de 2 retornos por período (Sharpe e Sortino) |
+| `zero_volatility` | todos os retornos iguais (desvio-padrão 0): Sharpe |
+| `zero_downside` | nenhum retorno negativo (desvio de queda 0): Sortino |
+| `period_too_short` | período menor que 30 dias (`MINIMUM_ANNUALIZATION_PERIOD_MILLISECONDS`): retorno anualizado e operações por ano |
+| `no_trades` | nenhuma operação fechada |
+| `no_losses` | nenhuma perda (profit factor, perda média, razão ganho/perda) |
+| `no_wins` | nenhum ganho (razão ganho/perda) |
+
+**Definições.** `E_k` = `equity` do ponto `k` (liquidação no fechamento), `L_k` = `equityAtLow`, `B_k` = `benchmark`,
+`E_0` e `E_n` o primeiro e o último ponto, `S` o saldo inicial, `T` a duração do timeframe, `Y` = 365,25 dias =
+31 557 600 000 ms (ano fixo: 365 dias subestimaria os períodos por ano).
+
+| Métrica | Definição |
+|---|---|
+| `totalReturn` | `E_n ÷ S − 1` (liquidação do último ponto: taxa e slippage já descontados) |
+| `benchmarkReturn` | `B_n ÷ S − 1`: comprar e segurar no mesmo período, com a mesma taxa e o mesmo slippage (constituição §3) |
+| `excessReturn` | `totalReturn − benchmarkReturn`, calculado dos valores de 40 algarismos (uma só arredondagem) |
+| `annualizedReturn` | `(E_n ÷ S)^(Y ÷ Δ) − 1`, com `Δ` = tempo de `E_n` − tempo de `E_0` em ms (do fechamento do primeiro ponto ao do último); `null` `period_too_short` se `Δ` < 30 dias (anualizar horizonte curto engana) |
+| retorno do período | `r_k = E_k ÷ E_{k−1} − 1`, `k = 1..n` (fechamento a fechamento; uma lacuna confirmada entre dois pontos conta como UM período) |
+| `sharpe` | `média(r) ÷ desvio_amostral(r) × √(Y ÷ T)`; `n−1` no denominador do desvio (`n` = número de retornos), taxa livre de risco 0; `null` se `n < 2` (`insufficient_returns`) ou se todos os retornos são iguais (`zero_volatility`: igualdade EXATA, sem tolerância escondida; a divisão decimal é arredondada corretamente, então razões iguais dão textos iguais) |
+| `sortino` | `média(r) ÷ desvio_de_queda × √(Y ÷ T)`, desvio de queda = `√( Σ min(r_k, 0)² ÷ n )` sobre TODOS os `n` períodos (alvo mínimo 0; o período positivo entra como 0, nunca é descartado); `null` se `n < 2` ou sem retorno negativo (`zero_downside`) |
+| pico | `P_k = max(E_0..E_k)`: o máximo corrente do patrimônio de FECHAMENTO, inclusive o candle corrente (o lado pior: o pico não encolhe) |
+| queda do ponto | no fechamento `(P_k − E_k) ÷ P_k`; na mínima `(P_k − L_k) ÷ P_k`. A queda máxima é o maior valor da série; **empate de profundidade: vale a ocorrência mais antiga** (comparação estrita `>` sobre o valor de 40 algarismos). `maxDrawdownAtLow` é o relatório honesto e o que as metas (RF13) usam; vale `≥ maxDrawdownAtClose` porque `L_k ≤ E_k` |
+| instantes da queda | `peakTime` = o ponto do pico vigente na queda máxima; `troughTime` = o ponto da queda máxima; `recoveryTime` = o primeiro ponto, a partir do vale (inclusive), com `E ≥` o valor do pico, ou `null` se nunca recuperou. Duração: do pico à recuperação, ou do pico ao último ponto se não recuperou; em candles (diferença dos índices dos pontos) e em ms (diferença dos `candleOpenTime`). Sem queda, os três instantes são `null` e as durações 0 |
+| `trades`, `wins`, `losses` | operações fechadas; `wins` = `netProfit > 0`; `losses` = `netProfit < 0`; resultado exatamente zero não é ganho nem perda (entra em `trades`) |
+| `winRate` | `wins ÷ trades` (a posição ABERTA não entra); `null` `no_trades` |
+| `grossProfit`, `grossLoss`, `netProfit` | soma dos `netProfit` positivos; soma dos módulos dos negativos (não negativa); soma de todos (`= grossProfit − grossLoss`); o `netProfit` de cada operação já traz as duas taxas |
+| `profitFactor` | `grossProfit ÷ grossLoss`; `null` `no_trades` sem operações e `null` `no_losses` se `grossLoss = 0` (só vitórias: infinito não se escreve); só perdas dá `0` |
+| `averageTrade` | `netProfit ÷ trades` |
+| `averageWin`, `averageLoss` | `grossProfit ÷ wins`; `grossLoss ÷ losses` (módulo, não negativo); `null` `no_wins` / `no_losses` |
+| `expectancy` | `winRate × averageWin − (losses ÷ trades) × averageLoss`, com as médias a 40 algarismos: o ganho esperado por operação (igual a `averageTrade`; `null` `no_trades`; média ausente conta como 0) |
+| `payoffRatio` | `averageWin ÷ averageLoss`; `null` `no_wins` ou `no_losses` |
+| `maxConsecutiveLosses` | a maior sequência de perdas consecutivas na ordem de saída (resultado zero ou ganho a interrompe) |
+| `feesPaid` | soma de `entryFee + exitFee` de TODAS as fechadas MAIS a `entryFee` da posição aberta: toda taxa que saiu do caixa, inclusive a da posição ainda sem saída |
+| `exposure` | fração dos pontos (candles a partir do primeiro sinal) em que havia posição NO FECHAMENTO do candle: a posição aberta no candle `a` e fechada no candle `c` está exposta nos fechamentos de `a` até `c−1`; a ainda aberta, de `a` ao fim. Entrada e saída no mesmo candle (stop) não contam. O aquecimento fica fora (não há ponto) |
+| `tradesPerYear` | `trades ÷ (Δ ÷ Y)`; `null` `period_too_short` se `Δ` < 30 dias |
+| `openPosition` | `null` ou `{ openedCandleOpenTime, entryFee, unrealizedProfit }`, SEPARADA das fechadas: `unrealizedProfit` = valor de liquidação da posição no último fechamento − o débito de compra (que inclui a taxa de entrada) |
+| `exitReasonCounts` | quantas fechadas saíram por `stop`, `target`, `signal`, `command` e `gap` |
+
+**Reconciliação.** `reconcileRunMetrics(metrics)` confere, em decimal exato e sem tolerância, que
+`netProfit + openPosition.unrealizedProfit = E_n − S` (sem ponto, `E_n − S` vale 0). As taxas já estão dentro do
+`netProfit` de cada operação e do `unrealizedProfit` (a compra debita o valor mais a taxa): descontá-las de novo seria
+contá-las duas vezes. O teste exige que a conta feche nos dois conjuntos reais (BTC 1h × 500 e ETH 1d × 400).
+
+**Conferência independente.** `test/fixtures/strategy-engine/oracle/metrics_reference.py` recalcula as métricas em
+Python puro (`python3 -I`, módulo `decimal`, contexto de 40 algarismos, sem biblioteca) a partir dos pontos e das
+posições que o motor exportou. Uso, da raiz do repositório:
+
+```text
+bun run scripts/export-metrics-input.ts "BTCUSDT 1h × 500" > tmp/metrics-btc.json
+python3 -I test/fixtures/strategy-engine/oracle/metrics_reference.py tmp/metrics-btc.json \
+  test/fixtures/strategy-engine/golden/classic-scoreboard-metrics.metrics-1.engine-2.json "BTCUSDT 1h × 500"
+```
+
+O script imprime cada métrica do Python ao lado da do dourado e sai com código 1 se alguma diferir mais que 1e-9. Não
+roda na CI (Python não é dependência do repositório); o resultado conferido fica registrado nos números do dourado e na
+seção "Prova" abaixo.
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
