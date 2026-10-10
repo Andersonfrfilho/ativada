@@ -4,11 +4,16 @@ import {
   ENGINE_INPUT_ERROR_CODE,
   EngineDecimal,
   EngineInputError,
+  type EngineDecimalValue,
   type EquityPointDecision,
   type WalletStepInput,
   type WalletStepResult,
 } from '../../../packages/strategy-engine/src/index.js';
-import { guardInput, type ReferenceEngineDefect } from './reference-engine-defect.fixture.js';
+import {
+  guardInput,
+  REFERENCE_ENGINE_DEFECT,
+  type ReferenceEngineDefect,
+} from './reference-engine-defect.fixture.js';
 import { evaluateProtectiveExits, executePendingOrder } from './reference-fills.fixture.js';
 import type { WalletContext, WalletDraft } from './reference-orders.fixture.js';
 import { applyClose } from './reference-policy.fixture.js';
@@ -40,7 +45,33 @@ function buyBenchmark(draft: WalletDraft, context: WalletContext): void {
   };
 }
 
-function equityPoint(draft: WalletDraft, context: WalletContext): EquityPointDecision {
+type Holding = { readonly cash: EngineDecimalValue; readonly quantity: EngineDecimalValue };
+
+// Fotografia depois da ordem pendente da abertura e antes de stop e alvo: quem estava na mão durante o candle.
+function holdingAfterOpen(draft: WalletDraft): Holding | null {
+  const { position, cash } = draft.state;
+  if (position === null) return null;
+  return { cash: toEngineDecimal(cash), quantity: toEngineDecimal(position.quantity) };
+}
+
+// O vale conta a posição que ainda existe ao fim do passo ou que saiu pelo alvo; a saída pelo stop (o
+// patrimônio mínimo é o da saída) e a venda da abertura não contam.
+function isHeldAtTheValley(draft: WalletDraft, context: WalletContext): boolean {
+  const { defect } = context;
+  const exitedByTarget = draft.closedPositions.some((closed) => closed.exitReason === 'target');
+  if (defect === REFERENCE_ENGINE_DEFECT.EQUITY_LOW_IGNORES_EXITING_POSITION) {
+    return draft.state.position !== null;
+  }
+  const exitedByStop = draft.closedPositions.some((closed) => closed.exitReason === 'stop');
+  const countsStop = defect === REFERENCE_ENGINE_DEFECT.EQUITY_LOW_COUNTS_STOP_AT_LOW;
+  return draft.state.position !== null || exitedByTarget || (countsStop && exitedByStop);
+}
+
+function equityPoint(
+  draft: WalletDraft,
+  context: WalletContext,
+  held: Holding | null,
+): EquityPointDecision {
   const { state } = draft;
   const { run, candle } = context;
   const quantity = toEngineDecimal(state.position?.quantity ?? '0');
@@ -55,14 +86,15 @@ function equityPoint(draft: WalletDraft, context: WalletContext): EquityPointDec
             run,
           }),
         );
+  const atClose = cash.plus(liquidationValue({ quantity, price: candle.close, run }));
+  const valley =
+    held === null || !isHeldAtTheValley(draft, context)
+      ? atClose
+      : held.cash.plus(liquidationValue({ quantity: held.quantity, price: candle.low, run }));
   return {
     candleOpenTime: candle.openTime,
-    equity: formatEngineDecimal(
-      cash.plus(liquidationValue({ quantity, price: candle.close, run })),
-    ),
-    equityAtLow: formatEngineDecimal(
-      cash.plus(liquidationValue({ quantity, price: candle.low, run })),
-    ),
+    equity: formatEngineDecimal(atClose),
+    equityAtLow: formatEngineDecimal(EngineDecimal.min(valley, atClose)),
     benchmark: formatEngineDecimal(benchmark),
   };
 }
@@ -94,13 +126,14 @@ export function runReferenceWalletStep(
     isIntraCandleEntry: false,
   };
   executePendingOrder(draft, context);
+  const held = holdingAfterOpen(draft);
   evaluateProtectiveExits(draft, context);
   buyBenchmark(draft, context);
   if (input.signal !== null && draft.state.firstSignalCandleOpenTime === null) {
     draft.state = { ...draft.state, firstSignalCandleOpenTime: input.candle.openTime };
   }
   applyClose(draft, context, { signal: input.signal, commands: input.commands ?? [] });
-  const equity = input.signal === null ? null : equityPoint(draft, context);
+  const equity = input.signal === null ? null : equityPoint(draft, context, held);
   const { commands, orders, fills, openedPositions, closedPositions } = draft;
   return {
     state: { ...draft.state, lastCandleOpenTime: input.candle.openTime },

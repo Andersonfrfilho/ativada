@@ -34,6 +34,8 @@ export const REFERENCE_ENGINE_DEFECT = {
   IGNORES_OPPOSITE_SIGNAL: 'ignores-opposite-signal',
   ZERO_PRICE_ACCEPTED: 'zero-price-accepted',
   SPLIT_DIVERGES: 'split-diverges',
+  EQUITY_LOW_IGNORES_EXITING_POSITION: 'equity-low-ignores-exiting-position',
+  EQUITY_LOW_COUNTS_STOP_AT_LOW: 'equity-low-counts-stop-at-low',
 } as const;
 
 export type ReferenceEngineDefect =

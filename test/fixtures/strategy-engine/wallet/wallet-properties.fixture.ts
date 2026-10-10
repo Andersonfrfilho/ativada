@@ -1,11 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
+  EngineDecimal,
   formatEngineDecimal,
   toEngineDecimal,
   type FillDecision,
   type OrderEvent,
 } from '../../../../packages/strategy-engine/src/index.js';
-import { liquidationValue, tickUp } from '../reference-pricing.fixture.js';
+import { liquidationValue, sellCredit, tickUp } from '../reference-pricing.fixture.js';
 import {
   iterateFlows,
   runWalletFlow,
@@ -45,20 +46,36 @@ function checkCashAndPosition(
   return undefined;
 }
 
-// Patrimônio = caixa + posição a valor de liquidação, no fechamento e na mínima (conta independente).
+// Patrimônio = caixa + posição a valor de liquidação, no fechamento e no vale do candle (conta independente):
+// o vale vale a posição que existiu durante o candle (ao fim do passo ou vendida pelo alvo), na mínima.
 function checkEquity(recorded: RecordedWalletStep): string | undefined {
   const point = recorded.result.decisions.equityPoint;
   if (point === null)
     return recorded.step.signal === null ? undefined : 'sinal sem ponto de patrimônio';
-  const { state } = recorded.result;
+  const { state, decisions } = recorded.result;
   const { candle } = recorded.step;
-  const parameters = recorded.flow.run.parameters;
+  const run = recorded.flow.run.parameters;
   const quantity = toEngineDecimal(state.position?.quantity ?? '0');
   const cash = toEngineDecimal(state.cash);
-  const atClose = cash.plus(liquidationValue({ quantity, price: candle.close, run: parameters }));
-  const atLow = cash.plus(liquidationValue({ quantity, price: candle.low, run: parameters }));
+  const atClose = cash.plus(liquidationValue({ quantity, price: candle.close, run }));
+  const targetSale = decisions.closedPositions.find((closed) => closed.exitReason === 'target');
+  const sale = decisions.fills.find(
+    (fill) => fill.positionKey === targetSale?.positionKey && fill.side === 'sell',
+  );
+  const held =
+    state.position !== null || targetSale === undefined || sale === undefined
+      ? { cash, quantity }
+      : {
+          cash: cash.minus(sellCredit(toEngineDecimal(sale.notional), run)),
+          quantity: toEngineDecimal(targetSale.quantity),
+        };
+  const hasValley = state.position !== null || targetSale !== undefined;
+  const valley = held.cash.plus(
+    liquidationValue({ quantity: held.quantity, price: candle.low, run }),
+  );
+  const atLow = hasValley ? EngineDecimal.min(valley, atClose) : atClose;
   if (point.equity !== formatEngineDecimal(atClose)) return 'patrimônio no fechamento errado';
-  if (point.equityAtLow !== formatEngineDecimal(atLow)) return 'patrimônio na mínima errado';
+  if (point.equityAtLow !== formatEngineDecimal(atLow)) return 'patrimônio no vale errado';
   return undefined;
 }
 

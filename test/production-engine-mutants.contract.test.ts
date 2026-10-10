@@ -202,8 +202,26 @@ const FILL_MUTANTS: readonly Mutant[] = [
     name: 'EQUITY_AT_LOW_MARKED_AT_THE_CLOSE',
     edits: edit(
       VALUATION,
-      'equityAtLow: valueAt(candle.low),',
-      'equityAtLow: valueAt(candle.close),',
+      'price: candle.low }, parameters)',
+      'price: candle.close }, parameters)',
+    ),
+    stage: JUDGE_STAGE.DIFFERENTIAL,
+  },
+  {
+    name: 'EQUITY_LOW_IGNORES_EXITING_POSITION',
+    edits: edit(
+      VALUATION,
+      '(position) => position.exitReason === EXIT_REASON.TARGET',
+      '() => false',
+    ),
+    stage: JUDGE_STAGE.DIFFERENTIAL,
+  },
+  {
+    name: 'EQUITY_LOW_COUNTS_STOP_AT_LOW',
+    edits: edit(
+      VALUATION,
+      '(position) => position.exitReason === EXIT_REASON.TARGET',
+      '(position) =>\n      position.exitReason === EXIT_REASON.TARGET || position.exitReason === EXIT_REASON.STOP',
     ),
     stage: JUDGE_STAGE.DIFFERENTIAL,
   },
@@ -372,6 +390,8 @@ describe('production engine: the guards, the differential and the harness reject
       'HALT_IGNORED',
       'COMMAND_REAPPLIED',
       'EQUITY_AT_LOW_MARKED_AT_THE_CLOSE',
+      'EQUITY_LOW_IGNORES_EXITING_POSITION',
+      'EQUITY_LOW_COUNTS_STOP_AT_LOW',
       'CONTIGUITY_NOT_CHECKED',
       'HASHES_NOT_CHECKED',
     ]) {

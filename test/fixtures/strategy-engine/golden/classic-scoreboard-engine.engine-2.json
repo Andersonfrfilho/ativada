@@ -1,5 +1,5 @@
 {
-  "engineVersion": "engine-1",
+  "engineVersion": "engine-2",
   "run": {
     "initialBalance": "10000",
     "feeRate": "0.001",
@@ -20,7 +20,7 @@
       "maxDrawdownAtClose": "0.0609834",
       "maxDrawdownAtLow": "0.06241435",
       "buyAndHoldReturn": "0.12345809",
-      "digest": "337937a4a8b74fb72a35101cbbcf7d942e8a7a8b3464519353c2490da33fe4c9"
+      "digest": "0e29de9ce6964240a1c2d6617cd255258d69599f2284d27c78bcaa6eec288bd0"
     },
     "ETHUSDT 1d × 400": {
       "candles": 400,
@@ -32,7 +32,7 @@
       "maxDrawdownAtClose": "0.04186581",
       "maxDrawdownAtLow": "0.04305754",
       "buyAndHoldReturn": "-0.08379965",
-      "digest": "a947bf226c49882db94670a519683baab122bd7ecb9fef04f0de27775f628122"
+      "digest": "922a8756a5e9e56d38c6d7721cd5fe2c9e2a73f7abcb7085b0d57760f5d3030d"
     }
   }
 }

@@ -11,7 +11,7 @@ export const ENGINE_STATE_VERSION = 1 as const;
 export const SIGNAL_ENGINE_VERSION = 'signal-2';
 // Versão da semântica do motor COMPLETO (sinal + modelo de preenchimento + política da carteira): é ela que
 // o estado grava. Saída diferente exige nova versão e novo dourado; estado de outra versão migra (§b).
-export const ENGINE_VERSION = 'engine-1';
+export const ENGINE_VERSION = 'engine-2';
 
 // Teto de combinações da grade do walk-forward (RNF02); a grade em si é parâmetro da execução (T3.3).
 export const MAX_WALK_FORWARD_COMBINATIONS = 200;

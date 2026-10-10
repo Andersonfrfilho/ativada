@@ -5,6 +5,7 @@ import {
   type EngineDecimalValue,
   type FillDecision,
   type OpenedPositionDecision,
+  type RunParameters,
 } from '../../../packages/strategy-engine/src/index.js';
 import { assertContract, type CheckContext } from './engine-contract-types.fixture.js';
 import {
@@ -170,6 +171,24 @@ function assertFillArithmetic(timeline: Timeline, entry: TimelineEntry, fill: Fi
   );
 }
 
+// O vale do candle: a posição que existiu durante ele vale a mínima. Sai ao fim do passo ou pelo alvo
+// (lado pior: a ordem dos extremos é desconhecida); a saída pelo stop e a venda da abertura não contam.
+function valleyEquity(params: {
+  readonly ledger: CashLedger;
+  readonly heldBeforeTargetSale: CashLedger | undefined;
+  readonly low: string;
+  readonly atClose: EngineDecimalValue;
+  readonly run: RunParameters;
+}): EngineDecimalValue {
+  const { ledger, run } = params;
+  const held = ledger.quantity.isZero() ? params.heldBeforeTargetSale : ledger;
+  if (held === undefined) return params.atClose;
+  const atLow = held.cash.plus(
+    liquidationValue({ quantity: held.quantity, price: params.low, run }),
+  );
+  return EngineDecimal.min(atLow, params.atClose);
+}
+
 export function checkFeesAndSlippage(context: CheckContext): void {
   const timeline = buildTimeline(context.scenario, context.baseline);
   const { run } = timeline;
@@ -178,8 +197,13 @@ export function checkFeesAndSlippage(context: CheckContext): void {
     quantity: new EngineDecimal(0),
   };
   for (const entry of timeline.entries) {
+    let heldBeforeTargetSale: CashLedger | undefined;
     for (const fill of entry.step.result.decisions.fills) {
       assertFillArithmetic(timeline, entry, fill);
+      const closed = closedIn(entry, fill.positionKey);
+      if (fill.side === 'sell' && closed?.exitReason === 'target') {
+        heldBeforeTargetSale = { ...ledger };
+      }
       applyFill(ledger, fill, timeline);
     }
     const point = entry.step.result.decisions.equityPoint;
@@ -188,9 +212,7 @@ export function checkFeesAndSlippage(context: CheckContext): void {
     const atClose = ledger.cash.plus(
       liquidationValue({ quantity: ledger.quantity, price: close, run }),
     );
-    const atLow = ledger.cash.plus(
-      liquidationValue({ quantity: ledger.quantity, price: low, run }),
-    );
+    const atLow = valleyEquity({ ledger, heldBeforeTargetSale, low, atClose, run });
     assertContract(
       sameDecimal(point.equity, atClose) && sameDecimal(point.equityAtLow, atLow),
       `Passo ${entry.index}: patrimônio (fechamento ou mínima) não reconcilia com caixa e taxas.`,
