@@ -44,7 +44,9 @@
       "name": "@cryptoada/worker-cryptoada",
       "version": "0.0.0",
       "dependencies": {
+        "@cryptoada/database": "workspace:*",
         "@cryptoada/environment": "workspace:*",
+        "@cryptoada/market-data": "workspace:*",
       },
     },
     "packages/database": {

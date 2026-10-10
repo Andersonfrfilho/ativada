@@ -9,7 +9,7 @@ import { TIMEFRAME_DURATION_MILLISECONDS } from '../../packages/market-data/src/
 
 export type InMemoryCandleRepository = Pick<
   CandleRepository,
-  'findMissingOpenTimes' | 'upsertCandles'
+  'findMissingOpenTimes' | 'upsertCandles' | 'findLatestOpenTime'
 > & {
   readonly stored: () => readonly CandleRecord[];
   readonly upsertSizes: number[];
@@ -42,6 +42,12 @@ export function createInMemoryCandleRepository(options: {
         inserted += 1;
       }
       return Promise.resolve({ inserted });
+    },
+    findLatestOpenTime: (key): Promise<number | undefined> => {
+      const openTimes = [...rows.values()]
+        .filter((candle) => candle.symbol === key.symbol && candle.timeframe === key.timeframe)
+        .map((candle) => candle.openTime);
+      return Promise.resolve(openTimes.length === 0 ? undefined : Math.max(...openTimes));
     },
     findMissingOpenTimes: (params): Promise<readonly number[]> => {
       const duration = TIMEFRAME_DURATION_MILLISECONDS[params.timeframe];

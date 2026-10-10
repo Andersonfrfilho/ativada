@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@cryptoada/environment": "workspace:*"
+    "@cryptoada/database": "workspace:*",
+    "@cryptoada/environment": "workspace:*",
+    "@cryptoada/market-data": "workspace:*"
   }
 }

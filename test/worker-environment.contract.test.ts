@@ -1,0 +1,124 @@
+// Copyright (c) 2026 Ada Technology. All rights reserved.
+import { describe, expect, test } from 'bun:test';
+
+import { environmentSchema } from '../apps/worker-cryptoada/src/environment.js';
+import { EnvironmentError, parseEnvironment } from '../packages/environment/src/index.js';
+import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
+
+type Source = Record<string, string>;
+
+const WORKER_VARIABLES: readonly string[] = [
+  'MARKET_EXCHANGE',
+  'MARKET_SYMBOLS',
+  'MARKET_TIMEFRAMES',
+  'BINANCE_BASE_URL',
+  'BINANCE_STREAM_URL',
+  'STREAM_STALE_SECONDS',
+];
+const SECRET_FRAGMENT = 'ValorQueNaoPodeVazar';
+const PRODUCTION_DATABASE_URL =
+  'postgres://cryptoada:prod-password-0123456789@db.internal:5432/crypto?sslmode=require';
+
+async function buildSource(overrides: Source = {}): Promise<Source> {
+  const base = await readEnvironmentFile('env.test');
+  for (const variable of WORKER_VARIABLES) delete base[variable];
+  return { ...base, ...overrides };
+}
+
+function issuesOf(source: Source): string {
+  try {
+    parseEnvironment(environmentSchema, source);
+  } catch (error: unknown) {
+    if (error instanceof EnvironmentError) return error.message;
+    throw error;
+  }
+  return '';
+}
+
+async function buildProductionSource(overrides: Source = {}): Promise<Source> {
+  return buildSource({
+    ENV: 'production',
+    DATABASE_URL: PRODUCTION_DATABASE_URL,
+    BINANCE_BASE_URL: 'https://data-api.binance.vision',
+    BINANCE_STREAM_URL: 'wss://data-stream.binance.vision',
+    ...overrides,
+  });
+}
+
+describe('worker environment', () => {
+  test('defaults: binance, BTC and ETH, every timeframe, public data hosts, 60 s of silence', async () => {
+    const environment = parseEnvironment(environmentSchema, await buildSource());
+    expect(environment.MARKET_EXCHANGE).toBe('binance');
+    expect(environment.MARKET_SYMBOLS).toStrictEqual(['BTCUSDT', 'ETHUSDT']);
+    expect(environment.MARKET_TIMEFRAMES).toStrictEqual(['15m', '1h', '4h', '1d']);
+    expect(environment.BINANCE_BASE_URL).toBe('https://data-api.binance.vision');
+    expect(environment.BINANCE_STREAM_URL).toBe('wss://data-stream.binance.vision');
+    expect(environment.STREAM_STALE_SECONDS).toBe(60);
+  });
+
+  test('reads the lists, the stream URL and the silence limit', async () => {
+    const environment = parseEnvironment(
+      environmentSchema,
+      await buildSource({
+        MARKET_SYMBOLS: 'SOLUSDT, BTCUSDT',
+        MARKET_TIMEFRAMES: '1h,1d',
+        BINANCE_STREAM_URL: 'ws://127.0.0.1:9',
+        STREAM_STALE_SECONDS: '30',
+      }),
+    );
+    expect(environment.MARKET_SYMBOLS).toStrictEqual(['SOLUSDT', 'BTCUSDT']);
+    expect(environment.MARKET_TIMEFRAMES).toStrictEqual(['1h', '1d']);
+    expect(environment.BINANCE_STREAM_URL).toBe('ws://127.0.0.1:9');
+    expect(environment.STREAM_STALE_SECONDS).toBe(30);
+  });
+
+  test.each([
+    ['MARKET_SYMBOLS', 'btcusdt'],
+    ['MARKET_TIMEFRAMES', '1m'],
+    ['BINANCE_BASE_URL', 'ftp://example.com'],
+    ['BINANCE_STREAM_URL', 'https://data-stream.binance.vision'],
+    ['STREAM_STALE_SECONDS', '0'],
+    ['STREAM_STALE_SECONDS', 'muito'],
+  ])(
+    'fails at boot with an invalid %s=%s, naming the variable and never the value',
+    async (variable, value) => {
+      const message = issuesOf(await buildSource({ [variable]: `${value}${SECRET_FRAGMENT}` }));
+      expect(message).toContain(variable);
+      expect(message).not.toContain(SECRET_FRAGMENT);
+    },
+  );
+
+  test('fails without DATABASE_URL', async () => {
+    const source = await buildSource();
+    delete source['DATABASE_URL'];
+    expect(issuesOf(source)).toContain('DATABASE_URL: obrigatória');
+  });
+
+  test.each(['env.dev', 'env.test'])('%s is valid for the worker', async (file) => {
+    expect(issuesOf(await readEnvironmentFile(file))).toBe('');
+  });
+});
+
+describe('worker environment in production', () => {
+  test('accepts https for REST and wss for the stream', async () => {
+    expect(issuesOf(await buildProductionSource())).toBe('');
+  });
+
+  test('rejects a plain http:// REST base', async () => {
+    const source = await buildProductionSource({ BINANCE_BASE_URL: 'http://insecure.example.com' });
+    expect(issuesOf(source)).toContain('BINANCE_BASE_URL');
+  });
+
+  test.each(['ws://insecure.example.com', 'https://data-stream.binance.vision'])(
+    'rejects the stream URL %s',
+    async (value) => {
+      const message = issuesOf(await buildProductionSource({ BINANCE_STREAM_URL: value }));
+      expect(message).toContain('BINANCE_STREAM_URL');
+    },
+  );
+
+  test('rejects a database URL without TLS', async () => {
+    const source = await buildProductionSource({ DATABASE_URL: 'postgres://u:p@h:5432/d' });
+    expect(issuesOf(source)).toContain('DATABASE_URL');
+  });
+});

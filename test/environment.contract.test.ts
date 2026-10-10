@@ -10,8 +10,10 @@ import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
 import { loadEnvironment as loadFrontendEnvironment } from '../apps/frontend-cryptoada/src/environment.js';
 
 const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
-const LONG_RUNNING_APPLICATION = 'api-cryptoada';
-const LISTENING_MESSAGE = '"message":"listening"';
+const LONG_RUNNING_READY_MESSAGES: Readonly<Record<string, string>> = {
+  'api-cryptoada': '"message":"listening"',
+  'worker-cryptoada': '"message":"worker started"',
+};
 const ENVIRONMENT_ERROR_PREFIX = 'Variáveis de ambiente inválidas';
 const CRON_APPLICATION = 'cron-cryptoada';
 const SERVER_APPLICATIONS: readonly string[] = [
@@ -76,10 +78,10 @@ async function runServerApplication(
     stdout: 'pipe',
     stderr: 'pipe',
   });
-  const isLongRunning = applicationName === LONG_RUNNING_APPLICATION;
+  const readyMessage = LONG_RUNNING_READY_MESSAGES[applicationName];
   const [stdout, stderr] = await Promise.all([
     collectOutput(child.stdout, (text) => {
-      if (isLongRunning && text.includes(LISTENING_MESSAGE)) child.kill('SIGTERM');
+      if (readyMessage !== undefined && text.includes(readyMessage)) child.kill('SIGTERM');
     }),
     new Response(child.stderr).text(),
   ]);
@@ -160,7 +162,7 @@ describe('server applications fail at boot without environment', () => {
   );
 
   test.each([...IDLE_APPLICATIONS])(
-    '%s boots with a valid env, logs JSON info and exits 0 (the API after SIGTERM)',
+    '%s boots with a valid env, logs JSON info and exits 0 (after SIGTERM)',
     async (applicationName) => {
       const testEnvironment = await readEnvironmentFile('env.test');
       const result = await runServerApplication(applicationName, testEnvironment);
