@@ -178,3 +178,8 @@ export {
 } from './metrics/open-position-metrics.js';
 export { reconcileRunMetrics } from './metrics/reconcile-run-metrics.js';
 export * from './walk-forward/index.js';
+export { computeBalanceSurvival } from './survival/compute-balance-survival.js';
+export { parseSurvivalSettings } from './survival/survival-settings.schema.js';
+export * from './survival/survival.constant.js';
+export { SurvivalInputError } from './survival/survival.error.js';
+export type * from './survival/survival.types.js';
