@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { createAccountRoutes, type AccountRouteDependencies } from '../account/account.routes.js';
 import { createAdminRoutes, type AdminRouteDependencies } from '../admin/admin.routes.js';
+import { createDocsRoutes } from '../docs/docs.routes.js';
 import { createMarketRoutes, type MarketRouteDependencies } from '../markets/markets.routes.js';
 import { createProfileRoutes, type ProfileRouteDependencies } from '../profile/profile.routes.js';
 import type { Route } from '../router/route.types.js';
@@ -38,10 +39,12 @@ export type ApiRouteDependencies = HealthRouteDependencies & {
   readonly markets: MarketRouteDependencies;
   readonly strategies: StrategyRouteDependencies;
   readonly runs: RunRoutesBundle;
+  // `/v1/openapi.json` e `/v1/docs` existem só fora de produção: em produção nem entram na tabela.
+  readonly isDocumentationEnabled: boolean;
 };
 
 export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Route[] {
-  return [
+  const routes: Route[] = [
     ...createHealthRoutes(dependencies),
     ...createSessionRoutes(dependencies.session),
     ...createProfileRoutes(dependencies.profile),
@@ -55,4 +58,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     ...createRunSeriesRoutes(dependencies.runs.series),
     ...createRunExportRoutes(dependencies.runs.exportRunCsv),
   ];
+  // A tabela final inclui as próprias rotas de documentação: o documento é gerado depois, dela inteira.
+  if (dependencies.isDocumentationEnabled) routes.push(...createDocsRoutes(() => routes));
+  return routes;
 }

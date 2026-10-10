@@ -4,6 +4,7 @@ import { ROUTE_ACCESS } from '../router/route-access.constant.js';
 import type { Route } from '../router/route.types.js';
 import { HTTP_METHOD, HTTP_STATUS } from '../shared/http/http.constant.js';
 import type { RouteResult } from '../shared/http/response-envelope.js';
+import { HEALTH_DOCUMENTATION } from './health.docs.js';
 
 export const HEALTH_PATH = '/v1/health';
 export const ADMIN_HEALTH_PATH = '/v1/admin/health';
@@ -22,6 +23,7 @@ export function createHealthRoutes(dependencies: HealthRouteDependencies): reado
       path: HEALTH_PATH,
       access: ROUTE_ACCESS.PUBLIC,
       rateLimitPolicy: RATE_LIMIT_POLICY.HEALTH_CLIENT_ADDRESS,
+      documentation: HEALTH_DOCUMENTATION.health,
       handler: () =>
         Promise.resolve({ status: HTTP_STATUS.OK, data: { status: HEALTH_STATUS.OK } }),
     },
@@ -29,6 +31,7 @@ export function createHealthRoutes(dependencies: HealthRouteDependencies): reado
       method: HTTP_METHOD.GET,
       path: ADMIN_HEALTH_PATH,
       access: ROUTE_ACCESS.ADMIN,
+      documentation: HEALTH_DOCUMENTATION.adminHealth,
       handler: async (): Promise<RouteResult> => {
         const isDatabaseUp = await dependencies.checkDatabase();
         return {

@@ -15,6 +15,12 @@ import type * as RunSeriesRoutesModule from '../../../apps/api-cryptoada/src/run
 import type * as RunSeriesUseCasesModule from '../../../apps/api-cryptoada/src/runs/run-series.use-cases.js';
 import type * as RunUseCasesModule from '../../../apps/api-cryptoada/src/runs/run.use-cases.js';
 import type * as RunRoutesModule from '../../../apps/api-cryptoada/src/runs/runs.routes.js';
+import type * as BuildOpenApiModule from '../../../apps/api-cryptoada/src/openapi/build-openapi-document.js';
+import type * as UndocumentedErrorModule from '../../../apps/api-cryptoada/src/openapi/undocumented-route.error.js';
+import type * as CreateApiRoutesModule from '../../../apps/api-cryptoada/src/routes/create-api-routes.js';
+import type * as DocsConstantModule from '../../../apps/api-cryptoada/src/docs/docs.constant.js';
+import type * as ErrorCatalogModule from '../../../apps/api-cryptoada/src/shared/errors/error-code-catalog.js';
+import type * as SecurityConstantModule from '../../../apps/api-cryptoada/src/http/http-security.constant.js';
 import type * as StrategyRoutesModule from '../../../apps/api-cryptoada/src/strategies/strategies.routes.js';
 import type * as StrategyUseCasesModule from '../../../apps/api-cryptoada/src/strategies/strategy.use-cases.js';
 
@@ -43,6 +49,12 @@ export type ApiApp = {
   readonly runRoutes: typeof RunRoutesModule;
   readonly strategyRoutes: typeof StrategyRoutesModule;
   readonly strategyUseCases: typeof StrategyUseCasesModule;
+  readonly openApi: typeof BuildOpenApiModule;
+  readonly undocumentedError: typeof UndocumentedErrorModule;
+  readonly apiRoutes: typeof CreateApiRoutesModule;
+  readonly docsConstant: typeof DocsConstantModule;
+  readonly errorCatalog: typeof ErrorCatalogModule;
+  readonly securityConstant: typeof SecurityConstantModule;
 };
 
 export function resolveApiAppSource(): string {
@@ -74,5 +86,11 @@ export async function loadApiApp(): Promise<ApiApp> {
     runRoutes: await load('runs/runs.routes'),
     strategyRoutes: await load('strategies/strategies.routes'),
     strategyUseCases: await load('strategies/strategy.use-cases'),
+    openApi: await load('openapi/build-openapi-document'),
+    undocumentedError: await load('openapi/undocumented-route.error'),
+    apiRoutes: await load('routes/create-api-routes'),
+    docsConstant: await load('docs/docs.constant'),
+    errorCatalog: await load('shared/errors/error-code-catalog'),
+    securityConstant: await load('http/http-security.constant'),
   };
 }

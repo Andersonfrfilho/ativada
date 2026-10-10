@@ -20,7 +20,7 @@ export const inviteUserSchema = z.strictObject({
     .transform((email) => email.trim().toLowerCase()),
 });
 
-const listAccountsQuerySchema = z.strictObject({
+export const listAccountsQuerySchema = z.strictObject({
   limit: z.coerce.number().int().min(1).max(MAX_ACCOUNT_PAGE_SIZE).optional(),
   cursor: z.string().min(1).max(CURSOR_MAX_LENGTH).optional(),
 });

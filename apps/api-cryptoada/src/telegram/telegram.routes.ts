@@ -6,6 +6,7 @@ import { FeatureDisabledError } from '../shared/errors/feature-disabled.error.js
 import { HTTP_METHOD, HTTP_STATUS } from '../shared/http/http.constant.js';
 import { readJsonBody } from '../shared/http/read-validated-body.js';
 import type { RouteResult } from '../shared/http/response-envelope.js';
+import { TELEGRAM_DOCUMENTATION } from './telegram.docs.js';
 import type { HandleStartCommandUseCase } from './handle-start-command.use-case.js';
 import { TelegramWebhookRejectedError } from './telegram.error.js';
 import {
@@ -35,6 +36,7 @@ function createLinkRoutes(dependencies: TelegramRouteDependencies): readonly Rou
       path: TELEGRAM_LINK_PATH,
       access: ROUTE_ACCESS.USER,
       rateLimitPolicy: RATE_LIMIT_POLICY.TELEGRAM_LINK_CODE_ISSUE,
+      documentation: TELEGRAM_DOCUMENTATION.issueLinkCode,
       handler: async ({ scope }): Promise<RouteResult> => {
         if (dependencies.issueLinkCode === undefined) throw new FeatureDisabledError();
         return { status: HTTP_STATUS.CREATED, data: await dependencies.issueLinkCode(scope) };
@@ -44,6 +46,7 @@ function createLinkRoutes(dependencies: TelegramRouteDependencies): readonly Rou
       method: HTTP_METHOD.DELETE,
       path: TELEGRAM_LINK_PATH,
       access: ROUTE_ACCESS.USER,
+      documentation: TELEGRAM_DOCUMENTATION.unlink,
       handler: async ({ scope }): Promise<RouteResult> => {
         await dependencies.unlinkTelegram(scope);
         return { status: HTTP_STATUS.NO_CONTENT };
@@ -58,6 +61,7 @@ function createWebhookRoute(webhook: TelegramWebhookDependencies): Route {
     path: TELEGRAM_WEBHOOK_PATH,
     access: ROUTE_ACCESS.PUBLIC,
     rateLimitPolicy: RATE_LIMIT_POLICY.TELEGRAM_WEBHOOK_CLIENT_ADDRESS,
+    documentation: TELEGRAM_DOCUMENTATION.webhook,
     handler: async ({ request }): Promise<RouteResult> => {
       if (!isWebhookSecretValid(request.headers.get(WEBHOOK_SECRET_HEADER), webhook.secret)) {
         throw new TelegramWebhookRejectedError();

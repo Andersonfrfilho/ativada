@@ -6,6 +6,7 @@ import {
   pingDatabase,
   resolveUserBySubject,
 } from '@cryptoada/database';
+import { PRODUCTION_ENVIRONMENT } from '@cryptoada/environment';
 
 import type { BacktestThreadRunner } from './backtest/backtest-thread-runner.js';
 import { createAccountRouteDependencies } from './account/create-account-route-dependencies.js';
@@ -94,6 +95,7 @@ function createApiRouter(params: ApiRouterParams): Router {
       admin: createAdminRouteDependencies({ identity, database }),
       streamTicketStore: createStreamTicketStore({ now: () => Date.now() }),
       ...domain,
+      isDocumentationEnabled: environment.ENV !== PRODUCTION_ENVIRONMENT,
     }),
     verifyAccessToken,
     resolveUser: (subject) => resolveUserBySubject(database, subject),

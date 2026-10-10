@@ -16,6 +16,7 @@ import {
   readRefreshCookie,
 } from './session-cookie.js';
 import { SESSION_PATH, SESSION_REFRESH_PATH } from './session.constant.js';
+import { SESSION_DOCUMENTATION } from './session.docs.js';
 import { SessionUnavailableError } from './session.error.js';
 
 export type SessionRouteDependencies = {
@@ -90,6 +91,7 @@ export function createSessionRoutes(dependencies: SessionRouteDependencies): rea
       rateLimitPolicy,
       method: HTTP_METHOD.POST,
       path: SESSION_PATH,
+      documentation: SESSION_DOCUMENTATION.create,
       handler: handlers.create,
     },
     {
@@ -97,6 +99,7 @@ export function createSessionRoutes(dependencies: SessionRouteDependencies): rea
       rateLimitPolicy,
       method: HTTP_METHOD.POST,
       path: SESSION_REFRESH_PATH,
+      documentation: SESSION_DOCUMENTATION.refresh,
       handler: handlers.refresh,
     },
     {
@@ -104,6 +107,7 @@ export function createSessionRoutes(dependencies: SessionRouteDependencies): rea
       rateLimitPolicy,
       method: HTTP_METHOD.DELETE,
       path: SESSION_PATH,
+      documentation: SESSION_DOCUMENTATION.end,
       handler: handlers.end,
     },
   ];

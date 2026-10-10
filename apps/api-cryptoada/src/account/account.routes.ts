@@ -6,6 +6,7 @@ import type { Route } from '../router/route.types.js';
 import { HTTP_HEADER, HTTP_METHOD, HTTP_STATUS } from '../shared/http/http.constant.js';
 import type { RouteResult } from '../shared/http/response-envelope.js';
 import { EXPORT_FILE_NAME_PREFIX, ISO_DATE_LENGTH, ME_EXPORT_PATH } from './account.constant.js';
+import { ACCOUNT_DOCUMENTATION } from './account.docs.js';
 import type { DeleteAccountUseCase } from './delete-account.use-case.js';
 import type { AccountExportDocument, ExportAccountUseCase } from './export-account.use-case.js';
 
@@ -27,6 +28,7 @@ export function createAccountRoutes(dependencies: AccountRouteDependencies): rea
       access: ROUTE_ACCESS.USER,
       rateLimitPolicy: RATE_LIMIT_POLICY.ACCOUNT_EXPORT,
       rateLimitCharge: RATE_LIMIT_CHARGE.AFTER_SUCCESS,
+      documentation: ACCOUNT_DOCUMENTATION.export,
       handler: async ({ scope, authenticatedUser }): Promise<RouteResult> => {
         const document = await dependencies.exportAccount({
           scope,
@@ -43,6 +45,7 @@ export function createAccountRoutes(dependencies: AccountRouteDependencies): rea
       method: HTTP_METHOD.DELETE,
       path: ME_PATH,
       access: ROUTE_ACCESS.USER,
+      documentation: ACCOUNT_DOCUMENTATION.delete,
       handler: async (context): Promise<RouteResult> => ({
         status: HTTP_STATUS.ACCEPTED,
         data: await dependencies.deleteAccount({

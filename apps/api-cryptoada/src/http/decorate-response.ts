@@ -1,6 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { HTTP_HEADER, NO_STORE_CACHE_CONTROL } from '../shared/http/http.constant.js';
-import { CORS_HEADER, CORS_EXPOSED_HEADERS, SECURITY_HEADERS } from './http-security.constant.js';
+import {
+  CONTENT_SECURITY_POLICY_HEADER,
+  CORS_HEADER,
+  CORS_EXPOSED_HEADERS,
+  SECURITY_HEADERS,
+} from './http-security.constant.js';
 
 export type DecorateResponseParams = {
   readonly response: Response;
@@ -10,7 +15,12 @@ export type DecorateResponseParams = {
 
 export function decorateResponse(params: DecorateResponseParams): Response {
   const { headers } = params.response;
-  for (const [name, value] of Object.entries(SECURITY_HEADERS)) headers.set(name, value);
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    // A página de documentação (só fora de produção) traz a PRÓPRIA CSP, mínima e com nonce; nenhum outro cabeçalho
+    // de segurança, nem a CSP das demais rotas, é decidido pela rota.
+    if (name === CONTENT_SECURITY_POLICY_HEADER && headers.has(name)) continue;
+    headers.set(name, value);
+  }
   if (!headers.has(HTTP_HEADER.CACHE_CONTROL)) {
     headers.set(HTTP_HEADER.CACHE_CONTROL, NO_STORE_CACHE_CONTROL);
   }

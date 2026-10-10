@@ -4,6 +4,7 @@ import { ROUTE_ACCESS } from '../router/route-access.constant.js';
 import type { Route } from '../router/route.types.js';
 import { HTTP_METHOD, HTTP_STATUS } from '../shared/http/http.constant.js';
 import { STREAM_TICKETS_PATH } from './stream-ticket.constant.js';
+import { STREAM_TICKET_DOCUMENTATION } from './stream-ticket.docs.js';
 import type { StreamTicketStore } from './stream-ticket-store.js';
 
 export function createStreamTicketRoutes(ticketStore: StreamTicketStore): readonly Route[] {
@@ -13,6 +14,7 @@ export function createStreamTicketRoutes(ticketStore: StreamTicketStore): readon
       path: STREAM_TICKETS_PATH,
       access: ROUTE_ACCESS.USER,
       rateLimitPolicy: RATE_LIMIT_POLICY.STREAM_TICKET_CLIENT_ADDRESS,
+      documentation: STREAM_TICKET_DOCUMENTATION,
       handler: ({ authenticatedUser }) =>
         Promise.resolve({
           status: HTTP_STATUS.CREATED,

@@ -11,7 +11,7 @@ import {
 import { InvalidSessionRequestError } from './session.error.js';
 import type { ExchangeCodeParams } from './keycloak-token-client.js';
 
-const exchangeCodeBodySchema = z.strictObject({
+export const exchangeCodeBodySchema = z.strictObject({
   code: z.string().min(1).max(CODE_MAX_LENGTH),
   codeVerifier: z
     .string()

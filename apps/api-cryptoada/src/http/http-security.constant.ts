@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+export const CONTENT_SECURITY_POLICY_HEADER = 'Content-Security-Policy';
+
 export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
   'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
   'Content-Security-Policy':

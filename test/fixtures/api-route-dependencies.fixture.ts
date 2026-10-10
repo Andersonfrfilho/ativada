@@ -9,6 +9,7 @@ const ENABLED_MARKETS = {
 
 export function buildApiRouteDependencies(
   checkDatabase: () => Promise<boolean>,
+  isDocumentationEnabled = false,
 ): ApiRouteDependencies {
   const notUsed = (): Promise<never> => Promise.reject(new Error('not used'));
   return {
@@ -55,5 +56,6 @@ export function buildApiRouteDependencies(
       },
       exportRunCsv: notUsed,
     },
+    isDocumentationEnabled,
   };
 }
