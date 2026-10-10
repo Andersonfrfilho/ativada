@@ -7,10 +7,15 @@ import {
   type NotificationListener,
 } from '@cryptoada/database';
 import { MILLISECONDS_PER_SECOND } from '@cryptoada/environment';
+import type { PriceTickListener } from '@cryptoada/market-data';
 
 import type { Environment } from '../environment.js';
 import type { Logger } from '../logging/logger.js';
 import { UNEXPECTED_ERROR_LOG_MESSAGE } from '../logging/logging.constant.js';
+import {
+  createApplicationMarketStream,
+  type ApplicationMarketStream,
+} from '../market-stream/create-application-market-stream.js';
 import { createRateLimiter } from '../rate-limit/rate-limiter.js';
 import { STREAM_LOG_MESSAGE } from './stream.constant.js';
 import { createStreamEndpoint, type StreamEndpoint } from './create-stream-endpoint.js';
@@ -27,6 +32,8 @@ export type ApplicationStreamParams = {
 
 export type ApplicationStream = {
   readonly endpoint: StreamEndpoint;
+  // Fase 4b (T4b.7): o alerta de preço se registra aqui e recebe cada tick agregado uma vez; sem ticker, não recebe nada.
+  readonly addPriceTickListener: (listener: PriceTickListener) => () => void;
   // Abre o escutador de NOTIFY e o varredor de ping/expiração; o endpoint só aceita sockets depois do LISTEN confirmado.
   readonly start: () => void;
   readonly close: () => Promise<void>;
@@ -58,26 +65,38 @@ function openRunEventListener(wiring: ListenerWiring): NotificationListener {
   });
 }
 
-// A API é quem liga o worker ao painel: o worker avisa por NOTIFY `{ runId, kind, eventId }` e a API resolve o dono pelo banco.
-export function createApplicationStream(params: ApplicationStreamParams): ApplicationStream {
+function createEndpoint(
+  params: ApplicationStreamParams,
+  market: ApplicationMarketStream | undefined,
+  reportError: (error: unknown) => void,
+): StreamEndpoint {
   const { environment, logger, database } = params;
-  const now = (): number => Date.now();
-  const reportError = (error: unknown): void =>
-    logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { error });
-  const endpoint = createStreamEndpoint({
+  return createStreamEndpoint({
+    market: market?.publisher.subscriptions,
     allowedOrigins: environment.CORS_ALLOWED_ORIGINS,
     trustedProxyHops: environment.TRUSTED_PROXY_HOPS,
     limits: toStreamLimits(environment),
     ticketStore: params.ticketStore,
-    rateLimiter: createRateLimiter({ now }),
+    rateLimiter: createRateLimiter({ now: () => Date.now() }),
     resolveUser: (subject) => resolveUserBySubject(database, subject),
-    now,
+    now: () => Date.now(),
     log: (fields) => logger.info(STREAM_LOG_MESSAGE, fields),
     reportUnexpectedError: reportError,
   });
+}
+
+// A API é quem liga o worker ao painel: o worker avisa por NOTIFY `{ runId, kind, eventId }` e a API resolve o dono pelo banco.
+export function createApplicationStream(params: ApplicationStreamParams): ApplicationStream {
+  const { environment, logger, database } = params;
+  const reportError = (error: unknown): void =>
+    logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { error });
+  const market = environment.TICKER_STREAM_ENABLED
+    ? createApplicationMarketStream({ environment, logger, reportError })
+    : undefined;
+  const endpoint = createEndpoint(params, market, reportError);
   const dispatcher = createRunEventDispatcher({
     hub: endpoint.hub,
-    now,
+    now: () => Date.now(),
     reportError,
     resolveOwner: async (runId) => (await resolveRunOwnerScope(database, runId))?.ownerUserId,
   });
@@ -85,8 +104,11 @@ export function createApplicationStream(params: ApplicationStreamParams): Applic
   let sweeper: ReturnType<typeof setInterval> | undefined;
   return {
     endpoint,
+    addPriceTickListener: (priceListener) =>
+      market?.publisher.addListener(priceListener) ?? ((): void => undefined),
     start: (): void => {
       if (listener !== undefined) return;
+      market?.start();
       listener = openRunEventListener({ environment, logger, endpoint, dispatcher, reportError });
       const intervalMilliseconds =
         environment.STREAM_PING_INTERVAL_SECONDS * MILLISECONDS_PER_SECOND;
@@ -95,6 +117,7 @@ export function createApplicationStream(params: ApplicationStreamParams): Applic
     close: async (): Promise<void> => {
       clearInterval(sweeper);
       endpoint.closeAll();
+      await market?.close();
       await listener?.close();
     },
   };

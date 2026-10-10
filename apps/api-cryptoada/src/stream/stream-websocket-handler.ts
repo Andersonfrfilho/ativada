@@ -34,6 +34,7 @@ export function createStreamWebSocketHandler(
     },
     close: (socket, code): void => {
       hub.remove(socket);
+      messages.market?.removeSocket(socket);
       log({ event: STREAM_LOG_EVENT.CLOSED, connectionId: socket.data.connectionId, code });
     },
   };

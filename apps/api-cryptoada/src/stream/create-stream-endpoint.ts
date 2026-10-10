@@ -2,6 +2,7 @@
 import type { UserResolution } from '@cryptoada/database';
 
 import { decorateResponse } from '../http/decorate-response.js';
+import type { MarketSubscriptions } from '../market-stream/create-market-publisher.js';
 import type { RateLimiter } from '../rate-limit/rate-limiter.js';
 import { AppError } from '../shared/errors/app.error.js';
 import { buildErrorResponse } from '../shared/http/response-envelope.js';
@@ -32,6 +33,8 @@ export type StreamEndpointDependencies = {
   readonly now: () => number;
   readonly log: StreamLog;
   readonly reportUnexpectedError: (error: unknown) => void;
+  // O ticker público (T4.7): ausente = `subscribe` responde `MARKET_UNAVAILABLE`.
+  readonly market?: MarketSubscriptions | undefined;
 };
 
 export type HandleUpgradeParams = {
@@ -136,6 +139,7 @@ export function createStreamEndpoint(dependencies: StreamEndpointDependencies): 
         now,
         maxMessagesPerMinute: limits.maxMessagesPerMinute,
         reportUnexpectedError: dependencies.reportUnexpectedError,
+        market: dependencies.market,
       },
     }),
     isStreamRequest: (request): boolean => new URL(request.url).pathname === STREAM_PATH,

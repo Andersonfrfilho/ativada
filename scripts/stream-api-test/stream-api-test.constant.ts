@@ -10,6 +10,7 @@ export const MAX_SOCKETS_PER_USER = '2';
 export const PING_INTERVAL_SECONDS = '5';
 export const PONG_TIMEOUT_SECONDS = '30';
 export const SHORT_TOKEN_SECONDS = 4;
+export const TICKER_STALE_SECONDS = '3';
 // Do passo gravado ao socket do dono: o aceite é < 10 s (RNF03).
 export const DELIVERY_BUDGET_MILLISECONDS = 10_000;
 export const EVENT_WAIT_MILLISECONDS = 15_000;
@@ -27,5 +28,7 @@ export const SUBJECT = {
   BYSTANDER: 'subject-stream-api-bystander',
   RENEW_BLOCKED: 'subject-stream-api-renew-blocked',
   SHUTDOWN: 'subject-stream-api-shutdown',
+  MARKET_A: 'subject-stream-api-market-a',
+  MARKET_B: 'subject-stream-api-market-b',
   ADMIN: 'subject-stream-api-admin',
 } as const;

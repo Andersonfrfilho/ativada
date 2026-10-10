@@ -9,6 +9,7 @@ import {
 import { checkDelivery } from './stream-api-test/check-delivery.js';
 import { checkHandshake } from './stream-api-test/check-handshake.js';
 import { checkLifecycle } from './stream-api-test/check-lifecycle.js';
+import { checkMarket } from './stream-api-test/check-market.js';
 import { checkResync } from './stream-api-test/check-resync.js';
 import { checkShutdown } from './stream-api-test/check-shutdown.js';
 import { createStreamApiContext } from './stream-api-test/stream-api-context.js';
@@ -23,6 +24,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     delivery.sockets.a.socket.close();
     delivery.sockets.b.socket.close();
     await checkHandshake(context);
+    await checkMarket(context);
     await checkLifecycle(context);
     await checkShutdown(context);
   } finally {

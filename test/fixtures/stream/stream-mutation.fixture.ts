@@ -24,3 +24,27 @@ export const STREAM_MUTANT_TARGET: MutantTarget = {
   judgeTimeoutMilliseconds: 180_000,
   shouldBailOnFirstFailure: true,
 };
+
+// O ticker público no WebSocket (T4.7): o mesmo `src` da API, julgado pelos contratos do publicador, da assinatura pelo
+// socket, do ambiente e do pipeline de ponta a ponta contra uma Binance falsa (o mais lento fica por último).
+export const MARKET_MUTANT_TARGET: MutantTarget = {
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
+  directoryPrefix: 'market-',
+  judgeTestFiles: [
+    'test/market-stream.contract.test.ts',
+    'test/stream-market-endpoint.contract.test.ts',
+    'test/stream-environment.contract.test.ts',
+  ],
+  sourceVariable: STREAM_APP_SOURCE_VARIABLE,
+  judgeTimeoutMilliseconds: 180_000,
+  shouldBailOnFirstFailure: true,
+};
+
+// A ligação do ticker real (relógio da Binance, varredor do selo de dado velho): só o pipeline de ponta a ponta a julga,
+// e ele anda em tempo real, então fica num alvo à parte para não atrasar os mutantes rápidos.
+export const MARKET_WIRING_MUTANT_TARGET: MutantTarget = {
+  ...MARKET_MUTANT_TARGET,
+  directoryPrefix: 'wiring-',
+  judgeTestFiles: ['test/market-stream-pipeline.contract.test.ts'],
+};

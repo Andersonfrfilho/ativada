@@ -18,6 +18,13 @@ async function issuesOf(overrides: Record<string, string>): Promise<string> {
   return '';
 }
 
+function withoutKeys(
+  environment: Record<string, string>,
+  keys: readonly string[],
+): Record<string, string> {
+  return Object.fromEntries(Object.entries(environment).filter(([key]) => !keys.includes(key)));
+}
+
 describe('stream environment — the WebSocket ceilings', () => {
   test('the defaults are 5 sockets per user, 4 KiB messages, ping 20 s, pong 60 s, 60 messages a minute', async () => {
     const base = await readEnvironmentFile('env.test');
@@ -29,6 +36,38 @@ describe('stream environment — the WebSocket ceilings', () => {
       maxMessagesPerMinute: 60,
     });
     expect(environment.STREAM_PING_INTERVAL_SECONDS).toBe(20);
+  });
+
+  test('the public ticker is off by default; 10 pairs per socket and a 10 s stale seal', async () => {
+    const base = withoutKeys(await readEnvironmentFile('env.test'), [
+      'TICKER_STREAM_ENABLED',
+      'STREAM_MAX_PAIRS_PER_SOCKET',
+      'TICKER_STALE_SECONDS',
+    ]);
+    const environment = parseEnvironment(environmentSchema, base);
+    expect(environment.TICKER_STREAM_ENABLED).toBe(false);
+    expect(environment.STREAM_MAX_PAIRS_PER_SOCKET).toBe(10);
+    expect(environment.TICKER_STALE_SECONDS).toBe(10);
+  });
+
+  test('the public ticker is turned on with the text true, and only with it', async () => {
+    const base = await readEnvironmentFile('env.test');
+    expect(
+      parseEnvironment(environmentSchema, { ...base, TICKER_STREAM_ENABLED: 'true' })
+        .TICKER_STREAM_ENABLED,
+    ).toBe(true);
+    expect(await issuesOf({ TICKER_STREAM_ENABLED: 'sim' })).toContain('TICKER_STREAM_ENABLED');
+    expect(await issuesOf({ TICKER_STREAM_ENABLED: '1' })).toContain('TICKER_STREAM_ENABLED');
+  });
+
+  test('the Binance URLs default to the public market-data hosts', async () => {
+    const rest = withoutKeys(await readEnvironmentFile('env.test'), [
+      'BINANCE_BASE_URL',
+      'BINANCE_STREAM_URL',
+    ]);
+    const environment = parseEnvironment(environmentSchema, rest);
+    expect(environment.BINANCE_BASE_URL).toBe('https://data-api.binance.vision');
+    expect(environment.BINANCE_STREAM_URL).toBe('wss://data-stream.binance.vision');
   });
 
   test('accepts overrides inside the bounds', async () => {
@@ -57,6 +96,11 @@ describe('stream environment — the WebSocket ceilings', () => {
     ['STREAM_PING_INTERVAL_SECONDS', '4'],
     ['STREAM_PONG_TIMEOUT_SECONDS', '601'],
     ['STREAM_MAX_MESSAGES_PER_MINUTE', '9'],
+    ['STREAM_MAX_PAIRS_PER_SOCKET', '0'],
+    ['STREAM_MAX_PAIRS_PER_SOCKET', '51'],
+    ['TICKER_STALE_SECONDS', '2'],
+    ['TICKER_STALE_SECONDS', '301'],
+    ['BINANCE_STREAM_URL', 'http://nao-e-websocket'],
     ['STREAM_MAX_SOCKETS_PER_USER', 'muitos'],
   ])('%s=%s is refused at boot, naming the variable', async (variable, value) => {
     expect(await issuesOf({ [variable]: value })).toContain(variable);

@@ -7,6 +7,9 @@ const PING_EXPECTATION = 'inteiro de segundos entre 5 e 120';
 const PONG_EXPECTATION =
   'inteiro de segundos entre 10 e 600, maior que STREAM_PING_INTERVAL_SECONDS';
 const MESSAGES_EXPECTATION = 'inteiro entre 10 e 600';
+const PAIRS_EXPECTATION = 'inteiro entre 1 e 50';
+const STALE_EXPECTATION = 'inteiro de segundos entre 3 e 300';
+const TICKER_FLAG_EXPECTATION = 'true ou false';
 
 export const PONG_AFTER_PING_EXPECTATION = PONG_EXPECTATION;
 
@@ -56,6 +59,24 @@ export const streamEnvironmentShape = {
     maximum: 600,
     fallback: 60,
   }),
+  STREAM_MAX_PAIRS_PER_SOCKET: boundedInteger({
+    expectation: PAIRS_EXPECTATION,
+    minimum: 1,
+    maximum: 50,
+    fallback: 10,
+  }),
+  // Dado de mercado sem tick há este tempo ganha o selo `stale` (RF16: o painel mostra "sem dados há N s").
+  TICKER_STALE_SECONDS: boundedInteger({
+    expectation: STALE_EXPECTATION,
+    minimum: 3,
+    maximum: 300,
+    fallback: 10,
+  }),
+  // Desligado por padrão: só quem tem saída para a Binance (produção, staging) liga o ticker público.
+  TICKER_STREAM_ENABLED: z
+    .enum(['true', 'false'], { error: TICKER_FLAG_EXPECTATION })
+    .default('false')
+    .transform((value) => value === 'true'),
 } as const;
 
 export type StreamEnvironmentValues = {
@@ -64,6 +85,9 @@ export type StreamEnvironmentValues = {
   readonly STREAM_PING_INTERVAL_SECONDS: number;
   readonly STREAM_PONG_TIMEOUT_SECONDS: number;
   readonly STREAM_MAX_MESSAGES_PER_MINUTE: number;
+  readonly STREAM_MAX_PAIRS_PER_SOCKET: number;
+  readonly TICKER_STALE_SECONDS: number;
+  readonly TICKER_STREAM_ENABLED: boolean;
 };
 
 export function isPongTimeoutAfterPingInterval(values: StreamEnvironmentValues): boolean {

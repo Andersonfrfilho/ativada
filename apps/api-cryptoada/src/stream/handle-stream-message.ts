@@ -2,6 +2,12 @@
 import { USER_RESOLUTION_STATUS, type UserResolution } from '@cryptoada/database';
 
 import {
+  MARKET_CLIENT_MESSAGE_TYPE,
+  MARKET_ERROR_CODE,
+} from '../market-stream/market-stream.constant.js';
+import { MarketSubscriptionError } from '../market-stream/market-stream.error.js';
+import type { MarketSubscriptions } from '../market-stream/create-market-publisher.js';
+import {
   CLIENT_MESSAGE_TYPE,
   CLOSE_REASON,
   MESSAGE_ERROR_CODE,
@@ -19,12 +25,39 @@ export type MessageDependencies = {
   readonly now: () => number;
   readonly maxMessagesPerMinute: number;
   readonly reportUnexpectedError: (error: unknown) => void;
+  // O ticker público (T4.7); ausente = o tempo real de mercado está desligado neste ambiente.
+  readonly market?: MarketSubscriptions | undefined;
 };
 
 function sendMessageError(socket: StreamSocket): void {
   socket.send(
     JSON.stringify({ type: SERVER_MESSAGE_TYPE.ERROR, code: MESSAGE_ERROR_CODE.INVALID_MESSAGE }),
   );
+}
+
+function sendMarketError(socket: StreamSocket, code: string, pair?: string): void {
+  const detail = pair === undefined ? {} : { pair };
+  socket.send(JSON.stringify({ type: SERVER_MESSAGE_TYPE.ERROR, code, ...detail }));
+}
+
+// Assinar ou cancelar pares do ticker público: a recusa é um erro TIPADO (`code` fixo), nunca um fechamento do socket.
+function handleMarketMessage(
+  socket: StreamSocket,
+  message: { readonly type: string; readonly pairs: readonly string[] },
+  market: MarketSubscriptions | undefined,
+): void {
+  if (market === undefined) {
+    sendMarketError(socket, MARKET_ERROR_CODE.MARKET_UNAVAILABLE);
+    return;
+  }
+  try {
+    if (message.type === MARKET_CLIENT_MESSAGE_TYPE.SUBSCRIBE)
+      market.subscribe(socket, message.pairs);
+    else market.unsubscribe(socket, message.pairs);
+  } catch (error: unknown) {
+    if (!(error instanceof MarketSubscriptionError)) throw error;
+    sendMarketError(socket, error.code, error.pair);
+  }
 }
 
 // Janela de um minuto por socket: o painel não manda mensagem a toda hora, então o excesso é abuso.
@@ -96,5 +129,7 @@ export function handleStreamMessage(
       dependencies.reportUnexpectedError(error);
       socket.close(WEBSOCKET_CLOSE_CODE.TRY_AGAIN_LATER, CLOSE_REASON.UNAVAILABLE);
     });
+    return;
   }
+  handleMarketMessage(socket, parsed, dependencies.market);
 }

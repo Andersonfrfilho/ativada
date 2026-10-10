@@ -33,6 +33,8 @@ async function buildProductionEnvironment(): Promise<EnvironmentSource> {
     TELEGRAM_BOT_TOKEN: `123456789:${'T'.repeat(40)}`,
     TELEGRAM_WEBHOOK_SECRET: 'W'.repeat(40),
     TELEGRAM_API_BASE_URL: 'https://api.telegram.org',
+    BINANCE_BASE_URL: 'https://data-api.binance.vision',
+    BINANCE_STREAM_URL: 'wss://data-stream.binance.vision',
   };
 }
 
@@ -70,6 +72,7 @@ describe('api-cryptoada in production', () => {
     'TELEGRAM_API_BASE_URL',
     'SESSION_ALLOWED_REDIRECT_URIS',
     'CORS_ALLOWED_ORIGINS',
+    'BINANCE_BASE_URL',
   ])('rejects a plain http:// %s', async (variable) => {
     const source = await buildProductionEnvironment();
     source[variable] =
@@ -78,6 +81,14 @@ describe('api-cryptoada in production', () => {
         : `http://insecure.example.com/${REPEATED_SECRET_FRAGMENT}`;
     const message = issuesOf(apiEnvironmentSchema, source);
     expect(message).toContain(variable);
+    expect(message).not.toContain(REPEATED_SECRET_FRAGMENT);
+  });
+
+  test('rejects a plain ws:// BINANCE_STREAM_URL (the public ticker must be wss:// in production)', async () => {
+    const source = await buildProductionEnvironment();
+    source['BINANCE_STREAM_URL'] = `ws://insecure.example.com/${REPEATED_SECRET_FRAGMENT}`;
+    const message = issuesOf(apiEnvironmentSchema, source);
+    expect(message).toContain('BINANCE_STREAM_URL');
     expect(message).not.toContain(REPEATED_SECRET_FRAGMENT);
   });
 

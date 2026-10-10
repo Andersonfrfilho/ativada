@@ -11,6 +11,11 @@ import type * as DeleteAccountModule from '../../../apps/api-cryptoada/src/accou
 import type * as ApiEnvironmentModule from '../../../apps/api-cryptoada/src/environment.js';
 import type * as TicketRoutesModule from '../../../apps/api-cryptoada/src/stream/stream-ticket.routes.js';
 import type * as ServerModule from '../../../apps/api-cryptoada/src/server.js';
+import type * as MarketPublisherModule from '../../../apps/api-cryptoada/src/market-stream/create-market-publisher.js';
+import type * as MarketPubSubModule from '../../../apps/api-cryptoada/src/market-stream/market-pubsub.js';
+import type * as MarketErrorModule from '../../../apps/api-cryptoada/src/market-stream/market-stream.error.js';
+import type * as MarketConstantModule from '../../../apps/api-cryptoada/src/market-stream/market-stream.constant.js';
+import type * as ApplicationMarketModule from '../../../apps/api-cryptoada/src/market-stream/create-application-market-stream.js';
 import type * as RateLimiterModule from '../../../apps/api-cryptoada/src/rate-limit/rate-limiter.js';
 import type * as PolicyModule from '../../../apps/api-cryptoada/src/rate-limit/rate-limit-policy.constant.js';
 
@@ -33,6 +38,11 @@ export type StreamApp = {
   readonly apiEnvironment: typeof ApiEnvironmentModule;
   readonly ticketRoutes: typeof TicketRoutesModule;
   readonly server: typeof ServerModule;
+  readonly marketPublisher: typeof MarketPublisherModule;
+  readonly marketPubSub: typeof MarketPubSubModule;
+  readonly marketError: typeof MarketErrorModule;
+  readonly marketConstant: typeof MarketConstantModule;
+  readonly applicationMarket: typeof ApplicationMarketModule;
   readonly rateLimiter: typeof RateLimiterModule;
   readonly policies: typeof PolicyModule;
 };
@@ -60,6 +70,11 @@ export async function loadStreamApp(): Promise<StreamApp> {
     apiEnvironment: await load('environment'),
     ticketRoutes: await load('stream/stream-ticket.routes'),
     server: await load('server'),
+    marketPublisher: await load('market-stream/create-market-publisher'),
+    marketPubSub: await load('market-stream/market-pubsub'),
+    marketError: await load('market-stream/market-stream.error'),
+    marketConstant: await load('market-stream/market-stream.constant'),
+    applicationMarket: await load('market-stream/create-application-market-stream'),
     rateLimiter: await load('rate-limit/rate-limiter'),
     policies: await load('rate-limit/rate-limit-policy.constant'),
   };

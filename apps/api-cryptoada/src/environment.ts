@@ -7,9 +7,11 @@ import {
   parseEnvironment,
   postgresUrlSchema,
   PRODUCTION_ENVIRONMENT,
+  webSocketUrlSchema,
   z,
   type ProductionProfile,
 } from '@cryptoada/environment';
+import { BINANCE_MARKET_DATA_BASE_URL, BINANCE_STREAM_BASE_URL } from '@cryptoada/market-data';
 
 import {
   HEARTBEAT_ORDER_EXPECTATION,
@@ -54,7 +56,9 @@ const PRODUCTION_PROFILE: ProductionProfile = {
     'TELEGRAM_API_BASE_URL',
     'SESSION_ALLOWED_REDIRECT_URIS',
     'CORS_ALLOWED_ORIGINS',
+    'BINANCE_BASE_URL',
   ],
+  webSocketUrlVariables: ['BINANCE_STREAM_URL'],
   secretVariables: [
     'KEYCLOAK_SESSION_CLIENT_SECRET',
     'KEYCLOAK_SERVICE_CLIENT_SECRET',
@@ -134,6 +138,9 @@ export const environmentSchema = z
     ...runQueueEnvironmentShape,
     ...runExecutionEnvironmentShape,
     ...streamEnvironmentShape,
+    // O ticker público da Binance (T4.7): a hora do servidor (REST) e o stream de `<par>@miniTicker` (WebSocket).
+    BINANCE_BASE_URL: httpUrlSchema.default(BINANCE_MARKET_DATA_BASE_URL),
+    BINANCE_STREAM_URL: webSocketUrlSchema.default(BINANCE_STREAM_BASE_URL),
   })
   .refine(
     (values) =>

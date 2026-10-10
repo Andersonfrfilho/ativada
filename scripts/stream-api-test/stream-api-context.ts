@@ -5,6 +5,10 @@ import {
 } from '../../test/fixtures/fake-keycloak-admin.fixture.js';
 import { startFakeKeycloak, type FakeKeycloak } from '../../test/fixtures/fake-keycloak.fixture.js';
 import {
+  startFakeBinanceStreamServer,
+  type FakeBinanceStreamServer,
+} from '../../packages/market-data/test-support/fake-binance-stream-server.js';
+import {
   createApiRunsContext,
   type ApiRunsContext,
 } from '../api-runs-test/api-runs-test-context.js';
@@ -20,6 +24,7 @@ import {
   PING_INTERVAL_SECONDS,
   PONG_TIMEOUT_SECONDS,
   STREAM_PATH,
+  TICKER_STALE_SECONDS,
   TICKETS_PATH,
   TICKETS_PER_MINUTE_BUDGET,
 } from './stream-api-test.constant.js';
@@ -50,6 +55,8 @@ export type StreamApiContext = {
   readonly live: LiveTestContext;
   readonly api: ApiRunsContext;
   readonly keycloak: FakeKeycloak;
+  // A Binance falsa (REST da hora e stream do ticker) que a API consome neste teste.
+  readonly binance: FakeBinanceStreamServer;
   readonly issueTicket: (params: {
     readonly subject: string;
     readonly lifetimeSeconds?: number;
@@ -83,6 +90,11 @@ export async function createStreamApiContext(databaseUrl: string): Promise<Strea
   const keycloak = startFakeKeycloak({
     issueAccessToken: () => Promise.reject(new Error('sem login')),
   });
+  const binance = startFakeBinanceStreamServer();
+  Bun.env['TICKER_STREAM_ENABLED'] = 'true';
+  Bun.env['BINANCE_BASE_URL'] = binance.restUrl;
+  Bun.env['BINANCE_STREAM_URL'] = binance.streamUrl;
+  Bun.env['TICKER_STALE_SECONDS'] = TICKER_STALE_SECONDS;
   Bun.env['KEYCLOAK_ADMIN_API_URL'] = keycloak.adminApiUrl;
   Bun.env['KEYCLOAK_TOKEN_URL'] = keycloak.tokenUrl;
   Bun.env['KEYCLOAK_SERVICE_CLIENT_ID'] = FAKE_SERVICE_CLIENT_ID;
@@ -178,6 +190,7 @@ export async function createStreamApiContext(databaseUrl: string): Promise<Strea
     live,
     api,
     keycloak,
+    binance,
     issueTicket,
     connect,
     attempt,
@@ -185,6 +198,7 @@ export async function createStreamApiContext(databaseUrl: string): Promise<Strea
     stop: async (): Promise<void> => {
       await stopApi();
       await keycloak.stop();
+      await binance.stop();
       await closeLiveTestContext(live);
     },
   };

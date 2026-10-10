@@ -8,6 +8,7 @@ import { createOwnerScope } from '../../../packages/database/src/ownership/owner
 import type { StreamSocketData } from '../../../apps/api-cryptoada/src/stream/stream-socket.types.js';
 import { userIdFromDatabase } from '../../../packages/database/src/ownership/user-id.js';
 import { createManualClock, waitFor, type ManualClock } from '../wait-for.fixture.js';
+import { createManualTimers } from '../ticker/manual-timers.fixture.js';
 import { loadStreamApp, type StreamApp } from './stream-app.fixture.js';
 
 export const ALLOWED_ORIGIN = 'http://127.0.0.1:56103';
@@ -39,6 +40,7 @@ export type StreamHarness = {
   readonly errors: unknown[];
   // Os códigos de fechamento vistos pelo SERVIDOR (o cliente do Bun mostra 1000 no lugar de 1001).
   readonly serverCloseCodes: number[];
+  readonly market: HarnessMarket | undefined;
   readonly issueTicket: (subject: string, lifetimeMilliseconds?: number) => string;
   readonly setResolution: (subject: string, status: UserResolution['status']) => void;
   readonly connect: (params: { ticket: string; origin?: string | null }) => StreamClient;
@@ -50,7 +52,14 @@ export type StreamHarness = {
   readonly stop: () => Promise<void>;
 };
 
+export type HarnessMarket = {
+  readonly publisher: ReturnType<StreamApp['marketPublisher']['createMarketPublisher']>;
+  readonly timers: ReturnType<typeof createManualTimers>;
+};
+
 export type StreamHarnessOptions = {
+  // O ticker público (T4.7): publicador com temporizadores à mão, pares BTCUSDT, ETHUSDT e SOLUSDT, teto de 2 pares por socket.
+  readonly hasMarket?: boolean;
   readonly maxSocketsPerUser?: number;
   readonly maxMessageBytes?: number;
   readonly maxMessagesPerMinute?: number;
@@ -67,6 +76,23 @@ export async function createStreamHarness(
   const serverCloseCodes: number[] = [];
   const statuses = new Map<string, UserResolution['status']>();
   const ticketStore = app.ticketStore.createStreamTicketStore({ now: clock.now });
+  const marketTimers = createManualTimers();
+  const market: HarnessMarket | undefined =
+    options.hasMarket === true
+      ? {
+          timers: marketTimers,
+          publisher: app.marketPublisher.createMarketPublisher<number>({
+            pairs: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'],
+            maxPairsPerSocket: 2,
+            staleAfterMilliseconds: 10_000,
+            now: clock.now,
+            serverTime: clock.now,
+            setTimer: marketTimers.setTimer,
+            clearTimer: marketTimers.clearTimer,
+            reportError: (error) => void errors.push(error),
+          }),
+        }
+      : undefined;
   const endpoint = app.endpoint.createStreamEndpoint({
     allowedOrigins: [ALLOWED_ORIGIN],
     trustedProxyHops: 0,
@@ -77,6 +103,7 @@ export async function createStreamHarness(
       maxMessagesPerMinute: options.maxMessagesPerMinute ?? 60,
     },
     ticketStore,
+    market: market?.publisher.subscriptions,
     rateLimiter: app.rateLimiter.createRateLimiter({ now: clock.now }),
     resolveUser: (subject) => {
       const userId = TICKET_USERS[subject];
@@ -162,6 +189,7 @@ export async function createStreamHarness(
     logLines,
     errors,
     serverCloseCodes,
+    market,
     issueTicket: (subject, lifetimeMilliseconds = SESSION_LIFETIME_MILLISECONDS): string => {
       const userId = TICKET_USERS[subject];
       if (userId === undefined) throw new Error('assunto desconhecido');
