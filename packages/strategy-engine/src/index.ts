@@ -159,6 +159,7 @@ export {
   type ReasonVote,
 } from './signal-reason.js';
 export { signalStep } from './signal-step.js';
+export { simulatedFillModel } from './wallet/fill-model.js';
 export { STRATEGY_CONFIG_SCHEMA } from './strategy-config.schema.js';
 export {
   collectIndicatorHorizons,
