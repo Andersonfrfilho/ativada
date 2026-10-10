@@ -35,6 +35,7 @@ import {
   checkSinglePosition,
   checkStopBeforeTarget,
 } from './engine-fill-checks.fixture.js';
+import { checkGapPolicy } from './engine-gap-checks.fixture.js';
 import { checkLimitOrders } from './engine-order-checks.fixture.js';
 import { checkSignalPolicy } from './engine-policy-checks.fixture.js';
 
@@ -61,6 +62,7 @@ export const ENGINE_CONTRACT_CHECKS: readonly (readonly [EngineContractCheck, Co
   [ENGINE_CONTRACT_CHECK.GAP_BEYOND_STOP, checkGapBeyondStop],
   [ENGINE_CONTRACT_CHECK.LIMIT_ORDERS, checkLimitOrders],
   [ENGINE_CONTRACT_CHECK.SIGNAL_POLICY, checkSignalPolicy],
+  [ENGINE_CONTRACT_CHECK.GAP_POLICY, checkGapPolicy],
   [ENGINE_CONTRACT_CHECK.REQUIRED_EVENTS, checkRequiredEvents],
 ];
 

@@ -21,6 +21,8 @@ import type { WalletContext, WalletDraft } from './wallet.types.js';
 export type ClosingInputs = {
   readonly signal: SignalDecision | null;
   readonly commands: readonly EngineCommand[];
+  // O candle veio depois de uma lacuna confirmada: nenhuma entrada nova nele (ADR 0002 §e).
+  readonly isAfterGap: boolean;
 };
 
 function cancelPendingEntry(
@@ -85,7 +87,9 @@ export function applyClose(
   for (const command of closing.commands) applyCommand(draft, context, command);
   const { signal } = closing;
   if (signal === null) return;
-  if (signal.action === SIGNAL_ACTION.BUY) return placeEntry(draft, context, signal);
+  if (signal.action === SIGNAL_ACTION.BUY) {
+    return closing.isAfterGap ? undefined : placeEntry(draft, context, signal);
+  }
   if (signal.action !== SIGNAL_ACTION.SELL) return;
   cancelPendingEntry(draft, context, ORDER_EVENT_REASON.OPPOSITE_SIGNAL);
   createExit(draft, context, EXIT_REASON.SIGNAL);

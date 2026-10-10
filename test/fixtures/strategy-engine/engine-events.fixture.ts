@@ -53,6 +53,7 @@ function classifyExits(timeline: Timeline, entry: TimelineEntry, found: Found): 
     );
     if (closed.exitReason === 'signal') found.add(ENGINE_EVENT_KIND.SELL_EXITS_AT_MARKET);
     if (closed.exitReason === 'command') found.add(ENGINE_EVENT_KIND.COMMAND_EXIT);
+    if (closed.exitReason === 'gap') found.add(ENGINE_EVENT_KIND.GAP_CLOSES_POSITION);
     if (position === undefined) continue;
     const isCarried = position.candleOpenTime < candle.openTime;
     const open = toEngineDecimal(candle.open);
@@ -112,6 +113,8 @@ const REJECTION_EVENT: Readonly<Record<string, EngineEventKind>> = {
 function classifyOrders(entry: TimelineEntry, found: Found): void {
   for (const order of entry.step.result.decisions.orders) {
     if (order.status === 'expired') found.add(ENGINE_EVENT_KIND.LIMIT_EXPIRED);
+    if (order.status === 'cancelled' && order.reason === 'gap')
+      found.add(ENGINE_EVENT_KIND.GAP_CANCELS_PENDING_ORDER);
     if (order.status === 'cancelled' && order.reason === 'opposite_signal')
       found.add(ENGINE_EVENT_KIND.SELL_CANCELS_LIMIT);
     if (order.status === 'filled' && order.reason === 'volume_capped')

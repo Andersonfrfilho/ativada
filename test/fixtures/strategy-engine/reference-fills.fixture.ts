@@ -34,7 +34,7 @@ import {
 import { sizeEntry, type SizedEntry } from './reference-sizing.fixture.js';
 
 type EntryFill = { readonly order: PendingOrderState; readonly price: EngineDecimalValue };
-type ExitFill = {
+export type ExitFill = {
   readonly price: EngineDecimalValue;
   readonly reason: ExitReason;
   readonly events: (quantity: string) => OrderEvent[];
@@ -116,7 +116,7 @@ function recordOpening(
   });
 }
 
-function closePosition(draft: WalletDraft, exit: ExitFill, context: WalletContext): void {
+export function closePosition(draft: WalletDraft, exit: ExitFill, context: WalletContext): void {
   const position = draft.state.position;
   if (position === null) throw new Error('Saída sem posição aberta.');
   const quantity = toEngineDecimal(position.quantity);

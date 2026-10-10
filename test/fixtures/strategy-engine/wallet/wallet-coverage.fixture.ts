@@ -27,6 +27,8 @@ export const COVERAGE = {
   HALT: 'halt',
   RESUME: 'resume',
   GAP_CANDLE: 'gap-candle',
+  GAP_EXIT: 'gap-exit',
+  GAP_CANCEL: 'gap-cancel',
 } as const;
 
 export type Coverage = Record<string, number>;
@@ -46,6 +48,7 @@ function countOrders(decisions: WalletDecisions, coverage: Coverage): void {
     if (order.reason === 'invalid_stop') bump(coverage, COVERAGE.REJECTED_INVALID_STOP);
     if (order.reason === 'below_min_notional') bump(coverage, COVERAGE.REJECTED_BELOW_MIN_NOTIONAL);
     if (order.reason === 'volume_capped') bump(coverage, COVERAGE.VOLUME_CAPPED);
+    if (order.status === 'cancelled' && order.reason === 'gap') bump(coverage, COVERAGE.GAP_CANCEL);
   }
 }
 
@@ -56,6 +59,7 @@ function countExits(recorded: RecordedWalletStep, coverage: Coverage): void {
     const isCarried = position !== null && position.openedCandleOpenTime < candle.openTime;
     if (closed.exitReason === 'signal') bump(coverage, COVERAGE.SIGNAL_EXIT);
     if (closed.exitReason === 'command') bump(coverage, COVERAGE.COMMAND_EXIT);
+    if (closed.exitReason === 'gap') bump(coverage, COVERAGE.GAP_EXIT);
     if (closed.exitReason === 'target') {
       bump(coverage, COVERAGE.TARGET_EXIT);
       if (isCarried && Number(candle.open) > Number(position.targetPrice)) {

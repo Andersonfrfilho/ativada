@@ -162,7 +162,9 @@ function assertFillArithmetic(timeline: Timeline, entry: TimelineEntry, fill: Fi
     sameDecimal(fill.fee, feeOf(notional, run)),
     `Passo ${entry.index}: taxa fora da fórmula.`,
   );
-  if (orderOf(timeline, fill)?.type !== 'market') return;
+  const order = orderOf(timeline, fill);
+  // A saída da lacuna tem preço próprio (min(stop, abertura)); o check de lacuna o confere.
+  if (order?.type !== 'market' || order.reason === 'gap') return;
   const { open } = entry.step.candle;
   const expected = fill.side === 'buy' ? marketBuyPrice(open, run) : marketSellPrice(open, run);
   assertContract(

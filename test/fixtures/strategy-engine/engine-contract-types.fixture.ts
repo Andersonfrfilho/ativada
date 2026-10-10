@@ -38,6 +38,8 @@ export const ENGINE_EVENT_KIND = {
   GAP_UP_ENTRY: 'gap-up-entry',
   SENTIMENT_USED: 'sentiment-used',
   SENTIMENT_STALE: 'sentiment-stale',
+  GAP_CLOSES_POSITION: 'gap-closes-position',
+  GAP_CANCELS_PENDING_ORDER: 'gap-cancels-pending-order',
 } as const;
 
 export type EngineEventKind = (typeof ENGINE_EVENT_KIND)[keyof typeof ENGINE_EVENT_KIND];
@@ -63,6 +65,7 @@ export const ENGINE_CONTRACT_CHECK = {
   GAP_BEYOND_STOP: 'gap-beyond-stop',
   LIMIT_ORDERS: 'limit-orders',
   SIGNAL_POLICY: 'signal-policy',
+  GAP_POLICY: 'gap-policy',
   REQUIRED_EVENTS: 'required-events',
 } as const;
 
@@ -86,6 +89,8 @@ export type RecordedStep = {
   readonly candle: EngineCandle;
   readonly sentiment: SentimentObservation | undefined;
   readonly commands: readonly EngineCommand[];
+  // Lacuna confirmada que o chamador declarou antes deste candle (0 quando contíguo).
+  readonly confirmedGapCandles: number;
   readonly result: StepResult;
 };
 

@@ -6,7 +6,12 @@ import {
   type FillDecision,
   type OrderEvent,
 } from '../../../../packages/strategy-engine/src/index.js';
-import { liquidationValue, sellCredit, tickUp } from '../reference-pricing.fixture.js';
+import {
+  liquidationValue,
+  sellCredit,
+  stopExitPrice,
+  tickUp,
+} from '../reference-pricing.fixture.js';
 import {
   iterateFlows,
   runWalletFlow,
@@ -117,7 +122,7 @@ function checkFillTiming(
   const createdIndex = memory.createdIndex.get(fill.orderKey);
   if (order === undefined || createdIndex === undefined) return 'preenchimento sem ordem criada';
   const age = recorded.index - createdIndex;
-  if (order.type === 'stop' || order.type === 'target') {
+  if (order.type === 'stop' || order.type === 'target' || order.reason === 'gap') {
     return age === 0 ? undefined : 'saída protetora nasceu num candle e preencheu em outro';
   }
   if (age < 1) return 'ordem preenchida no candle em que foi decidida';
@@ -134,6 +139,14 @@ function checkFillPrice(
   recorded: RecordedWalletStep,
   fill: FillDecision,
 ): string | undefined {
+  if (memory.created.get(fill.orderKey)?.reason === 'gap') {
+    // Saída da lacuna: o stop é assumido tocado e sai na abertura a min(stop, abertura) × (1 − slippage).
+    const stop = recorded.before.position?.stopPrice ?? '0';
+    const expected = stopExitPrice(stop, recorded.step.candle.open, recorded.flow.run.parameters);
+    return fill.price === formatEngineDecimal(expected)
+      ? undefined
+      : 'saída da lacuna fora do preço';
+  }
   if (memory.created.get(fill.orderKey)?.type === 'target') {
     // Gap acima do alvo preenche ao PREÇO DO ALVO, mesmo abaixo do candle (ordem que já estava no livro).
     const opened = recorded.result.decisions.openedPositions;

@@ -58,6 +58,19 @@ export function buildCandles(specs: readonly CandleSpec[]): EngineCandle[] {
   });
 }
 
+// Candles com lacuna: `missingBefore[índice]` slots ausentes antes do candle (a série segue na grade).
+export function buildCandlesWithGaps(
+  specs: readonly CandleSpec[],
+  missingBefore: Readonly<Record<number, number>>,
+): EngineCandle[] {
+  let missing = 0;
+  return buildCandles(specs).map((candle, index) => {
+    missing += missingBefore[index] ?? 0;
+    const openTime = candle.openTime + missing * HOUR;
+    return { ...candle, openTime, closeTime: openTime + HOUR - 1 };
+  });
+}
+
 export function buildReferenceStrategy(
   entry: StrategyConfigInput['entry'],
   risk: Partial<NonNullable<StrategyConfigInput['risk']>> = {},

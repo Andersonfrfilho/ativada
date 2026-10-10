@@ -10,6 +10,7 @@ type CloseSituation = {
   readonly isHalted: boolean;
   readonly createdEntry: boolean;
   readonly createdExit: boolean;
+  readonly isAfterGap: boolean;
   readonly cancelledBy: (reason: string) => boolean;
   readonly commandKinds: readonly string[];
 };
@@ -20,6 +21,8 @@ function isCreatedHere(order: OrderEvent, entry: TimelineEntry): boolean {
 
 // Entrada viva no fechamento: criada antes, sem terminal até aqui (ou cancelada neste fechamento).
 function hasLiveEntryAtClose(timeline: Timeline, entry: TimelineEntry): boolean {
+  // Depois de uma lacuna a ordem pendente já caducou na abertura: não há entrada viva no fechamento.
+  if (entry.step.confirmedGapCandles > 0) return false;
   for (const order of timeline.createdOrders.values()) {
     if (order.purpose !== 'entry' || order.createdIndex >= entry.index) continue;
     if (order.status !== 'created') continue;
@@ -38,6 +41,7 @@ function describeClose(timeline: Timeline, entry: TimelineEntry): CloseSituation
   return {
     hasLiveEntry: hasLiveEntryAtClose(timeline, entry),
     hasPosition: state.wallet.position !== null,
+    isAfterGap: entry.step.confirmedGapCandles > 0,
     isHalted: state.wallet.isHalted,
     createdEntry: createdHere.some((order) => order.purpose === 'entry'),
     createdExit: createdHere.some(
@@ -67,7 +71,8 @@ function assertCommands(situation: CloseSituation, label: string): void {
 }
 
 function assertSignal(action: string, situation: CloseSituation, label: string): void {
-  const isBusy = situation.hasLiveEntry || situation.hasPosition || situation.isHalted;
+  const isBusy =
+    situation.hasLiveEntry || situation.hasPosition || situation.isHalted || situation.isAfterGap;
   if (action === 'SELL' && situation.hasLiveEntry && !situation.cancelledBy('command')) {
     assertContract(
       situation.cancelledBy('opposite_signal'),

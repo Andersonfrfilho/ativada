@@ -175,12 +175,18 @@ function applyCommand(draft: WalletDraft, context: WalletContext, command: Engin
 export function applyClose(
   draft: WalletDraft,
   context: WalletContext,
-  params: { readonly signal: SignalDecision | null; readonly commands: readonly EngineCommand[] },
+  params: {
+    readonly signal: SignalDecision | null;
+    readonly commands: readonly EngineCommand[];
+    readonly isAfterGap: boolean;
+  },
 ): void {
   for (const command of params.commands) applyCommand(draft, context, command);
   const { signal } = params;
   if (signal === null) return;
-  if (signal.action === SIGNAL_ACTION.BUY) return placeEntry(draft, context, signal);
+  if (signal.action === SIGNAL_ACTION.BUY) {
+    return params.isAfterGap ? undefined : placeEntry(draft, context, signal);
+  }
   if (signal.action !== SIGNAL_ACTION.SELL) return;
   if (context.defect !== REFERENCE_ENGINE_DEFECT.IGNORES_OPPOSITE_SIGNAL) {
     cancelPendingEntry(draft, context, ORDER_EVENT_REASON.OPPOSITE_SIGNAL);

@@ -1,13 +1,14 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { WalletStepInput, WalletStepResult } from '../engine.types.js';
 import { applyFillModel, assertNoExecutionReports } from './fill-model.js';
+import { applyConfirmedGap } from './gap-close.js';
 import { applyClose } from './signal-policy.js';
 import { assertStandaloneWalletInput } from './wallet-guard.js';
 import { buildEquityPoint, buyBenchmark } from './wallet-valuation.js';
 import { createWalletDraft, type WalletContext } from './wallet.types.js';
 
 // A metade CARTEIRA do passo, sem guardas: o `step` composto já conferiu a entrada inteira. Sequência
-// (ADR 0002 §e): pendentes na abertura → stop e alvo → régua → comandos e decisão do sinal de `t` (no
+// (ADR 0002 §e): pendentes na abertura → stop e alvo (ou, depois de lacuna confirmada, a saída da lacuna) → régua → comandos e decisão do sinal de `t` (no
 // máximo uma ordem nova) → ponto de patrimônio.
 export function runWalletStep(input: WalletStepInput): WalletStepResult {
   assertNoExecutionReports(input.executionReports);
@@ -18,12 +19,18 @@ export function runWalletStep(input: WalletStepInput): WalletStepResult {
     candle,
   };
   const draft = createWalletDraft(input.state);
-  applyFillModel(draft, context);
+  const isAfterGap = (input.signal?.confirmedGapCandles ?? 0) > 0;
+  if (isAfterGap) applyConfirmedGap(draft, context);
+  else applyFillModel(draft, context);
   buyBenchmark(draft, context);
   if (input.signal !== null && draft.state.firstSignalCandleOpenTime === null) {
     draft.state = { ...draft.state, firstSignalCandleOpenTime: candle.openTime };
   }
-  applyClose(draft, context, { signal: input.signal, commands: input.commands ?? [] });
+  applyClose(draft, context, {
+    signal: input.signal,
+    commands: input.commands ?? [],
+    isAfterGap,
+  });
   const equityPoint = input.signal === null ? null : buildEquityPoint(draft, context);
   const { commands, orders, fills, openedPositions, closedPositions } = draft;
   return {

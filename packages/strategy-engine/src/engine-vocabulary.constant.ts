@@ -64,6 +64,8 @@ export const EXIT_REASON = {
   TARGET: ORDER_TYPE.TARGET,
   SIGNAL: 'signal',
   COMMAND: 'command',
+  // Lacuna confirmada: o stop é assumido tocado e a posição sai na abertura seguinte à lacuna (ADR 0002 §e).
+  GAP: 'gap',
 } as const;
 export type ExitReason = (typeof EXIT_REASON)[keyof typeof EXIT_REASON];
 
@@ -73,6 +75,8 @@ export const ORDER_EVENT_REASON = {
   INVALID_STOP: 'invalid_stop',
   OPPOSITE_SIGNAL: 'opposite_signal',
   COMMAND: EXIT_REASON.COMMAND,
+  // Ordem pendente que caducou numa lacuna confirmada, ou a saída que a lacuna provocou.
+  GAP: EXIT_REASON.GAP,
   // Preenchimento reduzido à participação máxima no volume do candle (a ordem continua `filled`).
   VOLUME_CAPPED: 'volume_capped',
 } as const;

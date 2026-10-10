@@ -2,6 +2,7 @@
 import { ENGINE_EVENT_KIND, type EngineScenario } from './engine-contract-types.fixture.js';
 import {
   buildCandles,
+  buildCandlesWithGaps,
   buildReferenceStrategy,
   command,
   commandsByIndex,
@@ -107,6 +108,51 @@ function sellAndCommandsScenario(): EngineScenario {
   });
 }
 
+// Lacuna confirmada com posição aberta: sai na abertura seguinte à lacuna e o BUY desse candle não entra.
+export const GAP_OPEN_POSITION_PRICES: readonly CandleSpec[] = [
+  QUIET,
+  QUIET,
+  QUIET,
+  QUIET,
+  QUIET,
+  QUIET,
+  QUIET,
+  QUIET,
+  QUIET,
+];
+
+// Lacuna confirmada com a limitada viva: ela caduca com motivo `gap`; depois a entrada nova preenche.
+export const GAP_LIVE_LIMIT_PRICES: readonly CandleSpec[] = [
+  QUIET,
+  QUIET,
+  QUIET,
+  ['100', '101', '99.5', '100'],
+  QUIET,
+  QUIET,
+  ['100', '101', '98.5', '99.5'],
+  QUIET,
+];
+
+function gapScenarios(): EngineScenario[] {
+  return [
+    scenario({
+      name: 'gap-closes-the-open-position',
+      strategy: buildReferenceStrategy(MARKET_ENTRY),
+      candles: buildCandlesWithGaps(GAP_OPEN_POSITION_PRICES, { 5: 1 }),
+      requiredEvents: [ENGINE_EVENT_KIND.MARKET_ENTRY_FILL, ENGINE_EVENT_KIND.GAP_CLOSES_POSITION],
+    }),
+    scenario({
+      name: 'gap-cancels-the-live-limit-entry',
+      strategy: buildReferenceStrategy({ ...LIMIT_ENTRY, expiryCandles: 3 }),
+      candles: buildCandlesWithGaps(GAP_LIVE_LIMIT_PRICES, { 4: 2 }),
+      requiredEvents: [
+        ENGINE_EVENT_KIND.GAP_CANCELS_PENDING_ORDER,
+        ENGINE_EVENT_KIND.LIMIT_ENTRY_FILL_INTRA_CANDLE,
+      ],
+    }),
+  ];
+}
+
 export function buildReferenceScenarios(): EngineScenario[] {
   return [
     scenario({
@@ -169,5 +215,6 @@ export function buildReferenceScenarios(): EngineScenario[] {
       candles: buildCandles(GAP_UP_PRICES),
       requiredEvents: [ENGINE_EVENT_KIND.GAP_UP_ENTRY, ENGINE_EVENT_KIND.STOP_EXIT_WITHOUT_GAP],
     }),
+    ...gapScenarios(),
   ];
 }

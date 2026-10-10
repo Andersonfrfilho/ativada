@@ -15,6 +15,7 @@ import {
   type ReferenceEngineDefect,
 } from './reference-engine-defect.fixture.js';
 import { evaluateProtectiveExits, executePendingOrder } from './reference-fills.fixture.js';
+import { applyReferenceGap, isReferenceGapIgnored } from './reference-gap.fixture.js';
 import type { WalletContext, WalletDraft } from './reference-orders.fixture.js';
 import { applyClose } from './reference-policy.fixture.js';
 import {
@@ -125,14 +126,20 @@ export function runReferenceWalletStep(
     closedPositions: [],
     isIntraCandleEntry: false,
   };
-  executePendingOrder(draft, context);
+  const isAfterGap = (input.signal?.confirmedGapCandles ?? 0) > 0;
+  if (isAfterGap) applyReferenceGap(draft, context);
+  if (!isAfterGap || isReferenceGapIgnored(context)) executePendingOrder(draft, context);
   const held = holdingAfterOpen(draft);
-  evaluateProtectiveExits(draft, context);
+  if (!isAfterGap || isReferenceGapIgnored(context)) evaluateProtectiveExits(draft, context);
   buyBenchmark(draft, context);
   if (input.signal !== null && draft.state.firstSignalCandleOpenTime === null) {
     draft.state = { ...draft.state, firstSignalCandleOpenTime: input.candle.openTime };
   }
-  applyClose(draft, context, { signal: input.signal, commands: input.commands ?? [] });
+  applyClose(draft, context, {
+    signal: input.signal,
+    commands: input.commands ?? [],
+    isAfterGap,
+  });
   const equity = input.signal === null ? null : equityPoint(draft, context, held);
   const { commands, orders, fills, openedPositions, closedPositions } = draft;
   return {

@@ -108,6 +108,7 @@ export function checkStepComposition(context: CheckContext): void {
       state: before.signal,
       candle: step.candle,
       sentiment: step.sentiment,
+      confirmedGapCandles: step.confirmedGapCandles,
     });
     const wallet = engine.walletStep({
       strategy,

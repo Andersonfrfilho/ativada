@@ -27,6 +27,7 @@ const VALUATION = 'wallet/wallet-valuation.ts';
 const GUARD = 'wallet/wallet-guard.ts';
 const WALLET_STEP = 'wallet/wallet-step.ts';
 const SIGNAL_STEP = 'signal-step.ts';
+const GAP_CLOSE = 'wallet/gap-close.ts';
 
 type Mutant = {
   readonly name: string;
@@ -52,7 +53,11 @@ const FILL_MUTANTS: readonly Mutant[] = [
   {
     name: 'FILL_IN_THE_DECISION_CANDLE',
     edits: [
-      ...edit(WALLET_STEP, '  applyFillModel(draft, context);\n  buyBenchmark', '  buyBenchmark'),
+      ...edit(
+        WALLET_STEP,
+        '  else applyFillModel(draft, context);\n  buyBenchmark',
+        '  buyBenchmark',
+      ),
       ...edit(
         WALLET_STEP,
         '  const equityPoint = input.signal === null',
@@ -271,6 +276,46 @@ const POLICY_MUTANTS: readonly Mutant[] = [
   },
 ];
 
+const GAP_MUTANTS: readonly Mutant[] = [
+  {
+    name: 'GAP_KEEPS_POSITION',
+    edits: edit(GAP_CLOSE, '  closeOnGap(draft, context);\n', ''),
+    stage: JUDGE_STAGE.DIFFERENTIAL,
+  },
+  {
+    name: 'GAP_KEEPS_PENDING',
+    edits: edit(GAP_CLOSE, '  cancelPendingOrder(draft, context);\n', ''),
+    stage: JUDGE_STAGE.DIFFERENTIAL,
+  },
+  {
+    name: 'GAP_ALLOWS_ENTRY',
+    edits: edit(
+      POLICY,
+      'return closing.isAfterGap ? undefined : placeEntry(draft, context, signal);',
+      'return placeEntry(draft, context, signal);',
+    ),
+    stage: JUDGE_STAGE.DIFFERENTIAL,
+  },
+  {
+    name: 'GAP_EXIT_AT_THE_STOP_NOT_THE_OPEN',
+    edits: edit(
+      GAP_CLOSE,
+      '{ stop: position.stopPrice, open: context.candle.open }',
+      '{ stop: position.stopPrice, open: position.stopPrice }',
+    ),
+    stage: JUDGE_STAGE.DIFFERENTIAL,
+  },
+  {
+    name: 'GAP_NEEDS_TWO_CANDLES',
+    edits: edit(
+      WALLET_STEP,
+      '(input.signal?.confirmedGapCandles ?? 0) > 0',
+      '(input.signal?.confirmedGapCandles ?? 0) > 1',
+    ),
+    stage: JUDGE_STAGE.DIFFERENTIAL,
+  },
+];
+
 const GUARD_MUTANTS: readonly Mutant[] = [
   {
     name: 'CONTIGUITY_NOT_CHECKED',
@@ -375,6 +420,7 @@ const COMPOSITION_MUTANTS: readonly Mutant[] = [
 const SOURCE_MUTANTS: readonly Mutant[] = [
   ...FILL_MUTANTS,
   ...POLICY_MUTANTS,
+  ...GAP_MUTANTS,
   ...GUARD_MUTANTS,
   ...COMPOSITION_MUTANTS,
   ...HASH_MUTANTS,
@@ -427,6 +473,8 @@ describe('production engine: the guards, the differential and the harness reject
       'SELL_IGNORED',
       'HALT_IGNORED',
       'COMMAND_REAPPLIED',
+      'GAP_KEEPS_POSITION',
+      'GAP_KEEPS_PENDING',
       'EQUITY_AT_LOW_MARKED_AT_THE_CLOSE',
       'EQUITY_LOW_IGNORES_EXITING_POSITION',
       'EQUITY_LOW_COUNTS_STOP_AT_LOW',

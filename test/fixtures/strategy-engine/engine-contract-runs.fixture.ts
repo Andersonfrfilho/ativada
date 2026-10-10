@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
+  ENGINE_TIMEFRAME_DURATION_MILLISECONDS,
   EngineDecimal,
   formatEngineDecimal,
   selectAvailableSentiment,
@@ -8,6 +9,7 @@ import {
   type Engine,
   type EngineCandle,
   type EngineState,
+  type RunParameters,
   type SentimentObservation,
   type StepDecisions,
   type StepInput,
@@ -58,7 +60,24 @@ export function buildStepInput(params: {
       insertionCutoff: candle.closeTime,
     }),
     commands: commandsAt(scenario.commands, candle.openTime),
+    confirmedGapCandles: gapBefore({
+      state: params.state,
+      candle,
+      timeframe: scenario.run.parameters.timeframe,
+    }),
   };
+}
+
+// Lacuna para a frente: o chamador a declara exata, como o ao vivo e o backtest fazem.
+export function gapBefore(params: {
+  readonly state: EngineState;
+  readonly candle: EngineCandle;
+  readonly timeframe: RunParameters['timeframe'];
+}): number {
+  const last = params.state.signal.lastCandleOpenTime;
+  if (last === null) return 0;
+  const duration = ENGINE_TIMEFRAME_DURATION_MILLISECONDS[params.timeframe];
+  return Math.max(0, (params.candle.openTime - last) / duration - 1);
 }
 
 export function commandsAt(commands: ScenarioCommands, openTime: number): StepInput['commands'] {
@@ -80,6 +99,7 @@ export function runSteps(params: RunStepsParams): RecordedStep[] {
       candle,
       sentiment: input.sentiment,
       commands: input.commands ?? [],
+      confirmedGapCandles: input.confirmedGapCandles ?? 0,
       result,
     });
     state = result.state;
