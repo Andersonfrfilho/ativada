@@ -15,7 +15,7 @@ backfill, Fear & Greed e stream ao vivo com recuperação de lacuna). Fase 2 (o 
 Monorepo Bun (workspaces) em TypeScript estrito:
 
 ```
-apps/api-cryptoada/        Bun.serve — REST + WebSocket para o painel; backtest em worker_thread
+apps/api-cryptoada/        Bun.serve — REST + WebSocket para o painel; backtest e walk-forward em worker_thread
 apps/worker-cryptoada/     consome o stream de klines da Binance (grava velas fechadas, recupera lacunas), avalia estratégias, simula ordens
 apps/cron-cryptoada/       one-shot agendado: exclusão de contas (Keycloak + dados, ADR 0001 §h), backfill de histórico e índice Fear & Greed
 apps/frontend-cryptoada/   React 19 + Vite (PWA)
@@ -43,7 +43,7 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `make down DOWN_FLAGS=--volumes` e `make up` (apaga os dados do Keycloak daquele ambiente). `make up`
   avisa quando o JSON é mais novo que o volume.
 - Alvos `*-test` (`migration-test`, `database-test`, `identity-test`, `session-test`, `admin-test`,
-  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
+  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`, `walkforward-test`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
   `TERM`: Ctrl-C não deixa container vivo. Dois deles ao mesmo tempo disputam o mesmo projeto; rode um por vez.
 - `make check` roda `bun test` com `env -i`: teste que precisa de variável a declara; o `export` do `env.dev`
   não chega a ele.
@@ -108,7 +108,7 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `created_at::text` (microssegundos). `sentiment_observations` é pública e imutável por GATILHO (UPDATE, DELETE e
   TRUNCATE), com `created_at` = instante em que o valor ficou conhecido. Prova: `make database-test` (lote sintético de
   17.520 + 4.000 + 300 em ~1 s, monotonicidade, isolamento, FK composta, paginação), `make lgpd-test` (exportação e
-  purga das 9 tabelas) e os contratos `strategy-persistence-schema` e `ownership-registry`.
+  purga das 10 tabelas) e os contratos `strategy-persistence-schema` e `ownership-registry`.
 - **Backtest em `worker_thread` (T3.2, ADR 0002 §"Backtest em `worker_thread` (T3.2)").** `apps/api-cryptoada/src/backtest/`:
   `runBacktest({ database, runId })` é o caso de uso (porta `BacktestDatabase`, adaptador `createBacktestDatabase`; o escopo
   do dono nasce em `attach` por `resolveRunOwnerScope`, SÓ para `runId` enfileirado pela API) e `backtest.worker.ts` +
@@ -122,6 +122,20 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   determinismo, paridade com o motor direto, golden dos dois conjuntos reais, isolamento, cancelamento, thread que morre,
   timeout, órfã retomada e `/v1/health` < 100 ms). Teste novo em `test/backtest-*` que carregue o módulo usa
   `loadBacktestApi()`: é por ele que os mutantes entram.
+- **Walk-forward (T3.3, ADR 0002 §"Walk-forward (T3.3)").** Domínio PURO em `packages/strategy-engine/src/walk-forward/`
+  (janelas em meses de calendário UTC sem `Date`, catálogo FECHADO de caminhos ajustáveis, teto de 200 combinações
+  VÁLIDAS, seleção por Sharpe do AJUSTE com `minTradesPerWindow`, encadeamento do patrimônio, `detectOverfitting`) e execução
+  em `apps/api-cryptoada/src/walk-forward/`: `runWalkForward({ database, runId, options })` (porta `WalkForwardDatabase`,
+  `createWalkForwardDatabase`), busca por combinação em até `WALK_FORWARD_THREADS` threads (`search.worker.ts`, mensagens
+  `z.strictObject`; o resultado NÃO depende do número) e a coordenadora `walk-forward.worker.ts` +
+  `walk-forward-thread-runner.ts` (o pedido — grade e janelas — viaja na mensagem e entra no checkpoint por hash). O sinal
+  sai UMA vez por combinação da série contínua e a carteira roda por janela (`walletStep` avulso, chaves `w<i>:`);
+  o relatório principal (`runs.metrics`) é o FORA DA AMOSTRA concatenado e `metrics.overfitting` guarda o alerta. Cada
+  janela grava a linha de `walk_forward_windows`, os resultados do teste e o checkpoint na MESMA transação
+  (`commitUnit`); a busca checkpointa por combinação. Prova: contratos (`test/walk-forward-*.contract.test.ts`, em memória
+  e com threads de verdade), 28 mutantes do domínio e 18 da execução, paridade com o motor completo por janela
+  (sintético e os dois conjuntos reais) e `make walkforward-test`. Teste novo que carregue o módulo usa
+  `loadWalkForwardApp()` / `loadWalkForwardEngineApi()`: é por eles que os mutantes entram.
 - Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account

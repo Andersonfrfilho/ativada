@@ -1130,6 +1130,84 @@ onde parou; lacuna no MEIO, ao contrário, é declarada. (3) `orders.expires_can
 da limitada já está em `eligible_candles`. (4) A janela de aquecimento exige `leadIn` candles PRESENTES, sem buraco;
 buraco no aquecimento é `INSUFFICIENT_HISTORY` e não lacuna.
 
+## Walk-forward (T3.3)
+
+Entregue em `packages/strategy-engine/src/walk-forward/` (domínio puro), `apps/api-cryptoada/src/walk-forward/` (execução e
+threads) e `packages/database` (migration 0009, `walk_forward_windows`). O walk-forward reaproveita as metades do motor
+(§a): o sinal sai UMA vez por combinação da série contínua e a carteira roda por janela com o `walletStep` avulso.
+
+**Domínio (puro, decimal, sem `Date`/`Math.random`/`Intl`).**
+
+| Decisão | Valor | Motivo |
+|---|---|---|
+| Janelas | `planWalkForwardWindows({ start, end, trainMonths = 6, testMonths = 2, stepMonths = 2 })`: meses de calendário UTC por aritmética inteira (dia inexistente vai para o último do mês), todas as fronteiras contadas do começo do período; ajuste `[trainStart, trainEnd)` e teste `[testStart, testEnd)` com `trainEnd = testStart`; passo < teste é `INVALID_WINDOW_CONFIG` (testes sobrepostos); menos de 3 janelas é `PERIOD_TOO_SHORT` | Ajuste e teste disjuntos e crescentes; o mesmo candle nunca é contado em dois testes |
+| Aquecimento | cada janela carrega `trainLeadInStart`/`testLeadInStart` (`leadIn` candles antes do início); a carteira de cada período parte do candle-âncora (o anterior ao período: decide no fechamento dele, executa na abertura) | O aquecimento não vaza teste para o ajuste: o sinal é causal e o ajuste termina estritamente antes do teste |
+| Grade | `{ parameters: [{ path, values }] }` sobre um catálogo FECHADO (`thresholds.*`, `risk.*`, `regime.period/trendThreshold`, `entry.*` e `rules.<id>.<campo>` com os campos por tipo de regra); caminho fora do catálogo, ausente na configuração-base (regime sem ADX, entrada a mercado), de tipo errado ou repetido é `INVALID_GRID` | Nada de caminho arbitrário (`__proto__`, `id`, `kind`, pesos) |
+| Teto | `MAX_WALK_FORWARD_COMBINATIONS = 200` conta só as combinações VÁLIDAS (o esquema inteiro da estratégia decide: período rápido < lento etc.); as inválidas são descartadas e contadas à parte; acima do teto, `GRID_TOO_LARGE` com a contagem ANTES de rodar; produto bruto acima de 5.000 também recusa sem enumerar | Uma grade 20 × 20 tem 400 brutas e 190 válidas e passa |
+| Seleção | `selectBestParameters`: maior Sharpe líquido de custos NO AJUSTE entre as com ≥ `minTradesPerWindow` (10) operações fechadas e Sharpe definido; empate: mais operações, menor queda na mínima, primeira da grade; nenhuma elegível ⇒ `no_eligible_parameters` e a janela NÃO opera no teste (carteira parada: `halt` no âncora, só a régua anda) | Nunca escolhe a "menos pior" |
+| Encadeamento | `chainWindowResult`: o teste de cada janela recomeça do patrimônio FINAL da anterior em unidades relativas (fator = patrimônio carregado ÷ saldo inicial, 20 casas; valores com 12 casas). A posição aberta no fim do teste é liquidada ali (operação `command`, `netProfit` = lucro não realizado) porque a janela seguinte recomeça parada. A régua da janela 0 é a própria; das seguintes, só a razão interna ao primeiro ponto continua a anterior | Repagar a entrada da régua a cada janela a empurraria para baixo e favoreceria a estratégia |
+| Relatório | `concatenateOutOfSample` + `computeRunMetrics` sobre a curva encadeada: é o RELATÓRIO PRINCIPAL (`runs.metrics`) | Constituição §3 |
+| Alerta | `detectOverfitting`: dispara com (1) Sharpe fora < 50% (`OVERFITTING_DEGRADATION_LIMIT = '0.5'`, estrito) do de dentro (média ponderada pelos pontos do ajuste, só janelas elegíveis), (2) fora negativo com dentro positivo, (3) menos de `MIN_ELIGIBLE_WINDOW_FRACTION = '0.5'` das janelas elegíveis, (4) fora indefinido com dentro positivo; devolve `{ isAlert, reasons, inSampleSharpe, outOfSampleSharpe, degradation, eligibleWindows, totalWindows }`, `null` com motivo quando indefinido | Dentro ≤ 0 não tem razão definida e não dispara por (1) |
+
+**Execução.**
+
+| Decisão | Valor | Motivo |
+|---|---|---|
+| Pedido | `options` de `runWalkForward` = grade, `trainMonths`/`testMonths`/`stepMonths`, `minTradesPerWindow` (+ `threads`, `now`, `engine`, `onProgress`). A grade fica na execução, não na versão da estratégia; a linha `runs` ainda não tem coluna para ela, então o chamador (T3.4/T3.6) a guarda e a repassa; o checkpoint guarda o HASH do pedido e uma retomada com outro é `OPTIONS_MISMATCH` | Não alterar `run_parameters` (o `runHash` das carteiras) |
+| Busca | Uma unidade = uma combinação: o sinal sai UMA vez da série contínua (do aquecimento da combinação ao fim do último AJUSTE) e a carteira roda por janela, devolvendo `{ trades, sharpe, maxDrawdownAtLow, points }` por janela. Até `WALK_FORWARD_THREADS` (env, padrão 2, 1–8) threads (`search.worker.ts`), mensagens `z.strictObject`; o resultado é função pura da combinação e NÃO depende do número de threads | A ordem janela × combinação exigiria todos os sinais de todas as combinações em memória |
+| Checkpoint | Busca: `runs.engine_state` guarda os resumos das combinações avaliadas (`last_candle_time` = começo do primeiro ajuste + combinações avaliadas), um commit por combinação. Teste: por janela, na MESMA transação (`commitUnit`: status → janela → resultados → checkpoint, com a execução travada), `last_candle_time` = fim do teste. Janela concluída não é refeita; as gravadas formam um prefixo e o patrimônio carregado vem da última | O progresso vai de 0 a 99 por (janela × combinação) e 100 só em `completed` |
+| Teste | Para a janela, escolhe, refaz o ajuste da escolhida (as métricas completas vão em `in_sample`; o Sharpe reproduzido precisa bater com o resumo da busca) e roda o teste com `halt` (`window_end`) no último candle. Sinais, ordens, preenchimentos, posições, comandos e patrimônio (encadeado) do TESTE são gravados com `engine_key`/`command_id` `w<i>:`; o âncora (candle anterior ao teste) não grava sinal nem patrimônio | O âncora é do teste anterior: colidiria na chave natural |
+| Cancelamento e falha | O status é lido dentro de cada unidade; `cancelled` para sem gravar a seguinte e sem erro. Falha vira `failed` com código estável (`GRID_TOO_LARGE`, `NO_VALID_COMBINATIONS`, `INVALID_GRID`, `INVALID_WINDOW_CONFIG`, `PERIOD_TOO_SHORT`, `NO_CANDLES`, `INSUFFICIENT_HISTORY`, `OPTIONS_MISMATCH`, `SEARCH_WORKER_FAILED`, `WALK_FORWARD_TIMEOUT`, `WORKER_CRASHED`, …) e a mensagem original NUNCA sai | Erro de driver traz consulta, URL ou segredo |
+| Relatório gravado | `runs.metrics` = métricas fora da amostra + `overfitting` + `walkForward` (janelas, elegíveis, liquidadas no fim da janela). Sai do que ficou GRAVADO (janelas e `equity_points`), então a execução retomada e a contínua passam pelo mesmo caminho | Idêntico byte a byte |
+| Coordenadora | `walk-forward.worker.ts` abre o próprio banco e cria as threads de busca (worker aninhado, validado no Bun 1.3.14); o pedido viaja na mensagem de `run`; `walk-forward-thread-runner.ts` termina a thread no tempo limite e no encerramento (a execução fica `running`, recuperável) | RNF02: nada disso roda na thread da API |
+
+**Paridade com o motor completo por janela.** `test/walk-forward-parity.contract.test.ts` compara, decisão por decisão (patrimônio,
+ordens, preenchimentos, posições abertas e fechadas, comandos), o pipeline (sinal calculado uma vez + `walletStep` por
+janela) com o `Engine.step` completo rodado sobre a janela, nas 4 janelas de teste e nas 4 de ajuste de uma série sintética e
+em 3 janelas sobrepostas de cada um dos dois conjuntos reais. A equivalência é exata. Uma diferença MEDIDA, e aceita, é
+a de ponto de partida (§"Riscos aceitos" da T2.6): o sinal da série contínua e o de um motor iniciado no aquecimento da janela
+diferem pelo peso residual do primeiro candle (ε = 1e-3); na série sintética, 0 ações divergentes em 248 candles de teste.
+
+**Prova.** Contratos sem banco (janelas à mão e 1.200 períodos aleatórios; grade e teto com 1.200 grades; seleção com 1.500
+listas; encadeamento com contas à mão e 1.000 sequências; alerta com limites à mão; caso de uso, retomada na busca e no
+teste, cancelamento, falhas, não-lookahead por alteração de candles, carteira parada, lacuna, ordem das operações,
+1 × 4 threads, thread que morre / evento inválido / tempo limite); **28 mutantes do domínio** e **18 da execução**
+reprovados (janelas sobrepostas, ajuste com dado de teste, `minTrades` ignorado, desempate não determinístico, teto contando
+inválidas, relatório = dentro da amostra, limiar 50% → 100%, sinal com o candle seguinte, checkpoint antes da gravação,
+cancelamento ignorado, grade fora do catálogo aceita, janela refeita na retomada, entre outros). `make walkforward-test`
+(Postgres real, thread coordenadora de produção): ver a seção de medidas.
+
+**Medidas (`make walkforward-test`, Postgres real, thread coordenadora de produção, máquina de desenvolvimento).**
+
+| Caso | Resultado |
+|---|---|
+| Overfitting conhecido (passeio aleatório sem borda, custos zerados para isolar o viés de seleção, 24 combinações, 8 janelas 6/2/2 sobre 17.520 candles `1h`) | ALERTA DISPARA: Sharpe DENTRO 2,2614, FORA −0,9982, degradação −0,4414, motivos `sharpe_below_half_of_in_sample` + `negative_out_of_sample_with_positive_in_sample` |
+| Tendência persistente (drift de 4 pontos-base por hora, custos reais, mesma grade) | alerta NÃO dispara: DENTRO 8,6468, FORA 8,6412, degradação 0,9994 |
+| ETHUSDT `1d` × 400 real (aquecimento de 200 candles, 3 janelas 3/1/1, sem Fear & Greed) | 92 pontos de teste; fora da amostra: retorno −2,48%, Sharpe −2,25, comprar e segurar +36,75%; alerta falso (sem motivo) |
+| BTCUSDT `1h` × 500 real | 12,5 dias úteis não comportam uma janela de calendário: falha tipada `PERIOD_TOO_SHORT` gravada, nenhuma janela escrita |
+| Determinismo | duas execuções, 1 × 2 × 4 threads: o mesmo digest (janelas, sinais, ordens, preenchimentos, posições, patrimônio e métricas) |
+| Retomada | queda na busca (52%): continua do checkpoint em 7,3 s (sem queda: 11,2 s); queda no teste (4 janelas gravadas): 1,9 s; digest idêntico ao da execução sem queda |
+| Cancelamento | na busca e no teste das janelas: para entre as unidades, `cancelled` sem erro nem métricas, nada gravado depois |
+| Isolamento | B não lê as janelas, a execução, o checkpoint nem o patrimônio de A, não a cancela e não abre lote nela |
+| `GET /v1/health` durante o walk-forward | 119 amostras, média 0,6 ms, máxima 33–39 ms (< 100 ms) |
+
+Tempos (17.520 candles `1h`, 8 janelas): **realista, 24 combinações, 2 threads: 12,2–12,6 s** (busca 8,5–8,9 s, teste 1,7 s,
+relatório 0,15 s), 33–35 mil candles·combinações/s; 1 thread 18,0 s, 4 threads 8,1 s. **Grande, 200 combinações: 119–120 s
+com 1 thread** (29,1–29,4 mil candles·combinações/s) **e 65,5 s com 2 threads** (53,4 mil). Extrapolação LINEAR em candles para
+175.000 candles (5 anos em `15m`) com as mesmas combinações: 24 combinações ≈ 2 min (2 threads); 200 combinações ≈ 20 min
+com 1 thread e ≈ 11 min com 2. O RNF02 só pede que rode fora da thread da API e informe progresso, o que se cumpre; a
+extrapolação cresce além do linear se as janelas aumentarem junto com o período. **Gargalo medido:** a BUSCA (96% do tempo
+do caso grande: indicadores do sinal, a carteira por janela e `computeRunMetrics` sobre o ajuste, 200 × 8 vezes); o teste
+das janelas (1,7 s) e o relatório (0,15 s) são desprezíveis. Não foi otimizado às cegas; o caminho natural é mais threads
+(8 dão ≈ 4× sobre 1) e reduzir o custo decimal das métricas de ajuste.
+
+**Suposições registradas.** (1) A bolsa é `binance`. (2) O pedido não é persistido na linha da execução (ver "Pedido"). (3)
+Posição aberta no fim do teste é liquidada ali (e contada como operação), em vez de atravessar a fronteira. (4) O ajuste
+inclui o ponto do candle-âncora (retorno do primeiro candle); o teste encadeado o descarta e usa o retorno de fronteira.
+(5) O âncora de uma janela cai no candle imediatamente anterior ao período; se ali há lacuna ela é declarada ao motor.
+(6) `no_eligible_parameters` roda a carteira parada sobre os sinais da primeira combinação só para ter os candles e a
+régua.
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
@@ -1166,6 +1244,7 @@ buraco no aquecimento é `INSUFFICIENT_HISTORY` e não lacuna.
   `signals.sentiment_observation`, `equity_points.equity_at_low`, `run_commands`, `sentiment_observations`).
 - T3.2 (backtest, entregue: seção "Backtest em `worker_thread` (T3.2)") e T4.1 (ao vivo) são laços sobre `step` com a persistência de §b; T4.2 (paridade)
   compara as duas execuções com os mesmos `leadInCandles` e as mesmas lacunas declaradas.
+- T3.3 (walk-forward, entregue: seção "Walk-forward (T3.3)") usa as metades do motor: sinal por combinação, carteira por janela.
 - Mudar a semântica do motor exige nova `engineVersion` e novo golden; execuções em curso migram (§b).
 - `@cryptoada/strategy-engine` depende só de `decimal.js@10.6.0` e `zod@4.6.5`.
 
