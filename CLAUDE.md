@@ -54,16 +54,24 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   (`MARKET_SYMBOLS` x `MARKET_TIMEFRAMES`, padrão BTCUSDT/ETHUSDT em 15m/1h/4h/1d) em sequência, acha as
   lacunas em SQL (`findMissingOpenTimes`), baixa só o que falta e grava cada página ao chegar; `BACKFILL_YEARS`
   (1 a 5, padrão 2) e `BINANCE_BASE_URL` (padrão `https://data-api.binance.vision`, https em produção).
-  Lacuna que a Binance não tem sai no log como `unfillable`, sem laço de retry. `make backfill-test` prova
+  Lacuna que a Binance não tem sai no log como `unfillable`, sem laço de retry. Um 418 (ban de IP) aborta a
+  execução do backfill (saída 1, com o fim do ban no log) em vez de passar ao próximo par. `make backfill-test` prova
   isso com o cron real, Postgres descartável e uma Binance falsa local.
 - O worker (`apps/worker-cryptoada`) roda de verdade: abre o banco, consome o stream combinado de klines
   (`createKlineStream`, `packages/market-data`) e grava só velas fechadas (`x === true`) com `upsertCandles`
-  (idempotente). Em CADA (re)conexão baixa pelo REST só as aberturas que faltam entre a última gravada e a última
-  vela fechada; par sem nenhum candle fica para o backfill do cron. Erro de gravação é logado (id opaco) e não
-  derruba o worker; SIGTERM/SIGINT encerram de forma graciosa (saída 0). Variáveis: `MARKET_EXCHANGE`,
-  `MARKET_SYMBOLS`, `MARKET_TIMEFRAMES`, `BINANCE_BASE_URL` (REST), `BINANCE_STREAM_URL` (padrão
-  `wss://data-stream.binance.vision`, `wss://` em produção) e `STREAM_STALE_SECONDS` (5 a 600, padrão 60: sem
-  mensagem por esse tempo, reconecta). `make stream-test` prova isso com o worker real em subprocesso, Postgres
+  (idempotente, não atualiza: vela fechada é imutável). A verificação de lacunas cobre uma JANELA DE RETROCESSO,
+  `[agora - STREAM_GAP_LOOKBACK_HOURS, última vela fechada)`, não "a partir da última gravada": roda em CADA
+  (re)conexão e a cada `STREAM_GAP_CHECK_MINUTES` (SQL barato; só vai ao REST se houver lacuna). Par sem nenhum
+  candle fica para o backfill do cron; buraco que a Binance não tem e que passou de 24 h não é pedido de novo.
+  Escrita que falha repete 3 vezes com backoff e, se persistir, dispara a verificação por janela. Erro de
+  gravação é logado (id opaco) e não derruba o worker; 418 faz dormir o `Retry-After` (teto 24 h) em fatias e a
+  recuperação não segue pelos pares seguintes; SIGTERM/SIGINT cancelam (AbortSignal) a recuperação em curso e
+  encerram de forma graciosa (saída 0). A hora vem do servidor (`createServerClock`, `GET /api/v3/time`; falha
+  cai no relógio local com aviso); o repositório só rejeita vela com `closeTime` além de agora + 5 s. Variáveis:
+  `MARKET_EXCHANGE` (só `binance`), `MARKET_SYMBOLS`, `MARKET_TIMEFRAMES`, `BINANCE_BASE_URL` (REST),
+  `BINANCE_STREAM_URL` (padrão `wss://data-stream.binance.vision`, `wss://` em produção), `STREAM_STALE_SECONDS`
+  (5 a 600, padrão 60: sem mensagem por esse tempo, reconecta), `STREAM_GAP_LOOKBACK_HOURS` (1 a 720, padrão 168)
+  e `STREAM_GAP_CHECK_MINUTES` (1 a 1440, padrão 15). `make stream-test` prova isso com o worker real em subprocesso, Postgres
   descartável e uma Binance falsa local (REST + WebSocket em `packages/market-data/test-support/`).
 
 ## Regras que não se negociam
