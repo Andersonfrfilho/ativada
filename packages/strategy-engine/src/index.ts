@@ -173,3 +173,36 @@ export {
   type ComputeOpenPositionMetricsParams,
 } from './metrics/open-position-metrics.js';
 export { reconcileRunMetrics } from './metrics/reconcile-run-metrics.js';
+export {
+  deriveStrategyConfig,
+  type DerivedStrategyConfig,
+} from './walk-forward/derive-strategy-config.js';
+export {
+  countValidCombinations,
+  expandWalkForwardGrid,
+  type ExpandedGrid,
+  type GridCount,
+  type GridParams,
+} from './walk-forward/expand-walk-forward-grid.js';
+export { planWalkForwardWindows } from './walk-forward/plan-walk-forward-windows.js';
+export {
+  selectBestParameters,
+  type SelectBestParametersParams,
+} from './walk-forward/select-best-parameters.js';
+export {
+  parseTunablePath,
+  TUNABLE_RULE_FIELDS,
+  TUNABLE_STATIC_PATHS,
+  type ParsedTunablePath,
+} from './walk-forward/tunable-parameter.catalog.js';
+export { addUtcMonths } from './walk-forward/utc-calendar.js';
+export * from './walk-forward/walk-forward.constant.js';
+export {
+  WalkForwardError,
+  type WalkForwardErrorDetails,
+} from './walk-forward/walk-forward.error.js';
+export type * from './walk-forward/walk-forward.types.js';
+export {
+  parseWalkForwardGrid,
+  WALK_FORWARD_GRID_SCHEMA,
+} from './walk-forward/walk-forward-grid.schema.js';
