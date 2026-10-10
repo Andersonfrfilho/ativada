@@ -30,7 +30,7 @@ export function assertNoExecutionReports(reports: readonly unknown[] | undefined
   });
 }
 
-export function buildWalletContext(input: FillModelInput): WalletContext {
+function buildWalletContext(input: FillModelInput): WalletContext {
   return {
     config: input.strategy.config,
     parameters: input.run.parameters,

@@ -51,7 +51,7 @@ export function decimalTextSchema(
 const CANONICAL_DECIMAL_PATTERN = /^-?(0|[1-9]\d*)(\.\d*[1-9])?$/;
 const NEGATIVE_ZERO = '-0';
 
-export const DECIMAL_STATE_TEXT_SCHEMA = z
+const DECIMAL_STATE_TEXT_SCHEMA = z
   .string()
   .regex(CANONICAL_DECIMAL_PATTERN, 'Decimal fora da grafia canônica.')
   .refine((text) => text !== NEGATIVE_ZERO, 'Zero negativo não é canônico.');

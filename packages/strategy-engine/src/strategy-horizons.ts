@@ -25,7 +25,7 @@ function ruleHorizon(rule: CandleRule): IndicatorHorizon {
 }
 
 // Horizonte de TODO indicador que o sinal usa: regras, ATR do risco e ADX do regime.
-export function collectIndicatorHorizons(config: StrategyConfig): readonly IndicatorHorizon[] {
+function collectIndicatorHorizons(config: StrategyConfig): readonly IndicatorHorizon[] {
   const risk = INDICATOR_REGISTRY.risk.create(config.risk);
   const regime =
     config.regime.kind === REGIME_FILTER_KIND.ADX

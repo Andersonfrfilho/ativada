@@ -43,7 +43,7 @@ export function assertIndicatorPeriod(period: number, name: string): void {
 }
 
 // `-0` vira `0` para o valor e o snapshot serem canônicos; resultado não finito é erro, não `NaN`.
-export function normalizeZero(value: number): number {
+function normalizeZero(value: number): number {
   return value === 0 ? 0 : value;
 }
 

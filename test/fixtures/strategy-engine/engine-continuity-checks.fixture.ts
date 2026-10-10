@@ -32,6 +32,8 @@ import {
 
 const BATCH_SIZES: readonly number[] = [2, 3, 5, 7];
 const ONE_MILLISECOND = 1;
+const INVALID_STATE_CODE = 'invalid_state';
+const ONE_HOUR_MILLISECONDS = 3_600_000;
 
 function above(price: string): string {
   return formatEngineDecimal(toEngineDecimal(price).plus(1));
@@ -129,7 +131,7 @@ export function checkBatches(context: CheckContext): void {
 
 type GuardCase = {
   readonly label: string;
-  readonly code: EngineInputErrorCode;
+  readonly code: EngineInputErrorCode | typeof INVALID_STATE_CODE;
   readonly input: StepInput;
 };
 
@@ -249,6 +251,22 @@ function guardCases(context: CheckContext): GuardCase[] {
       label: 'outros parâmetros',
       code: code.RUN_HASH_MISMATCH,
       input: { ...base, run: { ...base.run, runHash: 'e'.repeat(64) } },
+    },
+    {
+      label: 'carteira e sinal em candles diferentes',
+      code: INVALID_STATE_CODE,
+      input: {
+        ...base,
+        state: {
+          ...base.state,
+          wallet: {
+            ...base.state.wallet,
+            lastCandleOpenTime:
+              (base.state.wallet.lastCandleOpenTime ?? ONE_HOUR_MILLISECONDS) -
+              ONE_HOUR_MILLISECONDS,
+          },
+        },
+      },
     },
     {
       label: 'comando do futuro',

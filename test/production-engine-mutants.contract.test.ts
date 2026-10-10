@@ -445,6 +445,15 @@ const HASH_MUTANTS: readonly Mutant[] = [
     stage: JUDGE_STAGE.GUARDS,
   },
   {
+    name: 'STEP_ACCEPTS_THE_HALVES_AT_DIFFERENT_CANDLES',
+    edits: edit(
+      ASSERT_STEP,
+      'if (input.state.signal.lastCandleOpenTime !== input.state.wallet.lastCandleOpenTime) {',
+      'if (false) {',
+    ),
+    stage: JUDGE_STAGE.ENGINE_API,
+  },
+  {
     name: 'STEP_DOES_NOT_RECOMPUTE_THE_HASHES',
     edits: edit(
       ASSERT_STEP,

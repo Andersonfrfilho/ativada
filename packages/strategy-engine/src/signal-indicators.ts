@@ -40,7 +40,7 @@ type AdvanceContext = {
 };
 
 // O valor do candle anterior de um rompimento de Donchian vive no estado, ao lado do snapshot.
-export function previousValueId(indicatorId: string): string {
+function previousValueId(indicatorId: string): string {
   return `${INDICATOR_NAMESPACE.PREVIOUS}:${indicatorId}`;
 }
 

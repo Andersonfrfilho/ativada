@@ -30,7 +30,7 @@ function isIdentifier(value: string): boolean {
 }
 
 // Inteiro 0..100 e finito (NaN não passa); `observedAt` nunca depois do fechamento (lookahead).
-export function assertSentiment(sentiment: SentimentObservation, candle: EngineCandle): void {
+function assertSentiment(sentiment: SentimentObservation, candle: EngineCandle): void {
   const isValid =
     Number.isInteger(sentiment.value) &&
     sentiment.value >= 0 &&
@@ -104,6 +104,13 @@ export function assertStepInput(params: AssertStepInputParams): void {
   }
   assertStrategyHash(input.strategy);
   assertRunHash(input.run);
+  // As duas metades andam juntas: um estado em que cada uma parou num candle não é retomável.
+  if (input.state.signal.lastCandleOpenTime !== input.state.wallet.lastCandleOpenTime) {
+    throw new EngineStateError({
+      code: ENGINE_STATE_ERROR_CODE.INVALID_STATE,
+      message: 'Carteira e sinal em candles diferentes.',
+    });
+  }
   assertSignalStepInput({ ...input, market: input.run.parameters, state: input.state.signal });
   assertCommands(input.commands ?? [], input.candle);
 }

@@ -10,7 +10,6 @@ export {
 } from './assert-candle.js';
 export {
   assertCommands,
-  assertSentiment,
   assertSignalStepInput,
   assertStepInput,
   assertWalletStepInput,
@@ -150,7 +149,6 @@ export {
 } from './scoreboard.js';
 export {
   advanceIndicators,
-  previousValueId,
   type AdvanceIndicatorsParams,
   type AdvancedIndicators,
   type IndicatorSnapshots,
@@ -164,10 +162,6 @@ export { signalStep } from './signal-step.js';
 export { simulatedFillModel } from './wallet/fill-model.js';
 export { walletStep } from './wallet/wallet-step.js';
 export { STRATEGY_CONFIG_SCHEMA } from './strategy-config.schema.js';
-export {
-  collectIndicatorHorizons,
-  computeStrategyLeadInCandles,
-  createStrategySignalState,
-} from './strategy-horizons.js';
+export { computeStrategyLeadInCandles, createStrategySignalState } from './strategy-horizons.js';
 export type * from './strategy-config.types.js';
 export * from './strategy-engine.error.js';

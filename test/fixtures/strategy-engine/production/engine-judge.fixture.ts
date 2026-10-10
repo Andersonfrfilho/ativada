@@ -111,6 +111,17 @@ function judgeEngineApi(api: EngineApi): JudgeVerdict {
   ) {
     return { stage: JUDGE_STAGE.ENGINE_API, detail: 'o passo aceitou estratégia adulterada' };
   }
+  const { wallet } = input.state;
+  const halvesApart = {
+    ...input.state,
+    wallet: { ...wallet, lastCandleOpenTime: (wallet.lastCandleOpenTime ?? 0) - 1 },
+  };
+  if (codeOf(() => engine.step({ ...input, state: halvesApart })) !== 'invalid_state') {
+    return {
+      stage: JUDGE_STAGE.ENGINE_API,
+      detail: 'o passo aceitou as metades em candles diferentes',
+    };
+  }
   const report = {
     kind: 'order_rejected',
     reportId: 'report-1',
