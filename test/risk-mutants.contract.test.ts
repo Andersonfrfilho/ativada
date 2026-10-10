@@ -16,6 +16,7 @@ import { removeMutants } from './fixtures/strategy-engine/signal/signal-mutation
 const MUTANT_TIMEOUT_MILLISECONDS = 60_000;
 const BOUND = 'risk/quantity-bound.ts';
 const TRADE_COST = 'risk/trade-cost.ts';
+const MONEY = 'money.ts';
 const POSITION_SIZE = 'risk/position-size.ts';
 const PROTECTIVE = 'risk/protective-prices.ts';
 
@@ -43,8 +44,8 @@ const SOURCE_MUTANTS: readonly Mutant[] = [
     edits: [
       ...edit(
         BOUND,
-        "import { floorToIncrement } from './rounding.js';",
-        "import { ceilToIncrement } from './rounding.js';",
+        "import { floorToIncrement } from '../money.js';",
+        "import { ceilToIncrement } from '../money.js';",
       ),
       ...edit(
         BOUND,
@@ -104,7 +105,7 @@ const SOURCE_MUTANTS: readonly Mutant[] = [
   {
     name: 'MONEY_DEBIT_ROUNDED_DOWN',
     edits: edit(
-      TRADE_COST,
+      MONEY,
       'return roundMoney({ value, direction: ROUNDING_DIRECTION.UP });',
       'return roundMoney({ value, direction: ROUNDING_DIRECTION.DOWN });',
     ),

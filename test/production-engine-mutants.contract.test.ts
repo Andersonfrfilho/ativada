@@ -17,6 +17,7 @@ import { removeMutants } from './fixtures/strategy-engine/signal/signal-mutation
 const MUTANT_TIMEOUT_MILLISECONDS = 120_000;
 const MUTANT_FLOW_COUNT = 400;
 const PRICING = 'wallet/wallet-pricing.ts';
+const MONEY = 'money.ts';
 const FILL_MODEL = 'wallet/fill-model.ts';
 const LIMIT_FILL = 'wallet/limit-fill.ts';
 const PROTECTIVE = 'wallet/protective-exit.ts';
@@ -71,8 +72,8 @@ const FILL_MUTANTS: readonly Mutant[] = [
     name: 'FEE_IGNORED',
     edits: edit(
       PRICING,
-      'notional.times(toEngineDecimal(parameters.feeRate))',
-      'notional.times(0)',
+      'return computeTradeFee(notional, toEngineDecimal(parameters.feeRate));',
+      'return computeTradeFee(notional.times(0), toEngineDecimal(parameters.feeRate));',
     ),
     stage: JUDGE_STAGE.DIFFERENTIAL,
   },
@@ -234,18 +235,18 @@ const FILL_MUTANTS: readonly Mutant[] = [
   {
     name: 'SELL_CREDIT_ROUNDED_UP',
     edits: edit(
-      PRICING,
-      'return moneyDown(notional).minus(tradeFee(notional, parameters));',
-      'return moneyUp(notional).minus(tradeFee(notional, parameters));',
+      MONEY,
+      'return moneyDown(notional).minus(computeTradeFee(notional, feeRate));',
+      'return moneyUp(notional).minus(computeTradeFee(notional, feeRate));',
     ),
     stage: JUDGE_STAGE.DIFFERENTIAL,
   },
   {
     name: 'BUY_DEBIT_ROUNDED_DOWN',
     edits: edit(
-      PRICING,
-      'return moneyUp(notional).plus(tradeFee(notional, parameters));',
-      'return moneyDown(notional).plus(tradeFee(notional, parameters));',
+      MONEY,
+      'return moneyUp(notional).plus(computeTradeFee(notional, feeRate));',
+      'return moneyDown(notional).plus(computeTradeFee(notional, feeRate));',
     ),
     stage: JUDGE_STAGE.DIFFERENTIAL,
   },

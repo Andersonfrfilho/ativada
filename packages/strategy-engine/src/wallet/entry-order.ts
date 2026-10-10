@@ -12,8 +12,9 @@ import {
   ORDER_STATUS,
   type OrderEventReason,
 } from '../engine-vocabulary.constant.js';
+import { moneyDown } from '../money.js';
 import { recordOrder, takeKey } from './wallet-orders.js';
-import { moneyDown, tickDown } from './wallet-pricing.js';
+import { tickDown } from './wallet-pricing.js';
 import type { WalletContext, WalletDraft } from './wallet.types.js';
 
 const NO_FILL = '0';

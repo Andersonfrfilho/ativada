@@ -8,7 +8,7 @@ import {
   type SizingConstraint,
 } from './risk.constant.js';
 import type { PositionSizeParams } from './risk.types.js';
-import { floorToIncrement } from './rounding.js';
+import { floorToIncrement } from '../money.js';
 
 const ONE = new EngineDecimal(1);
 const ZERO = new EngineDecimal(0);

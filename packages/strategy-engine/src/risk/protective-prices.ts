@@ -2,7 +2,7 @@
 import { EngineDecimal, formatEngineDecimal } from '../engine-decimal.js';
 import { PROTECTIVE_REFUSAL, type ProtectiveRefusal } from './risk.constant.js';
 import type { ComputeProtectivePricesParams, ProtectivePricesResult } from './risk.types.js';
-import { ceilToIncrement, floorToIncrement } from './rounding.js';
+import { ceilToIncrement, floorToIncrement } from '../money.js';
 
 const ONE = new EngineDecimal(1);
 const ZERO = new EngineDecimal(0);

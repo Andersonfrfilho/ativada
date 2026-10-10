@@ -1,57 +1,35 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { EngineDecimal, toEngineDecimal, type EngineDecimalValue } from '../engine-decimal.js';
 import {
-  EngineDecimal,
-  ROUNDING_DIRECTION,
-  roundMoney,
-  roundToIncrement,
-  toEngineDecimal,
-  type EngineDecimalValue,
-} from '../engine-decimal.js';
+  ceilToIncrement,
+  computeBuyDebit,
+  computeSellCredit,
+  computeTradeFee,
+  floorToIncrement,
+} from '../money.js';
 import type { RunParameters } from '../strategy-config.types.js';
 
 const ONE = new EngineDecimal(1);
 const ZERO = new EngineDecimal(0);
 
-// Todo arredondamento é contra o usuário (ADR 0002 §e): preço de compra para cima no tick, de venda
-// para baixo; quantidade para baixo no passo; débito para cima, crédito para baixo; taxa para cima.
+// Preço ao tick e quantidade ao passo dos parâmetros da execução; as contas de dinheiro vivem em `money.ts`.
 export function tickUp(value: EngineDecimalValue, parameters: RunParameters): EngineDecimalValue {
-  return roundToIncrement({
-    value,
-    increment: toEngineDecimal(parameters.tickSize),
-    direction: ROUNDING_DIRECTION.UP,
-  });
+  return ceilToIncrement(value, parameters.tickSize);
 }
 
 export function tickDown(value: EngineDecimalValue, parameters: RunParameters): EngineDecimalValue {
-  return roundToIncrement({
-    value,
-    increment: toEngineDecimal(parameters.tickSize),
-    direction: ROUNDING_DIRECTION.DOWN,
-  });
+  return floorToIncrement(value, parameters.tickSize);
 }
 
 export function stepDown(value: EngineDecimalValue, parameters: RunParameters): EngineDecimalValue {
-  return roundToIncrement({
-    value,
-    increment: toEngineDecimal(parameters.quantityStep),
-    direction: ROUNDING_DIRECTION.DOWN,
-  });
+  return floorToIncrement(value, parameters.quantityStep);
 }
 
-export function moneyUp(value: EngineDecimalValue): EngineDecimalValue {
-  return roundMoney({ value, direction: ROUNDING_DIRECTION.UP });
-}
-
-export function moneyDown(value: EngineDecimalValue): EngineDecimalValue {
-  return roundMoney({ value, direction: ROUNDING_DIRECTION.DOWN });
-}
-
-// `ceil8(valor × taxa)`, nas duas pontas, em USDT.
 export function tradeFee(
   notional: EngineDecimalValue,
   parameters: RunParameters,
 ): EngineDecimalValue {
-  return moneyUp(notional.times(toEngineDecimal(parameters.feeRate)));
+  return computeTradeFee(notional, toEngineDecimal(parameters.feeRate));
 }
 
 // Compra a mercado: abertura + slippage, tick para cima.
@@ -87,14 +65,14 @@ export function buyDebit(
   notional: EngineDecimalValue,
   parameters: RunParameters,
 ): EngineDecimalValue {
-  return moneyUp(notional).plus(tradeFee(notional, parameters));
+  return computeBuyDebit(notional, toEngineDecimal(parameters.feeRate));
 }
 
 export function sellCredit(
   notional: EngineDecimalValue,
   parameters: RunParameters,
 ): EngineDecimalValue {
-  return moneyDown(notional).minus(tradeFee(notional, parameters));
+  return computeSellCredit(notional, toEngineDecimal(parameters.feeRate));
 }
 
 export type LiquidationParams = {
