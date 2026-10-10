@@ -50,6 +50,20 @@
       "when": 1791596324176,
       "tag": "0006_candles_open_close_range",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791617145379,
+      "tag": "0007_strategies_and_runs",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791617149587,
+      "tag": "0008_run_results_and_sentiment_observations",
+      "breakpoints": true
     }
   ]
 }

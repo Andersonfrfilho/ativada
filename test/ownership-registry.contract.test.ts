@@ -193,3 +193,61 @@ describe('ownership registry — export and deletion steps (ADR 0001 §h)', () =
     );
   });
 });
+
+describe('ownership registry — estratégias, execuções e resultados (T3.1)', () => {
+  const persistenceTables = [
+    'strategies',
+    'strategy_versions',
+    'runs',
+    'signals',
+    'orders',
+    'fills',
+    'positions',
+    'equity_points',
+    'run_commands',
+  ];
+  const deletionOrder = OWNED_TABLE_DELETION_ORDER.map(nameOf);
+
+  test('every persistence table is owned and exported by columns', () => {
+    for (const name of persistenceTables) {
+      expect(ownedNames).toContain(name);
+      const step = OWNED_TABLE_EXPORTS.find((entry) => nameOf(entry.table) === name);
+      expect({ name, mode: step?.mode }).toStrictEqual({
+        name,
+        mode: OWNED_TABLE_EXPORT_MODE.COLUMNS,
+      });
+    }
+  });
+
+  test('sentiment_observations is public data without an owner', () => {
+    expect(unownedPublicNames).toContain('sentiment_observations');
+    expect(ownedNames).not.toContain('sentiment_observations');
+  });
+
+  test('results are deleted before runs, runs before versions, versions before strategies', () => {
+    const resultTables = [
+      'equity_points',
+      'run_commands',
+      'fills',
+      'positions',
+      'orders',
+      'signals',
+    ];
+    for (const name of resultTables) {
+      expect(deletionOrder.indexOf(name)).toBeLessThan(deletionOrder.indexOf('runs'));
+    }
+    expect(deletionOrder.indexOf('runs')).toBeLessThan(deletionOrder.indexOf('strategy_versions'));
+    expect(deletionOrder.indexOf('strategy_versions')).toBeLessThan(
+      deletionOrder.indexOf('strategies'),
+    );
+  });
+
+  test('the export carries neither the technical engine state nor the owner id', () => {
+    const exported = OWNED_TABLE_EXPORTS.filter((entry) =>
+      persistenceTables.includes(nameOf(entry.table)),
+    ).flatMap((entry) => (entry.mode === OWNED_TABLE_EXPORT_MODE.COLUMNS ? entry.columns : []));
+    expect(exported).not.toContain('engineState');
+    expect(exported).not.toContain('userId');
+    expect(exported.length).toBeGreaterThan(0);
+  });
+});
