@@ -13,14 +13,21 @@ import {
   STREAM_TICKET_TIME_TO_LIVE_MILLISECONDS,
 } from './stream-ticket.constant.js';
 
+// O que o ticket prova: quem pediu, o assunto do token (para reconferir a conta) e até quando o token dele vale.
+export type StreamTicketClaims = {
+  readonly userId: UserId;
+  readonly keycloakSubject: string;
+  readonly sessionExpiresAtMilliseconds: number;
+};
+
 export type IssuedStreamTicket = {
   readonly ticket: string;
   readonly expiresInSeconds: number;
 };
 
 export type StreamTicketStore = {
-  readonly issueTicket: (userId: UserId) => IssuedStreamTicket;
-  readonly consumeTicket: (ticket: string) => UserId | undefined;
+  readonly issueTicket: (claims: StreamTicketClaims) => IssuedStreamTicket;
+  readonly consumeTicket: (ticket: string) => StreamTicketClaims | undefined;
 };
 
 export type StreamTicketStoreOptions = {
@@ -30,7 +37,7 @@ export type StreamTicketStoreOptions = {
 };
 
 type PendingTicket = {
-  readonly userId: UserId;
+  readonly claims: StreamTicketClaims;
   readonly expiresAtMilliseconds: number;
 };
 
@@ -42,21 +49,21 @@ export function createStreamTicketStore(options: StreamTicketStoreOptions): Stre
     isIdle: (pending) => pending.expiresAtMilliseconds <= nowMilliseconds(),
   });
 
-  function issueTicket(userId: UserId): IssuedStreamTicket {
+  function issueTicket(claims: StreamTicketClaims): IssuedStreamTicket {
     const ticket = randomBytes(STREAM_TICKET_BYTES).toString(BASE64_URL_ENCODING);
     pendingTickets.set(hashSecret(ticket), {
-      userId,
+      claims,
       expiresAtMilliseconds: nowMilliseconds() + timeToLive,
     });
     return { ticket, expiresInSeconds: timeToLive / MILLISECONDS_PER_SECOND };
   }
 
-  function consumeTicket(ticket: string): UserId | undefined {
+  function consumeTicket(ticket: string): StreamTicketClaims | undefined {
     const key = hashSecret(ticket);
     const pending = pendingTickets.get(key);
     if (pending === undefined) return undefined;
     pendingTickets.delete(key);
-    return pending.expiresAtMilliseconds > options.now() ? pending.userId : undefined;
+    return pending.expiresAtMilliseconds > options.now() ? pending.claims : undefined;
   }
 
   return { issueTicket, consumeTicket };

@@ -18,15 +18,16 @@ import { createListAccountsUseCase } from './list-accounts.use-case.js';
 export type CreateAdminRouteDependenciesParams = {
   readonly identity: IdentityAdminClient;
   readonly database: DatabaseHandle;
+  readonly closeUserSockets: (userId: string) => void;
 };
 
 export function createAdminRouteDependencies(
   params: CreateAdminRouteDependenciesParams,
 ): AdminRouteDependencies {
-  const { identity, database } = params;
+  const { identity, database, closeUserSockets } = params;
   const accounts = createAdminAccountRepository(database);
   const audit = createAdminAuditRecorder(createAuditEventRepository(database));
-  const accountState = { accounts, identity, audit };
+  const accountState = { accounts, identity, audit, onAccountBlocked: closeUserSockets };
   return {
     inviteUser: createInviteUserUseCase({ identity, accounts, audit }),
     listAccounts: createListAccountsUseCase({ accounts, identity }),

@@ -21,6 +21,7 @@ function startApplication(environment: Environment): void {
   const application = createApplication({ environment, logger });
   const server = startServer({
     handler: application.handler,
+    stream: application.stream,
     host: environment.API_HOST,
     port: environment.API_PORT,
     reportUnexpectedError: (error) => logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { error }),

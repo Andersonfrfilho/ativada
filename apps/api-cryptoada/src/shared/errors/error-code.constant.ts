@@ -69,6 +69,14 @@ export const RUN_ERROR_CODE = {
   PERIOD_TOO_SHORT: 'PERIOD_TOO_SHORT',
 } as const;
 
+// Recusas do handshake do WebSocket (T4.4): todas respondem ANTES do upgrade, com o envelope de sempre.
+export const STREAM_ERROR_CODE = {
+  STREAM_UPGRADE_REQUIRED: 'STREAM_UPGRADE_REQUIRED',
+  STREAM_TICKET_INVALID: 'STREAM_TICKET_INVALID',
+  STREAM_UNAVAILABLE: 'STREAM_UNAVAILABLE',
+  STREAM_LIMIT_REACHED: 'STREAM_LIMIT_REACHED',
+} as const;
+
 export const TELEGRAM_ERROR_CODE = {
   TELEGRAM_WEBHOOK_REJECTED: 'TELEGRAM_WEBHOOK_REJECTED',
 } as const;

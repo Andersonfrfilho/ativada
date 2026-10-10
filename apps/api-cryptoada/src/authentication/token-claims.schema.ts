@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { z } from '@cryptoada/environment';
+import { MILLISECONDS_PER_SECOND, z } from '@cryptoada/environment';
 
 import { normalizeAuthenticationLevel } from './authentication-level.js';
 import {
@@ -15,6 +15,8 @@ export type VerifiedAccessToken = {
   readonly isEmailVerified: boolean;
   readonly authenticationLevel: AuthenticationLevel;
   readonly authenticationTime: number | undefined;
+  // Quando o access token vence (`exp`): o WebSocket nascido dele fecha nesse instante, a menos que o painel renove.
+  readonly expiresAtMilliseconds: number;
 };
 
 const KNOWN_ROLES: readonly string[] = Object.values(USER_ROLE);
@@ -35,6 +37,7 @@ export function createTokenClaimsSchema(
       realm_access: z.object({ roles: z.array(z.string()) }).optional(),
       acr: z.string().optional(),
       auth_time: z.number().int().optional(),
+      exp: z.number().int(),
     })
     .transform((claims): VerifiedAccessToken => ({
       subject: claims.sub,
@@ -42,5 +45,6 @@ export function createTokenClaimsSchema(
       isEmailVerified: claims.email_verified,
       authenticationLevel: normalizeAuthenticationLevel(claims.acr),
       authenticationTime: claims.auth_time,
+      expiresAtMilliseconds: claims.exp * MILLISECONDS_PER_SECOND,
     }));
 }

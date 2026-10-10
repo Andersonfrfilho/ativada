@@ -75,6 +75,13 @@ export const RATE_LIMIT_POLICY = {
     keyScope: RATE_LIMIT_KEY_SCOPE.CLIENT_ADDRESS,
     maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
+  STREAM_UPGRADE_CLIENT_ADDRESS: {
+    name: 'stream-upgrade-client-address',
+    limit: 30,
+    windowMilliseconds: ONE_MINUTE_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.CLIENT_ADDRESS,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
+  },
   TELEGRAM_LINK_CODE_ISSUE: {
     name: 'telegram-link-code-issue',
     limit: 10,

@@ -32,6 +32,8 @@ export type DeleteAccountDependencies = {
   readonly audit: AuditEventRepository;
   readonly identity: IdentityAdminClient;
   readonly now: () => number;
+  // Fecha os sockets abertos da conta (4403) assim que a marca de exclusão (passo 1) está gravada.
+  readonly onAccountDeleted?: ((userId: string) => void) | undefined;
 };
 
 // Passo 1 do ADR 0001 §h. Os passos 2 e 3 (apagar no Keycloak e purgar os dados) são do cron.
@@ -55,6 +57,7 @@ export function createDeleteAccountUseCase(
     });
     const deletedAt = await dependencies.deletions.markDeleted(input.scope);
     if (deletedAt === undefined) throw new ProfileNotFoundError();
+    dependencies.onAccountDeleted?.(userId);
     // Melhor esforço: o passo 2 do cron apaga o usuário e derruba as sessões de qualquer forma.
     await dependencies.identity.logoutUser(keycloakSubject);
     return { status: DELETION_STATUS.STARTED };

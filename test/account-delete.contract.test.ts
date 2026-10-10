@@ -112,6 +112,18 @@ describe('DELETE /v1/me — step 1', () => {
     expect(harness.telegram.linkCodes.has(userIdFromDatabase(OWNER_A.id))).toBe(true);
   });
 
+  test('closes the open sockets of the deleted account — only that one — once the deletion mark is written', async () => {
+    const response = await deleteWith(await harness.tokenFor(OWNER_A.subject));
+    expect(response.status).toBe(202);
+    expect(harness.closedSockets).toStrictEqual([OWNER_A.id]);
+  });
+
+  test('closes no socket when the deletion is refused', async () => {
+    const response = await deleteWith(await harness.tokenWithoutAuthTime(OWNER_A.subject));
+    expect(response.status).toBe(403);
+    expect(harness.closedSockets).toStrictEqual([]);
+  });
+
   test('still answers 202 when the session cannot be ended in Keycloak', async () => {
     harness.keycloak.admin.failing.add(ADMIN_OPERATION.LOGOUT);
     const response = await deleteWith(await harness.tokenFor(OWNER_A.subject));

@@ -3,7 +3,6 @@ import { createSessionRouteDependencies } from '../../apps/api-cryptoada/src/ses
 import { createSessionRoutes } from '../../apps/api-cryptoada/src/session/session.routes.js';
 import { createStreamTicketStore } from '../../apps/api-cryptoada/src/stream/stream-ticket-store.js';
 import type { StreamTicketStore } from '../../apps/api-cryptoada/src/stream/stream-ticket-store.js';
-import { createStreamTicketRoutes } from '../../apps/api-cryptoada/src/stream/stream-ticket.routes.js';
 import { createLocalJWKSet } from './jose.fixture.js';
 import { ALLOWED_ORIGIN, createApiHarness, type ApiHarness } from './api-harness.fixture.js';
 import {
@@ -14,7 +13,12 @@ import {
   startFakeKeycloak,
   type FakeKeycloak,
 } from './fake-keycloak.fixture.js';
+import { loadStreamApp } from './stream/stream-app.fixture.js';
 import { signTestToken } from './token-signing.fixture.js';
+
+// A rota do ticket vem do carregador que o teste de mutantes aponta para a cópia mutada (T4.4).
+const { ticketRoutes } = await loadStreamApp();
+const { createStreamTicketRoutes } = ticketRoutes;
 
 export const ALLOWED_REDIRECT_URI = `${ALLOWED_ORIGIN}/auth/callback`;
 export const SESSION_URL_PATH = '/v1/session';

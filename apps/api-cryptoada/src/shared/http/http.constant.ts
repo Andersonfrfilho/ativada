@@ -14,6 +14,7 @@ export const HTTP_HEADER = {
   RETRY_AFTER: 'Retry-After',
   SET_COOKIE: 'Set-Cookie',
   TRACE_ID: 'X-Trace-Id',
+  UPGRADE: 'Upgrade',
   VARY: 'Vary',
   WWW_AUTHENTICATE: 'WWW-Authenticate',
 } as const;

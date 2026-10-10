@@ -50,6 +50,7 @@ export type RouteAuthentication = {
   readonly scope: OwnerScope;
   readonly authenticationLevel: AuthenticationLevel;
   readonly authenticationTime: number | undefined;
+  readonly accessTokenExpiresAtMilliseconds: number;
 };
 
 function chargeClientAddress(
@@ -114,5 +115,6 @@ export async function authenticateRouteRequest(
     ...resolved,
     authenticationLevel: token.authenticationLevel,
     authenticationTime: token.authenticationTime,
+    accessTokenExpiresAtMilliseconds: token.expiresAtMilliseconds,
   };
 }

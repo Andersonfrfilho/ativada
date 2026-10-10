@@ -4,11 +4,24 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { createStreamTicketStore } from '../apps/api-cryptoada/src/stream/stream-ticket-store.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
 import { createSessionHarness, type SessionHarness } from './fixtures/session-harness.fixture.js';
-import { signTestToken } from './fixtures/token-signing.fixture.js';
+import { signTestToken, TEST_SUBJECT } from './fixtures/token-signing.fixture.js';
 
 const USER_ID = userIdFromDatabase('0192f3a1-7c4e-7b2a-9d3f-5e6a7b8c9d0e');
 const OTHER_USER_ID = userIdFromDatabase('0192f3a1-7c4e-7b2a-9d3f-5e6a7b8c9d0f');
 const TIME_TO_LIVE_MILLISECONDS = 30_000;
+const SESSION_EXPIRY = 9_999_999_999_999;
+
+function claimsOf(userId: typeof USER_ID): {
+  readonly userId: typeof USER_ID;
+  readonly keycloakSubject: string;
+  readonly sessionExpiresAtMilliseconds: number;
+} {
+  return {
+    userId,
+    keycloakSubject: `subject-of-${userId}`,
+    sessionExpiresAtMilliseconds: SESSION_EXPIRY,
+  };
+}
 
 describe('stream ticket store', () => {
   function createClockedStore(): {
@@ -26,40 +39,40 @@ describe('stream ticket store', () => {
 
   test('a ticket is consumed once and tied to its user', () => {
     const { store } = createClockedStore();
-    const { ticket, expiresInSeconds } = store.issueTicket(USER_ID);
+    const { ticket, expiresInSeconds } = store.issueTicket(claimsOf(USER_ID));
     expect(expiresInSeconds).toBe(30);
-    expect(store.consumeTicket(ticket)).toBe(USER_ID);
+    expect(store.consumeTicket(ticket)).toStrictEqual(claimsOf(USER_ID));
     expect(store.consumeTicket(ticket)).toBeUndefined();
   });
 
   test('tickets of different users are never mixed up', () => {
     const { store } = createClockedStore();
-    const first = store.issueTicket(USER_ID).ticket;
-    const second = store.issueTicket(OTHER_USER_ID).ticket;
-    expect(store.consumeTicket(second)).toBe(OTHER_USER_ID);
-    expect(store.consumeTicket(first)).toBe(USER_ID);
+    const first = store.issueTicket(claimsOf(USER_ID)).ticket;
+    const second = store.issueTicket(claimsOf(OTHER_USER_ID)).ticket;
+    expect(store.consumeTicket(second)?.userId).toBe(OTHER_USER_ID);
+    expect(store.consumeTicket(first)?.userId).toBe(USER_ID);
   });
 
   test('an unknown or empty ticket is refused', () => {
     const { store } = createClockedStore();
-    store.issueTicket(USER_ID);
+    store.issueTicket(claimsOf(USER_ID));
     expect(store.consumeTicket('unknown-ticket')).toBeUndefined();
     expect(store.consumeTicket('')).toBeUndefined();
   });
 
   test('a ticket expires after 30 seconds and the attempt does not revive it', () => {
     const { store, advance } = createClockedStore();
-    const justInTime = store.issueTicket(USER_ID).ticket;
+    const justInTime = store.issueTicket(claimsOf(USER_ID)).ticket;
     advance(TIME_TO_LIVE_MILLISECONDS - 1);
-    expect(store.consumeTicket(justInTime)).toBe(USER_ID);
-    const late = store.issueTicket(USER_ID).ticket;
+    expect(store.consumeTicket(justInTime)?.userId).toBe(USER_ID);
+    const late = store.issueTicket(claimsOf(USER_ID)).ticket;
     advance(TIME_TO_LIVE_MILLISECONDS);
     expect(store.consumeTicket(late)).toBeUndefined();
   });
 
   test('tickets carry at least 128 bits of entropy and never repeat', () => {
     const { store } = createClockedStore();
-    const tickets = Array.from({ length: 500 }, () => store.issueTicket(USER_ID).ticket);
+    const tickets = Array.from({ length: 500 }, () => store.issueTicket(claimsOf(USER_ID)).ticket);
     expect(new Set(tickets).size).toBe(tickets.length);
     for (const ticket of tickets) {
       expect(Buffer.from(ticket, 'base64url').length).toBeGreaterThanOrEqual(16);
@@ -98,7 +111,13 @@ describe('POST /v1/stream/tickets', () => {
     expect(response.status).toBe(201);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(body.data.expiresInSeconds).toBe(30);
-    expect(harness.ticketStore.consumeTicket(body.data.ticket)).toBe(USER_ID);
+    const claims = harness.ticketStore.consumeTicket(body.data.ticket);
+    expect(claims?.userId).toBe(USER_ID);
+    expect(claims?.keycloakSubject).toBe(TEST_SUBJECT);
+    // O socket morre com o token que gerou o ticket: o `exp` do token (5 min) entra no ticket.
+    const lifetime = (claims?.sessionExpiresAtMilliseconds ?? 0) - Date.now();
+    expect(lifetime).toBeGreaterThan(290_000);
+    expect(lifetime).toBeLessThanOrEqual(300_000);
     expect(harness.ticketStore.consumeTicket(body.data.ticket)).toBeUndefined();
   });
 

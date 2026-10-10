@@ -8,15 +8,21 @@ import { CHAT_FAILURE_LIMIT } from '../apps/api-cryptoada/src/telegram/telegram.
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
 
 const USER_ID = userIdFromDatabase('0192f3a1-7c4e-7b2a-9d3f-5e6a7b8c9d0e');
+const CLAIMS = {
+  userId: USER_ID,
+  keycloakSubject: 'subject-bounded',
+  sessionExpiresAtMilliseconds: Number.MAX_SAFE_INTEGER,
+};
 const CEILING = 3;
 
 describe('stream ticket store ceiling', () => {
   test('keeps at most the configured tickets and drops the oldest one first', () => {
     const store = createStreamTicketStore({ now: () => 0, maximumEntries: CEILING });
-    const tickets = Array.from({ length: CEILING + 2 }, () => store.issueTicket(USER_ID).ticket);
+    const tickets = Array.from({ length: CEILING + 2 }, () => store.issueTicket(CLAIMS).ticket);
     expect(store.consumeTicket(tickets[0] ?? '')).toBeUndefined();
     expect(store.consumeTicket(tickets[1] ?? '')).toBeUndefined();
-    for (const ticket of tickets.slice(2)) expect(store.consumeTicket(ticket)).toBe(USER_ID);
+    for (const ticket of tickets.slice(2))
+      expect(store.consumeTicket(ticket)?.userId).toBe(USER_ID);
   });
 
   test('expired tickets are dropped before a live one', () => {
@@ -26,13 +32,13 @@ describe('stream ticket store ceiling', () => {
       maximumEntries: CEILING,
       timeToLiveMilliseconds: 1_000,
     });
-    const expired = store.issueTicket(USER_ID).ticket;
+    const expired = store.issueTicket(CLAIMS).ticket;
     now = 900;
-    const live = [store.issueTicket(USER_ID).ticket, store.issueTicket(USER_ID).ticket];
+    const live = [store.issueTicket(CLAIMS).ticket, store.issueTicket(CLAIMS).ticket];
     now = 1_000;
-    store.issueTicket(USER_ID);
+    store.issueTicket(CLAIMS);
     expect(store.consumeTicket(expired)).toBeUndefined();
-    for (const ticket of live) expect(store.consumeTicket(ticket)).toBe(USER_ID);
+    for (const ticket of live) expect(store.consumeTicket(ticket)?.userId).toBe(USER_ID);
   });
 });
 

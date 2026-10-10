@@ -55,10 +55,24 @@ describe('POST /v1/admin/accounts/:accountId/block', () => {
     });
     expect(harness.events).toStrictEqual([
       `database:blocked:${MEMBER_ID}`,
+      `sockets:closed:${MEMBER_ID}`,
       `keycloak:enabled=false:${MEMBER_SUBJECT}`,
     ]);
     expect(storedUser(MEMBER_ID).blockedAt).toBeInstanceOf(Date);
     expect(harness.keycloak.admin.users.get(MEMBER_SUBJECT)?.enabled).toBe(false);
+  });
+
+  test('closes the open sockets of the blocked account — even when Keycloak is down — and never on a refused block', async () => {
+    harness.keycloak.admin.failing.add(ADMIN_OPERATION.READ_USER);
+    const blocked = await block(MEMBER_ID);
+    expect(blocked.status).toBe(202);
+    expect(harness.events).toContain(`sockets:closed:${MEMBER_ID}`);
+    harness.events.length = 0;
+    const refused = await block(ADMIN_ID);
+    expect(refused.status).toBe(409);
+    const unknown = await block(UNKNOWN_ACCOUNT_ID);
+    expect(unknown.status).toBe(404);
+    expect(harness.events.filter((event) => event.startsWith('sockets:'))).toStrictEqual([]);
   });
 
   test('a blocked account is answered 403 ACCOUNT_BLOCKED on the next request', async () => {

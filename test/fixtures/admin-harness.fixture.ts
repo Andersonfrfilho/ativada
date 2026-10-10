@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createAdminAuditRecorder } from '../../apps/api-cryptoada/src/admin/admin-audit-recorder.js';
-import { createAdminRoutes } from '../../apps/api-cryptoada/src/admin/admin.routes.js';
 import {
   createBlockAccountUseCase,
   createUnblockAccountUseCase,
 } from '../../apps/api-cryptoada/src/admin/block-account.use-case.js';
+import { createAdminAuditRecorder } from '../../apps/api-cryptoada/src/admin/admin-audit-recorder.js';
+import { createAdminRoutes } from '../../apps/api-cryptoada/src/admin/admin.routes.js';
 import { createInviteUserUseCase } from '../../apps/api-cryptoada/src/admin/invite-user.use-case.js';
 import { createListAccountsUseCase } from '../../apps/api-cryptoada/src/admin/list-accounts.use-case.js';
 import { createIdentityHttp } from '../../packages/identity-admin/src/identity-http.js';
@@ -21,6 +21,7 @@ import { createOwnerScope } from '../../packages/database/src/ownership/owner-sc
 import { userIdFromDatabase } from '../../packages/database/src/ownership/user-id.js';
 import { USER_RESOLUTION_STATUS } from '../../packages/database/src/users/user-resolution.constant.js';
 import { createApiHarness, type ApiHarness } from './api-harness.fixture.js';
+
 import {
   FAKE_SERVICE_CLIENT_ID,
   FAKE_SERVICE_CLIENT_SECRET,
@@ -126,7 +127,13 @@ export async function createAdminHarness(): Promise<AdminHarness> {
     invitationRedirectUri: REDIRECT_URI,
   });
   const audit = createAdminAuditRecorder(store.audit);
-  const accountState = { accounts: store.accounts, identity, audit };
+  const accountState = {
+    accounts: store.accounts,
+    identity,
+    audit,
+    // O fechamento dos sockets da conta bloqueada (T4.4): entra na ordem dos efeitos, depois do banco e antes do Keycloak.
+    onAccountBlocked: (accountId: string): void => void events.push(`sockets:closed:${accountId}`),
+  };
   const subjectToUserId: Record<string, string> = Object.fromEntries(
     ACCOUNTS.map((account) => [account.subject, account.id]),
   );

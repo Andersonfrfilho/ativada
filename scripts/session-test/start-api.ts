@@ -22,6 +22,7 @@ export function startApi(): RunningApi {
   application.start().catch((error: unknown) => logger.error('unexpected error', { error }));
   const server = startServer({
     handler: application.handler,
+    stream: application.stream,
     host: environment.API_HOST,
     port: environment.API_PORT,
     reportUnexpectedError: (error) => logger.error('unexpected error', { error }),

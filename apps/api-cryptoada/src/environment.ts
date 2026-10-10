@@ -20,6 +20,11 @@ import {
   runExecutionEnvironmentShape,
   walkForwardThreadsSchema,
 } from './run-execution-environment.js';
+import {
+  isPongTimeoutAfterPingInterval,
+  PONG_AFTER_PING_EXPECTATION,
+  streamEnvironmentShape,
+} from './stream/stream-environment.js';
 
 const API_PORT_EXPECTATION = 'inteiro entre 1024 e 65535';
 const ORIGIN_LIST_EXPECTATION =
@@ -128,6 +133,7 @@ export const environmentSchema = z
     TELEGRAM_API_BASE_URL: httpUrlSchema.default(DEFAULT_TELEGRAM_API_BASE_URL),
     ...runQueueEnvironmentShape,
     ...runExecutionEnvironmentShape,
+    ...streamEnvironmentShape,
   })
   .refine(
     (values) =>
@@ -137,6 +143,10 @@ export const environmentSchema = z
   .refine(isHeartbeatTimeoutAfterInterval, {
     error: HEARTBEAT_ORDER_EXPECTATION,
     path: ['RUN_HEARTBEAT_TIMEOUT_SECONDS'],
+  })
+  .refine(isPongTimeoutAfterPingInterval, {
+    error: PONG_AFTER_PING_EXPECTATION,
+    path: ['STREAM_PONG_TIMEOUT_SECONDS'],
   })
   .superRefine((values, context) => {
     checkProductionRules(values, PRODUCTION_PROFILE, context);

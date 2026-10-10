@@ -15,10 +15,14 @@ export function createStreamTicketRoutes(ticketStore: StreamTicketStore): readon
       access: ROUTE_ACCESS.USER,
       rateLimitPolicy: RATE_LIMIT_POLICY.STREAM_TICKET_CLIENT_ADDRESS,
       documentation: STREAM_TICKET_DOCUMENTATION,
-      handler: ({ authenticatedUser }) =>
+      handler: ({ authenticatedUser, accessTokenExpiresAtMilliseconds }) =>
         Promise.resolve({
           status: HTTP_STATUS.CREATED,
-          data: ticketStore.issueTicket(authenticatedUser.userId),
+          data: ticketStore.issueTicket({
+            userId: authenticatedUser.userId,
+            keycloakSubject: authenticatedUser.keycloakSubject,
+            sessionExpiresAtMilliseconds: accessTokenExpiresAtMilliseconds,
+          }),
         }),
     },
   ];

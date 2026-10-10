@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createAccountRoutes } from '../../apps/api-cryptoada/src/account/account.routes.js';
 import { createDeleteAccountUseCase } from '../../apps/api-cryptoada/src/account/delete-account.use-case.js';
+import { createAccountRoutes } from '../../apps/api-cryptoada/src/account/account.routes.js';
 import { createExportAccountUseCase } from '../../apps/api-cryptoada/src/account/export-account.use-case.js';
 import { createProfileRoutes } from '../../apps/api-cryptoada/src/profile/profile.routes.js';
 import {
@@ -12,6 +12,7 @@ import { createOwnerScope } from '../../packages/database/src/ownership/owner-sc
 import { userIdFromDatabase } from '../../packages/database/src/ownership/user-id.js';
 import { USER_RESOLUTION_STATUS } from '../../packages/database/src/users/user-resolution.constant.js';
 import { createApiHarness, type ApiHarness } from './api-harness.fixture.js';
+
 import {
   FAKE_SERVICE_CLIENT_ID,
   FAKE_SERVICE_CLIENT_SECRET,
@@ -55,6 +56,8 @@ export type AccountHarness = {
   readonly store: InMemoryAccountStore;
   readonly keycloak: FakeKeycloak;
   readonly events: string[];
+  // Contas cujos sockets abertos foram fechados (T4.4): a exclusão derruba o tempo real da conta na hora.
+  readonly closedSockets: string[];
   readonly tokenFor: (subject: string, authenticatedSecondsAgo?: number) => Promise<string>;
   readonly tokenWithoutAuthTime: (subject: string) => Promise<string>;
   readonly stop: () => Promise<void>;
@@ -71,6 +74,7 @@ function seedOwners(users: InMemoryUserStore, keycloak: FakeKeycloak): void {
 
 export async function createAccountHarness(): Promise<AccountHarness> {
   const events: string[] = [];
+  const closedSockets: string[] = [];
   const users = createInMemoryUserStore();
   const telegram = createInMemoryTelegramStore(users.users);
   const keycloak = startFakeKeycloak({
@@ -119,6 +123,7 @@ export async function createAccountHarness(): Promise<AccountHarness> {
           audit: store.audit,
           identity,
           now: () => Date.now(),
+          onAccountDeleted: (userId: string): void => void closedSockets.push(userId),
         }),
       }),
       ...createProfileRoutes({
@@ -135,6 +140,7 @@ export async function createAccountHarness(): Promise<AccountHarness> {
     store,
     keycloak,
     events,
+    closedSockets,
     tokenFor: (subject, authenticatedSecondsAgo = SECONDS_PER_MINUTE) =>
       signTestToken({
         key: api.key,

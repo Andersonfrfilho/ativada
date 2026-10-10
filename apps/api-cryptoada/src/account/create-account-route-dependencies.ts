@@ -15,12 +15,13 @@ export type CreateAccountRouteDependenciesParams = {
   readonly database: DatabaseHandle;
   readonly identity: IdentityAdminClient;
   readonly now: () => number;
+  readonly closeUserSockets: (userId: string) => void;
 };
 
 export function createAccountRouteDependencies(
   params: CreateAccountRouteDependenciesParams,
 ): AccountRouteDependencies {
-  const { database, identity, now } = params;
+  const { database, identity, now, closeUserSockets } = params;
   return {
     exportAccount: createExportAccountUseCase({
       exports: createAccountExportRepository(database),
@@ -32,6 +33,7 @@ export function createAccountRouteDependencies(
       audit: createAuditEventRepository(database),
       identity,
       now,
+      onAccountDeleted: closeUserSockets,
     }),
   };
 }

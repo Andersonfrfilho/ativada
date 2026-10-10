@@ -17,6 +17,9 @@ export type AccountStateDependencies = {
   readonly accounts: AdminAccountRepository;
   readonly identity: IdentityAdminClient;
   readonly audit: AdminAuditRecorder;
+  // Fecha os sockets abertos da conta (4403) logo depois de `blocked_at` gravado e ANTES do Keycloak: mesmo com o
+  // Keycloak fora do ar, o tempo real da conta bloqueada cai (ADR 0001 §e).
+  readonly onAccountBlocked?: ((accountId: AccountId) => void) | undefined;
 };
 
 export type AccountStateInput = {
@@ -61,6 +64,7 @@ export function createBlockAccountUseCase(
     await assertBlockable(dependencies, { ...input, account });
     const blocked = await accounts.markBlocked(input.accountId);
     if (blocked === undefined) throw new AccountNotFoundError();
+    dependencies.onAccountBlocked?.(input.accountId);
     const disabled = await identity.setEnabled({
       userId: account.keycloakSubject,
       isEnabled: false,
