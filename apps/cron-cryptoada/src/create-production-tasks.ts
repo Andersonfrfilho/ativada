@@ -3,8 +3,9 @@ import {
   createAuditRetentionRepository,
   createBlockedAccountRepository,
   createCandleRepository,
+  createSentimentRepository,
 } from '@cryptoada/database';
-import { createMarketDataClient } from '@cryptoada/market-data';
+import { createFearGreedClient, createMarketDataClient } from '@cryptoada/market-data';
 
 import {
   createProductionIdentityAdmin,
@@ -15,6 +16,7 @@ import { createReconcileBlockedAccountsTask } from './accounts/reconcile-blocked
 import { createExpireAuditEventsTask } from './audit/expire-audit-events.task.js';
 import { TASK_NAME } from './cron.constant.js';
 import { createBackfillCandlesTask } from './market/backfill-candles.task.js';
+import { createSyncFearGreedTask } from './market/sync-fear-greed.task.js';
 import type { CronTask } from './run-cron-tasks.js';
 import { selectCronTasks } from './select-cron-tasks.js';
 
@@ -48,6 +50,15 @@ export function createProductionTasks(params: CreatePurgeTaskParams): readonly C
         symbols: environment.MARKET_SYMBOLS,
         timeframes: environment.MARKET_TIMEFRAMES,
         years: environment.BACKFILL_YEARS,
+      }),
+    },
+    {
+      name: TASK_NAME.SYNC_FEAR_GREED,
+      run: createSyncFearGreedTask({
+        repository: createSentimentRepository(database),
+        client: createFearGreedClient({ baseUrl: environment.FEAR_GREED_API_URL }),
+        logger,
+        refreshDays: environment.FEAR_GREED_REFRESH_DAYS,
       }),
     },
   ];

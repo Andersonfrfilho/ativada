@@ -63,7 +63,8 @@ Um sistema que, sobre preço real de mercado:
 - Timeframes `15m`, `1h`, `4h`, `1d`.
 - Backfill de pelo menos 2 anos por par e timeframe, retomável.
 - Detecção e preenchimento de lacunas; candle aberto nunca é gravado como fechado.
-- Índice Fear & Greed diário (alternative.me) como dado opcional.
+- Índice Fear & Greed diário (alternative.me, API pública sem chave) como dado opcional.
+- Atribuição obrigatória (termos da alternative.me): onde o índice aparecer, exibir "Fear & Greed Index por alternative.me" com link para https://alternative.me/crypto/fear-and-greed-index/.
 
 ### RF02 — Indicadores
 Médias (SMA/EMA), MACD, Donchian, RSI, Bandas de Bollinger, z-score, VWAP, OBV, ADX e ATR, todos

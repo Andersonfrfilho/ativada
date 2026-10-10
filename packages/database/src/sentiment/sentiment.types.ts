@@ -15,4 +15,6 @@ export type FindFearGreedParams = {
 export type SentimentRepository = {
   readonly upsertFearGreed: (entries: readonly FearGreedEntry[]) => Promise<void>;
   readonly findFearGreed: (params: FindFearGreedParams) => Promise<readonly FearGreedEntry[]>;
+  // Data mais recente já gravada; `undefined` quando a tabela está vazia.
+  readonly findLatestDate: () => Promise<string | undefined>;
 };

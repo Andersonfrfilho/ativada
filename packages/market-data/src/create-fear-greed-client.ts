@@ -1,5 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { FearGreedClient, FearGreedClientSettings } from './fear-greed.types.js';
+import type {
+  FearGreedClient,
+  FearGreedClientSettings,
+  FearGreedPoint,
+} from './fear-greed.types.js';
 import { parseFearGreedResponse } from './fear-greed.schema.js';
 import {
   FEAR_GREED_API_URL,
@@ -24,7 +28,7 @@ export function createFearGreedClient(clientSettings: FearGreedClientSettings): 
   const executor = createRequestExecutor(settings, NO_WEIGHT_GATE, FEAR_GREED_SOURCE_NAME);
 
   return {
-    fetchFearGreed: async (params) => {
+    fetchFearGreed: async (params): Promise<readonly FearGreedPoint[]> => {
       if (!Number.isSafeInteger(params.limit) || params.limit < 0)
         throw new MarketDataInvalidRequestError('limit deve ser um inteiro maior ou igual a 0.');
       const url = new URL(settings.baseUrl);

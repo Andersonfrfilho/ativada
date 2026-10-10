@@ -104,7 +104,7 @@ Cada task fecha com: `bun run typecheck` + testes da área + commit isolado + ev
 |---|---|---|
 | T5.1 | App React 19 + Vite PWA, layout, tema claro/escuro, aviso permanente de simulação, login pelo Keycloak (PKCE) e sessão pelo *token handler* (proxy em `/v1`, uma renovação por vez — ADR 0001 §a) | Build verde; aviso presente em todas as rotas; rota sem sessão leva ao login |
 | T5.1b | Tela de conta: preferências, vínculo do Telegram, exportar e apagar conta | E2E |
-| T5.2 | Visão geral (referência: `docs/preview/dashboard.html`) | Smoke Playwright com dados de seed |
+| T5.2 | Visão geral (referência: `docs/preview/dashboard.html`); o Fear & Greed exibe "Fear & Greed Index por alternative.me" com link (RF01, plan D14) | Smoke Playwright com dados de seed, incluindo o crédito e o link |
 | T5.3 | Backtests: criar, listar, comparar versões | E2E |
 | T5.4 | Estratégias: editar parâmetros gera versão nova | E2E |
 | T5.5 | Alertas: histórico e tempo real | E2E com WS |

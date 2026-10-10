@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, asc, gte, lt, sql } from 'drizzle-orm';
+import { and, asc, gte, lt, max, sql } from 'drizzle-orm';
 
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import { sentimentDaily } from '../schema/sentiment-daily.schema.js';
@@ -38,6 +38,12 @@ export function createSentimentRepository(handle: DatabaseHandle): SentimentRepo
         fearGreed: row.fearGreed,
         classification: row.classification ?? undefined,
       }));
+    },
+    findLatestDate: async (): Promise<string | undefined> => {
+      const [row] = await database
+        .select({ latest: max(sentimentDaily.date) })
+        .from(sentimentDaily);
+      return row?.latest ?? undefined;
     },
   };
 }

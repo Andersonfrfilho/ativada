@@ -13,7 +13,12 @@ import {
 import { marketEnvironmentShape } from './market/market-environment.js';
 
 const PRODUCTION_PROFILE: ProductionProfile = {
-  urlVariables: ['KEYCLOAK_TOKEN_URL', 'KEYCLOAK_ADMIN_API_URL', 'BINANCE_BASE_URL'],
+  urlVariables: [
+    'KEYCLOAK_TOKEN_URL',
+    'KEYCLOAK_ADMIN_API_URL',
+    'BINANCE_BASE_URL',
+    'FEAR_GREED_API_URL',
+  ],
   secretVariables: ['KEYCLOAK_SERVICE_CLIENT_SECRET'],
   databaseUrlVariable: 'DATABASE_URL',
 };
