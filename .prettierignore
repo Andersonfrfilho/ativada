@@ -7,3 +7,4 @@ dist
 coverage
 realm
 .omc
+test/fixtures/strategy-engine/market
