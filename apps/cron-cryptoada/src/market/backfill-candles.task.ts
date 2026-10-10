@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { MILLISECONDS_PER_SECOND } from '@cryptoada/environment';
+import { MILLISECONDS_PER_SECOND, readErrorName } from '@cryptoada/environment';
 import { MarketDataBannedError, type Timeframe } from '@cryptoada/market-data';
 
 import { backfillPair, type BackfillPair, type BackfillPairDependencies } from './backfill-pair.js';
@@ -68,7 +68,7 @@ export function createBackfillCandlesTask(
         dependencies.logger.error(BACKFILL_LOG.PAIR_FAILED, {
           symbol: pair.symbol,
           timeframe: pair.timeframe,
-          errorName: error instanceof Error ? error.name : 'UnknownError',
+          errorName: readErrorName(error),
         });
       }
     }

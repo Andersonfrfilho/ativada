@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { readPostgresErrorCode } from '@cryptoada/database';
+import { readErrorName } from '@cryptoada/environment';
 
 import { EXIT_CODE, NO_ERROR_CODE, type ExitCode } from './cron.constant.js';
 import type { CronLogger } from './logging/cron-logger.js';
@@ -17,7 +18,7 @@ async function runTask(task: CronTask, logger: CronLogger): Promise<ExitCode> {
     logger.info(`${task.name} finished`, summary);
     return (summary.failures ?? 0) > 0 ? EXIT_CODE.FAILURE : EXIT_CODE.SUCCESS;
   } catch (error: unknown) {
-    const errorName = error instanceof Error ? error.name : 'UnknownError';
+    const errorName = readErrorName(error);
     const errorCode = readPostgresErrorCode(error) ?? NO_ERROR_CODE;
     logger.error(`${task.name} failed`, { errorName, errorCode });
     return EXIT_CODE.FAILURE;

@@ -5,6 +5,7 @@ import {
   type PendingAccount,
   type PendingAccountCursor,
 } from '@cryptoada/database';
+import { readErrorName } from '@cryptoada/environment';
 import {
   IDENTITY_OUTCOME,
   mapInBatches,
@@ -86,7 +87,7 @@ async function runStep(
       dependencies.logger.error('purge step incomplete', { step: params.step, accountId });
     return isDone;
   } catch (error: unknown) {
-    const errorName = error instanceof Error ? error.name : 'UnknownError';
+    const errorName = readErrorName(error);
     const errorCode = readPostgresErrorCode(error) ?? NO_ERROR_CODE;
     dependencies.logger.error('purge step failed', {
       step: params.step,

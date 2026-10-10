@@ -25,13 +25,46 @@ import { createSyncFearGreedTask } from './market/sync-fear-greed.task.js';
 import type { CronTask } from './run-cron-tasks.js';
 import { selectCronTasks } from './select-cron-tasks.js';
 
-export function createProductionTasks(params: CreatePurgeTaskParams): readonly CronTask[] {
+type ServerClock = ReturnType<typeof createServerClock>;
+
+function createBackfillTask(params: CreatePurgeTaskParams, serverClock: ServerClock): CronTask {
   const { environment, database, logger } = params;
-  const serverClock = createServerClock({
-    baseUrl: environment.BINANCE_BASE_URL,
-    onWarning: (warning) => logger.warn(BACKFILL_LOG.SERVER_CLOCK_UNAVAILABLE, warning),
-  });
-  const tasks: readonly CronTask[] = [
+  return {
+    name: TASK_NAME.BACKFILL_CANDLES,
+    run: createBackfillCandlesTask({
+      repository: createCandleRepository(database),
+      client: createMarketDataClient({
+        baseUrl: environment.BINANCE_BASE_URL,
+        clock: serverClock,
+      }),
+      logger,
+      now: serverClock.now,
+      refreshClock: serverClock.refresh,
+      exchange: environment.MARKET_EXCHANGE,
+      symbols: environment.MARKET_SYMBOLS,
+      timeframes: environment.MARKET_TIMEFRAMES,
+      years: environment.BACKFILL_YEARS,
+    }),
+  };
+}
+
+function createFearGreedTask(params: CreatePurgeTaskParams): CronTask {
+  const { environment, database, logger } = params;
+  return {
+    name: TASK_NAME.SYNC_FEAR_GREED,
+    run: createSyncFearGreedTask({
+      repository: createSentimentRepository(database),
+      client: createFearGreedClient({ baseUrl: environment.FEAR_GREED_API_URL }),
+      logger,
+      refreshDays: environment.FEAR_GREED_REFRESH_DAYS,
+      now: () => Date.now(),
+    }),
+  };
+}
+
+function createAccountTasks(params: CreatePurgeTaskParams): readonly CronTask[] {
+  const { environment, database, logger } = params;
+  return [
     { name: TASK_NAME.PURGE_DELETED_ACCOUNTS, run: createProductionPurgeTask(params) },
     {
       name: TASK_NAME.RECONCILE_BLOCKED_ACCOUNTS,
@@ -48,33 +81,19 @@ export function createProductionTasks(params: CreatePurgeTaskParams): readonly C
         now: () => Date.now(),
       }),
     },
-    {
-      name: TASK_NAME.BACKFILL_CANDLES,
-      run: createBackfillCandlesTask({
-        repository: createCandleRepository(database),
-        client: createMarketDataClient({
-          baseUrl: environment.BINANCE_BASE_URL,
-          clock: serverClock,
-        }),
-        logger,
-        now: serverClock.now,
-        refreshClock: serverClock.refresh,
-        exchange: environment.MARKET_EXCHANGE,
-        symbols: environment.MARKET_SYMBOLS,
-        timeframes: environment.MARKET_TIMEFRAMES,
-        years: environment.BACKFILL_YEARS,
-      }),
-    },
-    {
-      name: TASK_NAME.SYNC_FEAR_GREED,
-      run: createSyncFearGreedTask({
-        repository: createSentimentRepository(database),
-        client: createFearGreedClient({ baseUrl: environment.FEAR_GREED_API_URL }),
-        logger,
-        refreshDays: environment.FEAR_GREED_REFRESH_DAYS,
-        now: () => Date.now(),
-      }),
-    },
+  ];
+}
+
+export function createProductionTasks(params: CreatePurgeTaskParams): readonly CronTask[] {
+  const { environment, logger } = params;
+  const serverClock = createServerClock({
+    baseUrl: environment.BINANCE_BASE_URL,
+    onWarning: (warning) => logger.warn(BACKFILL_LOG.SERVER_CLOCK_UNAVAILABLE, warning),
+  });
+  const tasks: readonly CronTask[] = [
+    ...createAccountTasks(params),
+    createBackfillTask(params, serverClock),
+    createFearGreedTask(params),
   ];
   return selectCronTasks({ tasks, names: environment.CRON_TASKS });
 }

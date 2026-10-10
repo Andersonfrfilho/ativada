@@ -3,10 +3,10 @@ import { describe, expect, test } from 'bun:test';
 
 import { EXIT_CODE } from '../apps/cron-cryptoada/src/cron.constant.js';
 import { computeBackfillWindow } from '../apps/cron-cryptoada/src/market/backfill-window.js';
-import { groupConsecutiveOpenTimes } from '../apps/cron-cryptoada/src/market/group-consecutive-open-times.js';
 import { createCronLogger } from '../apps/cron-cryptoada/src/logging/cron-logger.js';
 import { runCronTasks, type CronTask } from '../apps/cron-cryptoada/src/run-cron-tasks.js';
 import { selectCronTasks } from '../apps/cron-cryptoada/src/select-cron-tasks.js';
+import { groupConsecutiveOpenTimes } from '../packages/market-data/src/index.js';
 
 const NOW = Date.parse('2026-10-09T12:34:56.789Z');
 const ONE_HOUR = 3_600_000;
