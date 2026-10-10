@@ -13,13 +13,13 @@ Monorepo Bun (workspaces) em TypeScript estrito:
 
 ```
 apps/api-cryptoada/        Bun.serve — REST + WebSocket para o painel; backtest em worker_thread
-apps/worker-cryptoada/     consome o stream de candles da Binance, avalia estratégias, simula ordens
+apps/worker-cryptoada/     consome o stream de klines da Binance (grava velas fechadas, recupera lacunas), avalia estratégias, simula ordens
 apps/cron-cryptoada/       one-shot agendado: exclusão de contas (Keycloak + dados, ADR 0001 §h), backfill de histórico e índice Fear & Greed
 apps/frontend-cryptoada/   React 19 + Vite (PWA)
 packages/database/      Drizzle + migrations (cada uma com .rollback.sql) + cliente Bun.sql
 packages/environment/   validação Zod do env; `process.env` só em environment.ts (lint)
 packages/identity-admin/ cliente da Admin API do Keycloak (API e cron o compartilham)
-packages/market-data/    cliente REST de klines da Binance (Zod, peso, retry; cron e worker o compartilham)
+packages/market-data/    cliente REST de klines e stream WebSocket de klines da Binance (Zod, peso, retry, reconexão; cron e worker o compartilham)
 packages/strategy-engine/  indicadores, placar de votos, risco, corretora simulada, métricas —
                            o MESMO código roda no backtest e no ao vivo
 ```
@@ -40,7 +40,7 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `make down DOWN_FLAGS=--volumes` e `make up` (apaga os dados do Keycloak daquele ambiente). `make up`
   avisa quando o JSON é mais novo que o volume.
 - Alvos `*-test` (`migration-test`, `database-test`, `identity-test`, `session-test`, `admin-test`,
-  `lgpd-test`, `backfill-test`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
+  `lgpd-test`, `backfill-test`, `stream-test`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
   `TERM`: Ctrl-C não deixa container vivo. Dois deles ao mesmo tempo disputam o mesmo projeto; rode um por vez.
 - `make check` roda `bun test` com `env -i`: teste que precisa de variável a declara; o `export` do `env.dev`
   não chega a ele.
@@ -56,6 +56,15 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   (1 a 5, padrão 2) e `BINANCE_BASE_URL` (padrão `https://data-api.binance.vision`, https em produção).
   Lacuna que a Binance não tem sai no log como `unfillable`, sem laço de retry. `make backfill-test` prova
   isso com o cron real, Postgres descartável e uma Binance falsa local.
+- O worker (`apps/worker-cryptoada`) roda de verdade: abre o banco, consome o stream combinado de klines
+  (`createKlineStream`, `packages/market-data`) e grava só velas fechadas (`x === true`) com `upsertCandles`
+  (idempotente). Em CADA (re)conexão baixa pelo REST só as aberturas que faltam entre a última gravada e a última
+  vela fechada; par sem nenhum candle fica para o backfill do cron. Erro de gravação é logado (id opaco) e não
+  derruba o worker; SIGTERM/SIGINT encerram de forma graciosa (saída 0). Variáveis: `MARKET_EXCHANGE`,
+  `MARKET_SYMBOLS`, `MARKET_TIMEFRAMES`, `BINANCE_BASE_URL` (REST), `BINANCE_STREAM_URL` (padrão
+  `wss://data-stream.binance.vision`, `wss://` em produção) e `STREAM_STALE_SECONDS` (5 a 600, padrão 60: sem
+  mensagem por esse tempo, reconecta). `make stream-test` prova isso com o worker real em subprocesso, Postgres
+  descartável e uma Binance falsa local (REST + WebSocket em `packages/market-data/test-support/`).
 
 ## Regras que não se negociam
 

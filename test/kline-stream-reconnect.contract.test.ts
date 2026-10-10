@@ -113,6 +113,8 @@ describe('kline stream: reconnection', () => {
     await waitFor(() => recorder.delays.length >= 2, 'two failed attempts');
     await opened.stream.close();
     await opened.stream.close();
+    // Um pedido já enviado antes do close() ainda chega ao servidor: ele precisa assentar antes da prova.
+    await Bun.sleep(100);
     const attemptsAtClose = opened.stream.stats().attemptCount;
     harness.server.refuseConnections(false);
     await Bun.sleep(250);
