@@ -5,13 +5,12 @@ import { ENGINE_STATE_VERSION } from './engine.constant.js';
 import type { EngineState } from './engine-state.types.js';
 import {
   COUNT_SCHEMA,
+  HASH_SCHEMA,
   type IssueSink,
   reportIssue,
   TIME_SCHEMA,
   WALLET_STATE_SCHEMA,
 } from './wallet-state.schema.js';
-
-const HASH_SCHEMA = z.string().regex(/^[0-9a-f]{64}$/);
 
 const SIGNAL_STATE_SCHEMA = z
   .strictObject({
@@ -34,6 +33,13 @@ const SIGNAL_STATE_SCHEMA = z
 // "comprar e segurar" existe se, e só se, o aquecimento terminou antes do último candle.
 function checkHalvesAgree(state: EngineState, context: IssueSink): void {
   const { signal, wallet } = state;
+  if (wallet.configHash !== state.configHash || wallet.runHash !== state.runHash) {
+    reportIssue(
+      context,
+      ['wallet', 'configHash'],
+      'Carteira de outra versão ou de outros parâmetros.',
+    );
+  }
   if (wallet.lastCandleOpenTime !== signal.lastCandleOpenTime) {
     reportIssue(
       context,

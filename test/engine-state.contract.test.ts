@@ -114,6 +114,8 @@ describe('engine state', () => {
       runHash: RUN.runHash,
       signal: { leadInCandles: 3, processedCandles: 0, lastCandleOpenTime: null, indicators: {} },
       wallet: {
+        configHash: STRATEGY.configHash,
+        runHash: RUN.runHash,
         keyPrefix: '',
         lastCandleOpenTime: null,
         firstSignalCandleOpenTime: null,
@@ -226,6 +228,9 @@ describe('engine state', () => {
         { ...tradingState(2), wallet: { ...tradingState(2).wallet, firstSignalCandleOpenTime: 0 } },
       ],
       ['prefixo de chave inválido', withWallet({ keyPrefix: 'W 3' })],
+      ['carteira de outra estratégia', withWallet({ configHash: 'f'.repeat(64) })],
+      ['carteira de outros parâmetros', withWallet({ runHash: 'e'.repeat(64) })],
+      ['hash da carteira malformado', withWallet({ runHash: 'ZZ' })],
     ];
     for (const [label, state] of broken) {
       const error = captureStateError(() => serializeEngineState(state));

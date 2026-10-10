@@ -32,7 +32,10 @@ export type ScoreboardInput = {
   readonly sentimentSource: string;
 };
 
-export type ScoreboardEvaluation = Omit<SignalDecision, 'candleOpenTime'>;
+export type ScoreboardEvaluation = Omit<
+  SignalDecision,
+  'candleOpenTime' | 'configHash' | 'confirmedGapCandles'
+>;
 
 type VoteEntry = { readonly rule: StrategyRule; readonly vote: SignalVote };
 

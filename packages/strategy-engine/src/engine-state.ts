@@ -15,6 +15,7 @@ export type CreateInitialEngineStateParams = {
 };
 
 export type CreateInitialWalletStateParams = {
+  readonly strategy: StrategyVersion;
   readonly run: RunSetup;
   readonly keyPrefix?: string;
 };
@@ -26,6 +27,8 @@ export function createInitialSignalState(leadInCandles: number): SignalState {
 // Carteira nova sobre um sinal já aquecido (walk-forward por janela, meta): `keyPrefix` evita colisão.
 export function createInitialWalletState(params: CreateInitialWalletStateParams): WalletState {
   return {
+    configHash: params.strategy.configHash,
+    runHash: params.run.runHash,
     keyPrefix: params.keyPrefix ?? '',
     lastCandleOpenTime: null,
     firstSignalCandleOpenTime: null,
@@ -45,7 +48,7 @@ export function createInitialEngineState(params: CreateInitialEngineStateParams)
     configHash: params.strategy.configHash,
     runHash: params.run.runHash,
     signal: createInitialSignalState(params.leadInCandles),
-    wallet: createInitialWalletState({ run: params.run }),
+    wallet: createInitialWalletState({ strategy: params.strategy, run: params.run }),
   });
 }
 

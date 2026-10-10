@@ -110,6 +110,8 @@ function assertSignalAgreesWithItsVotes(signal: SignalDecision): void {
   const expectedAction = score.gte(2) ? 'BUY' : score.lte(-2) ? 'SELL' : 'HOLD';
   expect(signal.action).toBe(expectedAction);
   expect(signal.sentiment).toBeNull();
+  expect(signal.configHash).toBe(CLASSIC_STRATEGY.configHash);
+  expect(signal.confirmedGapCandles).toBe(0);
   expect(signal.reason).toBe(expectedReason(signal));
 }
 

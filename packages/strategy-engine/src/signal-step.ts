@@ -33,6 +33,11 @@ export function signalStep(input: SignalStepInput): SignalStepResult {
     sentiment: input.sentiment,
     sentimentSource: input.market.sentimentSource,
   });
-  const signal: SignalDecision = { candleOpenTime: candle.openTime, ...evaluation };
+  const signal: SignalDecision = {
+    candleOpenTime: candle.openTime,
+    configHash: input.strategy.configHash,
+    confirmedGapCandles: input.confirmedGapCandles ?? 0,
+    ...evaluation,
+  };
   return { state: nextState, signal };
 }

@@ -439,7 +439,10 @@ export function expectedOf(scenario: ScoreboardScenario): ComparableEvaluation {
   };
 }
 
-type EvaluatedDecision = Omit<SignalDecision, 'candleOpenTime'>;
+type EvaluatedDecision = Omit<
+  SignalDecision,
+  'candleOpenTime' | 'configHash' | 'confirmedGapCandles'
+>;
 
 export function evaluateScenario(api: SignalApi, scenario: ScoreboardScenario): EvaluatedDecision {
   return api.evaluateScoreboard({

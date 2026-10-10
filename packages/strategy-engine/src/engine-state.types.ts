@@ -54,6 +54,9 @@ export type SignalState = {
 // Parte da carteira: ordens, posição, caixa e régua; `keyPrefix` dá espaço de nome às chaves
 // (`w3:order-0` no walk-forward por janela).
 export type WalletState = {
+  // Carteira avulsa (walk-forward, meta) só aceita sinal e parâmetros da execução que a criou.
+  readonly configHash: string;
+  readonly runHash: string;
   readonly keyPrefix: string;
   readonly lastCandleOpenTime: number | null;
   readonly firstSignalCandleOpenTime: number | null;

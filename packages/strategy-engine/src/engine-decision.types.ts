@@ -27,6 +27,10 @@ export type SignalVote = {
 // várias saídas (`rule:macd-12-26-9.signal`); `sentiment` é a observação usada (nula se ausente/velha).
 export type SignalDecision = {
   readonly candleOpenTime: number;
+  // Hash da versão da estratégia que decidiu e lacuna confirmada que o passo atravessou: o `walletStep`
+  // avulso confere os dois (outra estratégia, candle não contíguo) em vez de confiar no chamador.
+  readonly configHash: string;
+  readonly confirmedGapCandles: number;
   readonly action: SignalAction;
   readonly score: string;
   readonly regime: Regime;

@@ -55,6 +55,8 @@ type PreviousDecision = PreviousCandle & { readonly atr: number | null };
 
 export type SignalContext = {
   readonly config: StrategyConfig;
+  readonly configHash: string;
+  readonly confirmedGapCandles: number;
   readonly candle: EngineCandle;
   readonly sentiment: SentimentObservation | undefined;
   readonly defect: ReferenceEngineDefect;
@@ -153,6 +155,7 @@ function reasonOf(action: SignalAction, score: number, votes: readonly SignalVot
 }
 
 function buildSignal(params: {
+  readonly context: SignalContext;
   readonly stamp: number;
   readonly candle: PreviousCandle;
   readonly fresh: SentimentObservation | null;
@@ -164,6 +167,8 @@ function buildSignal(params: {
   const score = votes.reduce((sum, vote) => sum + vote.vote, 0);
   return {
     candleOpenTime: params.stamp,
+    configHash: params.context.configHash,
+    confirmedGapCandles: params.context.confirmedGapCandles,
     action,
     score: formatEngineDecimal(toEngineDecimal(String(score))),
     regime: REGIME.NONE,
@@ -185,6 +190,7 @@ function peekSignal(
   const next = withIndicator(state, PEEK_KEY, current);
   const isRising = peek !== undefined && current.close > peek.close;
   const signal = buildSignal({
+    context,
     stamp: peek?.openTime ?? current.openTime,
     candle: context.candle,
     fresh: null,
@@ -214,6 +220,7 @@ function sentimentLookaheadSignal(
     closeTime: candle.closeTime,
   });
   const signal = buildSignal({
+    context,
     stamp: previous.openTime,
     candle: previous,
     fresh,
@@ -238,7 +245,7 @@ function decide(
     sentiment: context.sentiment,
     closeTime: candle.closeTime,
   });
-  return { state, signal: buildSignal({ stamp: candle.openTime, candle, fresh, atr }) };
+  return { state, signal: buildSignal({ context, stamp: candle.openTime, candle, fresh, atr }) };
 }
 
 function isTrading(state: SignalState, context: SignalContext): boolean {
@@ -262,6 +269,8 @@ export function runReferenceSignalStep(
   guardInput(defect, () => assertSignalStepInput(input));
   const context: SignalContext = {
     config: input.strategy.config,
+    configHash: input.strategy.configHash,
+    confirmedGapCandles: input.confirmedGapCandles ?? 0,
     candle: input.candle,
     sentiment: input.sentiment,
     defect,

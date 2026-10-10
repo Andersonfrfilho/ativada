@@ -18,6 +18,7 @@ import type { OpenPositionState, PendingOrderState } from './engine-state.types.
 export const TIME_SCHEMA = z.number().int().nonnegative();
 export const COUNT_SCHEMA = z.number().int().nonnegative();
 const KEY_SCHEMA = z.string().min(1).max(64);
+export const HASH_SCHEMA = z.string().regex(/^[0-9a-f]{64}$/);
 const PENDING_ORDER_PATH = ['pendingOrder'];
 
 export type IssueSink = z.RefinementCtx;
@@ -111,6 +112,8 @@ const BENCHMARK_SCHEMA = z.strictObject({
 });
 
 const WALLET_STATE_SHAPE = z.strictObject({
+  configHash: HASH_SCHEMA,
+  runHash: HASH_SCHEMA,
   keyPrefix: z.string().regex(/^([a-z0-9-]{1,16}:)?$/),
   lastCandleOpenTime: TIME_SCHEMA.nullable(),
   firstSignalCandleOpenTime: TIME_SCHEMA.nullable(),

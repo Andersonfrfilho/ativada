@@ -1,5 +1,5 @@
 {
-  "engineVersion": "signal-1",
+  "engineVersion": "signal-2",
   "datasets": {
     "BTCUSDT 1h × 500": {
       "candles": 500,
@@ -7,7 +7,7 @@
       "buy": 113,
       "sell": 57,
       "hold": 137,
-      "digest": "8defe9505882464e65a7088aaa9b0abee78ab0cc8aa1c2ab07a2c72aa6b5b655"
+      "digest": "c3d5308dcac2828ee83bb04041de8e9e2301590c0d932c79a3b6636237754f97"
     },
     "ETHUSDT 1d × 400": {
       "candles": 400,
@@ -15,7 +15,7 @@
       "buy": 60,
       "sell": 67,
       "hold": 80,
-      "digest": "e355b437612eeb1f4915886160820892ada69c7196f9f8a05d3d0e9134911515"
+      "digest": "a92b5e821b584b8b4735e27d8b80a2aedac6d169e65b764797d4381da4bd8bba"
     }
   }
 }
