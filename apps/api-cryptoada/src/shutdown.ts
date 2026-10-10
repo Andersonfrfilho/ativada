@@ -20,7 +20,9 @@ export function createShutdownHandler(params: ShutdownParams): (signal: string) 
     isShuttingDown = true;
     params.logger.info('shutdown started', { signal });
     const safetyTimer = setTimeout(() => {
-      params.logger.error('shutdown timed out', { timeoutMs: params.timeoutMilliseconds });
+      params.logger.error('shutdown timed out', {
+        timeoutMilliseconds: params.timeoutMilliseconds,
+      });
       params.exit(1);
     }, params.timeoutMilliseconds);
     try {

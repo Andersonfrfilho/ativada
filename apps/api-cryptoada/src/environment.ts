@@ -6,6 +6,7 @@ import {
   nonEmptyTextSchema,
   parseEnvironment,
   postgresUrlSchema,
+  PRODUCTION_ENVIRONMENT,
   z,
   type ProductionProfile,
 } from '@cryptoada/environment';
@@ -124,7 +125,7 @@ export const environmentSchema = z
   .superRefine((values, context) => {
     checkProductionRules(values, PRODUCTION_PROFILE, context);
     const isHopsMissing = values.TRUSTED_PROXY_HOPS === undefined;
-    if (values.ENV === 'production' && isHopsMissing) {
+    if (values.ENV === PRODUCTION_ENVIRONMENT && isHopsMissing) {
       context.addIssue({
         code: 'custom',
         message: PRODUCTION_PROXY_HOPS_REASON,

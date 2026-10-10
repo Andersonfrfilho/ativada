@@ -9,3 +9,5 @@ export type AccountId = string & { readonly [ACCOUNT_ID_BRAND]: 'AccountId' };
 export function parseAccountId(value: string): AccountId | undefined {
   return LOWERCASE_UUID_PATTERN.test(value) ? (value as AccountId) : undefined;
 }
+
+export const INVALID_USER_ID_MESSAGE = 'users.id fora do formato UUID em minúsculas';

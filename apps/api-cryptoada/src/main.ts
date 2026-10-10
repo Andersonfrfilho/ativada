@@ -5,6 +5,7 @@ import { createApplication } from './create-application.js';
 import { loadEnvironment, type Environment } from './environment.js';
 import { WORKSPACE_NAME } from './index.js';
 import { createLogger } from './logging/logger.js';
+import { UNEXPECTED_ERROR_LOG_MESSAGE } from './logging/logging.constant.js';
 import { startServer } from './server.js';
 import {
   SHUTDOWN_TIMEOUT_MILLISECONDS,
@@ -22,7 +23,7 @@ function startApplication(environment: Environment): void {
     handler: application.handler,
     host: environment.API_HOST,
     port: environment.API_PORT,
-    reportUnexpectedError: (error) => logger.error('unexpected error', { error }),
+    reportUnexpectedError: (error) => logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { error }),
   });
   logger.info('listening', { env: environment.ENV, host: environment.API_HOST, port: server.port });
   registerShutdownSignals(

@@ -31,7 +31,7 @@ export function createRequestHandler(dependencies: RequestHandlerDependencies): 
       method: request.method,
       path: new URL(request.url).pathname,
       status: response.status,
-      durationMs: Math.round(performance.now() - startedAtMilliseconds),
+      durationMilliseconds: Math.round(performance.now() - startedAtMilliseconds),
       traceId,
     });
     return decorateResponse({ response, allowedOrigin, traceId });

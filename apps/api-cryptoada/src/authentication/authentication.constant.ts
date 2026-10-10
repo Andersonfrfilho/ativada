@@ -12,7 +12,7 @@ export const SUBJECT_MAX_LENGTH = 255;
 export const RECENT_AUTHENTICATION_MAX_AGE_SECONDS = 300;
 export const AUTHORIZATION_HEADER_MAX_LENGTH = 8192;
 
-export const WWW_AUTHENTICATE_BEARER = 'Bearer';
+export const WWW_AUTHENTICATE_BEARER = BEARER_TOKEN_TYPE;
 export const WWW_AUTHENTICATE_INVALID_TOKEN = 'Bearer error="invalid_token"';
 
 export const AUTHENTICATION_LEVEL = {

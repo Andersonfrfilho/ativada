@@ -6,6 +6,7 @@ import { MILLISECONDS_PER_SECOND } from '@cryptoada/environment';
 
 import { createRecencyMap } from '../shared/collections/recency-map.js';
 import { hashSecret } from '../shared/crypto/hash-secret.js';
+import { BASE64_URL_ENCODING } from '../shared/encoding.constant.js';
 import {
   MAX_PENDING_STREAM_TICKETS,
   STREAM_TICKET_BYTES,
@@ -42,7 +43,7 @@ export function createStreamTicketStore(options: StreamTicketStoreOptions): Stre
   });
 
   function issueTicket(userId: UserId): IssuedStreamTicket {
-    const ticket = randomBytes(STREAM_TICKET_BYTES).toString('base64url');
+    const ticket = randomBytes(STREAM_TICKET_BYTES).toString(BASE64_URL_ENCODING);
     pendingTickets.set(hashSecret(ticket), {
       userId,
       expiresAtMilliseconds: nowMilliseconds() + timeToLive,

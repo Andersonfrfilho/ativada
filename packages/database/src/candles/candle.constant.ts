@@ -9,6 +9,8 @@ export const CLOCK_SKEW_TOLERANCE_MILLISECONDS = 5_000;
 
 const MILLISECONDS_PER_MINUTE = 60_000;
 
+// Espelha market-data (este pacote não depende dele); test/timeframe-tables.contract.test.ts prende a igualdade.
+
 export const CANDLE_TIMEFRAME_DURATION_MILLISECONDS: Readonly<
   Record<(typeof CANDLE_TIMEFRAMES)[number], number>
 > = {

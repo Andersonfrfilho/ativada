@@ -4,7 +4,7 @@ import type { BunSQLDatabase } from 'drizzle-orm/bun-sql';
 
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import { users } from '../schema/users.schema.js';
-import { parseAccountId, type AccountId } from './admin-account-id.js';
+import { INVALID_USER_ID_MESSAGE, parseAccountId, type AccountId } from './admin-account-id.js';
 import type { AccountPage, AdminAccountRecord, ListAccountsParams } from './admin-account.types.js';
 
 export type AdminAccountRepository = {
@@ -33,7 +33,7 @@ const ACCOUNT_COLUMNS = {
 
 function toAccountRecord(row: AccountRow): AdminAccountRecord {
   const id = parseAccountId(row.id);
-  if (id === undefined) throw new Error('users.id fora do formato UUID em minúsculas');
+  if (id === undefined) throw new Error(INVALID_USER_ID_MESSAGE);
   return {
     id,
     keycloakSubject: row.keycloakSubject,

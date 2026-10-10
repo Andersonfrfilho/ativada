@@ -25,7 +25,7 @@ import {
   type RouteTable,
 } from './route-table.js';
 import { MethodNotAllowedError, RouteNotFoundError } from './routing.error.js';
-import type { Route } from './route.types.js';
+import type { ProtectedRoute, PublicRoute, Route } from './route.types.js';
 
 export type RouterDependencies = AuthenticationPipelineDependencies & {
   readonly routes: readonly Route[];
@@ -48,30 +48,32 @@ type DispatchParams = {
   readonly routerRequest: RouterRequest;
 };
 
-async function runRoute(
-  params: DispatchParams,
-  route: Route,
-  pathParams: PathParams,
-): Promise<RouteResult> {
-  const { request, traceId, socketAddress } = params.routerRequest;
-  const clientAddress = resolveClientAddress({
-    socketAddress,
-    forwardedFor: request.headers.get(HTTP_HEADER.FORWARDED_FOR),
-    trustedProxyHops: params.dependencies.trustedProxyHops,
+type RouteRun = {
+  readonly dispatch: DispatchParams;
+  readonly pathParams: PathParams;
+  readonly clientAddress: string;
+};
+
+function runPublicRoute(run: RouteRun, route: PublicRoute): Promise<RouteResult> {
+  const { request, traceId } = run.dispatch.routerRequest;
+  const { pathParams, clientAddress } = run;
+  enforceRateLimit({
+    rateLimiter: run.dispatch.dependencies.rateLimiter,
+    policy: route.rateLimitPolicy ?? RATE_LIMIT_POLICY.UNAUTHENTICATED_CLIENT_ADDRESS,
+    key: toRateLimitAddressKey(clientAddress),
   });
-  if (route.access === ROUTE_ACCESS.PUBLIC) {
-    enforceRateLimit({
-      rateLimiter: params.dependencies.rateLimiter,
-      policy: route.rateLimitPolicy ?? RATE_LIMIT_POLICY.UNAUTHENTICATED_CLIENT_ADDRESS,
-      key: toRateLimitAddressKey(clientAddress),
-    });
-    return route.handler({ request, traceId, clientAddress, pathParams });
-  }
+  return route.handler({ request, traceId, clientAddress, pathParams });
+}
+
+async function runAuthenticatedRoute(run: RouteRun, route: ProtectedRoute): Promise<RouteResult> {
+  const { dependencies, inFlightChargeKeys } = run.dispatch;
+  const { request, traceId } = run.dispatch.routerRequest;
+  const { pathParams, clientAddress } = run;
   const authentication = await authenticateRouteRequest({
     route,
     request,
     clientAddress,
-    dependencies: params.dependencies,
+    dependencies,
   });
   const context = { request, traceId, clientAddress, pathParams, ...authentication };
   const { rateLimitPolicy } = route;
@@ -81,15 +83,32 @@ async function runRoute(
   const isSubjectScoped = rateLimitPolicy.keyScope === RATE_LIMIT_KEY_SCOPE.SUBJECT;
   return runWithDeferredCharge(
     {
-      rateLimiter: params.dependencies.rateLimiter,
+      rateLimiter: dependencies.rateLimiter,
       policy: rateLimitPolicy,
       key: isSubjectScoped
         ? authentication.authenticatedUser.keycloakSubject
         : toRateLimitAddressKey(clientAddress),
-      inFlightKeys: params.inFlightChargeKeys,
+      inFlightKeys: inFlightChargeKeys,
     },
     () => route.handler(context),
   );
+}
+
+function runRoute(
+  params: DispatchParams,
+  route: Route,
+  pathParams: PathParams,
+): Promise<RouteResult> {
+  const { request, socketAddress } = params.routerRequest;
+  const clientAddress = resolveClientAddress({
+    socketAddress,
+    forwardedFor: request.headers.get(HTTP_HEADER.FORWARDED_FOR),
+    trustedProxyHops: params.dependencies.trustedProxyHops,
+  });
+  const run: RouteRun = { dispatch: params, pathParams, clientAddress };
+  return route.access === ROUTE_ACCESS.PUBLIC
+    ? runPublicRoute(run, route)
+    : runAuthenticatedRoute(run, route);
 }
 
 async function dispatch(params: DispatchParams): Promise<Response> {

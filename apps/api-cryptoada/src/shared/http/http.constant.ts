@@ -1,30 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const HTTP_STATUS = {
-  OK: 200,
-  CREATED: 201,
-  ACCEPTED: 202,
-  NO_CONTENT: 204,
-  BAD_REQUEST: 400,
-  FORBIDDEN: 403,
-  CONFLICT: 409,
-  UNAUTHORIZED: 401,
-  NOT_FOUND: 404,
-  METHOD_NOT_ALLOWED: 405,
-  TOO_MANY_REQUESTS: 429,
-  INTERNAL_SERVER_ERROR: 500,
-  SERVICE_UNAVAILABLE: 503,
-} as const;
-
-export const HTTP_METHOD = {
-  GET: 'GET',
-  POST: 'POST',
-  PUT: 'PUT',
-  PATCH: 'PATCH',
-  DELETE: 'DELETE',
-  OPTIONS: 'OPTIONS',
-} as const;
-
-export type HttpMethod = (typeof HTTP_METHOD)[keyof typeof HTTP_METHOD];
+export { HTTP_METHOD, HTTP_STATUS, type HttpMethod } from '@cryptoada/environment';
 
 export const HTTP_HEADER = {
   ALLOW: 'Allow',

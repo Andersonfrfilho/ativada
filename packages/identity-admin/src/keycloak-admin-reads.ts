@@ -2,7 +2,7 @@
 import { z } from '@cryptoada/environment';
 
 import { HTTP_METHOD } from './identity-http.constant.js';
-import type { IdentityAdminClient } from './identity-admin.types.js';
+import type { IdentityAdminClient, IdentityOutcome } from './identity-admin.types.js';
 import type { IdentityHttp } from './identity-http.js';
 import { parseOutcome } from './identity-outcome.js';
 
@@ -24,51 +24,62 @@ export function userPath(userId: string): string {
   return `/users/${encodeURIComponent(userId)}`;
 }
 
+type ParseBody<TValue> = Parameters<typeof parseOutcome<TValue>>[1];
+
+function getAndParse<TValue>(
+  http: IdentityHttp,
+  path: string,
+  parse: ParseBody<TValue>,
+): Promise<IdentityOutcome<TValue>> {
+  return http({ method: HTTP_METHOD.GET, path }).then((response) => parseOutcome(response, parse));
+}
+
+function parseUserMatch(
+  email: string,
+): ParseBody<{ id: string; email: string | undefined } | undefined> {
+  return (body) => {
+    const parsed = userListSchema.safeParse(body);
+    if (!parsed.success) return undefined;
+    const match = parsed.data.find((user) => user.email?.toLowerCase() === email);
+    return { value: match === undefined ? undefined : { id: match.id, email: match.email } };
+  };
+}
+
+const parseHasCredentials: ParseBody<boolean> = (body) => {
+  const parsed = credentialListSchema.safeParse(body);
+  return parsed.success ? { value: parsed.data.length > 0 } : undefined;
+};
+
+const parseRoleNames: ParseBody<readonly string[]> = (body) => {
+  const parsed = roleListSchema.safeParse(body);
+  return parsed.success ? { value: parsed.data.map((role) => role.name) } : undefined;
+};
+
+const parseEnabled: ParseBody<boolean> = (body) => {
+  const parsed = userSchema.safeParse(body);
+  return parsed.success && parsed.data.enabled !== undefined
+    ? { value: parsed.data.enabled }
+    : undefined;
+};
+
+const parseEmail: ParseBody<string | undefined> = (body) => {
+  const parsed = userSchema.safeParse(body);
+  return parsed.success ? { value: parsed.data.email } : undefined;
+};
+
 export function createIdentityReads(http: IdentityHttp): IdentityReads {
   return {
-    findUserByEmail: async (email) =>
-      parseOutcome(
-        await http({
-          method: HTTP_METHOD.GET,
-          path: `/users?exact=true&email=${encodeURIComponent(email)}`,
-        }),
-        (body) => {
-          const parsed = userListSchema.safeParse(body);
-          if (!parsed.success) return undefined;
-          const match = parsed.data.find((user) => user.email?.toLowerCase() === email);
-          return { value: match === undefined ? undefined : { id: match.id, email: match.email } };
-        },
+    findUserByEmail: (email) =>
+      getAndParse(
+        http,
+        `/users?exact=true&email=${encodeURIComponent(email)}`,
+        parseUserMatch(email),
       ),
-    hasCredentials: async (userId) =>
-      parseOutcome(
-        await http({ method: HTTP_METHOD.GET, path: `${userPath(userId)}/credentials` }),
-        (body) => {
-          const parsed = credentialListSchema.safeParse(body);
-          return parsed.success ? { value: parsed.data.length > 0 } : undefined;
-        },
-      ),
-    readEffectiveRoles: async (userId) =>
-      parseOutcome(
-        await http({
-          method: HTTP_METHOD.GET,
-          path: `${userPath(userId)}/role-mappings/realm/composite`,
-        }),
-        (body) => {
-          const parsed = roleListSchema.safeParse(body);
-          return parsed.success ? { value: parsed.data.map((role) => role.name) } : undefined;
-        },
-      ),
-    readEnabled: async (userId) =>
-      parseOutcome(await http({ method: HTTP_METHOD.GET, path: userPath(userId) }), (body) => {
-        const parsed = userSchema.safeParse(body);
-        return parsed.success && parsed.data.enabled !== undefined
-          ? { value: parsed.data.enabled }
-          : undefined;
-      }),
-    readEmail: async (userId) =>
-      parseOutcome(await http({ method: HTTP_METHOD.GET, path: userPath(userId) }), (body) => {
-        const parsed = userSchema.safeParse(body);
-        return parsed.success ? { value: parsed.data.email } : undefined;
-      }),
+    hasCredentials: (userId) =>
+      getAndParse(http, `${userPath(userId)}/credentials`, parseHasCredentials),
+    readEffectiveRoles: (userId) =>
+      getAndParse(http, `${userPath(userId)}/role-mappings/realm/composite`, parseRoleNames),
+    readEnabled: (userId) => getAndParse(http, userPath(userId), parseEnabled),
+    readEmail: (userId) => getAndParse(http, userPath(userId), parseEmail),
   };
 }

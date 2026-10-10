@@ -2,7 +2,11 @@
 import { and, asc, eq, gt, isNotNull, isNull } from 'drizzle-orm';
 
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
-import { parseAccountId, type AccountId } from '../admin/admin-account-id.js';
+import {
+  INVALID_USER_ID_MESSAGE,
+  parseAccountId,
+  type AccountId,
+} from '../admin/admin-account-id.js';
 import { users } from '../schema/users.schema.js';
 
 export type BlockedAccount = {
@@ -30,7 +34,7 @@ function toBlockedAccount(row: {
   readonly keycloakSubject: string;
 }): BlockedAccount {
   const id = parseAccountId(row.id);
-  if (id === undefined) throw new Error('users.id fora do formato UUID em minúsculas');
+  if (id === undefined) throw new Error(INVALID_USER_ID_MESSAGE);
   return { id, keycloakSubject: row.keycloakSubject };
 }
 

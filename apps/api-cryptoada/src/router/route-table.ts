@@ -81,57 +81,69 @@ function isPattern(path: string): boolean {
   return path.includes(`/${PATH_PARAM_PREFIX}`);
 }
 
-export function createRouteTable(routes: readonly Route[]): RouteTable {
-  const routesByPath = new Map<string, Map<string, Route>>();
-  const patternRoutes: PatternRoute[] = [];
+type RouteIndex = {
+  readonly routesByPath: Map<string, Map<string, Route>>;
+  readonly patternRoutes: PatternRoute[];
+};
+
+function duplicateRouteError(route: Route): RouteDeclarationError {
+  return new RouteDeclarationError(`${describeRoute(route)} declarada duas vezes`);
+}
+
+function addPatternRoute(index: RouteIndex, route: Route): void {
+  const isDuplicate = index.patternRoutes.some(
+    (entry) => entry.route.method === route.method && entry.route.path === route.path,
+  );
+  if (isDuplicate) throw duplicateRouteError(route);
+  index.patternRoutes.push({ segments: splitPath(route.path), route });
+}
+
+function addExactRoute(index: RouteIndex, route: Route): void {
+  const routesByMethod = index.routesByPath.get(route.path) ?? new Map<string, Route>();
+  if (routesByMethod.has(route.method)) throw duplicateRouteError(route);
+  routesByMethod.set(route.method, route);
+  index.routesByPath.set(route.path, routesByMethod);
+}
+
+function buildRouteIndex(routes: readonly Route[]): RouteIndex {
+  const index: RouteIndex = { routesByPath: new Map(), patternRoutes: [] };
   for (const route of routes) {
     assertRouteDeclaration(route);
-    if (isPattern(route.path)) {
-      if (
-        patternRoutes.some(
-          (entry) => entry.route.method === route.method && entry.route.path === route.path,
-        )
-      ) {
-        throw new RouteDeclarationError(`${describeRoute(route)} declarada duas vezes`);
-      }
-      patternRoutes.push({ segments: splitPath(route.path), route });
-      continue;
-    }
-    const routesByMethod = routesByPath.get(route.path) ?? new Map<string, Route>();
-    if (routesByMethod.has(route.method)) {
-      throw new RouteDeclarationError(`${describeRoute(route)} declarada duas vezes`);
-    }
-    routesByMethod.set(route.method, route);
-    routesByPath.set(route.path, routesByMethod);
+    if (isPattern(route.path)) addPatternRoute(index, route);
+    else addExactRoute(index, route);
   }
+  return index;
+}
 
-  function findPattern(method: string, path: string): RouteLookup {
-    const pathSegments = splitPath(path);
-    const allowedMethods: string[] = [];
-    for (const entry of patternRoutes) {
-      const pathParams = matchPattern(entry.segments, pathSegments);
-      if (pathParams === undefined) continue;
-      if (entry.route.method === method) {
-        return { kind: ROUTE_LOOKUP_KIND.FOUND, route: entry.route, pathParams };
-      }
-      allowedMethods.push(entry.route.method);
+function findPattern(index: RouteIndex, method: string, path: string): RouteLookup {
+  const pathSegments = splitPath(path);
+  const allowedMethods: string[] = [];
+  for (const entry of index.patternRoutes) {
+    const pathParams = matchPattern(entry.segments, pathSegments);
+    if (pathParams === undefined) continue;
+    if (entry.route.method === method) {
+      return { kind: ROUTE_LOOKUP_KIND.FOUND, route: entry.route, pathParams };
     }
-    if (allowedMethods.length === 0) return { kind: ROUTE_LOOKUP_KIND.NOT_FOUND };
-    return { kind: ROUTE_LOOKUP_KIND.METHOD_NOT_ALLOWED, allowedMethods };
+    allowedMethods.push(entry.route.method);
   }
+  if (allowedMethods.length === 0) return { kind: ROUTE_LOOKUP_KIND.NOT_FOUND };
+  return { kind: ROUTE_LOOKUP_KIND.METHOD_NOT_ALLOWED, allowedMethods };
+}
 
-  function find(method: string, path: string): RouteLookup {
-    const routesByMethod = routesByPath.get(path);
-    if (routesByMethod === undefined) return findPattern(method, path);
-    const route = routesByMethod.get(method);
-    if (route === undefined) {
-      return {
-        kind: ROUTE_LOOKUP_KIND.METHOD_NOT_ALLOWED,
-        allowedMethods: [...routesByMethod.keys()],
-      };
-    }
-    return { kind: ROUTE_LOOKUP_KIND.FOUND, route, pathParams: NO_PATH_PARAMS };
+function findRoute(index: RouteIndex, method: string, path: string): RouteLookup {
+  const routesByMethod = index.routesByPath.get(path);
+  if (routesByMethod === undefined) return findPattern(index, method, path);
+  const route = routesByMethod.get(method);
+  if (route === undefined) {
+    return {
+      kind: ROUTE_LOOKUP_KIND.METHOD_NOT_ALLOWED,
+      allowedMethods: [...routesByMethod.keys()],
+    };
   }
+  return { kind: ROUTE_LOOKUP_KIND.FOUND, route, pathParams: NO_PATH_PARAMS };
+}
 
-  return { routes, find };
+export function createRouteTable(routes: readonly Route[]): RouteTable {
+  const index = buildRouteIndex(routes);
+  return { routes, find: (method, path) => findRoute(index, method, path) };
 }

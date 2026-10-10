@@ -16,6 +16,7 @@ import type {
   CandleRepositoryOptions,
   CandleSeriesKey,
   CandleTimeframe,
+  FindCandlesParams,
   FindMissingOpenTimesParams,
   UpsertCandlesResult,
 } from './candle.types.js';
@@ -61,64 +62,81 @@ async function selectMissingOpenTimes(
   return rows.map((row) => Number(row.openTime));
 }
 
+type UpsertContext = { readonly database: BunSQLDatabase; readonly now: () => number };
+
+// Não atualiza (candle fechado é imutável): DO NOTHING mantém o gravado e `inserted` conta só as novas.
+async function upsertCandles(
+  context: UpsertContext,
+  records: readonly CandleRecord[],
+): Promise<UpsertCandlesResult> {
+  const latestAcceptableCloseTime = context.now() + CLOCK_SKEW_TOLERANCE_MILLISECONDS;
+  const openCandle = records.find((record) => record.closeTime > latestAcceptableCloseTime);
+  if (openCandle !== undefined) throw new OpenCandleRejectedError(openCandle.openTime);
+  let inserted = 0;
+  for (const batch of splitIntoBatches(records)) {
+    const rows = await context.database
+      .insert(candles)
+      .values([...batch])
+      .onConflictDoNothing()
+      .returning({ openTime: candles.openTime });
+    inserted += rows.length;
+  }
+  return { inserted };
+}
+
+async function findCandles(
+  database: BunSQLDatabase,
+  params: FindCandlesParams,
+): Promise<readonly CandleRecord[]> {
+  const rows = await database
+    .select()
+    .from(candles)
+    .where(
+      and(
+        matchesSeries(params),
+        gte(candles.openTime, params.from),
+        lt(candles.openTime, params.to),
+      ),
+    )
+    .orderBy(asc(candles.openTime));
+  return rows.map((row) => ({
+    exchange: row.exchange,
+    symbol: row.symbol,
+    timeframe: row.timeframe as CandleTimeframe,
+    openTime: row.openTime,
+    closeTime: row.closeTime,
+    open: row.open,
+    high: row.high,
+    low: row.low,
+    close: row.close,
+    volume: row.volume,
+    tradeCount: row.tradeCount,
+  }));
+}
+
+async function findLatestOpenTime(
+  database: BunSQLDatabase,
+  key: CandleSeriesKey,
+): Promise<number | undefined> {
+  const [latest] = await database
+    .select({ openTime: candles.openTime })
+    .from(candles)
+    .where(matchesSeries(key))
+    .orderBy(desc(candles.openTime))
+    .limit(1);
+  return latest?.openTime;
+}
+
 export function createCandleRepository(
   handle: DatabaseHandle,
   options: CandleRepositoryOptions = {},
 ): CandleRepository {
   const { database } = readOpenDatabase(handle);
-  const now = options.now ?? Date.now;
+  const context: UpsertContext = { database, now: options.now ?? Date.now };
   return {
-    // Não atualiza (candle fechado é imutável): DO NOTHING mantém o gravado e `inserted` conta só as novas.
-    upsertCandles: async (records): Promise<UpsertCandlesResult> => {
-      const latestAcceptableCloseTime = now() + CLOCK_SKEW_TOLERANCE_MILLISECONDS;
-      const openCandle = records.find((record) => record.closeTime > latestAcceptableCloseTime);
-      if (openCandle !== undefined) throw new OpenCandleRejectedError(openCandle.openTime);
-      let inserted = 0;
-      for (const batch of splitIntoBatches(records)) {
-        const rows = await database
-          .insert(candles)
-          .values([...batch])
-          .onConflictDoNothing()
-          .returning({ openTime: candles.openTime });
-        inserted += rows.length;
-      }
-      return { inserted };
-    },
-    findCandles: async (params): Promise<readonly CandleRecord[]> => {
-      const rows = await database
-        .select()
-        .from(candles)
-        .where(
-          and(
-            matchesSeries(params),
-            gte(candles.openTime, params.from),
-            lt(candles.openTime, params.to),
-          ),
-        )
-        .orderBy(asc(candles.openTime));
-      return rows.map((row) => ({
-        exchange: row.exchange,
-        symbol: row.symbol,
-        timeframe: row.timeframe as CandleTimeframe,
-        openTime: row.openTime,
-        closeTime: row.closeTime,
-        open: row.open,
-        high: row.high,
-        low: row.low,
-        close: row.close,
-        volume: row.volume,
-        tradeCount: row.tradeCount,
-      }));
-    },
+    upsertCandles: (records) => upsertCandles(context, records),
+    findCandles: (params) => findCandles(database, params),
     findMissingOpenTimes: (params) => selectMissingOpenTimes(database, params),
-    findLatestOpenTime: async (key): Promise<number | undefined> => {
-      const [latest] = await database
-        .select({ openTime: candles.openTime })
-        .from(candles)
-        .where(matchesSeries(key))
-        .orderBy(desc(candles.openTime))
-        .limit(1);
-      return latest?.openTime;
-    },
+    findLatestOpenTime: (key) => findLatestOpenTime(database, key),
   };
 }
