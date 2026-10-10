@@ -35,7 +35,7 @@ describe('indicator contract harness', () => {
 
   test.each([
     [SIMPLE_AVERAGE_DEFECT.WRONG_WARMUP, /aquecimento/],
-    [SIMPLE_AVERAGE_DEFECT.LOSSY_SNAPSHOT, /Retomada do snapshot/],
+    [SIMPLE_AVERAGE_DEFECT.LOSSY_SNAPSHOT, /[Ss]napshot/],
     [SIMPLE_AVERAGE_DEFECT.SHORT_CONVERGENCE, /Convergência/],
   ] as const)('the harness fails the indicator whose defect is %s', (defect, expectedReason) => {
     expect(() =>
