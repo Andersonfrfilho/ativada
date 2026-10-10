@@ -61,8 +61,16 @@ const MUTANTS: readonly SourceMutant[] = [
     name: 'SHUTDOWN_LEAVES_THE_RUNS_RUNNING',
     edits: edit(
       DISPATCHER,
-      '      this.dependencies.queue.releaseClaimedRuns({\n        claimedBy: this.dependencies.config.instanceId,\n      }),\n',
-      '      Promise.resolve(0),\n',
+      'queue.releaseClaimedRuns({ claimedBy: config.instanceId }), expiry',
+      'Promise.resolve(0), expiry',
+    ),
+  },
+  {
+    name: 'SHUTDOWN_WAITS_FOREVER_FOR_THE_RELEASE',
+    edits: edit(
+      DISPATCHER,
+      'await Promise.race([queue.releaseClaimedRuns({ claimedBy: config.instanceId }), expiry]);',
+      'await queue.releaseClaimedRuns({ claimedBy: config.instanceId });',
     ),
   },
   {

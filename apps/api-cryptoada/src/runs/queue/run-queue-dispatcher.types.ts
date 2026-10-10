@@ -29,6 +29,8 @@ export type RunQueueDispatcherConfig = {
   readonly heartbeatIntervalMilliseconds: number;
   readonly heartbeatTimeoutSeconds: number;
   readonly pollIntervalMilliseconds: number;
+  // Teto de espera pela devolução ao encerrar: banco inalcançável não pode segurar o processo.
+  readonly releaseTimeoutMilliseconds: number;
   readonly orphanPolicy: RunOrphanPolicy;
 };
 

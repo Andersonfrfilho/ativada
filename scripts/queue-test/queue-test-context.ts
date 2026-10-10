@@ -244,6 +244,7 @@ export function createTestDispatcher(
       heartbeatIntervalMilliseconds: HEARTBEAT_INTERVAL_MILLISECONDS,
       heartbeatTimeoutSeconds: HEARTBEAT_TIMEOUT_SECONDS,
       pollIntervalMilliseconds: POLL_INTERVAL_MILLISECONDS,
+      releaseTimeoutMilliseconds: 1000,
       orphanPolicy: options.orphanPolicy ?? RUN_ORPHAN_POLICY.RESUME_WITH_CHECKPOINT,
     },
     reportUnexpectedError: (error) => options.reported.push(error),

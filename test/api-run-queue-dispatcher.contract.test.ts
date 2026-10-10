@@ -43,6 +43,7 @@ type Harness = {
     reclaimResult: ReclaimResult;
     claimFailures: number;
     failReclaim: boolean;
+    hangRelease: boolean;
   };
   readonly backlog: ClaimedRun[];
   readonly executions: Deferred[];
@@ -67,6 +68,7 @@ function build(options: { globalConcurrency?: number; backlog?: ClaimedRun[] } =
     reclaimResult: { requeued: 0, failed: 0 } as ReclaimResult,
     claimFailures: 0,
     failReclaim: false,
+    hangRelease: false,
   };
   const executions: Deferred[] = [];
   const executed: { kind: RunKind; runId: string }[] = [];
@@ -104,6 +106,7 @@ function build(options: { globalConcurrency?: number; backlog?: ClaimedRun[] } =
       },
       releaseClaimedRuns: ({ claimedBy }) => {
         calls.release.push(claimedBy);
+        if (state.hangRelease) return new Promise<number>(() => undefined);
         return Promise.resolve(0);
       },
       cancelRunsOfInactiveOwners: () => {
@@ -135,6 +138,7 @@ function build(options: { globalConcurrency?: number; backlog?: ClaimedRun[] } =
       heartbeatIntervalMilliseconds: HEARTBEAT_INTERVAL,
       heartbeatTimeoutSeconds: TIMEOUT_SECONDS,
       pollIntervalMilliseconds: POLL_INTERVAL,
+      releaseTimeoutMilliseconds: 20,
       orphanPolicy: RUN_ORPHAN_POLICY.RESUME_WITH_CHECKPOINT,
     },
     reportUnexpectedError: (error) => calls.reported.push(error),
@@ -317,6 +321,20 @@ describe('RunQueueDispatcher: encerramento', () => {
     expect(harness.dispatcher.activeCount()).toBe(0);
   });
 
+  test('stop não espera para sempre um banco que não responde: reporta e termina', async () => {
+    const harness = build({ backlog: [run('r1')], globalConcurrency: 1 });
+    await harness.dispatcher.start();
+    await settle();
+    harness.state.hangRelease = true;
+    const winner = await Promise.race([
+      harness.dispatcher.stop().then(() => 'stopped'),
+      Bun.sleep(1_000).then(() => 'hung'),
+    ]);
+    expect(winner).toBe('stopped');
+    expect(harness.calls.release).toStrictEqual([INSTANCE_ID]);
+    expect(harness.calls.reported).toHaveLength(1);
+  });
+
   test('depois do stop nada mais é reivindicado, nem por dispatch nem pela ronda', async () => {
     const harness = build({ backlog: [run('r1')], globalConcurrency: 1 });
     await harness.dispatcher.start();
@@ -362,6 +380,7 @@ describe('RunQueueDispatcher: o encerramento sobrevive a um banco que não respo
         heartbeatIntervalMilliseconds: HEARTBEAT_INTERVAL,
         heartbeatTimeoutSeconds: TIMEOUT_SECONDS,
         pollIntervalMilliseconds: POLL_INTERVAL,
+        releaseTimeoutMilliseconds: 1000,
         orphanPolicy: RUN_ORPHAN_POLICY.RESUME_WITH_CHECKPOINT,
       },
       reportUnexpectedError: (error) => harness.calls.reported.push(error),

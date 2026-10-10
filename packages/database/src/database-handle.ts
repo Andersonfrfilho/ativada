@@ -1,6 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { drizzle, type BunSQLDatabase } from 'drizzle-orm/bun-sql';
 
+// Espera as consultas em andamento só este tanto: banco inalcançável não pode segurar o encerramento.
+const CLOSE_DRAIN_SECONDS = 1;
+
 declare const DATABASE_HANDLE_BRAND: unique symbol;
 
 export type DatabaseHandle = { readonly [DATABASE_HANDLE_BRAND]: 'DatabaseHandle' };
@@ -28,7 +31,7 @@ export function readOpenDatabase(handle: DatabaseHandle): OpenDatabase {
 export async function closeDatabase(handle: DatabaseHandle): Promise<void> {
   const { client } = readOpenDatabase(handle);
   openDatabases.delete(handle);
-  await client.close();
+  await client.close({ timeout: CLOSE_DRAIN_SECONDS });
 }
 
 export async function pingDatabase(handle: DatabaseHandle): Promise<boolean> {

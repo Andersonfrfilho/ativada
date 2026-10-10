@@ -10,6 +10,7 @@ import type { RunQueueDispatcher, RunQueuePort } from './run-queue-dispatcher.ty
 
 // A ronda que pega o que outra instância enfileirou e recupera as órfãs: barata (índices parciais) e não precisa de env.
 const QUEUE_POLL_MILLISECONDS = 2_000;
+const QUEUE_RELEASE_TIMEOUT_MILLISECONDS = 2_000;
 
 export type ApplicationDispatcherParams = {
   readonly environment: Pick<
@@ -49,6 +50,7 @@ export function createApplicationDispatcher(
         environment.RUN_HEARTBEAT_INTERVAL_SECONDS * MILLISECONDS_PER_SECOND,
       heartbeatTimeoutSeconds: environment.RUN_HEARTBEAT_TIMEOUT_SECONDS,
       pollIntervalMilliseconds: QUEUE_POLL_MILLISECONDS,
+      releaseTimeoutMilliseconds: QUEUE_RELEASE_TIMEOUT_MILLISECONDS,
       orphanPolicy: environment.RUN_ORPHAN_POLICY,
     },
     reportUnexpectedError: params.reportUnexpectedError,

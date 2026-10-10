@@ -8,6 +8,7 @@ import type {
 } from './run-queue-dispatcher.types.js';
 
 const NO_EXECUTOR_MESSAGE = 'Tipo de execução sem executor.';
+const RELEASE_TIMEOUT_MESSAGE = 'A devolução das execuções ao encerrar passou do prazo.';
 const CLAIM_LOST_MESSAGE = 'Outra instância recuperou uma execução que esta ainda rodava.';
 
 // A fila é o banco; este objeto só reivindica a próxima execução elegível (round-robin entre usuários, tetos por usuário
@@ -50,11 +51,23 @@ class RunQueueEngine {
     this.haltLocally();
     await this.endExecutions();
     // Se o banco não responde agora, o batimento vence e outra instância (ou o próximo boot) recupera a execução.
-    await this.guarded(() =>
-      this.dependencies.queue.releaseClaimedRuns({
-        claimedBy: this.dependencies.config.instanceId,
-      }),
-    );
+    await this.guarded(() => this.releaseWithinTimeout());
+  }
+
+  private async releaseWithinTimeout(): Promise<void> {
+    const { queue, config } = this.dependencies;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const expiry = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(RELEASE_TIMEOUT_MESSAGE)),
+        config.releaseTimeoutMilliseconds,
+      );
+    });
+    try {
+      await Promise.race([queue.releaseClaimedRuns({ claimedBy: config.instanceId }), expiry]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   async abandon(): Promise<void> {
