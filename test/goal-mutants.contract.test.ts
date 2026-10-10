@@ -24,6 +24,7 @@ const SIGNALS = 'goal/goal-signals.ts';
 const TRAJECTORY = 'goal/goal-trajectory.ts';
 const BENCHMARK = 'goal/goal-benchmark.ts';
 const EVALUATE = 'goal/evaluate-goal.ts';
+const RANKING = 'goal/goal-ranking.ts';
 const FLOOR_RATE = 'rounding: EngineDecimal.ROUND_FLOOR }';
 const CEIL_RATE = 'rounding: EngineDecimal.ROUND_CEIL }';
 
@@ -380,6 +381,50 @@ const MUTANTS: readonly GoalSourceMutant[] = [
       EVALUATE,
       'firstWindowIndex === undefined ? null : (candles[firstWindowIndex]?.openTime ?? null)',
       'firstWindowIndex === undefined ? null : (candles[lastWindowIndex ?? 0]?.openTime ?? null)',
+    ),
+  },
+  {
+    name: 'RANKING_REACH_ASCENDING',
+    edits: edit(
+      RANKING,
+      'return right.reachedCount * left.windowCount - left.reachedCount * right.windowCount;',
+      'return left.reachedCount * right.windowCount - right.reachedCount * left.windowCount;',
+    ),
+  },
+  {
+    name: 'RANKING_STOP_DESCENDING',
+    edits: edit(
+      RANKING,
+      'return left.stoppedCount * right.windowCount - right.stoppedCount * left.windowCount;',
+      'return right.stoppedCount * left.windowCount - left.stoppedCount * right.windowCount;',
+    ),
+  },
+  {
+    name: 'RANKING_FEWER_WINDOWS_FIRST',
+    edits: edit(
+      RANKING,
+      'second.windowCount - first.windowCount',
+      'first.windowCount - second.windowCount',
+    ),
+  },
+  {
+    name: 'RANKING_KEYS_DESCENDING',
+    edits: edit(
+      RANKING,
+      'if (left < right) return -1;\n  return left > right ? 1 : 0;',
+      'if (left < right) return 1;\n  return left > right ? -1 : 0;',
+    ),
+  },
+  {
+    name: 'RANKING_EMPTY_FIRST',
+    edits: edit(RANKING, 'return isFirstEmpty ? 1 : -1;', 'return isFirstEmpty ? -1 : 1;'),
+  },
+  {
+    name: 'RANKING_SORTS_THE_INPUT_IN_PLACE',
+    edits: edit(
+      RANKING,
+      'return [...combinations].sort(compareCombinations);',
+      'return (combinations as TCombination[]).sort(compareCombinations);',
     ),
   },
 ];

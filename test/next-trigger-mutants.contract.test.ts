@@ -16,6 +16,7 @@ const PRICE = 'trigger/trigger-measure-price.ts';
 const VALUE = 'trigger/trigger-measure-value.ts';
 const RULE = 'trigger/trigger-rule.ts';
 const COMPUTE = 'trigger/compute-next-triggers.ts';
+const LATEST = 'trigger/compute-latest-triggers.ts';
 const CHANNEL_OUTPUT_HEAD =
   'const output = (name: string): EngineDecimalValue =>\n    decimalFromIndicator(\n      readIndicatorOutput({ value: reading.current, output: name, indicatorId: rule.id }),\n    );\n  const isBreakout';
 
@@ -239,6 +240,34 @@ const MUTANTS: readonly TriggerSourceMutant[] = [
       'sentiment: evaluation.sentiment,',
       'sentiment: params.sentiment ?? null,',
     ),
+  },
+  {
+    name: 'LATEST_READS_THE_PREVIOUS_CANDLE',
+    edits: edit(
+      LATEST,
+      'candle: toIndicatorCandle(last),',
+      'candle: toIndicatorCandle(candles[lastIndex - 1] ?? last),',
+    ),
+  },
+  {
+    name: 'LATEST_STATE_ONE_CANDLE_SHORT',
+    edits: edit(LATEST, 'candles.slice(0, lastIndex)', 'candles.slice(0, lastIndex - 1)'),
+  },
+  {
+    name: 'LATEST_ANSWERS_DURING_THE_WARM_UP',
+    edits: edit(LATEST, 'if (signal === null) return null;', ''),
+  },
+  {
+    name: 'LATEST_IGNORES_THE_LAST_SENTIMENT',
+    edits: edit(
+      LATEST,
+      'const sentiment = sentiments?.[lastIndex];',
+      'const sentiment = undefined;',
+    ),
+  },
+  {
+    name: 'LATEST_ALWAYS_AWAITING_ENTRY',
+    edits: edit(LATEST, 'state: params.state,', "state: 'awaiting_entry',"),
   },
 ];
 

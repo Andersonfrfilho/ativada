@@ -15,6 +15,7 @@ const GOAL_API_MEMBERS: readonly string[] = [
   'computeGoalLevels',
   'evaluateGoal',
   'parseGoalSpec',
+  'rankGoalCombinations',
   'resolveGoalVerdict',
   'summarizeGoalWindows',
 ];

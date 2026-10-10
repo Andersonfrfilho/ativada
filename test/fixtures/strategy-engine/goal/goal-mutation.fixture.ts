@@ -12,6 +12,7 @@ export const GOAL_JUDGE_TEST_FILES: readonly string[] = [
   'test/goal-hand-values.contract.test.ts',
   'test/goal-evaluation.contract.test.ts',
   'test/goal-differential.contract.test.ts',
+  'test/goal-ranking.contract.test.ts',
 ];
 
 export type GoalSourceEdit = SourceEdit;

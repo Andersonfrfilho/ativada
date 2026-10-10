@@ -10,10 +10,12 @@ export const TRIGGER_MUTANT_VARIABLE = 'TRIGGER_MUTANT_SOURCE';
 
 export type TriggerApi = typeof TriggerModule;
 
+const TRIGGER_API_MEMBERS: readonly string[] = ['computeLatestTriggers', 'computeNextTriggers'];
+
 function isTriggerApi(candidate: unknown): candidate is TriggerApi {
   if (typeof candidate !== 'object' || candidate === null) return false;
-  return (
-    typeof Object.getOwnPropertyDescriptor(candidate, 'computeNextTriggers')?.value === 'function'
+  return TRIGGER_API_MEMBERS.every(
+    (member) => typeof Object.getOwnPropertyDescriptor(candidate, member)?.value === 'function',
   );
 }
 

@@ -8,3 +8,8 @@ export { computeGoalLevels } from './goal-levels.js';
 export { parseGoalSpec } from './goal-spec.schema.js';
 export { summarizeGoalWindows, type SummarizeGoalParams } from './goal-summary.js';
 export { resolveGoalVerdict, type ResolveGoalVerdictParams } from './goal-verdict.js';
+export {
+  rankGoalCombinations,
+  type RankableCombination,
+  type RankableEvaluation,
+} from './goal-ranking.js';

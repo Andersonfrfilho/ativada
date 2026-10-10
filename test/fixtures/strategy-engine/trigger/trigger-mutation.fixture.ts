@@ -11,6 +11,7 @@ import { TRIGGER_MUTANT_VARIABLE } from './trigger-api.fixture.js';
 export const TRIGGER_JUDGE_TEST_FILES: readonly string[] = [
   'test/next-trigger.contract.test.ts',
   'test/next-trigger-engine.contract.test.ts',
+  'test/next-trigger-latest.contract.test.ts',
 ];
 
 export type TriggerSourceEdit = SourceEdit;
