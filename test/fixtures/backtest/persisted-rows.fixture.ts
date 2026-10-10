@@ -1,24 +1,53 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import type {
+  EquityPointInput,
+  FillInput,
+  OrderInput,
+  PositionInput,
+  SignalInput,
+} from '../../../packages/database/src/index.js';
 import type { InMemoryBacktest } from './in-memory-backtest-database.fixture.js';
 import type { ExpectedRows } from './expected-rows.fixture.js';
 
+// As linhas gravadas, em qualquer forma que as entregue (mapas da memória ou páginas do repositório).
+export type RowLists = {
+  readonly signals: Iterable<SignalInput>;
+  readonly orders: Iterable<OrderInput>;
+  readonly fills: Iterable<FillInput>;
+  readonly positions: Iterable<PositionInput>;
+  readonly equityPoints: Iterable<EquityPointInput>;
+};
+
 // O que ficou GRAVADO, no mesmo formato de `expectedRowsOf`.
-export function persistedRowsOf(memory: InMemoryBacktest): ExpectedRows {
-  const { results } = memory.state;
+export function comparableRows(lists: RowLists): ExpectedRows {
   const bySort = <TRow>(rows: Iterable<TRow>, key: (row: TRow) => string | number): TRow[] =>
     [...rows].sort((first, second) => (key(first) < key(second) ? -1 : 1));
   return {
-    equityPoints: bySort(results.equityPoints.values(), (row) => row.candleTime),
-    signals: bySort(results.signals.values(), (row) => row.candleTime).map((row) => ({
+    equityPoints: bySort(lists.equityPoints, (row) => row.candleTime).map((row) => ({
+      candleTime: row.candleTime,
+      equity: row.equity,
+      equityAtLow: row.equityAtLow,
+      benchmark: row.benchmark,
+    })),
+    signals: bySort(lists.signals, (row) => row.candleTime).map((row) => ({
       candleTime: row.candleTime,
       action: row.action,
       score: row.score,
       regime: row.regime,
       reason: row.reason,
     })),
-    fills: bySort(results.fills.values(), (row) => `${row.candleTime}|${row.orderKey}`),
+    fills: bySort(lists.fills, (row) => `${row.candleTime}|${row.orderKey}`).map((row) => ({
+      orderKey: row.orderKey,
+      positionKey: row.positionKey,
+      candleTime: row.candleTime,
+      side: row.side,
+      price: row.price,
+      quantity: row.quantity,
+      notional: row.notional,
+      fee: row.fee,
+    })),
     closedPositions: bySort(
-      [...results.positions.values()].filter((row) => row.status === 'closed'),
+      [...lists.positions].filter((row) => row.status === 'closed'),
       (row) => row.closedCandleTime ?? 0,
     ).map((row) => ({
       engineKey: row.engineKey,
@@ -32,10 +61,19 @@ export function persistedRowsOf(memory: InMemoryBacktest): ExpectedRows {
       stopPrice: row.stopPrice,
       targetPrice: row.targetPrice,
     })),
-    orderStatuses: Object.fromEntries(
-      [...results.orders.values()].map((row) => [row.engineKey, row.status]),
-    ),
+    orderStatuses: Object.fromEntries([...lists.orders].map((row) => [row.engineKey, row.status])),
   };
+}
+
+export function persistedRowsOf(memory: InMemoryBacktest): ExpectedRows {
+  const { results } = memory.state;
+  return comparableRows({
+    signals: results.signals.values(),
+    orders: results.orders.values(),
+    fills: results.fills.values(),
+    positions: results.positions.values(),
+    equityPoints: results.equityPoints.values(),
+  });
 }
 
 // As listas de comparação saem na mesma ordem: por candle e, no mesmo candle, pela chave da ordem.
