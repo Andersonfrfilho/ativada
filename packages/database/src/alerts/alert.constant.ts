@@ -25,3 +25,6 @@ export type AlertStatus = (typeof ALERT_STATUS)[keyof typeof ALERT_STATUS];
 
 export const ALERT_ERROR_CODE_MAX_LENGTH = 32;
 export const ALERT_CLAIM_MAXIMUM_BATCH = 100;
+
+// Gravado em `last_error` do alerta que esgotou as reivindicações sem nunca ser concluído (conteúdo que quebra a entrega).
+export const ALERT_ATTEMPTS_EXHAUSTED_ERROR_CODE = 'attempts_exhausted';

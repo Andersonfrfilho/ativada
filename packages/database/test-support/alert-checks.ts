@@ -1,6 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { AlertSide } from '../src/alerts/alert.constant.js';
-import { ALERT_SIDE, ALERT_STATUS } from '../src/alerts/alert.constant.js';
+import {
+  ALERT_ATTEMPTS_EXHAUSTED_ERROR_CODE,
+  ALERT_SIDE,
+  ALERT_STATUS,
+} from '../src/alerts/alert.constant.js';
 import { createAlertRepository } from '../src/alerts/alert.repository.js';
 import type { AlertInput } from '../src/alerts/alert.types.js';
 import { FOREIGN_KEY_VIOLATION_SQLSTATE } from '../src/postgres-error-code.js';
@@ -20,6 +24,7 @@ import {
 const CHAT_OF_A = '730000001';
 const CHAT_OF_B = '730000002';
 const LEASE_MILLISECONDS = 60_000;
+const MAXIMUM_ATTEMPTS = 5;
 // Uma hora à frente do relógio do banco: tudo o que os checks enfileiram já está vencido para o despachante.
 const NOW = new Date(Date.now() + 3_600_000);
 const CHECK_VIOLATION_SQLSTATE = '23514';
@@ -128,7 +133,12 @@ async function checkClaiming(context: LifecycleCheckContext, owner: SeededOwner)
   const other = await seedAlertOwner(context, { subject: 'subject-alert-c', chat: '730000003' });
   await enqueue(context, other, [draftOf(1)]);
   const alerts = createAlertRepository(context.handle);
-  const params = { now: NOW, limit: 50, leaseMilliseconds: LEASE_MILLISECONDS };
+  const params = {
+    now: NOW,
+    limit: 50,
+    leaseMilliseconds: LEASE_MILLISECONDS,
+    maximumAttempts: MAXIMUM_ATTEMPTS,
+  };
   const claimed = await alerts.claimDue(params);
   const byRun = new Map(claimed.map((item) => [item.runId, item]));
   assertCondition(
@@ -175,7 +185,12 @@ async function checkRace(context: LifecycleCheckContext): Promise<void> {
   const drafts = Array.from({ length: RACED_ALERTS }, (_unused, index) => draftOf(100 + index));
   assertCondition((await enqueue(context, owner, drafts)) === RACED_ALERTS, 'lote enfileirado');
   const alerts = createAlertRepository(context.handle);
-  const params = { now: NOW, limit: RACED_ALERTS, leaseMilliseconds: LEASE_MILLISECONDS };
+  const params = {
+    now: NOW,
+    limit: RACED_ALERTS,
+    leaseMilliseconds: LEASE_MILLISECONDS,
+    maximumAttempts: MAXIMUM_ATTEMPTS,
+  };
   const [first, second, third] = await Promise.all([
     alerts.claimDue(params),
     alerts.claimDue(params),
@@ -194,7 +209,12 @@ async function checkTransitions(context: LifecycleCheckContext): Promise<void> {
   const owner = await seedAlertOwner(context, { subject: 'subject-alert-flow', chat: '730000005' });
   await enqueue(context, owner, [draftOf(1), draftOf(2), draftOf(3), draftOf(4)]);
   const alerts = createAlertRepository(context.handle);
-  const claimed = await alerts.claimDue({ now: NOW, limit: 50, leaseMilliseconds: 1 });
+  const claimed = await alerts.claimDue({
+    now: NOW,
+    limit: 50,
+    leaseMilliseconds: 1,
+    maximumAttempts: MAXIMUM_ATTEMPTS,
+  });
   const mine = claimed.filter((item) => item.runId === owner.runId);
   const [toSend, toRetry, toFail, toSkip] = mine.map((item) => item.id);
   const retryAt = new Date(NOW.getTime() + 120_000);
@@ -222,18 +242,55 @@ async function checkTransitions(context: LifecycleCheckContext): Promise<void> {
     now: new Date(NOW.getTime() + 60_000),
     limit: 50,
     leaseMilliseconds: 1,
+    maximumAttempts: MAXIMUM_ATTEMPTS,
   });
   assertCondition(!early.some((item) => item.id === toRetry), 'reagendado espera a hora marcada');
   const due = await alerts.claimDue({
     now: new Date(retryAt.getTime() + 1),
     limit: 50,
     leaseMilliseconds: 1,
+    maximumAttempts: MAXIMUM_ATTEMPTS,
   });
   assertCondition(
     due.some((item) => item.id === toRetry),
     'reagendado volta na hora marcada',
   );
   reportCheck('alertas: enviado, reagendado, falho e dispensado; estado final não reabre');
+}
+
+async function checkPoisonedAlert(context: LifecycleCheckContext): Promise<void> {
+  const { assertCondition, reportCheck } = context;
+  const owner = await seedAlertOwner(context, {
+    subject: 'subject-alert-poison',
+    chat: '730000006',
+  });
+  await enqueue(context, owner, [draftOf(1)]);
+  const alerts = createAlertRepository(context.handle);
+  const claimOnce = (round: number): ReturnType<typeof alerts.claimDue> =>
+    alerts.claimDue({
+      now: new Date(NOW.getTime() + round * (LEASE_MILLISECONDS + 1)),
+      limit: 50,
+      leaseMilliseconds: LEASE_MILLISECONDS,
+      maximumAttempts: MAXIMUM_ATTEMPTS,
+    });
+  const claimedRounds: number[] = [];
+  for (let round = 1; round <= MAXIMUM_ATTEMPTS + 2; round += 1) {
+    const mine = (await claimOnce(round)).filter((item) => item.runId === owner.runId);
+    claimedRounds.push(mine.length);
+  }
+  assertCondition(
+    claimedRounds.join(',') === '1,1,1,1,1,0,0',
+    `o alerta que nunca conclui é entregue ${MAXIMUM_ATTEMPTS} vezes e depois não volta: ${claimedRounds.join(',')}`,
+  );
+  const [row] = await readRows(context, owner.runId);
+  assertCondition(row?.['status'] === ALERT_STATUS.FAILED, 'esgotado vira falho');
+  assertCondition(
+    row?.['last_error'] === ALERT_ATTEMPTS_EXHAUSTED_ERROR_CODE && row['locked_until'] === null,
+    'esgotado grava o motivo e solta o arrendamento',
+  );
+  reportCheck(
+    'alertas: o que esgota as tentativas sem concluir é encerrado, não reivindicado para sempre',
+  );
 }
 
 async function checkLatestMetrics(context: LifecycleCheckContext): Promise<void> {
@@ -280,5 +337,6 @@ export async function checkAlerts(context: LifecycleCheckContext): Promise<void>
   await checkClaiming(context, owner);
   await checkRace(context);
   await checkTransitions(context);
+  await checkPoisonedAlert(context);
   await checkLatestMetrics(context);
 }

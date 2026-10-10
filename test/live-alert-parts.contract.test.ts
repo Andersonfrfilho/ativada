@@ -69,6 +69,7 @@ describe('acerto histórico lido de runs.metrics do último walk-forward', () =>
     ['trades negativo', { winRate: { value: '0.5', reason: null }, trades: -1 }],
     ['trades fracionário', { winRate: { value: '0.5', reason: null }, trades: 1.5 }],
     ['winRate numérico', { winRate: { value: 0.5, reason: null }, trades: 2 }],
+    ['winRate que não é decimal', { winRate: { value: 'abc', reason: null }, trades: 2 }],
   ])('métrica ilegível (%s) vira "sem acerto"', (_name, metrics) => {
     expect(parseHitRate(metrics as never)).toBeUndefined();
   });
@@ -95,6 +96,22 @@ describe('conteúdo do alerta: esquema estrito', () => {
     expect(alertPayloadSchema.safeParse({ ...valid, reason: '' }).success).toBe(false);
     expect(alertPayloadSchema.safeParse({ ...valid, score: undefined }).success).toBe(false);
   });
+
+  test.each(['abc', '', '1e3', 'NaN', '0.5.5', ' 0.5', '0,5', '.5', '5.'])(
+    'taxa de acerto que não é decimal exato (%p) não passa: o formatador lançaria e o alerta voltaria para sempre',
+    (winRate) => {
+      const payload = { ...valid, hitRate: { winRate, trades: 4 } };
+      expect(alertPayloadSchema.safeParse(payload).success).toBe(false);
+    },
+  );
+
+  test.each(['0', '1', '0.583333333333', '-0.25'])(
+    'taxa de acerto decimal (%p) passa',
+    (winRate) => {
+      const payload = { ...valid, hitRate: { winRate, trades: 4 } };
+      expect(alertPayloadSchema.safeParse(payload).success).toBe(true);
+    },
+  );
 
   test('nível e acerto podem ser nulos (sem posição, sem walk-forward)', () => {
     const open = { ...valid, stopPrice: null, targetPrice: null, hitRate: null };

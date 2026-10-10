@@ -2,6 +2,9 @@
 import { GOAL_RUN_OUTCOME } from '@cryptoada/database';
 import { z } from '@cryptoada/environment';
 
+// Texto decimal exato, como o motor o emite: o formatador do alerta (`new EngineDecimal(texto)`) lança em qualquer outra coisa.
+export const DECIMAL_TEXT_PATTERN = /^-?\d+(\.\d+)?$/;
+
 export const SIMULATED_ACTION = { ENTER: 'enter', EXIT: 'exit', NONE: 'none' } as const;
 export type SimulatedAction = (typeof SIMULATED_ACTION)[keyof typeof SIMULATED_ACTION];
 
@@ -18,7 +21,10 @@ export const alertPayloadSchema = z.strictObject({
   stopPrice: z.string().min(1).nullable(),
   targetPrice: z.string().min(1).nullable(),
   hitRate: z
-    .strictObject({ winRate: z.string().min(1), trades: z.number().int().nonnegative() })
+    .strictObject({
+      winRate: z.string().regex(DECIMAL_TEXT_PATTERN),
+      trades: z.number().int().nonnegative(),
+    })
     .nullable(),
 });
 

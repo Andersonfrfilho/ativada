@@ -158,7 +158,7 @@ example-mutants: ## Prova que a semeadura da estratégia de exemplo reprova 6 mu
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/example-mutants.ts
 
-alert-mutants: ## Prova que a caixa de saída dos alertas reprova 11 mutantes (sem vínculo, lado fora da chave, duplicata que estoura, sem arrendamento, tentativa não contada, chat de outro dono, alerta desligado, estado final reaberto, hora ignorada, FK sem dono, métricas de outro dono) contra um Postgres de teste descartável
+alert-mutants: ## Prova que a caixa de saída dos alertas reprova 14 mutantes (sem vínculo, lado fora da chave, duplicata que estoura, sem arrendamento, tentativa não contada, chat de outro dono, alerta desligado, estado final reaberto, hora ignorada, FK sem dono, métricas de outro dono, esgotado reivindicado, esgotado pendente, teto fora por um) contra um Postgres de teste descartável
 	set -a; . envs/env.test; set +a; \
 	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
 	trap 'exit 130' INT; \

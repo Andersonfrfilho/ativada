@@ -287,6 +287,15 @@ describe('despacho do alerta: falha do Telegram, repetição e desistência', ()
     expectCleanLogs(subject);
   });
 
+  test('taxa de acerto ilegível no conteúdo: falha sem enviar, em vez de lançar e voltar para sempre', async () => {
+    const subject = harness();
+    subject.enqueue({ payload: alertPayload({ hitRate: { winRate: 'abc', trades: 3 } }) });
+    const summary = await subject.dispatcher.tick();
+    expect(summary).toMatchObject({ claimed: 1, failed: 1, errored: 0, sent: 0 });
+    expect(subject.alerts.rows[0]).toMatchObject({ status: 'failed', lastError: 'bad_payload' });
+    expect(subject.bot.requests).toHaveLength(0);
+  });
+
   test('falha ao gravar o resultado de um alerta não impede os outros e não lança', async () => {
     const subject = harness();
     subject.enqueue({ payload: alertPayload({ reason: 'primeiro' }), candleTime: 1_000 });
@@ -311,6 +320,67 @@ describe('despacho do alerta: falha do Telegram, repetição e desistência', ()
     await dispatcher.tick();
     expect(subject.bot.requests).toHaveLength(2);
     expect(subject.alerts.rows.filter((row) => row.status === 'sent')).toHaveLength(1);
+  });
+});
+
+describe('despacho do alerta: o alerta veneno não é reivindicado para sempre', () => {
+  async function dispatcherWhereRecordingFails(subject: DispatcherHarness): Promise<{
+    readonly tick: () => ReturnType<DispatcherHarness['dispatcher']['tick']>;
+  }> {
+    const { createAlertDispatcher, createTelegramClient } = await loadAlertsApi();
+    const alwaysBroken = {
+      ...subject.alerts.repository,
+      markSent: (): Promise<void> => Promise.reject(new Error('banco indisponível')),
+    };
+    return createAlertDispatcher({
+      alerts: alwaysBroken,
+      client: createTelegramClient({ apiBaseUrl: subject.bot.baseUrl, botToken: BOT_TOKEN }),
+      logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
+      now: () => subject.clock.now,
+    });
+  }
+
+  test('o teto de reivindicações vai ao repositório, que é quem o aplica', async () => {
+    const subject = harness();
+    const seen: number[] = [];
+    const spy = {
+      ...subject.alerts.repository,
+      claimDue: (params: ClaimAlertsParams): ReturnType<AlertRepository['claimDue']> => {
+        seen.push(params.maximumAttempts);
+        return subject.alerts.repository.claimDue(params);
+      },
+    };
+    const { createAlertDispatcher, createTelegramClient } = await loadAlertsApi();
+    const dispatcher = createAlertDispatcher({
+      alerts: spy,
+      client: createTelegramClient({ apiBaseUrl: subject.bot.baseUrl, botToken: BOT_TOKEN }),
+      logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
+      now: () => subject.clock.now,
+    });
+    await dispatcher.tick();
+    expect(seen).toStrictEqual([constants.ALERT_MAX_ATTEMPTS]);
+  });
+
+  test('entrega que quebra antes de gravar o resultado é tentada até o teto e então encerrada como falha', async () => {
+    const subject = harness();
+    subject.enqueue();
+    const dispatcher = await dispatcherWhereRecordingFails(subject);
+    const claimedPerRound: number[] = [];
+    for (let round = 0; round < constants.ALERT_MAX_ATTEMPTS + 3; round += 1) {
+      claimedPerRound.push((await dispatcher.tick()).claimed);
+      subject.clock.now += constants.ALERT_LEASE_MILLISECONDS + 1;
+    }
+    expect(claimedPerRound).toStrictEqual([
+      ...Array.from({ length: constants.ALERT_MAX_ATTEMPTS }, () => 1),
+      0,
+      0,
+      0,
+    ]);
+    expect(subject.bot.requests).toHaveLength(constants.ALERT_MAX_ATTEMPTS);
+    expect(subject.alerts.rows[0]).toMatchObject({
+      status: 'failed',
+      lastError: 'attempts_exhausted',
+    });
   });
 });
 

@@ -125,6 +125,7 @@ export function createAlertDispatcher(dependencies: AlertDispatcherDependencies)
         now: new Date(dependencies.now()),
         limit: ALERT_BATCH_SIZE,
         leaseMilliseconds: ALERT_LEASE_MILLISECONDS,
+        maximumAttempts: ALERT_MAX_ATTEMPTS,
       });
       const counts = { sent: 0, retried: 0, failed: 0, skipped: 0, errored: 0 };
       // Em sequência de propósito: o Telegram limita mensagens por segundo, e a ordem dos candles é a ordem do aviso.

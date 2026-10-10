@@ -57,20 +57,27 @@ export function createInMemoryAlerts(now: () => number): InMemoryAlerts {
         )
         .sort((first, second) => first.nextAttemptAt - second.nextAttemptAt)
         .slice(0, params.limit);
-      for (const row of due) {
+      for (const row of due.filter((item) => item.attempts >= params.maximumAttempts)) {
+        row.status = 'failed';
+        row.lockedUntil = undefined;
+        row.lastError = 'attempts_exhausted';
+      }
+      for (const row of due.filter((item) => item.status === 'pending')) {
         row.lockedUntil = params.now.getTime() + params.leaseMilliseconds;
         row.attempts += 1;
       }
       return Promise.resolve(
-        due.map((row) => ({
-          id: row.id,
-          runId: row.runId,
-          candleTime: row.candleTime,
-          side: row.side,
-          payload: row.payload,
-          attempts: row.attempts,
-          chatId: chats.get(row.userId),
-        })),
+        due
+          .filter((row) => row.status === 'pending')
+          .map((row) => ({
+            id: row.id,
+            runId: row.runId,
+            candleTime: row.candleTime,
+            side: row.side,
+            payload: row.payload,
+            attempts: row.attempts,
+            chatId: chats.get(row.userId),
+          })),
       );
     },
     markSent: ({ alertId, now: at }): Promise<void> => {

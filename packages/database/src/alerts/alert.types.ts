@@ -13,6 +13,8 @@ export type ClaimAlertsParams = {
   readonly now: Date;
   readonly limit: number;
   readonly leaseMilliseconds: number;
+  // Quantas reivindicações um alerta aguenta: a seguinte já o encerra como `failed` em vez de entregá-lo outra vez.
+  readonly maximumAttempts: number;
 };
 
 // `chatId` vem de `users` NO MOMENTO do envio e só existe com conta ativa, vínculo e alertas ligados; nunca é copiado

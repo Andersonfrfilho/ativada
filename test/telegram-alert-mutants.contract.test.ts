@@ -263,6 +263,22 @@ const MUTANTS: readonly AlertsSourceMutant[] = [
     ),
   },
   {
+    name: 'CLAIM_CEILING_NOT_FORWARDED',
+    edits: edit(
+      DISPATCHER,
+      'maximumAttempts: ALERT_MAX_ATTEMPTS,',
+      'maximumAttempts: Number.MAX_SAFE_INTEGER,',
+    ),
+  },
+  {
+    name: 'HIT_RATE_NOT_A_DECIMAL',
+    edits: edit(
+      PAYLOAD_SCHEMA,
+      'winRate: z.string().regex(DECIMAL_TEXT_PATTERN)',
+      'winRate: z.string().min(1)',
+    ),
+  },
+  {
     name: 'GOAL_OUTCOME_UNKNOWN_ACCEPTED',
     edits: edit(PAYLOAD_SCHEMA, 'outcome: z.enum(GOAL_RUN_OUTCOME),', 'outcome: z.string(),'),
   },

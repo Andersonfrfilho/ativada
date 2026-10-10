@@ -14,6 +14,7 @@ import {
 } from '../live-test/live-test-context.js';
 import {
   CHAT_OF_D,
+  CLAIM_MAXIMUM_ATTEMPTS,
   CHAT_OF_E,
   EVALUATOR_PASS_STEPS,
   FRESH_FOREVER_CANDLES,
@@ -67,6 +68,7 @@ async function claimEverything(context: TelegramTestContext): Promise<readonly s
       now: new Date(context.clock.now),
       limit: 100,
       leaseMilliseconds: LEASE_MILLISECONDS,
+      maximumAttempts: CLAIM_MAXIMUM_ATTEMPTS,
     });
     if (batch.length === 0) return claimed;
     claimed.push(...batch.map((alert) => alert.id));

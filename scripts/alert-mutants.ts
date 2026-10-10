@@ -109,6 +109,42 @@ const MUTANTS: readonly DatabaseMutant[] = [
     ],
   },
   {
+    name: 'EXHAUSTED_ALERT_STILL_CLAIMED',
+    edits: [
+      {
+        file: REPOSITORY,
+        find: 'const due = dueRows.filter((row) => row.attempts < params.maximumAttempts);',
+        replace: 'const due = dueRows;',
+      },
+    ],
+  },
+  {
+    name: 'EXHAUSTED_ALERT_LEFT_PENDING',
+    edits: [
+      {
+        file: REPOSITORY,
+        find: 'dueRows.filter((row) => row.attempts >= params.maximumAttempts).map((row) => row.id),',
+        replace: '[],',
+      },
+    ],
+  },
+  {
+    name: 'EXHAUSTED_CEILING_OFF_BY_ONE',
+    edits: [
+      {
+        file: REPOSITORY,
+        find: 'dueRows.filter((row) => row.attempts >= params.maximumAttempts).map((row) => row.id),',
+        replace:
+          'dueRows.filter((row) => row.attempts > params.maximumAttempts).map((row) => row.id),',
+      },
+      {
+        file: REPOSITORY,
+        find: 'const due = dueRows.filter((row) => row.attempts < params.maximumAttempts);',
+        replace: 'const due = dueRows.filter((row) => row.attempts <= params.maximumAttempts);',
+      },
+    ],
+  },
+  {
     name: 'LATEST_METRICS_OF_ANY_OWNER',
     edits: [
       {

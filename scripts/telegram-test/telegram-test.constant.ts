@@ -16,3 +16,4 @@ export const WALK_FORWARD_TRADES = 10;
 // O relógio do despachante parte de uma hora à frente do relógio do banco: tudo o que já foi enfileirado está vencido.
 export const CLOCK_HEAD_START_MILLISECONDS = 3_600_000;
 export const LEASE_MILLISECONDS = 120_000;
+export const CLAIM_MAXIMUM_ATTEMPTS = 5;

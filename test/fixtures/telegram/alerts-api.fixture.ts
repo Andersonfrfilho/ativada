@@ -63,6 +63,7 @@ export async function loadAlertsApi(): Promise<AlertsApi> {
 export type AlertConstants = {
   readonly ALERT_BATCH_SIZE: number;
   readonly ALERT_LEASE_MILLISECONDS: number;
+  readonly ALERT_MAX_ATTEMPTS: number;
   readonly ALERT_REQUEST_TIMEOUT_MILLISECONDS: number;
 };
 
@@ -77,6 +78,7 @@ export async function loadAlertConstants(): Promise<AlertConstants> {
   return {
     ALERT_BATCH_SIZE: read('ALERT_BATCH_SIZE'),
     ALERT_LEASE_MILLISECONDS: read('ALERT_LEASE_MILLISECONDS'),
+    ALERT_MAX_ATTEMPTS: read('ALERT_MAX_ATTEMPTS'),
     ALERT_REQUEST_TIMEOUT_MILLISECONDS: read('ALERT_REQUEST_TIMEOUT_MILLISECONDS'),
   };
 }

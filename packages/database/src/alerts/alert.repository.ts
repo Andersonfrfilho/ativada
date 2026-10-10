@@ -5,7 +5,12 @@ import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import { readJsonb } from '../jsonb.js';
 import { alerts } from '../schema/alerts.schema.js';
 import { users } from '../schema/users.schema.js';
-import { ALERT_CLAIM_MAXIMUM_BATCH, ALERT_STATUS, type AlertSide } from './alert.constant.js';
+import {
+  ALERT_ATTEMPTS_EXHAUSTED_ERROR_CODE,
+  ALERT_CLAIM_MAXIMUM_BATCH,
+  ALERT_STATUS,
+  type AlertSide,
+} from './alert.constant.js';
 import type { AlertRepository, ClaimAlertsParams, ClaimedAlert } from './alert.types.js';
 
 type Database = ReturnType<typeof readOpenDatabase>['database'];
@@ -39,16 +44,38 @@ async function readChats(
   return chats;
 }
 
+// O alerta que já foi reivindicado o máximo de vezes sem terminar (a entrega quebra antes de gravar o resultado) não volta
+// a ser entregue: encerra como falho na própria reivindicação, senão o arrendamento vencido o devolveria para sempre.
+async function failExhausted(
+  transaction: Pick<Database, 'update'>,
+  exhaustedIds: readonly string[],
+): Promise<void> {
+  if (exhaustedIds.length === 0) return;
+  await transaction
+    .update(alerts)
+    .set({
+      status: ALERT_STATUS.FAILED,
+      lockedUntil: null,
+      lastError: ALERT_ATTEMPTS_EXHAUSTED_ERROR_CODE,
+    })
+    .where(inArray(alerts.id, [...exhaustedIds]));
+}
+
 async function claimDue(database: Database, params: ClaimAlertsParams): Promise<ClaimedAlert[]> {
   const limit = Math.min(Math.max(Math.trunc(params.limit), 1), ALERT_CLAIM_MAXIMUM_BATCH);
   return database.transaction(async (transaction) => {
-    const due = await transaction
-      .select({ id: alerts.id })
+    const dueRows = await transaction
+      .select({ id: alerts.id, attempts: alerts.attempts })
       .from(alerts)
       .where(isDue(params.now))
       .orderBy(asc(alerts.nextAttemptAt), asc(alerts.id))
       .limit(limit)
       .for('update', { skipLocked: true });
+    await failExhausted(
+      transaction,
+      dueRows.filter((row) => row.attempts >= params.maximumAttempts).map((row) => row.id),
+    );
+    const due = dueRows.filter((row) => row.attempts < params.maximumAttempts);
     if (due.length === 0) return [];
     const taken = await transaction
       .update(alerts)
