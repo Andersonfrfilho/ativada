@@ -101,6 +101,12 @@ export { RSI_INDICATOR } from './rsi.indicator.js';
 export { SMA_INDICATOR } from './sma.indicator.js';
 export { VWAP_INDICATOR } from './vwap.indicator.js';
 export { Z_SCORE_INDICATOR } from './z-score.indicator.js';
+export {
+  missingIndicatorValue,
+  readIndicatorOutput,
+  readIndicatorScalar,
+  type ReadIndicatorOutputParams,
+} from './indicator-reading.js';
 export type { JsonValue } from './json-value.types.js';
 export {
   createRunSetup,
@@ -110,7 +116,17 @@ export {
   parseRunParameters,
   parseStrategyConfig,
 } from './parse-strategy-config.js';
+export {
+  formatTruncatedAdx,
+  resolveFamilyWeight,
+  resolveRegime,
+  type ResolveFamilyWeightParams,
+  type ResolveRegimeParams,
+  type ResolvedRegime,
+} from './regime.js';
+export type { RuleReading, ScoreboardReadings } from './rule-reading.types.js';
 export { RUN_PARAMETERS_SCHEMA } from './run-parameters.schema.js';
+export { castRuleVote, type CastRuleVoteParams, type CastVote, type Vote } from './rule-vote.js';
 export {
   resolveFreshSentiment,
   selectAvailableSentiment,
@@ -118,5 +134,10 @@ export {
   type SelectAvailableSentimentParams,
 } from './sentiment.js';
 export { STRATEGY_CONFIG_SCHEMA } from './strategy-config.schema.js';
+export {
+  collectIndicatorHorizons,
+  computeStrategyLeadInCandles,
+  createStrategySignalState,
+} from './strategy-horizons.js';
 export type * from './strategy-config.types.js';
 export * from './strategy-engine.error.js';

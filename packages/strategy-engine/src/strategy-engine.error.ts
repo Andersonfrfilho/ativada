@@ -92,11 +92,13 @@ export const INDICATOR_ERROR_CODE = {
   INVALID_PARAMETER: 'INVALID_PARAMETER',
   INVALID_SNAPSHOT: 'INVALID_SNAPSHOT',
   NON_FINITE_RESULT: 'NON_FINITE_RESULT',
+  MISSING_VALUE: 'MISSING_VALUE',
 } as const;
 
 export type IndicatorErrorCode = (typeof INDICATOR_ERROR_CODE)[keyof typeof INDICATOR_ERROR_CODE];
 
-// Dado ausente ou não finito, parâmetro inválido e snapshot alheio nunca viram `NaN` que atravessa.
+// Dado ausente ou não finito, parâmetro inválido e snapshot alheio nunca viram `NaN` que atravessa;
+// `MISSING_VALUE`: indicador sem valor depois do aquecimento (só o sentimento pode faltar).
 export class IndicatorError extends StrategyEngineError {
   readonly code: IndicatorErrorCode;
 
