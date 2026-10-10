@@ -64,7 +64,7 @@ async function checkIdempotentUpsert(context: CandleCheckContext): Promise<void>
   assertCondition(first.inserted === 3, `primeiro upsert inseriu ${first.inserted}`);
   assertCondition(second.inserted === 0, `segundo upsert inseriu ${second.inserted}`);
   assertCondition(total === 3, `contagem mudou: ${total}`);
-  const rewritten = { ...buildCandle('IDEMPOTENTUSDT', 0), close: '1.00000000' };
+  const rewritten = { ...buildCandle('IDEMPOTENTUSDT', 0), close: '82550.00000000' };
   const third = await repository.upsertCandles([rewritten]);
   const [stored] = await repository.findCandles({
     exchange: 'binance',
@@ -141,6 +141,23 @@ async function checkRejections(context: CandleCheckContext): Promise<void> {
   };
   const backwardsCode = await readRejectionCode(repository.upsertCandles([backwards]));
   assertCondition(backwardsCode === CHECK_VIOLATION_SQLSTATE, `close <= open -> ${backwardsCode}`);
+  for (const [label, outsideRange] of [
+    ['open acima de high', { open: '3.00000000' }],
+    ['open abaixo de low', { open: '0.50000000' }],
+    ['close acima de high', { close: '3.00000000' }],
+    ['close abaixo de low', { close: '0.50000000' }],
+  ] as const) {
+    const candle = {
+      ...buildCandle('REJECTEDUSDT', 3),
+      high: '2.00000000',
+      low: '1.00000000',
+      open: '1.50000000',
+      close: '1.50000000',
+      ...outsideRange,
+    };
+    const outsideCode = await readRejectionCode(repository.upsertCandles([candle]));
+    assertCondition(outsideCode === CHECK_VIOLATION_SQLSTATE, `${label} -> ${outsideCode}`);
+  }
   const rawTimeframeCode = await readRejectionCode(
     Promise.resolve(client`
       INSERT INTO candles (exchange, symbol, timeframe, open_time, close_time, open, high, low, close, volume, trade_count)
@@ -151,7 +168,9 @@ async function checkRejections(context: CandleCheckContext): Promise<void> {
     `timeframe 5m -> ${rawTimeframeCode}`,
   );
   assertCondition((await countCandles(client, 'REJECTEDUSDT')) === 0, 'rejeitados deixaram linhas');
-  reportCheck('candle aberto, high < low, close <= open e timeframe fora da lista -> rejeitados');
+  reportCheck(
+    'candle aberto, high < low, close <= open, open/close fora de [low, high] e timeframe fora da lista -> rejeitados',
+  );
 }
 
 async function checkBulkInsert(context: CandleCheckContext): Promise<void> {

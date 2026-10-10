@@ -30,10 +30,15 @@ function hoursFrom(first: number, count: number): number[] {
   return Array.from({ length: count }, (_unused, index) => first + index * PIPELINE_HOUR);
 }
 
-function publishHistory(missingOpenTimes: readonly number[] = []): void {
-  const openTimes = hoursFrom(PIPELINE_BASE - 12 * PIPELINE_HOUR, HOURS_PUBLISHED).filter(
-    (openTime) => !missingOpenTimes.includes(openTime),
-  );
+function publishHistory(
+  options: { readonly missingOpenTimes?: readonly number[]; readonly firstHoursBack?: number } = {},
+): void {
+  const missingOpenTimes = options.missingOpenTimes ?? [];
+  const firstHoursBack = options.firstHoursBack ?? 12;
+  const openTimes = hoursFrom(
+    PIPELINE_BASE - firstHoursBack * PIPELINE_HOUR,
+    HOURS_PUBLISHED + firstHoursBack - 12,
+  ).filter((openTime) => !missingOpenTimes.includes(openTime));
   pipeline.server.setHistory({ symbol: 'BTCUSDT', timeframe: '1h', openTimes });
 }
 
@@ -118,16 +123,25 @@ describe('worker: the gap check covers a lookback window, not "from the latest s
     expect(repository.stored().map((candle) => candle.openTime)).toContain(lost);
   });
 
-  test('an interval Binance does not have is asked once, not at every check', async () => {
-    const withheld = [PIPELINE_BASE - 3 * PIPELINE_HOUR, PIPELINE_BASE - 2 * PIPELINE_HOUR];
-    pipeline = startPipeline({ gapLookbackHours: 6, shouldPrefillWindow: false });
-    publishHistory(withheld);
+  test('an old interval Binance does not have is asked once, not at every check', async () => {
+    const withheld = [PIPELINE_BASE - 29 * PIPELINE_HOUR, PIPELINE_BASE - 28 * PIPELINE_HOUR];
+    pipeline = startPipeline({ gapLookbackHours: 30, shouldPrefillWindow: false });
+    publishHistory({ missingOpenTimes: withheld, firstHoursBack: 29 });
+    await waitFor(() => pipeline.finishedRecoveries() === 1, 'first recovery finished');
+    expect(pipeline.server.restRequests).toHaveLength(1);
+    pipeline.server.dropConnections();
+    await waitFor(() => pipeline.finishedRecoveries() === 2, 'recovery after the drop');
+    expect(pipeline.server.restRequests).toHaveLength(1);
+  });
+
+  test('a recent hole is asked again: the REST may just be late', async () => {
+    pipeline = startPipeline({ seedOpenTime: PIPELINE_BASE - 3 * PIPELINE_HOUR });
+    publishHistory({ missingOpenTimes: [PIPELINE_BASE - 2 * PIPELINE_HOUR] });
     await waitFor(() => pipeline.finishedRecoveries() === 1, 'first recovery finished');
     const requestsAfterFirst = pipeline.server.restRequests.length;
     pipeline.server.dropConnections();
     await waitFor(() => pipeline.finishedRecoveries() === 2, 'recovery after the drop');
-    expect(requestsAfterFirst).toBe(1);
-    expect(pipeline.server.restRequests).toHaveLength(requestsAfterFirst);
+    expect(pipeline.server.restRequests.length).toBeGreaterThan(requestsAfterFirst);
   });
 });
 
@@ -163,6 +177,17 @@ describe('worker: the periodic check', () => {
     );
     expect(pipeline.server.connectionCount()).toBe(1);
     expect(pipeline.server.restRequests).toHaveLength(0);
+  });
+
+  test('logs the stream counters, handlerFailureCount included, at every tick', async () => {
+    pipeline = startPipeline({ gapCheckIntervalMilliseconds: PERIODIC_INTERVAL_MILLISECONDS });
+    publishHistory();
+    await waitFor(() => pipeline.logs(WORKER_LOG.STREAM_STATS).length >= 2, 'two stats logs');
+    expect(pipeline.logs(WORKER_LOG.STREAM_STATS)[0]).toMatchObject({
+      handlerFailureCount: 0,
+      loopFailureCount: 0,
+      attemptCount: 1,
+    });
   });
 
   test('stop() ends the periodic check for good', async () => {

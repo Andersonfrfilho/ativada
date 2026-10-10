@@ -39,6 +39,7 @@ export type KlineStreamStats = {
   readonly ignoredOpenCount: number;
   readonly malformedCount: number;
   readonly handlerFailureCount: number;
+  readonly loopFailureCount: number;
 };
 
 export type KlineStream = {

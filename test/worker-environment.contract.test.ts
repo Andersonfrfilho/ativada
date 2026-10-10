@@ -86,6 +86,8 @@ describe('worker environment', () => {
   });
 
   test.each([
+    ['MARKET_EXCHANGE', 'coinbase'],
+    ['MARKET_EXCHANGE', 'Binance'],
     ['MARKET_SYMBOLS', 'btcusdt'],
     ['MARKET_TIMEFRAMES', '1m'],
     ['BINANCE_BASE_URL', 'ftp://example.com'],

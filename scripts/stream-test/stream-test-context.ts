@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { CandleRecord, CandleRepository } from '../../packages/database/src/index.js';
 import type { FakeBinanceStreamServer } from '../../packages/market-data/test-support/fake-binance-stream-server.js';
+import { waitForSafeClock } from '../backfill-test/grid-oracle.js';
 import { assertCondition } from '../identity-test/identity-test.error.js';
 import {
   EXCHANGE,
@@ -18,6 +19,21 @@ export type StreamContext = {
   // Abertura da última vela já fechada quando o cenário começa (a virada da hora é evitada antes).
   readonly lastClosedOpenTime: number;
 };
+
+export function computeLastClosedOpenTime(): number {
+  return (
+    Math.floor(Date.now() / MILLISECONDS_PER_HOUR) * MILLISECONDS_PER_HOUR - MILLISECONDS_PER_HOUR
+  );
+}
+
+// Cada cenário começa longe da virada da hora; se a espera atravessou a virada, o banco semeado não vale mais.
+export async function prepareScenario(context: StreamContext): Promise<void> {
+  await waitForSafeClock();
+  assertCondition(
+    computeLastClosedOpenTime() === context.lastClosedOpenTime,
+    'a hora virou entre os cenários: rode o stream-test de novo',
+  );
+}
 
 export function reportCheck(message: string): void {
   console.log(`stream-test: ${message}`);

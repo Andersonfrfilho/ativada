@@ -10,6 +10,8 @@ export const MINIMUM_FEAR_GREED_REFRESH_DAYS = 1;
 export const MAXIMUM_FEAR_GREED_REFRESH_DAYS = 365;
 // `limit=0` pede à alternative.me todo o histórico.
 export const FEAR_GREED_FULL_HISTORY_LIMIT = 0;
+export const MILLISECONDS_PER_DAY = 86_400_000;
+export const MISSING_DAYS_MARGIN = 2;
 export const MARKET_LIST_SEPARATOR = ',';
 export const SYMBOL_PATTERN = /^[A-Z0-9]{5,20}$/;
 

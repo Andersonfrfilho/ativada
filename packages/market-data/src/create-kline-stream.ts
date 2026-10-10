@@ -23,6 +23,7 @@ type Counters = {
   ignoredOpenCount: number;
   malformedCount: number;
   handlerFailureCount: number;
+  loopFailureCount: number;
 };
 
 export function createKlineStream(settings: KlineStreamSettings): KlineStream {
@@ -39,6 +40,7 @@ export function createKlineStream(settings: KlineStreamSettings): KlineStream {
     ignoredOpenCount: 0,
     malformedCount: 0,
     handlerFailureCount: 0,
+    loopFailureCount: 0,
   };
   let isClosed = false;
   let consecutiveFailures = 0;
@@ -109,21 +111,31 @@ export function createKlineStream(settings: KlineStreamSettings): KlineStream {
     return activeConnection.ended;
   }
 
+  async function connectAndWait(): Promise<void> {
+    const end = await connectOnce();
+    if (isClosed) return;
+    const { onDisconnected } = settings;
+    if (onDisconnected !== undefined) runHandler(() => onDisconnected({ reason: end.reason }));
+    if (isStable(end)) consecutiveFailures = 0;
+    const delay = computeBackoffDelay({
+      attempt: consecutiveFailures,
+      baseMilliseconds: config.reconnectBaseMilliseconds,
+      maxMilliseconds: config.reconnectMaxMilliseconds,
+      random,
+    });
+    consecutiveFailures += 1;
+    await Promise.race([sleep(delay), closedSignal]);
+  }
+
+  // Falha inesperada do laço (ex.: `sleep` injetado que rejeita) vira contagem e nova tentativa, nunca rejeição solta.
   async function run(): Promise<void> {
     while (!isClosed) {
-      const end = await connectOnce();
-      if (isClosed) return;
-      const { onDisconnected } = settings;
-      if (onDisconnected !== undefined) runHandler(() => onDisconnected({ reason: end.reason }));
-      if (isStable(end)) consecutiveFailures = 0;
-      const delay = computeBackoffDelay({
-        attempt: consecutiveFailures,
-        baseMilliseconds: config.reconnectBaseMilliseconds,
-        maxMilliseconds: config.reconnectMaxMilliseconds,
-        random,
-      });
-      consecutiveFailures += 1;
-      await Promise.race([sleep(delay), closedSignal]);
+      try {
+        await connectAndWait();
+      } catch {
+        counters.loopFailureCount += 1;
+        await Promise.race([cancellable.sleep(config.reconnectMaxMilliseconds), closedSignal]);
+      }
     }
   }
 

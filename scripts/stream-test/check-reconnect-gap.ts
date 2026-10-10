@@ -36,13 +36,17 @@ export async function checkDropWithLostCandlesLeavesNoHole(
 ): Promise<void> {
   const lastClosed = context.lastClosedOpenTime;
   const alreadyStored = hoursFrom(lastClosed, -3);
+  const storedBefore = worker.countMessages(WORKER_MESSAGE.CANDLE_STORED);
   context.server.sendEvent({
     symbol: SYMBOL,
     timeframe: TIMEFRAME,
     openTime: alreadyStored,
     isClosed: true,
   });
-  await Bun.sleep(300);
+  await waitUntil(
+    () => worker.countMessages(WORKER_MESSAGE.CANDLE_STORED) > storedBefore,
+    'o worker processar a vela repetida do stream',
+  );
   assertCondition(
     (await readCandlesAt(context, alreadyStored)).length === 1,
     'a mesma vela duas vezes pelo stream duplicou a linha',

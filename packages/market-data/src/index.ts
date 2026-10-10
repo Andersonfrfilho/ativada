@@ -22,6 +22,7 @@ export {
   FEAR_GREED_API_URL,
   MAX_KLINES_PER_REQUEST,
   MAXIMUM_RETRY_AFTER_SECONDS,
+  SUPPORTED_MARKET_EXCHANGES,
 } from './market-data.constant.js';
 export {
   MarketDataAbortedError,

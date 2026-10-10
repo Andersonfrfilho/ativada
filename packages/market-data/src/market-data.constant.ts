@@ -3,6 +3,7 @@
 // Base só de dados de mercado públicos, sem restrição de região e sem chave (docs da Binance, "General API Information").
 export const BINANCE_MARKET_DATA_BASE_URL = 'https://data-api.binance.vision';
 export const BINANCE_SOURCE_NAME = 'Binance';
+export const SUPPORTED_MARKET_EXCHANGES = ['binance'] as const;
 export const KLINES_PATH = '/api/v3/klines';
 export const SYMBOL_PATTERN = /^[A-Z0-9]{2,20}$/;
 export const MAX_KLINES_PER_REQUEST = 1_000;

@@ -3,7 +3,6 @@ import {
   checkProductionRules,
   environmentNameSchema,
   httpUrlSchema,
-  nonEmptyTextSchema,
   parseEnvironment,
   postgresUrlSchema,
   webSocketUrlSchema,
@@ -13,6 +12,7 @@ import {
 import {
   BINANCE_MARKET_DATA_BASE_URL,
   BINANCE_STREAM_BASE_URL,
+  SUPPORTED_MARKET_EXCHANGES,
   TIMEFRAME,
 } from '@cryptoada/market-data';
 
@@ -33,6 +33,7 @@ import {
   SYMBOL_PATTERN,
 } from './worker.constant.js';
 
+const EXCHANGE_EXPECTATION = `uma das corretoras suportadas: ${SUPPORTED_MARKET_EXCHANGES.join(', ')}`;
 const SYMBOL_EXPECTATION = 'símbolos em maiúsculas separados por vírgula (ex.: BTCUSDT,ETHUSDT)';
 const TIMEFRAME_EXPECTATION = 'timeframes separados por vírgula dentre 15m, 1h, 4h e 1d';
 const STALE_EXPECTATION = `inteiro de ${MINIMUM_STREAM_STALE_SECONDS} a ${MAXIMUM_STREAM_STALE_SECONDS}`;
@@ -54,7 +55,9 @@ export const environmentSchema = z
   .object({
     ENV: environmentNameSchema,
     DATABASE_URL: postgresUrlSchema,
-    MARKET_EXCHANGE: nonEmptyTextSchema.default(DEFAULT_MARKET_EXCHANGE),
+    MARKET_EXCHANGE: z
+      .enum(SUPPORTED_MARKET_EXCHANGES, { error: EXCHANGE_EXPECTATION })
+      .default(DEFAULT_MARKET_EXCHANGE),
     MARKET_SYMBOLS: commaSeparatedText
       .pipe(z.array(z.string().regex(SYMBOL_PATTERN), { error: SYMBOL_EXPECTATION }).min(1))
       .prefault(DEFAULT_MARKET_SYMBOLS),

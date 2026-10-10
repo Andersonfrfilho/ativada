@@ -15,7 +15,7 @@ export function assertValidKlinesParams(params: FetchKlinesParams): void {
   if (!SYMBOL_PATTERN.test(params.symbol)) {
     throw new MarketDataInvalidRequestError('symbol deve conter só letras maiúsculas e dígitos.');
   }
-  if (!(params.timeframe in TIMEFRAME_DURATION_MILLISECONDS)) {
+  if (!Object.hasOwn(TIMEFRAME_DURATION_MILLISECONDS, params.timeframe)) {
     throw new MarketDataInvalidRequestError('timeframe não suportado.');
   }
   assertTimestamp('startTime', params.startTime);

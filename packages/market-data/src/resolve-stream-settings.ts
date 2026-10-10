@@ -53,7 +53,9 @@ function assertSubscription(settings: KlineStreamSettings): void {
   }
   if (
     settings.timeframes.length === 0 ||
-    !settings.timeframes.every((timeframe) => timeframe in TIMEFRAME_DURATION_MILLISECONDS)
+    !settings.timeframes.every((timeframe) =>
+      Object.hasOwn(TIMEFRAME_DURATION_MILLISECONDS, timeframe),
+    )
   ) {
     throw new MarketDataInvalidRequestError('timeframes deve ter ao menos um timeframe suportado.');
   }

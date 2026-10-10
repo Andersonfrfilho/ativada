@@ -54,11 +54,19 @@ export function createRequestExecutor(
     );
   }
 
-  async function readBody(response: Response): Promise<AttemptOutcome> {
+  // Corpo cortado no meio (timeout, conexão caída) é falha de transporte e tenta de novo; só JSON ruim é erro de resposta.
+  async function readBody(response: Response, attemptNumber: number): Promise<AttemptOutcome> {
     try {
       return { kind: 'success', body: await response.json() };
-    } catch {
-      throw new MarketDataResponseError(`Resposta de ${sourceName} não é JSON válido.`);
+    } catch (error) {
+      throwIfAborted();
+      if (error instanceof SyntaxError)
+        throw new MarketDataResponseError(`Resposta de ${sourceName} não é JSON válido.`);
+      return {
+        kind: 'retry',
+        error: toTransportError(error, sourceName),
+        delayMilliseconds: backoffMilliseconds(attemptNumber),
+      };
     }
   }
 
@@ -108,7 +116,7 @@ export function createRequestExecutor(
       };
     }
     gate.record(response);
-    if (response.ok) return readBody(response);
+    if (response.ok) return readBody(response, attemptNumber);
     return classifyFailure(response, attemptNumber);
   }
 

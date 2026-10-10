@@ -9,7 +9,12 @@ import {
 } from '@cryptoada/market-data';
 
 import type { WorkerLogger } from '../logging/worker-logger.js';
-import { DEFAULT_BAN_SECONDS, MAXIMUM_BAN_SECONDS, WORKER_LOG } from '../worker.constant.js';
+import {
+  DEFAULT_BAN_SECONDS,
+  MAXIMUM_BAN_SECONDS,
+  UNFILLABLE_MIN_AGE_MILLISECONDS,
+  WORKER_LOG,
+} from '../worker.constant.js';
 import {
   groupConsecutiveOpenTimes,
   type OpenTimeInterval,
@@ -64,8 +69,12 @@ async function downloadInterval(
     },
   });
   const duration = TIMEFRAME_DURATION_MILLISECONDS[pair.timeframe];
+  const now = dependencies.now();
   for (let openTime = interval.from; openTime <= interval.to; openTime += duration) {
-    if (!received.has(openTime)) dependencies.unfillable.add(buildUnfillableKey(pair, openTime));
+    const isOldEnough = now - (openTime + duration) >= UNFILLABLE_MIN_AGE_MILLISECONDS;
+    if (!received.has(openTime) && isOldEnough) {
+      dependencies.unfillable.add(buildUnfillableKey(pair, openTime));
+    }
   }
   return received.size;
 }

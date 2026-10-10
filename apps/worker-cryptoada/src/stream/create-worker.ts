@@ -102,8 +102,6 @@ export function createWorker(dependencies: WorkerDependencies): Worker {
     onWriteExhausted: recovery.trigger,
     signal: dependencies.abortController.signal,
   });
-  // Verificação barata (SQL): só vai ao REST se achar lacuna na janela de retrocesso.
-  const periodicCheck = setInterval(recovery.trigger, gapCheckIntervalMilliseconds);
   const stream = createKlineStream({
     symbols: dependencies.symbols,
     timeframes: dependencies.timeframes,
@@ -126,6 +124,12 @@ export function createWorker(dependencies: WorkerDependencies): Worker {
       if (shouldLogMalformed(count)) logger.warn(WORKER_LOG.MALFORMED, { reason, count });
     },
   });
+
+  // Verificação barata (SQL): só vai ao REST se achar lacuna na janela de retrocesso.
+  const periodicCheck = setInterval(() => {
+    logger.info(WORKER_LOG.STREAM_STATS, { ...stream.stats() });
+    recovery.trigger();
+  }, gapCheckIntervalMilliseconds);
 
   return {
     stop: async (): Promise<void> => {

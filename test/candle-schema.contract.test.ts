@@ -13,6 +13,8 @@ import { sentimentDaily } from '../packages/database/src/schema/sentiment-daily.
 const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
 const MIGRATION_PATH = 'packages/database/drizzle/0005_candles_sentiment_daily.sql';
 const ROLLBACK_PATH = 'packages/database/drizzle/0005_candles_sentiment_daily.rollback.sql';
+const RANGE_MIGRATION_PATH = 'packages/database/drizzle/0006_candles_open_close_range.sql';
+const RANGE_ROLLBACK_PATH = 'packages/database/drizzle/0006_candles_open_close_range.rollback.sql';
 
 async function readRepositoryText(relativePath: string): Promise<string> {
   return Bun.file(`${REPOSITORY_ROOT}${relativePath}`).text();
@@ -51,7 +53,7 @@ describe('candles schema (RF01, plan §3)', () => {
     expect([...columnsOf(candles).keys()]).not.toContain('user_id');
   });
 
-  test('declares the three CHECK constraints', () => {
+  test('declares the four CHECK constraints', () => {
     expect(
       getTableConfig(candles)
         .checks.map((check) => check.name)
@@ -59,6 +61,7 @@ describe('candles schema (RF01, plan §3)', () => {
     ).toStrictEqual([
       'candles_close_after_open_check',
       'candles_high_gte_low_check',
+      'candles_open_close_within_range_check',
       'candles_timeframe_check',
     ]);
   });
@@ -70,6 +73,18 @@ describe('candles schema (RF01, plan §3)', () => {
     expect(sql).toMatch(/in\s*\('15m',\s*'1h',\s*'4h',\s*'1d'\)/i);
     expect(sql).toMatch(/between 0 and 100/i);
     expect(sql).not.toMatch(/AS\s+ENUM/i);
+  });
+
+  test('the 0006 migration keeps open and close between low and high, and its rollback drops only that', async () => {
+    const sql = await readRepositoryText(RANGE_MIGRATION_PATH);
+    expect(sql).toMatch(/ADD CONSTRAINT "candles_open_close_within_range_check"/);
+    for (const price of ['open', 'close']) {
+      expect(sql).toMatch(new RegExp(`"${price}"\\s*>=\\s*"candles"\\."low"`));
+      expect(sql).toMatch(new RegExp(`"${price}"\\s*<=\\s*"candles"\\."high"`));
+    }
+    const rollback = await readRepositoryText(RANGE_ROLLBACK_PATH);
+    expect(rollback).toMatch(/DROP CONSTRAINT "candles_open_close_within_range_check"/);
+    expect(rollback).not.toMatch(/DROP TABLE/);
   });
 
   test('the rollback drops both tables', async () => {

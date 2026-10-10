@@ -4,7 +4,7 @@ import { readPostgresErrorCode } from '@cryptoada/database';
 import { EXIT_CODE, NO_ERROR_CODE, type ExitCode } from './cron.constant.js';
 import type { CronLogger } from './logging/cron-logger.js';
 
-export type CronTaskSummary = Readonly<Record<string, number>> & { readonly failures: number };
+export type CronTaskSummary = Readonly<Record<string, number>> & { readonly failures?: number };
 
 export type CronTask = {
   readonly name: string;
@@ -15,7 +15,7 @@ async function runTask(task: CronTask, logger: CronLogger): Promise<ExitCode> {
   try {
     const summary = await task.run();
     logger.info(`${task.name} finished`, summary);
-    return summary.failures > 0 ? EXIT_CODE.FAILURE : EXIT_CODE.SUCCESS;
+    return (summary.failures ?? 0) > 0 ? EXIT_CODE.FAILURE : EXIT_CODE.SUCCESS;
   } catch (error: unknown) {
     const errorName = error instanceof Error ? error.name : 'UnknownError';
     const errorCode = readPostgresErrorCode(error) ?? NO_ERROR_CODE;

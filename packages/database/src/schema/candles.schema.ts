@@ -39,6 +39,10 @@ export const candles = pgTable(
     primaryKey({ columns: [table.exchange, table.symbol, table.timeframe, table.openTime] }),
     check('candles_close_after_open_check', sql`${table.closeTime} > ${table.openTime}`),
     check('candles_high_gte_low_check', sql`${table.high} >= ${table.low}`),
+    check(
+      'candles_open_close_within_range_check',
+      sql`${table.open} >= ${table.low} AND ${table.open} <= ${table.high} AND ${table.close} >= ${table.low} AND ${table.close} <= ${table.high}`,
+    ),
     check('candles_timeframe_check', sql`${table.timeframe} in (${TIMEFRAME_LITERALS})`),
   ],
 );

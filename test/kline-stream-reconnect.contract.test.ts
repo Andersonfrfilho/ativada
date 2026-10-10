@@ -9,6 +9,9 @@ import {
 } from './fixtures/kline-stream-harness.fixture.js';
 import { createManualClock, createRecordingSleep, waitFor } from './fixtures/wait-for.fixture.js';
 
+const STALE_MILLISECONDS = 1_000;
+const ABSENCE_WINDOW_MILLISECONDS = 250;
+
 let harness: StreamHarness;
 
 beforeEach(() => {
@@ -91,7 +94,7 @@ describe('kline stream: reconnection', () => {
   });
 
   test('keeps the connection while messages keep arriving', async () => {
-    const opened = harness.open({ staleAfterMilliseconds: 150 });
+    const opened = harness.open({ staleAfterMilliseconds: STALE_MILLISECONDS });
     await waitFor(() => opened.attempts.length === 1, 'first connection');
     for (let tick = 0; tick < 8; tick += 1) {
       harness.server.sendEvent({
@@ -100,7 +103,7 @@ describe('kline stream: reconnection', () => {
         openTime: FIRST_OPEN_TIME,
         isClosed: false,
       });
-      await Bun.sleep(50);
+      await Bun.sleep(STALE_MILLISECONDS / 10);
     }
     expect(opened.disconnections).toStrictEqual([]);
     expect(harness.server.connectionCount()).toBe(1);
@@ -108,16 +111,20 @@ describe('kline stream: reconnection', () => {
 
   test('close() during the backoff is idempotent and stops reconnecting for good', async () => {
     harness.server.refuseConnections(true);
-    const recorder = createRecordingSleep();
-    const opened = harness.open({ sleep: recorder.sleep });
-    await waitFor(() => recorder.delays.length >= 2, 'two failed attempts');
+    const parked: number[] = [];
+    const opened = harness.open({
+      sleep: (milliseconds) => {
+        parked.push(milliseconds);
+        return new Promise<void>(() => undefined);
+      },
+    });
+    await waitFor(() => parked.length === 1, 'first attempt over, parked in the backoff');
     await opened.stream.close();
     await opened.stream.close();
-    // Um pedido já enviado antes do close() ainda chega ao servidor: ele precisa assentar antes da prova.
-    await Bun.sleep(100);
     const attemptsAtClose = opened.stream.stats().attemptCount;
     harness.server.refuseConnections(false);
-    await Bun.sleep(250);
+    // Janela de ausência: só reprova se algo reconectar; esperar mais não torna o teste instável.
+    await Bun.sleep(ABSENCE_WINDOW_MILLISECONDS);
     expect(harness.server.connectionCount()).toBe(0);
     expect(opened.stream.stats().attemptCount).toBe(attemptsAtClose);
   });
@@ -170,6 +177,29 @@ describe('kline stream: reconnection', () => {
     } finally {
       globalThis.setTimeout = realSetTimeout;
       globalThis.clearTimeout = realClearTimeout;
+    }
+  });
+
+  test('a rejection inside the reconnect loop is counted and the stream goes on, with no unhandled rejection', async () => {
+    const unhandled: unknown[] = [];
+    const listener = (reason: unknown): void => void unhandled.push(reason);
+    process.on('unhandledRejection', listener);
+    try {
+      harness.server.refuseConnections(true);
+      let calls = 0;
+      const opened = harness.open({
+        reconnectMaxMilliseconds: 40,
+        sleep: () => {
+          calls += 1;
+          return calls === 1 ? Promise.reject(new Error('sleep quebrado')) : Bun.sleep(1);
+        },
+      });
+      await waitFor(() => opened.stream.stats().attemptCount >= 3, 'attempts after the failure');
+      await Bun.sleep(20);
+      expect(opened.stream.stats().loopFailureCount).toBe(1);
+      expect(unhandled).toStrictEqual([]);
+    } finally {
+      process.off('unhandledRejection', listener);
     }
   });
 });

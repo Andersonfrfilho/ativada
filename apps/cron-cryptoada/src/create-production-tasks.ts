@@ -72,6 +72,7 @@ export function createProductionTasks(params: CreatePurgeTaskParams): readonly C
         client: createFearGreedClient({ baseUrl: environment.FEAR_GREED_API_URL }),
         logger,
         refreshDays: environment.FEAR_GREED_REFRESH_DAYS,
+        now: () => Date.now(),
       }),
     },
   ];

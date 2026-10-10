@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { httpUrlSchema, nonEmptyTextSchema, z } from '@cryptoada/environment';
-import { FEAR_GREED_API_URL, TIMEFRAME } from '@cryptoada/market-data';
+import { httpUrlSchema, z } from '@cryptoada/environment';
+import { FEAR_GREED_API_URL, SUPPORTED_MARKET_EXCHANGES, TIMEFRAME } from '@cryptoada/market-data';
 
 import { TASK_NAME } from '../cron.constant.js';
 import {
@@ -18,6 +18,7 @@ import {
 } from './market.constant.js';
 
 const DEFAULT_BINANCE_BASE_URL = 'https://data-api.binance.vision';
+const EXCHANGE_EXPECTATION = `uma das corretoras suportadas: ${SUPPORTED_MARKET_EXCHANGES.join(', ')}`;
 const SYMBOL_EXPECTATION = 'símbolos em maiúsculas separados por vírgula (ex.: BTCUSDT,ETHUSDT)';
 const TIMEFRAME_EXPECTATION = 'timeframes separados por vírgula dentre 15m, 1h, 4h e 1d';
 const YEARS_EXPECTATION = `inteiro de ${MINIMUM_BACKFILL_YEARS} a ${MAXIMUM_BACKFILL_YEARS}`;
@@ -29,7 +30,9 @@ const commaSeparatedText = z
   .transform((text) => text.split(MARKET_LIST_SEPARATOR).map((entry) => entry.trim()));
 
 export const marketEnvironmentShape = {
-  MARKET_EXCHANGE: nonEmptyTextSchema.default(DEFAULT_MARKET_EXCHANGE),
+  MARKET_EXCHANGE: z
+    .enum(SUPPORTED_MARKET_EXCHANGES, { error: EXCHANGE_EXPECTATION })
+    .default(DEFAULT_MARKET_EXCHANGE),
   MARKET_SYMBOLS: commaSeparatedText
     .pipe(z.array(z.string().regex(SYMBOL_PATTERN), { error: SYMBOL_EXPECTATION }).min(1))
     .prefault(DEFAULT_MARKET_SYMBOLS),

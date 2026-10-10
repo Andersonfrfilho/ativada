@@ -1,0 +1,1 @@
+ALTER TABLE "candles" ADD CONSTRAINT "candles_open_close_within_range_check" CHECK ("candles"."open" >= "candles"."low" AND "candles"."open" <= "candles"."high" AND "candles"."close" >= "candles"."low" AND "candles"."close" <= "candles"."high");

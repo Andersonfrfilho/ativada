@@ -60,6 +60,9 @@ describe('cron market environment', () => {
   });
 
   test.each([
+    ['MARKET_EXCHANGE', 'coinbase'],
+    ['MARKET_EXCHANGE', 'Binance'],
+    ['MARKET_EXCHANGE', ''],
     ['MARKET_SYMBOLS', 'btc/usdt'],
     ['MARKET_SYMBOLS', ''],
     ['MARKET_SYMBOLS', 'BTCUSDT,,ETHUSDT'],

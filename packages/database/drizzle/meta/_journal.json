@@ -43,6 +43,13 @@
       "when": 1791589932707,
       "tag": "0005_candles_sentiment_daily",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791596324176,
+      "tag": "0006_candles_open_close_range",
+      "breakpoints": true
     }
   ]
 }

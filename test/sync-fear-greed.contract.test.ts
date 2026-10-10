@@ -21,6 +21,7 @@ import {
 } from './fixtures/fear-greed.fixture.js';
 
 const REFRESH_DAYS = 14;
+const NOW = Date.parse('2026-10-10T12:00:00.000Z');
 const SOURCE_FAILURE: FearGreedReply = { status: 503, body: {} };
 
 const EXISTING_ROWS: readonly FearGreedEntry[] = [
@@ -31,6 +32,7 @@ const EXISTING_ROWS: readonly FearGreedEntry[] = [
 async function buildHarness(params: {
   readonly seed?: readonly FearGreedEntry[];
   readonly script?: readonly FearGreedReply[];
+  readonly now?: number;
 }): Promise<{
   readonly run: () => Promise<SyncFearGreedSummary>;
   readonly task: CronTask;
@@ -52,6 +54,7 @@ async function buildHarness(params: {
     }),
     logger: createCronLogger({ appName: 'cron-cryptoada', write: (line) => void lines.push(line) }),
     refreshDays: REFRESH_DAYS,
+    now: () => params.now ?? NOW,
   });
   return {
     run,
@@ -68,14 +71,41 @@ describe('sync-fear-greed: how much history is requested', () => {
     const summary = await harness.run();
     expect(harness.limits()).toStrictEqual(['0']);
     expect(harness.repository.stored()).toHaveLength(5);
-    expect(summary).toMatchObject({ failures: 0, fullHistory: 1, fetched: 5, upserted: 5 });
+    expect(summary).toStrictEqual({ fullHistory: 1, fetched: 5, upserted: 5 });
   });
 
   test('a table with data asks only for the refresh window', async () => {
     const harness = await buildHarness({ seed: EXISTING_ROWS });
     const summary = await harness.run();
     expect(harness.limits()).toStrictEqual([String(REFRESH_DAYS)]);
-    expect(summary).toMatchObject({ failures: 0, fullHistory: 0 });
+    expect(summary).toMatchObject({ fullHistory: 0 });
+    expect(summary).not.toHaveProperty('failures');
+  });
+
+  test.each([
+    ['2026-10-10', REFRESH_DAYS],
+    ['2026-09-28', REFRESH_DAYS],
+    ['2026-09-27', 15],
+    ['2026-09-01', 41],
+  ])(
+    'a cron stopped since %s asks for max(refresh window, days since the last date + 2) = %i',
+    async (lastDate, expectedLimit) => {
+      const harness = await buildHarness({
+        seed: [{ date: lastDate, fearGreed: 30, classification: 'Fear' }],
+      });
+      await harness.run();
+      expect(harness.limits()).toStrictEqual([String(expectedLimit)]);
+    },
+  );
+
+  test('a task without failures field exits 0 through the cron runner', async () => {
+    const harness = await buildHarness({ seed: EXISTING_ROWS });
+    expect(
+      await runCronTasks(
+        [harness.task],
+        createCronLogger({ appName: 'cron-cryptoada', write: () => undefined }),
+      ),
+    ).toBe(EXIT_CODE.SUCCESS);
   });
 
   test('the value of the current day is UPDATED, not skipped, and there are no duplicates', async () => {

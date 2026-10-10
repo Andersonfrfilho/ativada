@@ -15,6 +15,8 @@ export const MINIMUM_STREAM_GAP_CHECK_MINUTES = 1;
 export const MAXIMUM_STREAM_GAP_CHECK_MINUTES = 1_440;
 export const MILLISECONDS_PER_MINUTE = 60_000;
 export const MILLISECONDS_PER_HOUR = 3_600_000;
+// Só buraco mais velho que isto vira "inalcançável": vela recente pode só estar atrasada no REST.
+export const UNFILLABLE_MIN_AGE_MILLISECONDS = 24 * MILLISECONDS_PER_HOUR;
 export const CANDLE_WRITE_MAX_ATTEMPTS = 3;
 export const CANDLE_WRITE_RETRY_BASE_MILLISECONDS = 200;
 // Sem Retry-After, a menor punição de IP da Binance (2 min) é o chão razoável.
@@ -30,6 +32,7 @@ export const MALFORMED_LOG_EVERY = 100;
 export const WORKER_LOG = {
   STARTED: 'worker started',
   STREAM_CONNECTED: 'stream connected',
+  STREAM_STATS: 'stream stats',
   STREAM_DISCONNECTED: 'stream disconnected',
   MALFORMED: 'stream message discarded',
   CANDLE_STORED: 'candle stored',

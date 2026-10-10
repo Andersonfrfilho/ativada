@@ -38,6 +38,7 @@ export type FetchKlinesRangeParams = {
   readonly timeframe: Timeframe;
   readonly from: number;
   readonly to: number;
+  // Com `onPage` as páginas vão ao consumidor e o retorno fica vazio: nada se acumula em memória.
   readonly onPage?: (page: readonly Candle[]) => Promise<void>;
 };
 

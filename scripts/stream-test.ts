@@ -18,15 +18,16 @@ import {
 import { waitForSafeClock } from './backfill-test/grid-oracle.js';
 import { checkClosedCandleIsStoredAndNoiseIsIgnored } from './stream-test/check-delivery.js';
 import { checkDropWithLostCandlesLeavesNoHole } from './stream-test/check-reconnect-gap.js';
-import { checkSigtermExitsZeroWithoutOrphans } from './stream-test/check-shutdown.js';
+import { checkSigtermDuringRecoveryExitsZeroFast } from './stream-test/check-shutdown.js';
 import {
   buildSeedCandle,
+  computeLastClosedOpenTime,
   hoursFrom,
+  prepareScenario,
   type StreamContext,
 } from './stream-test/stream-test-context.js';
 import {
   HOURS_BEFORE_LAST_CLOSED_AT_SEED_START,
-  MILLISECONDS_PER_HOUR,
   SEEDED_HOURS,
   SYMBOL,
   TEMPORARY_DATABASE_PREFIX,
@@ -35,12 +36,6 @@ import {
 import { startWorker, type WorkerProcess } from './stream-test/worker-process.js';
 
 const SEEDED_HISTORY_HOURS = 30;
-
-function computeLastClosedOpenTime(): number {
-  return (
-    Math.floor(Date.now() / MILLISECONDS_PER_HOUR) * MILLISECONDS_PER_HOUR - MILLISECONDS_PER_HOUR
-  );
-}
 
 // O banco já tem a série até 4 h atrás; o REST só conhece até a mesma abertura, então a primeira
 // recuperação não acha nada para baixar e as velas seguintes precisam vir pelo stream.
@@ -71,9 +66,12 @@ async function runChecks(databaseUrl: string, server: FakeBinanceStreamServer): 
   try {
     await seed(context, server);
     worker = startWorker({ databaseUrl, restUrl: server.restUrl, streamUrl: server.streamUrl });
+    await prepareScenario(context);
     await checkClosedCandleIsStoredAndNoiseIsIgnored(context, worker);
+    await prepareScenario(context);
     await checkDropWithLostCandlesLeavesNoHole(context, worker);
-    await checkSigtermExitsZeroWithoutOrphans(worker);
+    await prepareScenario(context);
+    await checkSigtermDuringRecoveryExitsZeroFast(context, worker);
   } finally {
     if (worker !== undefined && !worker.hasExited()) {
       worker.terminate();
