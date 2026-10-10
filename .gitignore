@@ -10,3 +10,4 @@ envs/*.local
 *.log
 tmp/
 .mutants/
+packages/dbmutant-*/

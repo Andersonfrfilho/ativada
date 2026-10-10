@@ -6,7 +6,7 @@ export
 COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
 
-.PHONY: help bootstrap config up down ps check contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test identity-logs
+.PHONY: help bootstrap config up down ps check contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants identity-logs
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -108,6 +108,20 @@ walkforward-test: ## Prova o walk-forward (24 e 200 combinações) em worker_thr
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/walkforward-test.ts
+
+api-runs-test: ## Prova as rotas REST de mercado, estratégias e execuções contra a API real e um Postgres de teste descartável: estratégia, versão, backtest e walk-forward via HTTP, séries, CSV, parada, isolamento entre usuários, saúde sob carga e OpenAPI
+	set -a; . envs/env.test; set +a; \
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/api-runs-test.ts
+
+api-runs-mutants: ## Prova que o isolamento entre usuários dos repositórios das rotas REST reprova 11 mutantes (filtro de dono removido, um por repositório) contra um Postgres de teste descartável
+	set -a; . envs/env.test; set +a; \
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/api-runs-mutants.ts
 
 identity-logs: ## Segue os logs do Keycloak do ambiente atual
 	$(COMPOSE) logs -f keycloak

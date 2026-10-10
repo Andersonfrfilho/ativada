@@ -9,6 +9,7 @@ import type * as PolicyModule from '../../../apps/api-cryptoada/src/rate-limit/r
 import type * as RateLimiterModule from '../../../apps/api-cryptoada/src/rate-limit/rate-limiter.js';
 import type * as CreateRouterModule from '../../../apps/api-cryptoada/src/router/create-router.js';
 import type * as CreateRunModule from '../../../apps/api-cryptoada/src/runs/create-run.use-case.js';
+import type * as DirectDispatcherModule from '../../../apps/api-cryptoada/src/runs/create-direct-run-dispatcher.js';
 import type * as ExportCsvModule from '../../../apps/api-cryptoada/src/runs/export-run-csv.use-case.js';
 import type * as RunExportRoutesModule from '../../../apps/api-cryptoada/src/runs/run-export.routes.js';
 import type * as RunSeriesRoutesModule from '../../../apps/api-cryptoada/src/runs/run-series.routes.js';
@@ -41,6 +42,7 @@ export type ApiApp = {
   readonly rateLimiter: typeof RateLimiterModule;
   readonly router: typeof CreateRouterModule;
   readonly createRun: typeof CreateRunModule;
+  readonly directDispatcher: typeof DirectDispatcherModule;
   readonly exportCsv: typeof ExportCsvModule;
   readonly runExportRoutes: typeof RunExportRoutesModule;
   readonly runSeriesRoutes: typeof RunSeriesRoutesModule;
@@ -78,6 +80,7 @@ export async function loadApiApp(): Promise<ApiApp> {
     rateLimiter: await load('rate-limit/rate-limiter'),
     router: await load('router/create-router'),
     createRun: await load('runs/create-run.use-case'),
+    directDispatcher: await load('runs/create-direct-run-dispatcher'),
     exportCsv: await load('runs/export-run-csv.use-case'),
     runExportRoutes: await load('runs/run-export.routes'),
     runSeriesRoutes: await load('runs/run-series.routes'),

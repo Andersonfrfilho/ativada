@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, test } from 'bun:test';
 
 import type { Route } from '../apps/api-cryptoada/src/router/route.types.js';
 import { loadApiApp, type ApiApp } from './fixtures/api-routes/api-app.fixture.js';
@@ -15,8 +15,14 @@ function buildTable(isDocumentationEnabled: boolean): readonly Route[] {
   );
 }
 
-const DEVELOPMENT_ROUTES = buildTable(true);
-const PRODUCTION_ROUTES = buildTable(false);
+// Montadas em `beforeAll`: uma tabela que nem consegue ser montada (rota sem `access`) reprova os testes, não o carregamento.
+let DEVELOPMENT_ROUTES: readonly Route[] = [];
+let PRODUCTION_ROUTES: readonly Route[] = [];
+
+beforeAll(() => {
+  DEVELOPMENT_ROUTES = buildTable(true);
+  PRODUCTION_ROUTES = buildTable(false);
+});
 
 function toOpenApiPath(path: string): string {
   return path.replace(/:([A-Za-z0-9_]+)/g, '{$1}');
