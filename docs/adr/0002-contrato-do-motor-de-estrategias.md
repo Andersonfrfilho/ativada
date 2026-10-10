@@ -505,6 +505,117 @@ ajuste, a decisão e a prova:
 | R7 | Indicadores | `convergenceCandles`; pré-aquecimento = máx(aquecimento, convergência) de todos; texto do fator 3× corrigido; implementação própria, `trading-signals` só oráculo; janelas recalculadas; ids com espaço de nome e achatados; ADX truncado no motivo | teste de convergência (mutações da fórmula e do pré-aquecimento reprovadas); `SHORT_CONVERGENCE` no harness de indicador |
 | R8 | Harness | Perturbações múltiplas; sentimento e comandos no `runSteps`; checks novos; cenários de SELL, recusas e `halt`; paredes de pureza estendidas com sonda; teste diferencial e golden por versão descritos (§h) | `STOP_FROM_DECISION_CLOSE` (`protective-prices`), `IGNORES_OPPOSITE_SIGNAL` (`signal-policy`), os demais acima |
 
+## Indicadores — convenções e tolerâncias (T2.2)
+
+Escrito **antes** de implementar; os testes e o código seguem este texto, não o contrário.
+
+### Oráculos e ferramentas
+
+- **Verdade numérica:** implementação de referência em `decimal.js` (precisão 40, só `+ − × ÷ sqrt`,
+  sem `exp/log`), em `test/fixtures/strategy-engine/oracle/`. Recebe o **texto** dos preços da
+  Binance (decimais exatos), não os `number`: o erro medido inclui a conversão para `number`. É
+  escrita em lote a partir de textbook (cada valor recalculado do histórico), de forma independente do
+  código incremental de `src`.
+- **Referência externa:** `trading-signals` **8.3.0**, devDependency de versão exata só em
+  `packages/strategy-engine`. Conferido em 2026-10-10: licença MIT, última versão publicada em
+  2026-08-11 (mantida; 8.x lançada em julho/2026), tipos próprios (`dist/index.d.ts`), **zero
+  dependências**, ESM, e roda no Bun 1.3.14 (RSI de 3 períodos conferido à mão no teste). Nunca é
+  importada por `src`: o teste de fronteira continua só com `decimal.js` e `zod` em `dependencies`.
+- **Séries:** BTCUSDT 1h × 500 e ETHUSDT 1d × 400 (reais, `market/`), mais uma série sintética
+  determinística (platô, gap, volume zero, subida e queda monótonas) para as bordas.
+- **Conferência à mão:** SMA(3), EMA(3), RSI(3), ATR(3), OBV e Donchian(3) numa janela de 6 candles,
+  com os números escritos no teste.
+
+### Regras comuns
+
+- **Entrada.** Todo campo do `IndicatorCandle` precisa ser `number` finito (`openTime`: inteiro
+  seguro ≥ 0). Campo ausente, `NaN` ou `±Infinity` ⇒ `IndicatorError` com
+  `code: INVALID_CANDLE`, **nunca** um `NaN` que atravessa. Período não inteiro ou < 1,
+  `fast ≥ slow` no MACD e desvio ≤ 0 no Bollinger ⇒ `INVALID_PARAMETER`. Snapshot que não tem o
+  formato esperado ⇒ `INVALID_SNAPSHOT`.
+- **Saída.** Sempre finita. `-0` vira `0` (valor e snapshot). Saída com várias grandezas é um objeto
+  de chaves fixas, achatado pelo registro do sinal (§c).
+- **Janelas finitas** (SMA, Donchian, Bollinger, z-score) guardam os últimos `n` valores no
+  snapshot e **recalculam** a soma, o máximo, o mínimo e o desvio a cada candle — nunca
+  `soma += novo − velho`. Acumulados sem janela (OBV) e a semente de uma suavização (soma única das
+  `n` primeiras entradas, feita uma vez) são os únicos somatórios.
+- **Suavização com semente.** EMA (`α = 2/(n+1)`) e Wilder (`α = 1/n`) usam a **mesma** recursão
+  `y = y₋₁ + α·(x − y₋₁)`, semeada pela **média simples das `n` primeiras entradas** (o valor sai no
+  `n`-ésimo). Escolha única para as duas: é a convenção de livro (Wilder; TA-Lib) e dá ao primeiro
+  valor um significado (a média das `n` entradas reais, sem peso residual de um único candle).
+  Alternativa rejeitada: semear a EMA pelo primeiro valor, como faz a `trading-signals`
+  (`previous ?? price`): o primeiro valor "válido" carregaria ≈ 13% de peso de um candle só. A
+  diferença de semente decai por `(1 − α)^k`; o teste contra a `trading-signals` (a) alinha a
+  semente (alimenta o `EMA` da biblioteca com a `SMA` dela) e prova igualdade exata e (b) prova a
+  equivalência da convenção original depois de `n + ⌈(n+1)/2·ln(10⁸)⌉` candles.
+- **Convergência** como no §c: `EMA(n) = ⌈(n+1)/2·ln(1/ε)⌉`, `Wilder(n) = ⌈n·ln(1/ε)⌉`, ε = 1e-3,
+  constante `LN_INVERSE_CONVERGENCE_EPSILON`; encadeado soma. Sempre `convergência ≥ aquecimento`.
+
+### Tabela por indicador
+
+`n` = período. Saídas entre chaves. "Aquec." = `warmupCandles`; "Conv." = `convergenceCandles`.
+
+| Indicador | Convenção exata | Aquec. | Conv. |
+|---|---|---|---|
+| SMA(n) | média dos últimos `n` fechamentos | `n` | `n` |
+| EMA(n) | `α = 2/(n+1)`; semente = SMA das `n` primeiras | `n` | `EMA(n)` |
+| MACD(f, s, g) `{macd, signal, histogram}` | `macd = EMA(f) − EMA(s)` (cada EMA corre desde o 1º candle, semeada no seu `n`-ésimo); `signal` = EMA(g) **dos valores do `macd`**, semeada pela SMA dos `g` primeiros; `histogram = macd − signal`; exige `f < s` | `s + g − 1` | `EMA(s) + EMA(g)` |
+| Donchian(n) `{upper, lower}` | maior máxima e menor mínima dos últimos `n` candles, **incluindo o corrente**. A regra de rompimento (T2.3) compara o fechamento com o valor do candle **anterior** (os `n` candles anteriores) | `n` | `n` |
+| RSI(n) | variação do fechamento; `ganho = max(Δ,0)`, `perda = max(−Δ,0)`; médias de Wilder semeadas pela SMA dos `n` primeiros ganhos/perdas; `RSI = 100 − 100/(1 + ganhoMédio/perdaMédio)` | `n + 1` | `Wilder(n)` |
+| Bollinger(n, k) `{lower, middle, upper, width}` | `middle` = SMA(n); desvio **populacional** (divisor `n`, igual ao do TA-Lib e da `trading-signals`) dos mesmos `n` fechamentos, em duas passagens (média, depois soma dos quadrados); `upper/lower = middle ± k·desvio`; `width = (upper − lower)/middle` | `n` | `n` |
+| z-score(n) | `(fechamento − média)/desvio` na janela de `n` (inclui o corrente), **desvio populacional** (o mesmo do Bollinger) | `n` | `n` |
+| VWAP `{vwap}` → número | sessão = dia UTC de `openTime` (`⌊openTime / 86 400 000⌋`); preço típico `(máx + mín + fechamento)/3`; `Σ(típico·volume)/Σvolume` recalculado sobre os candles da sessão; reinicia quando o dia muda | 1 | 1 |
+| OBV | acumulado: `+volume` se o fechamento sobe, `−volume` se cai, `0` se igual; o 1º candle vale `0` (sem anterior). O **nível** depende do candle em que a série começa — só a diferença e médias dele (regra `obv_trend`) têm significado | 1 | 1 |
+| ATR(n) | `TR₁ = máx − mín`; `TRₜ = máx(máx − mín, \|máx − fechₜ₋₁\|, \|mín − fechₜ₋₁\|)`; Wilder semeado pela SMA dos `n` primeiros `TR` (o `TR₁` entra) | `n` | `Wilder(n)` |
+| ADX(n) `{adx, plusDi, minusDi}` | `+DM = alta` se `alta > baixa` e `alta > 0`, senão `0` (`alta = máxₜ − máxₜ₋₁`, `baixa = mínₜ₋₁ − mínₜ`); `−DM` simétrico; **no 1º candle `+DM = −DM = 0`** (sem anterior), como a `trading-signals`; `TR`, `+DM` e `−DM` suavizados por Wilder (semente SMA das `n` primeiras, o 1º candle entra); `±DI = 100·DM suavizado/TR suavizado`; `DX = 100·\|+DI − −DI\|/(+DI + −DI)`; `ADX` = Wilder dos `DX`, semeado pela SMA dos `n` primeiros `DX` (**a segunda suavização**) | `2n − 1` | `2·Wilder(n)` |
+| `ema_cross(f, s)` `{fast, slow}` (composto da regra) | duas EMAs; sai quando a lenta sai | `s` | `EMA(s)` |
+| `obv_trend(g)` `{obv, ema}` (composto da regra) | OBV e a EMA(g) **do OBV** (semente SMA dos `g` primeiros OBV) | `g` | `EMA(g)` |
+
+Valores de exemplo (ε = 1e-3): MACD 12/26/9 ⇒ aquec. 34, conv. 94 + 35 = 129; ADX 14 ⇒ aquec. 27,
+conv. 97 + 97 = 194; RSI 14 ⇒ aquec. 15, conv. 97; ATR 14 ⇒ aquec. 14, conv. 97. O pré-aquecimento do
+Placar clássico (EMA 21, MACD, RSI, OBV×EMA 20, ATR e ADX 14) é **194**, o do ADX.
+
+### Bordas
+
+| Caso | Resultado |
+|---|---|
+| RSI sem perdas (`perdaMédia = 0`, `ganhoMédia > 0`) | `100` |
+| RSI sem ganhos (`ganhoMédia = 0`, `perdaMédia > 0`) | `0` |
+| RSI sem ganhos **e** sem perdas (platô) | `50` (neutro). A `trading-signals` devolve `100`; um mercado parado não pode votar "sobrecomprado", então esta é a única diferença declarada e o platô só é comparado com o oráculo de alta precisão |
+| Bollinger/z-score com desvio `0` | desvio `0`, bandas = média, `width = 0`, z-score `0` |
+| `middle = 0` no Bollinger | `width = 0` (preço positivo nunca chega aqui; o indicador não divide por zero) |
+| ATR com `TR = 0` na janela inteira | `0` |
+| ADX/DI com `TR` suavizado `0` | `+DI = −DI = 0` |
+| ADX com `+DI + −DI = 0` | `DX = 0` (e `ADX` segue a suavização) |
+| VWAP com volume zero na sessão (`Σvolume = 0`) | preço típico do candle corrente; candle de volume zero não pesa depois que entra volume |
+| OBV com fechamento igual | acumulado inalterado |
+| Donchian com `n = 1` | `upper = máxima` e `lower = mínima` do candle |
+| `-0` | normalizado para `0` |
+
+### Tolerâncias
+
+Declaradas antes de implementar. **Erro relativo** `|obtido − referência| / máx(|referência|, piso)`,
+com `0/0 = 0`.
+
+| Alvo | Tolerância | Piso |
+|---|---|---|
+| Todo indicador × oráculo de alta precisão, **todo candle depois do aquecimento**, 3 séries | `1e-8` | `0`, exceto: `macd`, `signal`, `histogram` (piso = `\|fechamento\|` do candle), z-score (piso `1`) e OBV (piso = volume total acumulado) |
+| Todo indicador × `trading-signals` com convenção alinhada | `1e-8` | idem |
+| EMA e MACD × `trading-signals` nativa (semente diferente) | `1e-8` a partir de `aquecimento + ⌈(n+1)/2·ln(10⁸)⌉` por etapa encadeada | idem |
+
+O piso existe porque `macd`, `signal`, `histogram`, z-score e OBV cruzam o zero: o erro absoluto é do
+tamanho do `ε` de máquina vezes o operando (≈ 1e-11 num preço de 1e5), e dividi-lo por um valor
+próximo de zero mediria cancelamento, não erro. Nenhum valor maior que `1e-8` é aceito; o erro
+medido de cada indicador entra no relatório da task.
+
+### Prova das mutações
+
+Cada mutação de `src` precisa reprovar algum teste (aplicada à mão, teste vermelho, revertida):
+semente do Wilder errada; `n` por `n − 1` na janela; ADX sem a segunda suavização; RSI com média
+simples no lugar de Wilder; VWAP sem reinício de sessão; OBV com sinal trocado; z-score com desvio
+amostral; Bollinger com desvio errado; EMA com `α = 1/n`; snapshot sem restaurar a janela. A tabela
+com o teste que pegou cada uma e o erro medido fecham esta seção no commit da implementação.
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
