@@ -77,3 +77,24 @@ describe('candle repository: a candle that has not closed is never stored (const
     expect(await repository.upsertCandles([])).toStrictEqual({ inserted: 0 });
   });
 });
+
+describe('candle repository: gap detection short-circuits', () => {
+  const key = { exchange: 'binance', symbol: 'BTCUSDT', timeframe: '1h' } as const;
+
+  test('an empty or inverted range has no expected open times and never touches the database', async () => {
+    const from = NOW_MILLISECONDS;
+    expect(await repository.findMissingOpenTimes({ ...key, from, to: from })).toStrictEqual([]);
+    expect(await repository.findMissingOpenTimes({ ...key, from, to: from - 1 })).toStrictEqual([]);
+  });
+
+  test('a range that holds no grid point has no expected open times and never touches the database', async () => {
+    const insideOneHour = 1_800_000_000_000 - (1_800_000_000_000 % 3_600_000) + 1;
+    expect(
+      await repository.findMissingOpenTimes({
+        ...key,
+        from: insideOneHour,
+        to: insideOneHour + 60,
+      }),
+    ).toStrictEqual([]);
+  });
+});

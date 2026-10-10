@@ -30,6 +30,8 @@ export type FindCandlesParams = CandleSeriesKey & {
   readonly to: number;
 };
 
+export type FindMissingOpenTimesParams = FindCandlesParams;
+
 export type UpsertCandlesResult = { readonly inserted: number };
 
 export type CandleRepositoryOptions = { readonly now?: () => number };
@@ -37,5 +39,6 @@ export type CandleRepositoryOptions = { readonly now?: () => number };
 export type CandleRepository = {
   readonly upsertCandles: (candles: readonly CandleRecord[]) => Promise<UpsertCandlesResult>;
   readonly findCandles: (params: FindCandlesParams) => Promise<readonly CandleRecord[]>;
+  readonly findMissingOpenTimes: (params: FindMissingOpenTimesParams) => Promise<readonly number[]>;
   readonly findLatestOpenTime: (key: CandleSeriesKey) => Promise<number | undefined>;
 };

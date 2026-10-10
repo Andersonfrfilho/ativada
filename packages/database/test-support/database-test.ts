@@ -8,6 +8,7 @@ import { checkAdminRepositories } from './admin-checks.js';
 import { checkAuditRetention, checkBlockedAccounts } from './cron-repository-checks.js';
 import { checkExport, checkMarkDeleted, seedLifecycleOwners } from './account-lifecycle-checks.js';
 import { checkCandleRepository } from './candle-checks.js';
+import { checkMissingOpenTimes } from './candle-gap-checks.js';
 import { checkSentimentRepository } from './sentiment-checks.js';
 import { checkProfileRepository } from './profile-checks.js';
 import { checkTelegramLink, checkTelegramRaces } from './telegram-checks.js';
@@ -94,6 +95,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkBlockedAccounts(lifecycle);
     await checkAuditRetention(lifecycle);
     await checkCandleRepository(lifecycle);
+    await checkMissingOpenTimes(lifecycle);
     await checkSentimentRepository(lifecycle);
   } finally {
     await client.close();

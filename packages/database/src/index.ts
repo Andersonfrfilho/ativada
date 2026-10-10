@@ -66,6 +66,7 @@ export type {
   CandleSeriesKey,
   CandleTimeframe,
   FindCandlesParams,
+  FindMissingOpenTimesParams,
   UpsertCandlesResult,
 } from './candles/candle.types.js';
 export { OpenCandleRejectedError } from './candles/open-candle-rejected.error.js';

@@ -1,15 +1,21 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, asc, desc, eq, gte, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lt, sql } from 'drizzle-orm';
+
+import type { BunSQLDatabase } from 'drizzle-orm/bun-sql';
 
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import { candles } from '../schema/candles.schema.js';
-import { CANDLE_INSERT_BATCH_SIZE } from './candle.constant.js';
+import {
+  CANDLE_INSERT_BATCH_SIZE,
+  CANDLE_TIMEFRAME_DURATION_MILLISECONDS,
+} from './candle.constant.js';
 import type {
   CandleRecord,
   CandleRepository,
   CandleRepositoryOptions,
   CandleSeriesKey,
   CandleTimeframe,
+  FindMissingOpenTimesParams,
   UpsertCandlesResult,
 } from './candle.types.js';
 import { OpenCandleRejectedError } from './open-candle-rejected.error.js';
@@ -31,6 +37,30 @@ function splitIntoBatches(records: readonly CandleRecord[]): readonly (readonly 
 }
 
 // Candle fechado é imutável: DO NOTHING mantém o gravado e `inserted` conta só as linhas novas.
+type ExpectedOpenTimeRow = { readonly openTime: string | number | bigint };
+
+async function selectMissingOpenTimes(
+  database: BunSQLDatabase,
+  params: FindMissingOpenTimesParams,
+): Promise<readonly number[]> {
+  const duration = CANDLE_TIMEFRAME_DURATION_MILLISECONDS[params.timeframe];
+  const firstGridOpenTime = Math.ceil(params.from / duration) * duration;
+  if (firstGridOpenTime >= params.to) return [];
+  const rows = await database.execute<ExpectedOpenTimeRow>(sql`
+    SELECT expected.open_time AS "openTime"
+    FROM generate_series(${firstGridOpenTime}::bigint, ${params.to - 1}::bigint, ${duration}::bigint)
+      AS expected(open_time)
+    WHERE NOT EXISTS (
+      SELECT 1 FROM candles
+      WHERE candles.exchange = ${params.exchange}
+        AND candles.symbol = ${params.symbol}
+        AND candles.timeframe = ${params.timeframe}
+        AND candles.open_time = expected.open_time
+    )
+    ORDER BY expected.open_time`);
+  return rows.map((row) => Number(row.openTime));
+}
+
 export function createCandleRepository(
   handle: DatabaseHandle,
   options: CandleRepositoryOptions = {},
@@ -79,6 +109,7 @@ export function createCandleRepository(
         tradeCount: row.tradeCount,
       }));
     },
+    findMissingOpenTimes: (params) => selectMissingOpenTimes(database, params),
     findLatestOpenTime: async (key): Promise<number | undefined> => {
       const [latest] = await database
         .select({ openTime: candles.openTime })
