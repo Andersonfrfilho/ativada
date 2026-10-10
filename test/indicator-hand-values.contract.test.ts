@@ -2,12 +2,15 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+  ATR_INDICATOR,
   BOLLINGER_INDICATOR,
   computeIndicatorSeries,
   DONCHIAN_INDICATOR,
   EMA_INDICATOR,
+  OBV_INDICATOR,
   RSI_INDICATOR,
   SMA_INDICATOR,
+  VWAP_INDICATOR,
   Z_SCORE_INDICATOR,
   type IndicatorDefinition,
   type IndicatorValue,
@@ -87,5 +90,21 @@ describe('values worked out on paper (6 candles, period 3, closes 10 11 12 14 13
       definition: Z_SCORE_INDICATOR,
       indicatorParams: { period: HAND_PERIOD },
     });
+  });
+
+  test('ATR(3): TR = 2, 3, 2, 3, 2, 2 seeded by 7/3, then 23/9, 64/27, 182/81', () => {
+    expectHandValues({
+      name: 'atr',
+      definition: ATR_INDICATOR,
+      indicatorParams: { period: HAND_PERIOD },
+    });
+  });
+
+  test('OBV adds the volume when the close rises and subtracts it when it falls', () => {
+    expectHandValues({ name: 'obv', definition: OBV_INDICATOR, indicatorParams: {} });
+  });
+
+  test('VWAP restarts at midnight UTC (candles 1-2 are day 1, candles 3-6 are day 2)', () => {
+    expectHandValues({ name: 'vwap', definition: VWAP_INDICATOR, indicatorParams: {} });
   });
 });

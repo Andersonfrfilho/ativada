@@ -4,7 +4,7 @@ import { defineIndicator } from './define-indicator.js';
 import { assertIndicatorPeriod } from './indicator-input.js';
 import { INDICATOR_NAME } from './indicator-name.constant.js';
 import type { PeriodParams } from './indicator-params.types.js';
-import { readNullableNumber, readRecord } from './indicator-snapshot.js';
+import { PREVIOUS_CLOSE_KEY, readNullableNumber, readRecord } from './indicator-snapshot.js';
 import {
   advanceSmoother,
   INITIAL_SMOOTHER_STATE,
@@ -46,7 +46,7 @@ export const RSI_INDICATOR = defineIndicator<PeriodParams, RsiState, number>({
   parseState: ({ params, snapshot }) => {
     const record = readRecord(snapshot);
     return {
-      previousClose: readNullableNumber(record, 'previousClose'),
+      previousClose: readNullableNumber(record, PREVIOUS_CLOSE_KEY),
       gains: parseSmootherState(record.gains, params.period),
       losses: parseSmootherState(record.losses, params.period),
     };

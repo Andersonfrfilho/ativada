@@ -2,15 +2,21 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+  ADX_INDICATOR,
+  ATR_INDICATOR,
   BOLLINGER_INDICATOR,
   computeIndicatorSeries,
   DONCHIAN_INDICATOR,
+  EMA_CROSS_INDICATOR,
   EMA_INDICATOR,
   INDICATOR_ERROR_CODE,
   IndicatorError,
   MACD_INDICATOR,
+  OBV_INDICATOR,
+  OBV_TREND_INDICATOR,
   RSI_INDICATOR,
   SMA_INDICATOR,
+  VWAP_INDICATOR,
   Z_SCORE_INDICATOR,
   type Indicator,
   type IndicatorCandle,
@@ -20,18 +26,25 @@ import {
   type JsonValue,
 } from '../packages/strategy-engine/src/index.js';
 import {
+  ADX_SPEC,
+  ATR_SPEC,
   BOLLINGER_SPEC,
   DONCHIAN_SPEC,
+  EMA_CROSS_SPEC,
   EMA_SPEC,
   MACD_SPEC,
+  OBV_SPEC,
+  OBV_TREND_SPEC,
   RSI_SPEC,
   SMA_SPEC,
+  VWAP_SPEC,
   ZSCORE_SPEC,
 } from './fixtures/strategy-engine/oracle/oracle-specs.fixture.js';
 import {
   MONOTONE_FALL_SERIES,
   MONOTONE_RISE_SERIES,
   PLATEAU_SERIES,
+  ZERO_VOLUME_SERIES,
 } from './fixtures/strategy-engine/oracle/oracle-synthetic.fixture.js';
 
 type BorderCase = {
@@ -62,6 +75,12 @@ const PERIOD_INDICATORS = [
   borderCase('rsi', RSI_INDICATOR, RSI_SPEC.params),
   borderCase('bollinger', BOLLINGER_INDICATOR, BOLLINGER_SPEC.params),
   borderCase('z-score', Z_SCORE_INDICATOR, ZSCORE_SPEC.params),
+  borderCase('atr', ATR_INDICATOR, ATR_SPEC.params),
+  borderCase('adx', ADX_INDICATOR, ADX_SPEC.params),
+  borderCase('vwap', VWAP_INDICATOR, VWAP_SPEC.params),
+  borderCase('obv', OBV_INDICATOR, OBV_SPEC.params),
+  borderCase('ema-cross', EMA_CROSS_INDICATOR, EMA_CROSS_SPEC.params),
+  borderCase('obv-trend', OBV_TREND_INDICATOR, OBV_TREND_SPEC.params),
 ] as const;
 
 const VALID_CANDLE: IndicatorCandle = {
@@ -144,6 +163,9 @@ describe('invalid parameters are refused when the indicator is created', () => {
     ['donchian', (period): unknown => DONCHIAN_INDICATOR.create({ period })],
     ['rsi', (period): unknown => RSI_INDICATOR.create({ period })],
     ['z-score', (period): unknown => Z_SCORE_INDICATOR.create({ period })],
+    ['atr', (period): unknown => ATR_INDICATOR.create({ period })],
+    ['adx', (period): unknown => ADX_INDICATOR.create({ period })],
+    ['obv-trend', (period): unknown => OBV_TREND_INDICATOR.create({ emaPeriod: period })],
   ];
 
   test.each(
@@ -268,5 +290,95 @@ describe('deviation borders (Bollinger and z-score)', () => {
         lower: candles[index]?.low ?? Number.NaN,
       });
     });
+  });
+});
+
+describe('ATR, ADX, OBV and VWAP borders', () => {
+  const lastOf = <TValue>(series: readonly (TValue | undefined)[]): TValue | undefined =>
+    series[series.length - 1];
+  const run = <TParams, TValue extends IndicatorValue>(
+    definition: IndicatorDefinition<TParams, TValue>,
+    params: TParams,
+    candles: readonly IndicatorCandle[],
+  ): readonly (TValue | undefined)[] => computeIndicatorSeries({ definition, params, candles });
+
+  test('a plateau has zero ATR, zero DI and zero ADX, and no change in the OBV', () => {
+    const candles = PLATEAU_SERIES.indicatorCandles;
+    expect(lastOf(run(ATR_INDICATOR, { period: 14 }, candles))).toBe(0);
+    expect(lastOf(run(ADX_INDICATOR, { period: 14 }, candles))).toStrictEqual({
+      adx: 0,
+      minusDi: 0,
+      plusDi: 0,
+    });
+    expect(lastOf(run(OBV_INDICATOR, {}, candles))).toBe(0);
+  });
+
+  test('a steady rise has no downward movement: -DI is exactly 0 and +DI is positive', () => {
+    const last = lastOf(run(ADX_INDICATOR, { period: 14 }, MONOTONE_RISE_SERIES.indicatorCandles));
+    expect(last?.minusDi).toBe(0);
+    expect(last?.plusDi).toBeGreaterThan(0);
+    expect(last?.adx).toBeGreaterThan(50);
+  });
+
+  test('a tie between the upward and the downward move counts for neither side (Wilder)', () => {
+    const base = { openTime: 0, open: 9, close: 9, volume: 1 };
+    const candles: IndicatorCandle[] = [
+      { ...base, high: 10, low: 8 },
+      { ...base, openTime: 3_600_000, high: 11, low: 7 },
+    ];
+    const series = run(ADX_INDICATOR, { period: 1 }, candles);
+    expect(series[1]).toStrictEqual({ adx: 0, minusDi: 0, plusDi: 0 });
+  });
+
+  test('the OBV does not change when the close is equal and starts at 0', () => {
+    const candles: IndicatorCandle[] = [10, 10, 11, 11, 10].map((close, index) => ({
+      openTime: index * 3_600_000,
+      open: close,
+      high: close,
+      low: close,
+      close,
+      volume: 5,
+    }));
+    expect(run(OBV_INDICATOR, {}, candles)).toStrictEqual([0, 0, 5, 5, 0]);
+  });
+
+  test('with zero volume in the session the VWAP is the typical price; volume then weights alone', () => {
+    const candle = (high: number, low: number, close: number, volume: number): IndicatorCandle => ({
+      openTime: 0,
+      open: close,
+      high,
+      low,
+      close,
+      volume,
+    });
+    const series = run(VWAP_INDICATOR, {}, [
+      candle(102, 99, 99, 0),
+      candle(111, 109, 110, 10),
+      candle(91, 89, 90, 0),
+    ]);
+    expect(series).toStrictEqual([100, 110, 110]);
+  });
+
+  test('the whole zero-volume series gives a finite VWAP equal to the typical price', () => {
+    const candles = ZERO_VOLUME_SERIES.indicatorCandles;
+    const series = run(VWAP_INDICATOR, {}, candles);
+    series.forEach((value, index) => {
+      const candle = candles[index];
+      expect(value).toBeCloseTo(
+        ((candle?.high ?? 0) + (candle?.low ?? 0) + (candle?.close ?? 0)) / 3,
+        10,
+      );
+    });
+  });
+});
+
+describe('composite parameters', () => {
+  test('ema-cross needs fast < slow', () => {
+    expect(codeOf(() => EMA_CROSS_INDICATOR.create({ fastPeriod: 21, slowPeriod: 9 }))).toBe(
+      INDICATOR_ERROR_CODE.INVALID_PARAMETER,
+    );
+    expect(
+      codeOf(() => EMA_CROSS_INDICATOR.create({ fastPeriod: 9, slowPeriod: 21 })),
+    ).toBeUndefined();
   });
 });

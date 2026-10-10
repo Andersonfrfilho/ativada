@@ -78,10 +78,13 @@ export function describeIndicatorConformance<TParams, TValue extends IndicatorVa
       // do ADR de propósito (RSI de platô, VWAP sem volume) e o oráculo de alta precisão é a verdade.
       if (!isReal) continue;
 
+      if (oracle.computeReference === undefined) continue;
+      const computeReference = oracle.computeReference;
+
       test(`${market.name}: matches trading-signals with aligned conventions`, () => {
         const comparison = compareWithReference({
           actual: toActual(market),
-          expected: oracle.computeReference(market.indicatorCandles),
+          expected: computeReference(market.indicatorCandles),
           fromIndex: oracle.referenceFromIndex ?? 0,
           ...(oracle.floorOf === undefined
             ? {}

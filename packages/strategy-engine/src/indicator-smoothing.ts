@@ -37,6 +37,16 @@ export function advanceSmoother(params: AdvanceSmootherParams): SmootherState {
   return { seed: [], value: sumOf(seed) / period };
 }
 
+export type AdvanceWilderParams = {
+  readonly state: SmootherState;
+  readonly input: number;
+  readonly period: number;
+};
+
+export function advanceWilder(params: AdvanceWilderParams): SmootherState {
+  return advanceSmoother({ ...params, weight: wilderWeight(params.period) });
+}
+
 export function parseSmootherState(snapshot: JsonValue | undefined, period: number): SmootherState {
   const record = readRecord(snapshot);
   const seed = readNumberArray({ record, key: 'seed', maximumLength: period });

@@ -105,7 +105,7 @@ describe('high-precision oracle agrees with trading-signals (aligned conventions
   )('%s on %s', (_name, _marketName, spec: OracleSpec<unknown>, market) => {
     const comparison = compareWithReference({
       actual: oracleSeriesToNumbers(spec.computeOracle(market.oracleCandles)),
-      expected: spec.computeReference(market.indicatorCandles),
+      expected: spec.computeReference?.(market.indicatorCandles) ?? [],
       fromIndex: spec.referenceFromIndex ?? 0,
     });
     expect(comparison.comparedCount).toBeGreaterThan(100);

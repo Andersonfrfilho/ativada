@@ -3,6 +3,9 @@ import { refuseIndicator } from './indicator-input.js';
 import type { JsonValue } from './json-value.types.js';
 import { INDICATOR_ERROR_CODE } from './strategy-engine.error.js';
 
+// Chave do fechamento anterior no snapshot de RSI, ATR e OBV.
+export const PREVIOUS_CLOSE_KEY = 'previousClose';
+
 export type SnapshotRecord = Readonly<Record<string, JsonValue>>;
 
 function refuseSnapshot(message: string): never {

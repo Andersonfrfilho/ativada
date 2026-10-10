@@ -608,13 +608,51 @@ tamanho do `ε` de máquina vezes o operando (≈ 1e-11 num preço de 1e5), e di
 próximo de zero mediria cancelamento, não erro. Nenhum valor maior que `1e-8` é aceito; o erro
 medido de cada indicador entra no relatório da task.
 
+### Erro medido (T2.2)
+
+Maior erro relativo contra o oráculo de alta precisão, em **todos** os candles depois do aquecimento
+das 7 séries (BTCUSDT 1h × 500, ETHUSDT 1d × 400 e as 5 de borda), e contra a `trading-signals` com
+convenção alinhada nas 2 séries reais. Tolerância declarada: `1e-8`.
+
+| Indicador | Aquec. | Conv. | Erro × oráculo de alta precisão | Erro × `trading-signals` |
+|---|---|---|---|---|
+| SMA(20) | 20 | 20 | 5.7e-16 | 0 |
+| EMA(21) | 21 | 76 | 4.5e-16 | 9.4e-16 |
+| MACD(12, 26, 9) | 34 | 129 | 4.7e-16 | 7.7e-16 |
+| Donchian(20) | 20 | 20 | 0 | 0 |
+| RSI(14) | 15 | 97 | 8.8e-15 | 6.9e-16 |
+| Bollinger(20, 2.3) | 20 | 20 | 2.0e-14 | 0 |
+| z-score(20) | 20 | 20 | 1.4e-13 | 0 |
+| VWAP | 1 | 1 | 4.6e-16 | 0 |
+| OBV | 1 | 1 | 1.0e-16 | 0 |
+| ATR(14) | 14 | 97 | 4.9e-15 | 0 |
+| ADX(14) | 27 | 194 | 3.4e-14 | 5.4e-16 |
+| `ema_cross(9, 21)` | 21 | 76 | 4.5e-16 | 9.4e-16 |
+| `obv_trend(20)` | 20 | 73 | 1.6e-16 | — |
+
+Convergência medida (diferença relativa máxima entre uma execução que começa `k` candles depois e a
+de histórico longo, nas duas séries reais e `k` ∈ {17, 61, 130}, contado a partir do horizonte
+declarado de cada indicador): EMA 2.4e-4, MACD 2.4e-5, RSI **9.9e-4**, ATR 4.9e-4, ADX 1.4e-5 — todos
+abaixo de ε = 1e-3 (o RSI com folga de 1%: o horizonte `n·ln(1/ε)` é justo, não generoso). Com o antigo
+fator de 3 × o aquecimento, RSI, ATR e ADX ficam acima de 1e-3 (até 7.3e-2, 2.9e-2 e 5.6e-2); a EMA e o
+MACD passavam. O pré-aquecimento conjunto do Placar clássico (194) cobre os cinco.
+
 ### Prova das mutações
 
-Cada mutação de `src` precisa reprovar algum teste (aplicada à mão, teste vermelho, revertida):
-semente do Wilder errada; `n` por `n − 1` na janela; ADX sem a segunda suavização; RSI com média
-simples no lugar de Wilder; VWAP sem reinício de sessão; OBV com sinal trocado; z-score com desvio
-amostral; Bollinger com desvio errado; EMA com `α = 1/n`; snapshot sem restaurar a janela. A tabela
-com o teste que pegou cada uma e o erro medido fecham esta seção no commit da implementação.
+Cada mutação de `src` foi aplicada à mão, reprovou algum teste e foi revertida:
+
+| Mutação | Teste que reprova (o primeiro) |
+|---|---|
+| Semente do Wilder errada (último valor no lugar da média) | `indicator atr > BTCUSDT 1h × 500: stays within 1e-8 of the high-precision oracle` (23 falhas: ATR, ADX, RSI) |
+| `n` por `n − 1` na janela | Donchian: `passes the indicator contract` e o oráculo; Bollinger: `Bollinger(3, 2) uses the population deviation`; SMA: `passes the indicator contract` |
+| ADX sem a segunda suavização | `indicator adx > BTCUSDT 1h × 500: passes the indicator contract` (aquecimento) e o oráculo |
+| RSI com média simples | `values worked out on paper … RSI(3) = 100, 800/11, 1600/31` e o oráculo do RSI |
+| VWAP sem reinício de sessão | `indicator vwap > BTCUSDT 1h × 500: stays within 1e-8 of the high-precision oracle` |
+| OBV com sinal trocado | `indicator obv…` e `indicator obv-trend…` contra o oráculo |
+| z-score com desvio amostral | `Bollinger(3, 2) uses the population deviation` e `z-score(3) uses the population deviation` (18 falhas) |
+| Bollinger com desvio errado (múltiplo aplicado duas vezes) | `Bollinger(3, 2) uses the population deviation` e o oráculo |
+| EMA com `α = 1/n` | `indicator ema > BTCUSDT 1h × 500: stays within 1e-8 of the high-precision oracle` |
+| Snapshot sem restaurar a janela (SMA) ou a sessão (VWAP) | `indicator sma > BTCUSDT 1h × 500: passes the indicator contract` (retomada do snapshot) e o equivalente da VWAP |
 
 ## Alternativas rejeitadas
 

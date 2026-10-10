@@ -16,6 +16,12 @@ import {
 } from './oracle-trend.fixture.js';
 import { computeObvOracle, computeVwapOracle } from './oracle-volume.fixture.js';
 import {
+  computeEmaCrossOracle,
+  computeObvTrendOracle,
+  type EmaCrossParams,
+  type ObvTrendParams,
+} from './oracle-composite.fixture.js';
+import {
   referenceAdx,
   referenceAtr,
   referenceBollinger,
@@ -37,7 +43,7 @@ export type OracleSpec<TParams> = {
   readonly horizon: IndicatorHorizon;
   readonly computeOracle: (candles: readonly OracleCandle[]) => OracleSeries;
   readonly floorOf?: (candles: readonly OracleCandle[]) => OutputFloor;
-  readonly computeReference: (candles: readonly IndicatorCandle[]) => ReferenceSeries;
+  readonly computeReference?: (candles: readonly IndicatorCandle[]) => ReferenceSeries;
   // Primeiro índice em que a referência alinhada vale (OBV começa a acumular no 2º candle).
   readonly referenceFromIndex?: number;
 };
@@ -143,6 +149,32 @@ export const ADX_SPEC: OracleSpec<{ readonly period: number }> = {
   horizon: { warmupCandles: 27, convergenceCandles: 194 },
   computeOracle: (candles) => computeAdxOracle(candles, { period: WILDER_PERIOD }),
   computeReference: (candles) => referenceAdx({ candles, period: WILDER_PERIOD }),
+};
+
+// Compostos das regras `ema_cross` e `obv_trend` (ADR 0002 §f): duas saídas por indicador.
+export const EMA_CROSS_SPEC: OracleSpec<EmaCrossParams> = {
+  name: 'ema-cross',
+  params: { fastPeriod: 9, slowPeriod: 21 },
+  horizon: { warmupCandles: 21, convergenceCandles: 76 },
+  computeOracle: (candles) => computeEmaCrossOracle(candles, { fastPeriod: 9, slowPeriod: 21 }),
+  computeReference: (candles) => {
+    const fast = referenceEma({ candles, period: 9 });
+    const slow = referenceEma({ candles, period: 21 });
+    return fast.map((entry, index) => {
+      const slowEntry = slow[index];
+      return entry === undefined || slowEntry === undefined
+        ? undefined
+        : { fast: entry.value ?? Number.NaN, slow: slowEntry.value ?? Number.NaN };
+    });
+  },
+};
+
+export const OBV_TREND_SPEC: OracleSpec<ObvTrendParams> = {
+  name: 'obv-trend',
+  params: { emaPeriod: 20 },
+  horizon: { warmupCandles: 20, convergenceCandles: 73 },
+  computeOracle: (candles) => computeObvTrendOracle(candles, { emaPeriod: 20 }),
+  floorOf: obvFloor,
 };
 
 export const TREND_AND_STATISTIC_SPECS = [
