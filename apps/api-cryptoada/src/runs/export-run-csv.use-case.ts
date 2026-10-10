@@ -5,7 +5,7 @@ import {
   CSV_FILE_EXTENSION,
   CSV_MAX_DURATION_MILLISECONDS,
   CSV_MAX_ROWS,
-  type CsvTableName,
+  type ExportedCsvTable,
 } from './csv-tables.constant.js';
 import { createCsvSources, type CsvSourceDependencies } from './csv-source.js';
 import { createCsvStream, type CsvStreamLimits } from './csv-stream.js';
@@ -19,7 +19,7 @@ export type RunCsvExport = {
 export type ExportRunCsvUseCase = (
   scope: OwnerScope,
   runId: string,
-  table: CsvTableName,
+  table: ExportedCsvTable,
 ) => Promise<RunCsvExport>;
 
 export type ExportRunCsvDependencies = {

@@ -211,6 +211,68 @@ async function checkSeries(context: ApiRunsContext, runId: string): Promise<void
   );
 }
 
+const LOG_HEADER =
+  'time,event,action,side,order_key,order_type,purpose,status,score,regime,price,limit_price,trigger_price,quantity,notional,fee,risk_amount,stop_distance,target_distance,last_event_time,reason';
+const LOG_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
+
+// O registro cronológico (T4.6): sinais, ordens e preenchimentos NUMA linha do tempo só, como o banco os gravou.
+async function checkLogCsv(context: ApiRunsContext, runId: string): Promise<void> {
+  const response = await context.call({ subject: SUBJECT_A, path: `/v1/runs/${runId}/log.csv` });
+  assertCondition(response.status === 200, `log.csv: ${response.status}`);
+  assertCondition(
+    response.headers.get('content-type') === 'text/csv; charset=utf-8',
+    'content-type do log',
+  );
+  assertCondition(
+    response.headers.get('content-disposition') === `attachment; filename="run-${runId}-log.csv"`,
+    'nome do arquivo do log',
+  );
+  const parsed = splitCsv(response.text);
+  assertCondition(parsed.header === LOG_HEADER, `cabeçalho do log: ${parsed.header}`);
+  const expected =
+    (await countRows(context.client, 'signals', runId)) +
+    (await countRows(context.client, 'orders', runId)) +
+    (await countRows(context.client, 'fills', runId));
+  assertCondition(
+    parsed.lines.length === expected,
+    `log: ${parsed.lines.length} linhas de ${expected}`,
+  );
+  const times = parsed.lines.map((line) => line.split(',')[0] ?? '');
+  assertCondition(
+    times.every((time) => LOG_TIME_PATTERN.test(time)),
+    'tempo fora de UTC ISO',
+  );
+  assertCondition(
+    times.every((time, index) => index === 0 || (times[index - 1] ?? '') <= time),
+    'log fora de ordem cronológica',
+  );
+  const events = new Set(parsed.lines.map((line) => line.split(',')[1]));
+  assertCondition(
+    ['signal', 'order', 'fill'].every((event) => events.has(event)),
+    'faltou um tipo de evento no log',
+  );
+  const fill: unknown =
+    await context.client`SELECT order_key, price::text AS price, notional::text AS notional FROM fills WHERE run_id = ${runId} ORDER BY candle_time, order_key LIMIT 1`;
+  const first = (fill as { order_key: string; price: string; notional: string }[])[0];
+  assertCondition(
+    parsed.lines.some(
+      (line) =>
+        line.includes(`,fill,`) &&
+        line.includes(`,${first?.order_key},`) &&
+        line.includes(`,${first?.price},`) &&
+        line.includes(`,${first?.notional},`),
+    ),
+    'o preenchimento do banco não está no log com os decimais exatos',
+  );
+  assertCondition(
+    !/user_id|userId|run_hash|config_hash/.test(response.text),
+    'log vazou dado interno',
+  );
+  reportLine(
+    `registro CSV (log.csv): cabeçalho fixo, ${parsed.lines.length} linhas = sinais + ordens + preenchimentos do banco, tempos em UTC ISO em ordem, decimais exatos`,
+  );
+}
+
 async function checkCsv(context: ApiRunsContext, runId: string): Promise<void> {
   for (const [table, source, header] of [
     ['equity', 'equity_points', 'candle_time,equity,equity_at_low,benchmark'],
@@ -289,5 +351,6 @@ export async function checkBacktestFlow(
   const run = await runBacktest(context, strategy.version.id, window);
   await checkSeries(context, run.id);
   await checkCsv(context, run.id);
+  await checkLogCsv(context, run.id);
   return { strategyId: strategy.strategy.id, versionId: strategy.version.id, runId: run.id };
 }

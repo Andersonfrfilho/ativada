@@ -3,6 +3,7 @@ import type {
   EquityPointInput,
   FillInput,
   PositionInput,
+  RunLogEntry,
   SignalInput,
   WalkForwardWindowInput,
 } from '@cryptoada/database';
@@ -71,4 +72,34 @@ export const WINDOW_COLUMNS: readonly CsvColumn<WalkForwardWindowInput>[] = [
   jsonColumn('best_params', (row) => row.bestParams),
   jsonColumn('in_sample', (row) => row.inSample),
   jsonColumn('out_of_sample', (row) => row.outOfSample),
+];
+
+// O instante do candle em UTC ISO (`2025-01-01T01:00:00.000Z`): legível na planilha e ordenável como texto.
+function toIsoTime(milliseconds: number | undefined): string | undefined {
+  return milliseconds === undefined ? undefined : new Date(milliseconds).toISOString();
+}
+
+// O registro cronológico: cabeçalho fixo; decimais exatamente como o motor os emitiu; só o que o tipo da linha tem.
+export const LOG_COLUMNS: readonly CsvColumn<RunLogEntry>[] = [
+  textColumn('time', (row) => toIsoTime(row.eventTime)),
+  textColumn('event', (row) => row.kind),
+  textColumn('action', (row) => row.action),
+  textColumn('side', (row) => row.side),
+  textColumn('order_key', (row) => row.orderKey),
+  textColumn('order_type', (row) => row.orderType),
+  textColumn('purpose', (row) => row.purpose),
+  textColumn('status', (row) => row.status),
+  decimalColumn('score', (row) => row.score),
+  textColumn('regime', (row) => row.regime),
+  decimalColumn('price', (row) => row.price),
+  decimalColumn('limit_price', (row) => row.limitPrice),
+  decimalColumn('trigger_price', (row) => row.triggerPrice),
+  decimalColumn('quantity', (row) => row.quantity),
+  decimalColumn('notional', (row) => row.notional),
+  decimalColumn('fee', (row) => row.fee),
+  decimalColumn('risk_amount', (row) => row.riskAmount),
+  decimalColumn('stop_distance', (row) => row.stopDistance),
+  decimalColumn('target_distance', (row) => row.targetDistance),
+  textColumn('last_event_time', (row) => toIsoTime(row.lastEventTime)),
+  textColumn('reason', (row) => row.reason),
 ];

@@ -12,6 +12,8 @@ import type {
   PositionCursor,
   PositionInput,
   ResultPage,
+  RunLogCursor,
+  RunLogEntry,
   RunRecord,
   RunRepository,
   RunResultRepository,
@@ -55,9 +57,10 @@ export type InMemoryRuns = {
     | 'listPositions'
     | 'listEquityPoints'
     | 'listWindows'
+    | 'listLog'
   >;
   // Cada leitura de resultado anota o `limit` pedido: provam que a rota lê por página, nunca a série inteira.
-  readonly listCalls: Record<ResultKind, number[]>;
+  readonly listCalls: Record<ResultKind | 'log', number[]>;
   readonly seed: <TKind extends ResultKind>(
     runId: string,
     kind: TKind,
@@ -94,7 +97,8 @@ export function createInMemoryRuns(
 ): InMemoryRuns {
   const runs: StoredRun[] = [];
   const stores = new Map<string, ResultStore>();
-  const listCalls: Record<ResultKind, number[]> = {
+  const listCalls: Record<ResultKind | 'log', number[]> = {
+    log: [],
     signals: [],
     orders: [],
     fills: [],
@@ -222,7 +226,99 @@ export function createInMemoryRuns(
     };
   }
 
+  const LOG_RANK = { fill: 1, signal: 2, order: 3 } as const;
+  const logRowsOf = (store: ResultStore): readonly RunLogEntry[] => {
+    const blank = {
+      action: undefined,
+      side: undefined,
+      orderKey: undefined,
+      orderType: undefined,
+      purpose: undefined,
+      status: undefined,
+      score: undefined,
+      regime: undefined,
+      price: undefined,
+      limitPrice: undefined,
+      triggerPrice: undefined,
+      quantity: undefined,
+      notional: undefined,
+      fee: undefined,
+      riskAmount: undefined,
+      stopDistance: undefined,
+      targetDistance: undefined,
+      lastEventTime: undefined,
+      reason: undefined,
+    } as const;
+    return [
+      ...store.signals.map((row) => ({
+        ...blank,
+        kind: 'signal' as const,
+        eventTime: row.candleTime,
+        action: row.action,
+        score: row.score,
+        regime: row.regime,
+        reason: row.reason,
+      })),
+      ...store.orders.map((row) => ({
+        ...blank,
+        kind: 'order' as const,
+        eventTime: row.createdCandleTime,
+        side: row.side,
+        orderKey: row.engineKey,
+        orderType: row.type,
+        purpose: row.purpose,
+        status: row.status,
+        price: row.price,
+        limitPrice: row.limitPrice,
+        triggerPrice: row.triggerPrice,
+        quantity: row.quantity,
+        riskAmount: row.riskAmount,
+        stopDistance: row.stopDistance,
+        targetDistance: row.targetDistance,
+        lastEventTime: row.lastEventCandleTime,
+        reason: row.reason,
+      })),
+      ...store.fills.map((row) => ({
+        ...blank,
+        kind: 'fill' as const,
+        eventTime: row.candleTime,
+        side: row.side,
+        orderKey: row.orderKey,
+        price: row.price,
+        quantity: row.quantity,
+        notional: row.notional,
+        fee: row.fee,
+      })),
+    ];
+  };
+  const logCursorOf = (row: RunLogEntry): RunLogCursor => ({
+    eventTime: row.eventTime,
+    rank: LOG_RANK[row.kind],
+    key: row.orderKey ?? '',
+  });
+  const compareLog = (first: RunLogCursor, second: RunLogCursor): number =>
+    first.eventTime - second.eventTime ||
+    first.rank - second.rank ||
+    (first.key < second.key ? -1 : first.key > second.key ? 1 : 0);
+
+  const listLog: InMemoryRuns['results']['listLog'] = (scope, runId, params) => {
+    listCalls.log.push(params.limit);
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    const ordered = [...logRowsOf(storeOf(runId))].sort((first, second) =>
+      compareLog(logCursorOf(first), logCursorOf(second)),
+    );
+    return Promise.resolve(
+      pageOf(
+        ordered,
+        params,
+        (row, cursor) => compareLog(logCursorOf(row), cursor) > 0,
+        logCursorOf,
+      ),
+    );
+  };
+
   const results: InMemoryRuns['results'] = {
+    listLog,
     listSignals: lister<SignalInput, number>('signals', (store) => store.signals, {
       isAfter: (row, cursor) => row.candleTime > cursor,
       of: (row) => row.candleTime,

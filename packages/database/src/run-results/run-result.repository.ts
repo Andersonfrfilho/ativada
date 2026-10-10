@@ -17,6 +17,7 @@ import {
   listPositions,
   listSignals,
 } from './run-result-list.js';
+import { listRunLog } from './run-log-list.js';
 import { listWindows } from './run-window-list.js';
 import { writeOrders, writePositions } from './run-result-upsert.js';
 import type { WriteRequest } from './run-result-write.types.js';
@@ -88,5 +89,6 @@ export function createRunResultRepository(handle: DatabaseHandle): RunResultRepo
     listPositions: lister(database, listPositions),
     listEquityPoints: lister(database, listEquityPoints),
     listWindows: lister(database, listWindows),
+    listLog: lister(database, listRunLog),
   };
 }

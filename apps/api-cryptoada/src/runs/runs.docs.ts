@@ -109,4 +109,20 @@ export const RUN_DOCUMENTATION = {
     ],
     errors: [VALIDATION, RUN_NOT_FOUND],
   },
+  exportLogCsv: {
+    summary:
+      'Exporta o registro cronológico da execução em CSV: sinais (com o motivo), ordens e preenchimentos juntos, do mais antigo ao mais novo (UTF-8, em fluxo por páginas, tempos em UTC ISO, decimais exatos, com proteção contra injeção de fórmula).',
+    tag: TAG,
+    params: RUN_PARAMS,
+    query: z.strictObject({}),
+    successes: [
+      {
+        status: HTTP_STATUS.OK,
+        description: 'O arquivo CSV (`Content-Disposition: attachment`).',
+        contentType: 'text/csv; charset=utf-8',
+        schema: z.string(),
+      },
+    ],
+    errors: [VALIDATION, RUN_NOT_FOUND],
+  },
 } as const satisfies Readonly<Record<string, RouteDocumentation>>;

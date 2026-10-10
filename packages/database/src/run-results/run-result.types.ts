@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { JsonContainer } from '../json-value.types.js';
 import type { OwnerScope } from '../ownership/owner-scope.js';
+import type { RunLogCursor, RunLogEntry } from './run-log.types.js';
 import type {
   CommandKind,
   CommandReason,
@@ -151,4 +152,6 @@ export type RunResultRepository = {
   readonly listPositions: ListOf<PositionInput, PositionCursor>;
   readonly listEquityPoints: ListOf<EquityPointInput, number>;
   readonly listWindows: ListOf<WalkForwardWindowInput, number>;
+  // O registro cronológico (sinais, ordens e preenchimentos) por cursor, para o CSV do registro (RF12).
+  readonly listLog: ListOf<RunLogEntry, RunLogCursor>;
 };

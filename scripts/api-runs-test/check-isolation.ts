@@ -69,6 +69,12 @@ function buildAttempts(window: SeriesWindow): readonly Attempt[] {
       path: (id) => `/v1/runs/${id}/export.csv`,
       resource: 'run',
     },
+    {
+      name: 'exportar o registro CSV',
+      method: 'GET',
+      path: (id) => `/v1/runs/${id}/log.csv`,
+      resource: 'run',
+    },
     ...RUN_SERIES.map((series): Attempt => ({
       name: `série ${series}`,
       method: 'GET',

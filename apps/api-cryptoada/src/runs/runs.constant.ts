@@ -9,6 +9,7 @@ export const RUN_ORDERS_PATH = '/v1/runs/:runId/orders';
 export const RUN_FILLS_PATH = '/v1/runs/:runId/fills';
 export const RUN_WINDOWS_PATH = '/v1/runs/:runId/windows';
 export const RUN_EXPORT_PATH = '/v1/runs/:runId/export.csv';
+export const RUN_LOG_EXPORT_PATH = '/v1/runs/:runId/log.csv';
 export const RUN_ID_PARAM = 'runId';
 
 // Gravado em `runs.error_code` quando a execução não chegou a ser entregue ao executor (ADR 0002, T3.4).

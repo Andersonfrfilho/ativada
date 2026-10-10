@@ -11,6 +11,7 @@ const EXPECTED_PATHS = [
   '/v1/runs/{runId}/stop',
   '/v1/runs/{runId}/equity',
   '/v1/runs/{runId}/export.csv',
+  '/v1/runs/{runId}/log.csv',
   '/v1/openapi.json',
   '/v1/docs',
 ];

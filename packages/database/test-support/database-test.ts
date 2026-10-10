@@ -24,6 +24,7 @@ import {
   seedPersistenceOwners,
 } from './persistence-lgpd-checks.js';
 import { checkRunEvents } from './run-event-checks.js';
+import { checkRunLog } from './run-log-checks.js';
 import { checkRunRepository } from './run-checks.js';
 import {
   checkBatchIsAtomic,
@@ -142,6 +143,7 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkRunQueueReading(context);
   await checkLiveRuns(context);
   await checkAlerts(context);
+  await checkRunLog(context);
 }
 
 async function runChecks(databaseUrl: string): Promise<void> {

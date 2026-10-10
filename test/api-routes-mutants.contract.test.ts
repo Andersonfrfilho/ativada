@@ -55,8 +55,16 @@ const MUTANTS: readonly SourceMutant[] = [
     name: 'EXPORT_ROUTE_IS_PUBLIC',
     edits: edit(
       'runs/run-export.routes.ts',
-      'access: ROUTE_ACCESS.USER,',
-      'access: ROUTE_ACCESS.PUBLIC,',
+      'path: RUN_EXPORT_PATH,\n      access: ROUTE_ACCESS.USER,',
+      'path: RUN_EXPORT_PATH,\n      access: ROUTE_ACCESS.PUBLIC,',
+    ),
+  },
+  {
+    name: 'LOG_ROUTE_IS_PUBLIC',
+    edits: edit(
+      'runs/run-export.routes.ts',
+      'path: RUN_LOG_EXPORT_PATH,\n      access: ROUTE_ACCESS.USER,',
+      'path: RUN_LOG_EXPORT_PATH,\n      access: ROUTE_ACCESS.PUBLIC,',
     ),
   },
   {
@@ -142,6 +150,66 @@ const MUTANTS: readonly SourceMutant[] = [
   {
     name: 'CSV_IGNORES_THE_TIME_CEILING',
     edits: edit('runs/csv-stream.ts', "throw new CsvLimitExceededError('duration');", 'void 0;'),
+  },
+  {
+    name: 'LOG_TIMES_NOT_ISO',
+    edits: edit(
+      'runs/csv-tables.ts',
+      'new Date(milliseconds).toISOString()',
+      'String(milliseconds)',
+    ),
+  },
+  {
+    name: 'LOG_REASON_WRITTEN_AS_RAW_JSON',
+    edits: edit(
+      'runs/csv-tables.ts',
+      "textColumn('reason', (row) => row.reason),\n];",
+      "jsonColumn('reason', (row) => row.reason),\n];",
+    ),
+  },
+  {
+    name: 'LOG_TARGET_DISTANCE_THROUGH_A_FLOAT',
+    edits: edit(
+      'runs/csv-tables.ts',
+      "decimalColumn('target_distance', (row) => row.targetDistance)",
+      "numberColumn('target_distance', (row) => (row.targetDistance === undefined ? undefined : Number(row.targetDistance)))",
+    ),
+  },
+  {
+    name: 'LOG_COLUMN_DROPPED',
+    edits: edit('runs/csv-tables.ts', "  textColumn('purpose', (row) => row.purpose),\n", ''),
+  },
+  {
+    name: 'LOG_READS_ONLY_THE_SIGNALS',
+    edits: edit(
+      'runs/csv-source.ts',
+      'openTable(LOG_COLUMNS, results.listLog)',
+      'openTable(LOG_COLUMNS, results.listSignals as never)',
+    ),
+  },
+  {
+    name: 'LOG_ROUTE_EXPORTS_THE_DEFAULT_TABLE',
+    edits: edit(
+      'runs/run-export.routes.ts',
+      'exportRunCsv(context.scope, runId, LOG_CSV_TABLE)',
+      'exportRunCsv(context.scope, runId, DEFAULT_CSV_TABLE)',
+    ),
+  },
+  {
+    name: 'LOG_ROUTE_ACCEPTS_ANY_QUERY',
+    edits: edit(
+      'runs/run-export.routes.ts',
+      '        readValidatedQuery(context.request, logQuerySchema);\n',
+      '',
+    ),
+  },
+  {
+    name: 'LOG_ROUTE_WITHOUT_RATE_LIMIT',
+    edits: edit(
+      'runs/run-export.routes.ts',
+      '      path: RUN_LOG_EXPORT_PATH,\n      access: ROUTE_ACCESS.USER,\n      rateLimitPolicy: RATE_LIMIT_POLICY.RUN_EXPORT,\n',
+      '      path: RUN_LOG_EXPORT_PATH,\n      access: ROUTE_ACCESS.USER,\n',
+    ),
   },
   {
     name: 'CURSOR_WITHOUT_CEILING',
@@ -411,8 +479,8 @@ const MUTANTS: readonly SourceMutant[] = [
     name: 'EXPORT_RATE_LIMIT_REMOVED',
     edits: edit(
       'runs/run-export.routes.ts',
-      '      rateLimitPolicy: RATE_LIMIT_POLICY.RUN_EXPORT,\n',
-      '',
+      '      path: RUN_EXPORT_PATH,\n      access: ROUTE_ACCESS.USER,\n      rateLimitPolicy: RATE_LIMIT_POLICY.RUN_EXPORT,\n',
+      '      path: RUN_EXPORT_PATH,\n      access: ROUTE_ACCESS.USER,\n',
     ),
   },
 ];

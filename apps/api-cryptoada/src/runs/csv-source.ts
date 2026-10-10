@@ -7,10 +7,11 @@ import type {
 } from '@cryptoada/database';
 
 import { formatHeaderLine, formatRowLine, type CsvColumn } from './csv-columns.js';
-import { CSV_PAGE_SIZE, type CsvTableName } from './csv-tables.constant.js';
+import { CSV_PAGE_SIZE, type ExportedCsvTable } from './csv-tables.constant.js';
 import {
   EQUITY_COLUMNS,
   FILL_COLUMNS,
+  LOG_COLUMNS,
   SIGNAL_COLUMNS,
   TRADE_COLUMNS,
   WINDOW_COLUMNS,
@@ -64,17 +65,18 @@ function openTable<TRow, TCursor>(
 
 export type CsvSourceDependencies = Pick<
   RunResultRepository,
-  'listPositions' | 'listSignals' | 'listFills' | 'listEquityPoints' | 'listWindows'
+  'listPositions' | 'listSignals' | 'listFills' | 'listEquityPoints' | 'listWindows' | 'listLog'
 >;
 
 export function createCsvSources(
   results: CsvSourceDependencies,
-): Readonly<Record<CsvTableName, OpenCsvTable>> {
+): Readonly<Record<ExportedCsvTable, OpenCsvTable>> {
   return {
     trades: openTable(TRADE_COLUMNS, results.listPositions),
     signals: openTable(SIGNAL_COLUMNS, results.listSignals),
     fills: openTable(FILL_COLUMNS, results.listFills),
     equity: openTable(EQUITY_COLUMNS, results.listEquityPoints),
     windows: openTable(WINDOW_COLUMNS, results.listWindows),
+    log: openTable(LOG_COLUMNS, results.listLog),
   };
 }

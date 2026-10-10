@@ -6,7 +6,7 @@ export
 COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
 
-.PHONY: help bootstrap config up down ps check contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants alert-mutants telegram-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants identity-logs
+.PHONY: help bootstrap config up down ps check contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants alert-mutants runlog-mutants telegram-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants identity-logs
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -164,6 +164,13 @@ alert-mutants: ## Prova que a caixa de saída dos alertas reprova 11 mutantes (s
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/alert-mutants.ts
+
+runlog-mutants: ## Prova que o registro cronológico da execução reprova 10 mutantes (sinal antes do preenchimento, só por instante, cursor que repete, sem a linha a mais da página, ordem pelo instante errado, preço por float, filtro de dono em cada consulta, execuções misturadas) contra um Postgres de teste descartável
+	set -a; . envs/env.test; set +a; \
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/runlog-mutants.ts
 
 telegram-test: ## Prova o alerta no Telegram contra Postgres de teste descartável e uma Bot API falsa: vínculo por código (uso único, vencido, chat de outro dono), passo ao vivo que enfileira um alerta por sinal BUY/SELL, entrega ao chat do próprio dono com motivo e acerto histórico, retry com espera crescente e retry_after, desistência, queda e reinício sem duplicar, desvinculação, exportação e exclusão LGPD e log sem token nem chat
 	set -a; . envs/env.test; set +a; \

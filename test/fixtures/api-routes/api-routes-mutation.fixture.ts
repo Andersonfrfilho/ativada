@@ -16,6 +16,7 @@ export const API_ROUTES_MUTANT_TARGET: MutantTarget = {
     'test/api-run-series.contract.test.ts',
     'test/api-cursor-instant.contract.test.ts',
     'test/api-run-export.contract.test.ts',
+    'test/api-run-log-export.contract.test.ts',
     'test/api-openapi.contract.test.ts',
     'test/api-docs-page.contract.test.ts',
     'test/api-run-queue-dispatcher.contract.test.ts',
