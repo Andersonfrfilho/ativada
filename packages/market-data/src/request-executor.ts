@@ -10,6 +10,7 @@ import {
   TIMEOUT_ERROR_NAME,
 } from './market-data.constant.js';
 import {
+  MarketDataAbortedError,
   MarketDataBannedError,
   MarketDataError,
   MarketDataHttpError,
@@ -85,13 +86,21 @@ export function createRequestExecutor(
     return { kind: 'retry', error, delayMilliseconds: backoffMilliseconds(attemptNumber) };
   }
 
+  function buildRequestSignal(): AbortSignal {
+    const timeout = AbortSignal.timeout(settings.requestTimeoutMilliseconds);
+    return settings.signal === undefined ? timeout : AbortSignal.any([timeout, settings.signal]);
+  }
+
+  function throwIfAborted(): void {
+    if (settings.signal?.aborted === true) throw new MarketDataAbortedError();
+  }
+
   async function attemptRequest(url: string, attemptNumber: number): Promise<AttemptOutcome> {
     let response: Response;
     try {
-      response = await settings.fetchImplementation(url, {
-        signal: AbortSignal.timeout(settings.requestTimeoutMilliseconds),
-      });
+      response = await settings.fetchImplementation(url, { signal: buildRequestSignal() });
     } catch (error) {
+      throwIfAborted();
       return {
         kind: 'retry',
         error: toTransportError(error, sourceName),
@@ -107,10 +116,12 @@ export function createRequestExecutor(
     // Cada tentativa depende do resultado da anterior: o laço é sequencial por natureza.
     for (let attemptNumber = 1; ; attemptNumber += 1) {
       await gate.waitIfNeeded();
+      throwIfAborted();
       const outcome = await attemptRequest(url, attemptNumber);
       if (outcome.kind === 'success') return outcome.body;
       if (attemptNumber >= settings.maxAttempts) throw outcome.error;
       await settings.sleep(outcome.delayMilliseconds);
+      throwIfAborted();
     }
   }
 

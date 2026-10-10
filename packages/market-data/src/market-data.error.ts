@@ -16,6 +16,12 @@ export class MarketDataTimeoutError extends MarketDataError {}
 
 export class MarketDataNetworkError extends MarketDataError {}
 
+export class MarketDataAbortedError extends MarketDataError {
+  constructor() {
+    super('A operação foi cancelada pelo chamador.');
+  }
+}
+
 // Falha declarada pela própria fonte (ex.: `metadata.error` da alternative.me); a mensagem dela nunca é repetida.
 export class MarketDataSourceError extends MarketDataError {}
 

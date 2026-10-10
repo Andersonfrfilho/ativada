@@ -17,8 +17,10 @@ function startWorker(environment: Environment): void {
     write: (line) => process.stdout.write(line),
   });
   const database = openDatabase(environment.DATABASE_URL);
+  const abortController = new AbortController();
   const serverClock = createServerClock({
     baseUrl: environment.BINANCE_BASE_URL,
+    signal: abortController.signal,
     onWarning: (warning) => logger.warn(WORKER_LOG.SERVER_CLOCK_UNAVAILABLE, warning),
   });
   const worker = createWorker({
@@ -26,7 +28,12 @@ function startWorker(environment: Environment): void {
     symbols: environment.MARKET_SYMBOLS,
     timeframes: environment.MARKET_TIMEFRAMES,
     repository: createCandleRepository(database),
-    client: createMarketDataClient({ baseUrl: environment.BINANCE_BASE_URL, clock: serverClock }),
+    client: createMarketDataClient({
+      baseUrl: environment.BINANCE_BASE_URL,
+      clock: serverClock,
+      signal: abortController.signal,
+    }),
+    abortController,
     serverClock,
     logger,
     streamBaseUrl: environment.BINANCE_STREAM_URL,

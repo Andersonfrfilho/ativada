@@ -1,25 +1,27 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-
 export type CancellableSleep = {
   readonly sleep: (milliseconds: number) => Promise<void>;
+  // Acorda as esperas pendentes (não as deixa penduradas): quem dormia checa a parada e sai.
   readonly cancelAll: () => void;
 };
 
-// Quem cancela não espera a promessa: ela fica pendente e o dono a descarta (Promise.race com o encerramento).
 export function createCancellableSleep(): CancellableSleep {
-  const timers = new Set<ReturnType<typeof setTimeout>>();
+  const pending = new Map<ReturnType<typeof setTimeout>, () => void>();
   return {
     sleep: (milliseconds): Promise<void> =>
       new Promise((resolve) => {
         const timer = setTimeout(() => {
-          timers.delete(timer);
+          pending.delete(timer);
           resolve();
         }, milliseconds);
-        timers.add(timer);
+        pending.set(timer, resolve);
       }),
     cancelAll: (): void => {
-      for (const timer of timers) clearTimeout(timer);
-      timers.clear();
+      for (const [timer, wake] of pending) {
+        clearTimeout(timer);
+        wake();
+      }
+      pending.clear();
     },
   };
 }

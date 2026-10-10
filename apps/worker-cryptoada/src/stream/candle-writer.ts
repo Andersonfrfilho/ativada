@@ -15,6 +15,7 @@ export type CandleWriterDependencies = {
   readonly exchange: string;
   readonly sleep: (milliseconds: number) => Promise<void>;
   readonly onWriteExhausted: () => void;
+  readonly signal: AbortSignal;
 };
 
 export type CandleWriter = {
@@ -28,6 +29,18 @@ export function buildCandleId(candle: Pick<Candle, 'symbol' | 'timeframe' | 'ope
 
 function readErrorName(error: unknown): string {
   return error instanceof Error ? error.name : 'UnknownError';
+}
+
+function sleepUnlessAborted(
+  dependencies: CandleWriterDependencies,
+  milliseconds: number,
+): Promise<void> {
+  const { signal } = dependencies;
+  if (signal.aborted) return Promise.resolve();
+  return new Promise((resolve) => {
+    signal.addEventListener('abort', () => resolve(), { once: true });
+    void dependencies.sleep(milliseconds).then(resolve);
+  });
 }
 
 export function createCandleWriter(dependencies: CandleWriterDependencies): CandleWriter {
@@ -57,7 +70,12 @@ export function createCandleWriter(dependencies: CandleWriterDependencies): Cand
           attempt,
           errorName: readErrorName(error),
         });
-        await dependencies.sleep(CANDLE_WRITE_RETRY_BASE_MILLISECONDS * 2 ** (attempt - 1));
+        await sleepUnlessAborted(
+          dependencies,
+          CANDLE_WRITE_RETRY_BASE_MILLISECONDS * 2 ** (attempt - 1),
+        );
+        // Parando, a vela fica para a recuperação por janela da próxima partida.
+        if (dependencies.signal.aborted) return;
       }
     }
   }

@@ -111,6 +111,7 @@ describe('worker: the gap check covers a lookback window, not "from the latest s
       refreshClock: () => Promise.resolve(),
       lookbackMilliseconds: 3 * PIPELINE_HOUR,
       unfillable: new Set<string>(),
+      signal: new AbortController().signal,
     });
     expect(outcome).toStrictEqual({ failures: 0 });
     expect(downloaded).toStrictEqual([lost, lost]);

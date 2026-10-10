@@ -106,6 +106,7 @@ describe('worker: the ban sleep has a ceiling', () => {
       timeframes: ['1h'],
       lookbackMilliseconds: 4 * PIPELINE_HOUR,
       unfillable: new Set<string>(),
+      signal: new AbortController().signal,
     });
     expect(outcome).toStrictEqual({ failures: 1, banMilliseconds: expectedMilliseconds });
   });

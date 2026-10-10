@@ -121,4 +121,55 @@ describe('kline stream: reconnection', () => {
     expect(harness.server.connectionCount()).toBe(0);
     expect(opened.stream.stats().attemptCount).toBe(attemptsAtClose);
   });
+
+  test('close() resolves only after the reconnect loop ended, even when the backoff sleep never returns', async () => {
+    harness.server.refuseConnections(true);
+    const sleeping: number[] = [];
+    const opened = harness.open({
+      sleep: (milliseconds) => {
+        sleeping.push(milliseconds);
+        return new Promise<void>(() => undefined);
+      },
+    });
+    await waitFor(() => sleeping.length === 1, 'first failed attempt, now in the backoff');
+    const outcome = await Promise.race([
+      opened.stream.close().then(() => 'closed'),
+      Bun.sleep(1_000).then(() => 'hung'),
+    ]);
+    expect(outcome).toBe('closed');
+    expect(opened.stream.stats().attemptCount).toBe(1);
+  });
+
+  test('close() cancels the backoff timers of its own sleep', async () => {
+    const realSetTimeout = globalThis.setTimeout;
+    const realClearTimeout = globalThis.clearTimeout;
+    const longTimers = new Set<unknown>();
+    const patched = ((handler: () => void, milliseconds?: number): unknown => {
+      const timer = realSetTimeout(handler, milliseconds);
+      if ((milliseconds ?? 0) >= 30_000) longTimers.add(timer);
+      return timer;
+    }) as unknown as typeof setTimeout;
+    const patchedClear = ((timer: Parameters<typeof clearTimeout>[0]): void => {
+      longTimers.delete(timer);
+      realClearTimeout(timer);
+    }) as typeof clearTimeout;
+    globalThis.setTimeout = patched;
+    globalThis.clearTimeout = patchedClear;
+    try {
+      harness.server.refuseConnections(true);
+      const opened = harness.open({
+        reconnectBaseMilliseconds: 60_000,
+        reconnectMaxMilliseconds: 120_000,
+      });
+      await waitFor(
+        () => harness.server.connectionCount() === 0 && longTimers.size >= 1,
+        'in the backoff',
+      );
+      await opened.stream.close();
+      expect(longTimers.size).toBe(0);
+    } finally {
+      globalThis.setTimeout = realSetTimeout;
+      globalThis.clearTimeout = realClearTimeout;
+    }
+  });
 });

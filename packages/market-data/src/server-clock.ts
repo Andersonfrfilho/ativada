@@ -20,6 +20,7 @@ export type ServerClockSettings = {
   readonly fetchImplementation?: FetchImplementation | undefined;
   readonly now?: (() => number) | undefined;
   readonly refreshIntervalMilliseconds?: number | undefined;
+  readonly signal?: AbortSignal | undefined;
   readonly onWarning?: ((warning: ServerClockWarning) => void) | undefined;
 };
 
@@ -31,12 +32,16 @@ export type ServerClock = {
   readonly refreshIfStale: () => Promise<void>;
 };
 
-async function readServerTime(
-  url: string,
-  fetchImplementation: FetchImplementation,
-): Promise<number> {
-  const response = await fetchImplementation(url, {
-    signal: AbortSignal.timeout(SERVER_TIME_TIMEOUT_MILLISECONDS),
+type ReadServerTimeParams = {
+  readonly url: string;
+  readonly fetchImplementation: FetchImplementation;
+  readonly signal: AbortSignal | undefined;
+};
+
+async function readServerTime(params: ReadServerTimeParams): Promise<number> {
+  const timeout = AbortSignal.timeout(SERVER_TIME_TIMEOUT_MILLISECONDS);
+  const response = await params.fetchImplementation(params.url, {
+    signal: params.signal === undefined ? timeout : AbortSignal.any([timeout, params.signal]),
   });
   if (!response.ok) {
     throw new MarketDataHttpError({
@@ -70,9 +75,14 @@ export function createServerClock(settings: ServerClockSettings = {}): ServerClo
     const sentAt = localNow();
     lastAttemptAt = sentAt;
     try {
-      const serverTime = await readServerTime(url, fetchImplementation);
+      const serverTime = await readServerTime({
+        url,
+        fetchImplementation,
+        signal: settings.signal,
+      });
       offset = serverTime - (sentAt + localNow()) / 2;
     } catch (error: unknown) {
+      if (settings.signal?.aborted === true) return;
       settings.onWarning?.({ errorName: error instanceof Error ? error.name : 'UnknownError' });
     }
   }

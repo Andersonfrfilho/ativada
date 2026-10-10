@@ -24,6 +24,7 @@ export {
   MAXIMUM_RETRY_AFTER_SECONDS,
 } from './market-data.constant.js';
 export {
+  MarketDataAbortedError,
   MarketDataBannedError,
   MarketDataError,
   MarketDataHttpError,

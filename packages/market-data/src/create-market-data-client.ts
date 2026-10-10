@@ -39,6 +39,8 @@ export function createMarketDataClient(clientSettings: MarketDataClientSettings)
       body,
       symbol: params.symbol,
       timeframe: params.timeframe,
+      startTime: params.startTime,
+      endTime: params.endTime,
     });
     // Candle com closeTime >= agora ainda está aberto e muda: nunca sai como fechado.
     const closedCandles = candles.filter((candle) => candle.closeTime < settings.now());

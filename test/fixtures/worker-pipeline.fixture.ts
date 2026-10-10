@@ -84,6 +84,7 @@ export function startPipeline(options: PipelineOptions = {}): Pipeline {
   const seed = buildSeed(options, symbols);
   const repository = createInMemoryCandleRepository({ now: clock.now, seed });
   const entries: LogEntry[] = [];
+  const abortController = new AbortController();
   const delays: number[] = [];
   const restRequestsAtSleep: number[] = [];
   const recordedSleep = (milliseconds: number): Promise<void> => {
@@ -108,7 +109,9 @@ export function startPipeline(options: PipelineOptions = {}): Pipeline {
       baseUrl: server.restUrl,
       now: clock.now,
       maxAttempts: REST_ATTEMPTS,
+      signal: abortController.signal,
     }),
+    abortController,
     logger: createWorkerLogger({
       appName: 'worker-cryptoada',
       write: (line) => void entries.push(JSON.parse(line) as LogEntry),

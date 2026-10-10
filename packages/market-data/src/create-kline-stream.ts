@@ -127,7 +127,7 @@ export function createKlineStream(settings: KlineStreamSettings): KlineStream {
     }
   }
 
-  void run();
+  const running = run();
 
   return {
     close: (): Promise<void> => {
@@ -135,7 +135,7 @@ export function createKlineStream(settings: KlineStreamSettings): KlineStream {
       notifyClosed();
       cancellable.cancelAll();
       activeConnection?.abort();
-      return Promise.resolve();
+      return running;
     },
     stats: (): KlineStreamStats => ({ ...counters }),
   };

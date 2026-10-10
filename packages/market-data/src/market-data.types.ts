@@ -14,6 +14,8 @@ export type MarketDataClientSettings = {
   readonly now?: () => number;
   // Hora do servidor: quando informado, vale no lugar de `now` para decidir o que já fechou.
   readonly clock?: Pick<ServerClock, 'now' | 'refreshIfStale'>;
+  // Cancela a chamada em curso, a espera de Retry-After/backoff e a paginação.
+  readonly signal?: AbortSignal;
   readonly sleep?: (milliseconds: number) => Promise<void>;
   readonly weightCeiling?: number;
   readonly weightSafetyMargin?: number;
@@ -44,5 +46,7 @@ export type MarketDataClient = {
   readonly fetchKlinesRange: (params: FetchKlinesRangeParams) => Promise<readonly Candle[]>;
 };
 
-export type ResolvedMarketDataSettings = Required<Omit<MarketDataClientSettings, 'clock'>> &
-  Pick<MarketDataClientSettings, 'clock'>;
+export type ResolvedMarketDataSettings = Required<
+  Omit<MarketDataClientSettings, 'clock' | 'signal'>
+> &
+  Pick<MarketDataClientSettings, 'clock' | 'signal'>;

@@ -50,6 +50,7 @@ export type WorkerDependencies = {
   readonly staleAfterMilliseconds: number;
   readonly gapLookbackHours?: number | undefined;
   readonly gapCheckMinutes?: number | undefined;
+  readonly abortController: AbortController;
   readonly serverClock?: Pick<ServerClock, 'now' | 'refresh'> | undefined;
   readonly timing?: WorkerTiming;
 };
@@ -85,6 +86,7 @@ export function createWorker(dependencies: WorkerDependencies): Worker {
         refreshClock,
         lookbackMilliseconds,
         unfillable,
+        signal: dependencies.abortController.signal,
       }),
     logger,
     sleep,
@@ -98,6 +100,7 @@ export function createWorker(dependencies: WorkerDependencies): Worker {
     exchange: dependencies.exchange,
     sleep,
     onWriteExhausted: recovery.trigger,
+    signal: dependencies.abortController.signal,
   });
   // Verificação barata (SQL): só vai ao REST se achar lacuna na janela de retrocesso.
   const periodicCheck = setInterval(recovery.trigger, gapCheckIntervalMilliseconds);
@@ -126,6 +129,7 @@ export function createWorker(dependencies: WorkerDependencies): Worker {
 
   return {
     stop: async (): Promise<void> => {
+      dependencies.abortController.abort();
       clearInterval(periodicCheck);
       await stream.close();
       await recovery.stop();

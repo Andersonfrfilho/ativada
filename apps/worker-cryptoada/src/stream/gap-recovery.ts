@@ -30,6 +30,7 @@ export type GapRecoveryDependencies = {
   readonly lookbackMilliseconds: number;
   // Aberturas que a Binance não tem: perguntar de novo a cada verificação só gastaria peso.
   readonly unfillable: Set<string>;
+  readonly signal: AbortSignal;
 };
 
 export type RecoveryOutcome = {
@@ -122,9 +123,11 @@ export async function recoverGaps(dependencies: GapRecoveryDependencies): Promis
   let failures = 0;
   for (const symbol of dependencies.symbols) {
     for (const timeframe of dependencies.timeframes) {
+      if (dependencies.signal.aborted) return { failures };
       try {
         await recoverPair(dependencies, { symbol, timeframe });
       } catch (error: unknown) {
+        if (dependencies.signal.aborted) return { failures };
         failures += 1;
         dependencies.logger.error(WORKER_LOG.GAP_RECOVERY_FAILED, {
           pairId: `${symbol}/${timeframe}`,
