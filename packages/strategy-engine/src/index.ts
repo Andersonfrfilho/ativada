@@ -184,3 +184,4 @@ export * from './survival/survival.constant.js';
 export { SurvivalInputError } from './survival/survival.error.js';
 export type * from './survival/survival.types.js';
 export * from './goal/index.js';
+export * from './trigger/index.js';
