@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "symbol": "BTCUSDT",
   "timeframe": "1h",
+  "sentimentSource": "alternative.me",
   "initialBalance": "10000",
   "feeRate": "0.001",
   "slippageRate": "0.0005",

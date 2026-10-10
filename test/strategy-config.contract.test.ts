@@ -25,7 +25,12 @@ const MINIMAL_CONFIG = {
   rules: [{ id: 'rsi-14', kind: 'rsi', period: 14, oversold: 30, overbought: 70 }],
   thresholds: { buy: '1', sell: '-1' },
 };
-const MINIMAL_RUN = { schemaVersion: 1, symbol: 'ETHUSDT', timeframe: '4h' };
+const MINIMAL_RUN = {
+  schemaVersion: 1,
+  symbol: 'ETHUSDT',
+  timeframe: '4h',
+  sentimentSource: 'alternative.me',
+};
 
 // Hash-dourado literal: mudar a semântica do Zod (defaults, transformações) ou do JSON canônico muda
 // o hash de toda versão gravada — o teste avisa antes que isso chegue ao banco.
@@ -33,8 +38,8 @@ const CLASSIC_CONFIG_HASH = '7dc257e634968692b36421cc67c92a41ccbb17b6138299cc5a5
 const MINIMAL_CONFIG_HASH = '71129208a8f4550a83f15fb22f78c8c834b2c0ddc9351fb5729516fb275f073a';
 const MINIMAL_CONFIG_CANONICAL =
   '{"entry":{"orderType":"market"},"regime":{"kind":"none"},"risk":{"atrPeriod":14,"maxExposureRate":"1","riskPerTrade":"0.01","stopAtrMultiple":"2","targetAtrMultiple":"3"},"rules":[{"id":"rsi-14","kind":"rsi","overbought":70,"oversold":30,"period":14}],"schemaVersion":1,"thresholds":{"buy":"1","sell":"-1"}}';
-const CLASSIC_RUN_HASH = '4dcddb3132d4c3e39a4c33f71d476b0f0d57f04524fce0d91832ab0ad84ffad0';
-const MINIMAL_RUN_HASH = 'ddbcba515e24f709606c3319beda429cc724a59f927c2c0b544f8e555c6cab31';
+const CLASSIC_RUN_HASH = 'da96318e37bca44a9ec657c3bf58cd09ba487137299cec7ed5bc12926657b079';
+const MINIMAL_RUN_HASH = '105ad94998ccc797493e985523bb7f545aea54197c4dd4be50b414c49e9e241f';
 
 function captureIssues(parse: () => unknown): readonly { path: string; message: string }[] {
   try {
@@ -194,6 +199,7 @@ describe('run parameters schema', () => {
       schemaVersion: 1,
       symbol: 'ETHUSDT',
       timeframe: '4h',
+      sentimentSource: 'alternative.me',
       initialBalance: '10000',
       feeRate: '0.001',
       slippageRate: '0.0005',
@@ -218,6 +224,7 @@ describe('run parameters schema', () => {
     for (const expectedPath of [
       'symbol',
       'timeframe',
+      'sentimentSource',
       'initialBalance',
       'feeRate',
       'slippageRate',
@@ -229,6 +236,20 @@ describe('run parameters schema', () => {
     expect(
       parseRunParameters({ ...MINIMAL_RUN, initialBalance: '1000000000' }).initialBalance,
     ).toBe('1000000000');
+  });
+});
+
+describe('run parameters: sentiment source', () => {
+  test('is mandatory, non-empty and at most 64 characters (the observation source is an identifier)', () => {
+    const withoutSource = Object.fromEntries(
+      Object.entries(MINIMAL_RUN).filter(([key]) => key !== 'sentimentSource'),
+    );
+    expect(runIssuePaths(withoutSource)).toContain('sentimentSource');
+    expect(runIssuePaths({ ...MINIMAL_RUN, sentimentSource: '' })).toContain('sentimentSource');
+    expect(runIssuePaths({ ...MINIMAL_RUN, sentimentSource: 'x'.repeat(65) })).toContain(
+      'sentimentSource',
+    );
+    expect(parseRunParameters({ ...MINIMAL_RUN, sentimentSource: 'x'.repeat(64) })).toBeDefined();
   });
 });
 
@@ -273,6 +294,7 @@ describe('version and run hashes', () => {
       { ...example, symbol: 'ETHUSDT' },
       { ...example, initialBalance: '500' },
       { ...example, maxVolumeShare: '0.05' },
+      { ...example, sentimentSource: 'alternative.me/live' },
     ];
     const runHashes = runVariants.map((variant) => createRunSetup(variant).runHash);
     expect(new Set([CLASSIC_RUN_HASH, ...runHashes]).size).toBe(runVariants.length + 1);

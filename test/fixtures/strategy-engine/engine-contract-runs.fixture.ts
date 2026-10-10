@@ -47,9 +47,15 @@ export function buildStepInput(params: {
     run: scenario.run,
     state: params.state,
     candle,
+    // O mundo do cenário é o ao vivo: a observação nasce no instante em que fica disponível.
     sentiment: selectAvailableSentiment({
-      observations: params.sentiment,
+      observations: params.sentiment.map((observation) => ({
+        ...observation,
+        createdAt: observation.observedAt,
+      })),
       closeTime: candle.closeTime,
+      source: scenario.run.parameters.sentimentSource,
+      insertionCutoff: candle.closeTime,
     }),
     commands: commandsAt(scenario.commands, candle.openTime),
   };

@@ -173,15 +173,23 @@ describe('step input guard', () => {
 
 describe('sentiment availability and freshness', () => {
   const closeTime = requireCandle(SECOND).closeTime;
-  const older = { value: 20, observedAt: closeTime - 10, source: 'alternative.me' };
-  const newer = { value: 80, observedAt: closeTime, source: 'alternative.me' };
-  const future = { value: 99, observedAt: closeTime + 1, source: 'alternative.me' };
+  const source = 'alternative.me';
+  const insertionCutoff = closeTime + 1_000;
+  const older = { value: 20, observedAt: closeTime - 10, source, createdAt: closeTime - 10 };
+  const newer = { value: 80, observedAt: closeTime, source, createdAt: closeTime };
+  const future = { value: 99, observedAt: closeTime + 1, source, createdAt: closeTime + 1 };
 
   test('the caller hands over the latest observation already available at the close', () => {
-    expect(selectAvailableSentiment({ observations: [older, newer, future], closeTime })).toBe(
-      newer,
-    );
-    expect(selectAvailableSentiment({ observations: [future], closeTime })).toBeUndefined();
+    const selected = selectAvailableSentiment({
+      observations: [older, newer, future],
+      closeTime,
+      source,
+      insertionCutoff,
+    });
+    expect(selected).toStrictEqual({ value: 80, observedAt: closeTime, source });
+    expect(
+      selectAvailableSentiment({ observations: [future], closeTime, source, insertionCutoff }),
+    ).toBeUndefined();
   });
 
   test('exactly 48 h old is still fresh; one millisecond more is missing data', () => {
