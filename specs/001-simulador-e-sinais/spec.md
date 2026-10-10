@@ -89,6 +89,9 @@ parametrizáveis. Cada indicador tem teste com valores de referência conferidos
 - Exposição máxima por par e total.
 - Uma posição aberta por par por estratégia.
 
+- A perda é limitada a `riskPerTrade` **até o stop**, já com taxas e slippage de saída; o risco de GAP além do stop (abertura abaixo do stop) fica fora dessa garantia e é registrado como tal.
+- O teto de exposição TOTAL entre pares não existe no motor (só `maxExposureRate` por carteira): quem o cobra é o RiskGuard da execução real (spec 002) e, no ao vivo, a camada de metas.
+
 ### RF06 — Corretora simulada
 - Carteira com saldo inicial imaginário (padrão R$ 10.000 equivalentes em USDT, configurável).
 - Taxa por ordem (padrão 0,1%) e slippage (padrão 0,05%) configuráveis e sempre aplicados.

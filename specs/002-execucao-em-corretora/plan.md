@@ -94,3 +94,7 @@ A trilha de auditoria usa a tabela `audit_events` da spec 001, com o esquema ún
 | Chave vazada | Sem saque + IP restrito, verificados no boot |
 | Defeito abrir ordens em sequência | Teto de ordens por dia + idempotência + kill switch |
 | Real muito pior que a simulação | Relatório da sombra; aumento de teto só com diferença dentro da tolerância |
+
+## Pré-requisitos vindos do contrato do motor (ADR 0002, recheca do arquiteto)
+
+Antes de iniciar esta spec: (1) a quantidade da ordem precisa existir NO ENVIO e o motor só a calcula no preenchimento; o executor dimensiona com a MESMA função pura de tamanho exportada pelo `strategy-engine` (T2.4), usando como P o preço-teto da limitada enviada; sem isso, sombra e real divergem por construção; (2) conciliar o RF06 ("só ordem limitada; mercado só no stop") com as ordens a mercado que o motor cria (entrada do Placar clássico, venda por SELL ou `exit_position`).

@@ -48,10 +48,10 @@ Cada task fecha com: `bun run typecheck` + testes da área + commit isolado + ev
 | Task | O quê | Aceite |
 |---|---|---|
 | T2.1 🧠 | Fechar o contrato do motor: tipos `StepInput`/`StepResult`, modelo de preenchimento (D6), schema Zod da estratégia, regras de regime. Escrever os testes de contrato de lookahead, determinismo e preenchimento (vermelhos) | Testes escritos e falhando pelo motivo certo; revisão `architect` |
-| T2.2 | Indicadores: confirmar cobertura do `trading-signals`; envolver numa interface própria; implementar o que faltar | Cada indicador bate com valores de referência externos (tolerância 1e-8) |
-| T2.3 | Votos por família, regime ADX e placar com texto de motivo | Contrato: tabela de cenários → voto e motivo esperados |
-| T2.4 | Risco: stop/alvo por ATR, tamanho de posição por risco, tetos de exposição | Contrato: casos de borda (saldo pequeno, ATR zero) |
-| T2.5 | Corretora simulada em decimal: taxa, slippage, ordem limitada com expiração, stop antes de alvo | Testes da T2.1 verdes |
+| T2.2 | Indicadores PRÓPRIOS (plan D4, ADR 0002: só `+ − × ÷ sqrt`; `trading-signals` apenas como oráculo nos testes), cada um com `warmupCandles`, `convergenceCandles`, snapshot/restore e janelas recalculadas (sem somatório corrido). Declarar a TOLERÂNCIA por indicador contra o oráculo ANTES de implementar e documentar no ADR as bordas (RSI sem perdas = 100, desvio zero = 0, ADX com DM zero) | `expectIndicatorContract` para cada indicador; valores batem com o oráculo na tolerância declarada (padrão 1e-8) |
+| T2.3 | Votos por família, regime ADX e placar com texto de motivo | Contrato: tabela de cenários → voto e motivo esperados **Herdado do arquiteto:** `sentimentSource` entra no `RunParameters`/`runHash`; a seleção de sentimento filtra por fonte e por corte de inserção (`created_at ≤` início da execução); regra de paridade: o backtest usa a fonte coletada AO VIVO quando existir; ADX exibido truncado; ids de snapshot com namespace (`rule:<id>`, `risk:atr`, `regime:adx`) |
+| T2.4 | Risco: stop/alvo por ATR, tamanho de posição por risco, tetos de exposição | Contrato: casos de borda (saldo pequeno, ATR zero) **Herdado do arquiteto:** participação no volume por `volume(t)` (não `volume(k)`, desconhecido na abertura); função pura de dimensionamento EXPORTADA do pacote (a spec 002 a usa no envio da ordem); escrever quem cobra o teto de exposição TOTAL entre pares (meta ou RiskGuard); avisar quando `tickSize` tornar o slippage efetivo irreal |
+| T2.5 | Corretora simulada em decimal: taxa, slippage, ordem limitada com expiração, stop antes de alvo | Testes da T2.1 verdes **Herdado do arquiteto:** `walletStep` avulso exige contiguidade (ou lacuna confirmada ecoada no `SignalDecision`) e confere `configHash`/`runHash` (sinal e estado da carteira carregam o hash), com check do harness; teste DIFERENCIAL do `FillModel` de produção contra a referência; golden do Placar clássico preso à `engineVersion` |
 | T2.6 | Métricas: retorno, anualizado, comprar e segurar, drawdown e duração, Sharpe, Sortino, acerto, profit factor, exposição, taxas | Contrato com série conhecida calculada à mão |
 
 ## Fase 3 — Backtest e walk-forward
@@ -60,7 +60,7 @@ Cada task fecha com: `bun run typecheck` + testes da área + commit isolado + ev
 
 | Task | O quê | Aceite |
 |---|---|---|
-| T3.1 | Migrations `strategies`, `strategy_versions`, `runs`, `signals`, `orders`, `fills`, `positions`, `equity_points`, com `user_id` e FKs compostas (plan.md §3, ADR 0001 §e) | `make migration-test` verde; contrato do registro de tabelas |
+| T3.1 | Migrations `strategies`, `strategy_versions`, `runs`, `signals`, `orders`, `fills`, `positions`, `equity_points`, com `user_id` e FKs compostas (plan.md §3, ADR 0001 §e) | `make migration-test` verde; contrato do registro de tabelas **Herdado do arquiteto:** tabela `fills` com `run_id`, `order_key`, `candle_time` e a chave única `(run_id, order_key, candle_time)` do ADR 0002 §b; `sentiment_observations` append-only com `observed_at`, `source` e `created_at` |
 | T3.2 | Use case de backtest em `worker_thread`, gravando operações e métricas | RNF01: 2 anos em `1h` < 5 s; determinismo |
 | T3.3 | Walk-forward com grade limitada, progresso e alerta de overfitting | Contrato: série sintética com overfitting conhecido dispara o alerta |
 | T3.4 | Rotas REST da §6 do plano (exceto stream), OpenAPI e Scalar | Contrato por rota + **contrato negativo entre usuários por rota** + teste de que toda rota está no OpenAPI |
