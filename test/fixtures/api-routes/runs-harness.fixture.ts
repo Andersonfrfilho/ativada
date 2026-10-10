@@ -138,6 +138,7 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     candles: candles.repository,
     exchange: EXCHANGE,
     queue: queue.port,
+    results: runs.results,
   };
   const series = app.runSeriesUseCases.createRunSeriesUseCases({ results: runs.results });
   const routes: readonly Route[] = [

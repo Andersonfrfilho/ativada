@@ -24,6 +24,7 @@ import type { CreateRunBody } from './create-run-request.schema.js';
 import { admitRun, type RunAdmissionDependencies } from './run-admission.js';
 import type { RunDispatcher } from './run-dispatcher.js';
 import { readQueuePosition, type RunQueuePositionDependencies } from './run-queue-position.js';
+import { describeRunSurvival } from './run-survival.js';
 import { toRunView, type RunDetailView } from './run-view.js';
 import { readRunWarnings, type RunWarningDependencies } from './run-warnings.js';
 import { RUN_STORED_ERROR_CODE } from './runs.constant.js';
@@ -48,6 +49,13 @@ function resolvePeriodStart(body: CreateRunBody, now: number): number {
   return Math.floor(now / duration) * duration;
 }
 
+// O pedido guardado na linha: a grade e as janelas do walk-forward, ou a configuração do piso/dobro da simulação ao vivo.
+function toRequest(body: CreateRunBody): CreateRunParams['request'] {
+  if (body.walkForward !== undefined) return parseJsonContainer(JSON.stringify(body.walkForward));
+  if (body.survival === undefined) return undefined;
+  return parseJsonContainer(JSON.stringify({ survival: body.survival }));
+}
+
 function toCreateParams(body: CreateRunBody, now: number): CreateRunParams {
   const { parameters } = body.setup;
   return {
@@ -64,10 +72,7 @@ function toCreateParams(body: CreateRunBody, now: number): CreateRunParams {
     periodEnd: body.periodEnd,
     migratedFromRunId: undefined,
     // O pedido do walk-forward (grade e janelas) mora na linha: a thread o lê de lá (migration 0010).
-    request:
-      body.walkForward === undefined
-        ? undefined
-        : parseJsonContainer(JSON.stringify(body.walkForward)),
+    request: toRequest(body),
   };
 }
 
@@ -145,6 +150,6 @@ export function createCreateRunUseCase(dependencies: CreateRunDependencies): Cre
         fallback: null,
       }),
     ]);
-    return { ...toRunView(run), warnings, queuePosition };
+    return { ...toRunView(run), warnings, queuePosition, survival: describeRunSurvival(run, []) };
   };
 }

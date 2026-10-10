@@ -255,8 +255,8 @@ const MUTANTS: readonly SourceMutant[] = [
     name: 'WALK_FORWARD_REQUEST_NOT_PERSISTED',
     edits: edit(
       'runs/create-run.use-case.ts',
-      '      body.walkForward === undefined\n        ? undefined\n        : parseJsonContainer(JSON.stringify(body.walkForward)),',
-      '      undefined,',
+      '  if (body.walkForward !== undefined) return parseJsonContainer(JSON.stringify(body.walkForward));',
+      '',
     ),
   },
   {
@@ -290,6 +290,58 @@ const MUTANTS: readonly SourceMutant[] = [
       'if (!isLive && value === undefined) addIssue(context, [field], RUN_REASON.REQUIRED);',
       '',
     ),
+  },
+  {
+    name: 'SURVIVAL_SETTINGS_NOT_STORED',
+    edits: edit(
+      'runs/create-run.use-case.ts',
+      'return parseJsonContainer(JSON.stringify({ survival: body.survival }));',
+      'return undefined;',
+    ),
+  },
+  {
+    name: 'SURVIVAL_ACCEPTED_FOR_BACKTEST',
+    edits: edit(
+      'runs/run-survival-request.ts',
+      'if (body.kind !== RUN_KIND.LIVE_PAPER) {',
+      'if (false as boolean) {',
+    ),
+  },
+  {
+    name: 'SURVIVAL_SHOWN_FOR_BACKTEST_ON_CREATION',
+    edits: edit(
+      'runs/run-survival.ts',
+      '  if (run.kind !== RUN_KIND.LIVE_PAPER) return null;\n  const parameters',
+      '  const parameters',
+    ),
+  },
+  {
+    name: 'SURVIVAL_READ_FOR_BACKTEST',
+    edits: edit(
+      'runs/run-survival.ts',
+      '  if (params.run.kind !== RUN_KIND.LIVE_PAPER) return null;\n  const points',
+      '  const points',
+    ),
+  },
+  {
+    name: 'SURVIVAL_ONLY_THE_FIRST_PAGE',
+    edits: edit(
+      'runs/run-survival.ts',
+      '    if (page.nextCursor === undefined) return points;',
+      '    return points;',
+    ),
+  },
+  {
+    name: 'SURVIVAL_SETTINGS_IGNORED_ON_READ',
+    edits: edit(
+      'runs/run-survival.ts',
+      'settings: parseSurvivalSettings(readSettingsInput(run.request)),',
+      'settings: parseSurvivalSettings(undefined),',
+    ),
+  },
+  {
+    name: 'SURVIVAL_STARTS_AT_THE_EPOCH',
+    edits: edit('runs/run-survival.ts', 'startTime: run.periodStart,', 'startTime: 0,'),
   },
   {
     name: 'WARNINGS_NOT_RETURNED_ON_CREATION',

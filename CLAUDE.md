@@ -8,7 +8,7 @@ Contexto operacional do **CryptoAdA**. Produto e regras em `README.md`,
 Spec 001 em andamento (progresso real em `specs/001-simulador-e-sinais/evidence.md`). Prontos: Fase 0
 (fundação), Fase 0b (contas, login, isolamento entre usuários, LGPD) e Fase 1 (candles da Binance:
 backfill, Fear & Greed e stream ao vivo com recuperação de lacuna). Fase 2 (o motor em
-`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) a estratégia de exemplo por usuário (T3.5) e a fila durável de execuções com tetos por usuário (T3.6); Fase 4 com a simulação ao vivo no worker (T4.1), a paridade com o backtest (T4.2) e a sobrevivência do saldo (T4.3); próximo passo: T4.4 (`LISTEN/NOTIFY` → WebSocket).
+`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) a estratégia de exemplo por usuário (T3.5) e a fila durável de execuções com tetos por usuário (T3.6); Fase 4 com a simulação ao vivo no worker (T4.1), a paridade com o backtest (T4.2) e a sobrevivência do saldo (T4.3, piso e meta de dobro em `GET /v1/runs/:id`); próximo passo: T4.4 (`LISTEN/NOTIFY` → WebSocket).
 
 ## Stack decidida
 
@@ -181,6 +181,13 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   avaliador usa `loadLiveApi()` (`test/fixtures/live/`): é por ele que os 32 mutantes entram. Prova: 53 contratos, `make live-test` (Postgres
   descartável, API real, worker em processo à parte morto por SIGKILL, paridade com o backtest nos dois conjuntos reais, ~3 ms por passo),
   `make live-mutants` (6 mutantes do adaptador) e `make queue-mutants` (+10 da reivindicação ao vivo).
+- **Sobrevivência do saldo (T4.3, ADR 0002 §"Sobrevivência do saldo (T4.3)").** `computeBalanceSurvival` (`packages/strategy-engine/src/survival/`,
+  `survival-1`) é PURA: piso = `ceil8(saldo × floorRate)` (padrão 0,8) e meta = `ceil8(saldo × doubleRate)` (padrão 2), ambos para cima; piso
+  atingido quando `equityAtLow <= piso` (o vale), dobro quando `equity >= meta` (o fechamento); o tempo vai do início da simulação ao
+  FECHAMENTO do candle do marco (`null` enquanto não atingido, com o progresso arredondado contra o usuário e `1` só se atingido); pontos do
+  aquecimento não contam. A configuração mora em `runs.request.survival` (só `live_paper`, validada na criação); `GET /v1/runs/:id` lê a curva
+  por páginas e devolve `survival` (`null` nos outros tipos); a lista não traz o campo. Teste novo usa `loadSurvivalApi()`
+  (`test/fixtures/strategy-engine/survival/`): é por ele que os 23 mutantes entram; o oráculo `bigint` do teste não importa o `src`.
 - Código que só os testes de integração usam fica em `packages/<pacote>/test-support/` (pode imprimir); `src`
   não tem `console`.
 - **Admin só pelo grupo `admins`.** O grupo carrega o papel `admin` e está fora do alcance da service account

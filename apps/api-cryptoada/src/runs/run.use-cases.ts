@@ -13,10 +13,12 @@ import { RunAlreadyFinishedError, RunNotFoundError } from './run.error.js';
 import { readQueuePosition, type RunQueuePositionDependencies } from './run-queue-position.js';
 import { encodeRunCursor } from './run-cursor.js';
 import { toRunView, type RunDetailView, type RunView } from './run-view.js';
+import { readRunSurvival, type RunSurvivalDependencies } from './run-survival.js';
 import { readRunWarnings, type RunWarningDependencies } from './run-warnings.js';
 
 export type RunUseCaseDependencies = RunWarningDependencies &
-  RunQueuePositionDependencies & {
+  RunQueuePositionDependencies &
+  RunSurvivalDependencies & {
     readonly runs: Pick<RunRepository, 'findRun' | 'listRuns' | 'transitionRun'>;
   };
 
@@ -43,6 +45,7 @@ export function createGetRunUseCase(dependencies: RunUseCaseDependencies): GetRu
       ...toRunView(run),
       warnings: await readRunWarnings(dependencies, run),
       queuePosition: await readQueuePosition(dependencies, scope, run),
+      survival: await readRunSurvival(dependencies, { scope, run }),
     };
   };
 }

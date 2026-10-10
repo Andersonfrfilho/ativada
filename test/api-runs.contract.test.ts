@@ -49,6 +49,12 @@ let testIndex = 0;
 // consomem a cota uns dos outros.
 beforeEach(() => {
   harness.dispatch.shouldFail = false;
+  // As simulações ao vivo criadas por um teste não podem consumir o teto de ativas do seguinte.
+  for (const run of harness.runs.all()) {
+    if (run.status === 'queued' || run.status === 'running') {
+      harness.runs.updateRun(run.id, { status: 'cancelled', finishedAt: new Date() });
+    }
+  }
   testIndex += 1;
   harness.clock.now = Date.UTC(2026, 9, 1) + testIndex * 120_000;
 });
@@ -386,6 +392,143 @@ describe('POST /v1/runs', () => {
       expect(stopped.status).toBe(200);
       expect((await readJson(stopped)).body).toMatchObject({ data: { status: 'cancelled' } });
     }
+  });
+
+  test('a simulação ao vivo traz o piso e a meta de dobro desde a criação (padrão 80% e 2×)', async () => {
+    const { body } = await post(SUBJECT_A, liveBody());
+    const data = (body as RunBody).data;
+    expect(data['survival']).toMatchObject({
+      version: 'survival-1',
+      initialBalance: '10000',
+      floor: { level: '8000', isReached: false, elapsedMilliseconds: null, progress: '0' },
+      double: { level: '20000', isReached: false, elapsedMilliseconds: null, progress: '0' },
+      lowestEquity: null,
+      observedMilliseconds: 0,
+    });
+  });
+
+  test('piso e dobro configuráveis na criação e guardados no pedido da execução', async () => {
+    const { status, body } = await post(
+      SUBJECT_A,
+      liveBody({ survival: { floorRate: '0.9', doubleRate: '1.5' } }),
+    );
+    const data = (body as RunBody).data;
+    expect(status).toBe(202);
+    expect(data['survival']).toMatchObject({
+      floor: { level: '9000' },
+      double: { level: '15000' },
+    });
+    expect(harness.runs.all().find((run) => run.id === data.id)?.request).toStrictEqual({
+      survival: { floorRate: '0.9', doubleRate: '1.5' },
+    });
+    const read = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${data.id}` }),
+    );
+    expect((read.body as RunBody).data['survival']).toMatchObject({ floor: { level: '9000' } });
+  });
+
+  test('configuração de sobrevivência inválida: todos os erros de uma vez, sem repetir o valor', async () => {
+    const { status, body } = await post(
+      SUBJECT_A,
+      liveBody({ survival: { floorRate: 'ValorQueNaoPodeVazar', doubleRate: '1' } }),
+    );
+    const errorBody = body as ErrorBody;
+    expect(status).toBe(400);
+    const fields = (errorBody.error.details ?? []).map((detail) => detail.field);
+    expect(fields).toContain('survival.floorRate');
+    expect(fields).toContain('survival.doubleRate');
+    expect(JSON.stringify(body)).not.toContain('ValorQueNaoPodeVazar');
+  });
+
+  test('só a simulação ao vivo aceita configuração de sobrevivência', async () => {
+    const { status, body } = await post(
+      SUBJECT_A,
+      backtestBody({ survival: { floorRate: '0.9' } }),
+    );
+    expect(status).toBe(400);
+    expect((body as ErrorBody).error.details).toContainEqual({
+      field: 'survival',
+      reason: 'not_allowed_for_kind',
+    });
+  });
+
+  test('GET calcula o tempo até o piso e até o dobro a partir da curva de patrimônio gravada', async () => {
+    const { body } = await post(SUBJECT_A, liveBody());
+    const created = (body as RunBody).data;
+    const start = created['periodStart'] as number;
+    harness.runs.seed(created.id, 'equity', [
+      { candleTime: start, equity: '10100', equityAtLow: '9900', benchmark: '10000' },
+      { candleTime: start + HOUR, equity: '9000', equityAtLow: '7950', benchmark: '10000' },
+      { candleTime: start + 2 * HOUR, equity: '20500', equityAtLow: '9000', benchmark: '10000' },
+    ]);
+    const read = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${created.id}` }),
+    );
+    expect((read.body as RunBody).data['survival']).toMatchObject({
+      floor: {
+        isReached: true,
+        reachedAtCandleTime: start + HOUR,
+        elapsedMilliseconds: 2 * HOUR,
+        progress: '1',
+      },
+      double: {
+        isReached: true,
+        reachedAtCandleTime: start + 2 * HOUR,
+        elapsedMilliseconds: 3 * HOUR,
+        progress: '1',
+      },
+      lowestEquity: '7950',
+      highestEquity: '20500',
+      observedUntilCandleTime: start + 2 * HOUR,
+    });
+  });
+
+  test('GET lê a curva inteira, página a página: o piso tocado no último ponto de uma série longa é achado', async () => {
+    const { body } = await post(SUBJECT_A, liveBody());
+    const created = (body as RunBody).data;
+    const start = created['periodStart'] as number;
+    const count = 10_500;
+    const points = Array.from({ length: count }, (_unused, index) => ({
+      candleTime: start + index * HOUR,
+      equity: '10100',
+      equityAtLow: index === count - 1 ? '7000' : '10000',
+      benchmark: '10000',
+    }));
+    harness.runs.seed(created.id, 'equity', points);
+    harness.runs.listCalls.equity.length = 0;
+    const read = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${created.id}` }),
+    );
+    expect((read.body as RunBody).data['survival']).toMatchObject({
+      floor: { isReached: true, reachedAtCandleTime: start + (count - 1) * HOUR },
+      observedMilliseconds: count * HOUR,
+    });
+    expect(harness.runs.listCalls.equity).toHaveLength(3);
+    expect(Math.max(...harness.runs.listCalls.equity)).toBeLessThanOrEqual(5_000);
+  });
+
+  test('backtest e walk-forward não trazem o campo (é do RF09, ao vivo), nem ao criar nem ao ler', async () => {
+    const { body } = await post(SUBJECT_A, backtestBody());
+    const created = (body as RunBody).data;
+    expect(created['survival']).toBeNull();
+    harness.runs.listCalls.equity.length = 0;
+    const read = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${created.id}` }),
+    );
+    expect((read.body as RunBody).data['survival']).toBeNull();
+    expect(harness.runs.listCalls.equity).toHaveLength(0);
+  });
+
+  test('o piso e o dobro de outro usuário não aparecem: 404 idêntico ao do inexistente', async () => {
+    const { body } = await post(SUBJECT_A, liveBody());
+    const runId = (body as RunBody).data.id;
+    const foreign = await harness.call({ subject: SUBJECT_B, path: `${RUNS}/${runId}` });
+    const missing = await harness.call({ subject: SUBJECT_B, path: `${RUNS}/${MISSING_ID}` });
+    await expectIndistinguishableNotFound({
+      expectedCode: 'RUN_NOT_FOUND',
+      foreignResourceResponse: foreign,
+      missingResourceResponse: missing,
+    });
   });
 
   test('versão de estratégia de OUTRO dono: 404 STRATEGY_VERSION_NOT_FOUND idêntico ao inexistente (inclusive live_paper)', async () => {

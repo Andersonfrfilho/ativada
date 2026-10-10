@@ -29,7 +29,7 @@ const RUN_NOT_FOUND = {
 export const RUN_DOCUMENTATION = {
   create: {
     summary:
-      'Cria uma execução (backtest, walk-forward ou simulação ao vivo) e responde 202 com o id. Backtest e walk-forward entram na fila do usuário, que é limitada (429 `RUN_QUEUE_FULL`). `live_paper` não leva período (começa no candle corrente e não tem fim), fica `queued` até um worker reivindicá-la e responde 409 `LIVE_RUN_LIMIT_REACHED` acima do teto de ativas.',
+      'Cria uma execução (backtest, walk-forward ou simulação ao vivo) e responde 202 com o id. Backtest e walk-forward entram na fila do usuário, que é limitada (429 `RUN_QUEUE_FULL`). `live_paper` não leva período (começa no candle corrente e não tem fim), fica `queued` até um worker reivindicá-la e responde 409 `LIVE_RUN_LIMIT_REACHED` acima do teto de ativas. `survival` (opcional, só no ao vivo) ajusta o piso (padrão 0,8 do saldo inicial) e a meta de dobro (padrão 2).',
     tag: TAG,
     successes: [
       {
@@ -70,7 +70,7 @@ export const RUN_DOCUMENTATION = {
   },
   get: {
     summary:
-      'Status, progresso, métricas, alerta de overfitting, avisos e, se está na fila, a posição (a do usuário e a global, só como número).',
+      'Status, progresso, métricas, alerta de overfitting, avisos, a posição na fila (a do usuário e a global, só como número) e, na simulação ao vivo, a sobrevivência do saldo (RF09): o piso e a meta de dobro, o tempo até cada um quando atingido e o progresso enquanto não.',
     tag: TAG,
     params: RUN_PARAMS,
     successes: [{ status: HTTP_STATUS.OK, description: 'A execução.', schema: RUN_DETAIL_SCHEMA }],

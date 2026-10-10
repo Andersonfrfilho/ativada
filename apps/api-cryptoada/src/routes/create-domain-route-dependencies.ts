@@ -68,6 +68,7 @@ function createRunDependencies(
     candles,
     exchange: environment.MARKET_EXCHANGE,
     queue: createRunQueueRepository(database),
+    results,
   };
   const routes: RunRouteDependencies = {
     enabled,

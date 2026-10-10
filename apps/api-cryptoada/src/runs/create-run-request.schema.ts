@@ -7,10 +7,12 @@ import {
   RunParametersError,
   RUN_PARAMETERS_SCHEMA_VERSION,
   type RunSetup,
+  type SurvivalSettings,
 } from '@cryptoada/strategy-engine';
 
 import type { EnabledMarkets } from '../markets/candles-query.schema.js';
 import { epochMillisecondsSchema, resourceIdSchema } from '../openapi/schema-primitives.js';
+import { resolveSurvival } from './run-survival-request.js';
 import { DEFAULT_SENTIMENT_SOURCE, RUN_FIELD, RUN_REASON } from './runs.constant.js';
 
 const MONTHS_MAXIMUM = 120;
@@ -29,6 +31,12 @@ const runParametersBodySchema = z.strictObject({
   minNotional: z.string().max(TEXT_MAXIMUM).optional(),
   maxVolumeShare: z.string().max(TEXT_MAXIMUM).optional(),
   sentimentSource: z.string().min(1).max(TEXT_MAXIMUM).optional(),
+});
+
+// Só os campos que o usuário ajusta do piso e da meta de dobro; os limites e a grafia são do esquema do MOTOR.
+const survivalBodySchema = z.strictObject({
+  floorRate: z.string().max(TEXT_MAXIMUM).optional(),
+  doubleRate: z.string().max(TEXT_MAXIMUM).optional(),
 });
 
 const monthsSchema = z.int().min(1).max(MONTHS_MAXIMUM);
@@ -56,6 +64,8 @@ export type CreateRunBody = {
   readonly periodStart: number | undefined;
   readonly periodEnd: number | undefined;
   readonly walkForward: WalkForwardBody | undefined;
+  // Piso e meta de dobro da simulação ao vivo (RF09); ausente vale o padrão do RF09.
+  readonly survival: SurvivalSettings | undefined;
 };
 
 type ParsedBody = {
@@ -68,6 +78,7 @@ type ParsedBody = {
   readonly runParameters?: ParametersInput;
   readonly grid?: unknown;
   readonly windows?: z.infer<typeof windowsBodySchema> | undefined;
+  readonly survival?: z.infer<typeof survivalBodySchema> | undefined;
 };
 
 type Context = z.RefinementCtx;
@@ -174,9 +185,11 @@ export function createRunRequestSchema(enabled: EnabledMarkets): z.ZodType<Creat
       runParameters: checkedRunParametersSchema.optional(),
       grid: z.unknown().optional(),
       windows: windowsBodySchema.optional(),
+      survival: survivalBodySchema.optional(),
     })
     .transform((body, context): CreateRunBody => {
       checkKindFields(body, context);
+      const survival = resolveSurvival(body, context);
       const setup = buildSetup(
         runSetupInput(body.symbol, body.timeframe, body.runParameters),
         context,
@@ -189,6 +202,7 @@ export function createRunRequestSchema(enabled: EnabledMarkets): z.ZodType<Creat
         periodStart: body.periodStart,
         periodEnd: body.periodEnd,
         walkForward: toWalkForward(body),
+        survival,
       };
     });
 }

@@ -214,9 +214,9 @@ de BTCUSDT 1h (113 `BUY`, 57 `SELL`) e 207 de ETHUSDT 1d (60 `BUY`, 67 `SELL`).
 | `GET/POST` | `/v1/strategies` | Listar (por cursor) / criar (nome + configuração validada pelo motor; cria a versão 1) |
 | `GET` | `/v1/strategies/:id` | Estratégia com a versão mais recente |
 | `GET/POST` | `/v1/strategies/:id/versions` | Listar versões (da mais nova) / nova versão (configuração igual ⇒ a MESMA versão, `200`; nova ⇒ `201`) |
-| `POST` | `/v1/runs` | Criar backtest ou walk-forward (valida parâmetros, grade e janelas ANTES de aceitar, grava o pedido, enfileira, `202`); fila do usuário cheia ⇒ `429 RUN_QUEUE_FULL`; `live_paper` (T4.1) não leva período: nasce `queued` no candle em curso, sem fim, o worker a reivindica; `409 LIVE_RUN_LIMIT_REACHED` acima do teto de ativas; 20/min |
+| `POST` | `/v1/runs` | Criar backtest ou walk-forward (valida parâmetros, grade e janelas ANTES de aceitar, grava o pedido, enfileira, `202`); fila do usuário cheia ⇒ `429 RUN_QUEUE_FULL`; `live_paper` (T4.1) não leva período: nasce `queued` no candle em curso, sem fim, o worker a reivindica; aceita `survival: { floorRate, doubleRate }` (T4.3; padrão 0,8 e 2); `409 LIVE_RUN_LIMIT_REACHED` acima do teto de ativas; 20/min |
 | `GET` | `/v1/runs` | Execuções do dono, por cursor (filtro `kind`) |
-| `GET` | `/v1/runs/:id` | Status, progresso, métricas, alerta de overfitting, avisos e `queuePosition` (`{ own, overall }` só para `queued`) |
+| `GET` | `/v1/runs/:id` | Status, progresso, métricas, alerta de overfitting, avisos, `queuePosition` (`{ own, overall }` só para `queued`) e, na simulação ao vivo, `survival` (T4.3, RF09): piso e meta de dobro, o tempo até cada um quando atingido e o progresso enquanto não (ADR 0002 "Sobrevivência do saldo (T4.3)") |
 | `GET` | `/v1/runs/:id/equity` · `/trades` · `/signals` · `/orders` · `/fills` · `/windows` | Séries do painel, por cursor (`/windows` só no walk-forward) |
 | `POST` | `/v1/runs/:id/stop` | Cancelar execução `queued`/`running`, inclusive a simulação ao vivo (idempotente; `409` se já terminou) |
 | `GET` | `/v1/runs/:id/export.csv?table=trades\|signals\|fills\|equity\|windows` | Registro em CSV, em fluxo, com proteção contra injeção de fórmula |

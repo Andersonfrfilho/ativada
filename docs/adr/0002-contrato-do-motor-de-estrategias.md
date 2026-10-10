@@ -1404,6 +1404,37 @@ recusado). (4) Conta bloqueada ou apagada no meio de uma ronda deixa terminar, n
 fechados); a ronda seguinte cancela. (5) O estado inicial não é gravado na criação: nasce no primeiro passo. (6) Sem histórico de
 aquecimento a execução falha com `INSUFFICIENT_HISTORY` no worker, não na criação.
 
+## Sobrevivência do saldo (T4.3)
+
+Entregue em `packages/strategy-engine/src/survival/` (`SURVIVAL_VERSION = 'survival-1'`) e exposta por `GET /v1/runs/:id` (campo `survival`
+do detalhe da execução; `POST /v1/runs` já devolve os níveis). É o RF09: a partir do capital fictício, o piso e a meta de dobro, o
+tempo até cada um quando atingido e, enquanto não, `null` com o progresso. `computeBalanceSurvival({ initialBalance, startTime,
+durationMilliseconds, settings, points })` é PURA (decimal exato, sem `Date`, `Math.random` nem I/O; o teste de fronteira do pacote varre os
+arquivos novos) e recusa a entrada em voz alta com `SurvivalInputError` (códigos `INVALID_INITIAL_BALANCE`, `INVALID_SETTINGS`,
+`INVALID_TIME`, `INVALID_POINT`, `POINTS_OUT_OF_ORDER`), sem repetir o valor recebido.
+
+| Decisão | Valor | Motivo |
+|---|---|---|
+| Níveis | `piso = ceil8(saldo inicial × floorRate)` e `meta = ceil8(saldo inicial × doubleRate)`: os dois arredondados PARA CIMA a 8 casas (o piso fica mais alto, a meta mais difícil). `floorRate` ∈ (0, 1) e `doubleRate` ∈ (1, 100], até 4 casas, texto decimal canônico (`"0.80"` = `"0.8"`); padrões do RF09: `0.8` e `2` | Contra o usuário, como toda a aritmética de dinheiro do motor (§e) |
+| Piso atingido | primeiro candle da simulação com `equityAtLow <= piso` (o VALE do candle, que inclui a posição valorada na mínima): tocar já vale | Lado pior, sem adivinhar o que aconteceu dentro do candle (constituição §3) |
+| Dobro atingido | primeiro candle com `equity >= meta` (o FECHAMENTO): alcançar vale; a máxima do candle não conta | O vale é conhecido pelo motor; a máxima só serviria para uma posição que ainda pode sair abaixo dela |
+| Tempo | do início da simulação (`period_start`) ao FECHAMENTO do candle em que o marco foi observado (`abertura + duração − início`), em milissegundos inteiros; `null` enquanto não atingido. `observedMilliseconds` é o mesmo até o último candle visto | Todo candle é medido pelo instante em que o dado deixou de ser parcial |
+| Aquecimento | pontos de candles ANTES do início (`candleOpenTime < startTime`) são lidos e validados, mas não contam: o motor já passou por eles com o caixa inicial | Os candles do aquecimento não fazem parte da simulação |
+| Progresso | fração de 0 a 1 em texto, 4 casas: consumo do piso `(saldo − vale mais fundo) ÷ (saldo − piso)` PARA CIMA e ganho do dobro `(fechamento mais alto − saldo) ÷ (meta − saldo)` PARA BAIXO; `0` se nunca saiu do saldo; `1` se e SÓ se o marco foi atingido (o consumo do piso é limitado a `0.9999` enquanto não atingido: arredondar para cima chegaria a `1` a um centavo do piso) | Pior para o usuário nos dois lados e sem "100%" sem o marco |
+| Configuração | `runs.request.survival` (`{ floorRate, doubleRate }`), gravada só quando o corpo do `POST /v1/runs` traz `survival` (e só em `live_paper`; nos outros tipos `not_allowed_for_kind`); ausente vale o padrão. Os campos inválidos saem com o caminho (`survival.floorRate`), todos de uma vez, sem o valor. Sem migration e sem tocar `runHash` | `request` já guarda o pedido da execução (T3.4); `RunParameters` é o que o hash trava |
+| Leitura | `GET /v1/runs/:id` de uma execução `live_paper` lê a curva de patrimônio por páginas de 5.000 (cursor estável) e chama a função pura; outros tipos: `survival: null`. A lista (`GET /v1/runs`) NÃO traz o campo: custaria uma leitura da curva por execução da página | Sem estado novo para manter; o worker não precisa gravar nada além do que já grava |
+
+**Prova.** `test/balance-survival.contract.test.ts` (57 casos: tabela de níveis à mão com os arredondamentos, cada marco — tocar o piso,
+vale contra fechamento, dobro pelo fechamento, os dois em qualquer ordem, primeira vez, timeframe de 4 h, aquecimento, sem pontos —,
+progresso contra o usuário e nunca `1` sem o marco, configuração e entrada inválidas por código, pureza e determinismo, e **600 séries
+aleatórias contra um oráculo `bigint` independente**, sem `decimal.js` nem o código do pacote), **23 mutantes**
+(`test/survival-mutants.contract.test.ts`: arredondamento do piso e da meta, `<=` virando `<`, vale ou fechamento trocados, primeira vez,
+aquecimento contado, tempo até a abertura, progresso arredondado ao contrário, `1` sem o marco, ordem, valor negativo, saldo zero, taxa
+`1` aceita, campo desconhecido) reprovados; na API, 8 contratos novos em `test/api-runs.contract.test.ts` (níveis desde a criação,
+configuração guardada e relida, campos inválidos sem eco, só ao vivo, tempo a partir da curva gravada, 10.500 pontos em 3 páginas, tipos
+sem o campo, 404 idêntico entre donos) e 7 mutantes da API reprovados; `make live-test` compara a rota da API real com a função pura
+sobre a curva que o worker gravou no Postgres (piso 99% tocado em 140.400.000 ms e meta 100,4% em 118.800.000 ms, em 306 candles reais).
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
@@ -1438,7 +1469,7 @@ aquecimento a execução falha com `INSUFFICIENT_HISTORY` no worker, não na cri
 - T3.1 cria as colunas e tabelas de §a/§b/§d (`runs.engine_state`, `engine_version`, `run_parameters`,
   `run_hash`, `migrated_from_run_id`, `engine_key` em `orders` e `positions`, `signals.regime`,
   `signals.sentiment_observation`, `equity_points.equity_at_low`, `run_commands`, `sentiment_observations`).
-- T3.2 (backtest, entregue: seção "Backtest em `worker_thread` (T3.2)") e T4.1 (ao vivo, entregue: seção "Simulação ao vivo (T4.1 e T4.2)") são laços sobre `step` com a persistência de §b; T4.2 (paridade, entregue)
+- T3.2 (backtest, entregue: seção "Backtest em `worker_thread` (T3.2)") e T4.1 (ao vivo, entregue: seção "Simulação ao vivo (T4.1 e T4.2)"; a sobrevivência do saldo, T4.3, está na seção seguinte) são laços sobre `step` com a persistência de §b; T4.2 (paridade, entregue)
   compara as duas execuções com os mesmos `leadInCandles` e as mesmas lacunas declaradas.
 - T3.3 (walk-forward, entregue: seção "Walk-forward (T3.3)") usa as metades do motor: sinal por combinação, carteira por janela.
 - Mudar a semântica do motor exige nova `engineVersion` e novo golden; execuções em curso migram (§b).

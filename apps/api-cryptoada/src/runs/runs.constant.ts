@@ -21,6 +21,7 @@ export const RUN_PARAMETERS_SCHEMA_VERSION_VALUE = 1;
 export const RUN_FIELD = {
   RUN_PARAMETERS: 'runParameters',
   PERIOD_START: 'periodStart',
+  SURVIVAL: 'survival',
   GRID: 'grid',
   WINDOWS: 'windows',
   PERIOD_END: 'periodEnd',
@@ -28,6 +29,7 @@ export const RUN_FIELD = {
 
 export const RUN_REASON = {
   REQUIRED: 'required',
+  INVALID_VALUE: 'invalid_value',
   PERIOD_END_MUST_BE_AFTER_START: 'must_be_after_period_start',
   NOT_ENABLED: 'not_enabled',
   GRID_REQUIRED: 'required_for_walk_forward',

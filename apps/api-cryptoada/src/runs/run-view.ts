@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { JsonValue, RunKind, RunRecord, RunStatus } from '@cryptoada/database';
+import type { BalanceSurvival } from '@cryptoada/strategy-engine';
 import { RUN_KIND } from '@cryptoada/database';
 
 export type RunWarning = { readonly code: string; readonly message: string };
@@ -34,6 +35,8 @@ export type RunDetailView = RunView & {
   readonly warnings: readonly RunWarning[];
   // 1-based, só para `queued`: entre as execuções do dono e na fila inteira (só o número). `null` fora da fila.
   readonly queuePosition: RunQueuePositionView | null;
+  // Piso e meta de dobro do saldo (RF09): só na simulação ao vivo.
+  readonly survival: BalanceSurvival | null;
 };
 
 function isJsonObject(

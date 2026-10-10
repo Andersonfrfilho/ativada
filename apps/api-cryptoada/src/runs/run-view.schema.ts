@@ -42,7 +42,29 @@ export const RUN_QUEUE_POSITION_SCHEMA = z.strictObject({
   overall: z.number().int().min(1),
 });
 
+const SURVIVAL_MILESTONE_SCHEMA = z.strictObject({
+  level: z.string(),
+  isReached: z.boolean(),
+  reachedAtCandleTime: epochMillisecondsSchema.nullable(),
+  elapsedMilliseconds: z.number().int().min(0).nullable(),
+  progress: z.string(),
+});
+
+// Sobrevivência do saldo (RF09): piso e meta de dobro, com o tempo até cada um quando atingido e o progresso enquanto não.
+export const BALANCE_SURVIVAL_SCHEMA = z.strictObject({
+  version: z.string(),
+  initialBalance: z.string(),
+  floor: SURVIVAL_MILESTONE_SCHEMA,
+  double: SURVIVAL_MILESTONE_SCHEMA,
+  lowestEquity: z.string().nullable(),
+  highestEquity: z.string().nullable(),
+  observedUntilCandleTime: epochMillisecondsSchema.nullable(),
+  observedMilliseconds: z.number().int().min(0),
+});
+
 export const RUN_DETAIL_SCHEMA = RUN_VIEW_SCHEMA.extend({
   warnings: z.array(RUN_WARNING_SCHEMA),
   queuePosition: RUN_QUEUE_POSITION_SCHEMA.nullable(),
+  // Só na simulação ao vivo; `null` nos demais tipos.
+  survival: BALANCE_SURVIVAL_SCHEMA.nullable(),
 });
