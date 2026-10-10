@@ -23,6 +23,25 @@ describe('run parameter warnings (not errors)', () => {
     expect(warningsOf({}, '60000')).toStrictEqual([]);
   });
 
+  test('a zero fee or a zero slippage makes the results optimistic and says so', () => {
+    expect(warningsOf({ feeRate: '0' }, '60000')).toStrictEqual(['fee_rate_is_zero']);
+    expect(warningsOf({ slippageRate: '0', tickSize: '0.01' }, '60000')).toStrictEqual([
+      'slippage_rate_is_zero',
+    ]);
+    expect(warningsOf({ feeRate: '0', slippageRate: '0' }, '60000')).toStrictEqual([
+      'fee_rate_is_zero',
+      'slippage_rate_is_zero',
+    ]);
+    const parameters = RUN_PARAMETERS_SCHEMA.parse({
+      schemaVersion: 1,
+      symbol: 'BTCUSDT',
+      timeframe: '1h',
+      sentimentSource: 'alternative.me',
+      feeRate: '0',
+    });
+    expect(warnRunParameters(parameters, '60000')[0]?.message).toContain('otimistas');
+  });
+
   test('a tick of 0,01 on a price of 0,53 makes the effective slippage about 1,9%', () => {
     const parameters = RUN_PARAMETERS_SCHEMA.parse({
       schemaVersion: 1,
@@ -41,8 +60,11 @@ describe('run parameter warnings (not errors)', () => {
   });
 
   test('a zero slippage only warns when the tick itself is noticeable', () => {
-    expect(warningsOf({ slippageRate: '0' }, '60000')).toStrictEqual([]);
-    expect(warningsOf({ slippageRate: '0' }, '10')).toStrictEqual(['tick_dominates_slippage']);
+    expect(warningsOf({ slippageRate: '0' }, '60000')).toStrictEqual(['slippage_rate_is_zero']);
+    expect(warningsOf({ slippageRate: '0' }, '10')).toStrictEqual([
+      'tick_dominates_slippage',
+      'slippage_rate_is_zero',
+    ]);
   });
 
   test('a step worth more than the whole balance zeroes the quantity', () => {

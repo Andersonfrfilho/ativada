@@ -25,6 +25,8 @@ export const RUN_PARAMETER_WARNING = {
   QUANTITY_STEP_EXCEEDS_BALANCE: 'quantity_step_exceeds_balance',
   QUANTITY_STEP_COARSE: 'quantity_step_coarse',
   MIN_NOTIONAL_EXCEEDS_BALANCE: 'min_notional_exceeds_balance',
+  FEE_RATE_IS_ZERO: 'fee_rate_is_zero',
+  SLIPPAGE_RATE_IS_ZERO: 'slippage_rate_is_zero',
 } as const;
 export type RunParameterWarningCode =
   (typeof RUN_PARAMETER_WARNING)[keyof typeof RUN_PARAMETER_WARNING];

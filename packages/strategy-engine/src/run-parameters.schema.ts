@@ -6,11 +6,13 @@ import {
   ENGINE_TIMEFRAME,
   MAX_INITIAL_BALANCE,
   MAX_SENTIMENT_SOURCE_LENGTH,
+  MONEY_DECIMAL_PLACES,
   RUN_PARAMETERS_SCHEMA_VERSION,
 } from './engine.constant.js';
 
 const ZERO = '0';
-// Teto dos filtros de preço e quantidade da corretora (tick e passo).
+// Teto dos filtros de preço e quantidade da corretora (tick e passo). Dinheiro, taxas e filtros têm no máximo
+// 8 casas: é o que o `numeric(24,8)` guarda e o que o arredondamento da carteira mede.
 const MAX_EXCHANGE_INCREMENT = '1000000';
 // Taxa de 0,1% teto e tick de 0,01 do BTCUSDT: mesmo número, papéis diferentes.
 const ONE_HUNDREDTH = '0.01';
@@ -18,6 +20,7 @@ const POSITIVE_INCREMENT_SCHEMA = decimalTextSchema({
   minimum: ZERO,
   maximum: MAX_EXCHANGE_INCREMENT,
   isMinimumExclusive: true,
+  maximumDecimalPlaces: MONEY_DECIMAL_PLACES,
 });
 
 // Entrada da execução (RF07, RF13, spec 002): saldo, taxa, slippage e filtros mudam sem mudar a lógica.
@@ -29,14 +32,28 @@ export const RUN_PARAMETERS_SCHEMA = z.strictObject({
   // Fonte das observações de sentimento que a execução lê (ADR 0002 §f): entra no `runHash`, então
   // trocar de fonte é outra execução, nunca a mesma com resultado diferente.
   sentimentSource: z.string().min(1).max(MAX_SENTIMENT_SOURCE_LENGTH),
-  initialBalance: decimalTextSchema({ minimum: '10', maximum: MAX_INITIAL_BALANCE }).default(
-    '10000',
-  ),
-  feeRate: decimalTextSchema({ minimum: ZERO, maximum: ONE_HUNDREDTH }).default('0.001'),
-  slippageRate: decimalTextSchema({ minimum: ZERO, maximum: '0.05' }).default('0.0005'),
+  initialBalance: decimalTextSchema({
+    minimum: '10',
+    maximum: MAX_INITIAL_BALANCE,
+    maximumDecimalPlaces: MONEY_DECIMAL_PLACES,
+  }).default('10000'),
+  feeRate: decimalTextSchema({
+    minimum: ZERO,
+    maximum: ONE_HUNDREDTH,
+    maximumDecimalPlaces: MONEY_DECIMAL_PLACES,
+  }).default('0.001'),
+  slippageRate: decimalTextSchema({
+    minimum: ZERO,
+    maximum: '0.05',
+    maximumDecimalPlaces: MONEY_DECIMAL_PLACES,
+  }).default('0.0005'),
   tickSize: POSITIVE_INCREMENT_SCHEMA.default(ONE_HUNDREDTH),
   quantityStep: POSITIVE_INCREMENT_SCHEMA.default('0.00001'),
-  minNotional: decimalTextSchema({ minimum: ZERO, maximum: MAX_INITIAL_BALANCE }).default('5'),
+  minNotional: decimalTextSchema({
+    minimum: ZERO,
+    maximum: MAX_INITIAL_BALANCE,
+    maximumDecimalPlaces: MONEY_DECIMAL_PLACES,
+  }).default('5'),
   // Fração máxima do volume do candle de preenchimento que uma ordem consome (o resto não preenche).
   maxVolumeShare: decimalTextSchema({
     minimum: ZERO,

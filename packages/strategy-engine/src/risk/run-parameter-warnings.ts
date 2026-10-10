@@ -69,6 +69,26 @@ function warnMinNotional(parameters: RunParameters): RunParameterWarning[] {
   ];
 }
 
+// Taxa e slippage zero são válidos (teste de lógica), mas nenhuma corretora real os tem.
+function warnZeroCosts(parameters: RunParameters): RunParameterWarning[] {
+  const warnings: RunParameterWarning[] = [];
+  if (new EngineDecimal(parameters.feeRate).isZero()) {
+    warnings.push({
+      code: RUN_PARAMETER_WARNING.FEE_RATE_IS_ZERO,
+      message:
+        'A taxa é zero: os resultados ficam otimistas, porque a corretora real cobra taxa em cada ordem.',
+    });
+  }
+  if (new EngineDecimal(parameters.slippageRate).isZero()) {
+    warnings.push({
+      code: RUN_PARAMETER_WARNING.SLIPPAGE_RATE_IS_ZERO,
+      message:
+        'O slippage é zero: os resultados ficam otimistas, porque a ordem a mercado real nunca acerta o preço exato.',
+    });
+  }
+  return warnings;
+}
+
 // Avisos, não erros: tick, passo e mínimo podem tornar o slippage efetivo ou o tamanho irreais.
 export function warnRunParameters(
   runParameters: RunParameters,
@@ -79,5 +99,6 @@ export function warnRunParameters(
     ...warnTick(runParameters, price),
     ...warnQuantityStep(runParameters, price),
     ...warnMinNotional(runParameters),
+    ...warnZeroCosts(runParameters),
   ];
 }
