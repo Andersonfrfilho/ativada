@@ -1,17 +1,18 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@cryptoada/environment';
+import { decimalText, nullableDecimalText } from '../http/decimal.validation.js';
 
 const assetItemSchema = z.object({
   symbol: z.string(),
-  quantity: z.string(),
-  averagePrice: z.string(),
-  price: z.object({ value: z.string() }).nullable(),
-  value: z.string().nullable(),
-  cost: z.string(),
-  result: z.string().nullable(),
-  resultRate: z.string().nullable(),
-  targetPrice: z.string(),
-  stopPrice: z.string(),
+  quantity: decimalText,
+  averagePrice: decimalText,
+  price: z.object({ value: decimalText }).nullable(),
+  value: nullableDecimalText,
+  cost: decimalText,
+  result: nullableDecimalText,
+  resultRate: nullableDecimalText,
+  targetPrice: decimalText,
+  stopPrice: decimalText,
   isTargetReached: z.boolean().nullable(),
   isStopReached: z.boolean().nullable(),
   rule: z
@@ -24,15 +25,15 @@ const assetItemSchema = z.object({
 
 export const assetSummarySchema = z.object({
   currency: z.string(),
-  targetRate: z.string(),
-  stopRate: z.string(),
+  targetRate: decimalText,
+  stopRate: decimalText,
   strategy: z.object({ id: z.string(), name: z.string(), version: z.number() }).nullable(),
   items: z.array(assetItemSchema),
   totals: z.object({
-    value: z.string(),
-    cost: z.string(),
-    result: z.string(),
-    resultRate: z.string().nullable(),
+    value: decimalText,
+    cost: decimalText,
+    result: decimalText,
+    resultRate: nullableDecimalText,
     pricedAssets: z.number(),
     unpricedAssets: z.number(),
   }),

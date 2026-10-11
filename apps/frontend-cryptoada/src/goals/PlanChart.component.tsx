@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
-import { formatDecimal } from '../format/format.js';
+import { formatPrice } from '../format/format.js';
 import type { Candle } from '../overview/overview.validation.js';
 import styles from './Goals.module.css';
 import { mapPlanChart } from './plan-chart.js';
@@ -47,7 +47,7 @@ function ChartLevel({ level, y }: ChartLevelProps): ReactElement {
         y2={y.toFixed(1)}
       />
       <text className={styles.chartLabel} x={WIDTH - LABEL_OFFSET} y={y - LABEL_OFFSET}>
-        {level.label} {formatDecimal(level.price)}
+        {level.label} {formatPrice(level.price)}
       </text>
     </g>
   );

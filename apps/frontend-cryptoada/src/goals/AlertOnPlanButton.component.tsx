@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 
 import { messageFromAlertError } from '../alerts/alert-text.js';
 import { useCreatePriceAlertMutation } from '../alerts/alerts.query.js';
-import { formatDecimal } from '../format/format.js';
+import { formatPrice } from '../format/format.js';
 import controls from '../styles/Controls.module.css';
 
 const LEVEL_NAME = { buy: 'compra', target: 'alvo', stop: 'stop' } as const;
@@ -39,7 +39,7 @@ export function AlertOnPlanButton({
       <button
         type="button"
         className={controls.button}
-        aria-label={`Avisar no plano: ${LEVEL_NAME[kind]} em ${formatDecimal(price)}`}
+        aria-label={`Avisar no plano: ${LEVEL_NAME[kind]} em ${formatPrice(price)}`}
         disabled={create.isPending}
         onClick={handleClick}
       >

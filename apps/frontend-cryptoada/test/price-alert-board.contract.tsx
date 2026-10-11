@@ -227,3 +227,45 @@ describe('price alert board', () => {
     await waitFor(() => expect(list.textContent).toContain('Disparado'));
   });
 });
+
+describe('decimals from the API', () => {
+  test('a value that is not a decimal fails the schema instead of showing NaN', async () => {
+    renderApp({
+      path: '/alertas',
+      isAuthenticated: true,
+      routes: [
+        { method: 'GET', path: '/v1/runs', respond: (): Response => pageResponse([]) },
+        {
+          method: 'GET',
+          path: '/v1/price-alerts',
+          respond: (): Response => pageResponse([alert({ id: 'a', value: 'abc' })]),
+        },
+      ],
+    });
+    await screen.findByRole('button', { name: 'Criar alerta' });
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole('alert').some((item) => item.textContent?.includes('Não foi possível')),
+      ).toBe(true),
+    );
+    expect(document.body.textContent).not.toContain('NaN');
+  });
+
+  test('keeps up to 8 places where the API accepts 8 (a cheap coin is not cut to cents)', async () => {
+    renderApp({
+      path: '/alertas',
+      isAuthenticated: true,
+      routes: [
+        { method: 'GET', path: '/v1/runs', respond: (): Response => pageResponse([]) },
+        {
+          method: 'GET',
+          path: '/v1/price-alerts',
+          respond: (): Response =>
+            pageResponse([alert({ id: 'a', value: '0.00001234', symbol: 'ETHUSDT' })]),
+        },
+      ],
+    });
+    const list = await screen.findByRole('list', { name: 'Gerenciar alertas de preço' });
+    expect(list.textContent).toContain('0,00001234');
+  });
+});

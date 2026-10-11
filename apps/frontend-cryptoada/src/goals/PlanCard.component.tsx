@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
-import { formatDate, formatDecimal } from '../format/format.js';
+import { formatDate, formatPrice } from '../format/format.js';
 import { useShownPrice } from '../live/useShownPrice.hook.js';
 import { Card } from '../layout/Card.component.js';
 import controls from '../styles/Controls.module.css';
@@ -31,7 +31,7 @@ function Level({ title, kind, price, detail, view, current }: LevelProps): React
   return (
     <div className={styles.level}>
       <h3>{title}</h3>
-      <p className={styles.levelValue}>{price === null ? '—' : formatDecimal(price)}</p>
+      <p className={styles.levelValue}>{price === null ? '—' : formatPrice(price)}</p>
       <p className={controls.muted}>{detail}</p>
       {price === null ? null : (
         <>
@@ -98,8 +98,8 @@ export function PlanCard({ view }: PlanCardProps): ReactElement {
       </p>
       <p>
         {shown === undefined
-          ? `Último fechamento ${formatDecimal(plan.lastClose)}`
-          : `Preço agora ${formatDecimal(current)}`}
+          ? `Último fechamento ${formatPrice(plan.lastClose)}`
+          : `Preço agora ${formatPrice(current)}`}
       </p>
       <PlanLevels view={view} current={current} />
       <p className={controls.muted}>{BASIS_TEXT[plan.basis]}</p>

@@ -2,6 +2,7 @@
 import { z } from '@cryptoada/environment';
 
 import { RUN_STATUS, SIGNAL_ACTION } from './overview.constant.js';
+import { decimalText } from '../http/decimal.validation.js';
 
 export const runSchema = z.object({
   id: z.string(),
@@ -15,18 +16,18 @@ export const runSchema = z.object({
 
 export const equityPointSchema = z.object({
   candleTime: z.number(),
-  equity: z.string(),
-  benchmark: z.string(),
+  equity: decimalText,
+  benchmark: decimalText,
 });
 
 export const signalSchema = z.object({
   candleTime: z.number(),
   action: z.enum(SIGNAL_ACTION),
-  score: z.string(),
+  score: decimalText,
   reason: z.string(),
 });
 
-export const candleSchema = z.object({ openTime: z.number(), close: z.string() });
+export const candleSchema = z.object({ openTime: z.number(), close: decimalText });
 
 export type Run = z.infer<typeof runSchema>;
 export type EquityPoint = z.infer<typeof equityPointSchema>;

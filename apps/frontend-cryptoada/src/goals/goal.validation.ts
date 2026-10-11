@@ -1,12 +1,13 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@cryptoada/environment';
+import { decimalText, nullableDecimalText } from '../http/decimal.validation.js';
 
 export const goalSchema = z.object({
   id: z.string(),
   symbol: z.string(),
-  targetRate: z.string(),
+  targetRate: decimalText,
   horizonDays: z.number(),
-  maxLossRate: z.string(),
+  maxLossRate: decimalText,
   isActive: z.boolean(),
   createdAt: z.string(),
 });
@@ -18,28 +19,28 @@ const ruleTriggerSchema = z.object({
   metric: z.string(),
   direction: z.enum(['above', 'below']),
   basis: z.enum(['exact', 'indicative']),
-  current: z.string().nullable(),
-  threshold: z.string().nullable(),
-  distance: z.string().nullable(),
-  distanceRate: z.string().nullable(),
+  current: nullableDecimalText,
+  threshold: nullableDecimalText,
+  distance: nullableDecimalText,
+  distanceRate: nullableDecimalText,
 });
 
 const situationSchema = z.object({
-  signal: z.object({ action: z.string(), score: z.string(), reason: z.string() }),
+  signal: z.object({ action: z.string(), score: decimalText, reason: z.string() }),
   triggers: z.object({
     state: z.enum(['awaiting_entry', 'holding']),
-    scoreThreshold: z.string(),
-    scoreGap: z.string(),
+    scoreThreshold: decimalText,
+    scoreGap: decimalText,
     rules: z.array(ruleTriggerSchema),
   }),
 });
 
 const evaluationSchema = z.object({
   windowCount: z.number(),
-  reachRate: z.string().nullable(),
-  stopRate: z.string().nullable(),
-  medianDaysToTarget: z.string().nullable(),
-  benchmark: z.object({ reachRate: z.string().nullable(), stopRate: z.string().nullable() }),
+  reachRate: nullableDecimalText,
+  stopRate: nullableDecimalText,
+  medianDaysToTarget: nullableDecimalText,
+  benchmark: z.object({ reachRate: nullableDecimalText, stopRate: nullableDecimalText }),
   verdict: z.string(),
 });
 

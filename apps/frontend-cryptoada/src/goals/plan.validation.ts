@@ -1,25 +1,26 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@cryptoada/environment';
+import { decimalText, nullableDecimalText } from '../http/decimal.validation.js';
 
 const planLevelSchema = z.object({
   status: z.enum(['price', 'already_active', 'unreachable']),
-  price: z.string().nullable(),
+  price: nullableDecimalText,
   trigger: z.enum(['at_or_above', 'at_or_below']).nullable(),
   direction: z.enum(['above', 'below']).nullable(),
-  distance: z.string().nullable(),
-  distanceRate: z.string().nullable(),
+  distance: nullableDecimalText,
+  distanceRate: nullableDecimalText,
 });
 
-const protectiveLevelSchema = z.object({ rate: z.string(), price: z.string() });
+const protectiveLevelSchema = z.object({ rate: decimalText, price: decimalText });
 
 export const planViewSchema = z.object({
   strategy: z.object({ id: z.string(), name: z.string(), version: z.number() }),
   symbol: z.string(),
   plan: z.object({
-    lastClose: z.string(),
+    lastClose: decimalText,
     basis: z.enum(['exact', 'indicative']),
     buy: planLevelSchema,
-    entryReference: z.string().nullable(),
+    entryReference: nullableDecimalText,
     target: protectiveLevelSchema.nullable(),
     stop: protectiveLevelSchema.nullable(),
     startsAt: z.number(),

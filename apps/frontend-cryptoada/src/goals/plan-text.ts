@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { formatChangePercent, formatDecimal, formatPercent } from '../format/format.js';
+import { formatChangePercent, formatPrice, formatPercent } from '../format/format.js';
 import type { PlanLevel, PlanView } from './plan.validation.js';
 
 export const BASIS_TEXT = {
@@ -11,8 +11,7 @@ export const BASIS_TEXT = {
 export function describeBuy(level: PlanLevel, entryReference: string | null): string {
   if (level.status === 'unreachable') return 'inalcançável com os dados de hoje';
   if (level.status === 'already_active' || level.price === null) {
-    const reference =
-      entryReference === null ? '' : `; referência ${formatDecimal(entryReference)}`;
+    const reference = entryReference === null ? '' : `; referência ${formatPrice(entryReference)}`;
     return `sinal de compra já ativo${reference}`;
   }
   const side = level.trigger === 'at_or_above' ? 'ou acima' : 'ou abaixo';
@@ -20,7 +19,7 @@ export function describeBuy(level: PlanLevel, entryReference: string | null): st
     level.distanceRate === null
       ? ''
       : ` (${formatPercent(Number(level.distanceRate))} do fechamento)`;
-  return `${formatDecimal(level.price)}: fechar nesse preço ${side}${gap}`;
+  return `${formatPrice(level.price)}: fechar nesse preço ${side}${gap}`;
 }
 
 // Quanto falta, no preço de agora, até o nível: "+2,65%" sobe, "−0,34%" cai.

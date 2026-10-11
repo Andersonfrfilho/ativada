@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
-import { formatDateTime, formatDecimal } from '../format/format.js';
+import { formatDateTime, formatDecimal, formatPrice } from '../format/format.js';
 import { Card } from '../layout/Card.component.js';
 import { ListStatus } from '../layout/ListStatus.component.js';
 import controls from '../styles/Controls.module.css';
@@ -21,9 +21,9 @@ function TradeRow({ trade }: { readonly trade: Trade }): ReactElement {
   return (
     <tr>
       <td>{formatDateTime(trade.openedCandleTime)}</td>
-      <td className={styles.num}>{formatDecimal(trade.entryPrice)}</td>
+      <td className={styles.num}>{formatPrice(trade.entryPrice)}</td>
       <td className={styles.num}>
-        {trade.exitPrice === undefined ? 'aberta' : formatDecimal(trade.exitPrice)}
+        {trade.exitPrice === undefined ? 'aberta' : formatPrice(trade.exitPrice)}
       </td>
       <td className={resultClass(trade)}>
         {trade.netProfit === undefined ? '—' : formatDecimal(trade.netProfit)}

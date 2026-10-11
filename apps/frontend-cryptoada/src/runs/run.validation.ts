@@ -2,6 +2,7 @@
 import { z } from '@cryptoada/environment';
 
 import { RUN_KIND, RUN_STATUS } from './run.constant.js';
+import { decimalText } from '../http/decimal.validation.js';
 
 export const metricValueSchema = z.object({
   value: z.string().nullable(),
@@ -75,17 +76,17 @@ export const runDetailSchema = runSchema.extend({
 
 export const equityPointSchema = z.object({
   candleTime: z.number(),
-  equity: z.string(),
-  benchmark: z.string(),
+  equity: decimalText,
+  benchmark: decimalText,
 });
 
 export const tradeSchema = z.object({
   engineKey: z.string(),
   status: z.enum(['open', 'closed']),
-  entryPrice: z.string(),
-  quantity: z.string(),
-  exitPrice: z.string().optional(),
-  netProfit: z.string().optional(),
+  entryPrice: decimalText,
+  quantity: decimalText,
+  exitPrice: decimalText.optional(),
+  netProfit: decimalText.optional(),
   exitReason: z.string().optional(),
   openedCandleTime: z.number(),
   closedCandleTime: z.number().optional(),

@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { formatDecimal, formatPercent } from '../format/format.js';
+import { formatPrice, formatPercent } from '../format/format.js';
 import { METRIC_LABEL } from './goal.constant.js';
 import type { RuleTrigger } from './goal.validation.js';
 
@@ -30,5 +30,5 @@ export function describeTrigger(rule: RuleTrigger): string {
   const verb = rule.direction === 'below' ? 'precisa cair abaixo de' : 'precisa subir acima de';
   const rate = rule.distanceRate === null ? '' : ` (${formatPercent(Number(rule.distanceRate))})`;
   const basis = rule.basis === 'exact' ? 'exato' : 'indicativo';
-  return `${metric} ${verb} ${formatDecimal(rule.threshold)}; agora ${formatDecimal(rule.current)}: faltam ${formatDecimal(rule.distance)}${rate} · ${basis}`;
+  return `${metric} ${verb} ${formatPrice(rule.threshold)}; agora ${formatPrice(rule.current)}: faltam ${formatPrice(rule.distance)}${rate} · ${basis}`;
 }
