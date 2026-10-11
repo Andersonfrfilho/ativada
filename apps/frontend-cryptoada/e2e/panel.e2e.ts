@@ -159,8 +159,11 @@ test('comparar duas execuções lado a lado, com comprar e segurar e a explicaç
 });
 
 test('estratégias: duplicar o exemplo, editar um parâmetro gera a versão 2 e apagar a cópia', async () => {
-  await editStrategyIntoANewVersion(page);
-  await deleteTheCopy(page);
+  // `PANEL_E2E_STRATEGY_REPEAT=10` repete o ciclo na mesma sessão para provar que não é corrida (padrão: uma vez).
+  for (let round = 0; round < environment.strategyRepeat; round += 1) {
+    await editStrategyIntoANewVersion(page);
+    await deleteTheCopy(page);
+  }
 });
 
 test('alertas: sinal e alerta de preço chegam pelo WebSocket e aparecem sem recarregar', async () => {

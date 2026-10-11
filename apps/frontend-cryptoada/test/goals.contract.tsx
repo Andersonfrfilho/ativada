@@ -330,6 +330,61 @@ describe('goal ranking', () => {
   });
 });
 
+describe('simulating from the goal screen', () => {
+  test('the overview shows the new "Meta ativa" even though it had been loaded empty a moment before', async () => {
+    let created = false;
+    const run = buildRun({
+      id: 'run-live',
+      kind: 'live_paper',
+      status: 'queued',
+      goalId: 'goal-1',
+    });
+    const { router } = renderApp({
+      path: '/',
+      isAuthenticated: true,
+      routes: goalRoutes([
+        {
+          method: 'GET',
+          path: '/v1/runs',
+          respond: (call): Response =>
+            pageResponse(created && call.query.get('kind') === 'live_paper' ? [run] : []),
+        },
+        {
+          method: 'POST',
+          path: '/v1/runs',
+          respond: (): Response => {
+            created = true;
+            return dataResponse(run, HTTP_STATUS.ACCEPTED);
+          },
+        },
+        {
+          method: 'GET',
+          path: '/v1/goals/goal-1/evaluation',
+          respond: (): Response => dataResponse(RANKING),
+        },
+        { method: 'GET', path: '/v1/runs/run-live', respond: (): Response => dataResponse(run) },
+        {
+          method: 'GET',
+          path: '/v1/runs/run-live/equity',
+          respond: (): Response => pageResponse([]),
+        },
+        {
+          method: 'GET',
+          path: '/v1/runs/run-live/signals',
+          respond: (): Response => pageResponse([]),
+        },
+      ]),
+    });
+    await screen.findByRole('heading', { name: 'Visão geral' });
+    expect(screen.queryByRole('region', { name: 'Meta ativa' })).toBeNull();
+    void router.navigate('/metas/goal-1');
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Simular esta meta com Placar clássico' }),
+    );
+    expect(await screen.findByRole('region', { name: 'Meta ativa' })).toBeDefined();
+  });
+});
+
 describe('what the engine leaves empty', () => {
   const EMPTY_EVALUATION = {
     ...(buildCombination()['evaluation'] as object),

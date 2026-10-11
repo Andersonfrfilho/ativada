@@ -153,7 +153,8 @@ export function useCreateRunMutation(): UseMutationResult<
         body,
         schema: runDetailSchema,
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [RUN_QUERY_ROOT, 'list'] }),
+    // Criar uma execução muda também a ativa e a ligada a meta da visão geral: tudo sob a raiz `runs` é refeito.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [RUN_QUERY_ROOT] }),
   });
 }
 

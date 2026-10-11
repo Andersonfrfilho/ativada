@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import { ApiError } from '../http/api.error.js';
 import { formatDate } from '../format/format.js';
 import { Card } from '../layout/Card.component.js';
 import controls from '../styles/Controls.module.css';
@@ -20,12 +21,17 @@ const CLASSIFICATION_TEXT: Readonly<Record<string, string>> = {
   'Extreme Greed': 'Ganância extrema',
 };
 
-function describeMissing(query: {
+type MissingState = {
   readonly isPending: boolean;
   readonly isError: boolean;
-}): string {
+  readonly error: Error | null;
+};
+
+// 404 é "ainda não coletado"; qualquer outra falha (rede, 5xx, resposta fora do esquema) é "não deu para ler".
+function describeMissing(query: MissingState): string {
   if (query.isPending) return 'Carregando…';
-  return query.isError
+  const isNotCollected = query.error instanceof ApiError && query.error.status === 404;
+  return query.isError && !isNotCollected
     ? 'Não foi possível ler o índice agora.'
     : 'O índice ainda não foi coletado.';
 }

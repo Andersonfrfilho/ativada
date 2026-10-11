@@ -3,10 +3,12 @@ import type { DownloadedFile } from '../http/api-client.js';
 
 const REVOKE_DELAY_MILLISECONDS = 30_000;
 
-export type SaveOptions = { readonly revokeDelayMilliseconds?: number };
-
 // O navegador começa o download depois do clique: liberar a URL na hora pode cortá-lo, então espera um pouco.
-export function saveDownloadedFile(file: DownloadedFile, options: SaveOptions = {}): void {
+export function saveDownloadedFile(file: DownloadedFile): void {
+  saveAndRevokeLater(file, REVOKE_DELAY_MILLISECONDS);
+}
+
+export function saveAndRevokeLater(file: DownloadedFile, revokeDelayMilliseconds: number): void {
   const url = URL.createObjectURL(file.blob);
   const anchor = document.createElement('a');
   anchor.href = url;
@@ -14,8 +16,5 @@ export function saveDownloadedFile(file: DownloadedFile, options: SaveOptions = 
   document.body.append(anchor);
   anchor.click();
   anchor.remove();
-  window.setTimeout(
-    () => URL.revokeObjectURL(url),
-    options.revokeDelayMilliseconds ?? REVOKE_DELAY_MILLISECONDS,
-  );
+  window.setTimeout(() => URL.revokeObjectURL(url), revokeDelayMilliseconds);
 }

@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { act, screen, waitFor, within } from '@testing-library/react';
 
-import { dataResponse, pageResponse, type FakeRoute } from './support/fake-fetch.js';
+import { dataResponse, errorResponse, pageResponse, type FakeRoute } from './support/fake-fetch.js';
 import { renderApp } from './support/render-app.js';
 
 const NOW = Date.parse('2026-10-11T12:00:00.000Z');
@@ -98,6 +98,36 @@ describe('the price badge for screen readers', () => {
     await new Promise((resolve) => setTimeout(resolve, 1_200));
     expect(stateRegion().textContent).toBe('Estado dos preços: sem dados');
     expect(screen.getByText(/^Sem dados há \d+ s$/).getAttribute('aria-hidden')).toBe('true');
+  });
+});
+
+describe('the sentiment card without data', () => {
+  test('404 says it was not collected yet; a server error says it could not be read', async () => {
+    const failing = (status: number, code: string): readonly FakeRoute[] =>
+      ROUTES.map((route) =>
+        route.path === '/v1/market/sentiment'
+          ? { ...route, respond: (): Response => errorResponse(status, code) }
+          : route,
+      );
+    renderApp({
+      path: '/',
+      isAuthenticated: true,
+      routes: failing(404, 'SENTIMENT_NOT_AVAILABLE'),
+    });
+    expect(await screen.findByText('O índice ainda não foi coletado.')).toBeDefined();
+  });
+
+  test('a 500 says the index could not be read now', async () => {
+    renderApp({
+      path: '/',
+      isAuthenticated: true,
+      routes: ROUTES.map((route) =>
+        route.path === '/v1/market/sentiment'
+          ? { ...route, respond: (): Response => errorResponse(500, 'BOOM') }
+          : route,
+      ),
+    });
+    expect(await screen.findByText('Não foi possível ler o índice agora.')).toBeDefined();
   });
 });
 

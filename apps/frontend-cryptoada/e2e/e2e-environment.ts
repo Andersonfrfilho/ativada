@@ -19,6 +19,8 @@ export type E2eEnvironment = {
   readonly telegramSecret: string;
   readonly telegramChatId: string;
   readonly controlUrl: string;
+  // Só para investigar corrida: repete o ciclo de estratégias na mesma sessão (padrão 1).
+  readonly strategyRepeat: number;
   readonly expected: ExpectedDisplay;
 };
 
@@ -56,6 +58,7 @@ export function readE2eEnvironment(): E2eEnvironment {
     telegramSecret: readRequired('PANEL_E2E_TELEGRAM_SECRET'),
     telegramChatId: readRequired('PANEL_E2E_TELEGRAM_CHAT_ID'),
     controlUrl: readRequired('PANEL_E2E_CONTROL_URL'),
+    strategyRepeat: Number(process.env['PANEL_E2E_STRATEGY_REPEAT'] ?? '1'),
     expected,
   };
 }
