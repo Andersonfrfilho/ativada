@@ -223,14 +223,42 @@ describe('stream client', () => {
     expect(Math.max(...delays)).toBeLessThanOrEqual(30_000);
   });
 
-  test('4401 (token expired) reconnects at once with a fresh ticket', async () => {
+  test('4401 (token expired) reconnects with a fresh ticket, but never in a tight loop', async () => {
     const harness = createHarness();
     const socket = await openFirst(harness);
     socket.handlers?.close(4401);
-    expect(harness.tasks.some((task) => !task.isCancelled && task.delay === 0)).toBe(true);
+    const wait = harness.tasks.filter((task) => !task.isCancelled).at(-1)?.delay ?? -1;
+    expect(wait).toBeGreaterThanOrEqual(500);
     await harness.runNextTask();
     expect(harness.sockets).toHaveLength(2);
     expect(harness.sockets[1]?.ticket).toBe('ticket-2');
+  });
+
+  test('a server that accepts and drops at once (4401 or not) keeps backing off: opening alone does not reset the wait', async () => {
+    const harness = createHarness();
+    const first = await openFirst(harness);
+    first.handlers?.close(4401);
+    const waits: number[] = [];
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      waits.push(harness.tasks.filter((task) => !task.isCancelled).at(-1)?.delay ?? -1);
+      await harness.runNextTask();
+      harness.sockets.at(-1)?.handlers?.open();
+      harness.sockets.at(-1)?.handlers?.close(4401);
+    }
+    expect(waits).toStrictEqual([1000, 2000, 4000]);
+  });
+
+  test('the wait resets only after the first message proves the connection works', async () => {
+    const harness = createHarness();
+    const first = await openFirst(harness);
+    first.handlers?.close(1006);
+    await harness.runNextTask();
+    const second = harness.sockets.at(-1);
+    second?.handlers?.open();
+    second?.serverSends({ type: 'resync', reason: 'listener_lost' });
+    second?.handlers?.close(1006);
+    const wait = harness.tasks.filter((task) => !task.isCancelled).at(-1)?.delay ?? -1;
+    expect(wait).toBe(1000);
   });
 
   test('4403 (account blocked or deleted) stops for good', async () => {

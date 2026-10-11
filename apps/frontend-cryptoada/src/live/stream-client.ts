@@ -110,7 +110,6 @@ class ReconnectingStream implements StreamClient {
   }
 
   private handleOpen(): void {
-    this.attempts = 0;
     this.options.onStatus(STREAM_STATUS.LIVE);
     this.subscribeToPairs();
     if (this.hasConnectedBefore) this.options.onResync(RESYNC_REASON_RECONNECTED);
@@ -121,6 +120,8 @@ class ReconnectingStream implements StreamClient {
   private handleMessage(data: unknown): void {
     const message = parseServerMessage(data);
     if (message === undefined) return;
+    // Só uma mensagem de verdade prova que a conexão presta: abrir e cair de novo não zera a espera.
+    this.attempts = 0;
     if (message.type === 'tick') this.options.onTick(toMarketTick(message));
     else if (message.type === 'resync') this.options.onResync(message.reason);
     else if (message.type === 'renewed') this.scheduleNextRenewal(message.expiresAt);
@@ -140,7 +141,7 @@ class ReconnectingStream implements StreamClient {
       return;
     }
     this.options.onStatus(STREAM_STATUS.RECONNECTING);
-    this.scheduleReconnect(code === CLOSE_CODE.TOKEN_EXPIRED ? 0 : this.nextWait());
+    this.scheduleReconnect(this.nextWait());
   }
 
   private nextWait(): number {
