@@ -18,6 +18,7 @@ import {
   isHeartbeatTimeoutAfterInterval,
   runQueueEnvironmentShape,
 } from './run-queue-environment.js';
+import { goalEvaluationEnvironmentShape } from './goals/goal-evaluation-environment.js';
 import { userLimitsEnvironmentShape } from './user-limits-environment.js';
 import {
   runExecutionEnvironmentShape,
@@ -140,6 +141,7 @@ export const environmentSchema = z
     ...runExecutionEnvironmentShape,
     ...streamEnvironmentShape,
     ...userLimitsEnvironmentShape,
+    ...goalEvaluationEnvironmentShape,
     // O ticker público da Binance (T4.7): a hora do servidor (REST) e o stream de `<par>@miniTicker` (WebSocket).
     BINANCE_BASE_URL: httpUrlSchema.default(BINANCE_MARKET_DATA_BASE_URL),
     BINANCE_STREAM_URL: webSocketUrlSchema.default(BINANCE_STREAM_BASE_URL),
