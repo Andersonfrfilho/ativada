@@ -131,19 +131,32 @@ function overviewRoutes(overrides: {
     {
       method: 'GET',
       path: `/v1/runs/${RUN_ID}/equity`,
-      respond: (call): Response =>
-        call.query.get('cursor') === null
-          ? pageResponse([equityPoint(0, '10000.00'), equityPoint(1, '10200.00')], 'c1')
-          : pageResponse([equityPoint(2, '10420.00')]),
+      respond: (call): Response => {
+        const points = [
+          equityPoint(0, '10000.00'),
+          equityPoint(1, '10200.00'),
+          equityPoint(2, '10420.00'),
+        ];
+        // Só a ordem decrescente devolve o ponto mais recente primeiro: a crescente é de propósito a errada.
+        return call.query.get('order') === 'desc'
+          ? pageResponse([...points].reverse())
+          : pageResponse(points.slice(0, 1));
+      },
     },
     {
       method: 'GET',
       path: `/v1/runs/${RUN_ID}/signals`,
-      respond: (): Response =>
-        pageResponse([
+      respond: (call): Response => {
+        const signals = [
           signal('BUY', 'Compra 3/4: tendência, MACD e volume confirmam', 0),
-          signal('SELL', 'Venda 3/4: reversão e RSI esticado', 1),
-        ]),
+          signal('HOLD', 'Neutro: placar entre os limiares', 1),
+          signal('SELL', 'Venda 3/4: reversão e RSI esticado', 2),
+          signal('HOLD', 'Neutro: sem votos', 3),
+        ];
+        return call.query.get('order') === 'desc'
+          ? pageResponse([...signals].reverse())
+          : pageResponse([]);
+      },
     },
     { method: 'GET', path: '/v1/markets/candles', respond: candleResponder() },
   ];
@@ -173,6 +186,7 @@ describe('overview page', () => {
     renderApp({ path: '/', isAuthenticated: true, routes: overviewRoutes({}) });
     const list = await screen.findByRole('list', { name: 'Últimos sinais' });
     const items = within(list).getAllByRole('listitem');
+    // Neutro não é aviso: só compra e venda entram, do mais novo para o mais antigo.
     expect(items).toHaveLength(2);
     expect(items[0]?.textContent).toContain('Venda');
     expect(items[0]?.textContent).toContain('reversão e RSI esticado');

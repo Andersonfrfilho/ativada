@@ -4,7 +4,7 @@ import type { ReactElement } from 'react';
 import controls from '../styles/Controls.module.css';
 import styles from './Overview.module.css';
 import { useCoinPriceQuery } from './overview.query.js';
-import { formatChangePercent, formatDecimal, formatSymbol } from './format.js';
+import { formatChangePercent, formatDecimal, formatSymbol } from '../format/format.js';
 
 export type CoinCardProps = { readonly symbol: string };
 

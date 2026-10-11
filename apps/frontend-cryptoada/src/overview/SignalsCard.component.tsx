@@ -6,7 +6,7 @@ import controls from '../styles/Controls.module.css';
 import styles from './Overview.module.css';
 import { SIGNAL_ACTION, SIGNAL_LABEL } from './overview.constant.js';
 import type { Signal } from './overview.validation.js';
-import { formatDateTime } from './format.js';
+import { formatDateTime } from '../format/format.js';
 
 export type SignalsCardProps = { readonly signals: readonly Signal[] };
 

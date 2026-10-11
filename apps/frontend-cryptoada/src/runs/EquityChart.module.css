@@ -1,0 +1,62 @@
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.chart text {
+  font: 11px var(--font-data);
+  fill: var(--ink-3);
+}
+
+.zero {
+  stroke: var(--line);
+  stroke-dasharray: 3 3;
+}
+
+.strategy,
+.benchmark,
+.second {
+  fill: none;
+  stroke-width: 2;
+}
+
+.strategy {
+  stroke: var(--accent);
+}
+
+.benchmark {
+  stroke: var(--bench);
+  stroke-dasharray: 5 3;
+}
+
+.second {
+  stroke: var(--buy);
+}
+
+.legend {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.swatch {
+  display: inline-block;
+  width: 16px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-top: 2px solid var(--accent);
+}
+
+.benchmarkSwatch {
+  border-top: 2px dashed var(--bench);
+}
+
+.secondSwatch {
+  border-top: 2px solid var(--buy);
+}

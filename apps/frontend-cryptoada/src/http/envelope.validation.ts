@@ -2,7 +2,11 @@
 import { z } from '@cryptoada/environment';
 
 export const errorEnvelopeSchema = z.object({
-  error: z.object({ code: z.string(), message: z.string() }),
+  error: z.object({
+    code: z.string(),
+    message: z.string(),
+    details: z.array(z.object({ field: z.string(), reason: z.string() })).optional(),
+  }),
 });
 
 export const paginationSchema = z.object({

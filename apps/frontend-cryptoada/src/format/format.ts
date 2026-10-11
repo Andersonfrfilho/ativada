@@ -7,6 +7,12 @@ const numberFormat = new Intl.NumberFormat(LOCALE, {
   minimumFractionDigits: FRACTION_DIGITS,
   maximumFractionDigits: FRACTION_DIGITS,
 });
+const dateFormat = new Intl.DateTimeFormat(LOCALE, {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
 const dateTimeFormat = new Intl.DateTimeFormat(LOCALE, {
   day: '2-digit',
   month: '2-digit',
@@ -38,4 +44,13 @@ export function formatSymbol(symbol: string): string {
 
 export function formatDateTime(epochMilliseconds: number): string {
   return dateTimeFormat.format(new Date(epochMilliseconds));
+}
+
+// Fração (0,0425) como porcentagem simples, sem sinal: "4,25%".
+export function formatPercent(ratio: number): string {
+  return `${numberFormat.format(ratio * 100)}%`;
+}
+
+export function formatDate(epochMilliseconds: number): string {
+  return dateFormat.format(new Date(epochMilliseconds));
 }

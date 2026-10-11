@@ -1,7 +1,13 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { RouteObject } from 'react-router';
 
+import { BacktestDetailPage } from '../backtests/BacktestDetailPage.page.js';
+import { BacktestsPage } from '../backtests/BacktestsPage.page.js';
+import { ComparePage } from '../backtests/ComparePage.page.js';
+import { StrategiesPage } from '../strategies/StrategiesPage.page.js';
+import { StrategyDetailPage } from '../strategies/StrategyDetailPage.page.js';
 import { AccountPage } from '../account/AccountPage.page.js';
+import { AlertsPage } from '../alerts/AlertsPage.page.js';
 import { AppShell } from '../layout/AppShell.component.js';
 import { NotFoundPage } from '../layout/NotFoundPage.page.js';
 import { RootLayout } from '../layout/RootLayout.component.js';
@@ -26,6 +32,12 @@ export function createAppRoutes(): RouteObject[] {
               element: <AppShell />,
               children: [
                 { index: true, element: <OverviewPage /> },
+                { path: ROUTE_PATH.BACKTESTS, element: <BacktestsPage /> },
+                { path: ROUTE_PATH.BACKTEST_COMPARE, element: <ComparePage /> },
+                { path: ROUTE_PATH.BACKTEST, element: <BacktestDetailPage /> },
+                { path: ROUTE_PATH.STRATEGIES, element: <StrategiesPage /> },
+                { path: ROUTE_PATH.STRATEGY, element: <StrategyDetailPage /> },
+                { path: ROUTE_PATH.ALERTS, element: <AlertsPage /> },
                 { path: ROUTE_PATH.ACCOUNT, element: <AccountPage /> },
               ],
             },

@@ -11,6 +11,7 @@ import {
   createFakeFetch,
   dataResponse,
   errorResponse,
+  jsonResponse,
   pageResponse,
   captureRejection,
   type FakeResponder,
@@ -40,6 +41,33 @@ function buildClient(routes: readonly FakeRoute[]): {
 function thingRoute(respond: FakeResponder, method = 'GET'): FakeRoute {
   return { method, path: ITEM_PATH, respond };
 }
+
+describe('api client errors with details', () => {
+  test('keeps the field and reason of each validation problem', async () => {
+    const { client } = buildClient([
+      thingRoute(() =>
+        jsonResponse(
+          {
+            error: {
+              code: 'REQUEST_VALIDATION_FAILED',
+              message: 'Corpo inválido.',
+              details: [
+                { field: 'runParameters.feeRate', reason: 'invalid_value' },
+                { field: 'periodEnd', reason: 'must_be_after_period_start' },
+              ],
+            },
+          },
+          400,
+        ),
+      ),
+    ]);
+    const failure = await captureRejection(client.request({ path: ITEM_PATH, schema: itemSchema }));
+    expect(failure instanceof ApiError ? failure.details : []).toEqual([
+      { field: 'runParameters.feeRate', reason: 'invalid_value' },
+      { field: 'periodEnd', reason: 'must_be_after_period_start' },
+    ]);
+  });
+});
 
 describe('api client', () => {
   test('sends the bearer token and the CSRF header, and returns validated data', async () => {

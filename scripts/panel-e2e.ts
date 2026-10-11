@@ -25,6 +25,7 @@ import {
   FINAL_BENCHMARK,
   TEMPORARY_DATABASE_PREFIX,
 } from './panel-e2e/panel-e2e.constant.js';
+import { startControlServer } from './panel-e2e/control-server.js';
 import { runPlaywright } from './panel-e2e/run-playwright.js';
 import { seedPanelData } from './panel-e2e/seed-panel-data.js';
 import { startPanel } from './panel-e2e/start-panel.js';
@@ -76,7 +77,15 @@ async function main(): Promise<void> {
     const actor = await createActor({ identity, api, sql }, 'user', undefined);
     const resolution = await resolveUserBySubject(handle, actor.keycloakId);
     assertCondition(resolution.status === USER_RESOLUTION_STATUS.ACTIVE, 'usuário do seed inativo');
-    await seedPanelData({ handle, scope: resolution.scope });
+    const seeded = await seedPanelData({ handle, scope: resolution.scope });
+    const control = startControlServer({
+      handle,
+      sql,
+      scope: resolution.scope,
+      runId: seeded.runId,
+      lastOpenTime: seeded.lastOpenTime,
+    });
+    identity.cleanup.register('parar o servidor de controle', () => control.stop());
 
     const baseUrl = identity.environment.panelOrigin;
     const panel = await startPanel(baseUrl);
@@ -89,6 +98,7 @@ async function main(): Promise<void> {
       [E2E_ENV.EMAIL]: actor.email,
       [E2E_ENV.TELEGRAM_SECRET]: api.environment.TELEGRAM_WEBHOOK_SECRET ?? '',
       [E2E_ENV.TELEGRAM_CHAT_ID]: TEST_CHAT_ID,
+      [E2E_ENV.CONTROL_URL]: control.url,
       [E2E_ENV.EXPECTED]: JSON.stringify({ ...EXPECTED_DISPLAY, benchmark: FINAL_BENCHMARK }),
     });
     assertCondition(exitCode === 0, `Playwright terminou com código ${exitCode}`);

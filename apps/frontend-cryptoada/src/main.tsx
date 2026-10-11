@@ -9,6 +9,7 @@ import { AppProviders } from './app/AppProviders.component.js';
 import { createAppRoutes } from './app/createAppRoutes.js';
 import { isProductionBuild, loadEnvironment, readMarketSymbols } from './environment.js';
 import { createApiClient } from './http/api-client.js';
+import { createStreamConnector } from './live/stream-connector.js';
 import { createSessionService } from './session/session-service.js';
 import './styles/global.css';
 import { applyStoredTheme } from './theme/theme-store.js';
@@ -45,6 +46,7 @@ function start(): void {
         session={session}
         apiClient={apiClient}
         queryClient={queryClient}
+        connectStream={createStreamConnector({ apiClient, session })}
       >
         <RouterProvider router={createBrowserRouter(createAppRoutes())} />
       </AppProviders>

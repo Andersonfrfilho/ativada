@@ -18,6 +18,7 @@ export type E2eEnvironment = {
   readonly email: string;
   readonly telegramSecret: string;
   readonly telegramChatId: string;
+  readonly controlUrl: string;
   readonly expected: ExpectedDisplay;
 };
 
@@ -54,6 +55,7 @@ export function readE2eEnvironment(): E2eEnvironment {
     email: readRequired('PANEL_E2E_EMAIL'),
     telegramSecret: readRequired('PANEL_E2E_TELEGRAM_SECRET'),
     telegramChatId: readRequired('PANEL_E2E_TELEGRAM_CHAT_ID'),
+    controlUrl: readRequired('PANEL_E2E_CONTROL_URL'),
     expected,
   };
 }

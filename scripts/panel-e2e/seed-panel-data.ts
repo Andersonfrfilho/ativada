@@ -18,6 +18,7 @@ import {
   METRICS_VERSION,
   SIGNAL_ENGINE_VERSION,
 } from '../../packages/strategy-engine/src/index.js';
+import { buildDailyCandles } from '../../test/fixtures/walk-forward/daily-candles.fixture.js';
 import {
   loadClassicRunParameters,
   loadClassicScoreboard,
@@ -36,6 +37,12 @@ import {
 } from './panel-e2e.constant.js';
 
 export type SeedParams = { readonly handle: DatabaseHandle; readonly scope: OwnerScope };
+
+export type SeededPanel = { readonly runId: string; readonly lastOpenTime: number };
+
+const DAILY_CANDLES = 430;
+const DAILY_SEED = 20_261_011;
+const DAY_MILLISECONDS = 86_400_000;
 
 function lastClosedHourStart(now: number): number {
   return Math.floor(now / HOUR_MILLISECONDS) * HOUR_MILLISECONDS - HOUR_MILLISECONDS;
@@ -71,7 +78,7 @@ async function seedCandles(handle: DatabaseHandle, lastOpen: number): Promise<vo
 async function createLiveRun(params: SeedParams, firstOpen: number): Promise<string> {
   const strategies = createStrategyRepository(params.handle);
   const strategy = await strategies.createStrategy(params.scope, {
-    name: 'Placar clássico',
+    name: 'Minha estratégia ao vivo',
     isExample: false,
   });
   const version = createStrategyVersion(loadClassicScoreboard());
@@ -146,12 +153,38 @@ async function seedResults(params: SeedParams, runId: string, firstOpen: number)
   ]);
 }
 
+// Candles diários até ontem: dão histórico para o backtest que o E2E pede pela tela, rodado de verdade na API.
+async function seedDailyCandles(handle: DatabaseHandle, now: number): Promise<void> {
+  const today = Math.floor(now / DAY_MILLISECONDS) * DAY_MILLISECONDS;
+  const candles = buildDailyCandles({
+    count: DAILY_CANDLES,
+    seed: DAILY_SEED,
+    firstOpenTime: today - DAILY_CANDLES * DAY_MILLISECONDS,
+  });
+  await createCandleRepository(handle, { now: () => Date.now() }).upsertCandles(
+    candles.map((candle) => ({
+      exchange: EXCHANGE,
+      symbol: candle.symbol,
+      timeframe: '1d' as const,
+      openTime: candle.openTime,
+      closeTime: candle.closeTime,
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close,
+      volume: candle.volume,
+      tradeCount: 1,
+    })),
+  );
+}
+
 // Dados reais no Postgres do teste, lidos depois pela API real: o painel nunca vê um mock.
-export async function seedPanelData(params: SeedParams): Promise<string> {
+export async function seedPanelData(params: SeedParams): Promise<SeededPanel> {
   const lastOpen = lastClosedHourStart(Date.now());
   await seedCandles(params.handle, lastOpen);
+  await seedDailyCandles(params.handle, Date.now());
   const firstEquityOpen = lastOpen - (EQUITY_HOURS - 1) * HOUR_MILLISECONDS;
   const runId = await createLiveRun(params, firstEquityOpen);
   await seedResults(params, runId, firstEquityOpen);
-  return runId;
+  return { runId, lastOpenTime: lastOpen };
 }

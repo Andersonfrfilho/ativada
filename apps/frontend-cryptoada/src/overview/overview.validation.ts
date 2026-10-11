@@ -10,11 +10,6 @@ export const runSchema = z.object({
   timeframe: z.string(),
 });
 
-export const runDetailSchema = runSchema.extend({
-  survival: z.object({ initialBalance: z.string() }).nullable(),
-  waitingForData: z.object({ since: z.number(), openTime: z.number() }).nullable(),
-});
-
 export const equityPointSchema = z.object({
   candleTime: z.number(),
   equity: z.string(),
@@ -31,7 +26,6 @@ export const signalSchema = z.object({
 export const candleSchema = z.object({ openTime: z.number(), close: z.string() });
 
 export type Run = z.infer<typeof runSchema>;
-export type RunDetail = z.infer<typeof runDetailSchema>;
 export type EquityPoint = z.infer<typeof equityPointSchema>;
 export type Signal = z.infer<typeof signalSchema>;
 export type Candle = z.infer<typeof candleSchema>;

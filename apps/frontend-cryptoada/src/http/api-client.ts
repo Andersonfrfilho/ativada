@@ -71,6 +71,9 @@ async function readApiError(response: Response): Promise<ApiError> {
     status: response.status,
     code: parsed.success ? parsed.data.error.code : UNKNOWN_ERROR_CODE,
     message: parsed.success ? parsed.data.error.message : response.statusText,
+    ...(parsed.success && parsed.data.error.details !== undefined
+      ? { details: parsed.data.error.details }
+      : {}),
   });
 }
 

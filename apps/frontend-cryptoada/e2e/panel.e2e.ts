@@ -4,6 +4,13 @@ import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 
 import { readE2eEnvironment } from './e2e-environment.js';
+import { receiveLiveAlertsWithoutReloading } from './flows/alerts.flow.js';
+import {
+  compareTheTwoBacktests,
+  expectBacktestResult,
+  runBacktestThroughTheScreen,
+} from './flows/backtest.flow.js';
+import { deleteTheCopy, editStrategyIntoANewVersion } from './flows/strategy.flow.js';
 
 const environment = readE2eEnvironment();
 const NOTICE = 'Simulação com dinheiro fictício. Não é recomendação de investimento.';
@@ -137,6 +144,28 @@ test('exportar meus dados baixa o arquivo da API com o e-mail do usuário', asyn
   expect(await readFile(path, 'utf8')).toContain(environment.email);
 });
 
+test('backtest: criar pela tela, acompanhar na fila e ver o resultado de uma execução real', async () => {
+  await runBacktestThroughTheScreen(page, '0.0005');
+  await expectBacktestResult(page);
+});
+
+test('comparar duas execuções lado a lado, com comprar e segurar e a explicação dos custos', async () => {
+  await runBacktestThroughTheScreen(page, '0.002');
+  await compareTheTwoBacktests(page);
+});
+
+test('estratégias: duplicar o exemplo, editar um parâmetro gera a versão 2 e apagar a cópia', async () => {
+  await editStrategyIntoANewVersion(page);
+  await deleteTheCopy(page);
+});
+
+test('alertas: sinal e alerta de preço chegam pelo WebSocket e aparecem sem recarregar', async () => {
+  await receiveLiveAlertsWithoutReloading(page, {
+    request: page.request,
+    url: environment.controlUrl,
+  });
+});
+
 test('PWA: manifesto válido, service worker ativo e nada de /v1 em cache; CSP sem unsafe-inline', async () => {
   const manifest = await page.request.get('/manifest.webmanifest');
   const manifestBody: unknown = await manifest.json();
@@ -154,11 +183,12 @@ test('PWA: manifesto válido, service worker ativo e nada de /v1 em cache; CSP s
   expect(html).not.toContain('unsafe-eval');
 });
 
-test('celular: sem rolagem horizontal na visão geral e na conta', async () => {
+test('celular: sem rolagem horizontal em nenhuma tela do painel', async () => {
   await page.setViewportSize({ width: 375, height: 812 });
-  for (const path of ['/', '/conta']) {
-    await page.goto(path);
-    await expect(page.getByRole('navigation', { name: 'Principal' })).toBeVisible();
+  const navigation = page.getByRole('navigation', { name: 'Principal' });
+  for (const link of ['Visão geral', 'Backtests', 'Estratégias', 'Alertas', 'Conta']) {
+    await navigation.getByRole('link', { name: link }).click();
+    await expect(navigation).toBeVisible();
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );

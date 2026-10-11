@@ -2,12 +2,14 @@
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { useEffect, type ReactElement, type ReactNode } from 'react';
 
+import type { StreamConnector } from '../live/stream-connector.js';
 import type { ApiClient } from '../http/api-client.js';
 import type { SessionService } from '../session/session-service.js';
 import {
   ApiClientContext,
   AppConfigContext,
   SessionContext,
+  StreamConnectorContext,
   type AppConfig,
 } from './app-context.js';
 
@@ -16,6 +18,7 @@ export type AppProvidersProps = {
   readonly session: SessionService;
   readonly apiClient: ApiClient;
   readonly queryClient: QueryClient;
+  readonly connectStream: StreamConnector;
   readonly children: ReactNode;
 };
 
@@ -31,7 +34,9 @@ export function AppProviders(props: AppProvidersProps): ReactElement {
     <AppConfigContext value={props.config}>
       <SessionContext value={session}>
         <ApiClientContext value={props.apiClient}>
-          <QueryClientProvider client={props.queryClient}>{props.children}</QueryClientProvider>
+          <StreamConnectorContext value={props.connectStream}>
+            <QueryClientProvider client={props.queryClient}>{props.children}</QueryClientProvider>
+          </StreamConnectorContext>
         </ApiClientContext>
       </SessionContext>
     </AppConfigContext>

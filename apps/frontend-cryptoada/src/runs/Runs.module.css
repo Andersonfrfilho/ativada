@@ -1,0 +1,105 @@
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px 12px;
+  margin: 0;
+}
+
+.fact dt {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.fact dd {
+  margin: 2px 0 0;
+  font: 500 17px/1.3 var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.hint {
+  display: block;
+  font: 400 12px/1.3 var(--font-body);
+  color: var(--ink-3);
+}
+
+.positive {
+  color: var(--buy);
+}
+
+.negative {
+  color: var(--sell);
+}
+
+.alertBox {
+  border: 1px solid var(--warn);
+  background: var(--warn-soft);
+  color: var(--warn);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.okBox {
+  border: 1px solid var(--line);
+  background: var(--buy-soft);
+  color: var(--buy);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.table th {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.num {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress {
+  width: 100%;
+  height: 14px;
+  accent-color: var(--accent);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.title {
+  font: 400 28px/1.15 var(--font-display);
+}
+
+.sub {
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.page {
+  display: grid;
+  gap: 16px;
+}

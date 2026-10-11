@@ -6,13 +6,14 @@ import controls from '../styles/Controls.module.css';
 import { EquitySparkline } from './EquitySparkline.component.js';
 import styles from './Overview.module.css';
 import { RUN_STATUS } from './overview.constant.js';
-import type { EquityPoint, RunDetail } from './overview.validation.js';
+import type { RunDetail } from '../runs/run.validation.js';
+import type { EquityPoint } from './overview.validation.js';
 import {
   computeChangeRatio,
   formatChangePercent,
   formatDateTime,
   formatDecimal,
-} from './format.js';
+} from '../format/format.js';
 
 export type BalanceCardProps = {
   readonly run: RunDetail;

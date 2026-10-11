@@ -21,6 +21,7 @@
   gap: 4px;
   order: 3;
   flex-basis: 100%;
+  overflow-x: auto;
 }
 
 .link {
@@ -29,6 +30,7 @@
   color: var(--ink-2);
   text-decoration: none;
   font-size: 14px;
+  white-space: nowrap;
 }
 
 .active {

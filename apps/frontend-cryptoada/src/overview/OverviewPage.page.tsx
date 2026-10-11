@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import { useRunDetailQuery } from '../runs/runs.query.js';
 import { useAppConfig } from '../app/useAppContext.hook.js';
 import { Card } from '../layout/Card.component.js';
 import controls from '../styles/Controls.module.css';
@@ -13,7 +14,6 @@ import {
   useActiveRunQuery,
   useEquitySeriesQuery,
   useLatestSignalsQuery,
-  useRunDetailQuery,
 } from './overview.query.js';
 import type { Run } from './overview.validation.js';
 

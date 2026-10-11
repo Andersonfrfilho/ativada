@@ -6,26 +6,25 @@ import { useApiClient } from '../app/useAppContext.hook.js';
 import {
   LATEST_SIGNALS_COUNT,
   MILLISECONDS_PER_HOUR,
+  NEWEST_PAGE_QUERY,
   PAGE_SIZE,
   PRICE_CHANGE_HOURS,
   PRICE_HISTORY_HOURS,
   PRICE_TIMEFRAME,
   RUN_KIND_LIVE_PAPER,
   RUN_STATUS,
+  SIGNAL_ACTION,
   STALE_TIME_MILLISECONDS,
 } from './overview.constant.js';
 import {
   candleSchema,
   equityPointSchema,
-  runDetailSchema,
   runSchema,
   signalSchema,
   type EquityPoint,
   type Run,
-  type RunDetail,
   type Signal,
 } from './overview.validation.js';
-import { readSeries } from './read-series.js';
 
 export type CoinPrice = { readonly price: string; readonly changeRatio: number | undefined };
 
@@ -51,37 +50,36 @@ export function useActiveRunQuery(): UseQueryResult<Run | null> {
   });
 }
 
-export function useRunDetailQuery(runId: string): UseQueryResult<RunDetail> {
-  const client = useApiClient();
-  return useQuery({
-    queryKey: ['runs', runId, 'detail'],
-    staleTime: STALE_TIME_MILLISECONDS,
-    queryFn: () => client.request({ path: `${API_PATH.RUNS}/${runId}`, schema: runDetailSchema }),
-  });
-}
-
+// As últimas velas da curva, da mais antiga para a mais nova: o último ponto é o saldo de agora.
 export function useEquitySeriesQuery(runId: string): UseQueryResult<EquityPoint[]> {
   const client = useApiClient();
   return useQuery({
-    queryKey: ['runs', runId, 'equity'],
+    queryKey: ['runs', runId, 'equity', 'newest'],
     staleTime: STALE_TIME_MILLISECONDS,
-    queryFn: () =>
-      readSeries({ client, path: `${API_PATH.RUNS}/${runId}/equity`, schema: equityPointSchema }),
+    queryFn: async () => {
+      const page = await client.requestPage({
+        path: `${API_PATH.RUNS}/${runId}/equity?${NEWEST_PAGE_QUERY}`,
+        schema: equityPointSchema,
+      });
+      return page.items.reverse();
+    },
   });
 }
 
+// Neutro é a decisão de quase todo candle e não é aviso: só compra e venda, do mais novo para o mais antigo.
 export function useLatestSignalsQuery(runId: string): UseQueryResult<Signal[]> {
   const client = useApiClient();
   return useQuery({
-    queryKey: ['runs', runId, 'signals'],
+    queryKey: ['runs', runId, 'signals', 'newest'],
     staleTime: STALE_TIME_MILLISECONDS,
     queryFn: async () => {
-      const signals = await readSeries({
-        client,
-        path: `${API_PATH.RUNS}/${runId}/signals`,
+      const page = await client.requestPage({
+        path: `${API_PATH.RUNS}/${runId}/signals?${NEWEST_PAGE_QUERY}`,
         schema: signalSchema,
       });
-      return signals.slice(-LATEST_SIGNALS_COUNT).reverse();
+      return page.items
+        .filter((signal) => signal.action !== SIGNAL_ACTION.HOLD)
+        .slice(0, LATEST_SIGNALS_COUNT);
     },
   });
 }

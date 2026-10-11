@@ -25,7 +25,19 @@ const QUIET_ROUTES: readonly FakeRoute[] = [
   },
   { method: 'GET', path: '/v1/markets/candles', respond: (): Response => dataResponse([]) },
 ];
-const ALL_PATHS = ['/login', '/auth/callback', '/', '/conta', '/rota-que-nao-existe'] as const;
+const ALL_PATHS = [
+  '/login',
+  '/auth/callback',
+  '/',
+  '/conta',
+  '/backtests',
+  '/backtests/run-1',
+  '/backtests/comparar',
+  '/estrategias',
+  '/estrategias/strategy-1',
+  '/alertas',
+  '/rota-que-nao-existe',
+] as const;
 
 describe('permanent simulation notice', () => {
   for (const isAuthenticated of [false, true]) {

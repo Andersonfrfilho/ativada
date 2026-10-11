@@ -8,6 +8,8 @@ import { HTTP_STATUS } from '@cryptoada/environment';
 
 import { AppProviders } from '../../src/app/AppProviders.component.js';
 import { createAppRoutes } from '../../src/app/createAppRoutes.js';
+import type { StreamConnector, StreamHandlers } from '../../src/live/stream-connector.js';
+import type { StreamMessage, StreamStatus } from '../../src/live/stream-client.js';
 import { createApiClient } from '../../src/http/api-client.js';
 import { createSessionService, type SessionService } from '../../src/session/session-service.js';
 import {
@@ -29,7 +31,16 @@ export type RenderAppOptions = {
   readonly ownsSessionRoute?: boolean;
 };
 
+export type FakeStream = {
+  readonly emit: (message: StreamMessage) => void;
+  readonly setStatus: (status: StreamStatus) => void;
+  readonly resync: (reason?: string) => void;
+  readonly connections: () => number;
+  readonly stops: () => number;
+};
+
 export type RenderedApp = {
+  readonly stream: FakeStream;
   readonly fake: FakeFetch;
   readonly session: SessionService;
   readonly router: ReturnType<typeof createMemoryRouter>;
@@ -49,6 +60,26 @@ function buildSessionRoute(isAuthenticated: boolean): FakeRoute {
   };
 }
 
+function createFakeStream(): { readonly stream: FakeStream; readonly connect: StreamConnector } {
+  let current: StreamHandlers | undefined;
+  let connections = 0;
+  let stops = 0;
+  return {
+    connect: (handlers): { readonly stop: () => void } => {
+      current = handlers;
+      connections += 1;
+      return { stop: () => void (stops += 1) };
+    },
+    stream: {
+      emit: (message) => current?.onMessage(message),
+      setStatus: (status) => current?.onStatus(status),
+      resync: (reason = 'listener_lost') => current?.onResync(reason),
+      connections: () => connections,
+      stops: () => stops,
+    },
+  };
+}
+
 export function renderApp(options: RenderAppOptions): RenderedApp {
   const sessionRoutes =
     options.ownsSessionRoute === true ? [] : [buildSessionRoute(options.isAuthenticated)];
@@ -60,12 +91,20 @@ export function renderApp(options: RenderAppOptions): RenderedApp {
     authorizeUrl: 'http://127.0.0.1:56181/realms/cryptoada/protocol/openid-connect/auth',
     clientId: 'cryptoada-session',
     marketSymbols: ['BTCUSDT', 'ETHUSDT'],
+    runPollMilliseconds: 20,
   };
+  const { stream, connect } = createFakeStream();
   const router = createMemoryRouter(createAppRoutes(), { initialEntries: [options.path] });
   render(
-    <AppProviders config={config} session={session} apiClient={apiClient} queryClient={queryClient}>
+    <AppProviders
+      config={config}
+      session={session}
+      apiClient={apiClient}
+      queryClient={queryClient}
+      connectStream={connect}
+    >
       <RouterProvider router={router} />
     </AppProviders>,
   );
-  return { fake, session, router };
+  return { fake, session, router, stream };
 }

@@ -3,10 +3,10 @@ export const FEAR_GREED_CREDIT_TEXT = 'Fear & Greed Index por alternative.me';
 export const FEAR_GREED_CREDIT_URL = 'https://alternative.me/crypto/fear-and-greed-index/';
 export const EXTERNAL_LINK_REL = 'noopener noreferrer';
 
-export const RUN_KIND_LIVE_PAPER = 'live_paper';
 export const PAGE_SIZE = 100;
-// A API só lista a série em ordem crescente: para achar o último ponto lemos até este teto de páginas.
-export const MAX_SERIES_PAGES = 50;
+export const RUN_KIND_LIVE_PAPER = 'live_paper';
+// Os pontos mais recentes vêm com `order=desc` (uma página só, sem varrer a série inteira).
+export const NEWEST_PAGE_QUERY = `limit=${PAGE_SIZE}&order=desc`;
 export const LATEST_SIGNALS_COUNT = 5;
 export const SPARKLINE_MAX_POINTS = 120;
 
