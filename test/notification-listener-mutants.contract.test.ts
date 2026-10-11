@@ -104,9 +104,12 @@ const SCRAM_MUTANTS: readonly SourceMutant[] = [
   },
   {
     name: 'ITERATION_CEILING_REMOVED',
-    edits: edit(SCRAM, ' || iterations > MAX_ITERATIONS', ''),
+    edits: edit(SCRAM, ' &&\n    iterations <= SCRAM_MAXIMUM_ITERATIONS', ''),
   },
-  { name: 'ZERO_ITERATIONS_ACCEPTED', edits: edit(SCRAM, 'iterations < 1 || ', '') },
+  {
+    name: 'ITERATION_FLOOR_REMOVED',
+    edits: edit(SCRAM, 'iterations >= SCRAM_MINIMUM_ITERATIONS', 'iterations >= 1'),
+  },
   {
     name: 'USERNAME_NOT_ESCAPED',
     edits: edit(SCRAM, "username.replaceAll('=', '=3D').replaceAll(',', '=2C')", 'username'),

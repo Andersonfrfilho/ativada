@@ -4,7 +4,13 @@ import { describe, expect, test } from 'bun:test';
 import { loadDatabaseListenerApi } from './fixtures/postgres-wire/database-source.fixture.js';
 
 const { scram } = await loadDatabaseListenerApi();
-const { createScramClient, ScramError, SCRAM_ERROR_CODE } = scram;
+const {
+  createScramClient,
+  ScramError,
+  SCRAM_ERROR_CODE,
+  SCRAM_MAXIMUM_ITERATIONS,
+  SCRAM_MINIMUM_ITERATIONS,
+} = scram;
 
 // Vetor do RFC 7677 §3 (SCRAM-SHA-256): senha "pencil", 4096 iterações.
 const RFC_USER = 'user';
@@ -57,18 +63,30 @@ describe('SCRAM-SHA-256 client', () => {
   });
 
   test('rejects an iteration count above the ceiling (a hostile server cannot burn the CPU)', async () => {
-    // Um centésimo a mais que o teto: o mutante que o remove computa 1.000.001 iterações (≈ 0,3 s), não 2 bilhões.
-    const hostile = RFC_SERVER_FIRST.replace('i=4096', 'i=1000001');
+    // Um a mais que o teto: o mutante que o remove ainda computa 262.145 iterações, não 2 bilhões.
+    const hostile = RFC_SERVER_FIRST.replace('i=4096', `i=${SCRAM_MAXIMUM_ITERATIONS + 1}`);
     expect(await codeOf(() => rfcClient().respondToServerFirst(hostile))).toBe(
       SCRAM_ERROR_CODE.ITERATIONS_OUT_OF_RANGE,
     );
+    const atCeiling = RFC_SERVER_FIRST.replace('i=4096', `i=${SCRAM_MAXIMUM_ITERATIONS}`);
+    expect(await codeOf(() => rfcClient().respondToServerFirst(atCeiling))).toBeUndefined();
   });
 
-  test('rejects zero iterations and a malformed server-first message', async () => {
-    const zero = RFC_SERVER_FIRST.replace('i=4096', 'i=0');
-    expect(await codeOf(() => rfcClient().respondToServerFirst(zero))).toBe(
-      SCRAM_ERROR_CODE.ITERATIONS_OUT_OF_RANGE,
-    );
+  test.each([0, 1, 1024, SCRAM_MINIMUM_ITERATIONS - 1])(
+    'rejects %p iterations: below the RFC 7677 floor of 4096 the stored password is easy to brute-force',
+    async (iterations) => {
+      const weak = RFC_SERVER_FIRST.replace('i=4096', `i=${iterations}`);
+      expect(await codeOf(() => rfcClient().respondToServerFirst(weak))).toBe(
+        SCRAM_ERROR_CODE.ITERATIONS_OUT_OF_RANGE,
+      );
+    },
+  );
+
+  test('accepts exactly the floor of 4096 iterations', async () => {
+    expect(await codeOf(() => rfcClient().respondToServerFirst(RFC_SERVER_FIRST))).toBeUndefined();
+  });
+
+  test('rejects a malformed server-first message', async () => {
     expect(await codeOf(() => rfcClient().respondToServerFirst('lixo'))).toBe(
       SCRAM_ERROR_CODE.INVALID_SERVER_MESSAGE,
     );

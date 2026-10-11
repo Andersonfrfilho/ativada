@@ -6,7 +6,9 @@ const GS2_HEADER = 'n,,';
 const CHANNEL_BINDING = 'c=biws';
 const CLIENT_KEY_LABEL = 'Client Key';
 const SERVER_KEY_LABEL = 'Server Key';
-const MAX_ITERATIONS = 1_000_000;
+// Piso do RFC 7677 §4; o teto (2^18) protege a CPU de um servidor hostil e ainda cobre `scram_iterations` de 64x o padrão.
+export const SCRAM_MINIMUM_ITERATIONS = 4_096;
+export const SCRAM_MAXIMUM_ITERATIONS = 262_144;
 const DIGEST_BITS = 256;
 const ASCII_PATTERN = /^[ -~]*$/;
 const TEXT_ENCODER = new TextEncoder();
@@ -69,7 +71,11 @@ function parseServerFirst(message: string, clientNonce: string): ServerFirst {
   if (!nonce.startsWith(clientNonce) || nonce.length === clientNonce.length) {
     throw new ScramError(SCRAM_ERROR_CODE.NONCE_MISMATCH);
   }
-  if (!Number.isInteger(iterations) || iterations < 1 || iterations > MAX_ITERATIONS) {
+  const isInRange =
+    Number.isInteger(iterations) &&
+    iterations >= SCRAM_MINIMUM_ITERATIONS &&
+    iterations <= SCRAM_MAXIMUM_ITERATIONS;
+  if (!isInRange) {
     throw new ScramError(SCRAM_ERROR_CODE.ITERATIONS_OUT_OF_RANGE);
   }
   return { nonce, salt: Uint8Array.fromBase64(salt), iterations };
