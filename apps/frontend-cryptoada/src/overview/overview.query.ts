@@ -91,7 +91,8 @@ export function useCoinPriceQuery(symbol: string): UseQueryResult<CoinPrice | nu
   const client = useApiClient();
   const { fallbackPollMilliseconds = FALLBACK_POLL_MILLISECONDS } = useAppConfig();
   const market = useLiveMarket();
-  const needsFallback = market.state === 'offline' || market.state === 'stale';
+  // O REST de reserva é POR PAR: socket fora, ou este par sem tick em dia, mesmo que os outros sigam ao vivo.
+  const needsFallback = market.freshPrice(symbol) === undefined;
   return useQuery({
     queryKey: ['markets', symbol, 'price'],
     staleTime: STALE_TIME_MILLISECONDS,

@@ -29,6 +29,8 @@ export type RenderAppOptions = {
   readonly routes?: readonly FakeRoute[];
   // Quando as rotas do teste já trazem a renovação da sessão, a padrão não é registrada.
   readonly ownsSessionRoute?: boolean;
+  // Só para provar o silêncio por par sem dormir 10 s.
+  readonly silenceMilliseconds?: number;
 };
 
 export type FakeStream = {
@@ -95,6 +97,9 @@ export function renderApp(options: RenderAppOptions): RenderedApp {
     marketSymbols: ['BTCUSDT', 'ETHUSDT'],
     runPollMilliseconds: 20,
     fallbackPollMilliseconds: 20,
+    ...(options.silenceMilliseconds === undefined
+      ? {}
+      : { silenceMilliseconds: options.silenceMilliseconds }),
   };
   const { stream, connect } = createFakeStream();
   const router = createMemoryRouter(createAppRoutes(), { initialEntries: [options.path] });

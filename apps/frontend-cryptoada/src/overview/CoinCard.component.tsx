@@ -2,11 +2,17 @@
 import type { ReactElement } from 'react';
 
 import { formatChangePercent, formatDecimal, formatSymbol } from '../format/format.js';
-import { useShownPrice } from '../live/useShownPrice.hook.js';
+import { useShownPrice, type ShownPrice } from '../live/useShownPrice.hook.js';
 import controls from '../styles/Controls.module.css';
 import styles from './Overview.module.css';
 
 export type CoinCardProps = { readonly symbol: string };
+
+function describeFreshness(shown: ShownPrice): string {
+  if (shown.source === 'live') return `Ao vivo · há ${shown.secondsSinceTick ?? 0} s`;
+  if (shown.secondsSinceTick === undefined) return 'Último fechamento consultado';
+  return `Sem dados há ${shown.secondsSinceTick} s · último fechamento consultado`;
+}
 
 export function CoinCard({ symbol }: CoinCardProps): ReactElement {
   const shown = useShownPrice(symbol);
@@ -26,6 +32,7 @@ export function CoinCard({ symbol }: CoinCardProps): ReactElement {
           >
             {shown.change === undefined ? '—' : `${formatChangePercent(shown.change)} em 24 h`}
           </p>
+          <p className={controls.muted}>{describeFreshness(shown)}</p>
         </>
       )}
     </article>

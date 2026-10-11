@@ -8,6 +8,7 @@ export type LiveMarketValue = {
   readonly store: MarketStore;
   readonly streamStatus: StreamStatus;
   readonly now: number;
+  readonly silenceMilliseconds: number;
 };
 
 export const LiveMarketContext = createContext<LiveMarketValue | undefined>(undefined);

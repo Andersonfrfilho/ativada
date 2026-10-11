@@ -2,24 +2,36 @@
 import { useCoinPriceQuery } from '../overview/overview.query.js';
 import { useLiveMarket } from './useLiveMarket.hook.js';
 
-export type ShownPrice = { readonly price: string; readonly change: number | undefined };
+const MILLISECONDS_PER_SECOND = 1_000;
 
-// O tick vivo vale enquanto o socket e os ticks estão em dia; senão, o último fechamento lido por REST.
+export type ShownPrice = {
+  readonly price: string;
+  readonly change: number | undefined;
+  // `live`: tick em dia deste par. `rest`: último fechamento consultado por REST.
+  readonly source: 'live' | 'rest';
+  // Segundos desde o último tick deste par (mesmo mudo); `undefined` se nunca chegou um.
+  readonly secondsSinceTick: number | undefined;
+};
+
+// O tick vivo vale enquanto ESTE par chega em dia; um par mudo cai para o REST mesmo com os outros ao vivo.
 export function useShownPrice(symbol: string): ShownPrice | undefined {
   const market = useLiveMarket();
   const rest = useCoinPriceQuery(symbol).data;
-  const live = market.prices.get(symbol);
-  if (market.isLive && live !== undefined && !live.isStale) {
-    return { price: live.price, change: live.change24h };
+  const last = market.prices.get(symbol);
+  const secondsSinceTick =
+    last === undefined
+      ? undefined
+      : Math.max(0, Math.floor((market.now - last.receivedAt) / MILLISECONDS_PER_SECOND));
+  const live = market.freshPrice(symbol);
+  if (live !== undefined) {
+    return { price: live.price, change: live.change24h, source: 'live', secondsSinceTick };
   }
   return rest === null || rest === undefined
     ? undefined
-    : { price: rest.price, change: rest.changeRatio };
+    : { price: rest.price, change: rest.changeRatio, source: 'rest', secondsSinceTick };
 }
 
-// Só o tick vivo e em dia; fora dele o chamador mantém o preço que já tem (o do servidor).
+// Só o tick vivo e em dia deste par; fora dele o chamador mantém o preço que já tem (o do servidor).
 export function useLivePrice(symbol: string): string | undefined {
-  const market = useLiveMarket();
-  const live = market.prices.get(symbol);
-  return market.isLive && live !== undefined && !live.isStale ? live.price : undefined;
+  return useLiveMarket().freshPrice(symbol)?.price;
 }

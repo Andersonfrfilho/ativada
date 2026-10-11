@@ -65,7 +65,21 @@ export type ComputeMarketStateParams = {
   readonly streamStatus: StreamStatus;
   readonly prices: ReadonlyMap<string, LivePrice>;
   readonly now: number;
+  readonly silenceMilliseconds?: number;
 };
+
+export type IsPriceFreshParams = {
+  readonly price: LivePrice;
+  readonly now: number;
+  readonly silenceMilliseconds: number;
+};
+
+// A idade é POR PAR: um par mudo não pode parecer ao vivo só porque outro par continua chegando.
+export function isPriceFresh(params: IsPriceFreshParams): boolean {
+  return (
+    !params.price.isStale && params.now - params.price.receivedAt <= params.silenceMilliseconds
+  );
+}
 
 function lastReceivedAt(prices: ReadonlyMap<string, LivePrice>): number | undefined {
   const times = [...prices.values()].map((price) => price.receivedAt);
@@ -74,12 +88,15 @@ function lastReceivedAt(prices: ReadonlyMap<string, LivePrice>): number | undefi
 
 export function computeMarketState(params: ComputeMarketStateParams): MarketStatus {
   const last = lastReceivedAt(params.prices);
+  const silence = params.silenceMilliseconds ?? MARKET_SILENCE_MILLISECONDS;
   const seconds =
-    last === undefined ? undefined : Math.floor((params.now - last) / MILLISECONDS_PER_SECOND);
+    last === undefined
+      ? undefined
+      : Math.max(0, Math.floor((params.now - last) / MILLISECONDS_PER_SECOND));
   if (params.streamStatus !== STREAM_STATUS.LIVE)
     return { state: 'offline', secondsWithoutData: seconds };
   if (last === undefined) return { state: 'waiting', secondsWithoutData: undefined };
-  const isSilent = params.now - last > MARKET_SILENCE_MILLISECONDS;
+  const isSilent = params.now - last > silence;
   const isSealed = [...params.prices.values()].every((price) => price.isStale);
   return { state: isSilent || isSealed ? 'stale' : 'live', secondsWithoutData: seconds };
 }

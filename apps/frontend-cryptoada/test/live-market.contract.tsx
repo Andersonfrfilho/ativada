@@ -65,6 +65,12 @@ function tick(
   return { symbol, price, change24h: '2.5', at: NOW, isStale: false, ...extra };
 }
 
+function bitcoinCandleCalls(fake: ReturnType<typeof renderApp>['fake']): number {
+  return fake
+    .callsTo('GET', '/v1/markets/candles')
+    .filter((call) => call.query.get('symbol') === 'BTCUSDT').length;
+}
+
 async function openOverview(): Promise<ReturnType<typeof renderApp>> {
   const rendered = renderApp({ path: '/', isAuthenticated: true, routes: ROUTES });
   await screen.findByRole('article', { name: 'BTC/USDT' });
@@ -72,17 +78,57 @@ async function openOverview(): Promise<ReturnType<typeof renderApp>> {
   return rendered;
 }
 
+describe('a quiet pair', () => {
+  test('leaves live mode on its own card while the other pair keeps ticking, and polls REST for it only', async () => {
+    const rendered = renderApp({
+      path: '/',
+      isAuthenticated: true,
+      routes: ROUTES,
+      silenceMilliseconds: 300,
+    });
+    const { fake, stream } = rendered;
+    await screen.findByRole('article', { name: 'BTC/USDT' });
+    await waitFor(() => expect(stream.connections()).toBe(1));
+    act(() => stream.setStatus('live'));
+    act(() => stream.tick(tick('BTCUSDT', '62000.50')));
+    act(() => stream.tick(tick('ETHUSDT', '3100.00')));
+    const bitcoin = screen.getByRole('article', { name: 'BTC/USDT' });
+    const ether = screen.getByRole('article', { name: 'ETH/USDT' });
+    await waitFor(() => expect(bitcoin.textContent).toContain('62.000,50'));
+    const bitcoinCalls = (): number =>
+      fake.callsTo('GET', '/v1/markets/candles').filter((c) => c.query.get('symbol') === 'BTCUSDT')
+        .length;
+    const etherCalls = (): number =>
+      fake.callsTo('GET', '/v1/markets/candles').filter((c) => c.query.get('symbol') === 'ETHUSDT')
+        .length;
+    const bitcoinBefore = bitcoinCalls();
+    for (let index = 0; index < 8; index += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      act(() => stream.tick(tick('ETHUSDT', `31${index}0.00`)));
+    }
+    await waitFor(() => expect(bitcoin.textContent).toMatch(/Sem dados há \d+ s/));
+    expect(bitcoin.textContent).not.toContain('62.000,50');
+    expect(bitcoin.textContent).toContain('60.029,00');
+    expect(ether.textContent).toMatch(/Ao vivo · há \d+ s/);
+    await waitFor(() => expect(bitcoinCalls()).toBeGreaterThan(bitcoinBefore + 1));
+    const etherBefore = etherCalls();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    act(() => stream.tick(tick('ETHUSDT', '3200.00')));
+    expect(etherCalls()).toBe(etherBefore);
+  });
+});
+
 describe('live prices on the overview', () => {
   test('a tick replaces the price and the 24 h change at once, without asking the API again', async () => {
     const { fake, stream } = await openOverview();
     const bitcoin = screen.getByRole('article', { name: 'BTC/USDT' });
     await waitFor(() => expect(bitcoin.textContent).toContain('60.029,00'));
-    const requests = fake.callsTo('GET', '/v1/markets/candles').length;
+    const requests = bitcoinCandleCalls(fake);
     act(() => stream.setStatus('live'));
     act(() => stream.tick(tick('BTCUSDT', '62000.50')));
     await waitFor(() => expect(bitcoin.textContent).toContain('62.000,50'));
     expect(bitcoin.textContent).toContain('+2,50%');
-    expect(fake.callsTo('GET', '/v1/markets/candles').length).toBe(requests);
+    expect(bitcoinCandleCalls(fake)).toBe(requests);
   });
 
   test('says "ao vivo" while ticks arrive, and "sem dados há N s" when the server seals them as stale', async () => {
@@ -92,7 +138,7 @@ describe('live prices on the overview', () => {
     act(() => stream.tick(tick('BTCUSDT', '62000.50')));
     expect(await screen.findByText('Preços ao vivo')).toBeDefined();
     act(() => stream.tick(tick('BTCUSDT', '62000.50', { isStale: true })));
-    expect((await screen.findByText(/Sem dados há \d+ s/)).textContent).toContain('Sem dados');
+    expect((await screen.findByText(/^Sem dados há \d+ s$/)).textContent).toContain('Sem dados');
   });
 
   test('with the socket down it says "sem dados" and falls back to REST polling every 15 s (shortened here)', async () => {
@@ -100,14 +146,12 @@ describe('live prices on the overview', () => {
     act(() => stream.setStatus('live'));
     act(() => stream.tick(tick('BTCUSDT', '62000.50')));
     await screen.findByText('Preços ao vivo');
-    const before = fake.callsTo('GET', '/v1/markets/candles').length;
+    const before = bitcoinCandleCalls(fake);
     await new Promise((resolve) => setTimeout(resolve, 80));
-    expect(fake.callsTo('GET', '/v1/markets/candles').length).toBe(before);
+    expect(bitcoinCandleCalls(fake)).toBe(before);
     act(() => stream.setStatus('reconnecting'));
-    expect(await screen.findByText(/Sem dados há \d+ s/)).toBeDefined();
-    await waitFor(() =>
-      expect(fake.callsTo('GET', '/v1/markets/candles').length).toBeGreaterThan(before + 1),
-    );
+    expect(await screen.findByText(/^Sem dados há \d+ s$/)).toBeDefined();
+    await waitFor(() => expect(bitcoinCandleCalls(fake)).toBeGreaterThan(before + 1));
     const bitcoin = screen.getByRole('article', { name: 'BTC/USDT' });
     expect(bitcoin.textContent).toContain('60.029,00');
   });
@@ -117,15 +161,13 @@ describe('live prices on the overview', () => {
     act(() => stream.setStatus('live'));
     act(() => stream.tick(tick('BTCUSDT', '62000.50')));
     act(() => stream.setStatus('reconnecting'));
-    await screen.findByText(/Sem dados há \d+ s/);
-    const before = fake.callsTo('GET', '/v1/markets/candles').length;
+    await screen.findByText(/^Sem dados há \d+ s$/);
+    const before = bitcoinCandleCalls(fake);
     act(() => {
       stream.setStatus('live');
       stream.resync('reconnected');
     });
-    await waitFor(() =>
-      expect(fake.callsTo('GET', '/v1/markets/candles').length).toBeGreaterThan(before),
-    );
+    await waitFor(() => expect(bitcoinCandleCalls(fake)).toBeGreaterThan(before));
     act(() => stream.tick(tick('BTCUSDT', '63000.00')));
     const bitcoin = screen.getByRole('article', { name: 'BTC/USDT' });
     await waitFor(() => expect(bitcoin.textContent).toContain('63.000,00'));

@@ -24,11 +24,15 @@ export function useAssetSummaryQuery(
   const client = useApiClient();
   const { fallbackPollMilliseconds = FALLBACK_POLL_MILLISECONDS } = useAppConfig();
   const market = useLiveMarket();
-  const needsFallback = market.state === 'offline' || market.state === 'stale';
   return useQuery({
     queryKey: [ASSET_QUERY_ROOT, 'summary', strategyId],
     enabled: isEnabled,
-    refetchInterval: needsFallback ? fallbackPollMilliseconds : false,
+    // O resumo é refeito por REST se o socket cai ou se QUALQUER ativo cujo par ficou mudo dependa do preço do servidor.
+    refetchInterval: (query) => {
+      const items = query.state.data?.items ?? [];
+      const hasSilentAsset = items.some((item) => market.freshPrice(item.symbol) === undefined);
+      return hasSilentAsset || market.state !== 'live' ? fallbackPollMilliseconds : false;
+    },
     queryFn: () => {
       const query = strategyId === '' ? '' : `?${new URLSearchParams({ strategyId }).toString()}`;
       return client.request({

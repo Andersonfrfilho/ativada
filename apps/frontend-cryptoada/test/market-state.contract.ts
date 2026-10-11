@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { computeMarketState, MarketStore } from '../src/live/market-store.js';
+import { computeMarketState, isPriceFresh, MarketStore } from '../src/live/market-store.js';
 import type { MarketTick } from '../src/live/stream-client.js';
 
 function tick(overrides: Partial<MarketTick> = {}): MarketTick {
@@ -111,5 +111,29 @@ describe('market state', () => {
       state: 'offline',
       secondsWithoutData: undefined,
     });
+  });
+});
+
+describe('freshness of one pair', () => {
+  const price = { price: '1', change24h: undefined, receivedAt: 1_000, isStale: false };
+
+  test('fresh while the last tick is inside the silence window and not sealed', () => {
+    expect(isPriceFresh({ price, now: 1_000 + 10_000, silenceMilliseconds: 10_000 })).toBe(true);
+  });
+
+  test('silent once the window passes, even if other pairs keep ticking', () => {
+    expect(isPriceFresh({ price, now: 1_000 + 10_001, silenceMilliseconds: 10_000 })).toBe(false);
+  });
+
+  test('sealed by the server is never fresh', () => {
+    expect(
+      isPriceFresh({ price: { ...price, isStale: true }, now: 1_000, silenceMilliseconds: 10_000 }),
+    ).toBe(false);
+  });
+
+  test('the seconds without data never go negative when the clocks disagree', () => {
+    const prices = new Map([['BTCUSDT', { ...price, receivedAt: 5_000 }]]);
+    const status = computeMarketState({ streamStatus: 'live', prices, now: 1_000 });
+    expect(status.secondsWithoutData).toBe(0);
   });
 });

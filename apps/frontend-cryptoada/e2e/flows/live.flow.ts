@@ -32,7 +32,7 @@ export async function dropTheSocketAndComeBack(page: Page, control: Control): Pr
 
   isBlocked = true;
   await Promise.all(open.map((route) => route.close()));
-  await expect(second.getByText(/Sem dados/)).toBeVisible();
+  await expect(second.getByRole('status').filter({ hasText: 'Sem dados' })).toBeVisible();
 
   isBlocked = false;
   await expect(async () => {

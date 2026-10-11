@@ -12,6 +12,8 @@ export type AppConfig = LoginConfig & {
   readonly runPollMilliseconds?: number;
   // Polling de reserva dos preços quando o socket está fora (RF16: 15 s).
   readonly fallbackPollMilliseconds?: number;
+  // Só os testes encurtam: padrão de 10 s sem tick para o par deixar de valer como ao vivo.
+  readonly silenceMilliseconds?: number;
 };
 
 export const AppConfigContext = createContext<AppConfig | undefined>(undefined);

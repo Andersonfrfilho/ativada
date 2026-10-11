@@ -1,8 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { useState, type ReactElement, type ReactNode } from 'react';
 
+import { useAppConfig } from '../app/useAppContext.hook.js';
 import { LiveMarketContext } from './live-market-context.js';
-import { MarketStore } from './market-store.js';
+import { MARKET_SILENCE_MILLISECONDS, MarketStore } from './market-store.js';
 import { useClock } from './useClock.hook.js';
 import { useLiveStream } from './useLiveStream.hook.js';
 
@@ -13,5 +14,10 @@ export function LiveMarketProvider({ children }: { readonly children: ReactNode 
   const [store] = useState(() => new MarketStore(() => Date.now()));
   const streamStatus = useLiveStream(store.applyTick);
   const now = useClock(CLOCK_INTERVAL_MILLISECONDS);
-  return <LiveMarketContext value={{ store, streamStatus, now }}>{children}</LiveMarketContext>;
+  const { silenceMilliseconds = MARKET_SILENCE_MILLISECONDS } = useAppConfig();
+  return (
+    <LiveMarketContext value={{ store, streamStatus, now, silenceMilliseconds }}>
+      {children}
+    </LiveMarketContext>
+  );
 }
