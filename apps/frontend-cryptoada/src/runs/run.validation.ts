@@ -61,6 +61,8 @@ export const runSchema = z.object({
   metrics: z.unknown(),
   overfitting: z.unknown(),
   errorCode: z.string().nullable(),
+  goalId: z.string().nullish(),
+  goalOutcome: z.string().nullish(),
   createdAt: z.string(),
 });
 

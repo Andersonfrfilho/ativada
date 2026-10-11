@@ -8,6 +8,9 @@ export const runSchema = z.object({
   status: z.enum(RUN_STATUS),
   symbol: z.string(),
   timeframe: z.string(),
+  periodStart: z.number().optional(),
+  goalId: z.string().nullish(),
+  goalOutcome: z.string().nullish(),
 });
 
 export const equityPointSchema = z.object({

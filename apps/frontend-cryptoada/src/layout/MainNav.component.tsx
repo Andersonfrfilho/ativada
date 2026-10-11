@@ -12,6 +12,7 @@ function navClassName({ isActive }: { readonly isActive: boolean }): string | un
 const LINKS: readonly { readonly to: string; readonly label: string; readonly isExact: boolean }[] =
   [
     { to: ROUTE_PATH.OVERVIEW, label: 'Visão geral', isExact: true },
+    { to: ROUTE_PATH.GOALS, label: 'Metas', isExact: false },
     { to: ROUTE_PATH.BACKTESTS, label: 'Backtests', isExact: false },
     { to: ROUTE_PATH.STRATEGIES, label: 'Estratégias', isExact: false },
     { to: ROUTE_PATH.ALERTS, label: 'Alertas', isExact: false },

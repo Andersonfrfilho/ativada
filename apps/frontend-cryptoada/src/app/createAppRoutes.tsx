@@ -8,6 +8,8 @@ import { StrategiesPage } from '../strategies/StrategiesPage.page.js';
 import { StrategyDetailPage } from '../strategies/StrategyDetailPage.page.js';
 import { AccountPage } from '../account/AccountPage.page.js';
 import { AlertsPage } from '../alerts/AlertsPage.page.js';
+import { GoalDetailPage } from '../goals/GoalDetailPage.page.js';
+import { GoalsPage } from '../goals/GoalsPage.page.js';
 import { AppShell } from '../layout/AppShell.component.js';
 import { NotFoundPage } from '../layout/NotFoundPage.page.js';
 import { RootLayout } from '../layout/RootLayout.component.js';
@@ -38,6 +40,8 @@ export function createAppRoutes(): RouteObject[] {
                 { path: ROUTE_PATH.STRATEGIES, element: <StrategiesPage /> },
                 { path: ROUTE_PATH.STRATEGY, element: <StrategyDetailPage /> },
                 { path: ROUTE_PATH.ALERTS, element: <AlertsPage /> },
+                { path: ROUTE_PATH.GOALS, element: <GoalsPage /> },
+                { path: ROUTE_PATH.GOAL, element: <GoalDetailPage /> },
                 { path: ROUTE_PATH.ACCOUNT, element: <AccountPage /> },
               ],
             },

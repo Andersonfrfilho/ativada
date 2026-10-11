@@ -13,6 +13,8 @@ export const ROUTE_PATH = {
   STRATEGIES: '/estrategias',
   STRATEGY: '/estrategias/:strategyId',
   ALERTS: '/alertas',
+  GOALS: '/metas',
+  GOAL: '/metas/:goalId',
   LOGIN: '/login',
   AUTH_CALLBACK: '/auth/callback',
 } as const;
@@ -27,5 +29,6 @@ export const API_PATH = {
   CANDLES: '/v1/markets/candles',
   STRATEGIES: '/v1/strategies',
   PRICE_ALERTS: '/v1/price-alerts',
+  GOALS: '/v1/goals',
   STREAM_TICKETS: '/v1/stream/tickets',
 } as const;

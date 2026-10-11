@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import { ActiveGoalCard } from '../goals/ActiveGoalCard.component.js';
 import { useRunDetailQuery } from '../runs/runs.query.js';
 import { useAppConfig } from '../app/useAppContext.hook.js';
 import { Card } from '../layout/Card.component.js';
@@ -63,6 +64,7 @@ export function OverviewPage(): ReactElement {
       {activeRun.data === undefined || activeRun.data === null ? null : (
         <ActiveSimulation run={activeRun.data} />
       )}
+      <ActiveGoalCard />
       <div className={styles.marketBar}>
         <MarketStatusBadge />
       </div>
