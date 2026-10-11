@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { useState, type ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import { Link, useParams } from 'react-router';
 
 import { HTTP_STATUS } from '@cryptoada/environment';
@@ -8,10 +8,11 @@ import { ROUTE_PATH } from '../app/app.constant.js';
 import { ApiError } from '../http/api.error.js';
 import runStyles from '../runs/Runs.module.css';
 import controls from '../styles/Controls.module.css';
-import { ParameterEditor, type SavedVersion } from './ParameterEditor.component.js';
+import { ParameterEditor } from './ParameterEditor.component.js';
 import { VersionsCard } from './VersionsCard.component.js';
 import { WalkForwardCard } from './WalkForwardCard.component.js';
 import { useStrategyQuery, useVersionsQuery } from './strategy.query.js';
+import { useStrategyEditing } from './useStrategyEditing.hook.js';
 import { shortHash, type StrategyDetail, type StrategyVersion } from './strategy.validation.js';
 
 function LoadFailure({ error }: { readonly error: Error | null }): ReactElement {
@@ -32,10 +33,8 @@ type DetailBodyProps = {
 };
 
 function DetailBody({ strategy, versions }: DetailBodyProps): ReactElement {
-  const [baseId, setBaseId] = useState<string | undefined>(undefined);
-  const [saved, setSaved] = useState<SavedVersion | undefined>(undefined);
-  const latest = versions[0];
-  const base = versions.find((version) => version.id === baseId) ?? latest;
+  const editing = useStrategyEditing(strategy.id, versions);
+  const { base, latest } = editing;
   if (latest === undefined || base === undefined)
     return <p>Esta estratégia ainda não tem versão.</p>;
   return (
@@ -49,23 +48,13 @@ function DetailBody({ strategy, versions }: DetailBodyProps): ReactElement {
       </header>
       <ParameterEditor
         key={base.id}
-        strategyId={strategy.id}
         base={base}
-        knownVersionIds={versions.map((version) => version.id)}
-        saved={saved}
-        onSaved={(result) => {
-          setSaved(result);
-          setBaseId(result.version.id);
-        }}
+        saved={editing.saved}
+        isSaving={editing.isSaving}
+        saveError={editing.saveError}
+        onSave={editing.save}
       />
-      <VersionsCard
-        versions={versions}
-        baseId={base.id}
-        onUseAsBase={(versionId) => {
-          setSaved(undefined);
-          setBaseId(versionId);
-        }}
-      />
+      <VersionsCard versions={versions} baseId={base.id} onUseAsBase={editing.selectBase} />
       <WalkForwardCard version={latest} />
     </div>
   );

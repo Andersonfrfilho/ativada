@@ -5,7 +5,6 @@ import { ApiError } from '../http/api.error.js';
 import type { FormProblem } from '../forms/ProblemList.component.js';
 import { applyLeafEdits, listLeaves, type Leaf } from './config-leaves.js';
 import type { ParameterEditorProps } from './ParameterEditor.component.js';
-import { useAddVersionMutation } from './strategy.mutation.js';
 
 const CONFIG_PREFIX = 'config.';
 const REASON_TEXT: Readonly<Record<string, string>> = {
@@ -42,11 +41,10 @@ export type ParameterEditorState = {
 };
 
 export function useParameterEditor(props: ParameterEditorProps): ParameterEditorState {
-  const { strategyId, base, knownVersionIds, onSaved } = props;
+  const { base, isSaving, saveError, onSave } = props;
   const leaves = listLeaves(base.config);
   const [edits, setEdits] = useState<Readonly<Record<string, string>>>({});
   const [clientProblems, setClientProblems] = useState<readonly FormProblem[]>([]);
-  const add = useAddVersionMutation();
 
   function save(): void {
     const result = applyLeafEdits(base.config, edits);
@@ -56,23 +54,14 @@ export function useParameterEditor(props: ParameterEditorProps): ParameterEditor
       message: p.message,
     }));
     setClientProblems(found);
-    if (found.length > 0) return;
-    add.mutate(
-      { strategyId, config: result.config },
-      {
-        onSuccess: ({ version }) => {
-          setEdits({});
-          onSaved({ version, isNew: !knownVersionIds.includes(version.id) });
-        },
-      },
-    );
+    if (found.length === 0) onSave(result.config);
   }
 
   return {
     leaves,
     edits,
-    problems: clientProblems.length > 0 ? clientProblems : problemsFromError(add.error, leaves),
-    canSave: Object.keys(edits).length > 0 && !add.isPending,
+    problems: clientProblems.length > 0 ? clientProblems : problemsFromError(saveError, leaves),
+    canSave: Object.keys(edits).length > 0 && !isSaving,
     setEdit: (key, value) => setEdits((current) => ({ ...current, [key]: value })),
     save,
   };

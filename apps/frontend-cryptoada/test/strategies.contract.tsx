@@ -188,6 +188,45 @@ describe('strategy editor', () => {
     expect(body.config.risk).toEqual(CLASSIC_CONFIG.risk);
   });
 
+  test('the message survives the list refetch that already brings the new version (editor is not remounted mid-save)', async () => {
+    const version3 = buildVersion({ id: 'version-3', version: 3, configHash: 'c'.repeat(64) });
+    let saved = false;
+    const routes: readonly FakeRoute[] = [
+      {
+        method: 'POST',
+        path: '/v1/strategies/strategy-1/versions',
+        respond: (): Response => {
+          saved = true;
+          return dataResponse({ version: version3 }, HTTP_STATUS.CREATED);
+        },
+      },
+      {
+        method: 'GET',
+        path: '/v1/strategies/strategy-1/versions',
+        respond: (): Response =>
+          pageResponse(saved ? [version3, VERSION_2, VERSION_1] : [VERSION_2, VERSION_1]),
+      },
+      {
+        method: 'GET',
+        path: '/v1/strategies/strategy-1',
+        respond: (): Response =>
+          dataResponse({ ...OWN, latestVersion: saved ? version3 : VERSION_2 }),
+      },
+    ];
+    renderApp({
+      path: '/estrategias/strategy-1',
+      isAuthenticated: true,
+      routes: strategyRoutes(routes),
+    });
+    fireEvent.change(await screen.findByLabelText('Limiar de compra'), {
+      target: { value: '2.5' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar como nova versão' }));
+    expect(await screen.findByText(/Versão 3 criada/)).toBeDefined();
+    await waitFor(() => expect(screen.getByText(/base: versão 3/)).toBeDefined());
+    expect(screen.getByText(/Versão 3 criada/)).toBeDefined();
+  });
+
   test('the same configuration answers with the existing version and says nothing changed', async () => {
     await open([
       {

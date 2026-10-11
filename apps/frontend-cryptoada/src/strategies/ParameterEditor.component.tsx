@@ -53,11 +53,12 @@ function LeafGroups({ leaves, edits, onEdit }: LeafGroupsProps): ReactElement {
 }
 
 export type ParameterEditorProps = {
-  readonly strategyId: string;
   readonly base: StrategyVersion;
-  readonly knownVersionIds: readonly string[];
   readonly saved: SavedVersion | undefined;
-  readonly onSaved: (saved: SavedVersion) => void;
+  readonly isSaving: boolean;
+  readonly saveError: Error | null;
+  // A mutação mora no pai: trocar a base remonta o editor, e o callback de uma mutação não sobrevive a isso.
+  readonly onSave: (config: unknown) => void;
 };
 
 // Edita só os números e decimais da versão-base; salvar sempre pede uma versão NOVA (a API devolve a mesma se nada mudou).
