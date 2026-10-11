@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
-    "test": "bun test",
+    "test": "bun test --timeout 60000",
     "test:full": "FULL_CONTRACT=1 bun test"
   },
   "devDependencies": {

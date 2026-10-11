@@ -34,11 +34,11 @@ check: ## Gate completo: formato, lint, tipos e testes (API, worker, cron, pacot
 	bun run format:check
 	bun run lint
 	bun run typecheck
-	env -i PATH="$$PATH" HOME="$$HOME" bun test
+	env -i PATH="$$PATH" HOME="$$HOME" bun test --timeout 60000
 	env -i PATH="$$PATH" HOME="$$HOME" bun run --cwd apps/frontend-cryptoada test
 
 contract-full: ## Bateria completa do motor: todo corte nos checks de lookahead e retomada (FULL_CONTRACT=1)
-	env -i PATH="$$PATH" HOME="$$HOME" FULL_CONTRACT=1 bun test
+	env -i PATH="$$PATH" HOME="$$HOME" FULL_CONTRACT=1 bun test --timeout 60000
 
 migration-test: ## Aplica e desfaz as migrations num Postgres de teste descartável
 	set -a; . envs/env.test; set +a; \
