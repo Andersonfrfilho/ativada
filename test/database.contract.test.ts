@@ -58,6 +58,7 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'createTelegramLinkConsumer',
   'createTelegramLinkRepository',
   'isDatabaseError',
+  'isFatalSessionEnd',
   'isForeignKeyViolation',
   'openDatabase',
   'parseAccountId',
