@@ -8,7 +8,7 @@ Contexto operacional do **CryptoAdA**. Produto e regras em `README.md`,
 Spec 001 em andamento (progresso real em `specs/001-simulador-e-sinais/evidence.md`). Prontos: Fase 0
 (fundação), Fase 0b (contas, login, isolamento entre usuários, LGPD) e Fase 1 (candles da Binance:
 backfill, Fear & Greed e stream ao vivo com recuperação de lacuna). Fase 2 (o motor em
-`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) a estratégia de exemplo por usuário (T3.5) e a fila durável de execuções com tetos por usuário (T3.6); Fase 4 com a simulação ao vivo no worker (T4.1), a paridade com o backtest (T4.2) e a sobrevivência do saldo (T4.3, piso e meta de dobro em `GET /v1/runs/:id`); tempo real com `LISTEN/NOTIFY` → WebSocket `GET /v1/stream` (T4.4) e o ticker público da Binance (T4.7); alerta de sinal no Telegram com caixa de saída durável e despachante com retry (T4.5) e registro cronológico em CSV (T4.6); Fase 4b com o motor de metas (T4b.1), o próximo gatilho (T4b.2), as rotas `/v1/goals*` com a avaliação em cache (T4b.3) e a simulação ao vivo atrelada a uma meta (T4b.4), o plano de operação (T4b.5), os alertas de preço (T4b.6 e T4b.7) e Seus ativos (T4b.8); Fase 5 do painel: T5.1 (app React/Vite PWA, login PKCE pelo token handler, aviso de simulação em toda rota), T5.1b (conta) e T5.2 (visão geral com o crédito do Fear & Greed); próximo passo: T5.3 do `tasks.md`.
+`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) a estratégia de exemplo por usuário (T3.5) e a fila durável de execuções com tetos por usuário (T3.6); Fase 4 com a simulação ao vivo no worker (T4.1), a paridade com o backtest (T4.2) e a sobrevivência do saldo (T4.3, piso e meta de dobro em `GET /v1/runs/:id`); tempo real com `LISTEN/NOTIFY` → WebSocket `GET /v1/stream` (T4.4) e o ticker público da Binance (T4.7); alerta de sinal no Telegram com caixa de saída durável e despachante com retry (T4.5) e registro cronológico em CSV (T4.6); Fase 4b com o motor de metas (T4b.1), o próximo gatilho (T4b.2), as rotas `/v1/goals*` com a avaliação em cache (T4b.3) e a simulação ao vivo atrelada a uma meta (T4b.4), o plano de operação (T4b.5), os alertas de preço (T4b.6 e T4b.7) e Seus ativos (T4b.8); Fase 5 do painel: T5.1 (app React/Vite PWA, login PKCE pelo token handler, aviso de simulação em toda rota), T5.1b (conta), T5.2 (visão geral com o crédito do Fear & Greed), T5.3 (backtests: criar, listar, detalhe com curva, comparar), T5.4 (estratégias: editar gera versão nova, duplicar, apagar, walk-forward) e T5.5 (alertas e WebSocket `/v1/stream`); próximo passo: T5.6 do `tasks.md`.
 
 ## Stack decidida
 
@@ -244,8 +244,24 @@ mão e não cacheia `/v1`). Detalhe e decisões em `specs/001-simulador-e-sinais
   roda os dois.
 - **Env público** (`envs/env.*`): `VITE_API_URL` (alvo do proxy), `VITE_KEYCLOAK_AUTHORIZE_URL`, opcionais
   `VITE_KEYCLOAK_CLIENT_ID` e `VITE_MARKET_SYMBOLS`, e `PANEL_PORT` (porta de `vite`/`vite preview`, só do `vite.config.ts`).
-- **Limites conhecidos.** Séries só crescem: o painel lê até 50 páginas para achar o último ponto (T5.8 resolve com rota
-  de resumo ou tempo real). A API ainda não expõe o valor do Fear & Greed: o painel só credita a fonte.
+- **Tempo real (`src/live/`).** `StreamClient` é puro (socket, temporizador, relógio e sorteio entram por parâmetro, então os
+  testes não dormem): ticket de uso único, renovação dentro do socket, reconexão com espera crescente, `4401` reconecta na
+  hora, `4403` para, `resync` rebusca por REST. Quem liga a tela ao socket é `useLiveStream` (no `AppShell`), e o aviso só
+  invalida as consultas do assunto (`runs` ou `price-alerts`): o REST continua sendo a fonte da verdade. Consulta que o aviso
+  deve refazer fica sob a chave raiz `runs` ou `price-alerts`.
+- **Lista, polling e cursor.** Listas usam `useInfiniteQuery` (botão "Carregar mais"); execução na fila ou rodando é
+  acompanhada por `refetchInterval` (`runPollMilliseconds` em `AppConfig`, 2 s; os testes usam 20 ms). A curva inteira vem do
+  CSV do registro, nunca de dezenas de páginas.
+- **Editor de estratégia.** Os campos saem da própria configuração (`config-leaves.ts`): só número e decimal, com o tipo
+  preservado, e rótulos em `leaf-labels.ts`. O catálogo do walk-forward é espelhado ali (`STATIC_TUNABLE_KEYS`, `RULE_FIELDS`):
+  mudou o catálogo do motor, mude lá também (a API recusa com `400` o que ficar de fora).
+- **E2E ampliado.** `make panel-e2e` agora cria backtests pela tela e a API os roda de verdade (candles diários do seed),
+  compara, edita estratégia, e recebe sinal e alerta de preço pelo WebSocket: o servidor de controle do harness
+  (`scripts/panel-e2e/control-server.ts`) só grava a linha no banco e dá o `pg_notify` que o worker e o ticker dariam; todo o
+  resto é o caminho de produção. O limite de 10 renovações de sessão por minuto vale no E2E: navegue por links, não por
+  `page.goto`.
+- **Limites conhecidos.** A API ainda não expõe o valor do Fear & Greed: o painel só credita a fonte. O histórico de sinais
+  lê páginas de 100 (decrescentes) e esconde o neutro: com muito neutro seguido, "Carregar sinais mais antigos" é preciso.
 
 ## Regras que não se negociam
 

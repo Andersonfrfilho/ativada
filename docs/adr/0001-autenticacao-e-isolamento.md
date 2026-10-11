@@ -1018,7 +1018,17 @@ Implementação em `apps/worker-cryptoada/src/{live,alerts}/` e, no pacote, `ale
 | NOTIFY | O disparo usa o canal `run_events` com `{ kind: 'price_alert', alertId }`: só o ponteiro, sem dono, preço nem par. A API resolve o dono ATIVO pelo banco (`findActiveOwnerId`: conta bloqueada ou apagada não recebe) e entrega aos sockets dele |
 | Dado pessoal | O valor do alerta e a posição (quantidade e preço médio) são dado financeiro pessoal: nunca em log (a API não loga corpo; o erro de validação só leva caminho e motivo), exportados só ao dono, apagados com a conta. O texto do Telegram leva par, sentido, valor do usuário e preço público, nunca nome, id nem chat |
 | Tetos | `PRICE_ALERT_MAX_ENABLED_PER_USER` (alertas ligados) e `USER_ASSET_MAX_PER_USER`, ambos por usuário e validados no boot (RF00b); conferidos sob a trava da linha do dono, então a corrida não passa do teto |
-| Lacuna | O teto de alertas conta os LIGADOS: um usuário pode acumular alertas desligados (disparados) sem limite; a retenção/limpeza fica para depois, junto da tela de alertas (T5.5) |
+| Lacuna | O teto de alertas conta os LIGADOS: um usuário pode acumular alertas desligados (disparados) sem limite. **Fechada na T5.5:** `DELETE /v1/price-alerts/fired` apaga os disparados do dono (filtro de dono, `triggered_at IS NOT NULL`; armados e desligados à mão ficam), exposta como "Limpar disparados" na tela de alertas. Retenção automática segue sem prazo |
+
+### u) Ajustes de API da T5.3 a T5.5 (painel)
+
+| Ponto | Decisão |
+|---|---|
+| Último ponto de uma série | `order=asc\|desc` só em `equity` e `signals` (a visão geral e o histórico de alertas precisam do mais recente; varrer páginas de 100 não escala). O cursor segue sendo o instante e o filtro de dono é o mesmo nas duas direções (`api-runs-test` compara as 200 últimas linhas com o banco); nas demais séries o parâmetro é `400` |
+| Apagar estratégia | `DELETE /v1/strategies/:id` usa a exclusão lógica que o repositório já tinha (`deleted_at`): execuções e resultados continuam do dono. A de exemplo é `409 STRATEGY_IS_EXAMPLE` (o painel oferece "Duplicar"). Estratégia alheia e inexistente respondem o MESMO `404` |
+| Hash da versão | A versão passa a devolver `configHash` (SHA-256 canônico da configuração): é derivado do que o dono já vê e o painel o mostra ao salvar. Continua fora da exportação |
+| Limpar disparados | Ver §t, linha "Lacuna" |
+| Tempo real no painel | Sem mudança de protocolo (§r): ticket por Bearer, renovação no socket, `4401` reconecta, `4403` para, `resync` rebusca por REST. O painel não assina `market:*` nesta etapa (T5.8) |
 
 ## Alternativas rejeitadas
 

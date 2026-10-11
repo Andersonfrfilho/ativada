@@ -241,9 +241,29 @@ nem de PWA (o service worker `public/sw.js` é escrito à mão, guarda só a cas
   (`VITE_MARKET_SYMBOLS`, padrão `BTCUSDT,ETHUSDT`) com o último fechamento de `1h` e a variação de 24 h, e o crédito
   "Fear & Greed Index por alternative.me" com link `rel="noopener noreferrer"` (RF01, D14). A API não tem rota do valor do
   índice: hoje a página só credita a fonte; o cartão do valor entra quando houver rota.
-- **Limite conhecido.** As séries (`equity`, `signals`) só existem em ordem crescente; achar o último ponto lê até 50
-  páginas de 100. Uma simulação com mais de 5.000 pontos mostraria um "último" velho: a rota de resumo (ou `order=desc`)
-  fica para a T5.8, que também troca o polling por `useLiveMarket`.
+- **Último ponto sem varrer a série (T5.3).** `GET /v1/runs/:id/equity` e `/signals` aceitam `order=desc` (padrão `asc`; nas
+  outras séries o parâmetro é `400`): a primeira página já é o ponto mais recente. A visão geral lê UMA página decrescente de
+  100 (saldo de agora e curva recente) e filtra o neutro dos sinais; a curva inteira de um backtest vem do CSV do registro
+  (`export.csv?table=equity`, uma chamada) e é reduzida a no máximo 240 pontos.
+- **Backtests (T5.3).** `/backtests` cria (estratégia e versão, par, timeframe, período em datas UTC, capital, taxa e slippage
+  com os padrões da API; o risco por operação é da VERSÃO e aparece só como nota), lista por cursor (backtests e walk-forwards
+  em listas separadas, que acompanham sozinhas as execuções na fila ou rodando) e marca duas concluídas para comparar. O
+  detalhe (`/backtests/:id`) mostra a posição na fila e o progresso por polling de 2 s, cancela (`POST .../stop`), e na
+  conclusão traz métricas (valor indisponível diz o motivo, nunca zero), curva SVG escrita à mão (retorno acumulado × comprar e
+  segurar), operações por cursor e os custos incluídos. A comparação (`/backtests/comparar?a=&b=`) põe comprar e segurar e as
+  duas execuções lado a lado, avisa quando par ou período diferem e explica os custos sem prometer nada.
+- **Estratégias (T5.4).** `/estrategias` lista, duplica (toda estratégia nasce de uma cópia: a API pede a configuração inteira)
+  e apaga (exclusão lógica; o exemplo não se apaga). `/estrategias/:id` edita os números e decimais da versão-base em formulário
+  gerado da própria configuração (ids, tipos e `schemaVersion` ficam de fora), salva SEMPRE como versão nova (a API devolve a
+  mesma versão, `200`, se nada mudou, e o painel diz isso) mostrando versão e hash curto, lista as versões (cada uma pode virar
+  a base) e pede o walk-forward com uma grade de até 3 parâmetros do catálogo e o teto de 200 combinações conferido antes de
+  enviar. O relatório fora da amostra e o alerta de sobreajuste vêm no mesmo detalhe de execução.
+- **Alertas e tempo real (T5.5).** `/alertas` mostra o histórico de compra e venda da simulação ao vivo (mais novo primeiro),
+  os alertas de preço disparados (com "Limpar disparados", que chama `DELETE /v1/price-alerts/fired`) e as preferências. O
+  painel autenticado abre UM WebSocket (`src/live/`): ticket de uso único por `POST /v1/stream/tickets`, `Origin` da própria
+  origem, renovação dentro do socket antes de o token vencer (sessão renovada antes do ticket), reconexão com espera
+  crescente (teto de 30 s), `4401` reconecta na hora, `4403` para de vez ("Conta inativa") e todo `resync` ou reconexão rebusca
+  por REST (o aviso só diz o que mudou). O selo do cabeçalho mostra "Ao vivo", "Reconectando…" ou "Conta inativa".
 - **Build e segurança.** `vite build` injeta CSP por `<meta>` só no build (`default-src 'self'`, sem `unsafe-inline` nem
   `unsafe-eval`); `VITE_*` é público e só leva URL do Keycloak, `client_id` público e lista de pares. Dev e preview servem
   na origem do painel com proxy de `/v1` (cookie `__Host-` não atravessa origens).
@@ -257,7 +277,8 @@ nem de PWA (o service worker `public/sw.js` é escrito à mão, guarda só a cas
 |---|---|---|
 | `GET` | `/v1/markets/candles?symbol&timeframe&from&to` | Candles para gráfico (pares e timeframes habilitados; `from` incluído, `to` excluído; até 5.000; texto decimal; 60/min) |
 | `GET/POST` | `/v1/strategies` | Listar (por cursor) / criar (nome + configuração validada pelo motor; cria a versão 1) |
-| `GET` | `/v1/strategies/:id` | Estratégia com a versão mais recente |
+| `DELETE` | `/v1/strategies/:id` | (T5.4) Apaga (exclusão lógica: some da lista e do detalhe, execuções e resultados ficam); `204`; a de exemplo é `409 STRATEGY_IS_EXAMPLE`; alheia = `404` idêntico |
+| `GET` | `/v1/strategies/:id` | Estratégia com a versão mais recente (a versão traz `configHash`, o SHA-256 canônico da configuração, desde a T5.4) |
 | `GET/POST` | `/v1/strategies/:id/versions` | Listar versões (da mais nova) / nova versão (configuração igual ⇒ a MESMA versão, `200`; nova ⇒ `201`) |
 | `POST` | `/v1/runs` | Criar backtest ou walk-forward (valida parâmetros, grade e janelas ANTES de aceitar, grava o pedido, enfileira, `202`); fila do usuário cheia ⇒ `429 RUN_QUEUE_FULL`; `live_paper` (T4.1) não leva período: nasce `queued` no candle em curso, sem fim, o worker a reivindica; aceita `survival: { floorRate, doubleRate }` (T4.3; padrão 0,8 e 2) e `goalId` (T4b.4: meta do dono, ligada e do mesmo par; `GET /v1/runs/:id` devolve `goalId` e `goalOutcome`); `409 LIVE_RUN_LIMIT_REACHED` acima do teto de ativas; 20/min |
 | `GET/POST` | `/v1/goals` | (T4b.3, RF13) Listar por cursor / criar meta (`symbol`, `targetRate`, `maxLossRate`, `horizonDays`); teto de 20 (`409 GOAL_LIMIT_REACHED`) |
@@ -265,12 +286,13 @@ nem de PWA (o service worker `public/sw.js` é escrito à mão, guarda só a cas
 | `GET` | `/v1/goals/:goalId/evaluation` | Ranking estratégia × par com veredito `COMPRAR`/`SEGURAR`/`EVITAR` e situação atual (sinal e próximos gatilhos), em `1d`, com cache; 20/min |
 | `GET` | `/v1/goals/:goalId/plan?strategyId` | (T4b.5, RF13) Plano de operação: preço de compra e de saída no tick (o fechamento do próximo candle que faz o placar e cada regra sinalizarem), alvo e stop de venda com taxas e slippage, data limite e a base `exact`/`indicative`; `strategyId` obrigatório (400), meta ou estratégia alheia = 404 idêntico; cache por último candle; 20/min |
 | `GET/POST` | `/v1/price-alerts` | (T4b.6, RF14) Listar por cursor / criar (`symbol`, `direction`, `value`, `origin` `manual`\|`plan`); teto de alertas ligados (`409 PRICE_ALERT_LIMIT_REACHED`) |
+| `DELETE` | `/v1/price-alerts/fired` | (T5.5, pendência da T4b.6) Apaga de uma vez os alertas já disparados do usuário e devolve `{ deleted }`; armados e desligados à mão ficam |
 | `GET/PATCH/DELETE` | `/v1/price-alerts/:alertId` | Ler / alterar parcialmente (`direction`, `value`, `isEnabled`; religar rearma e respeita o teto) / apagar; alheio = 404 idêntico |
 | `GET` | `/v1/assets` · `/v1/assets/summary` | (T4b.8, RF15) Ativos do usuário por cursor (ordem do par) / resumo: valor atual (USDT), custo, resultado, alvo e stop sobre o preço médio (`targetRate`, `stopRate`), regra do dia (`strategyId` opcional); 20/min |
 | `GET/PUT/PATCH/DELETE` | `/v1/assets/:symbol` | Ler / cadastrar (posição digitada) / `{ side: 'buy', quantity, price }` soma e pondera o médio, `{ side: 'sell', quantity }` desconta (`409 ASSET_INSUFFICIENT_QUANTITY`) / apagar; teto `409 ASSET_LIMIT_REACHED`; alheio = 404 idêntico |
 | `GET` | `/v1/runs` | Execuções do dono, por cursor (filtro `kind`) |
 | `GET` | `/v1/runs/:id` | Status, progresso, métricas, alerta de overfitting, avisos, `queuePosition` (`{ own, overall }` só para `queued`) e, na simulação ao vivo, `survival` (T4.3, RF09): piso e meta de dobro, o tempo até cada um quando atingido e o progresso enquanto não (ADR 0002 "Sobrevivência do saldo (T4.3)") |
-| `GET` | `/v1/runs/:id/equity` · `/trades` · `/signals` · `/orders` · `/fills` · `/windows` | Séries do painel, por cursor (`/windows` só no walk-forward) |
+| `GET` | `/v1/runs/:id/equity` · `/trades` · `/signals` · `/orders` · `/fills` · `/windows` | Séries do painel, por cursor (`/windows` só no walk-forward). `equity` e `signals` aceitam `order=asc\|desc` (T5.3; `desc` começa pelo mais recente, nas outras séries é `400`) |
 | `POST` | `/v1/runs/:id/stop` | Cancelar execução `queued`/`running`, inclusive a simulação ao vivo (idempotente; `409` se já terminou) |
 | `GET` | `/v1/runs/:id/export.csv?table=trades\|signals\|fills\|equity\|windows` | Registro em CSV, em fluxo, com proteção contra injeção de fórmula |
 | `GET` | `/v1/runs/:id/log.csv` | (T4.6, RF12) Registro cronológico — sinais com o motivo, ordens e preenchimentos numa linha do tempo só (no mesmo candle: preenchimento, sinal, ordem) —, em fluxo por páginas, só do dono, cabeçalho fixo de 21 colunas, tempos em UTC ISO, decimais em texto exato, proteção contra injeção de fórmula; cota do `export.csv` |
