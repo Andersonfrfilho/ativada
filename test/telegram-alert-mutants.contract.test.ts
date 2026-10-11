@@ -84,7 +84,11 @@ const MUTANTS: readonly AlertsSourceMutant[] = [
   },
   {
     name: 'SIDE_LABELS_SWAPPED',
-    edits: edit(FORMAT, "{ BUY: 'COMPRA', SELL: 'VENDA' }", "{ BUY: 'VENDA', SELL: 'COMPRA' }"),
+    edits: edit(
+      FORMAT,
+      "[ALERT_SIDE.BUY]: 'COMPRA',\n  [ALERT_SIDE.SELL]: 'VENDA',",
+      "[ALERT_SIDE.BUY]: 'VENDA',\n  [ALERT_SIDE.SELL]: 'COMPRA',",
+    ),
   },
   {
     name: 'HIT_RATE_NOT_SCALED_TO_PERCENT',

@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { SignalAlertSide } from '@cryptoada/database';
+import { ALERT_SIDE, type SignalAlertSide } from '@cryptoada/database';
 
 import {
   SIMULATED_ACTION,
@@ -9,7 +9,10 @@ import {
 import { TELEGRAM_MESSAGE_MAX_LENGTH } from './alerts.constant.js';
 import { formatPercent } from './format-percent.js';
 
-const SIDE_LABEL: Readonly<Record<SignalAlertSide, string>> = { BUY: 'COMPRA', SELL: 'VENDA' };
+const SIDE_LABEL: Readonly<Record<SignalAlertSide, string>> = {
+  [ALERT_SIDE.BUY]: 'COMPRA',
+  [ALERT_SIDE.SELL]: 'VENDA',
+};
 const REGIME_LABEL: Readonly<Record<string, string>> = {
   trending: 'tendência',
   ranging: 'lateral',
@@ -23,7 +26,7 @@ const NO_HIT_RATE = 'Acerto histórico: sem walk-forward concluído para esta ve
 function simulatedActionText(side: SignalAlertSide, action: SimulatedAction): string {
   if (action === SIMULATED_ACTION.ENTER) return 'entrar comprado na abertura do próximo candle';
   if (action === SIMULATED_ACTION.EXIT) return 'sair da posição na abertura do próximo candle';
-  return side === 'BUY'
+  return side === ALERT_SIDE.BUY
     ? 'nenhuma (carteira já posicionada ou entrada bloqueada)'
     : 'nenhuma (sem posição aberta para vender)';
 }
