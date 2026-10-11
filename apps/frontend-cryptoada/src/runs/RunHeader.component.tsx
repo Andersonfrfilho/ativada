@@ -2,7 +2,8 @@
 import type { ReactElement } from 'react';
 
 import { formatDate, formatSymbol } from '../format/format.js';
-import { describeVersion, shortHash } from '../strategies/strategy.validation.js';
+import { shortHash } from '../strategies/strategy.validation.js';
+import { describeLookup, lookupVersion } from '../strategies/version-index.js';
 import { useVersionIndexQuery } from '../strategies/strategy.query.js';
 import { RUN_KIND, STATUS_LABEL } from './run.constant.js';
 import styles from './Runs.module.css';
@@ -18,7 +19,7 @@ export type RunHeaderProps = { readonly run: Run };
 
 export function RunHeader({ run }: RunHeaderProps): ReactElement {
   const index = useVersionIndexQuery();
-  const label = index.data?.get(run.strategyVersionId);
+  const lookup = lookupVersion(index, run.strategyVersionId);
   return (
     <header>
       <h1 className={styles.title}>
@@ -30,14 +31,12 @@ export function RunHeader({ run }: RunHeaderProps): ReactElement {
           : `${formatDate(run.periodStart)} a ${formatDate(run.periodEnd)}`}{' '}
         · {STATUS_LABEL[run.status]}
       </p>
-      {index.data === undefined ? null : (
-        <p className={styles.sub}>
-          {describeVersion(label)}
-          {label === undefined ? null : (
-            <span className={styles.num}> · {shortHash(label.configHash)}</span>
-          )}
-        </p>
-      )}
+      <p className={styles.sub}>
+        {describeLookup(lookup)}
+        {lookup.kind === 'found' ? (
+          <span className={styles.num}> · {shortHash(lookup.label.configHash)}</span>
+        ) : null}
+      </p>
     </header>
   );
 }

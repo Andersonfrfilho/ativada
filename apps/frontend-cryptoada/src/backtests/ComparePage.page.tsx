@@ -11,7 +11,7 @@ import { toRatioLine } from '../runs/curve-lines.js';
 import { parseMetrics, type RunDetail, type RunMetrics } from '../runs/run.validation.js';
 import { useEquityCurveQuery, useRunDetailQuery } from '../runs/runs.query.js';
 import { useVersionIndexQuery } from '../strategies/strategy.query.js';
-import { describeVersion } from '../strategies/strategy.validation.js';
+import { describeLookup, lookupVersion } from '../strategies/version-index.js';
 import controls from '../styles/Controls.module.css';
 import { CompareCosts } from './CompareCosts.component.js';
 import { CompareTable } from './CompareTable.component.js';
@@ -72,7 +72,7 @@ function ComparisonBody({
 }): ReactElement {
   const index = useVersionIndexQuery();
   const label = (side: Side, name: string): string =>
-    `${name}: ${describeVersion(index.data?.get(side.run.strategyVersionId))}`;
+    `${name}: ${describeLookup(lookupVersion(index, side.run.strategyVersionId))}`;
   return (
     <>
       {isSameScope(first.run, second.run) ? null : (

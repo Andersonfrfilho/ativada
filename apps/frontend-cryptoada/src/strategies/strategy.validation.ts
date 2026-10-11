@@ -41,9 +41,3 @@ const SHORT_HASH_LENGTH = 8;
 export function shortHash(configHash: string): string {
   return configHash.slice(0, SHORT_HASH_LENGTH);
 }
-
-export function describeVersion(label: VersionLabel | undefined): string {
-  return label === undefined
-    ? 'Estratégia removida'
-    : `${label.strategyName} · versão ${label.version}`;
-}

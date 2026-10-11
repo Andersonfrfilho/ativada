@@ -7,9 +7,12 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 
+import type { z } from '@cryptoada/environment';
+
 import { API_PATH } from '../app/app.constant.js';
 import { useApiClient } from '../app/useAppContext.hook.js';
-import type { Page } from '../http/api-client.js';
+import type { ApiClient, Page } from '../http/api-client.js';
+import type { VersionIndex } from './version-index.js';
 import {
   strategyDetailSchema,
   strategySchema,
@@ -93,43 +96,68 @@ export function useVersionsQuery(strategyId: string): UseQueryResult<StrategyVer
   });
 }
 
-// A execução só guarda o id da versão: este índice diz de qual estratégia e versão ela veio.
-export function useVersionIndexQuery(): UseQueryResult<ReadonlyMap<string, VersionLabel>> {
+const MAX_INDEX_PAGES = 20;
+
+async function readAllPages<TItem>(
+  client: ApiClient,
+  params: { readonly base: string; readonly schema: z.ZodType<TItem> },
+): Promise<TItem[]> {
+  const items: TItem[] = [];
+  let cursor: string | null = FIRST_PAGE;
+  for (let page = 0; page < MAX_INDEX_PAGES; page += 1) {
+    // Páginas em sequência: o cursor da próxima só existe depois desta.
+    const result = await client.requestPage({
+      path: pagePath(params.base, PAGE_SIZE, cursor),
+      schema: params.schema,
+    });
+    items.push(...result.items);
+    if (result.nextCursor === null) break;
+    cursor = result.nextCursor;
+  }
+  return items;
+}
+
+function toLabel(strategy: Strategy, version: StrategyVersion): [string, VersionLabel] {
+  return [
+    version.id,
+    {
+      strategyId: strategy.id,
+      strategyName: strategy.name,
+      version: version.version,
+      configHash: version.configHash,
+    },
+  ];
+}
+
+// A execução só guarda o id da versão: este índice diz de qual estratégia e versão ela veio. Uma estratégia cujas versões
+// falham não derruba o índice; ele só deixa de ser "completo".
+export function useVersionIndexQuery(): UseQueryResult<VersionIndex> {
   const client = useApiClient();
   return useQuery({
     queryKey: [STRATEGY_QUERY_ROOT, 'version-index'],
     staleTime: STALE_MILLISECONDS,
     queryFn: async () => {
-      const strategies = (
-        await client.requestPage({
-          path: pagePath(API_PATH.STRATEGIES, PAGE_SIZE, null),
-          schema: strategySchema,
-        })
-      ).items;
-      const pages = await Promise.all(
+      const strategies = await readAllPages(client, {
+        base: API_PATH.STRATEGIES,
+        schema: strategySchema,
+      });
+      const settled = await Promise.allSettled(
         strategies.map(async (strategy) => ({
           strategy,
-          versions: (
-            await client.requestPage({
-              path: pagePath(`${API_PATH.STRATEGIES}/${strategy.id}/versions`, PAGE_SIZE, null),
-              schema: versionSchema,
-            })
-          ).items,
+          versions: await readAllPages(client, {
+            base: `${API_PATH.STRATEGIES}/${strategy.id}/versions`,
+            schema: versionSchema,
+          }),
         })),
       );
-      return new Map(
-        pages.flatMap(({ strategy, versions }) =>
-          versions.map((version): [string, VersionLabel] => [
-            version.id,
-            {
-              strategyId: strategy.id,
-              strategyName: strategy.name,
-              version: version.version,
-              configHash: version.configHash,
-            },
-          ]),
-        ),
-      );
+      const labels = new Map<string, VersionLabel>();
+      for (const result of settled) {
+        if (result.status !== 'fulfilled') continue;
+        for (const version of result.value.versions) {
+          labels.set(...toLabel(result.value.strategy, version));
+        }
+      }
+      return { labels, isComplete: settled.every((result) => result.status === 'fulfilled') };
     },
   });
 }

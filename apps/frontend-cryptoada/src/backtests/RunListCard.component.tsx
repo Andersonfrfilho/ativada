@@ -10,7 +10,7 @@ import { RUN_STATUS, STATUS_LABEL, type RunKind } from '../runs/run.constant.js'
 import runStyles from '../runs/Runs.module.css';
 import { parseMetrics, type Run } from '../runs/run.validation.js';
 import { useRunListQuery } from '../runs/runs.query.js';
-import { describeVersion } from '../strategies/strategy.validation.js';
+import { describeLookup, lookupVersion } from '../strategies/version-index.js';
 import { useVersionIndexQuery } from '../strategies/strategy.query.js';
 import controls from '../styles/Controls.module.css';
 import styles from './Backtests.module.css';
@@ -53,7 +53,7 @@ function RunRow({ run, selection }: RunRowProps): ReactElement {
         <span className={controls.muted}>
           {run.timeframe} · {formatDate(run.periodStart)}
           {run.periodEnd === null ? '' : ` a ${formatDate(run.periodEnd)}`} ·{' '}
-          {describeVersion(index.data?.get(run.strategyVersionId))}
+          {describeLookup(lookupVersion(index, run.strategyVersionId))}
         </span>
       </Link>
       <span className={runStyles.sub}>{STATUS_LABEL[run.status]}</span>
