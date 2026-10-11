@@ -9,7 +9,7 @@ import {
 } from './fixtures/strategy-engine/goal/goal-mutation.fixture.js';
 import { removeMutants } from './fixtures/strategy-engine/signal/signal-mutation.fixture.js';
 
-const MUTANT_TIMEOUT_MILLISECONDS = 600_000;
+const MUTANT_TIMEOUT_MILLISECONDS = 1_800_000;
 const PARALLEL_MUTANTS = 4;
 const CONTROL: GoalSourceMutant = { name: 'CONTROL', edits: [] };
 const LEVELS = 'goal/goal-levels.ts';

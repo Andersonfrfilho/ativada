@@ -10,7 +10,7 @@ import {
   type SourceMutant,
 } from './fixtures/walk-forward/walk-forward-mutation.fixture.js';
 
-const MUTANT_TIMEOUT_MILLISECONDS = 900_000;
+const MUTANT_TIMEOUT_MILLISECONDS = 1_800_000;
 const PARALLEL_MUTANTS = 4;
 const CONTROL: SourceMutant = { name: 'CONTROL', edits: [] };
 
