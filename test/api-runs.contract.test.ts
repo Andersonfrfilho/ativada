@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 
+import { computeBalanceSurvival } from '../packages/strategy-engine/src/survival/compute-balance-survival.js';
 import { expectIndistinguishableNotFound } from './fixtures/not-found-response.fixture.js';
 import {
   buildHourlyCandles,
@@ -483,7 +484,7 @@ describe('POST /v1/runs', () => {
     });
   });
 
-  test('GET lê a curva inteira, página a página: o piso tocado no último ponto de uma série longa é achado', async () => {
+  test('GET acha o piso tocado no último ponto de uma série longa sem trazer a série: no máximo cinco linhas', async () => {
     const { body } = await post(SUBJECT_A, liveBody());
     const created = (body as RunBody).data;
     const start = created['periodStart'] as number;
@@ -496,6 +497,7 @@ describe('POST /v1/runs', () => {
     }));
     harness.runs.seed(created.id, 'equity', points);
     harness.runs.listCalls.equity.length = 0;
+    harness.runs.survivalRowsRead.length = 0;
     const read = await readJson(
       await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${created.id}` }),
     );
@@ -503,8 +505,122 @@ describe('POST /v1/runs', () => {
       floor: { isReached: true, reachedAtCandleTime: start + (count - 1) * HOUR },
       observedMilliseconds: count * HOUR,
     });
-    expect(harness.runs.listCalls.equity).toHaveLength(3);
-    expect(Math.max(...harness.runs.listCalls.equity)).toBeLessThanOrEqual(5_000);
+    expect(harness.runs.listCalls.equity).toHaveLength(0);
+    expect(harness.runs.survivalRowsRead).toHaveLength(1);
+    expect(Math.max(...harness.runs.survivalRowsRead)).toBeLessThanOrEqual(5);
+  });
+
+  test('o custo não cresce com a série: 100 ou 20.000 pontos leem as mesmas poucas linhas', async () => {
+    const rowsReadFor = async (count: number): Promise<number> => {
+      const { body } = await post(SUBJECT_A, liveBody());
+      const created = (body as RunBody).data;
+      const start = created['periodStart'] as number;
+      harness.runs.seed(
+        created.id,
+        'equity',
+        Array.from({ length: count }, (_unused, index) => ({
+          candleTime: start + index * HOUR,
+          equity: String(10_000 + (index % 7)),
+          equityAtLow: String(9_900 + (index % 5)),
+          benchmark: '10000',
+        })),
+      );
+      harness.runs.survivalRowsRead.length = 0;
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${created.id}` });
+      return harness.runs.survivalRowsRead[0] ?? -1;
+    };
+    const small = await rowsReadFor(100);
+    const large = await rowsReadFor(20_000);
+    expect(small).toBeGreaterThan(0);
+    expect(large).toBe(small);
+  });
+
+  test('paridade: a resposta é idêntica à função pura sobre a série completa, em séries de formas diferentes', async () => {
+    const shapes: Record<string, (index: number, count: number) => [number, number]> = {
+      'nunca toca nada': () => [10_100, 9_900],
+      'só o piso': (index, count) => [10_000, index > count / 2 ? 7_900 : 9_500],
+      'só o dobro': (index, count) => [index === count - 1 ? 21_000 : 12_000, 11_000],
+      'dobro antes do piso': (index) => [
+        index === 3 ? 20_000 : 9_000,
+        index === 10 ? 7_000 : 9_000,
+      ],
+      'empates no vale e no pico': (index) => [
+        10_500 + (index % 2) * 300,
+        9_000 + (index % 3) * 200,
+      ],
+      'tudo igual': () => [10_000, 10_000],
+      // O primeiro cruzamento NÃO é o vale mais fundo nem o pico: quem escolhe os pontos precisa dos níveis certos.
+      'piso tocado cedo e vale mais fundo depois': (index) => [10_000, 9_900 - index * 40],
+      'dobro alcançado cedo e pico mais alto depois': (index) => [10_000 + index * 250, 10_000],
+    };
+    for (const [name, shape] of Object.entries(shapes)) {
+      const { body } = await post(SUBJECT_A, liveBody());
+      const created = (body as RunBody).data;
+      const start = created['periodStart'] as number;
+      const count = 60;
+      const warmup = [{ candleTime: start - HOUR, equity: '1', equityAtLow: '1', benchmark: '1' }];
+      const series = Array.from({ length: count }, (_unused, index) => {
+        const [equity, equityAtLow] = shape(index, count);
+        return {
+          candleTime: start + index * HOUR,
+          equity: String(equity),
+          equityAtLow: String(equityAtLow),
+          benchmark: '10000',
+        };
+      });
+      harness.runs.seed(created.id, 'equity', [...warmup, ...series]);
+      const read = await readJson(
+        await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${created.id}` }),
+      );
+      const expected = computeBalanceSurvival({
+        initialBalance: '10000',
+        startTime: start,
+        durationMilliseconds: HOUR,
+        settings: { floorRate: '0.8', doubleRate: '2' },
+        points: [...warmup, ...series].map((point) => ({
+          candleOpenTime: point.candleTime,
+          equity: point.equity,
+          equityAtLow: point.equityAtLow,
+        })),
+      });
+      expect({ name, survival: (read.body as RunBody).data['survival'] }).toStrictEqual({
+        name,
+        survival: expected,
+      });
+      // O teto de simulações ativas por usuário: libera a vaga para a próxima forma.
+      harness.runs.updateRun(created.id, { status: 'cancelled', finishedAt: new Date() });
+    }
+  });
+
+  test('piso e dobro configurados guiam a escolha dos pontos que a leitura traz', async () => {
+    const { body } = await post(
+      SUBJECT_A,
+      liveBody({ survival: { floorRate: '0.9', doubleRate: '1.5' } }),
+    );
+    const created = (body as RunBody).data;
+    const start = created['periodStart'] as number;
+    const series = Array.from({ length: 60 }, (_unused, index) => ({
+      candleTime: start + index * HOUR,
+      equity: String(10_000 + index * 150),
+      equityAtLow: String(9_950 - index * 40),
+      benchmark: '10000',
+    }));
+    harness.runs.seed(created.id, 'equity', series);
+    const read = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${created.id}` }),
+    );
+    const expected = computeBalanceSurvival({
+      initialBalance: '10000',
+      startTime: start,
+      durationMilliseconds: HOUR,
+      settings: { floorRate: '0.9', doubleRate: '1.5' },
+      points: series.map((point) => ({
+        candleOpenTime: point.candleTime,
+        equity: point.equity,
+        equityAtLow: point.equityAtLow,
+      })),
+    });
+    expect((read.body as RunBody).data['survival']).toStrictEqual(expected);
   });
 
   test('backtest e walk-forward não trazem o campo (é do RF09, ao vivo), nem ao criar nem ao ler', async () => {
@@ -512,11 +628,13 @@ describe('POST /v1/runs', () => {
     const created = (body as RunBody).data;
     expect(created['survival']).toBeNull();
     harness.runs.listCalls.equity.length = 0;
+    harness.runs.survivalRowsRead.length = 0;
     const read = await readJson(
       await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${created.id}` }),
     );
     expect((read.body as RunBody).data['survival']).toBeNull();
     expect(harness.runs.listCalls.equity).toHaveLength(0);
+    expect(harness.runs.survivalRowsRead).toHaveLength(0);
   });
 
   test('o piso e o dobro de outro usuário não aparecem: 404 idêntico ao do inexistente', async () => {

@@ -1,14 +1,13 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
   RUN_KIND,
-  type EquityPointInput,
   type OwnerScope,
-  type ResultPage,
   type RunRecord,
   type RunResultRepository,
 } from '@cryptoada/database';
 import {
   computeBalanceSurvival,
+  describeSurvivalLevels,
   ENGINE_TIMEFRAME_DURATION_MILLISECONDS,
   parseRunParameters,
   parseSurvivalSettings,
@@ -17,42 +16,14 @@ import {
 } from '@cryptoada/strategy-engine';
 
 export type RunSurvivalDependencies = {
-  readonly results: Pick<RunResultRepository, 'listEquityPoints'>;
+  readonly results: Pick<RunResultRepository, 'listSurvivalPoints'>;
 };
 
 type SurvivalRun = Pick<RunRecord, 'kind' | 'id' | 'periodStart' | 'runParameters' | 'request'>;
 
-const EQUITY_PAGE_SIZE = 5_000;
-
 function readSettingsInput(request: RunRecord['request']): unknown {
   if (typeof request !== 'object' || request === null || Array.isArray(request)) return undefined;
   return Object.getOwnPropertyDescriptor(request, 'survival')?.value;
-}
-
-// Os pontos da curva de patrimônio, página a página pelo cursor estável: nada fica de fora nem se repete.
-async function readPoints(
-  dependencies: RunSurvivalDependencies,
-  params: { readonly scope: OwnerScope; readonly runId: string },
-): Promise<readonly SurvivalPoint[]> {
-  const points: SurvivalPoint[] = [];
-  let after: number | undefined;
-  for (;;) {
-    const page: ResultPage<EquityPointInput, number> | undefined =
-      await dependencies.results.listEquityPoints(params.scope, params.runId, {
-        limit: EQUITY_PAGE_SIZE,
-        after,
-      });
-    if (page === undefined) return points;
-    for (const item of page.items) {
-      points.push({
-        candleOpenTime: item.candleTime,
-        equity: item.equity,
-        equityAtLow: item.equityAtLow,
-      });
-    }
-    if (page.nextCursor === undefined) return points;
-    after = page.nextCursor;
-  }
 }
 
 // Sobrevivência do saldo de uma execução ao vivo (RF09) a partir dos pontos de patrimônio; `null` nos demais tipos.
@@ -72,11 +43,29 @@ export function describeRunSurvival(
   });
 }
 
+// O banco decide, por agregação, quais poucos pontos da curva bastam (primeiro a tocar o piso, primeiro a alcançar a meta, vale,
+// pico e último) e a função pura os recebe no lugar da série: a resposta é a mesma e o custo não cresce com a execução.
 export async function readRunSurvival(
   dependencies: RunSurvivalDependencies,
   params: { readonly scope: OwnerScope; readonly run: SurvivalRun },
 ): Promise<BalanceSurvival | null> {
-  if (params.run.kind !== RUN_KIND.LIVE_PAPER) return null;
-  const points = await readPoints(dependencies, { scope: params.scope, runId: params.run.id });
-  return describeRunSurvival(params.run, points);
+  const { run } = params;
+  if (run.kind !== RUN_KIND.LIVE_PAPER) return null;
+  const parameters = parseRunParameters(run.runParameters);
+  const levels = describeSurvivalLevels({
+    initialBalance: parameters.initialBalance,
+    settings: parseSurvivalSettings(readSettingsInput(run.request)),
+  });
+  const points = await dependencies.results.listSurvivalPoints(params.scope, run.id, {
+    startTime: run.periodStart,
+    ...levels,
+  });
+  return describeRunSurvival(
+    run,
+    (points ?? []).map((point) => ({
+      candleOpenTime: point.candleTime,
+      equity: point.equity,
+      equityAtLow: point.equityAtLow,
+    })),
+  );
 }

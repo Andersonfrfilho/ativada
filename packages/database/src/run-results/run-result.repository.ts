@@ -18,6 +18,7 @@ import {
   listSignals,
 } from './run-result-list.js';
 import { listRunLog } from './run-log-list.js';
+import { listSurvivalPoints } from './run-survival-points.js';
 import { listWindows } from './run-window-list.js';
 import { writeOrders, writePositions } from './run-result-upsert.js';
 import type { WriteRequest } from './run-result-write.types.js';
@@ -26,6 +27,7 @@ import type {
   ListResultsParams,
   ResultPage,
   RunResultRepository,
+  SurvivalPointInput,
 } from './run-result.types.js';
 
 type Database = ReturnType<typeof readOpenDatabase>['database'];
@@ -90,5 +92,13 @@ export function createRunResultRepository(handle: DatabaseHandle): RunResultRepo
     listEquityPoints: lister(database, listEquityPoints),
     listWindows: lister(database, listWindows),
     listLog: lister(database, listRunLog),
+    listSurvivalPoints: async (
+      scope,
+      runId,
+      params,
+    ): Promise<readonly SurvivalPointInput[] | undefined> => {
+      if (!(await isOwnedRun(database, scope, runId))) return undefined;
+      return listSurvivalPoints({ executor: database, scope, runId, params });
+    },
   };
 }

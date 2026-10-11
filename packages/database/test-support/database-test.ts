@@ -40,6 +40,7 @@ import {
   checkWindowBatchIsAtomic,
 } from './run-batch-checks.js';
 import { checkResultPagination } from './run-result-page-checks.js';
+import { checkSurvivalPoints } from './run-survival-checks.js';
 import {
   checkCommandsAndForeignKey,
   checkOrderMonotonicity,
@@ -126,6 +127,7 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkRunRepository(context);
   const batch = await checkLargeBatch(context);
   await checkResultPagination(context, batch);
+  await checkSurvivalPoints(context);
   await checkOversizedOrderBatch(context);
   await checkBatchIsAtomic(context);
   await checkOrderMonotonicity(context);

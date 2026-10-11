@@ -113,6 +113,8 @@ export type {
   ResultPage,
   RunResultRepository,
   SignalInput,
+  SurvivalPointInput,
+  SurvivalPointsParams,
   WalkForwardWindowInput,
 } from './run-results/run-result.types.js';
 export {

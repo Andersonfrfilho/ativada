@@ -111,6 +111,15 @@ export type WalkForwardWindowInput = {
 // `written` conta linhas inseridas ou avançadas; o reenvio idêntico devolve 0.
 export type AppendResult = { readonly written: number };
 
+// A leitura da sobrevivência do saldo: o início da simulação e os dois níveis (texto decimal) que definem o piso e a meta.
+export type SurvivalPointsParams = {
+  readonly startTime: number;
+  readonly floorLevel: string;
+  readonly targetLevel: string;
+};
+
+export type SurvivalPointInput = Pick<EquityPointInput, 'candleTime' | 'equity' | 'equityAtLow'>;
+
 export type ListResultsParams<TCursor> = {
   readonly limit: number;
   readonly after: TCursor | undefined;
@@ -152,6 +161,12 @@ export type RunResultRepository = {
   readonly listPositions: ListOf<PositionInput, PositionCursor>;
   readonly listEquityPoints: ListOf<EquityPointInput, number>;
   readonly listWindows: ListOf<WalkForwardWindowInput, number>;
+  // No máximo cinco pontos da curva de patrimônio (os que decidem piso, dobro, vale, pico e último), nunca a série inteira.
+  readonly listSurvivalPoints: (
+    scope: OwnerScope,
+    runId: string,
+    params: SurvivalPointsParams,
+  ) => Promise<readonly SurvivalPointInput[] | undefined>;
   // O registro cronológico (sinais, ordens e preenchimentos) por cursor, para o CSV do registro (RF12).
   readonly listLog: ListOf<RunLogEntry, RunLogCursor>;
 };

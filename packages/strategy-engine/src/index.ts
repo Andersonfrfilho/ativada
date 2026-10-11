@@ -179,6 +179,7 @@ export {
 export { reconcileRunMetrics } from './metrics/reconcile-run-metrics.js';
 export * from './walk-forward/index.js';
 export { computeBalanceSurvival } from './survival/compute-balance-survival.js';
+export { describeSurvivalLevels } from './survival/survival-levels.js';
 export { parseSurvivalSettings } from './survival/survival-settings.schema.js';
 export * from './survival/survival.constant.js';
 export { SurvivalInputError } from './survival/survival.error.js';

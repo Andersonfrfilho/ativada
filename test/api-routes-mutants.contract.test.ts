@@ -379,37 +379,69 @@ const MUTANTS: readonly SourceMutant[] = [
     name: 'SURVIVAL_SHOWN_FOR_BACKTEST_ON_CREATION',
     edits: edit(
       'runs/run-survival.ts',
-      '  if (run.kind !== RUN_KIND.LIVE_PAPER) return null;\n  const parameters',
-      '  const parameters',
+      'BalanceSurvival | null {\n  if (run.kind !== RUN_KIND.LIVE_PAPER) return null;\n',
+      'BalanceSurvival | null {\n',
     ),
   },
   {
     name: 'SURVIVAL_READ_FOR_BACKTEST',
     edits: edit(
       'runs/run-survival.ts',
-      '  if (params.run.kind !== RUN_KIND.LIVE_PAPER) return null;\n  const points',
-      '  const points',
+      '  if (run.kind !== RUN_KIND.LIVE_PAPER) return null;\n  const parameters = parseRunParameters(run.runParameters);\n  const levels',
+      '  const parameters = parseRunParameters(run.runParameters);\n  const levels',
     ),
   },
   {
-    name: 'SURVIVAL_ONLY_THE_FIRST_PAGE',
+    name: 'SURVIVAL_READS_THE_WHOLE_SERIES_INSTEAD_OF_THE_DECIDING_POINTS',
     edits: edit(
       'runs/run-survival.ts',
-      '    if (page.nextCursor === undefined) return points;',
-      '    return points;',
+      '  const points = await dependencies.results.listSurvivalPoints(params.scope, run.id, {',
+      '  const points = await dependencies.results.listSurvivalPoints(params.scope, run.id + "x", {',
     ),
+  },
+  {
+    name: 'SURVIVAL_READ_WITH_THE_WRONG_FLOOR',
+    edits: edit(
+      'runs/run-survival.ts',
+      '    ...levels,\n',
+      '    floorLevel: "0",\n    targetLevel: levels.targetLevel,\n',
+    ),
+  },
+  {
+    name: 'SURVIVAL_READ_WITH_THE_WRONG_TARGET',
+    edits: edit(
+      'runs/run-survival.ts',
+      '    ...levels,\n',
+      '    floorLevel: levels.floorLevel,\n    targetLevel: "999999999",\n',
+    ),
+  },
+  {
+    name: 'SURVIVAL_POINTS_DISCARDED_ON_READ',
+    edits: edit('runs/run-survival.ts', '    (points ?? []).map(', '    [].map('),
   },
   {
     name: 'SURVIVAL_SETTINGS_IGNORED_ON_READ',
     edits: edit(
       'runs/run-survival.ts',
-      'settings: parseSurvivalSettings(readSettingsInput(run.request)),',
-      'settings: parseSurvivalSettings(undefined),',
+      'settings: parseSurvivalSettings(readSettingsInput(run.request)),\n  });\n  const points',
+      'settings: parseSurvivalSettings(undefined),\n  });\n  const points',
     ),
   },
   {
     name: 'SURVIVAL_STARTS_AT_THE_EPOCH',
-    edits: edit('runs/run-survival.ts', 'startTime: run.periodStart,', 'startTime: 0,'),
+    edits: edit(
+      'runs/run-survival.ts',
+      '    startTime: run.periodStart,\n    ...levels,',
+      '    startTime: 0,\n    ...levels,',
+    ),
+  },
+  {
+    name: 'SURVIVAL_SCAN_STARTS_AT_THE_EPOCH',
+    edits: edit(
+      'runs/run-survival.ts',
+      'startTime: run.periodStart,\n    durationMilliseconds',
+      'startTime: 0,\n    durationMilliseconds',
+    ),
   },
   {
     name: 'WARNINGS_NOT_RETURNED_ON_CREATION',

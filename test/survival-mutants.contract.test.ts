@@ -13,6 +13,7 @@ const MUTANT_TIMEOUT_MILLISECONDS = 300_000;
 const PARALLEL_MUTANTS = 4;
 const CONTROL: SurvivalSourceMutant = { name: 'CONTROL', edits: [] };
 const COMPUTE = 'survival/compute-balance-survival.ts';
+const LEVELS = 'survival/survival-levels.ts';
 const SCAN = 'survival/survival-scan.ts';
 const INPUT = 'survival/survival-input.ts';
 const SETTINGS = 'survival/survival-settings.schema.ts';
@@ -25,17 +26,17 @@ const MUTANTS: readonly SurvivalSourceMutant[] = [
   {
     name: 'FLOOR_LEVEL_ROUNDED_DOWN',
     edits: edit(
-      COMPUTE,
-      'moneyUp(initial.times(input.floorRate))',
-      'initial.times(input.floorRate).toDecimalPlaces(8, EngineDecimal.ROUND_FLOOR)',
+      LEVELS,
+      'moneyUp(input.initial.times(input.floorRate))',
+      'input.initial.times(input.floorRate).toDecimalPlaces(8, 3)',
     ),
   },
   {
     name: 'TARGET_LEVEL_ROUNDED_DOWN',
     edits: edit(
-      COMPUTE,
-      'moneyUp(initial.times(input.doubleRate))',
-      'initial.times(input.doubleRate).toDecimalPlaces(8, EngineDecimal.ROUND_FLOOR)',
+      LEVELS,
+      'moneyUp(input.initial.times(input.doubleRate))',
+      'input.initial.times(input.doubleRate).toDecimalPlaces(8, 3)',
     ),
   },
   {

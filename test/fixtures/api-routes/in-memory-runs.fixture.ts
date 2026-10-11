@@ -58,9 +58,12 @@ export type InMemoryRuns = {
     | 'listEquityPoints'
     | 'listWindows'
     | 'listLog'
+    | 'listSurvivalPoints'
   >;
   // Cada leitura de resultado anota o `limit` pedido: provam que a rota lê por página, nunca a série inteira.
   readonly listCalls: Record<ResultKind | 'log', number[]>;
+  // Quantas linhas cada leitura da sobrevivência devolveu: o custo não pode crescer com a série.
+  readonly survivalRowsRead: number[];
   readonly seed: <TKind extends ResultKind>(
     runId: string,
     kind: TKind,
@@ -108,6 +111,7 @@ export function createInMemoryRuns(
     equity: [],
     windows: [],
   };
+  const survivalRowsRead: number[] = [];
   let sequence = 0;
 
   const ownedRun = (scope: OwnerScope, runId: string): StoredRun | undefined =>
@@ -323,8 +327,47 @@ export function createInMemoryRuns(
     );
   };
 
+  // A referência do que o banco devolve: os cinco pontos que decidem piso, dobro, vale, pico e último (valores de teste são
+  // inteiros pequenos, então `Number` basta aqui; o SQL real é provado no `make database-test`).
+  const listSurvivalPoints: InMemoryRuns['results']['listSurvivalPoints'] = (
+    scope,
+    runId,
+    params,
+  ) => {
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    const counted = storeOf(runId).equity.filter((point) => point.candleTime >= params.startTime);
+    const first = (matches: (point: EquityPointInput) => boolean): EquityPointInput | undefined =>
+      counted.find(matches);
+    const extreme = (
+      better: (candidate: EquityPointInput, current: EquityPointInput) => boolean,
+    ): EquityPointInput | undefined =>
+      counted.reduce<EquityPointInput | undefined>(
+        (best, point) => (best === undefined || better(point, best) ? point : best),
+        undefined,
+      );
+    const chosen = [
+      first((point) => Number(point.equityAtLow) <= Number(params.floorLevel)),
+      first((point) => Number(point.equity) >= Number(params.targetLevel)),
+      extreme((point, best) => Number(point.equityAtLow) < Number(best.equityAtLow)),
+      extreme((point, best) => Number(point.equity) > Number(best.equity)),
+      counted.at(-1),
+    ].filter((point): point is EquityPointInput => point !== undefined);
+    const unique = [...new Map(chosen.map((point) => [point.candleTime, point])).values()].sort(
+      (left, right) => left.candleTime - right.candleTime,
+    );
+    survivalRowsRead.push(unique.length);
+    return Promise.resolve(
+      unique.map((point) => ({
+        candleTime: point.candleTime,
+        equity: point.equity,
+        equityAtLow: point.equityAtLow,
+      })),
+    );
+  };
+
   const results: InMemoryRuns['results'] = {
     listLog,
+    listSurvivalPoints,
     listSignals: lister<SignalInput, number>('signals', (store) => store.signals, {
       isAfter: (row, cursor) => row.candleTime > cursor,
       of: (row) => row.candleTime,
@@ -361,6 +404,7 @@ export function createInMemoryRuns(
     repository,
     results,
     listCalls,
+    survivalRowsRead,
     seed: (runId, kind, rows): void => {
       const store = storeOf(runId);
       (store[kind] as unknown[]).push(...rows);

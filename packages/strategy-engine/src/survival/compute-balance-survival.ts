@@ -1,6 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { EngineDecimal, formatEngineDecimal, type EngineDecimalValue } from '../engine-decimal.js';
-import { moneyUp } from '../money.js';
 import {
   SURVIVAL_PROGRESS_COMPLETE,
   SURVIVAL_PROGRESS_DECIMAL_PLACES,
@@ -8,6 +7,7 @@ import {
   SURVIVAL_VERSION,
 } from './survival.constant.js';
 import { parseSurvivalInput, type ParsedPoint } from './survival-input.js';
+import { computeSurvivalLevels } from './survival-levels.js';
 import { scanSurvival } from './survival-scan.js';
 import type {
   BalanceSurvival,
@@ -80,8 +80,7 @@ function doubleProgress(params: {
 export function computeBalanceSurvival(params: ComputeBalanceSurvivalParams): BalanceSurvival {
   const input = parseSurvivalInput(params);
   const { initial, startTime, durationMilliseconds } = input;
-  const floorLevel = moneyUp(initial.times(input.floorRate));
-  const targetLevel = moneyUp(initial.times(input.doubleRate));
+  const { floorLevel, targetLevel } = computeSurvivalLevels(input);
   const scan = scanSurvival({ points: input.points, startTime, floorLevel, targetLevel });
   const { last } = scan;
   return {
