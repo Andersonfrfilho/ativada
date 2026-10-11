@@ -43,3 +43,8 @@ export function useStreamConnector(): StreamConnector {
   if (connector === undefined) throw new Error(MISSING_PROVIDER);
   return connector;
 }
+
+export function useRenewalProblem(): boolean {
+  const session = useSessionService();
+  return useSyncExternalStore(session.subscribe, session.hasRenewalProblem);
+}

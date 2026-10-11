@@ -18,3 +18,7 @@ export const SESSION_UNAVAILABLE_TEXT = 'Não foi possível verificar sua sessã
 // Respostas assim dizem que a sessão ainda pode existir (limite de uso, servidor ou rede fora).
 export const TRANSIENT_FAILURE_STATUSES: readonly number[] = [429];
 export const SERVER_ERROR_MIN_STATUS = 500;
+// Com a renovação falhando, não insiste a cada requisição: espera um pouco antes de tentar de novo.
+export const RENEWAL_RETRY_MILLISECONDS = 5_000;
+export const RENEWAL_PROBLEM_TEXT =
+  'Não foi possível renovar a sessão agora. Você segue conectado por mais alguns instantes; tentaremos de novo.';

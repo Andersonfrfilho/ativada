@@ -30,3 +30,10 @@
   justify-items: start;
   padding: 24px var(--gutter);
 }
+
+.renewalNotice {
+  padding: 8px var(--gutter);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}

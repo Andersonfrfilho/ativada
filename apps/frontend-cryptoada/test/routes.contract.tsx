@@ -107,6 +107,41 @@ describe('session check failures', () => {
   });
 });
 
+describe('a transient renewal failure with a valid token', () => {
+  test('keeps the panel mounted with a non-blocking notice, and clears it when the renewal works again', async () => {
+    let isDown = false;
+    const routes: readonly FakeRoute[] = [
+      ...QUIET_ROUTES,
+      {
+        method: 'POST',
+        path: '/v1/session/refresh',
+        respond: (): Response =>
+          isDown
+            ? errorResponse(503, 'DOWN')
+            : dataResponse({ accessToken: 'a.e30.s', expiresIn: 300 }),
+      },
+    ];
+    const { session } = renderApp({
+      path: '/',
+      isAuthenticated: true,
+      routes,
+      ownsSessionRoute: true,
+    });
+    await screen.findByRole('heading', { name: 'Visão geral' });
+    isDown = true;
+    await session.renew();
+    const notice = await screen.findByRole('status', { name: 'Aviso da sessão' });
+    expect(notice.textContent).toContain('renovar a sessão');
+    expect(screen.getByRole('heading', { name: 'Visão geral' })).toBeDefined();
+    expect(screen.queryByRole('alert')).toBeNull();
+    isDown = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar renovar agora' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('status', { name: 'Aviso da sessão' })).toBeNull(),
+    );
+  });
+});
+
 describe('login callback', () => {
   test('exchanges the code with the stored verifier and lands on the overview', async () => {
     window.sessionStorage.setItem(

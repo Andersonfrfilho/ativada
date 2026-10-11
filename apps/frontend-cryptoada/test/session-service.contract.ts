@@ -169,3 +169,75 @@ describe('session service', () => {
     expect(session.getSnapshot()).toBe('anonymous');
   });
 });
+
+describe('transient renewal failure while the token is still good', () => {
+  const REAL_EXPIRY = LIFETIME_SECONDS * 1_000;
+  const INSIDE_MARGIN = REAL_EXPIRY - 10_000;
+
+  function setup(): {
+    readonly session: ReturnType<typeof createSessionService>;
+    readonly clock: { now: number };
+    readonly mode: { transient: boolean };
+    readonly token: string;
+  } {
+    const token = createFakeAccessToken({ email: EMAIL });
+    const mode = { transient: false };
+    const clock = { now: 0 };
+    const fake = createFakeFetch([
+      refreshRoute(() => (mode.transient ? errorResponse(503, 'DOWN') : tokenResponse(token))),
+    ]);
+    const session = createSessionService({
+      fetchImplementation: fake.fetch,
+      now: () => clock.now,
+    });
+    return { session, clock, mode, token };
+  }
+
+  test('keeps the session authenticated and the credentials, and flags the renewal problem', async () => {
+    const { session, clock, mode, token } = setup();
+    await session.getAccessToken();
+    mode.transient = true;
+    clock.now = INSIDE_MARGIN;
+    expect(await session.getAccessToken()).toBe(token);
+    expect(session.getSnapshot()).toBe('authenticated');
+    expect(session.hasRenewalProblem()).toBe(true);
+  });
+
+  test('a later successful renewal clears the flag', async () => {
+    const { session, clock, mode } = setup();
+    await session.getAccessToken();
+    mode.transient = true;
+    clock.now = INSIDE_MARGIN;
+    await session.getAccessToken();
+    mode.transient = false;
+    await session.renew();
+    expect(session.hasRenewalProblem()).toBe(false);
+    expect(session.getSnapshot()).toBe('authenticated');
+  });
+
+  test('only when the token really expires without renewal does the session become unavailable', async () => {
+    const { session, clock, mode } = setup();
+    await session.getAccessToken();
+    mode.transient = true;
+    clock.now = REAL_EXPIRY + 1_000;
+    expect(await session.getAccessToken()).toBeUndefined();
+    expect(session.getSnapshot()).toBe('unavailable');
+    expect(session.hasRenewalProblem()).toBe(false);
+  });
+
+  test('a definitive refusal (401) still logs out at once', async () => {
+    const token = createFakeAccessToken({});
+    let calls = 0;
+    const fake = createFakeFetch([
+      refreshRoute(() =>
+        (calls += 1) === 1 ? tokenResponse(token) : errorResponse(401, 'SESSION_INVALID'),
+      ),
+    ]);
+    const clock = { now: 0 };
+    const session = createSessionService({ fetchImplementation: fake.fetch, now: () => clock.now });
+    await session.getAccessToken();
+    clock.now = INSIDE_MARGIN;
+    expect(await session.getAccessToken()).toBeUndefined();
+    expect(session.getSnapshot()).toBe('anonymous');
+  });
+});

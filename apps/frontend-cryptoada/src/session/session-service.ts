@@ -16,6 +16,7 @@ import {
   TRANSIENT_FAILURE_STATUSES,
   type SessionStatus,
 } from './session.constant.js';
+import { RENEWAL_RETRY_MILLISECONDS } from './session.constant.js';
 import { readEmailClaim, tokenResponseSchema } from './session.validation.js';
 
 export type ExchangeCodeParams = {
@@ -26,6 +27,8 @@ export type ExchangeCodeParams = {
 
 export type SessionService = {
   readonly getSnapshot: () => SessionStatus;
+  // A renovação falhou por causa transitória, mas o token de acesso ainda vale: o painel segue de pé com um aviso.
+  readonly hasRenewalProblem: () => boolean;
   readonly subscribe: (listener: () => void) => () => void;
   readonly getAccessToken: () => Promise<string | undefined>;
   readonly renew: () => Promise<string | undefined>;
@@ -40,7 +43,12 @@ export type SessionServiceOptions = {
   readonly now: () => number;
 };
 
-type Credentials = { readonly accessToken: string; readonly expiresAt: number };
+type Credentials = {
+  readonly accessToken: string;
+  // Quando começa a renovar (antes da margem) e quando o token deixa mesmo de valer.
+  readonly expiresAt: number;
+  readonly validUntil: number;
+};
 
 export class SessionExchangeError extends Error {
   constructor() {
@@ -53,10 +61,8 @@ function readCredentials(body: unknown, now: number): Credentials | undefined {
   const parsed = tokenResponseSchema.safeParse(body);
   if (!parsed.success) return undefined;
   const { accessToken, expiresIn } = parsed.data.data;
-  return {
-    accessToken,
-    expiresAt: now + expiresIn * MILLISECONDS_PER_SECOND - TOKEN_EXPIRY_MARGIN_MILLISECONDS,
-  };
+  const validUntil = now + expiresIn * MILLISECONDS_PER_SECOND;
+  return { accessToken, validUntil, expiresAt: validUntil - TOKEN_EXPIRY_MARGIN_MILLISECONDS };
 }
 
 function failureStatus(response: Response): SessionStatus {
@@ -70,6 +76,8 @@ function failureStatus(response: Response): SessionStatus {
 class MemorySessionService implements SessionService {
   private status: SessionStatus = SESSION_STATUS.LOADING;
   private credentials: Credentials | undefined;
+  private renewalProblem = false;
+  private lastRenewalFailureAt = 0;
   private refreshing: Promise<string | undefined> | undefined;
   private exchanging: { readonly code: string; readonly promise: Promise<void> } | undefined;
   private readonly listeners = new Set<() => void>();
@@ -78,6 +86,8 @@ class MemorySessionService implements SessionService {
 
   readonly getSnapshot = (): SessionStatus => this.status;
 
+  readonly hasRenewalProblem = (): boolean => this.renewalProblem;
+
   readonly subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
     return () => void this.listeners.delete(listener);
@@ -85,7 +95,13 @@ class MemorySessionService implements SessionService {
 
   readonly getAccessToken = (): Promise<string | undefined> => {
     const { credentials } = this;
-    if (credentials !== undefined && this.options.now() < credentials.expiresAt) {
+    const now = this.options.now();
+    if (credentials !== undefined && now < credentials.expiresAt) {
+      return Promise.resolve(credentials.accessToken);
+    }
+    const isRetryTooSoon =
+      this.renewalProblem && now - this.lastRenewalFailureAt < RENEWAL_RETRY_MILLISECONDS;
+    if (credentials !== undefined && isRetryTooSoon && now < credentials.validUntil) {
       return Promise.resolve(credentials.accessToken);
     }
     return this.renew();
@@ -116,6 +132,7 @@ class MemorySessionService implements SessionService {
   private publish(next: SessionStatus, credentials: Credentials | undefined): void {
     this.status = next;
     this.credentials = credentials;
+    this.renewalProblem = false;
     this.listeners.forEach((listener) => listener());
   }
 
@@ -136,15 +153,28 @@ class MemorySessionService implements SessionService {
       const fresh = response.ok
         ? readCredentials(await response.json(), this.options.now())
         : undefined;
-      this.publish(
-        fresh === undefined ? failureStatus(response) : SESSION_STATUS.AUTHENTICATED,
-        fresh,
-      );
-      return fresh;
+      if (fresh !== undefined) {
+        this.publish(SESSION_STATUS.AUTHENTICATED, fresh);
+        return fresh;
+      }
+      return this.failRenewal(failureStatus(response));
     } catch {
-      this.publish(SESSION_STATUS.UNAVAILABLE, undefined);
-      return undefined;
+      return this.failRenewal(SESSION_STATUS.UNAVAILABLE);
     }
+  }
+
+  // Falha transitória com o token ainda válido não derruba o painel: guarda as credenciais e avisa.
+  private failRenewal(next: SessionStatus): Credentials | undefined {
+    const kept = this.credentials;
+    const isStillValid = kept !== undefined && this.options.now() < kept.validUntil;
+    if (next === SESSION_STATUS.UNAVAILABLE && isStillValid) {
+      this.renewalProblem = true;
+      this.lastRenewalFailureAt = this.options.now();
+      this.listeners.forEach((listener) => listener());
+      return kept;
+    }
+    this.publish(next, undefined);
+    return undefined;
   }
 
   private async runRefresh(): Promise<string | undefined> {
