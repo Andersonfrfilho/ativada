@@ -35,6 +35,7 @@ export function createIdentityHttp(settings: IdentityHttpSettings): IdentityHttp
           ...(request.json === undefined ? {} : { 'Content-Type': 'application/json' }),
         },
         ...(request.json === undefined ? {} : { body: JSON.stringify(request.json) }),
+        redirect: 'error',
         signal: AbortSignal.timeout(IDENTITY_REQUEST_TIMEOUT_MILLISECONDS),
       });
       if (response.status === HTTP_STATUS.UNAUTHORIZED) settings.tokens.discardToken();

@@ -38,6 +38,7 @@ async function requestToken(
         client_id: settings.clientId,
         client_secret: settings.clientSecret,
       }),
+      redirect: 'error',
       signal: AbortSignal.timeout(IDENTITY_REQUEST_TIMEOUT_MILLISECONDS),
     });
     if (response.status !== HTTP_STATUS.OK) return undefined;

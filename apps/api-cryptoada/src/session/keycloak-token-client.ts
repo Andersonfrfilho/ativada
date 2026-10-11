@@ -67,6 +67,7 @@ async function postForm(
     return await fetch(url, {
       method: HTTP_METHOD.POST,
       body: new URLSearchParams(form),
+      redirect: 'error',
       signal: AbortSignal.timeout(KEYCLOAK_REQUEST_TIMEOUT_MILLISECONDS),
     });
   } catch {

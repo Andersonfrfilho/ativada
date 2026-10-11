@@ -25,6 +25,7 @@ export function createTelegramBotClient(settings: TelegramBotClientSettings): Te
           method: HTTP_METHOD.POST,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ chat_id: params.chatId, text: params.text }),
+          redirect: 'error',
           signal: AbortSignal.timeout(BOT_REQUEST_TIMEOUT_MILLISECONDS),
         });
         return response.ok;
