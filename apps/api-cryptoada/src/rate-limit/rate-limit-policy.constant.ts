@@ -54,6 +54,14 @@ export const RATE_LIMIT_POLICY = {
     keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
     maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
+  // Só a avaliação a FRIO (cache que erra) e o PATCH de meta que muda alvo, prazo ou perda gastam este orçamento: é o que custa CPU.
+  GOAL_EVALUATION_COLD: {
+    name: 'goal-evaluation-cold',
+    limit: 3,
+    windowMilliseconds: ONE_MINUTE_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
+  },
   RUN_EXPORT: {
     name: 'run-export',
     limit: 10,

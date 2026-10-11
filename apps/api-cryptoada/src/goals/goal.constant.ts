@@ -21,3 +21,7 @@ export const GOAL_HISTORY_DAYS = 1_100;
 export const GOAL_CACHE_MAX_ENTRIES = 1_000;
 export const GOAL_INITIAL_BALANCE = '10000';
 export const GOAL_REASON = { NOT_ENABLED: 'not_enabled', INVALID_VALUE: 'invalid_value' } as const;
+// Quanto o cliente espera antes de repetir uma avaliação recusada por excesso de avaliações em andamento.
+export const GOAL_EVALUATION_BUSY_RETRY_AFTER_SECONDS = 5;
+// Quanto espera quem pediu OUTRA meta enquanto uma avaliação sua ainda voa (uma avaliação a frio por usuário).
+export const GOAL_EVALUATION_IN_FLIGHT_RETRY_AFTER_SECONDS = 1;
