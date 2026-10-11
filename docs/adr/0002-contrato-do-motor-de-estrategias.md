@@ -1551,6 +1551,41 @@ Meta alheia, inexistente e id malformado são o MESMO `404 GOAL_NOT_FOUND` (ADR 
 
 **Prova.** 27 contratos do acompanhamento, 10 do avaliador (os três desfechos contra uma referência de produção em laço direto, reinício logo após o desfecho, nenhum duplicado), 12 do texto do alerta, 14 da API, 30 mutantes do worker, 45 do alerta do Telegram e os mutantes da API, todos mortos; `make database-test` (FK, CHECKs, desfecho uma vez, conclusão, lado `GOAL`) e `make goals-test` (API e Postgres reais: CRUD, isolamento, avaliação, os três desfechos iguais à varredura independente, entrega ao chat do dono e reinício).
 
+## Plano de operação (T4b.5)
+
+`computeLatestPlan` / `computeOperationPlan` (`packages/strategy-engine/src/plan/`, `PLAN_VERSION = 'plan-1'`) respondem, para uma meta, uma estratégia e um par: **a que preço o próximo fechamento faz a regra disparar?** Puro, sem relógio, `Date`, `Intl` nem `Math.exp/log/pow`.
+
+| Peça | Decisão | Motivo |
+|---|---|---|
+| Como o preço é achado | Não há fórmula paralela por família: o plano roda o próprio `signalStep` de produção sobre **um candle hipotético** (abre no último fechamento; máxima e mínima são as pontas entre abertura e fechamento; volume repete o do último candle; abertura/fechamento do timeframe seguinte) e procura, no **tick** (`RunParameters.tickSize`), o par de preços vizinhos em que o placar passa de não sinalizar a sinalizar | Cruzamento de médias, rompimento, RSI, Bollinger, MACD e o placar inteiro ficam exatos **por construção**, inclusive com o float dos indicadores; uma fórmula fechada por família duplicaria a regra e envelheceria com ela |
+| Busca | `findTransition`: distâncias que dobram (1, 2, 4... ticks) para cima e para baixo, a última encostada na borda da faixa (de 1 tick a 4× o último fechamento), bisseção até o par adjacente; não presume monotonia (o par achado é sempre válido) | O par adjacente é a prova: o preço sinaliza e o vizinho do outro lado, não |
+| Nível | `PlanLevel`: `price` (texto, no tick), `trigger` (`at_or_above`: fechar NO preço ou acima dele; `at_or_below`), `direction` (lado do preço em relação ao último fechamento), `distance` e `distanceRate` (absolutas, para CIMA a 8 casas). `status`: `price`, `already_active` (o último candle já sinalizou: o preço é o último fechamento) ou `unreachable` (a regra não depende do preço, como o Fear & Greed) | Texto da tela: "fechar acima de X" |
+| Por regra | `rules[]` traz o nível de COMPRA (voto +1) e de SAÍDA (voto −1) de cada regra, com a família e a base | "Por família" do RF13 |
+| Base | `exact` quando só o fechamento do próximo candle importa; `indicative` com OBV (soma o volume dele) ou filtro de regime ADX (depende da amplitude dele) | Honestidade: o Placar clássico é `indicative` |
+| Alvo e stop | `computePlanLevels`: preço de VENDA em que uma unidade comprada em `entrada` rende o ganho alvo (ou a perda máxima), com o que o motor cobra (compra a `entrada × (1 + slippage)` no tick, taxa nas duas pontas, venda a `preço × (1 − slippage)`), ambos **para cima** no tick (alvo mais difícil, stop mais cedo). A entrada é o preço de compra do plano (ou o último fechamento se o sinal já está ativo). Se a perda máxima for menor que o custo de entrar, o stop sai acima da entrada e o fato não é escondido | Contra o usuário, como o resto do motor |
+| Data limite | `startsAt = fechamento do último candle + 1 ms`; `deadlineAt = startsAt + prazo × 86.400.000 ms` | Sem relógio no motor |
+
+Rota `GET /v1/goals/:goalId/plan?strategyId=` (`apps/api-cryptoada/src/goals/goal-plan.*`): meta e estratégia do dono (alheia ou inexistente = o MESMO 404; `strategyId` ausente ou malformado = 400 de validação), candles diários do par da meta, cache em memória por (meta, taxas, prazo, versão, par, último candle), cota `GOAL_EVALUATION`, `409 GOAL_PLAN_UNAVAILABLE` sem candles para o aquecimento.
+
+**Prova.** 67 contratos (contas à mão contra um oráculo `Decimal` em Python; para cada família e para o Placar clássico, o preço calculado aplicado ao `signalStep` de produção sinaliza e o vizinho de um tick do outro lado não, em compra e em saída, em três ticks; busca com 500 predicados aleatórios; sentimento; determinismo), 50 mutantes do plano (`operation-plan-mutants`) e 11 mutantes da rota (`api-goals-mutants`), todos reprovados.
+
+## Alertas de preço (T4b.6 e T4b.7)
+
+Migration `0017_price_alerts` (`price_alerts`: `id`, `user_id`, `symbol`, `direction` `above|below`, `value numeric`, `origin` `manual|plan`, `is_enabled`, `triggered_at`, `created_at`; VARCHAR sem ENUM; CHECKs de par, vocabulários, valor > 0 e "disparado implica desligado"; `UNIQUE (id, user_id)`; índice parcial dos armados por par) e `0018_alerts_price` (caixa de saída aceita o lado `PRICE`).
+
+| Peça | Decisão | Motivo |
+|---|---|---|
+| Rotas | `GET/POST /v1/price-alerts`, `GET/PATCH/DELETE /v1/price-alerts/:alertId`; `value` em texto decimal positivo, até 8 casas, grafia canônica; alerta alheio, inexistente e id malformado = o MESMO 404; "Avisar no plano" = `POST` com `origin: 'plan'` e o preço do plano | ADR 0001 §e |
+| Teto | `PRICE_ALERT_MAX_ENABLED_PER_USER` (1 a 500, padrão 50) vale para os alertas **ligados**, na criação e ao religar, com a linha do dono travada (`409 PRICE_ALERT_LIMIT_REACHED`) | RF14; corrida de 12 POSTs respeita o teto |
+| Religar rearma | `PATCH isEnabled: true` limpa `triggered_at`; disparar liga `is_enabled = false` e carimba no mesmo `UPDATE` | "Ficam desligados até ele religar" |
+| Onde avalia | **Na API**, que já tem o ticker público (T4.7): `createPriceAlertEvaluator` assina a porta `PriceTickListener` e recebe cada tick agregado uma vez. Tick mais velho que `TICKER_STALE_SECONDS` não avalia nada; ticker fora do ar não gera tick | O worker não tem o ticker; mover o ticker ou abrir outra conexão custaria mais que o encaixe |
+| Disparo atômico | `UPDATE price_alerts SET is_enabled = false, triggered_at = now() WHERE symbol = $1 AND is_enabled AND triggered_at IS NULL AND (direction = 'above' AND value <= preço OR direction = 'below' AND value >= preço) RETURNING ...` (comparação em `numeric`, **inclusiva**). Na MESMA transação: aviso na caixa de saída (`alerts`, `side = 'PRICE'`, `run_id` nulo, `price_alert_id`, `candle_time` = instante do tick, único por (alerta, instante)), só para dono com Telegram vinculado e ligado, e `pg_notify('run_events', {kind:'price_alert', alertId})` | Duas instâncias da API no mesmo tick nunca avisam em dobro |
+| Aviso ao painel | Mesmo canal `run_events`, formato próprio `{kind, alertId}` (só o ponteiro); cada API resolve o dono ATIVO pelo banco e manda `{type:'price_alert', alertId, at}` só aos sockets dele | ADR 0001 §e: o dono nunca viaja no aviso |
+| Telegram | O despachante do worker lê o `payload` (`symbol`, `direction`, `threshold`, `price`, só texto decimal) e envia "Alerta de preço · PAR / O preço subiu acima de X (agora Y)" ao chat do dono da linha, com o aviso de que não é recomendação | RF14 |
+| LGPD | `price_alerts` em `OWNED_TABLES`, exportada e apagada antes de `users`; `alerts.price_alert_id` entra na exportação; sem FK de propósito (apagar o alerta não leva o aviso já enfileirado) | RNF08 |
+
+**Prova.** 32 contratos das rotas (404 idêntico, teto, rearme) e 36 mutantes da API; `make price-alert-mutants` (26 mutantes contra Postgres real: dono, teto, trava, rearme, disparo estrito/invertido/sem par/sem carimbo/sem guarda atômica, aviso a dono sem Telegram, dono bloqueado ou apagado, cada CHECK); 8 mutantes do texto e do despacho no worker; `make price-alerts-test` (Postgres real, o publicador de produção da API com ticker falso, duas instâncias, o despachante e a Bot API falsa: cruzar o valor dispara UMA vez com ticks repetidos e com duas instâncias no mesmo tick, religar rearma, alerta de outro usuário nunca dispara para este, ticker indisponível e tick atrasado não disparam nada, exportação e log sem token nem chat).
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |

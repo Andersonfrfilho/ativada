@@ -1,10 +1,13 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   bigint,
   check,
+  type CheckBuilder,
   foreignKey,
   index,
+  type IndexBuilder,
   integer,
   jsonb,
   pgTable,
@@ -24,6 +27,23 @@ import { literalList } from './check-literals.js';
 import { runs } from './runs.schema.js';
 import { users } from './users.schema.js';
 
+// O lado PRICE (alerta de preço) não tem execução e leva o alerta; os outros lados são o contrário. Único por (alerta, instante).
+function priceAlertConstraints(table: {
+  readonly side: AnyPgColumn;
+  readonly runId: AnyPgColumn;
+  readonly priceAlertId: AnyPgColumn;
+  readonly candleTime: AnyPgColumn;
+}): readonly (CheckBuilder | IndexBuilder)[] {
+  const isPrice = sql`(${table.side} = ${literalList([ALERT_SIDE.PRICE])})`;
+  return [
+    uniqueIndex('alerts_price_alert_id_candle_time_unique')
+      .on(table.priceAlertId, table.candleTime)
+      .where(sql`${table.priceAlertId} is not null`),
+    check('alerts_price_has_no_run_check', sql`${isPrice} = (${table.runId} is null)`),
+    check('alerts_price_alert_id_check', sql`${isPrice} = (${table.priceAlertId} is not null)`),
+  ];
+}
+
 // Caixa de saída durável dos alertas de sinal (RF10): a linha nasce na MESMA transação do passo e o despachante a entrega
 // depois. A chave (execução, candle, lado, canal) impede alerta repetido; o chat NÃO é copiado para cá, é lido de `users` no envio.
 export const alerts = pgTable(
@@ -33,7 +53,9 @@ export const alerts = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
-    runId: uuid('run_id').notNull(),
+    runId: uuid('run_id'),
+    // O alerta de preço que disparou (lado PRICE); sem FK de propósito: apagar o alerta não leva o aviso já enfileirado.
+    priceAlertId: uuid('price_alert_id'),
     candleTime: bigint('candle_time', { mode: 'number' }).notNull(),
     side: varchar('side', { length: 8 }).notNull(),
     channel: varchar('channel', { length: 16 }).notNull(),
@@ -58,6 +80,7 @@ export const alerts = pgTable(
       table.side,
       table.channel,
     ),
+    ...priceAlertConstraints(table),
     index('alerts_user_id_created_at_idx').on(table.userId, table.createdAt.desc()),
     index('alerts_pending_next_attempt_idx')
       .on(table.nextAttemptAt)

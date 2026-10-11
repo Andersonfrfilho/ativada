@@ -15,6 +15,7 @@ import { createRequestHandler, type RequestHandler } from './http/create-request
 import { createIdentityAdmin } from './identity/create-identity-admin.js';
 import type { Logger } from './logging/logger.js';
 import { UNEXPECTED_ERROR_LOG_MESSAGE } from './logging/logging.constant.js';
+import { registerPriceAlertEvaluation } from './price-alerts/register-price-alert-evaluation.js';
 import { createApplicationRunners } from './runs/create-application-runners.js';
 import { createApplicationDispatcher } from './runs/queue/create-application-dispatcher.js';
 import type { RunQueueDispatcher } from './runs/queue/run-queue-dispatcher.types.js';
@@ -94,6 +95,7 @@ export function createApplication(params: CreateApplicationParams): Application 
   });
   const ticketStore = createStreamTicketStore({ now: () => Date.now() });
   const stream = createApplicationStream({ environment, logger, database, ticketStore });
+  registerPriceAlertEvaluation({ environment, database, stream });
   const router = createApiRouter({
     environment,
     logger,

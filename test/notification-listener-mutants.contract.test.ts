@@ -402,7 +402,14 @@ const LISTENER_MUTANTS: readonly SourceMutant[] = [
 ];
 
 const EVENT_MUTANTS: readonly SourceMutant[] = [
-  { name: 'EVENT_PAYLOAD_NOT_STRICT', edits: edit(EVENT_SCHEMA, 'z.strictObject({', 'z.object({') },
+  {
+    name: 'EVENT_PAYLOAD_NOT_STRICT',
+    edits: edit(
+      EVENT_SCHEMA,
+      'const runEventSchema = z.strictObject({',
+      'const runEventSchema = z.object({',
+    ),
+  },
   {
     name: 'EVENT_KIND_UNRESTRICTED',
     edits: edit(

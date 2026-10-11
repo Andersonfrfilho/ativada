@@ -20,6 +20,7 @@ const CONSTANTS = 'alerts.constant.ts';
 const GOAL_FORMAT = 'format-goal-alert-message.ts';
 const PERCENT = 'format-percent.ts';
 const PAYLOAD_SCHEMA = 'alert-payload.schema.ts';
+const PRICE_FORMAT = 'format-price-alert-message.ts';
 
 function edit(file: string, find: string, replace: string, occurrences = 1): AlertsSourceEdit[] {
   return [{ file, find, replace, occurrences }];
@@ -341,6 +342,58 @@ const MUTANTS: readonly AlertsSourceMutant[] = [
       'Meta: ${formatPercent(payload.targetRate)} em ${payload.horizonDays} dias, perda máxima de ${formatPercent(payload.maxLossRate)}.',
       'Meta: ${formatPercent(payload.maxLossRate)} em ${payload.horizonDays} dias, perda máxima de ${formatPercent(payload.targetRate)}.',
     ),
+  },
+  {
+    name: 'PRICE_VERBS_SWAPPED',
+    edits: edit(
+      PRICE_FORMAT,
+      "{ above: 'subiu acima de', below: 'caiu abaixo de' }",
+      "{ above: 'caiu abaixo de', below: 'subiu acima de' }",
+    ),
+  },
+  {
+    name: 'PRICE_THRESHOLD_AND_PRICE_SWAPPED',
+    edits: edit(
+      PRICE_FORMAT,
+      '${payload.threshold} (agora ${payload.price})',
+      '${payload.price} (agora ${payload.threshold})',
+    ),
+  },
+  {
+    name: 'PRICE_WITHOUT_THE_DISCLAIMER',
+    edits: edit(PRICE_FORMAT, '    DISCLAIMER,\n  ].join', '  ].join'),
+  },
+  {
+    name: 'PRICE_SIDE_USES_THE_SIGNAL_TEXT',
+    edits: edit(DISPATCHER, 'if (alert.side === ALERT_SIDE.PRICE) {', 'if (false) {'),
+  },
+  {
+    name: 'PRICE_PAYLOAD_ACCEPTS_EXTRA_FIELDS',
+    edits: edit(
+      PAYLOAD_SCHEMA,
+      'export const priceAlertPayloadSchema = z.strictObject({',
+      'export const priceAlertPayloadSchema = z.object({',
+    ),
+  },
+  {
+    name: 'PRICE_THRESHOLD_NOT_A_DECIMAL',
+    edits: edit(
+      PAYLOAD_SCHEMA,
+      'threshold: z.string().regex(DECIMAL_TEXT_PATTERN)',
+      'threshold: z.string()',
+    ),
+  },
+  {
+    name: 'PRICE_VALUE_NOT_A_DECIMAL',
+    edits: edit(
+      PAYLOAD_SCHEMA,
+      'price: z.string().regex(DECIMAL_TEXT_PATTERN)',
+      'price: z.string()',
+    ),
+  },
+  {
+    name: 'PRICE_DIRECTION_ANY_TEXT',
+    edits: edit(PAYLOAD_SCHEMA, "direction: z.enum(['above', 'below']),", 'direction: z.string(),'),
   },
 ];
 

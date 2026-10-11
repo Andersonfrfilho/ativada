@@ -33,6 +33,8 @@ export const CLOSE_REASON = {
 
 export const SERVER_MESSAGE_TYPE = {
   EVENT: 'event',
+  // O disparo de um alerta de preço do dono (T4b.7): só o ponteiro, o painel rebusca o alerta por REST.
+  PRICE_ALERT: 'price_alert',
   RESYNC: 'resync',
   RENEWED: 'renewed',
   ERROR: 'error',

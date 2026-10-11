@@ -67,7 +67,7 @@ function toClaimedAlerts(
 ): ClaimedAlert[] {
   return taken.map((row) => ({
     id: row.id,
-    runId: row.runId,
+    runId: row.runId ?? undefined,
     candleTime: row.candleTime,
     side: row.side as AlertSide,
     payload: readJsonb(row.payload),

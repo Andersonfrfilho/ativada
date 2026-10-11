@@ -17,6 +17,8 @@ const ROUTES = 'price-alerts/price-alerts.routes.ts';
 const REQUESTS = 'price-alerts/price-alert-requests.ts';
 const USE_CASES = 'price-alerts/price-alert.use-cases.ts';
 const VIEWS = 'price-alerts/price-alert-views.ts';
+const EVALUATOR = 'price-alerts/price-alert-evaluator.ts';
+const EVENT_DISPATCHER = 'price-alerts/price-alert-event-dispatcher.ts';
 
 function edit(file: string, find: string, replace: string): SourceEdit[] {
   return [{ file, find, replace, occurrences: 1 }];
@@ -198,6 +200,73 @@ const MUTANTS: readonly SourceMutant[] = [
   {
     name: 'VIEW_LEAKS_THE_ORIGIN_AS_MANUAL',
     edits: edit(VIEWS, 'origin: record.origin,', "origin: 'manual',"),
+  },
+  {
+    name: 'EVALUATOR_IGNORES_STALE_TICKS',
+    edits: edit(
+      EVALUATOR,
+      'if (params.now() - tick.eventTime > params.staleAfterMilliseconds) return;',
+      '',
+    ),
+  },
+  {
+    name: 'EVALUATOR_STALE_BOUNDARY_INCLUSIVE',
+    edits: edit(
+      EVALUATOR,
+      'tick.eventTime > params.staleAfterMilliseconds',
+      'tick.eventTime >= params.staleAfterMilliseconds',
+    ),
+  },
+  {
+    name: 'EVALUATOR_SENDS_THE_WRONG_PRICE',
+    edits: edit(EVALUATOR, 'price: tick.price,', "price: tick.change24h ?? '0',"),
+  },
+  {
+    name: 'EVALUATOR_SENDS_THE_WRONG_SYMBOL',
+    edits: edit(EVALUATOR, 'symbol: tick.symbol,', "symbol: 'BTCUSDT',"),
+  },
+  {
+    name: 'EVALUATOR_DROPS_THE_EVENT_TIME',
+    edits: edit(EVALUATOR, 'eventTime: tick.eventTime,', 'eventTime: params.now(),'),
+  },
+  {
+    name: 'EVALUATOR_SWALLOWS_DATABASE_FAILURES',
+    edits: edit(
+      EVALUATOR,
+      'await params.repository.fireDueAlerts({',
+      'await params.repository.fireDueAlerts({',
+    ).concat([
+      {
+        file: EVALUATOR,
+        find: '      });\n    },\n  };',
+        replace: '      }).catch(() => undefined);\n    },\n  };',
+        occurrences: 1,
+      },
+    ]),
+  },
+  {
+    name: 'EVENT_GOES_TO_EVERY_USER',
+    edits: edit(EVENT_DISPATCHER, 'params.hub.sendToUser(ownerUserId, {', 'params.hub.broadcast({'),
+  },
+  {
+    name: 'EVENT_HAS_THE_RUN_EVENT_TYPE',
+    edits: edit(
+      EVENT_DISPATCHER,
+      'type: SERVER_MESSAGE_TYPE.PRICE_ALERT,',
+      'type: SERVER_MESSAGE_TYPE.EVENT,',
+    ),
+  },
+  {
+    name: 'EVENT_LEAKS_THE_OWNER',
+    edits: edit(
+      EVENT_DISPATCHER,
+      'alertId: event.alertId,',
+      'alertId: event.alertId,\n          ownerUserId,',
+    ),
+  },
+  {
+    name: 'EVENT_ERROR_NOT_REPORTED',
+    edits: edit(EVENT_DISPATCHER, 'params.reportError(error);', ''),
   },
 ];
 

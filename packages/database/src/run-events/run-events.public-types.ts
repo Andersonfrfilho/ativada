@@ -7,4 +7,4 @@ export type {
 export type { SessionEnd, SessionEndReason } from '../notifications/session-end.js';
 export type { RunEventKind } from './run-event.constant.js';
 export type { RunEventListenerSettings } from './run-event-listener.js';
-export type { RunEvent } from './run-event.schema.js';
+export type { PriceAlertEvent, RunEvent } from './run-event.schema.js';

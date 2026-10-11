@@ -33,6 +33,8 @@ import type * as GoalCacheModule from '../../../apps/api-cryptoada/src/goals/goa
 import type * as GoalEvaluationModule from '../../../apps/api-cryptoada/src/goals/goal-evaluation.use-case.js';
 import type * as GoalPlanCacheModule from '../../../apps/api-cryptoada/src/goals/goal-plan-cache.js';
 import type * as GoalPlanModule from '../../../apps/api-cryptoada/src/goals/goal-plan.use-case.js';
+import type * as PriceAlertEvaluatorModule from '../../../apps/api-cryptoada/src/price-alerts/price-alert-evaluator.js';
+import type * as PriceAlertEventDispatcherModule from '../../../apps/api-cryptoada/src/price-alerts/price-alert-event-dispatcher.js';
 import type * as PriceAlertRoutesModule from '../../../apps/api-cryptoada/src/price-alerts/price-alerts.routes.js';
 import type * as PriceAlertUseCasesModule from '../../../apps/api-cryptoada/src/price-alerts/price-alert.use-cases.js';
 import type * as GoalRoutesModule from '../../../apps/api-cryptoada/src/goals/goals.routes.js';
@@ -76,6 +78,8 @@ export type ApiApp = {
   readonly goalUseCases: typeof GoalUseCasesModule;
   readonly goalEvaluation: typeof GoalEvaluationModule;
   readonly goalCache: typeof GoalCacheModule;
+  readonly priceAlertEvaluator: typeof PriceAlertEvaluatorModule;
+  readonly priceAlertEventDispatcher: typeof PriceAlertEventDispatcherModule;
   readonly priceAlertRoutes: typeof PriceAlertRoutesModule;
   readonly priceAlertUseCases: typeof PriceAlertUseCasesModule;
   readonly goalPlan: typeof GoalPlanModule;
@@ -130,6 +134,8 @@ export async function loadApiApp(): Promise<ApiApp> {
     goalUseCases: await load('goals/goal.use-cases'),
     goalEvaluation: await load('goals/goal-evaluation.use-case'),
     goalCache: await load('goals/goal-evaluation-cache'),
+    priceAlertEvaluator: await load('price-alerts/price-alert-evaluator'),
+    priceAlertEventDispatcher: await load('price-alerts/price-alert-event-dispatcher'),
     priceAlertRoutes: await load('price-alerts/price-alerts.routes'),
     priceAlertUseCases: await load('price-alerts/price-alert.use-cases'),
     goalPlan: await load('goals/goal-plan.use-case'),

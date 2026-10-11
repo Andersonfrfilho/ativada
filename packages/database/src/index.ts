@@ -45,16 +45,7 @@ export {
 } from './database-handle.js';
 export { CLOCK_SKEW_TOLERANCE_MILLISECONDS } from './candles/candle.constant.js';
 export { createCandleRepository } from './candles/candle.repository.js';
-export type {
-  CandleRecord,
-  CandleRepository,
-  CandleRepositoryOptions,
-  CandleSeriesKey,
-  CandleTimeframe,
-  FindCandlesParams,
-  FindMissingOpenTimesParams,
-  UpsertCandlesResult,
-} from './candles/candle.types.js';
+export type * from './candles/candle.types.js';
 export { OpenCandleRejectedError } from './candles/open-candle-rejected.error.js';
 export { createSentimentRepository } from './sentiment/sentiment.repository.js';
 export type {
@@ -86,18 +77,7 @@ export { createAlertRepository } from './alerts/alert.repository.js';
 export { ALERT_CHANNEL, ALERT_SIDE, ALERT_STATUS } from './alerts/alert.constant.js';
 export { createRunMetricsRepository } from './runs/run-metrics.repository.js';
 export type * from './alerts/alerts.public-types.js';
-export type {
-  CreateRunParams,
-  EngineCheckpoint,
-  ListRunsParams,
-  RunCursor,
-  RunRecord,
-  RunRepository,
-  RunsPage,
-  SaveCheckpointParams,
-  TransitionRunParams,
-  TransitionRunResult,
-} from './runs/run.types.js';
+export type * from './runs/run.types.js';
 export type { DataWaitState, RecordDataWaitParams } from './runs/run-data-wait.js';
 export { createRunResultRepository } from './run-results/run-result.repository.js';
 export type {
@@ -126,7 +106,7 @@ export type { RunLogCursor, RunLogEntry } from './run-results/run-log.types.js';
 export { createRunBatchRepository } from './run-results/run-batch.repository.js';
 export type * from './run-results/run-batch.types.js';
 export { resolveRunOwnerScope } from './runs/run-owner.js';
-export { RUN_EVENT_KIND } from './run-events/run-event.constant.js';
+export { PRICE_ALERT_EVENT_KIND, RUN_EVENT_KIND } from './run-events/run-event.constant.js';
 export { createRunEventListener } from './run-events/run-event-listener.js';
 export { isFatalSessionEnd } from './notifications/session-end.js';
 export type * from './run-events/run-events.public-types.js';
@@ -152,22 +132,7 @@ export { createLiveRunRepository } from './live-runs/live-run.repository.js';
 export type * from './live-runs/live-run.types.js';
 export { createStrategyRepository } from './strategies/strategy.repository.js';
 export { EXAMPLE_SEED_OUTCOME, type ExampleSeedOutcome } from './strategies/strategy.constant.js';
-export type {
-  AddStrategyVersionParams,
-  AddStrategyVersionResult,
-  CreateStrategyParams,
-  CreateStrategyWithVersionParams,
-  CreateStrategyWithVersionResult,
-  ListStrategiesParams,
-  ListVersionsParams,
-  SeedExampleStrategyParams,
-  StrategiesPage,
-  StrategyCursor,
-  StrategyRecord,
-  StrategyRepository,
-  StrategyVersionRecord,
-  VersionsPage,
-} from './strategies/strategy.types.js';
+export type * from './strategies/strategy.types.js';
 export { InvalidUserIdError } from './ownership/invalid-user-id.error.js';
 export type { OwnerScope } from './ownership/owner-scope.js';
 export type { UserId } from './ownership/user-id.js';
@@ -191,6 +156,7 @@ export {
   readPostgresErrorCode,
 } from './postgres-error-code.js';
 export { createPriceAlertRepository } from './price-alerts/price-alert.repository.js';
+export { createPriceAlertEvaluationRepository } from './price-alerts/price-alert-evaluation.repository.js';
 export {
   PRICE_ALERT_CREATE_OUTCOME,
   PRICE_ALERT_DIRECTION,
@@ -200,3 +166,8 @@ export {
   type PriceAlertOrigin,
 } from './price-alerts/price-alert.constant.js';
 export type * from './price-alerts/price-alert.types.js';
+export type {
+  FireDueAlertsParams,
+  FireDueAlertsResult,
+  PriceAlertEvaluationRepository,
+} from './price-alerts/price-alert-evaluation.repository.js';

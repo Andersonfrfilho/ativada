@@ -21,7 +21,8 @@ export type ClaimAlertsParams = {
 // para `alerts`. `attempts` já conta esta tentativa.
 export type ClaimedAlert = {
   readonly id: string;
-  readonly runId: string;
+  // Nulo no alerta de preço (lado PRICE), que não nasce de uma execução.
+  readonly runId: string | undefined;
   readonly candleTime: number;
   readonly side: AlertSide;
   readonly payload: JsonValue;

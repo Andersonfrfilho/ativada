@@ -6,7 +6,7 @@ export
 COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
 
-.PHONY: help bootstrap config up down ps check contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants price-alert-mutants alert-mutants runlog-mutants telegram-test goals-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants identity-logs
+.PHONY: help bootstrap config up down ps check contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants price-alert-mutants alert-mutants runlog-mutants telegram-test goals-test price-alerts-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants identity-logs
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -158,7 +158,7 @@ example-mutants: ## Prova que a semeadura da estratégia de exemplo reprova 6 mu
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/example-mutants.ts
 
-price-alert-mutants: ## Prova que os alertas de preço reprovam 12 mutantes do banco (sem filtro de dono em leitura, lista e exclusão, teto contando alertas desligados ou sem a trava do dono, religar sem limpar o disparo ou sem respeitar o teto, e cada CHECK removido) num Postgres de teste descartável
+price-alert-mutants: ## Prova que os alertas de preço reprovam 26 mutantes do banco (sem filtro de dono, teto contando alertas desligados ou sem a trava do dono, religar sem limpar o disparo ou sem respeitar o teto, disparo estrito, invertido, sem par, sem carimbo, sem trava atômica, aviso para dono sem Telegram ou com valores trocados, dono bloqueado ou apagado e cada CHECK removido) num Postgres de teste descartável
 	set -a; . envs/env.test; set +a; \
 	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
 	trap 'exit 130' INT; \
@@ -185,6 +185,13 @@ goals-test: ## Prova as metas contra a API real e um Postgres de teste descartá
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/goals-test.ts
+
+price-alerts-test: ## Prova o alerta de preço contra Postgres de teste descartável, com ticker falso (o publicador de produção da API) e duas instâncias: cruzar o valor dispara UMA vez mesmo com ticks repetidos e com duas instâncias no mesmo tick, religar rearma, alerta de outro usuário nunca dispara para este, ticker indisponível ou dado velho não disparam nada, aviso só no Telegram do dono e NOTIFY com o ponteiro, exportação LGPD e log sem token nem chat
+	set -a; . envs/env.test; set +a; \
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/price-alerts-test.ts
 
 telegram-test: ## Prova o alerta no Telegram contra Postgres de teste descartável e uma Bot API falsa: vínculo por código (uso único, vencido, chat de outro dono), passo ao vivo que enfileira um alerta por sinal BUY/SELL, entrega ao chat do próprio dono com motivo e acerto histórico, retry com espera crescente e retry_after, desistência, queda e reinício sem duplicar, desvinculação, exportação e exclusão LGPD e log sem token nem chat
 	set -a; . envs/env.test; set +a; \

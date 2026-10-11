@@ -3,7 +3,11 @@ import type { AlertRepository, ClaimedAlert } from '@cryptoada/database';
 import { readErrorName } from '@cryptoada/environment';
 
 import { ALERT_SIDE } from '@cryptoada/database';
-import { alertPayloadSchema, goalAlertPayloadSchema } from '../live/alert-payload.schema.js';
+import {
+  alertPayloadSchema,
+  goalAlertPayloadSchema,
+  priceAlertPayloadSchema,
+} from '../live/alert-payload.schema.js';
 import type { WorkerLogger } from '../logging/worker-logger.js';
 import {
   ALERT_BACKOFF_BASE_MILLISECONDS,
@@ -16,6 +20,7 @@ import {
 } from './alerts.constant.js';
 import { formatAlertMessage } from './format-alert-message.js';
 import { formatGoalAlertMessage } from './format-goal-alert-message.js';
+import { formatPriceAlertMessage } from './format-price-alert-message.js';
 import type { TelegramClient, TelegramSendResult } from './telegram-client.js';
 
 const BACKOFF_FACTOR = 2;
@@ -73,11 +78,15 @@ async function settleFailure(
   return 'retried';
 }
 
-// O texto do alerta, pelo conteúdo gravado (sinal ou desfecho de meta); conteúdo que não bate com o esquema não é enviado.
+// O texto do alerta, pelo conteúdo gravado (sinal, desfecho de meta ou disparo de preço); conteúdo que não bate com o esquema não é enviado.
 function renderAlertText(alert: ClaimedAlert): string | undefined {
   if (alert.side === ALERT_SIDE.GOAL) {
     const goal = goalAlertPayloadSchema.safeParse(alert.payload);
     return goal.success ? formatGoalAlertMessage(goal.data) : undefined;
+  }
+  if (alert.side === ALERT_SIDE.PRICE) {
+    const price = priceAlertPayloadSchema.safeParse(alert.payload);
+    return price.success ? formatPriceAlertMessage(price.data) : undefined;
   }
   const signal = alertPayloadSchema.safeParse(alert.payload);
   return signal.success

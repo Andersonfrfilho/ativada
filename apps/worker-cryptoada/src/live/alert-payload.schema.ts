@@ -44,3 +44,13 @@ export const goalAlertPayloadSchema = z.strictObject({
 });
 
 export type GoalAlertPayload = z.infer<typeof goalAlertPayloadSchema>;
+
+// O aviso de um alerta de preço (RF14): só mercado e o valor que o usuário pôs, em texto decimal exato.
+export const priceAlertPayloadSchema = z.strictObject({
+  symbol: z.string().min(1),
+  direction: z.enum(['above', 'below']),
+  threshold: z.string().regex(DECIMAL_TEXT_PATTERN),
+  price: z.string().regex(DECIMAL_TEXT_PATTERN),
+});
+
+export type PriceAlertPayload = z.infer<typeof priceAlertPayloadSchema>;

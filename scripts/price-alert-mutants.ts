@@ -3,6 +3,7 @@ import { runDatabaseMutantSuite, type DatabaseMutant } from './mutants/run-datab
 
 const REPOSITORY = 'src/price-alerts/price-alert.repository.ts';
 const MIGRATION = 'drizzle/0017_price_alerts.sql';
+const EVALUATION = 'src/price-alerts/price-alert-evaluation.repository.ts';
 
 function dropConstraint(name: string, statement: string): DatabaseMutant {
   return { name, edits: [{ file: MIGRATION, find: statement, replace: '' }] };
@@ -102,6 +103,134 @@ const MUTANTS: readonly DatabaseMutant[] = [
       {
         file: MIGRATION,
         find: ',\n\tCONSTRAINT "price_alerts_triggered_is_disabled_check" CHECK ("price_alerts"."triggered_at" is null or not "price_alerts"."is_enabled")',
+        replace: '',
+      },
+    ],
+  },
+  {
+    name: 'FIRE_ABOVE_IS_STRICT',
+    edits: [
+      {
+        file: EVALUATION,
+        find: 'sql`${priceAlerts.value} <= ${observed}`',
+        replace: 'sql`${priceAlerts.value} < ${observed}`',
+      },
+    ],
+  },
+  {
+    name: 'FIRE_BELOW_IS_STRICT',
+    edits: [
+      {
+        file: EVALUATION,
+        find: 'sql`${priceAlerts.value} >= ${observed}`',
+        replace: 'sql`${priceAlerts.value} > ${observed}`',
+      },
+    ],
+  },
+  {
+    name: 'FIRE_DIRECTIONS_SWAPPED',
+    edits: [
+      {
+        file: EVALUATION,
+        find: 'eq(priceAlerts.direction, PRICE_ALERT_DIRECTION.ABOVE),',
+        replace: 'eq(priceAlerts.direction, PRICE_ALERT_DIRECTION.BELOW),',
+      },
+      {
+        file: EVALUATION,
+        find: 'eq(priceAlerts.direction, PRICE_ALERT_DIRECTION.BELOW),\n      sql`${priceAlerts.value} >=',
+        replace:
+          'eq(priceAlerts.direction, PRICE_ALERT_DIRECTION.ABOVE),\n      sql`${priceAlerts.value} >=',
+      },
+    ],
+  },
+  {
+    name: 'FIRE_IGNORES_THE_PAIR',
+    edits: [{ file: EVALUATION, find: 'eq(priceAlerts.symbol, params.symbol),', replace: '' }],
+  },
+  {
+    name: 'FIRE_IGNORES_THE_ENABLED_FLAG',
+    edits: [{ file: EVALUATION, find: 'eq(priceAlerts.isEnabled, true),', replace: '' }],
+  },
+  {
+    name: 'FIRE_WITHOUT_THE_TRIGGER_STAMP',
+    edits: [
+      {
+        file: EVALUATION,
+        find: '.set({ isEnabled: false, triggeredAt: sql`now()` })',
+        replace: '.set({ isEnabled: false })',
+      },
+    ],
+  },
+  {
+    name: 'FIRE_WITHOUT_THE_ATOMIC_GUARD',
+    edits: [
+      {
+        file: EVALUATION,
+        find: 'eq(priceAlerts.isEnabled, true),\n          isNull(priceAlerts.triggeredAt),',
+        replace: '',
+      },
+    ],
+  },
+  {
+    name: 'OUTBOX_FOR_OWNERS_WITHOUT_TELEGRAM',
+    edits: [
+      {
+        file: EVALUATION,
+        find: 'if (!(await isTelegramDeliverable(transaction, userIdFromDatabase(row.userId)))) continue;',
+        replace: '',
+      },
+    ],
+  },
+  {
+    name: 'OUTBOX_PRICE_AND_THRESHOLD_SWAPPED',
+    edits: [
+      {
+        file: EVALUATION,
+        find: 'threshold: row.value,\n        price: params.price,',
+        replace: 'threshold: params.price,\n        price: row.value,',
+      },
+    ],
+  },
+  {
+    name: 'OUTBOX_KEYED_WITHOUT_THE_INSTANT',
+    edits: [{ file: EVALUATION, find: 'candleTime: params.eventTime,', replace: 'candleTime: 0,' }],
+  },
+  {
+    name: 'OWNER_LOOKUP_IGNORES_BLOCKED_ACCOUNTS',
+    edits: [
+      {
+        file: EVALUATION,
+        find: 'and(eq(priceAlerts.id, alertId), isNull(users.deletedAt), isNull(users.blockedAt))',
+        replace: 'and(eq(priceAlerts.id, alertId), isNull(users.deletedAt))',
+      },
+    ],
+  },
+  {
+    name: 'OWNER_LOOKUP_IGNORES_DELETED_ACCOUNTS',
+    edits: [
+      {
+        file: EVALUATION,
+        find: 'and(eq(priceAlerts.id, alertId), isNull(users.deletedAt), isNull(users.blockedAt))',
+        replace: 'and(eq(priceAlerts.id, alertId), isNull(users.blockedAt))',
+      },
+    ],
+  },
+  {
+    name: 'ALERTS_PRICE_WITH_A_RUN_ALLOWED',
+    edits: [
+      {
+        file: 'drizzle/0018_alerts_price.sql',
+        find: 'ALTER TABLE "alerts" ADD CONSTRAINT "alerts_price_has_no_run_check" CHECK (("alerts"."side" = \'PRICE\') = ("alerts"."run_id" is null));--> statement-breakpoint\n',
+        replace: '',
+      },
+    ],
+  },
+  {
+    name: 'ALERTS_SIGNAL_WITHOUT_A_RUN_ALLOWED',
+    edits: [
+      {
+        file: 'drizzle/0018_alerts_price.sql',
+        find: 'ALTER TABLE "alerts" ADD CONSTRAINT "alerts_price_alert_id_check" CHECK (("alerts"."side" = \'PRICE\') = ("alerts"."price_alert_id" is not null));--> statement-breakpoint\n',
         replace: '',
       },
     ],

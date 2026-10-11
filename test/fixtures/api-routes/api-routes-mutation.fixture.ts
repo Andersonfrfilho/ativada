@@ -67,6 +67,10 @@ export const PRICE_ALERTS_MUTANT_TARGET: MutantTarget = {
   sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
   mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
   directoryPrefix: 'price-alerts-',
-  judgeTestFiles: ['test/api-price-alerts.contract.test.ts', 'test/api-openapi.contract.test.ts'],
+  judgeTestFiles: [
+    'test/api-price-alerts.contract.test.ts',
+    'test/price-alert-evaluation.contract.test.ts',
+    'test/api-openapi.contract.test.ts',
+  ],
   sourceVariable: 'API_ROUTES_APP_SOURCE',
 };

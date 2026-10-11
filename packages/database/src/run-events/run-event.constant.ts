@@ -13,3 +13,7 @@ export const RUN_EVENT_KIND = {
 } as const;
 
 export type RunEventKind = (typeof RUN_EVENT_KIND)[keyof typeof RUN_EVENT_KIND];
+
+// O aviso do disparo de um alerta de preço (T4b.7) usa o mesmo canal: `{ kind, alertId }`, só o ponteiro; a API resolve o dono
+// pelo banco.
+export const PRICE_ALERT_EVENT_KIND = 'price_alert';

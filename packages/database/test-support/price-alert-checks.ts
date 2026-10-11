@@ -3,6 +3,7 @@ import {
   PRICE_ALERT_CREATE_OUTCOME,
   PRICE_ALERT_UPDATE_OUTCOME,
 } from '../src/price-alerts/price-alert.constant.js';
+import { createPriceAlertEvaluationRepository } from '../src/price-alerts/price-alert-evaluation.repository.js';
 import { createPriceAlertRepository } from '../src/price-alerts/price-alert.repository.js';
 import type {
   CreatePriceAlertParams,
@@ -13,6 +14,7 @@ import type { LifecycleCheckContext } from './account-lifecycle-checks.js';
 import { captureErrorCode, resolvePersistenceOwner } from './persistence-seed.js';
 
 const CHECK_VIOLATION_SQLSTATE = '23514';
+const UNIQUE_VIOLATION_SQLSTATE = '23505';
 const RACED_ALERTS = 12;
 const ALERT_CEILING = 5;
 const BASE: CreatePriceAlertParams = {
@@ -181,10 +183,212 @@ async function checkDatabaseRules(context: LifecycleCheckContext): Promise<void>
   );
 }
 
+const FIRING_CHAT = '760000001';
+
+type FiringSetup = {
+  readonly alerts: ReturnType<typeof createPriceAlertRepository>;
+  readonly evaluation: ReturnType<typeof createPriceAlertEvaluationRepository>;
+  readonly withTelegram: Awaited<ReturnType<typeof resolvePersistenceOwner>>;
+  readonly withoutTelegram: Awaited<ReturnType<typeof resolvePersistenceOwner>>;
+};
+
+async function outboxRows(
+  context: LifecycleCheckContext,
+  alertId: string,
+): Promise<readonly { side: string; candle_time: string; payload: Record<string, string> }[]> {
+  const rows: unknown =
+    await context.client`SELECT side, candle_time::text, payload FROM alerts WHERE price_alert_id = ${alertId} ORDER BY candle_time`;
+  return rows as readonly { side: string; candle_time: string; payload: Record<string, string> }[];
+}
+
+async function openFiringSetup(context: LifecycleCheckContext): Promise<FiringSetup> {
+  const { handle, client } = context;
+  const withTelegram = await resolvePersistenceOwner(handle, 'subject-price-alert-fire-a');
+  const withoutTelegram = await resolvePersistenceOwner(handle, 'subject-price-alert-fire-b');
+  await client`UPDATE users SET telegram_chat_id = ${FIRING_CHAT}, alert_telegram_enabled = true WHERE id = ${withTelegram.userId}`;
+  return {
+    alerts: createPriceAlertRepository(handle),
+    evaluation: createPriceAlertEvaluationRepository(handle),
+    withTelegram,
+    withoutTelegram,
+  };
+}
+
+// A regra de disparo no banco: cruzamento inclusivo nos dois sentidos, uma vez só, só o par do tick, só alerta ligado,
+// aviso na caixa de saída só para o dono com Telegram, e dois processos no mesmo tick nunca avisam em dobro.
+async function checkFiring(context: LifecycleCheckContext): Promise<void> {
+  const { assertCondition, reportCheck } = context;
+  const { alerts, evaluation, withTelegram, withoutTelegram } = await openFiringSetup(context);
+  const above = await created(alerts, withTelegram.scope, { symbol: 'LTCUSDT', value: '99.5' });
+  const below = await created(alerts, withTelegram.scope, {
+    symbol: 'LTCUSDT',
+    direction: 'below',
+    value: '50',
+  });
+  const otherPair = await created(alerts, withTelegram.scope, { symbol: 'XRPUSDT', value: '1' });
+  const noTelegram = await created(alerts, withoutTelegram.scope, {
+    symbol: 'LTCUSDT',
+    value: '100',
+  });
+  const fire = (price: string, eventTime: number): Promise<readonly string[]> =>
+    evaluation.fireDueAlerts({ symbol: 'LTCUSDT', price, eventTime }).then((r) => r.firedAlertIds);
+  assertCondition((await fire('89.99999999', 1)).length === 0, 'entre os valores nada dispara');
+  const crossed = await fire('100', 2);
+  assertCondition(
+    crossed.length === 2 && crossed.includes(above.id) && crossed.includes(noTelegram.id),
+    `ao cruzar o valor dispara o "acima de" e o de outro dono: ${crossed.join()}`,
+  );
+  assertCondition((await fire('100', 3)).length === 0, 'o mesmo cruzamento não dispara de novo');
+  assertCondition(
+    (await fire('50.00000001', 4)).length === 0,
+    'um pouco acima de 50 ainda não cruza o "abaixo de"',
+  );
+  assertCondition((await fire('50', 5))[0] === below.id, 'no valor exato dispara o "abaixo de"');
+  const otherUntouched = await alerts.findPriceAlert(withTelegram.scope, otherPair.id);
+  assertCondition(otherUntouched?.isEnabled === true, 'tick de um par não dispara alerta de outro');
+  const row = (await outboxRows(context, above.id))[0];
+  assertCondition(
+    row?.side === 'PRICE' &&
+      row.candle_time === '2' &&
+      row.payload['threshold'] === '99.5' &&
+      row.payload['price'] === '100' &&
+      row.payload['direction'] === 'above' &&
+      row.payload['symbol'] === 'LTCUSDT',
+    'o aviso leva par, sentido, valor do usuário e preço que cruzou',
+  );
+  assertCondition(
+    (await outboxRows(context, noTelegram.id)).length === 0,
+    'dono sem Telegram: o alerta dispara, mas nenhum aviso entra na caixa de saída',
+  );
+  const state = await alerts.findPriceAlert(withoutTelegram.scope, noTelegram.id);
+  assertCondition(
+    state?.isEnabled === false && state.triggeredAt !== undefined,
+    'e fica desligado e carimbado',
+  );
+  reportCheck(
+    'alertas de preço: disparo inclusivo nos dois sentidos, uma vez, só no par do tick, aviso só com Telegram',
+  );
+}
+
+async function checkFiringRaces(context: LifecycleCheckContext): Promise<void> {
+  const { assertCondition, reportCheck } = context;
+  const { alerts, evaluation, withTelegram } = await openFiringSetup(context);
+  const alert = await created(alerts, withTelegram.scope, { symbol: 'ADAUSDT', value: '2' });
+  const results = await Promise.all(
+    Array.from({ length: 10 }, () =>
+      evaluation.fireDueAlerts({ symbol: 'ADAUSDT', price: '2.5', eventTime: 7 }),
+    ),
+  );
+  const total = results.reduce((sum, result) => sum + result.firedAlertIds.length, 0);
+  assertCondition(total === 1, `${total} disparos de 10 processos no mesmo tick; esperava 1`);
+  assertCondition(
+    (await outboxRows(context, alert.id)).length === 1,
+    'e UM aviso na caixa de saída',
+  );
+  const rearmed = await alerts.updatePriceAlert(withTelegram.scope, {
+    alertId: alert.id,
+    patch: { isEnabled: true },
+    maxEnabled: 50,
+  });
+  assertCondition(rearmed.outcome === PRICE_ALERT_UPDATE_OUTCOME.UPDATED, 'religa');
+  await evaluation.fireDueAlerts({ symbol: 'ADAUSDT', price: '2.5', eventTime: 8 });
+  assertCondition(
+    (await outboxRows(context, alert.id)).length === 2,
+    'rearmado, o novo cruzamento é outro aviso (outro instante)',
+  );
+  await alerts.updatePriceAlert(withTelegram.scope, {
+    alertId: alert.id,
+    patch: { isEnabled: true },
+    maxEnabled: 50,
+  });
+  await context.client`UPDATE price_alerts SET is_enabled = false WHERE id = ${alert.id}`;
+  const none = await evaluation.fireDueAlerts({ symbol: 'ADAUSDT', price: '9', eventTime: 9 });
+  assertCondition(none.firedAlertIds.length === 0, 'alerta desligado nunca dispara');
+  reportCheck(
+    'alertas de preço: 10 processos no mesmo tick = 1 disparo e 1 aviso; religar rearma; desligado não dispara',
+  );
+}
+
+async function checkActiveOwner(context: LifecycleCheckContext): Promise<void> {
+  const { handle, client, assertCondition, reportCheck } = context;
+  const owner = await resolvePersistenceOwner(handle, 'subject-price-alert-active-owner');
+  const alerts = createPriceAlertRepository(handle);
+  const evaluation = createPriceAlertEvaluationRepository(handle);
+  const alert = await created(alerts, owner.scope);
+  assertCondition(
+    (await evaluation.findActiveOwnerId(alert.id)) === owner.userId,
+    'o dono ativo do alerta',
+  );
+  assertCondition(
+    (await evaluation.findActiveOwnerId(crypto.randomUUID())) === undefined,
+    'alerta inexistente não tem dono',
+  );
+  await client`UPDATE users SET blocked_at = now() WHERE id = ${owner.userId}`;
+  assertCondition(
+    (await evaluation.findActiveOwnerId(alert.id)) === undefined,
+    'conta bloqueada não recebe aviso',
+  );
+  await client`UPDATE users SET blocked_at = null, deleted_at = now() WHERE id = ${owner.userId}`;
+  assertCondition(
+    (await evaluation.findActiveOwnerId(alert.id)) === undefined,
+    'conta apagada não recebe aviso',
+  );
+  reportCheck('alertas de preço: o aviso só vai ao dono com conta ativa');
+}
+
+// A caixa de saída: o lado PRICE não tem execução e leva o alerta; os outros lados são o contrário; (alerta, instante) é único.
+async function checkOutboxRules(context: LifecycleCheckContext): Promise<void> {
+  const { handle, client, assertCondition, reportCheck } = context;
+  const owner = await resolvePersistenceOwner(handle, 'subject-price-alert-outbox-rules');
+  const insert = (fields: {
+    side: string;
+    runId: string | null;
+    priceAlertId: string | null;
+    candleTime: number;
+  }): PromiseLike<unknown> =>
+    client`INSERT INTO alerts (id, user_id, run_id, price_alert_id, candle_time, side, channel, payload)
+      VALUES (${crypto.randomUUID()}, ${owner.userId}, ${fields.runId}, ${fields.priceAlertId}, ${fields.candleTime},
+        ${fields.side}, 'telegram', '{}'::jsonb)`;
+  const someId = crypto.randomUUID();
+  const invalid: readonly (readonly [string, Parameters<typeof insert>[0]])[] = [
+    ['PRICE com execução', { side: 'PRICE', runId: someId, priceAlertId: someId, candleTime: 1 }],
+    [
+      'PRICE sem o alerta de origem',
+      { side: 'PRICE', runId: null, priceAlertId: null, candleTime: 1 },
+    ],
+    ['sinal sem execução', { side: 'BUY', runId: null, priceAlertId: null, candleTime: 1 }],
+    [
+      'sinal com alerta de preço',
+      { side: 'BUY', runId: someId, priceAlertId: someId, candleTime: 1 },
+    ],
+  ];
+  for (const [label, fields] of invalid) {
+    const code = await captureErrorCode(insert(fields));
+    assertCondition(code === CHECK_VIOLATION_SQLSTATE, `${label}: o banco devia recusar (${code})`);
+  }
+  const price = { side: 'PRICE', runId: null, priceAlertId: someId, candleTime: 5 };
+  assertCondition(
+    (await captureErrorCode(insert(price))) === undefined,
+    'o aviso PRICE válido entra',
+  );
+  const duplicate = await captureErrorCode(insert(price));
+  assertCondition(
+    duplicate === UNIQUE_VIOLATION_SQLSTATE,
+    `o mesmo alerta no mesmo instante é único (${duplicate})`,
+  );
+  reportCheck(
+    'alertas de preço: a caixa de saída recusa PRICE com execução, sinal sem execução e aviso em dobro',
+  );
+}
+
 export async function checkPriceAlerts(context: LifecycleCheckContext): Promise<void> {
   await checkRoundTrip(context);
   await checkIsolation(context);
   await checkRearm(context);
   await checkCeilingUnderRace(context);
   await checkDatabaseRules(context);
+  await checkFiring(context);
+  await checkFiringRaces(context);
+  await checkActiveOwner(context);
+  await checkOutboxRules(context);
 }

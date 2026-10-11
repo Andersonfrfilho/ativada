@@ -178,6 +178,7 @@ export const OWNED_TABLE_EXPORTS: readonly OwnedTableExportStep[] = [
   exportColumns(alerts, [
     'id',
     'runId',
+    'priceAlertId',
     'candleTime',
     'side',
     'channel',

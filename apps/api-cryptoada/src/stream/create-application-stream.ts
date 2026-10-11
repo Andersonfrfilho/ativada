@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
+  createPriceAlertEvaluationRepository,
   createRunEventListener,
   resolveRunOwnerScope,
   resolveUserBySubject,
@@ -19,6 +20,10 @@ import {
 import { createRateLimiter } from '../rate-limit/rate-limiter.js';
 import { STREAM_LOG_MESSAGE } from './stream.constant.js';
 import { createStreamEndpoint, type StreamEndpoint } from './create-stream-endpoint.js';
+import {
+  createPriceAlertEventDispatcher,
+  type PriceAlertEventDispatcher,
+} from '../price-alerts/price-alert-event-dispatcher.js';
 import { createRunEventDispatcher, type RunEventDispatcher } from './run-event-dispatcher.js';
 import { logListenerLoss, toListenerHealth, type ListenerHealth } from './listener-health.js';
 import { toStreamLimits } from './stream-environment.js';
@@ -47,14 +52,16 @@ type ListenerWiring = {
   readonly logger: Logger;
   readonly endpoint: StreamEndpoint;
   readonly dispatcher: RunEventDispatcher;
+  readonly priceAlertDispatcher: PriceAlertEventDispatcher;
   readonly reportError: (error: unknown) => void;
 };
 
 function openRunEventListener(wiring: ListenerWiring): NotificationListener {
-  const { logger, endpoint, dispatcher } = wiring;
+  const { logger, endpoint, dispatcher, priceAlertDispatcher } = wiring;
   return createRunEventListener({
     databaseUrl: wiring.environment.DATABASE_URL,
     onEvent: (event) => void dispatcher.dispatch(event),
+    onPriceAlert: (event) => void priceAlertDispatcher.dispatch(event),
     onMalformed: () => logger.warn(STREAM_LOG_MESSAGE, { event: 'stream.event.malformed' }),
     onListening: (event) => {
       endpoint.handleListenerListening(event.isReconnect);
@@ -88,6 +95,34 @@ function createEndpoint(
   });
 }
 
+type DispatcherParams = {
+  readonly database: DatabaseHandle;
+  readonly hub: StreamEndpoint['hub'];
+  readonly reportError: (error: unknown) => void;
+};
+
+// Os dois avisos do banco (passo ao vivo e disparo de alerta de preço) resolvem o dono pelo banco e entregam só a ele.
+function createDispatchers(params: DispatcherParams): {
+  readonly dispatcher: RunEventDispatcher;
+  readonly priceAlertDispatcher: PriceAlertEventDispatcher;
+} {
+  const { database, hub, reportError } = params;
+  return {
+    dispatcher: createRunEventDispatcher({
+      hub,
+      now: () => Date.now(),
+      reportError,
+      resolveOwner: async (runId) => (await resolveRunOwnerScope(database, runId))?.ownerUserId,
+    }),
+    priceAlertDispatcher: createPriceAlertEventDispatcher({
+      hub,
+      now: () => Date.now(),
+      reportError,
+      resolveOwner: createPriceAlertEvaluationRepository(database).findActiveOwnerId,
+    }),
+  };
+}
+
 // A API é quem liga o worker ao painel: o worker avisa por NOTIFY `{ runId, kind, eventId }` e a API resolve o dono pelo banco.
 export function createApplicationStream(params: ApplicationStreamParams): ApplicationStream {
   const { environment, logger, database } = params;
@@ -97,12 +132,7 @@ export function createApplicationStream(params: ApplicationStreamParams): Applic
     ? createApplicationMarketStream({ environment, logger, reportError })
     : undefined;
   const endpoint = createEndpoint(params, market, reportError);
-  const dispatcher = createRunEventDispatcher({
-    hub: endpoint.hub,
-    now: () => Date.now(),
-    reportError,
-    resolveOwner: async (runId) => (await resolveRunOwnerScope(database, runId))?.ownerUserId,
-  });
+  const dispatchers = createDispatchers({ database, hub: endpoint.hub, reportError });
   let listener: NotificationListener | undefined;
   let sweeper: ReturnType<typeof setInterval> | undefined;
   return {
@@ -112,7 +142,13 @@ export function createApplicationStream(params: ApplicationStreamParams): Applic
     start: (): void => {
       if (listener !== undefined) return;
       market?.start();
-      listener = openRunEventListener({ environment, logger, endpoint, dispatcher, reportError });
+      listener = openRunEventListener({
+        environment,
+        logger,
+        endpoint,
+        ...dispatchers,
+        reportError,
+      });
       const intervalMilliseconds =
         environment.STREAM_PING_INTERVAL_SECONDS * MILLISECONDS_PER_SECOND;
       sweeper = setInterval(endpoint.sweep, intervalMilliseconds);
