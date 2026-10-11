@@ -78,6 +78,39 @@ async function openOverview(): Promise<ReturnType<typeof renderApp>> {
   return rendered;
 }
 
+describe('the sentiment credit link', () => {
+  function withSentiment(url: string): readonly FakeRoute[] {
+    return ROUTES.map((route) =>
+      route.path === '/v1/market/sentiment'
+        ? {
+            ...route,
+            respond: (): Response =>
+              dataResponse({
+                fearGreed: 27,
+                classification: 'Fear',
+                date: '2026-10-11',
+                source: {
+                  name: 'alternative.me',
+                  creditText: 'Fear & Greed Index por alternative.me',
+                  url,
+                },
+              }),
+          }
+        : route,
+    );
+  }
+
+  for (const url of ['javascript:alert(1)', 'http://alternative.me/x', 'not a url']) {
+    test(`${url} from the API is never put in an href: the fixed credit link stays`, async () => {
+      renderApp({ path: '/', isAuthenticated: true, routes: withSentiment(url) });
+      const link = await screen.findByRole('link', {
+        name: 'Fear & Greed Index por alternative.me',
+      });
+      expect(link.getAttribute('href')).toBe('https://alternative.me/crypto/fear-and-greed-index/');
+    });
+  }
+});
+
 describe('a quiet pair', () => {
   test('leaves live mode on its own card while the other pair keeps ticking, and polls REST for it only', async () => {
     const rendered = renderApp({

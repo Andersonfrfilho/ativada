@@ -9,10 +9,15 @@ const SENTIMENT_PATH = '/v1/market/sentiment';
 const DAY_MILLISECONDS = 86_400_000;
 
 export const sentimentSchema = z.object({
-  fearGreed: z.number(),
+  fearGreed: z.number().int().min(0).max(100),
   classification: z.string().nullable(),
-  date: z.string(),
-  source: z.object({ name: z.string(), creditText: z.string(), url: z.string() }),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  // O link do crédito vem da API: só https passa (nada de `javascript:` num href).
+  source: z.object({
+    name: z.string(),
+    creditText: z.string(),
+    url: z.url().refine((url) => url.startsWith('https://')),
+  }),
 });
 
 export type Sentiment = z.infer<typeof sentimentSchema>;

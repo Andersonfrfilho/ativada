@@ -20,6 +20,16 @@ const CLASSIFICATION_TEXT: Readonly<Record<string, string>> = {
   'Extreme Greed': 'Ganância extrema',
 };
 
+function describeMissing(query: {
+  readonly isPending: boolean;
+  readonly isError: boolean;
+}): string {
+  if (query.isPending) return 'Carregando…';
+  return query.isError
+    ? 'Não foi possível ler o índice agora.'
+    : 'O índice ainda não foi coletado.';
+}
+
 // Onde o índice aparece, o crédito da alternative.me e o link vão junto (RF01, plan D14); sem valor, o crédito fica.
 export function SentimentCard(): ReactElement {
   const sentiment = useSentimentQuery();
@@ -28,9 +38,7 @@ export function SentimentCard(): ReactElement {
   return (
     <Card title="Sentimento do mercado">
       {data === undefined ? (
-        <p className={controls.muted}>
-          {sentiment.isPending ? 'Carregando…' : 'O índice ainda não foi coletado.'}
-        </p>
+        <p className={controls.muted}>{describeMissing(sentiment)}</p>
       ) : (
         <p>
           <span className={styles.bigNumber}>{data.fearGreed}</span>{' '}
