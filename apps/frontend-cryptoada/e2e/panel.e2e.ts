@@ -144,7 +144,7 @@ test('exportar meus dados baixa o arquivo da API com o e-mail do usuário', asyn
   const downloading = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Exportar meus dados' }).click();
   const download = await downloading;
-  expect(download.suggestedFilename()).toMatch(/^cryptoada-export-\d{4}-\d{2}-\d{2}\.json$/);
+  expect(download.suggestedFilename()).toMatch(/^cryptoada-export-\d{4}-\d{2}-\d{2}\.ndjson$/);
   const path = await download.path();
   expect(await readFile(path, 'utf8')).toContain(environment.email);
 });
