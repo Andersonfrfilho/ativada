@@ -78,6 +78,29 @@ async function openOverview(): Promise<ReturnType<typeof renderApp>> {
   return rendered;
 }
 
+describe('the price badge for screen readers', () => {
+  function stateRegion(): HTMLElement {
+    const region = screen
+      .getAllByRole('status')
+      .find((element) => (element.textContent ?? '').startsWith('Estado dos preços'));
+    if (region === undefined) throw new Error('região de estado dos preços ausente');
+    return region;
+  }
+
+  test('only the state change is announced: the live region never carries the ticking seconds', async () => {
+    const { stream } = await openOverview();
+    expect(stateRegion().textContent).toBe('Estado dos preços: sem dados');
+    act(() => stream.setStatus('live'));
+    act(() => stream.tick(tick('BTCUSDT', '62000.50')));
+    await waitFor(() => expect(stateRegion().textContent).toBe('Estado dos preços: ao vivo'));
+    act(() => stream.setStatus('reconnecting'));
+    await waitFor(() => expect(stateRegion().textContent).toBe('Estado dos preços: sem dados'));
+    await new Promise((resolve) => setTimeout(resolve, 1_200));
+    expect(stateRegion().textContent).toBe('Estado dos preços: sem dados');
+    expect(screen.getByText(/^Sem dados há \d+ s$/).getAttribute('aria-hidden')).toBe('true');
+  });
+});
+
 describe('the sentiment credit link', () => {
   function withSentiment(url: string): readonly FakeRoute[] {
     return ROUTES.map((route) =>

@@ -12,13 +12,23 @@ function describe(market: LiveMarket): string {
     : `Sem dados há ${market.secondsWithoutData} s`;
 }
 
-// O selo dos preços: "ao vivo", esperando o primeiro tick ou "sem dados há N s" (socket fora ou ticks velhos).
+const STATE_TEXT: Readonly<Record<LiveMarket['state'], string>> = {
+  live: 'ao vivo',
+  waiting: 'aguardando',
+  stale: 'sem dados',
+  offline: 'sem dados',
+};
+
+// O texto com os segundos muda toda hora e fica fora do leitor de tela; só a região de estado, que muda uma vez por troca, é anunciada.
 export function MarketStatusBadge(): ReactElement {
   const market = useLiveMarket();
   return (
-    <span role="status" className={market.isLive ? `${styles.badge} ${styles.live}` : styles.badge}>
+    <span className={market.isLive ? `${styles.badge} ${styles.live}` : styles.badge}>
       <span className={styles.dot} aria-hidden="true" />
-      {describe(market)}
+      <span aria-hidden="true">{describe(market)}</span>
+      <span role="status" className={styles.srOnly}>
+        Estado dos preços: {STATE_TEXT[market.state]}
+      </span>
     </span>
   );
 }
