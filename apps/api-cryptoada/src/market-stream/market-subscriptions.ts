@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { deliverToSocket } from '../stream/socket-delivery.js';
 import type { StreamSocket } from '../stream/stream-socket.types.js';
 import type { MarketContext, MarketSubscriptions } from './market-context.js';
 import { buildTickMessage, isPairStale } from './market-publishing.js';
@@ -12,7 +13,7 @@ function sortedUnique(pairs: Iterable<string>): string[] {
 
 function sendSubscribed(socket: StreamSocket): void {
   const pairs = sortedUnique(socket.data.subscribedPairs);
-  socket.send(JSON.stringify({ type: MARKET_SERVER_MESSAGE_TYPE.SUBSCRIBED, pairs }));
+  deliverToSocket(socket, JSON.stringify({ type: MARKET_SERVER_MESSAGE_TYPE.SUBSCRIBED, pairs }));
 }
 
 // Quem assina no meio do dia recebe o último tick na hora (já selado como velho, se for o caso), não uma tela em branco.
@@ -20,7 +21,7 @@ function sendSnapshot(context: MarketContext, socket: StreamSocket, pair: string
   const state = context.states.get(pair);
   if (state?.aggregated === undefined) return;
   const message = buildTickMessage(context, state.aggregated, isPairStale(context, state));
-  socket.send(JSON.stringify(message));
+  deliverToSocket(socket, JSON.stringify(message));
 }
 
 function subscribe(context: MarketContext, socket: StreamSocket, pairs: readonly string[]): void {

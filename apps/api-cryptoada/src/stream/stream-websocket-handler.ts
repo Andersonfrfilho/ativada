@@ -1,5 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { CLOSE_REASON, STREAM_LOG_EVENT, WEBSOCKET_CLOSE_CODE } from './stream.constant.js';
+import {
+  CLOSE_REASON,
+  STREAM_LOG_EVENT,
+  WEBSOCKET_BACKPRESSURE_LIMIT_BYTES,
+  WEBSOCKET_CLOSE_CODE,
+} from './stream.constant.js';
 import { handleStreamMessage, type MessageDependencies } from './handle-stream-message.js';
 import type { StreamHub } from './stream-hub.js';
 import type { StreamSocketData } from './stream-socket.types.js';
@@ -20,6 +25,8 @@ export function createStreamWebSocketHandler(
   const { hub, messages, log } = dependencies;
   return {
     maxPayloadLength: dependencies.maxMessageBytes,
+    backpressureLimit: WEBSOCKET_BACKPRESSURE_LIMIT_BYTES,
+    closeOnBackpressureLimit: true,
     open: (socket): void => {
       // O teto também vale aqui: dois handshakes simultâneos do mesmo usuário passam juntos pela checagem do upgrade.
       if (hub.add(socket) === 'limit-reached') {

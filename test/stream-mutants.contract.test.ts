@@ -62,8 +62,8 @@ const HUB_MUTANTS: readonly SourceMutant[] = [
   {
     name: 'SEND_FAILURE_ABORTS_THE_DELIVERY',
     edits: edit(
-      HUB,
-      '  } catch {\n    return false;\n  }',
+      'stream/socket-delivery.ts',
+      '  } catch {\n    return SEND_OUTCOME.FAILED;\n  }',
       '  } catch (error) {\n    throw error;\n  }',
     ),
   },
@@ -370,7 +370,82 @@ const ACCOUNT_MUTANTS: readonly SourceMutant[] = [
   },
 ];
 
+const DELIVERY = 'stream/socket-delivery.ts';
+const MARKET_PUBSUB = 'market-stream/market-pubsub.ts';
+
+const BACKPRESSURE_MUTANTS: readonly SourceMutant[] = [
+  {
+    name: 'DROPPED_MESSAGE_NOT_ANSWERED_WITH_RESYNC',
+    edits: edit(DELIVERY, '  if (outcome === SEND_OUTCOME.DROPPED) recoverFromDrop(socket);\n', ''),
+  },
+  {
+    name: 'STUCK_SOCKET_NOT_CLOSED',
+    edits: edit(
+      DELIVERY,
+      '  closeSocketSafely(socket, WEBSOCKET_CLOSE_CODE.TRY_AGAIN_LATER, CLOSE_REASON.SLOW_CLIENT);\n',
+      '',
+    ),
+  },
+  {
+    name: 'STUCK_SOCKET_CLOSED_WITH_THE_WRONG_CODE',
+    edits: edit(
+      DELIVERY,
+      'closeSocketSafely(socket, WEBSOCKET_CLOSE_CODE.TRY_AGAIN_LATER,',
+      'closeSocketSafely(socket, WEBSOCKET_CLOSE_CODE.POLICY_VIOLATION,',
+    ),
+  },
+  {
+    name: 'QUEUED_MESSAGE_TREATED_AS_DROPPED',
+    edits: edit(
+      DELIVERY,
+      'return result === 0 ? SEND_OUTCOME.DROPPED : SEND_OUTCOME.ACCEPTED;',
+      'return result === 0 || result === -1 ? SEND_OUTCOME.DROPPED : SEND_OUTCOME.ACCEPTED;',
+    ),
+  },
+  {
+    name: 'DROPPED_MESSAGE_COUNTED_AS_DELIVERED',
+    edits: edit(
+      DELIVERY,
+      '  return outcome === SEND_OUTCOME.ACCEPTED;\n',
+      '  return outcome !== SEND_OUTCOME.FAILED;\n',
+    ),
+  },
+  {
+    name: 'BACKPRESSURE_LIMIT_NOT_SET',
+    edits: edit(HANDLER, '    backpressureLimit: WEBSOCKET_BACKPRESSURE_LIMIT_BYTES,\n', ''),
+  },
+  {
+    name: 'BACKPRESSURE_LIMIT_DOES_NOT_CLOSE',
+    edits: edit(HANDLER, 'closeOnBackpressureLimit: true,', 'closeOnBackpressureLimit: false,'),
+  },
+  {
+    name: 'MARKET_PUBLISH_BYPASSES_THE_SLOW_CLIENT_POLICY',
+    edits: edit(
+      MARKET_PUBSUB,
+      '        if (deliverToSocket(socket, text)) delivered += 1;\n',
+      '        socket.send(text);\n        delivered += 1;\n',
+    ),
+  },
+  {
+    name: 'HUB_FAN_OUT_BYPASSES_THE_SLOW_CLIENT_POLICY',
+    edits: edit(
+      HUB,
+      'if (deliverToSocket(socket, text)) delivered += 1;',
+      'if (socket.send(text) !== 0) delivered += 1;',
+    ),
+  },
+  {
+    name: 'REPLY_TO_A_CLOSED_SOCKET_THROWS',
+    edits: edit(
+      MESSAGE,
+      'function sendMessageError(socket: StreamSocket): void {\n  deliverToSocket(\n    socket,\n    JSON.stringify(',
+      'function sendMessageError(socket: StreamSocket): void {\n  socket.send(\n    JSON.stringify(',
+    ),
+  },
+];
+
 const MUTANTS: readonly SourceMutant[] = [
+  ...BACKPRESSURE_MUTANTS,
   ...HUB_MUTANTS,
   ...SWEEP_MUTANTS,
   ...DISPATCHER_MUTANTS,

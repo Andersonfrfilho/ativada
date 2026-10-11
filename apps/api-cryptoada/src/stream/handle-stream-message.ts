@@ -15,6 +15,7 @@ import {
   SERVER_MESSAGE_TYPE,
   WEBSOCKET_CLOSE_CODE,
 } from './stream.constant.js';
+import { deliverToSocket } from './socket-delivery.js';
 import { parseClientMessage } from './stream-client-message.schema.js';
 import type { StreamSocket } from './stream-socket.types.js';
 import type { StreamTicketStore } from './stream-ticket-store.js';
@@ -30,14 +31,15 @@ export type MessageDependencies = {
 };
 
 function sendMessageError(socket: StreamSocket): void {
-  socket.send(
+  deliverToSocket(
+    socket,
     JSON.stringify({ type: SERVER_MESSAGE_TYPE.ERROR, code: MESSAGE_ERROR_CODE.INVALID_MESSAGE }),
   );
 }
 
 function sendMarketError(socket: StreamSocket, code: string, pair?: string): void {
   const detail = pair === undefined ? {} : { pair };
-  socket.send(JSON.stringify({ type: SERVER_MESSAGE_TYPE.ERROR, code, ...detail }));
+  deliverToSocket(socket, JSON.stringify({ type: SERVER_MESSAGE_TYPE.ERROR, code, ...detail }));
 }
 
 // Assinar ou cancelar pares do ticker público: a recusa é um erro TIPADO (`code` fixo), nunca um fechamento do socket.
@@ -101,7 +103,8 @@ async function renew(
     return;
   }
   socket.data.expiresAtMilliseconds = claims.sessionExpiresAtMilliseconds;
-  socket.send(
+  deliverToSocket(
+    socket,
     JSON.stringify({
       type: SERVER_MESSAGE_TYPE.RENEWED,
       expiresAt: claims.sessionExpiresAtMilliseconds,

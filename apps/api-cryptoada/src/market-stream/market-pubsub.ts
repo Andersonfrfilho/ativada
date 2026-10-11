@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { deliverToSocket } from '../stream/socket-delivery.js';
 import type { StreamSocket } from '../stream/stream-socket.types.js';
 import { MARKET_TOPIC_PREFIX } from './market-stream.constant.js';
 
@@ -40,12 +41,8 @@ export function createMarketPubSub(): MarketPubSub {
       const text = JSON.stringify(message);
       let delivered = 0;
       for (const socket of subscribers.get(topic) ?? []) {
-        try {
-          socket.send(text);
-          delivered += 1;
-        } catch {
-          // Soquete quebrado sai pelo `close` do servidor; os outros assinantes seguem.
-        }
+        // Soquete quebrado sai pelo `close` do servidor; o lento recebe `resync` ou cai com 1013; os outros seguem.
+        if (deliverToSocket(socket, text)) delivered += 1;
       }
       return delivered;
     },

@@ -10,6 +10,8 @@ import type * as BlockAccountModule from '../../../apps/api-cryptoada/src/admin/
 import type * as DeleteAccountModule from '../../../apps/api-cryptoada/src/account/delete-account.use-case.js';
 import type * as ApiEnvironmentModule from '../../../apps/api-cryptoada/src/environment.js';
 import type * as TicketRoutesModule from '../../../apps/api-cryptoada/src/stream/stream-ticket.routes.js';
+import type * as WebSocketHandlerModule from '../../../apps/api-cryptoada/src/stream/stream-websocket-handler.js';
+import type * as StreamMessageModule from '../../../apps/api-cryptoada/src/stream/handle-stream-message.js';
 import type * as ServerModule from '../../../apps/api-cryptoada/src/server.js';
 import type * as MarketPublisherModule from '../../../apps/api-cryptoada/src/market-stream/create-market-publisher.js';
 import type * as MarketPubSubModule from '../../../apps/api-cryptoada/src/market-stream/market-pubsub.js';
@@ -38,6 +40,8 @@ export type StreamApp = {
   readonly apiEnvironment: typeof ApiEnvironmentModule;
   readonly ticketRoutes: typeof TicketRoutesModule;
   readonly server: typeof ServerModule;
+  readonly websocketHandler: typeof WebSocketHandlerModule;
+  readonly streamMessage: typeof StreamMessageModule;
   readonly marketPublisher: typeof MarketPublisherModule;
   readonly marketPubSub: typeof MarketPubSubModule;
   readonly marketError: typeof MarketErrorModule;
@@ -70,6 +74,8 @@ export async function loadStreamApp(): Promise<StreamApp> {
     apiEnvironment: await load('environment'),
     ticketRoutes: await load('stream/stream-ticket.routes'),
     server: await load('server'),
+    websocketHandler: await load('stream/stream-websocket-handler'),
+    streamMessage: await load('stream/handle-stream-message'),
     marketPublisher: await load('market-stream/create-market-publisher'),
     marketPubSub: await load('market-stream/market-pubsub'),
     marketError: await load('market-stream/market-stream.error'),

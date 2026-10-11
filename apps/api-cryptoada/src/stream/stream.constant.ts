@@ -5,6 +5,8 @@ export const STREAM_LOG_MESSAGE = 'stream';
 export const MAX_TICKET_LENGTH = 128;
 export const WEBSOCKET_UPGRADE_HEADER_VALUE = 'websocket';
 export const MESSAGE_WINDOW_MILLISECONDS = 60_000;
+// Acima disto de fila por cliente, o servidor derruba a conexão (o padrão do Bun seria 16 MiB por cliente).
+export const WEBSOCKET_BACKPRESSURE_LIMIT_BYTES = 1_048_576;
 
 // 4401 e 4403 são os códigos da aplicação (ADR 0001 §e): token vencido e conta bloqueada ou apagada.
 export const WEBSOCKET_CLOSE_CODE = {
@@ -26,6 +28,7 @@ export const CLOSE_REASON = {
   MESSAGE_FLOOD: 'mensagens demais',
   SHUTTING_DOWN: 'encerrando',
   UNAVAILABLE: 'indisponível',
+  SLOW_CLIENT: 'cliente lento',
 } as const;
 
 export const SERVER_MESSAGE_TYPE = {
@@ -46,6 +49,7 @@ export const MESSAGE_ERROR_CODE = {
 export const RESYNC_REASON = {
   LISTENER_LOST: 'listener_lost',
   LISTENER_RESTORED: 'listener_restored',
+  BACKPRESSURE: 'backpressure',
 } as const;
 
 export const STREAM_LOG_EVENT = {

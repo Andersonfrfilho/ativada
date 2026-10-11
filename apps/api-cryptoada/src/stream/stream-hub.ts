@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { closeSocketSafely, deliverToSocket } from './socket-delivery.js';
 import type { StreamSocket } from './stream-socket.types.js';
 
 export type AddSocketResult = 'added' | 'limit-reached';
@@ -19,24 +20,6 @@ export type StreamHub = {
 
 export type StreamHubOptions = { readonly maxSocketsPerUser: number };
 
-// Um soquete que falha ao enviar não derruba a entrega aos outros; ele sai sozinho pelo `close` do servidor.
-function trySend(socket: StreamSocket, text: string): boolean {
-  try {
-    socket.send(text);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function tryClose(socket: StreamSocket, code: number, reason: string): void {
-  try {
-    socket.close(code, reason);
-  } catch {
-    // Já fechado: nada a encerrar.
-  }
-}
-
 export function createStreamHub(options: StreamHubOptions): StreamHub {
   const socketsByUser = new Map<string, Set<StreamSocket>>();
 
@@ -44,10 +27,11 @@ export function createStreamHub(options: StreamHubOptions): StreamHub {
     return [...socketsByUser.values()].flatMap((sockets) => [...sockets]);
   }
 
+  // Um soquete que falha ao enviar não derruba a entrega aos outros; ele sai sozinho pelo `close` do servidor.
   function sendToAll(sockets: Iterable<StreamSocket>, message: object): number {
     const text = JSON.stringify(message);
     let delivered = 0;
-    for (const socket of sockets) if (trySend(socket, text)) delivered += 1;
+    for (const socket of sockets) if (deliverToSocket(socket, text)) delivered += 1;
     return delivered;
   }
 
@@ -71,11 +55,11 @@ export function createStreamHub(options: StreamHubOptions): StreamHub {
     broadcast: (message): number => sendToAll(allSockets(), message),
     closeUser: (userId, code, reason): number => {
       const sockets = [...(socketsByUser.get(userId) ?? [])];
-      for (const socket of sockets) tryClose(socket, code, reason);
+      for (const socket of sockets) closeSocketSafely(socket, code, reason);
       return sockets.length;
     },
     closeAll: (code, reason): void => {
-      for (const socket of allSockets()) tryClose(socket, code, reason);
+      for (const socket of allSockets()) closeSocketSafely(socket, code, reason);
     },
   };
 }

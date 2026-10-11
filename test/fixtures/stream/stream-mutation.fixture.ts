@@ -12,6 +12,7 @@ export const STREAM_MUTANT_TARGET: MutantTarget = {
   directoryPrefix: 'stream-',
   judgeTestFiles: [
     'test/stream-hub.contract.test.ts',
+    'test/stream-backpressure.contract.test.ts',
     'test/stream-sweep.contract.test.ts',
     'test/run-event-dispatcher.contract.test.ts',
     'test/stream-endpoint.contract.test.ts',

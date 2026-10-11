@@ -11,7 +11,9 @@ export const SUBJECT_A = 'subject-stream-a';
 export const SUBJECT_B = 'subject-stream-b';
 
 export type FakeStreamSocket = StreamSocket & {
+  // O que o socket ACEITOU (enviado ou na fila); o descartado (0) só entra em `attempts`.
   readonly sent: string[];
+  readonly attempts: string[];
   readonly pings: number[];
   closed: { readonly code: number; readonly reason: string } | undefined;
   isBroken: boolean;
@@ -22,6 +24,8 @@ export type FakeSocketOptions = {
   readonly keycloakSubject?: string;
   readonly expiresAtMilliseconds?: number;
   readonly lastActivityAtMilliseconds?: number;
+  // O que `send` devolve para cada texto, como o do Bun: bytes enviados, -1 (na fila, com pressão) ou 0 (descartado).
+  readonly sendOutcome?: (text: string, attempt: number) => number;
 };
 
 let connectionCounter = 0;
@@ -41,13 +45,16 @@ export function createFakeSocket(options: FakeSocketOptions = {}): FakeStreamSoc
   const socket: FakeStreamSocket = {
     data,
     sent: [],
+    attempts: [],
     pings: [],
     closed: undefined,
     isBroken: false,
     send: (text: string): number => {
       if (socket.isBroken) throw new Error('socket quebrado');
-      socket.sent.push(text);
-      return text.length;
+      socket.attempts.push(text);
+      const outcome = options.sendOutcome?.(text, socket.attempts.length) ?? text.length;
+      if (outcome !== 0) socket.sent.push(text);
+      return outcome;
     },
     close: (code: number, reason?: string): void => {
       socket.closed = { code, reason: reason ?? '' };
