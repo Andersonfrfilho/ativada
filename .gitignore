@@ -11,3 +11,5 @@ envs/*.local
 tmp/
 .mutants/
 packages/dbmutant-*/
+apps/frontend-cryptoada/test-results/
+apps/frontend-cryptoada/playwright-report/

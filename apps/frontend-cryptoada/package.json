@@ -4,6 +4,27 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@cryptoada/environment": "workspace:*"
+    "@cryptoada/environment": "workspace:*",
+    "@tanstack/react-query": "5.104.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router": "8.4.0"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "20.14.5",
+    "@playwright/test": "1.58.2",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "happy-dom": "20.14.5",
+    "vite": "8.3.1"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "bun test --preload ./test/support/css-modules-plugin.ts --preload ./test/support/register-dom.ts --preload ./test/setup.ts ./test/session-service.contract.ts ./test/api-client.contract.ts ./test/login-redirect.contract.ts ./test/theme-store.contract.ts ./test/service-worker.contract.ts ./test/routes.contract.tsx ./test/account.contract.tsx ./test/overview.contract.tsx"
   }
 }

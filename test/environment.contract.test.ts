@@ -200,13 +200,28 @@ describe('cron application', () => {
 });
 
 describe('frontend environment', () => {
-  test('loadEnvironment returns VITE_API_URL when it is present', () => {
-    const environment = loadFrontendEnvironment({ VITE_API_URL: 'http://127.0.0.1:56001' });
+  const REQUIRED = {
+    VITE_API_URL: 'http://127.0.0.1:56001',
+    VITE_KEYCLOAK_AUTHORIZE_URL:
+      'http://127.0.0.1:56081/realms/cryptoada/protocol/openid-connect/auth',
+  };
+
+  test('loadEnvironment returns the public settings, with defaults for the optional ones', () => {
+    const environment = loadFrontendEnvironment(REQUIRED);
     expect(environment.VITE_API_URL).toBe('http://127.0.0.1:56001');
+    expect(environment.VITE_KEYCLOAK_CLIENT_ID).toBe('cryptoada-session');
+    expect(environment.VITE_MARKET_SYMBOLS).toBe('BTCUSDT,ETHUSDT');
   });
 
   test('loadEnvironment throws EnvironmentError when VITE_API_URL is missing', () => {
     const error = captureError(() => loadFrontendEnvironment({}));
+    expect(error).toBeInstanceOf(EnvironmentError);
+  });
+
+  test('loadEnvironment throws EnvironmentError when the Keycloak authorize URL is missing', () => {
+    const error = captureError(() =>
+      loadFrontendEnvironment({ VITE_API_URL: REQUIRED.VITE_API_URL }),
+    );
     expect(error).toBeInstanceOf(EnvironmentError);
   });
 });

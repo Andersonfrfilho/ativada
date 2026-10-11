@@ -1,0 +1,44 @@
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.heading {
+  font: 400 30px/1.15 var(--font-display);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+}
+
+.code {
+  font: 600 24px/1.2 var(--font-data);
+  letter-spacing: 0.12em;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.status {
+  font-weight: 600;
+}
+
+.danger {
+  border-color: var(--sell);
+}

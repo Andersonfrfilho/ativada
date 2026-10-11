@@ -88,7 +88,15 @@ const APP_SOURCE_FILES = 'apps/*/src/**/*.{ts,tsx,mts,cts,js,mjs}';
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'coverage', 'node_modules', 'docs', 'specs'],
+    ignores: [
+      '**/dist',
+      'coverage',
+      'node_modules',
+      'docs',
+      'specs',
+      'apps/frontend-cryptoada/public',
+      'apps/frontend-cryptoada/test-results',
+    ],
   },
   {
     files: ['**/*.js'],
@@ -187,6 +195,18 @@ export default tseslint.config(
     // Scripts de integração imprimem o resultado no terminal; o código de produção não.
     files: ['packages/*/test-support/**/*.ts', 'scripts/**/*.ts'],
     rules: { 'no-console': 'off' },
+  },
+  {
+    // Vite e Playwright exigem `export default`; o leitor de variáveis do E2E é a fronteira que lê process.env.
+    files: [
+      'apps/frontend-cryptoada/vite.config.ts',
+      'apps/frontend-cryptoada/playwright.config.ts',
+      'apps/frontend-cryptoada/e2e/e2e-environment.ts',
+    ],
+    rules: {
+      'no-restricted-exports': 'off',
+      'no-restricted-syntax': 'off',
+    },
   },
   {
     files: ['packages/database/drizzle.config.ts'],

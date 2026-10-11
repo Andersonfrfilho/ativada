@@ -7,5 +7,6 @@
     "packages/*/drizzle.config.ts",
     "test",
     "scripts"
-  ]
+  ],
+  "exclude": ["apps/frontend-cryptoada"]
 }

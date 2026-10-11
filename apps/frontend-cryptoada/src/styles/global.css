@@ -1,0 +1,110 @@
+:root {
+  --bg: #f2f4f8;
+  --surface: #ffffff;
+  --surface-2: #ebeef4;
+  --line: #d8dee9;
+  --ink: #10162a;
+  --ink-2: #47516c;
+  --ink-3: #5f6b86;
+  --accent: #2541b2;
+  --accent-soft: #e1e7fb;
+  --on-accent: #ffffff;
+  --buy: #0b8459;
+  --buy-soft: #dbf2e8;
+  --sell: #c0353d;
+  --sell-soft: #fbe3e4;
+  --warn: #7a4f00;
+  --warn-soft: #fbf0d9;
+  --bench: #8e97ac;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: Georgia, 'Times New Roman', serif;
+  --font-data: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --gutter: 16px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0b0f1c;
+    --surface: #131a2c;
+    --surface-2: #1a2238;
+    --line: #262f4b;
+    --ink: #e8ecf6;
+    --ink-2: #a8b1c8;
+    --ink-3: #8a94ad;
+    --accent: #8ea3ff;
+    --accent-soft: #1e2954;
+    --on-accent: #0b0f1c;
+    --buy: #41cc94;
+    --buy-soft: #0e2d23;
+    --sell: #ff7d83;
+    --sell-soft: #3a191e;
+    --warn: #f2c26b;
+    --warn-soft: #33270f;
+    --bench: #6f7891;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0b0f1c;
+  --surface: #131a2c;
+  --surface-2: #1a2238;
+  --line: #262f4b;
+  --ink: #e8ecf6;
+  --ink-2: #a8b1c8;
+  --ink-3: #8a94ad;
+  --accent: #8ea3ff;
+  --accent-soft: #1e2954;
+  --on-accent: #0b0f1c;
+  --buy: #41cc94;
+  --buy-soft: #0e2d23;
+  --sell: #ff7d83;
+  --sell-soft: #3a191e;
+  --warn: #f2c26b;
+  --warn-soft: #33270f;
+  --bench: #6f7891;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 15px/1.55 var(--font-body);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--accent);
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

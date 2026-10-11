@@ -1,0 +1,59 @@
+.shell {
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 12px var(--gutter);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  font: 400 24px/1 var(--font-display);
+}
+
+.nav {
+  display: flex;
+  gap: 4px;
+  order: 3;
+  flex-basis: 100%;
+}
+
+.link {
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--ink-2);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.active {
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.main {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 20px var(--gutter) 56px;
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 720px) {
+  .nav {
+    order: 0;
+    flex-basis: auto;
+  }
+}
