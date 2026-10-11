@@ -15,7 +15,7 @@ import {
   validateBacktestForm,
 } from './backtest-form.validation.js';
 import { PeriodAndCostFields, StrategyFields } from './BacktestFields.component.js';
-import { useBacktestForm } from './useBacktestForm.hook.js';
+import { useBacktestForm, type BacktestForm } from './useBacktestForm.hook.js';
 
 function RiskNote({
   config,
@@ -28,6 +28,22 @@ function RiskNote({
     <p className={controls.muted}>
       Risco por operação: {formatPercent(risk)} do saldo (vem da versão da estratégia; mude em
       Estratégias).
+    </p>
+  );
+}
+
+function LoadState({ form }: { readonly form: BacktestForm }): ReactElement | null {
+  if (form.isError) {
+    return (
+      <p role="alert" className={controls.error}>
+        Não foi possível carregar suas estratégias. Recarregue a página para tentar de novo.
+      </p>
+    );
+  }
+  if (!form.isLoading) return null;
+  return (
+    <p role="status" aria-label="Carregando estratégias">
+      Carregando suas estratégias…
     </p>
   );
 }
@@ -58,10 +74,11 @@ export function NewBacktestCard(): ReactElement {
         </div>
         <RiskNote config={form.selectedVersion?.config} />
         <ProblemList problems={problems} />
+        <LoadState form={form} />
         <button
           type="submit"
           className={`${controls.button} ${controls.primary}`}
-          disabled={create.isPending}
+          disabled={create.isPending || form.isLoading || form.isError}
         >
           Rodar backtest
         </button>

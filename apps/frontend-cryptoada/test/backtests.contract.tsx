@@ -174,6 +174,53 @@ describe('new backtest', () => {
     expect(await screen.findByText(/Risco por operação: 1,00%/)).toBeDefined();
   });
 
+  test('the run button stays disabled while the strategies and their versions load', async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    renderApp({
+      path: '/backtests',
+      isAuthenticated: true,
+      routes: [
+        STRATEGY_ROUTES[0] as FakeRoute,
+        {
+          method: 'GET',
+          path: '/v1/strategies/strategy-1/versions',
+          respond: async (): Promise<Response> => {
+            await gate;
+            return pageResponse([buildVersion()]);
+          },
+        },
+        ...runRoutes([]),
+      ],
+    });
+    const button = await screen.findByRole('button', { name: 'Rodar backtest' });
+    expect(button).toHaveProperty('disabled', true);
+    expect(screen.getByRole('status', { name: 'Carregando estratégias' })).toBeDefined();
+    release();
+    await waitFor(() => expect(button).toHaveProperty('disabled', false));
+    expect(screen.queryByRole('status', { name: 'Carregando estratégias' })).toBeNull();
+  });
+
+  test('a failed strategy list says so and keeps the button disabled', async () => {
+    renderApp({
+      path: '/backtests',
+      isAuthenticated: true,
+      routes: [
+        {
+          method: 'GET',
+          path: '/v1/strategies',
+          respond: (): Response => errorResponse(500, 'BOOM'),
+        },
+        ...runRoutes([]),
+      ],
+    });
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('estratégias');
+    expect(screen.getByRole('button', { name: 'Rodar backtest' })).toHaveProperty('disabled', true);
+  });
+
   test('sends the request the API expects and opens the new run', async () => {
     const created = buildRun({ id: 'run-new', status: 'queued', progress: 0, metrics: null });
     const { fake, router } = await openForm([

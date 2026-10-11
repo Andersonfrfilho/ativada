@@ -7,8 +7,6 @@ const RUN_TIMEOUT_MILLISECONDS = 90_000;
 export async function runBacktestThroughTheScreen(page: Page, slippage: string): Promise<string> {
   await page.getByRole('link', { name: 'Backtests' }).click();
   await expect(page.getByRole('heading', { name: 'Backtests', level: 1 })).toBeVisible();
-  // As versões da estratégia carregam depois da lista: enviar antes disso cai no "escolha uma estratégia" do formulário.
-  await expect(page.getByRole('combobox', { name: 'Versão' })).toContainText('versão 1');
   await page.getByRole('combobox', { name: 'Timeframe' }).selectOption('1d');
   await page.getByLabel('Slippage').fill(slippage);
   await page.getByRole('button', { name: 'Rodar backtest' }).click();
