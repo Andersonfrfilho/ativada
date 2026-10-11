@@ -275,6 +275,16 @@ mão e não cacheia `/v1`). Detalhe e decisões em `specs/001-simulador-e-sinais
   preço, WebSocket, painel) é o caminho de produção. A série diária do seed usa `DAILY_SEED = 7` porque o plano precisa de
   compra alcançável (com a semente antiga a compra era "inalcançável" e não havia alvo nem stop). Derrubar o socket é feito
   com `page.routeWebSocket` numa segunda aba da mesma sessão.
+- **Revisão da Fase 5 (preços, sessão, dinheiro).** (1) A idade do preço é POR PAR (`isPriceFresh`, janela de 10 s; `silenceMilliseconds`
+  em `AppConfig` só para teste): par mudo cai para o REST de reserva (15 s) e o `CoinCard` diz "Ao vivo · há N s" ou "Sem dados há N s".
+  (2) Falha transitória na renovação com o token ainda válido mantém a sessão e mostra aviso (`hasRenewalProblem`); só o token vencido
+  sem renovação troca o `Outlet`. Um contador de geração impede refresh lento de desfazer um login. Sair que o servidor não confirma
+  avisa na tela de login. (3) O índice de versões distingue carregando, indisponível e removida (`allSettled`, paginação). (4) Dinheiro no
+  navegador é `BigInt` de escala 8 (`src/format/decimal.ts`), com o arredondamento do servidor (valor para baixo, custo para cima, taxa
+  para baixo); `test/panel-asset-math.contract.test.ts` (raiz) compara o painel com a API em 400 casos sorteados. Resumo e total em R$
+  saem dos mesmos números vivos dos cartões. (5) Valor numérico da API é validado como texto decimal (`decimalText`): nada de `NaN` na tela.
+  (6) O selo de preços anuncia ao leitor de tela só a troca de estado, não os segundos. (7) O prazo da meta usa os presets da RF13
+  (7, 14, 30, 60, 90 dias). (8) `--buy` e `--bench` têm teste de contraste (≥ 4,5:1) nos dois temas.
 - **Limites conhecidos.** O histórico de sinais
   lê páginas de 100 (decrescentes) e esconde o neutro: com muito neutro seguido, "Carregar sinais mais antigos" é preciso.
 
