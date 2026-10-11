@@ -6,16 +6,17 @@ import { Outlet } from 'react-router';
 import { APP_NAME } from '../app/app.constant.js';
 import { useSessionService } from '../app/useAppContext.hook.js';
 import controls from '../styles/Controls.module.css';
+import { LiveMarketProvider } from '../live/LiveMarketProvider.component.js';
 import { LiveStatusBadge } from '../live/LiveStatusBadge.component.js';
-import { useLiveStream } from '../live/useLiveStream.hook.js';
+import { useLiveMarket } from '../live/useLiveMarket.hook.js';
 import { ThemeToggle } from '../theme/ThemeToggle.component.js';
 import styles from './AppShell.module.css';
 import { MainNav } from './MainNav.component.js';
 
-export function AppShell(): ReactElement {
+function ShellFrame(): ReactElement {
   const session = useSessionService();
   const queryClient = useQueryClient();
-  const liveStatus = useLiveStream();
+  const liveStatus = useLiveMarket().streamStatus;
 
   async function handleSignOut(): Promise<void> {
     await session.end();
@@ -39,5 +40,13 @@ export function AppShell(): ReactElement {
         <Outlet />
       </main>
     </div>
+  );
+}
+
+export function AppShell(): ReactElement {
+  return (
+    <LiveMarketProvider>
+      <ShellFrame />
+    </LiveMarketProvider>
   );
 }

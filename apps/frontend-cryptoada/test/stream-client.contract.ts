@@ -6,6 +6,7 @@ import {
   createStreamClient,
   type SocketHandlers,
   type SocketLike,
+  type MarketTick,
   type StreamClientOptions,
   type StreamMessage,
   type StreamStatus,
@@ -41,6 +42,7 @@ type Harness = {
   readonly sockets: FakeSocket[];
   readonly statuses: StreamStatus[];
   readonly messages: StreamMessage[];
+  readonly ticks: MarketTick[];
   readonly resyncs: string[];
   readonly tasks: ScheduledTask[];
   readonly ticketRequests: { count: number };
@@ -54,6 +56,7 @@ function createHarness(overrides: Partial<StreamClientOptions> = {}): Harness {
   const sockets: FakeSocket[] = [];
   const statuses: StreamStatus[] = [];
   const messages: StreamMessage[] = [];
+  const ticks: MarketTick[] = [];
   const resyncs: string[] = [];
   const tasks: ScheduledTask[] = [];
   const ticketRequests = { count: 0 };
@@ -74,6 +77,8 @@ function createHarness(overrides: Partial<StreamClientOptions> = {}): Harness {
     },
     onStatus: (status): void => void statuses.push(status),
     onMessage: (message) => void messages.push(message),
+    onTick: (tick): void => void ticks.push(tick),
+    pairs: [],
     onResync: (reason) => void resyncs.push(reason),
     schedule: (run, delay) => {
       const task: ScheduledTask = { run, delay, isCancelled: false };
@@ -88,6 +93,7 @@ function createHarness(overrides: Partial<StreamClientOptions> = {}): Harness {
     sockets,
     statuses,
     messages,
+    ticks,
     resyncs,
     tasks,
     ticketRequests,
@@ -133,6 +139,49 @@ describe('stream client', () => {
       { type: 'event', runId: 'r1', kind: 'signal', eventId: 'e1', at: 1 },
       { type: 'price_alert', alertId: 'a1', at: 2 },
     ]);
+  });
+
+  test('subscribes the configured pairs on every open, also after a reconnect', async () => {
+    const harness = createHarness({ pairs: ['BTCUSDT', 'ETHUSDT'] });
+    const first = await openFirst(harness);
+    const subscribe = { type: 'subscribe', pairs: ['BTCUSDT', 'ETHUSDT'] };
+    expect(first.sent.map((text) => JSON.parse(text) as unknown)).toStrictEqual([subscribe]);
+    first.handlers?.close(1006);
+    await harness.runNextTask();
+    const second = harness.sockets[1];
+    second?.handlers?.open();
+    expect(second?.sent.map((text) => JSON.parse(text) as unknown)).toStrictEqual([subscribe]);
+  });
+
+  test('sends no subscription when there are no pairs', async () => {
+    const harness = createHarness();
+    const socket = await openFirst(harness);
+    expect(socket.sent).toStrictEqual([]);
+  });
+
+  test('delivers ticks to their own handler, with the stale seal, and drops malformed ones', async () => {
+    const harness = createHarness();
+    const socket = await openFirst(harness);
+    const tick = {
+      type: 'tick',
+      symbol: 'BTCUSDT',
+      price: '61290.50',
+      change24h: '1.2345',
+      at: 1_000,
+      serverTime: 1_050,
+      stale: false,
+    };
+    socket.serverSends(tick);
+    socket.serverSends({ ...tick, stale: true, at: 2_000 });
+    socket.serverSends({ ...tick, change24h: null });
+    socket.serverSends({ ...tick, price: 61290 });
+    socket.serverSends({ type: 'tick', symbol: 'BTCUSDT' });
+    expect(harness.ticks.map((item) => [item.price, item.change24h, item.isStale])).toStrictEqual([
+      ['61290.50', '1.2345', false],
+      ['61290.50', '1.2345', true],
+      ['61290.50', null, false],
+    ]);
+    expect(harness.messages).toStrictEqual([]);
   });
 
   test('a resync from the server asks the panel to refetch over REST', async () => {

@@ -2,8 +2,10 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { API_PATH } from '../app/app.constant.js';
-import { useApiClient } from '../app/useAppContext.hook.js';
+import { useApiClient, useAppConfig } from '../app/useAppContext.hook.js';
+import { useLiveMarket } from '../live/useLiveMarket.hook.js';
 import {
+  FALLBACK_POLL_MILLISECONDS,
   LATEST_SIGNALS_COUNT,
   MILLISECONDS_PER_HOUR,
   NEWEST_PAGE_QUERY,
@@ -84,11 +86,16 @@ export function useLatestSignalsQuery(runId: string): UseQueryResult<Signal[]> {
   });
 }
 
+// Com o socket vivo o preço vem pelos ticks; fora dele (ou velho) o REST é consultado a cada 15 s (RF16).
 export function useCoinPriceQuery(symbol: string): UseQueryResult<CoinPrice | null> {
   const client = useApiClient();
+  const { fallbackPollMilliseconds = FALLBACK_POLL_MILLISECONDS } = useAppConfig();
+  const market = useLiveMarket();
+  const needsFallback = market.state === 'offline' || market.state === 'stale';
   return useQuery({
     queryKey: ['markets', symbol, 'price'],
     staleTime: STALE_TIME_MILLISECONDS,
+    refetchInterval: needsFallback ? fallbackPollMilliseconds : false,
     queryFn: async () => {
       const to = Date.now();
       const query = new URLSearchParams({

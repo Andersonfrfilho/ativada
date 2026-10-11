@@ -7,6 +7,8 @@ import { Card } from '../layout/Card.component.js';
 import controls from '../styles/Controls.module.css';
 import { BalanceCard } from './BalanceCard.component.js';
 import { CoinCard } from './CoinCard.component.js';
+import { MarketStatusBadge } from '../live/MarketStatusBadge.component.js';
+import { SentimentCard } from './SentimentCard.component.js';
 import { DataSourcesNote } from './DataSourcesNote.component.js';
 import styles from './Overview.module.css';
 import { SignalsCard } from './SignalsCard.component.js';
@@ -61,11 +63,15 @@ export function OverviewPage(): ReactElement {
       {activeRun.data === undefined || activeRun.data === null ? null : (
         <ActiveSimulation run={activeRun.data} />
       )}
+      <div className={styles.marketBar}>
+        <MarketStatusBadge />
+      </div>
       <div className={styles.coins}>
         {marketSymbols.map((symbol) => (
           <CoinCard key={symbol} symbol={symbol} />
         ))}
       </div>
+      <SentimentCard />
       <DataSourcesNote />
     </div>
   );

@@ -10,6 +10,15 @@ const serverMessageSchema = z.discriminatedUnion('type', [
     at: z.number(),
   }),
   z.object({ type: z.literal('price_alert'), alertId: z.string(), at: z.number() }),
+  z.object({
+    type: z.literal('tick'),
+    symbol: z.string(),
+    price: z.string(),
+    change24h: z.string().nullable(),
+    at: z.number(),
+    serverTime: z.number(),
+    stale: z.boolean(),
+  }),
   z.object({ type: z.literal('resync'), reason: z.string() }),
   z.object({ type: z.literal('renewed'), expiresAt: z.number() }),
 ]);

@@ -46,7 +46,7 @@ function start(): void {
         session={session}
         apiClient={apiClient}
         queryClient={queryClient}
-        connectStream={createStreamConnector({ apiClient, session })}
+        connectStream={createStreamConnector({ apiClient, session, pairs: config.marketSymbols })}
       >
         <RouterProvider router={createBrowserRouter(createAppRoutes())} />
       </AppProviders>

@@ -7,6 +7,7 @@ import type { SessionService } from '../session/session-service.js';
 import { openBrowserSocket } from './browser-socket.js';
 import {
   createStreamClient,
+  type MarketTick,
   type StreamClientOptions,
   type StreamMessage,
   type StreamStatus,
@@ -16,6 +17,7 @@ import { ticketResponseSchema } from './stream.validation.js';
 export type StreamHandlers = {
   readonly onStatus: (status: StreamStatus) => void;
   readonly onMessage: (message: StreamMessage) => void;
+  readonly onTick: (tick: MarketTick) => void;
   readonly onResync: (reason: string) => void;
 };
 
@@ -26,6 +28,7 @@ export type StreamConnector = (handlers: StreamHandlers) => StreamConnection;
 export type StreamConnectorDependencies = {
   readonly apiClient: ApiClient;
   readonly session: SessionService;
+  readonly pairs: readonly string[];
 };
 
 function scheduleInBrowser(run: () => void, delayMilliseconds: number): () => void {
@@ -45,6 +48,7 @@ export function createStreamConnector(dependencies: StreamConnectorDependencies)
   return (handlers) => {
     const client = createStreamClient({
       ...handlers,
+      pairs: dependencies.pairs,
       requestTicket,
       refreshSession: () => dependencies.session.renew(),
       openSocket: openBrowserSocket,

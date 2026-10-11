@@ -10,6 +10,8 @@ export type AppConfig = LoginConfig & {
   readonly marketSymbols: readonly string[];
   // Só os testes encurtam: padrão de 2 s para acompanhar execução na fila ou rodando.
   readonly runPollMilliseconds?: number;
+  // Polling de reserva dos preços quando o socket está fora (RF16: 15 s).
+  readonly fallbackPollMilliseconds?: number;
 };
 
 export const AppConfigContext = createContext<AppConfig | undefined>(undefined);

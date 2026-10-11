@@ -15,6 +15,7 @@ export const PRICE_HISTORY_HOURS = 26;
 export const PRICE_CHANGE_HOURS = 24;
 export const MILLISECONDS_PER_HOUR = 3_600_000;
 export const STALE_TIME_MILLISECONDS = 15_000;
+export const FALLBACK_POLL_MILLISECONDS = 15_000;
 
 export const RUN_STATUS = {
   QUEUED: 'queued',

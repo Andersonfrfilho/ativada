@@ -9,7 +9,7 @@ import { HTTP_STATUS } from '@cryptoada/environment';
 import { AppProviders } from '../../src/app/AppProviders.component.js';
 import { createAppRoutes } from '../../src/app/createAppRoutes.js';
 import type { StreamConnector, StreamHandlers } from '../../src/live/stream-connector.js';
-import type { StreamMessage, StreamStatus } from '../../src/live/stream-client.js';
+import type { MarketTick, StreamMessage, StreamStatus } from '../../src/live/stream-client.js';
 import { createApiClient } from '../../src/http/api-client.js';
 import { createSessionService, type SessionService } from '../../src/session/session-service.js';
 import {
@@ -33,6 +33,7 @@ export type RenderAppOptions = {
 
 export type FakeStream = {
   readonly emit: (message: StreamMessage) => void;
+  readonly tick: (tick: MarketTick) => void;
   readonly setStatus: (status: StreamStatus) => void;
   readonly resync: (reason?: string) => void;
   readonly connections: () => number;
@@ -72,6 +73,7 @@ function createFakeStream(): { readonly stream: FakeStream; readonly connect: St
     },
     stream: {
       emit: (message) => current?.onMessage(message),
+      tick: (tick) => current?.onTick(tick),
       setStatus: (status) => current?.onStatus(status),
       resync: (reason = 'listener_lost') => current?.onResync(reason),
       connections: () => connections,
@@ -92,6 +94,7 @@ export function renderApp(options: RenderAppOptions): RenderedApp {
     clientId: 'cryptoada-session',
     marketSymbols: ['BTCUSDT', 'ETHUSDT'],
     runPollMilliseconds: 20,
+    fallbackPollMilliseconds: 20,
   };
   const { stream, connect } = createFakeStream();
   const router = createMemoryRouter(createAppRoutes(), { initialEntries: [options.path] });

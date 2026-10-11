@@ -19,6 +19,15 @@ export type { StreamStatus } from './stream.constant.js';
 
 export type StreamMessage = Extract<ServerMessage, { type: 'event' | 'price_alert' }>;
 
+// O último preço de um par: `at` é o instante da Binance e `isStale` o selo do servidor (par sem tick há muito).
+export type MarketTick = {
+  readonly symbol: string;
+  readonly price: string;
+  readonly change24h: string | null;
+  readonly at: number;
+  readonly isStale: boolean;
+};
+
 export type SocketHandlers = {
   readonly open: () => void;
   readonly message: (data: unknown) => void;
@@ -37,6 +46,9 @@ export type StreamClientOptions = {
   readonly openSocket: (ticket: string) => SocketLike;
   readonly onStatus: (status: StreamStatus) => void;
   readonly onMessage: (message: StreamMessage) => void;
+  readonly onTick: (tick: MarketTick) => void;
+  // Pares do ticker assinados em toda abertura do socket (inclusive depois de uma reconexão).
+  readonly pairs: readonly string[];
   readonly onResync: (reason: string) => void;
   readonly schedule: (run: () => void, delayMilliseconds: number) => () => void;
   readonly now: () => number;
@@ -44,6 +56,16 @@ export type StreamClientOptions = {
 };
 
 export type StreamClient = { readonly start: () => void; readonly stop: () => void };
+
+function toMarketTick(message: Extract<ServerMessage, { type: 'tick' }>): MarketTick {
+  return {
+    symbol: message.symbol,
+    price: message.price,
+    change24h: message.change24h,
+    at: message.at,
+    isStale: message.stale,
+  };
+}
 
 // O socket do painel: ticket de uso único, renovação dentro do socket antes de o token vencer, reconexão com espera
 // crescente e `resync` (o painel rebusca por REST: nada do que passou enquanto caiu fica errado).
@@ -90,6 +112,7 @@ class ReconnectingStream implements StreamClient {
   private handleOpen(): void {
     this.attempts = 0;
     this.options.onStatus(STREAM_STATUS.LIVE);
+    this.subscribeToPairs();
     if (this.hasConnectedBefore) this.options.onResync(RESYNC_REASON_RECONNECTED);
     this.hasConnectedBefore = true;
     this.scheduleRenewal(FIRST_RENEWAL_MILLISECONDS);
@@ -98,9 +121,15 @@ class ReconnectingStream implements StreamClient {
   private handleMessage(data: unknown): void {
     const message = parseServerMessage(data);
     if (message === undefined) return;
-    if (message.type === 'resync') this.options.onResync(message.reason);
+    if (message.type === 'tick') this.options.onTick(toMarketTick(message));
+    else if (message.type === 'resync') this.options.onResync(message.reason);
     else if (message.type === 'renewed') this.scheduleNextRenewal(message.expiresAt);
     else this.options.onMessage(message);
+  }
+
+  private subscribeToPairs(): void {
+    if (this.options.pairs.length === 0) return;
+    this.socket?.send(JSON.stringify({ type: 'subscribe', pairs: this.options.pairs }));
   }
 
   private handleClose(closed: SocketLike, code: number): void {
