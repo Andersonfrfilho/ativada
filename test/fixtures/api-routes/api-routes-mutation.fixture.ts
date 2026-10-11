@@ -74,3 +74,18 @@ export const PRICE_ALERTS_MUTANT_TARGET: MutantTarget = {
   ],
   sourceVariable: 'API_ROUTES_APP_SOURCE',
 };
+
+// Os ativos do usuário (T4b.8, RF15): posição, rotas, resumo e regra do dia, julgados só pelos contratos deles.
+export const ASSETS_MUTANT_TARGET: MutantTarget = {
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
+  directoryPrefix: 'assets-',
+  judgeTestFiles: [
+    'test/asset-position.contract.test.ts',
+    'test/asset-rule.contract.test.ts',
+    'test/api-assets.contract.test.ts',
+    'test/api-assets-summary.contract.test.ts',
+    'test/api-openapi.contract.test.ts',
+  ],
+  sourceVariable: 'API_ROUTES_APP_SOURCE',
+};

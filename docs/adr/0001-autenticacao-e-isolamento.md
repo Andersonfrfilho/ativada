@@ -1009,6 +1009,17 @@ Implementação em `apps/worker-cryptoada/src/{live,alerts}/` e, no pacote, `ale
 
 **Risco residual aceito.** Entrega *at-least-once*: se o processo morrer entre o `sendMessage` e o `markSent`, o arrendamento (120 s) vence e o alerta é reenviado uma vez (o Telegram não oferece chave de idempotência). A janela é de milissegundos; a alternativa (marcar antes de enviar) perderia o alerta, pior para o produto.
 
+### t) Resultados e desvios da T4b.5 a T4b.8 (plano, alertas de preço e ativos)
+
+| Ponto | Decisão |
+|---|---|
+| Tabelas de dono novas | `price_alerts` (0017) e `user_assets` (0019) levam `user_id` com `ON DELETE RESTRICT`, `UNIQUE (id, user_id)` e índice começando pelo dono; entram em `OWNED_TABLES`, na ordem de exclusão (antes de `users`) e na exportação (colunas declaradas). `alerts` (0018) passa a aceitar o lado `PRICE`: `run_id` anulável, `price_alert_id` sem FK (apagar o alerta não leva o aviso enfileirado) e CHECKs que ligam o lado ao par execução/alerta; `price_alert_id` entra na exportação |
+| Isolamento | Toda leitura e escrita dos dois repositórios de usuário filtra o dono; alerta ou ativo alheio, inexistente e id malformado respondem o MESMO `404` (contrato negativo no harness e mutantes sem o filtro). A avaliação do tick (`PriceAlertEvaluationRepository`) é a única que cruza donos, por desenho: o preço é público, o `UPDATE` carimba cada alerta uma vez e o aviso vai ao dono DA LINHA (chat lido de `users` no envio, ADR 0001 §s) |
+| NOTIFY | O disparo usa o canal `run_events` com `{ kind: 'price_alert', alertId }`: só o ponteiro, sem dono, preço nem par. A API resolve o dono ATIVO pelo banco (`findActiveOwnerId`: conta bloqueada ou apagada não recebe) e entrega aos sockets dele |
+| Dado pessoal | O valor do alerta e a posição (quantidade e preço médio) são dado financeiro pessoal: nunca em log (a API não loga corpo; o erro de validação só leva caminho e motivo), exportados só ao dono, apagados com a conta. O texto do Telegram leva par, sentido, valor do usuário e preço público, nunca nome, id nem chat |
+| Tetos | `PRICE_ALERT_MAX_ENABLED_PER_USER` (alertas ligados) e `USER_ASSET_MAX_PER_USER`, ambos por usuário e validados no boot (RF00b); conferidos sob a trava da linha do dono, então a corrida não passa do teto |
+| Lacuna | O teto de alertas conta os LIGADOS: um usuário pode acumular alertas desligados (disparados) sem limite; a retenção/limpeza fica para depois, junto da tela de alertas (T5.5) |
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |

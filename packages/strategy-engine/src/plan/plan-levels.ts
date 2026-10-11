@@ -20,27 +20,54 @@ export type PlanLevels = {
   readonly stop: PlanProtectiveLevel;
 };
 
-// O preço de VENDA em que o resultado líquido de uma unidade comprada em `entry` é exatamente o ganho alvo (ou a perda
-// máxima), com o que o motor cobra: compra a `entry × (1 + slippage)` (tick para cima) mais a taxa, venda a
-// `preço × (1 − slippage)` menos a taxa. Ambos sobem ao tick (contra o usuário: o alvo fica mais difícil e o stop vale mais cedo).
+type SellContext = {
+  readonly unitCost: EngineDecimalValue;
+  readonly parameters: RunParameters;
+};
+
+// O preço de VENDA (tick para cima) em que vender uma unidade que custou `unitCost` rende `outcomeRate` do custo, com a taxa
+// e o slippage de saída que o motor cobra: venda a `preço × (1 − slippage)` menos a taxa.
+function sellPriceFor(context: SellContext, outcomeRate: EngineDecimalValue): string {
+  const { feeRate, slippageRate, tickSize } = context.parameters;
+  const sellFactor = ONE.minus(feeRate).times(ONE.minus(slippageRate));
+  return formatEngineDecimal(
+    ceilToIncrement(context.unitCost.times(outcomeRate).dividedBy(sellFactor), tickSize),
+  );
+}
+
+function protectiveLevels(context: SellContext, goal: GoalSpec): PlanLevels {
+  return {
+    target: {
+      rate: goal.targetRate,
+      price: sellPriceFor(context, ONE.plus(toEngineDecimal(goal.targetRate))),
+    },
+    stop: {
+      rate: goal.maxLossRate,
+      price: sellPriceFor(context, ONE.minus(toEngineDecimal(goal.maxLossRate))),
+    },
+  };
+}
+
+// Alvo e stop de uma compra FUTURA em `entry`: o custo por unidade inclui o que o motor cobra na entrada (compra a
+// `entry × (1 + slippage)` no tick, mais a taxa). Ambos sobem ao tick (contra o usuário: o alvo fica mais difícil e o stop
+// vale mais cedo). Se a perda máxima for menor que o custo de entrar, o stop sai acima da entrada e o fato não se esconde.
 export function computePlanLevels(params: ComputePlanLevelsParams): PlanLevels {
   const goal = parseGoalSpec(params.goal);
   const { feeRate, slippageRate, tickSize } = params.parameters;
   const entryFill = ceilToIncrement(params.entry.times(ONE.plus(slippageRate)), tickSize);
   const unitCost = entryFill.times(ONE.plus(feeRate));
-  const sellFactor = ONE.minus(feeRate).times(ONE.minus(slippageRate));
-  const sellPriceFor = (outcomeRate: EngineDecimalValue): string =>
-    formatEngineDecimal(
-      ceilToIncrement(unitCost.times(outcomeRate).dividedBy(sellFactor), tickSize),
-    );
-  return {
-    target: {
-      rate: goal.targetRate,
-      price: sellPriceFor(ONE.plus(toEngineDecimal(goal.targetRate))),
-    },
-    stop: {
-      rate: goal.maxLossRate,
-      price: sellPriceFor(ONE.minus(toEngineDecimal(goal.maxLossRate))),
-    },
-  };
+  return protectiveLevels({ unitCost, parameters: params.parameters }, goal);
+}
+
+export type ComputeHoldingLevelsParams = {
+  // O preço médio que o usuário informou: já é o custo dele, sem somar taxa nem slippage de entrada.
+  readonly averagePrice: EngineDecimalValue;
+  readonly parameters: RunParameters;
+  readonly goal: GoalSpec;
+};
+
+// Alvo e stop de uma posição JÁ comprada (RF15): partem do preço médio como custo e só cobram a saída.
+export function computeHoldingLevels(params: ComputeHoldingLevelsParams): PlanLevels {
+  const goal = parseGoalSpec(params.goal);
+  return protectiveLevels({ unitCost: params.averagePrice, parameters: params.parameters }, goal);
 }

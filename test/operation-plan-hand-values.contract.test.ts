@@ -74,3 +74,57 @@ describe('alvo e stop de venda: contas à mão (oráculo Decimal do Python), sem
     expect(attempt).toThrow();
   });
 });
+
+describe('alvo e stop de uma posição já comprada: partem do preço médio e só cobram a saída (oráculo Decimal do Python)', () => {
+  test.each([
+    ['60000', '0.001', '0.0005', '0.01', '0.1', '0.08', '66099.12', '55282.9'],
+    ['100', '0.001', '0.0005', '0.01', '0.03', '0.05', '103.16', '95.15'],
+    ['0.5', '0', '0', '0.0001', '0.5', '0.5', '0.75', '0.25'],
+    ['2.5', '0.002', '0.001', '0.001', '0.02', '0.01', '2.558', '2.483'],
+  ])(
+    'médio %s, taxa %s, slippage %s, tick %s, alvo %s, perda %s -> alvo %s e stop %s',
+    (average, feeRate, slippageRate, tickSize, targetRate, maxLossRate, target, stop) => {
+      const levels = api.computeHoldingLevels({
+        averagePrice: new EngineDecimal(average as string),
+        parameters: parametersWith({
+          feeRate: feeRate as string,
+          slippageRate: slippageRate as string,
+          tickSize: tickSize as string,
+        }),
+        goal: {
+          targetRate: targetRate as string,
+          maxLossRate: maxLossRate as string,
+          horizonDays: 1,
+        },
+      });
+      expect(levels.target).toStrictEqual({ rate: targetRate, price: target });
+      expect(levels.stop).toStrictEqual({ rate: maxLossRate, price: stop });
+    },
+  );
+
+  test('uma posição que já existe custa menos que uma compra nova: não paga a entrada de novo', () => {
+    const parameters = parametersWith({
+      feeRate: '0.001',
+      slippageRate: '0.0005',
+      tickSize: '0.01',
+    });
+    const goal = { targetRate: '0.1', maxLossRate: '0.08', horizonDays: 1 };
+    const holding = api.computeHoldingLevels({
+      averagePrice: new EngineDecimal('60000'),
+      parameters,
+      goal,
+    });
+    const future = api.computePlanLevels({ entry: new EngineDecimal('60000'), parameters, goal });
+    expect(new EngineDecimal(holding.target.price).lessThan(future.target.price)).toBe(true);
+  });
+
+  test('meta inválida é recusada', () => {
+    const attempt = (): unknown =>
+      api.computeHoldingLevels({
+        averagePrice: new EngineDecimal('100'),
+        parameters: parametersWith({ feeRate: '0.001', slippageRate: '0.0005', tickSize: '0.01' }),
+        goal: { targetRate: '0', maxLossRate: '0.05', horizonDays: 1 },
+      });
+    expect(attempt).toThrow();
+  });
+});

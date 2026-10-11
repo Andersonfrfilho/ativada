@@ -209,10 +209,30 @@ const MUTANTS: readonly PlanSourceMutant[] = [
     edits: edit(LEVELS, 'ONE.minus(feeRate).times(ONE.minus(slippageRate))', 'ONE.minus(feeRate)'),
   },
   {
+    name: 'HOLDING_PAYS_THE_ENTRY_AGAIN',
+    edits: edit(
+      LEVELS,
+      'return protectiveLevels({ unitCost: params.averagePrice, parameters: params.parameters }, goal);',
+      'return protectiveLevels(\n    { unitCost: params.averagePrice.times(ONE.plus(params.parameters.feeRate)), parameters: params.parameters },\n    goal,\n  );',
+    ),
+  },
+  {
+    name: 'HOLDING_SKIPS_GOAL_VALIDATION',
+    edits: [
+      {
+        file: LEVELS,
+        find: 'export function computeHoldingLevels(params: ComputeHoldingLevelsParams): PlanLevels {\n  const goal = parseGoalSpec(params.goal);',
+        replace:
+          'export function computeHoldingLevels(params: ComputeHoldingLevelsParams): PlanLevels {\n  const goal = params.goal;',
+        occurrences: 1,
+      },
+    ],
+  },
+  {
     name: 'LEVELS_ROUNDED_DOWN',
     edits: edit(
       LEVELS,
-      'ceilToIncrement(unitCost.times(outcomeRate).dividedBy(sellFactor), tickSize)',
+      'ceilToIncrement(context.unitCost.times(outcomeRate).dividedBy(sellFactor), tickSize)',
       'unitCost.times(outcomeRate).dividedBy(sellFactor).toDecimalPlaces(2, EngineDecimal.ROUND_FLOOR)',
     ),
   },
@@ -220,16 +240,16 @@ const MUTANTS: readonly PlanSourceMutant[] = [
     name: 'LEVELS_TARGET_USES_MINUS',
     edits: edit(
       LEVELS,
-      'sellPriceFor(ONE.plus(toEngineDecimal(goal.targetRate)))',
-      'sellPriceFor(ONE.minus(toEngineDecimal(goal.targetRate)))',
+      'sellPriceFor(context, ONE.plus(toEngineDecimal(goal.targetRate)))',
+      'sellPriceFor(context, ONE.minus(toEngineDecimal(goal.targetRate)))',
     ),
   },
   {
     name: 'LEVELS_STOP_USES_PLUS',
     edits: edit(
       LEVELS,
-      'sellPriceFor(ONE.minus(toEngineDecimal(goal.maxLossRate)))',
-      'sellPriceFor(ONE.plus(toEngineDecimal(goal.maxLossRate)))',
+      'sellPriceFor(context, ONE.minus(toEngineDecimal(goal.maxLossRate)))',
+      'sellPriceFor(context, ONE.plus(toEngineDecimal(goal.maxLossRate)))',
     ),
   },
   {
@@ -238,7 +258,11 @@ const MUTANTS: readonly PlanSourceMutant[] = [
   },
   {
     name: 'LEVELS_SKIPS_GOAL_VALIDATION',
-    edits: edit(LEVELS, 'const goal = parseGoalSpec(params.goal);', 'const goal = params.goal;'),
+    edits: edit(
+      LEVELS,
+      'export function computePlanLevels(params: ComputePlanLevelsParams): PlanLevels {\n  const goal = parseGoalSpec(params.goal);',
+      'export function computePlanLevels(params: ComputePlanLevelsParams): PlanLevels {\n  const goal = params.goal;',
+    ),
   },
   {
     name: 'COMPUTE_SKIPS_GOAL_VALIDATION',

@@ -134,6 +134,13 @@
       "when": 1791694632482,
       "tag": "0018_alerts_price",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791697725347,
+      "tag": "0019_user_assets",
+      "breakpoints": true
     }
   ]
 }

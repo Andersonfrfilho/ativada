@@ -171,3 +171,9 @@ export type {
   FireDueAlertsResult,
   PriceAlertEvaluationRepository,
 } from './price-alerts/price-alert-evaluation.repository.js';
+export { createUserAssetRepository } from './user-assets/user-asset.repository.js';
+export {
+  USER_ASSET_DECISION_KIND,
+  USER_ASSET_MUTATE_OUTCOME,
+} from './user-assets/user-asset.constant.js';
+export type * from './user-assets/user-asset.types.js';

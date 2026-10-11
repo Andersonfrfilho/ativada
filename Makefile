@@ -6,7 +6,7 @@ export
 COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
 
-.PHONY: help bootstrap config up down ps check contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants price-alert-mutants alert-mutants runlog-mutants telegram-test goals-test price-alerts-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants identity-logs
+.PHONY: help bootstrap config up down ps check contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants price-alert-mutants user-asset-mutants alert-mutants runlog-mutants telegram-test goals-test price-alerts-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants identity-logs
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -157,6 +157,13 @@ example-mutants: ## Prova que a semeadura da estratégia de exemplo reprova 6 mu
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/example-mutants.ts
+
+user-asset-mutants: ## Prova que os ativos do usuário reprovam 14 mutantes do banco (sem filtro de dono em leitura, lista e escrita, sem a trava do dono, teto ignorado ou com folga, recusa que ainda grava, cursor inclusivo, página sem ordem e cada CHECK ou unicidade removidos) num Postgres de teste descartável
+	set -a; . envs/env.test; set +a; \
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/user-asset-mutants.ts
 
 price-alert-mutants: ## Prova que os alertas de preço reprovam 26 mutantes do banco (sem filtro de dono, teto contando alertas desligados ou sem a trava do dono, religar sem limpar o disparo ou sem respeitar o teto, disparo estrito, invertido, sem par, sem carimbo, sem trava atômica, aviso para dono sem Telegram ou com valores trocados, dono bloqueado ou apagado e cada CHECK removido) num Postgres de teste descartável
 	set -a; . envs/env.test; set +a; \

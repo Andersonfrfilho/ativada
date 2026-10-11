@@ -66,6 +66,15 @@ export function buildApiRouteDependencies(
       evaluateGoal: notUsed,
       getGoalPlan: notUsed,
     },
+    assets: {
+      enabledSymbols: ENABLED_MARKETS.symbols,
+      listAssets: notUsed,
+      getAssetSummary: notUsed,
+      getAsset: notUsed,
+      replaceAsset: notUsed,
+      tradeAsset: notUsed,
+      deleteAsset: notUsed,
+    },
     priceAlerts: {
       enabledSymbols: ENABLED_MARKETS.symbols,
       createPriceAlert: notUsed,

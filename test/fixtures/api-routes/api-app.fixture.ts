@@ -33,6 +33,11 @@ import type * as GoalCacheModule from '../../../apps/api-cryptoada/src/goals/goa
 import type * as GoalEvaluationModule from '../../../apps/api-cryptoada/src/goals/goal-evaluation.use-case.js';
 import type * as GoalPlanCacheModule from '../../../apps/api-cryptoada/src/goals/goal-plan-cache.js';
 import type * as GoalPlanModule from '../../../apps/api-cryptoada/src/goals/goal-plan.use-case.js';
+import type * as AssetPositionModule from '../../../apps/api-cryptoada/src/assets/asset-position.js';
+import type * as AssetRuleModule from '../../../apps/api-cryptoada/src/assets/asset-rule.js';
+import type * as AssetSummaryModule from '../../../apps/api-cryptoada/src/assets/asset-summary.use-case.js';
+import type * as AssetUseCasesModule from '../../../apps/api-cryptoada/src/assets/asset.use-cases.js';
+import type * as AssetRoutesModule from '../../../apps/api-cryptoada/src/assets/assets.routes.js';
 import type * as PriceAlertEvaluatorModule from '../../../apps/api-cryptoada/src/price-alerts/price-alert-evaluator.js';
 import type * as PriceAlertEventDispatcherModule from '../../../apps/api-cryptoada/src/price-alerts/price-alert-event-dispatcher.js';
 import type * as PriceAlertRoutesModule from '../../../apps/api-cryptoada/src/price-alerts/price-alerts.routes.js';
@@ -78,6 +83,11 @@ export type ApiApp = {
   readonly goalUseCases: typeof GoalUseCasesModule;
   readonly goalEvaluation: typeof GoalEvaluationModule;
   readonly goalCache: typeof GoalCacheModule;
+  readonly assetPosition: typeof AssetPositionModule;
+  readonly assetRule: typeof AssetRuleModule;
+  readonly assetSummary: typeof AssetSummaryModule;
+  readonly assetUseCases: typeof AssetUseCasesModule;
+  readonly assetRoutes: typeof AssetRoutesModule;
   readonly priceAlertEvaluator: typeof PriceAlertEvaluatorModule;
   readonly priceAlertEventDispatcher: typeof PriceAlertEventDispatcherModule;
   readonly priceAlertRoutes: typeof PriceAlertRoutesModule;
@@ -134,6 +144,11 @@ export async function loadApiApp(): Promise<ApiApp> {
     goalUseCases: await load('goals/goal.use-cases'),
     goalEvaluation: await load('goals/goal-evaluation.use-case'),
     goalCache: await load('goals/goal-evaluation-cache'),
+    assetPosition: await load('assets/asset-position'),
+    assetRule: await load('assets/asset-rule'),
+    assetSummary: await load('assets/asset-summary.use-case'),
+    assetUseCases: await load('assets/asset.use-cases'),
+    assetRoutes: await load('assets/assets.routes'),
     priceAlertEvaluator: await load('price-alerts/price-alert-evaluator'),
     priceAlertEventDispatcher: await load('price-alerts/price-alert-event-dispatcher'),
     priceAlertRoutes: await load('price-alerts/price-alerts.routes'),

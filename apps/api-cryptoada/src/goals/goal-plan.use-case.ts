@@ -45,7 +45,7 @@ export type GetGoalPlanUseCase = (
 ) => Promise<GoalPlanView>;
 
 // A estratégia do dono na versão mais recente; alheia ou inexistente é o mesmo 404.
-async function loadStrategy(
+export async function loadStrategy(
   reader: GoalPlanDependencies['strategies'],
   params: { readonly scope: OwnerScope; readonly strategyId: string },
 ): Promise<{ readonly ref: GoalStrategyRef; readonly version: StrategyVersion }> {

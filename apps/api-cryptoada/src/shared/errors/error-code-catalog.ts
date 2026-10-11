@@ -14,6 +14,7 @@ import {
   SESSION_ERROR_CODE,
   STRATEGY_ERROR_CODE,
   TELEGRAM_ERROR_CODE,
+  USER_ASSET_ERROR_CODE,
   VALIDATION_ERROR_CODE,
 } from './error-code.constant.js';
 
@@ -33,6 +34,7 @@ export const ERROR_CODE_CATALOG: ReadonlySet<string> = new Set([
   ...Object.values(SESSION_ERROR_CODE),
   ...Object.values(STRATEGY_ERROR_CODE),
   ...Object.values(TELEGRAM_ERROR_CODE),
+  ...Object.values(USER_ASSET_ERROR_CODE),
   ...Object.values(VALIDATION_ERROR_CODE),
   INTERNAL_ERROR_CODE,
 ]);

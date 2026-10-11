@@ -8,6 +8,7 @@ import { RUN_KIND, RUN_STATUS } from '../src/runs/run.constant.js';
 import { createRunRepository } from '../src/runs/run.repository.js';
 import { createRunResultRepository } from '../src/run-results/run-result.repository.js';
 import { createGoalRepository } from '../src/goals/goal.repository.js';
+import { createUserAssetRepository } from '../src/user-assets/user-asset.repository.js';
 import { createPriceAlertRepository } from '../src/price-alerts/price-alert.repository.js';
 import { createStrategyRepository } from '../src/strategies/strategy.repository.js';
 import type {
@@ -47,6 +48,7 @@ export const PERSISTENCE_TABLES = [
   'alerts',
   'goals',
   'price_alerts',
+  'user_assets',
 ] as const;
 const ENGINE_STATE_MARKER = 'engine-state-marker';
 const ALERT_REASON_MARKER = 'alert-reason-marker';
@@ -66,6 +68,7 @@ export const PERSISTENCE_EXPECTED_ROWS: Readonly<
   alerts: 1,
   goals: 2,
   price_alerts: 2,
+  user_assets: 2,
 };
 
 export function strategyNameOf(owner: LifecycleOwner): string {
@@ -114,6 +117,21 @@ export async function seedOwnerPersistence(
   await seedAlert(handle, owner, run.id);
   await seedGoals(handle, owner);
   await seedPriceAlerts(handle, owner);
+  await seedUserAssets(handle, owner);
+}
+
+const USER_ASSET_SEED_LIMIT = 50;
+
+// O ativo é dado financeiro pessoal: entra na exportação e some com a exclusão da conta.
+async function seedUserAssets(handle: DatabaseHandle, owner: LifecycleOwner): Promise<void> {
+  const assets = createUserAssetRepository(handle);
+  for (const symbol of ['BTCUSDT', 'ETHUSDT']) {
+    await assets.mutateUserAsset(owner.scope, {
+      symbol,
+      maxAssets: USER_ASSET_SEED_LIMIT,
+      decide: () => ({ kind: 'save', quantity: '0.5', averagePrice: '62000.5' }),
+    });
+  }
 }
 
 const PRICE_ALERT_SEED_LIMIT = 50;

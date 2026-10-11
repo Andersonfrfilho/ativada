@@ -13,6 +13,7 @@ export const PLAN_MUTANT_VARIABLE = 'PLAN_MUTANT_SOURCE';
 export type PlanApi = typeof PlanModule;
 
 const PLAN_API_MEMBERS: readonly string[] = [
+  'computeHoldingLevels',
   'computeLatestPlan',
   'computeOperationPlan',
   'computePlanLevels',

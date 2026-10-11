@@ -18,6 +18,7 @@ import { sentimentObservations } from '../schema/sentiment-observations.schema.j
 import { signals } from '../schema/signals.schema.js';
 import { strategies, strategyVersions } from '../schema/strategies.schema.js';
 import { telegramLinkCodes } from '../schema/telegram-link-codes.schema.js';
+import { userAssets } from '../schema/user-assets.schema.js';
 import { users } from '../schema/users.schema.js';
 import { walkForwardWindows } from '../schema/walk-forward-windows.schema.js';
 
@@ -47,6 +48,7 @@ export const OWNED_TABLES: readonly PgTable[] = [
   alerts,
   goals,
   priceAlerts,
+  userAssets,
 ];
 
 // Ordem da exclusão (ADR 0001 §h passo 3): filhas antes dos pais, porque a FK é ON DELETE RESTRICT.
@@ -63,6 +65,7 @@ export const OWNED_TABLE_DELETION_ORDER: readonly PgTable[] = [
   runs,
   goals,
   priceAlerts,
+  userAssets,
   strategyVersions,
   strategies,
 ];

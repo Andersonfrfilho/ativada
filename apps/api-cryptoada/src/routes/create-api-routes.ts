@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { createAccountRoutes, type AccountRouteDependencies } from '../account/account.routes.js';
 import { createAdminRoutes, type AdminRouteDependencies } from '../admin/admin.routes.js';
+import { createAssetRoutes, type AssetRouteDependencies } from '../assets/assets.routes.js';
 import { createDocsRoutes } from '../docs/docs.routes.js';
 import { createGoalRoutes, type GoalRouteDependencies } from '../goals/goals.routes.js';
 import {
@@ -45,6 +46,7 @@ export type ApiRouteDependencies = HealthRouteDependencies & {
   readonly strategies: StrategyRouteDependencies;
   readonly goals: GoalRouteDependencies;
   readonly priceAlerts: PriceAlertRouteDependencies;
+  readonly assets: AssetRouteDependencies;
   readonly runs: RunRoutesBundle;
   // `/v1/openapi.json` e `/v1/docs` existem só fora de produção: em produção nem entram na tabela.
   readonly isDocumentationEnabled: boolean;
@@ -63,6 +65,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     ...createStrategyRoutes(dependencies.strategies),
     ...createGoalRoutes(dependencies.goals),
     ...createPriceAlertRoutes(dependencies.priceAlerts),
+    ...createAssetRoutes(dependencies.assets),
     ...createRunRoutes(dependencies.runs.routes),
     ...createRunSeriesRoutes(dependencies.runs.series),
     ...createRunExportRoutes(dependencies.runs.exportRunCsv),

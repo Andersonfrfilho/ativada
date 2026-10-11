@@ -13,6 +13,7 @@ import { runs } from '../schema/runs.schema.js';
 import { signals } from '../schema/signals.schema.js';
 import { strategies, strategyVersions } from '../schema/strategies.schema.js';
 import { telegramLinkCodes } from '../schema/telegram-link-codes.schema.js';
+import { userAssets } from '../schema/user-assets.schema.js';
 import { walkForwardWindows } from '../schema/walk-forward-windows.schema.js';
 export const OWNED_TABLE_EXPORT_MODE = {
   COLUMNS: 'columns',
@@ -175,6 +176,7 @@ export const OWNED_TABLE_EXPORTS: readonly OwnedTableExportStep[] = [
     'triggeredAt',
     'createdAt',
   ]),
+  exportColumns(userAssets, ['id', 'symbol', 'quantity', 'averagePrice', 'createdAt', 'updatedAt']),
   exportColumns(alerts, [
     'id',
     'runId',

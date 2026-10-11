@@ -17,3 +17,4 @@ export { walkForwardWindows } from './walk-forward-windows.schema.js';
 export { alerts } from './alerts.schema.js';
 export { goals } from './goals.schema.js';
 export { priceAlerts } from './price-alerts.schema.js';
+export { userAssets } from './user-assets.schema.js';
