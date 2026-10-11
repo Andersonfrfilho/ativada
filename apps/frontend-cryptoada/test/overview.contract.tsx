@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import { HTTP_STATUS } from '@cryptoada/environment';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 
 import {
   dataResponse,
@@ -171,6 +171,42 @@ describe('overview page', () => {
     expect(balance.textContent).toContain('+4,20%');
     expect(balance.textContent).toContain('10.000,00');
     expect((await screen.findByText('Rodando')).tagName).toBeDefined();
+  });
+
+  test('marks the buys and sells on the balance curve, by shape and not only by colour', async () => {
+    const points = [
+      equityPoint(0, '10000.00'),
+      equityPoint(1, '10200.00'),
+      equityPoint(2, '10420.00'),
+    ];
+    const marked = (action: string, index: number): Record<string, unknown> => ({
+      ...signal(action, `${action} marcado`, 0),
+      candleTime: points[index]?.['candleTime'],
+    });
+    renderApp({
+      path: '/',
+      isAuthenticated: true,
+      routes: [
+        {
+          method: 'GET',
+          path: `/v1/runs/${RUN_ID}/equity`,
+          respond: (): Response => pageResponse([...points].reverse()),
+        },
+        {
+          method: 'GET',
+          path: `/v1/runs/${RUN_ID}/signals`,
+          respond: (): Response => pageResponse([marked('SELL', 2), marked('BUY', 1)]),
+        },
+        ...overviewRoutes({}),
+      ],
+    });
+    const chart = await screen.findByRole('img', {
+      name: /Curva do saldo comparada a comprar e segurar/,
+    });
+    await waitFor(() => expect(chart.querySelectorAll('[data-marker="BUY"]')).toHaveLength(1));
+    expect(chart.querySelectorAll('[data-marker="SELL"]')).toHaveLength(1);
+    expect(chart.getAttribute('aria-label')).toContain('1 compra');
+    expect(chart.getAttribute('aria-label')).toContain('1 venda');
   });
 
   test('says the simulation is waiting for data when candles are missing', async () => {

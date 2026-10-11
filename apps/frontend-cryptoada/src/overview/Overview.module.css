@@ -138,3 +138,11 @@
   display: flex;
   justify-content: flex-end;
 }
+
+.markerBuy {
+  fill: var(--buy);
+}
+
+.markerSell {
+  fill: var(--sell);
+}

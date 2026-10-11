@@ -36,7 +36,7 @@ function ActiveSimulation({ run }: { readonly run: Run }): ReactElement {
   }
   return (
     <>
-      <BalanceCard run={detail.data} points={equity.data} />
+      <BalanceCard run={detail.data} points={equity.data} signals={signals.data} />
       <SignalsCard signals={signals.data} />
     </>
   );

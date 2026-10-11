@@ -7,7 +7,7 @@ import { EquitySparkline } from './EquitySparkline.component.js';
 import styles from './Overview.module.css';
 import { RUN_STATUS } from './overview.constant.js';
 import type { RunDetail } from '../runs/run.validation.js';
-import type { EquityPoint } from './overview.validation.js';
+import type { EquityPoint, Signal } from './overview.validation.js';
 import {
   computeChangeRatio,
   formatChangePercent,
@@ -18,6 +18,7 @@ import {
 export type BalanceCardProps = {
   readonly run: RunDetail;
   readonly points: readonly EquityPoint[];
+  readonly signals?: readonly Signal[];
 };
 
 function describeState(run: RunDetail): string {
@@ -66,7 +67,7 @@ function BalanceFacts({
   );
 }
 
-export function BalanceCard({ run, points }: BalanceCardProps): ReactElement {
+export function BalanceCard({ run, points, signals }: BalanceCardProps): ReactElement {
   const latest = points.at(-1);
   return (
     <Card title="Saldo da simulação">
@@ -86,7 +87,7 @@ export function BalanceCard({ run, points }: BalanceCardProps): ReactElement {
             {formatDecimal(latest.equity)} <span className={styles.unit}>USDT</span>
           </p>
           <BalanceFacts run={run} latest={latest} />
-          <EquitySparkline points={points} />
+          <EquitySparkline points={points} {...(signals === undefined ? {} : { signals })} />
         </>
       )}
     </Card>
