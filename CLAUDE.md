@@ -8,7 +8,7 @@ Contexto operacional do **CryptoAdA**. Produto e regras em `README.md`,
 Spec 001 em andamento (progresso real em `specs/001-simulador-e-sinais/evidence.md`). Prontos: Fase 0
 (fundação), Fase 0b (contas, login, isolamento entre usuários, LGPD) e Fase 1 (candles da Binance:
 backfill, Fear & Greed e stream ao vivo com recuperação de lacuna). Fase 2 (o motor em
-`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) a estratégia de exemplo por usuário (T3.5) e a fila durável de execuções com tetos por usuário (T3.6); Fase 4 com a simulação ao vivo no worker (T4.1), a paridade com o backtest (T4.2) e a sobrevivência do saldo (T4.3, piso e meta de dobro em `GET /v1/runs/:id`); tempo real com `LISTEN/NOTIFY` → WebSocket `GET /v1/stream` (T4.4) e o ticker público da Binance (T4.7); alerta de sinal no Telegram com caixa de saída durável e despachante com retry (T4.5) e registro cronológico em CSV (T4.6); Fase 4b com o motor de metas (T4b.1), o próximo gatilho (T4b.2), as rotas `/v1/goals*` com a avaliação em cache (T4b.3) e a simulação ao vivo atrelada a uma meta (T4b.4), o plano de operação (T4b.5), os alertas de preço (T4b.6 e T4b.7) e Seus ativos (T4b.8); próximo passo: fase 5 do `tasks.md`.
+`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) a estratégia de exemplo por usuário (T3.5) e a fila durável de execuções com tetos por usuário (T3.6); Fase 4 com a simulação ao vivo no worker (T4.1), a paridade com o backtest (T4.2) e a sobrevivência do saldo (T4.3, piso e meta de dobro em `GET /v1/runs/:id`); tempo real com `LISTEN/NOTIFY` → WebSocket `GET /v1/stream` (T4.4) e o ticker público da Binance (T4.7); alerta de sinal no Telegram com caixa de saída durável e despachante com retry (T4.5) e registro cronológico em CSV (T4.6); Fase 4b com o motor de metas (T4b.1), o próximo gatilho (T4b.2), as rotas `/v1/goals*` com a avaliação em cache (T4b.3) e a simulação ao vivo atrelada a uma meta (T4b.4), o plano de operação (T4b.5), os alertas de preço (T4b.6 e T4b.7) e Seus ativos (T4b.8); Fase 5 do painel: T5.1 (app React/Vite PWA, login PKCE pelo token handler, aviso de simulação em toda rota), T5.1b (conta) e T5.2 (visão geral com o crédito do Fear & Greed); próximo passo: T5.3 do `tasks.md`.
 
 ## Stack decidida
 
@@ -44,7 +44,7 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   `make down DOWN_FLAGS=--volumes` e `make up` (apaga os dados do Keycloak daquele ambiente). `make up`
   avisa quando o JSON é mais novo que o volume.
 - Alvos `*-test` (`migration-test`, `database-test`, `identity-test`, `session-test`, `admin-test`,
-  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`, `walkforward-test`, `api-runs-test`, `api-runs-mutants`, `example-mutants`, `queue-test`, `queue-mutants`, `live-test`, `live-mutants`, `stream-api-test`, `stream-mutants`, `alert-mutants`, `runlog-mutants`, `telegram-test`, `telegram-mutants`, `goals-test`, `price-alerts-test`, `price-alert-mutants`, `user-asset-mutants`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
+  `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`, `walkforward-test`, `api-runs-test`, `api-runs-mutants`, `example-mutants`, `queue-test`, `queue-mutants`, `live-test`, `live-mutants`, `stream-api-test`, `stream-mutants`, `alert-mutants`, `runlog-mutants`, `telegram-test`, `telegram-mutants`, `goals-test`, `price-alerts-test`, `price-alert-mutants`, `user-asset-mutants`, `panel-e2e`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
   `TERM`: Ctrl-C não deixa container vivo. Dois deles ao mesmo tempo disputam o mesmo projeto; rode um por vez.
 - `make check` roda `bun test` com `env -i`: teste que precisa de variável a declara; o `export` do `env.dev`
   não chega a ele.
@@ -217,6 +217,35 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
   (5 a 600, padrão 60: sem mensagem por esse tempo, reconecta), `STREAM_GAP_LOOKBACK_HOURS` (1 a 720, padrão 168)
   e `STREAM_GAP_CHECK_MINUTES` (1 a 1440, padrão 15). `make stream-test` prova isso com o worker real em subprocesso, Postgres
   descartável e uma Binance falsa local (REST + WebSocket em `packages/market-data/test-support/`).
+
+## Painel (`apps/frontend-cryptoada`)
+
+React 19 + Vite 8 + react-router 8 + TanStack Query 5, sem biblioteca de UI e sem plugin de PWA (o `public/sw.js` é à
+mão e não cacheia `/v1`). Detalhe e decisões em `specs/001-simulador-e-sinais/plan.md` §5d.
+
+- **O token nunca toca o disco do navegador.** Access token só em memória (`SessionService`); refresh no cookie
+  `__Host-` HttpOnly da API. Renovação de uma por vez; 401 renova uma vez e repete. `localStorage` guarda só o tema.
+  Resposta de 429/5xx/rede na renovação é `unavailable` (tentar de novo), não logout.
+- **Toda resposta da API é validada por Zod no cliente**; o painel não importa código de outra app, então os
+  esquemas em `src/**/*.validation.ts` espelham os contratos de `GET /v1/openapi.json` (fora de produção). Mudou o
+  contrato da API, mude o esquema do painel e o contrato de `test/`.
+- **Estilo do código.** Componente de função ≤ 40 linhas e arquivo ≤ 200 (o lint vale para `.tsx`); sem `as`, sem
+  `any`, sem `default export` (exceção nomeada só para `vite.config.ts` e `playwright.config.ts`, que o Vite/Playwright
+  exigem); `import.meta.env` e `process.env` só em `src/environment.ts` (e no leitor do E2E). CSS Modules + tokens em
+  `src/styles/global.css`; sem estilo inline. Tipos de `*.module.css` vêm de `vite/client` (com
+  `noUncheckedIndexedAccess` a classe é `string | undefined`; só `className` e template string aceitam isso).
+- **Testes.** `bun run --cwd apps/frontend-cryptoada test`: arquivos `test/*.contract.ts(x)` (NÃO `.test.`/`.spec.`, para
+  o `bun test` da raiz e o Playwright não os pegarem), lista EXPLÍCITA no script `test` do `package.json` (teste novo não
+  roda se não entrar ali), preload `register-dom.ts` (happy-dom), `setup.ts` e o stub de CSS Modules. A API é um
+  `fetch` falso por rota (`test/support/fake-fetch.ts`); `renderApp` monta o app inteiro com roteador em memória.
+  `make check` roda esse script. `make panel-e2e` sobe infra descartável, constrói o painel, serve com `vite preview`
+  na porta do `KEYCLOAK_PANEL_ORIGIN` e roda o Playwright (`e2e/*.e2e.ts`, Chromium em cache do Playwright 1.58).
+- **Typecheck próprio.** `tsconfig.json` do painel tem `lib` com DOM e `jsx`; o da raiz o exclui. `bun run typecheck`
+  roda os dois.
+- **Env público** (`envs/env.*`): `VITE_API_URL` (alvo do proxy), `VITE_KEYCLOAK_AUTHORIZE_URL`, opcionais
+  `VITE_KEYCLOAK_CLIENT_ID` e `VITE_MARKET_SYMBOLS`, e `PANEL_PORT` (porta de `vite`/`vite preview`, só do `vite.config.ts`).
+- **Limites conhecidos.** Séries só crescem: o painel lê até 50 páginas para achar o último ponto (T5.8 resolve com rota
+  de resumo ou tempo real). A API ainda não expõe o valor do Fear & Greed: o painel só credita a fonte.
 
 ## Regras que não se negociam
 

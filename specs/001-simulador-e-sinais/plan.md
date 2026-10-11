@@ -26,7 +26,7 @@
 | `apps/cron-cryptoada` | One-shot agendado: exclusão de contas (passos 2 e 3 e remoção da linha de `users`, ADR 0001 §h; retenção de 90 dias do IP da auditoria), backfill de candles (`backfill-candles`: por par, em sequência, janela de `BACKFILL_YEARS` alinhada à grade, lacunas por `findMissingOpenTimes` em SQL, uma página gravada por vez; `MARKET_EXCHANGE`, `MARKET_SYMBOLS`, `MARKET_TIMEFRAMES`, `BACKFILL_YEARS`, `BINANCE_BASE_URL`, `CRON_TASKS`; prova em `make backfill-test`), correção de lacunas, Fear & Greed |
 | `apps/worker-cryptoada` | Consome o stream de klines; no candle fechado, avalia as simulações ativas, grava e notifica. **Simulação ao vivo (T4.1, `src/live/`, ADR 0002 "Simulação ao vivo (T4.1 e T4.2)")**: `createLiveEvaluator(...).tick()` cancela as simulações de conta inativa, renova o batimento, reivindica (`createLiveRunRepository.claimLiveRuns`: `claimed_by` + batimento, teto `maxActiveLivePaperRuns` por usuário, `SKIP LOCKED`, assume a de worker caído) e avalia cada execução detida: lê o checkpoint, os candles fechados depois dele (até 500 passos por ronda) e dá UM passo (`advanceCandle`) por candle numa transação só (linhas + `engine_state` + `last_candle_time`); o `createLiveScheduler` roda uma ronda a cada `LIVE_POLL_SECONDS` (padrão 5) e uma a cada candle gravado. Buraco entre candles espera a recuperação e só vira lacuna (posição fechada, motivo `gap`) quando ela o marcou como inalcançável; conta apagada/bloqueada não é avaliada e FK violada é execução encerrada, sem erro; erro de banco repete, erro tipado grava só o código. Variáveis: `LIVE_POLL_SECONDS` (1 a 300, padrão 5) e `LIVE_HEARTBEAT_TIMEOUT_SECONDS` (5 a 3600, padrão 60, maior que o intervalo). Prova: `make live-test`. Etapa T1.5 (já ativa, endurecida na T1.6): cada vela fechada vai para `upsertCandles` (idempotente; escrita que falha repete 3 vezes com backoff e então dispara a recuperação) e a recuperação de lacuna baixa pelo REST só as aberturas que faltam numa JANELA DE RETROCESSO `[agora - STREAM_GAP_LOOKBACK_HOURS, última vela fechada)` (`findMissingOpenTimes`, por par, em sequência), em CADA (re)conexão e a cada `STREAM_GAP_CHECK_MINUTES`; falha agenda nova tentativa com backoff sem parar o stream; 418 faz dormir o `Retry-After` (teto 24 h) sem seguir pelos pares; par sem nenhum candle fica para o backfill do cron. A hora de corte vem do relógio do servidor (`createServerClock`, `GET /api/v3/time`). Variáveis: `MARKET_EXCHANGE` (só `binance`), `MARKET_SYMBOLS`, `MARKET_TIMEFRAMES`, `BINANCE_BASE_URL` (REST), `BINANCE_STREAM_URL` (`wss://` em produção), `STREAM_STALE_SECONDS` (5 a 600, padrão 60), `STREAM_GAP_LOOKBACK_HOURS` (1 a 720, padrão 168), `STREAM_GAP_CHECK_MINUTES` (1 a 1440, padrão 15). Prova: `make stream-test` (worker real em subprocesso, Postgres descartável, Binance falsa REST + WebSocket) **Alerta no Telegram (T4.5, `src/alerts/`, ADR 0002 "Alerta de sinal no Telegram")**: o passo ao vivo enfileira o alerta de cada sinal BUY/SELL de candle fresco na própria transação (`appendAlerts`) e `createAlertDispatcher` (agendado por `ALERT_POLL_SECONDS`, padrão 2) reivindica com arrendamento, monta o texto (motivo, placar, ação simulada, stop, alvo, acerto histórico), entrega pela Bot API (`fetch`, URL base `TELEGRAM_API_BASE_URL`) e repete com espera de 30 s a 4 min (5 tentativas; 429 respeita `retry_after`); sem `TELEGRAM_BOT_TOKEN` o recurso fica desligado. Prova: `make telegram-test` e `make telegram-mutants`. |
 | `apps/api-cryptoada` | `Bun.serve`: REST, WebSocket para o painel, backtest e walk-forward em `worker_thread`. Backtest (T3.2, `src/backtest/`, ADR 0002 "Backtest em `worker_thread` (T3.2)"): `runBacktest({ database, runId })` resolve o dono pelo `runId` (`resolveRunOwnerScope`, só para runIds enfileirados pela API), confere os hashes recalculados, carrega o pré-aquecimento (`leadInCandles`) e o período por páginas, declara as lacunas ao motor, executa o `Engine.step` de produção e grava UMA transação por lote de 2.000 passos (status, resultados, checkpoint), cancela entre lotes, falha com `error_code` estável (`NO_CANDLES`, `INSUFFICIENT_HISTORY`, `HASH_MISMATCH`, `BACKTEST_TIMEOUT`, `WORKER_CRASHED`, …) e retoma do checkpoint com resultado idêntico ao da execução contínua. A thread (`backtest.worker.ts`) abre o próprio banco, valida `{ runId }` e os eventos com Zod, e a API a termina no timeout (`BACKTEST_TIMEOUT_SECONDS`, padrão 900) e no encerramento gracioso. Medida: 17.520 candles `1h` de ponta a ponta em ~3,4 s (`make backtest-test`). Walk-forward (T3.3, `src/walk-forward/`, ADR 0002 "Walk-forward (T3.3)"): `runWalkForward({ database, runId, options })` valida a grade no catálogo FECHADO de caminhos ajustáveis (teto de 200 combinações VÁLIDAS), planeja janelas em meses de calendário UTC, avalia cada combinação em até `WALK_FORWARD_THREADS` threads de busca (o sinal sai UMA vez da série contínua e a carteira roda por janela), escolhe por Sharpe líquido do AJUSTE com mínimo de operações, testa janela a janela com a carteira encadeada e grava, por janela, a linha de `walk_forward_windows`, os resultados do teste e o checkpoint na mesma transação; o relatório principal (`runs.metrics`) é o FORA DA AMOSTRA concatenado e `metrics.overfitting` guarda o alerta |
-| `apps/frontend-cryptoada` | React 19 + Vite, PWA |
+| `apps/frontend-cryptoada` | React 19 + Vite, PWA (§5d) |
 
 O motor é o mesmo para backtest e ao vivo: o backtest alimenta candles do banco num laço; o ao vivo
 alimenta um candle por vez. A interface é uma só, com duas metades para quem calcula o sinal uma vez e
@@ -216,6 +216,40 @@ Entregues nas T4b.5 a T4b.8; a definição fechada está no ADR 0002 ("Plano de 
   progresso da meta no navegador, mostra o selo "ao vivo" / "sem dados há N s" e cai para polling
   de 15 s quando o WebSocket não conecta. Ao reconectar, rebusca o estado por REST.
 - Alerta de preço (RF14) é avaliado no servidor a cada tick consolidado (o cliente nunca decide).
+
+## 5d. Painel (T5.1, T5.1b e T5.2)
+
+`apps/frontend-cryptoada`: React 19 + Vite 8 + react-router 8 + TanStack Query 5. Sem biblioteca de componentes, de estilo
+nem de PWA (o service worker `public/sw.js` é escrito à mão, guarda só a casca e nunca responde a `/v1`).
+
+- **Sessão (token handler, ADR 0001 §a).** `SessionService` (`src/session/session-service.ts`) guarda o access token SÓ em
+  memória; o refresh fica no cookie `__Host-cryptoada_refresh` que o JS nunca vê. Uma renovação por vez (as chamadas
+  paralelas esperam a mesma promessa), renovação 30 s antes de vencer e `SessionStatus` em quatro estados: `loading`,
+  `authenticated`, `anonymous` (401/400/403 da renovação) e `unavailable` (429, 5xx ou rede fora: NÃO é logout, a tela
+  oferece "Tentar de novo"). O login é PKCE S256 feito pelo navegador (`login-redirect.ts`); o verifier fica em
+  `sessionStorage` até o retorno e a tentativa é de uso único, queimada também por `state` diferente.
+- **Cliente HTTP (`src/http/api-client.ts`).** `Authorization: Bearer`, `X-Requested-With: fetch` em toda chamada, um 401
+  renova UMA vez e repete, o segundo 401 encerra a sessão local (a rota protegida leva ao login). TODA resposta é validada
+  por Zod no cliente (envelope, página e dado): resposta de API é entrada não confiável.
+- **Rotas.** `/login`, `/auth/callback`, `/` (visão geral) e `/conta`; tudo nasce sob `RootLayout`, que traz o AVISO
+  PERMANENTE DE SIMULAÇÃO (texto fixo em `SIMULATION_NOTICE`, sem botão de fechar) em todas as rotas, inclusive 404.
+- **Conta (T5.1b).** Tema (automático/claro/escuro, só no navegador), alertas do Telegram (`PATCH /v1/me`), vínculo do
+  Telegram (código de uso único), exportar (`GET /v1/me/export` como download) e apagar (digitar o e-mail do token; `403
+  REAUTH_REQUIRED` pede novo login; no `202` a sessão local é encerrada).
+- **Visão geral (T5.2).** Uma ideia por cartão: saldo e resultado × comprar e segurar da simulação ao vivo ativa (estado
+  "Rodando", "Aguardando dados do mercado" ou "Na fila"), últimos sinais com o motivo, um cartão por moeda
+  (`VITE_MARKET_SYMBOLS`, padrão `BTCUSDT,ETHUSDT`) com o último fechamento de `1h` e a variação de 24 h, e o crédito
+  "Fear & Greed Index por alternative.me" com link `rel="noopener noreferrer"` (RF01, D14). A API não tem rota do valor do
+  índice: hoje a página só credita a fonte; o cartão do valor entra quando houver rota.
+- **Limite conhecido.** As séries (`equity`, `signals`) só existem em ordem crescente; achar o último ponto lê até 50
+  páginas de 100. Uma simulação com mais de 5.000 pontos mostraria um "último" velho: a rota de resumo (ou `order=desc`)
+  fica para a T5.8, que também troca o polling por `useLiveMarket`.
+- **Build e segurança.** `vite build` injeta CSP por `<meta>` só no build (`default-src 'self'`, sem `unsafe-inline` nem
+  `unsafe-eval`); `VITE_*` é público e só leva URL do Keycloak, `client_id` público e lista de pares. Dev e preview servem
+  na origem do painel com proxy de `/v1` (cookie `__Host-` não atravessa origens).
+- **Provas.** `bun run --cwd apps/frontend-cryptoada test` (contratos com happy-dom, lista de arquivos explícita no
+  `package.json`, dentro do `make check`) e `make panel-e2e` (Playwright contra API, Postgres e Keycloak reais de teste,
+  seed por repositórios, Telegram falso, sem mock da API).
 
 ## 6. API (etapa 1)
 
