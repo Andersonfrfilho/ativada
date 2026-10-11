@@ -284,4 +284,40 @@ describe('live connection', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Sair' }));
     await waitFor(() => expect(stream.stops()).toBeGreaterThan(0));
   });
+
+  test('when the server cannot confirm the sign-out, the login page says so', async () => {
+    renderApp({
+      path: '/alertas',
+      isAuthenticated: true,
+      routes: [
+        ...routes(newWorld()),
+        {
+          method: 'DELETE',
+          path: '/v1/session',
+          respond: (): Response => new Response(null, { status: HTTP_STATUS.SERVICE_UNAVAILABLE }),
+        },
+      ],
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Sair' }));
+    const notice = await screen.findByRole('alert');
+    expect(notice.textContent).toContain('não conseguimos confirmar');
+  });
+
+  test('a confirmed sign-out shows no warning on the login page', async () => {
+    renderApp({
+      path: '/alertas',
+      isAuthenticated: true,
+      routes: [
+        ...routes(newWorld()),
+        {
+          method: 'DELETE',
+          path: '/v1/session',
+          respond: (): Response => new Response(null, { status: HTTP_STATUS.NO_CONTENT }),
+        },
+      ],
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Sair' }));
+    await screen.findByRole('button', { name: 'Entrar com Keycloak' });
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
 });

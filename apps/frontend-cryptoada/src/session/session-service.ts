@@ -33,7 +33,9 @@ export type SessionService = {
   readonly getAccessToken: () => Promise<string | undefined>;
   readonly renew: () => Promise<string | undefined>;
   readonly exchangeCode: (params: ExchangeCodeParams) => Promise<void>;
-  readonly end: () => Promise<void>;
+  // Sempre encerra a sessão local; `isConfirmed` diz se o servidor confirmou a revogação do cookie de renovação.
+  readonly end: () => Promise<{ readonly isConfirmed: boolean }>;
+  readonly hasUnconfirmedSignOut: () => boolean;
   readonly expire: () => void;
   readonly readEmail: () => string | undefined;
 };
@@ -77,6 +79,9 @@ class MemorySessionService implements SessionService {
   private status: SessionStatus = SESSION_STATUS.LOADING;
   private credentials: Credentials | undefined;
   private renewalProblem = false;
+  private hasUnconfirmedEnd = false;
+  private generation = 0;
+  private appliedGeneration = 0;
   private lastRenewalFailureAt = 0;
   private refreshing: Promise<string | undefined> | undefined;
   private exchanging: { readonly code: string; readonly promise: Promise<void> } | undefined;
@@ -119,10 +124,18 @@ class MemorySessionService implements SessionService {
     return this.exchanging.promise;
   };
 
-  readonly end = async (): Promise<void> => {
-    await this.callSession(HTTP_METHOD.DELETE, API_PATH.SESSION).catch(() => undefined);
+  readonly end = async (): Promise<{ readonly isConfirmed: boolean }> => {
+    const response = await this.callSession(HTTP_METHOD.DELETE, API_PATH.SESSION).catch(
+      () => undefined,
+    );
+    const isConfirmed = response?.ok === true;
+    this.appliedGeneration = this.generation += 1;
+    this.hasUnconfirmedEnd = !isConfirmed;
     this.publish(SESSION_STATUS.ANONYMOUS, undefined);
+    return { isConfirmed };
   };
+
+  readonly hasUnconfirmedSignOut = (): boolean => this.hasUnconfirmedEnd;
 
   readonly expire = (): void => this.publish(SESSION_STATUS.ANONYMOUS, undefined);
 
@@ -147,18 +160,28 @@ class MemorySessionService implements SessionService {
     });
   }
 
+  // Contador de geração: a FALHA de uma chamada mais antiga que outra já aplicada (um refresh lento) é descartada.
   private async requestCredentials(path: string, body?: unknown): Promise<Credentials | undefined> {
+    this.generation += 1;
+    const mine = this.generation;
     try {
       const response = await this.callSession(HTTP_METHOD.POST, path, body);
       const fresh = response.ok
         ? readCredentials(await response.json(), this.options.now())
         : undefined;
       if (fresh !== undefined) {
+        // Um sucesso sempre vale e supera qualquer chamada já em voo (ela nasceu antes dele terminar).
+        this.appliedGeneration = this.generation;
+        this.hasUnconfirmedEnd = false;
         this.publish(SESSION_STATUS.AUTHENTICATED, fresh);
         return fresh;
       }
+      if (mine < this.appliedGeneration) return this.credentials;
+      this.appliedGeneration = mine;
       return this.failRenewal(failureStatus(response));
     } catch {
+      if (mine < this.appliedGeneration) return this.credentials;
+      this.appliedGeneration = mine;
       return this.failRenewal(SESSION_STATUS.UNAVAILABLE);
     }
   }

@@ -165,8 +165,24 @@ describe('session service', () => {
     ]);
     const session = createSessionService({ fetchImplementation: fake.fetch, now: () => 0 });
     await session.getAccessToken();
-    await session.end();
+    expect(await session.end()).toEqual({ isConfirmed: false });
     expect(session.getSnapshot()).toBe('anonymous');
+    expect(session.hasUnconfirmedSignOut()).toBe(true);
+  });
+
+  test('a confirmed sign-out leaves no warning', async () => {
+    const fake = createFakeFetch([
+      refreshRoute(() => tokenResponse(createFakeAccessToken({}))),
+      {
+        method: 'DELETE',
+        path: SESSION_PATH,
+        respond: (): Response => new Response(null, { status: 204 }),
+      },
+    ]);
+    const session = createSessionService({ fetchImplementation: fake.fetch, now: () => 0 });
+    await session.getAccessToken();
+    expect(await session.end()).toEqual({ isConfirmed: true });
+    expect(session.hasUnconfirmedSignOut()).toBe(false);
   });
 });
 
@@ -239,5 +255,30 @@ describe('transient renewal failure while the token is still good', () => {
     clock.now = INSIDE_MARGIN;
     expect(await session.getAccessToken()).toBeUndefined();
     expect(session.getSnapshot()).toBe('anonymous');
+  });
+});
+
+describe('a slow refresh must not undo a newer login', () => {
+  test('the code exchange that started later wins, even if the older refresh answers 401 afterwards', async () => {
+    const token = createFakeAccessToken({ email: EMAIL });
+    let releaseRefresh: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+    const fake = createFakeFetch([
+      refreshRoute(async () => {
+        await gate;
+        return errorResponse(HTTP_STATUS.UNAUTHORIZED, 'SESSION_INVALID');
+      }),
+      { method: 'POST', path: SESSION_PATH, respond: (): Response => tokenResponse(token) },
+    ]);
+    const session = createSessionService({ fetchImplementation: fake.fetch, now: () => 0 });
+    const slowRefresh = session.renew();
+    await session.exchangeCode({ code: 'c', codeVerifier: 'v', redirectUri: 'http://x/cb' });
+    expect(session.getSnapshot()).toBe('authenticated');
+    releaseRefresh();
+    await slowRefresh;
+    expect(session.getSnapshot()).toBe('authenticated');
+    expect(session.readEmail()).toBe(EMAIL);
   });
 });

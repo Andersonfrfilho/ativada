@@ -22,3 +22,5 @@ export const SERVER_ERROR_MIN_STATUS = 500;
 export const RENEWAL_RETRY_MILLISECONDS = 5_000;
 export const RENEWAL_PROBLEM_TEXT =
   'Não foi possível renovar a sessão agora. Você segue conectado por mais alguns instantes; tentaremos de novo.';
+export const UNCONFIRMED_SIGN_OUT_TEXT =
+  'Você saiu deste navegador, mas não conseguimos confirmar o encerramento no servidor: a sessão pode continuar válida. Entre e saia de novo, ou feche este navegador.';

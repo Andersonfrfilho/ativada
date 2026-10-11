@@ -48,3 +48,8 @@ export function useRenewalProblem(): boolean {
   const session = useSessionService();
   return useSyncExternalStore(session.subscribe, session.hasRenewalProblem);
 }
+
+export function useUnconfirmedSignOut(): boolean {
+  const session = useSessionService();
+  return useSyncExternalStore(session.subscribe, session.hasUnconfirmedSignOut);
+}
