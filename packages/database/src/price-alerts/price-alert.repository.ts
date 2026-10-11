@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, count, desc, eq, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, isNotNull, sql, type SQL } from 'drizzle-orm';
 
 import type { DatabaseExecutor } from '../database-executor.js';
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
@@ -158,6 +158,17 @@ async function deletePriceAlert(
   return rows.length > 0;
 }
 
+async function deleteFiredPriceAlerts(
+  executor: DatabaseExecutor,
+  scope: OwnerScope,
+): Promise<number> {
+  const rows = await executor
+    .delete(priceAlerts)
+    .where(and(ownerCondition(scope, priceAlerts.userId), isNotNull(priceAlerts.triggeredAt)))
+    .returning({ id: priceAlerts.id });
+  return rows.length;
+}
+
 export function createPriceAlertRepository(handle: DatabaseHandle): PriceAlertRepository {
   const { database } = readOpenDatabase(handle);
   return {
@@ -166,5 +177,6 @@ export function createPriceAlertRepository(handle: DatabaseHandle): PriceAlertRe
     listPriceAlertsPage: (scope, params) => listPriceAlertsPage(database, scope, params),
     updatePriceAlert: (scope, params) => updatePriceAlert(database, scope, params),
     deletePriceAlert: (scope, alertId) => deletePriceAlert(database, scope, alertId),
+    deleteFiredPriceAlerts: (scope) => deleteFiredPriceAlerts(database, scope),
   };
 }

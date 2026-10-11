@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, asc, eq, gt, or, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, lt, or, type SQL } from 'drizzle-orm';
 
 import type { DatabaseExecutor } from '../database-executor.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
@@ -15,6 +15,7 @@ import {
   toPositionInput,
   toSignalInput,
 } from './run-result-record.mapper.js';
+import { RESULT_ORDER } from './run-result.types.js';
 import type {
   EquityPointInput,
   FillCursor,
@@ -53,6 +54,23 @@ export function toPage<TRow, TItem, TCursor>(
   };
 }
 
+type TimeColumn = typeof signals.candleTime | typeof equityPoints.candleTime;
+
+// Decrescente: o cursor é o último instante já entregue e a próxima página é a anterior a ele.
+function timeCursorCondition(
+  column: TimeColumn,
+  params: ListResultsParams<number>,
+): SQL | undefined {
+  if (params.after === undefined) return undefined;
+  return params.order === RESULT_ORDER.DESCENDING
+    ? lt(column, params.after)
+    : gt(column, params.after);
+}
+
+function timeOrder(column: TimeColumn, params: ListResultsParams<number>): SQL {
+  return params.order === RESULT_ORDER.DESCENDING ? desc(column) : asc(column);
+}
+
 export async function listSignals(
   request: ListRequest<number>,
 ): Promise<ResultPage<SignalInput, number>> {
@@ -65,10 +83,10 @@ export async function listSignals(
       and(
         ownerCondition(scope, signals.userId),
         eq(signals.runId, runId),
-        params.after === undefined ? undefined : gt(signals.candleTime, params.after),
+        timeCursorCondition(signals.candleTime, params),
       ),
     )
-    .orderBy(asc(signals.candleTime))
+    .orderBy(timeOrder(signals.candleTime, params))
     .limit(limit + 1);
   return toPage(rows, limit, { toItem: toSignalInput, cursorOf: (row) => row.candleTime });
 }
@@ -90,10 +108,10 @@ export async function listEquityPoints(
       and(
         ownerCondition(scope, equityPoints.userId),
         eq(equityPoints.runId, runId),
-        params.after === undefined ? undefined : gt(equityPoints.candleTime, params.after),
+        timeCursorCondition(equityPoints.candleTime, params),
       ),
     )
-    .orderBy(asc(equityPoints.candleTime))
+    .orderBy(timeOrder(equityPoints.candleTime, params))
     .limit(limit + 1);
   return toPage(rows, limit, { toItem: (row) => row, cursorOf: (row) => row.candleTime });
 }

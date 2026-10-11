@@ -64,15 +64,21 @@ export function isFinished(run: RunData): boolean {
 // Percorre até `maxPages` páginas por cursor (limite 100), sem repetir linha.
 export async function readPages(
   context: ApiRunsContext,
-  params: { readonly subject: string; readonly path: string; readonly maxPages: number },
+  params: {
+    readonly subject: string;
+    readonly path: string;
+    readonly maxPages: number;
+    readonly extraQuery?: string;
+  },
 ): Promise<{ readonly rows: readonly Record<string, unknown>[]; readonly isComplete: boolean }> {
   const rows: Record<string, unknown>[] = [];
   let cursor: string | null = null;
   for (let page = 0; page < params.maxPages; page += 1) {
+    const extra = params.extraQuery === undefined ? '' : `&${params.extraQuery}`;
     const suffix: string =
       cursor === null
-        ? `?limit=${SERIES_PAGE_SIZE}`
-        : `?limit=${SERIES_PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`;
+        ? `?limit=${SERIES_PAGE_SIZE}${extra}`
+        : `?limit=${SERIES_PAGE_SIZE}${extra}&cursor=${encodeURIComponent(cursor)}`;
     const response: ApiResponse = await context.call({
       subject: params.subject,
       path: `${params.path}${suffix}`,

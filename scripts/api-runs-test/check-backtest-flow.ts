@@ -148,6 +148,30 @@ async function runBacktest(
   return finished;
 }
 
+// `order=desc` (o painel lê o ponto mais recente sem varrer a série): as 200 primeiras linhas são as do fim, valor a valor.
+async function checkNewestFirst(context: ApiRunsContext, runId: string): Promise<void> {
+  const newest = await readPages(context, {
+    subject: SUBJECT_A,
+    path: `/v1/runs/${runId}/equity`,
+    maxPages: 2,
+    extraQuery: 'order=desc',
+  });
+  assertCondition(
+    newest.rows.length === 200 &&
+      strictlyIncreasing(newest.rows.map((row) => -Number(row['candleTime']))),
+    'equity decrescente: 200 linhas em ordem, sem repetir',
+  );
+  const stored: unknown =
+    await context.client`SELECT candle_time, equity::text AS equity FROM equity_points WHERE run_id = ${runId} ORDER BY candle_time DESC LIMIT 200`;
+  const sameRows = (stored as { candle_time: number; equity: string }[]).every(
+    (row, index) =>
+      newest.rows[index]?.['equity'] === row.equity &&
+      newest.rows[index]?.['candleTime'] === Number(row.candle_time),
+  );
+  assertCondition(sameRows, 'as 200 últimas linhas da API são as do banco, valor a valor');
+  reportLine('equity?order=desc começa pelo ponto mais recente e bate com o banco');
+}
+
 async function checkSeries(context: ApiRunsContext, runId: string): Promise<void> {
   const equity = await readPages(context, {
     subject: SUBJECT_A,
@@ -170,6 +194,7 @@ async function checkSeries(context: ApiRunsContext, runId: string): Promise<void
       equity.rows[index]?.['candleTime'] === Number(row.candle_time),
   );
   assertCondition(sameRows, 'as 300 primeiras linhas da API são as do banco, valor a valor');
+  await checkNewestFirst(context, runId);
   const trades = await readPages(context, {
     subject: SUBJECT_A,
     path: `/v1/runs/${runId}/trades`,

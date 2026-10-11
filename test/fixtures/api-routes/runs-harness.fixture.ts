@@ -170,6 +170,7 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
       getStrategy: app.strategyUseCases.createGetStrategyUseCase(strategyDeps),
       listVersions: app.strategyUseCases.createListVersionsUseCase(strategyDeps),
       addVersion: app.strategyUseCases.createAddVersionUseCase(strategyDeps),
+      deleteStrategy: app.strategyUseCases.createDeleteStrategyUseCase(strategyDeps),
     }),
     ...app.runRoutes.createRunRoutes({
       enabled,

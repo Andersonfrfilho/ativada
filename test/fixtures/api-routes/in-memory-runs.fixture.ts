@@ -224,6 +224,8 @@ export function createInMemoryRuns(
     pick: (store: ResultStore) => readonly TRow[],
     cursor: {
       readonly isAfter: (row: TRow, cursor: TCursor) => boolean;
+      // Só as séries que aceitam `order=desc` (patrimônio e sinais) declaram o "antes do cursor".
+      readonly isBefore?: (row: TRow, cursor: TCursor) => boolean;
       readonly of: (row: TRow) => TCursor;
     },
   ): (
@@ -234,7 +236,11 @@ export function createInMemoryRuns(
     return (scope, runId, params) => {
       listCalls[kind].push(params.limit);
       if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
-      return Promise.resolve(pageOf(pick(storeOf(runId)), params, cursor.isAfter, cursor.of));
+      const isDescending = params.order === 'desc' && cursor.isBefore !== undefined;
+      const rows = isDescending ? [...pick(storeOf(runId))].reverse() : pick(storeOf(runId));
+      const isAfter =
+        isDescending && cursor.isBefore !== undefined ? cursor.isBefore : cursor.isAfter;
+      return Promise.resolve(pageOf(rows, params, isAfter, cursor.of));
     };
   }
 
@@ -372,10 +378,12 @@ export function createInMemoryRuns(
     listSurvivalPoints,
     listSignals: lister<SignalInput, number>('signals', (store) => store.signals, {
       isAfter: (row, cursor) => row.candleTime > cursor,
+      isBefore: (row, cursor) => row.candleTime < cursor,
       of: (row) => row.candleTime,
     }),
     listEquityPoints: lister<EquityPointInput, number>('equity', (store) => store.equity, {
       isAfter: (row, cursor) => row.candleTime > cursor,
+      isBefore: (row, cursor) => row.candleTime < cursor,
       of: (row) => row.candleTime,
     }),
     listWindows: lister<WalkForwardWindowInput, number>('windows', (store) => store.windows, {

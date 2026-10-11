@@ -19,6 +19,7 @@ import { StrategyNotFoundError } from './strategy.error.js';
 import type {
   AddVersionUseCase,
   CreateStrategyUseCase,
+  DeleteStrategyUseCase,
   GetStrategyUseCase,
   ListStrategiesUseCase,
   ListVersionsUseCase,
@@ -31,6 +32,7 @@ export type StrategyRouteDependencies = {
   readonly getStrategy: GetStrategyUseCase;
   readonly listVersions: ListVersionsUseCase;
   readonly addVersion: AddVersionUseCase;
+  readonly deleteStrategy: DeleteStrategyUseCase;
 };
 
 function readStrategyId(context: ProtectedRouteContext): string {
@@ -90,6 +92,19 @@ function createGetRoute(dependencies: StrategyRouteDependencies): Route {
   };
 }
 
+function createDeleteRoute(dependencies: StrategyRouteDependencies): Route {
+  return {
+    method: HTTP_METHOD.DELETE,
+    path: STRATEGY_PATH,
+    access: ROUTE_ACCESS.USER,
+    documentation: STRATEGY_DOCUMENTATION.delete,
+    handler: async (context): Promise<RouteResult> => {
+      await dependencies.deleteStrategy(context.scope, readStrategyId(context));
+      return { status: HTTP_STATUS.NO_CONTENT };
+    },
+  };
+}
+
 function createVersionsRoute(dependencies: StrategyRouteDependencies): Route {
   return {
     method: HTTP_METHOD.GET,
@@ -132,6 +147,7 @@ export function createStrategyRoutes(dependencies: StrategyRouteDependencies): r
     createListRoute(dependencies),
     createCreateRoute(dependencies),
     createGetRoute(dependencies),
+    createDeleteRoute(dependencies),
     createVersionsRoute(dependencies),
     createAddVersionRoute(dependencies),
   ];

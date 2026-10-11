@@ -4,7 +4,7 @@ import type { StrategyVersion } from '@cryptoada/strategy-engine';
 
 import { parseJsonContainer } from '@cryptoada/run-recording';
 import { encodeStrategyCursor, encodeVersionCursor } from './strategy-cursor.js';
-import { StrategyNotFoundError } from './strategy.error.js';
+import { StrategyIsExampleError, StrategyNotFoundError } from './strategy.error.js';
 import {
   toStrategyVersionView,
   toStrategyView,
@@ -20,6 +20,7 @@ export type StrategyUseCaseDependencies = {
     | 'listVersionsPage'
     | 'addVersion'
     | 'findStrategy'
+    | 'softDeleteStrategy'
   >;
 };
 
@@ -56,6 +57,8 @@ export type ListVersionsUseCase = (
   scope: OwnerScope,
   input: PageInput<number> & { readonly strategyId: string },
 ) => Promise<PageOutput<StrategyVersionView>>;
+
+export type DeleteStrategyUseCase = (scope: OwnerScope, strategyId: string) => Promise<void>;
 
 export type AddVersionUseCase = (
   scope: OwnerScope,
@@ -141,5 +144,19 @@ export function createAddVersionUseCase(
     });
     if (added === undefined) throw new StrategyNotFoundError();
     return { version: toStrategyVersionView(added.version), isNew: added.isNew };
+  };
+}
+
+// A estratégia some da lista e do detalhe (exclusão lógica); execuções e resultados já gravados continuam do dono.
+export function createDeleteStrategyUseCase(
+  dependencies: StrategyUseCaseDependencies,
+): DeleteStrategyUseCase {
+  return async (scope, strategyId) => {
+    const strategy = await dependencies.strategies.findStrategy(scope, strategyId);
+    if (strategy === undefined) throw new StrategyNotFoundError();
+    if (strategy.isExample) throw new StrategyIsExampleError();
+    if (!(await dependencies.strategies.softDeleteStrategy(scope, strategyId))) {
+      throw new StrategyNotFoundError();
+    }
   };
 }

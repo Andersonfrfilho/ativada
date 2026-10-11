@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { RESULT_ORDER } from '@cryptoada/database';
 import { z } from '@cryptoada/environment';
 import {
   EXIT_REASON,
@@ -104,12 +105,17 @@ const WINDOW_SCHEMA = z.strictObject({
   eligibleCombinations: z.number().int().nonnegative(),
 });
 
-function series(summary: string, item: z.ZodType): RouteDocumentation {
+export const ORDERABLE_QUERY_SHAPE = {
+  ...PAGE_QUERY_SHAPE,
+  order: z.enum(RESULT_ORDER).optional(),
+} as const;
+
+function series(summary: string, item: z.ZodType, isOrderable = false): RouteDocumentation {
   return {
     summary,
     tag: TAG,
     params: pathIdSchema(RUN_ID_PARAM),
-    query: z.strictObject(PAGE_QUERY_SHAPE),
+    query: z.strictObject(isOrderable ? ORDERABLE_QUERY_SHAPE : PAGE_QUERY_SHAPE),
     successes: [
       {
         status: HTTP_STATUS.OK,
@@ -129,9 +135,17 @@ function series(summary: string, item: z.ZodType): RouteDocumentation {
 }
 
 export const RUN_SERIES_DOCUMENTATION = {
-  equity: series('Curva de patrimônio, em ordem de candle.', EQUITY_SCHEMA),
+  equity: series(
+    'Curva de patrimônio, em ordem de candle (`order=desc` começa pelo ponto mais recente).',
+    EQUITY_SCHEMA,
+    true,
+  ),
   trades: series('Operações (posições abertas e fechadas), em ordem de abertura.', TRADE_SCHEMA),
-  signals: series('Sinais (compra, venda ou neutro) com votos e motivo.', SIGNAL_SCHEMA),
+  signals: series(
+    'Sinais (compra, venda ou neutro) com votos e motivo (`order=desc` começa pelo mais recente).',
+    SIGNAL_SCHEMA,
+    true,
+  ),
   orders: series('Ordens simuladas.', ORDER_SCHEMA),
   fills: series('Preenchimentos das ordens.', FILL_SCHEMA),
   windows: series('Janelas do walk-forward (vazio nas outras execuções).', WINDOW_SCHEMA),

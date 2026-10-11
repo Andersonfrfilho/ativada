@@ -11,10 +11,12 @@ import { createPriceAlertSchema, patchPriceAlertSchema } from './price-alert-req
 import {
   PRICE_ALERT_ID_PARAM,
   PRICE_ALERT_PATH,
+  PRICE_ALERTS_FIRED_PATH,
   PRICE_ALERTS_PATH,
 } from './price-alert.constant.js';
 import { PriceAlertNotFoundError } from './price-alert.error.js';
 import type {
+  ClearFiredPriceAlertsUseCase,
   CreatePriceAlertUseCase,
   DeletePriceAlertUseCase,
   GetPriceAlertUseCase,
@@ -30,6 +32,7 @@ export type PriceAlertRouteDependencies = {
   readonly getPriceAlert: GetPriceAlertUseCase;
   readonly updatePriceAlert: UpdatePriceAlertUseCase;
   readonly deletePriceAlert: DeletePriceAlertUseCase;
+  readonly clearFiredPriceAlerts: ClearFiredPriceAlertsUseCase;
 };
 
 // UUID malformado e alerta inexistente são o MESMO 404 (ADR 0001 §e).
@@ -116,6 +119,19 @@ function createDeleteRoute(dependencies: PriceAlertRouteDependencies): Route {
   };
 }
 
+function createClearFiredRoute(dependencies: PriceAlertRouteDependencies): Route {
+  return {
+    method: HTTP_METHOD.DELETE,
+    path: PRICE_ALERTS_FIRED_PATH,
+    access: ROUTE_ACCESS.USER,
+    documentation: PRICE_ALERT_DOCUMENTATION.clearFired,
+    handler: async ({ scope }): Promise<RouteResult> => ({
+      status: HTTP_STATUS.OK,
+      data: await dependencies.clearFiredPriceAlerts(scope),
+    }),
+  };
+}
+
 export function createPriceAlertRoutes(
   dependencies: PriceAlertRouteDependencies,
 ): readonly Route[] {
@@ -124,6 +140,7 @@ export function createPriceAlertRoutes(
     createCreateRoute(dependencies),
     createGetRoute(dependencies),
     createUpdateRoute(dependencies),
+    createClearFiredRoute(dependencies),
     createDeleteRoute(dependencies),
   ];
 }

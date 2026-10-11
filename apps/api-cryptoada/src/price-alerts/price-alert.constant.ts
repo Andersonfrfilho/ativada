@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 
 export const PRICE_ALERTS_PATH = '/v1/price-alerts';
+export const PRICE_ALERTS_FIRED_PATH = '/v1/price-alerts/fired';
 export const PRICE_ALERT_PATH = '/v1/price-alerts/:alertId';
 export const PRICE_ALERT_ID_PARAM = 'alertId';
 

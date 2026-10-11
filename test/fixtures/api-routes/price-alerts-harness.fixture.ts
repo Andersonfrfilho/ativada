@@ -23,6 +23,7 @@ export async function createPriceAlertsHarness(
         getPriceAlert: useCases.createGetPriceAlertUseCase(base),
         updatePriceAlert: useCases.createUpdatePriceAlertUseCase(base),
         deletePriceAlert: useCases.createDeletePriceAlertUseCase(base),
+        clearFiredPriceAlerts: useCases.createClearFiredPriceAlertsUseCase(base),
       });
     },
   });

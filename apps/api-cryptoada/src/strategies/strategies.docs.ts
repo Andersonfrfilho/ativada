@@ -27,6 +27,7 @@ export const STRATEGY_VERSION_VIEW_SCHEMA = z.strictObject({
   strategyId: resourceIdSchema,
   version: z.number().int().positive(),
   config: STRATEGY_CONFIG_SCHEMA,
+  configHash: z.string().regex(/^[0-9a-f]{64}$/),
   createdAt: isoDateTimeSchema,
 });
 
@@ -86,6 +87,17 @@ export const STRATEGY_DOCUMENTATION = {
       { status: HTTP_STATUS.OK, description: 'A estratégia.', schema: STRATEGY_DETAIL_SCHEMA },
     ],
     errors: [NOT_FOUND],
+  },
+  delete: {
+    summary:
+      'Apaga a estratégia (a lista e o detalhe deixam de mostrá-la). As execuções e os resultados já gravados ficam. A estratégia de exemplo não se apaga.',
+    tag: TAG,
+    params: pathIdSchema(STRATEGY_ID_PARAM),
+    successes: [{ status: HTTP_STATUS.NO_CONTENT, description: 'Apagada.' }],
+    errors: [
+      NOT_FOUND,
+      { status: HTTP_STATUS.CONFLICT, code: STRATEGY_ERROR_CODE.STRATEGY_IS_EXAMPLE },
+    ],
   },
   versions: {
     summary: 'Lista as versões de uma estratégia, da mais nova para a mais antiga.',

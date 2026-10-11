@@ -120,9 +120,14 @@ export type SurvivalPointsParams = {
 
 export type SurvivalPointInput = Pick<EquityPointInput, 'candleTime' | 'equity' | 'equityAtLow'>;
 
+export const RESULT_ORDER = { ASCENDING: 'asc', DESCENDING: 'desc' } as const;
+export type ResultOrder = (typeof RESULT_ORDER)[keyof typeof RESULT_ORDER];
+
+// `order` só vale para a curva de patrimônio e os sinais (o painel precisa do ponto mais recente); ausente = crescente.
 export type ListResultsParams<TCursor> = {
   readonly limit: number;
   readonly after: TCursor | undefined;
+  readonly order?: ResultOrder;
 };
 
 export type ResultPage<TItem, TCursor> = {

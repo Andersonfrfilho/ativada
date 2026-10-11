@@ -43,6 +43,9 @@ export type UpdatePriceAlertUseCase = (
   input: { readonly alertId: string; readonly patch: PatchPriceAlertBody },
 ) => Promise<PriceAlertView>;
 export type DeletePriceAlertUseCase = (scope: OwnerScope, alertId: string) => Promise<void>;
+export type ClearFiredPriceAlertsUseCase = (
+  scope: OwnerScope,
+) => Promise<{ readonly deleted: number }>;
 
 export function createCreatePriceAlertUseCase(
   dependencies: PriceAlertUseCaseDependencies,
@@ -117,4 +120,12 @@ export function createDeletePriceAlertUseCase(
     const isDeleted = await dependencies.priceAlerts.deletePriceAlert(scope, alertId);
     if (!isDeleted) throw new PriceAlertNotFoundError();
   };
+}
+
+export function createClearFiredPriceAlertsUseCase(
+  dependencies: PriceAlertUseCaseDependencies,
+): ClearFiredPriceAlertsUseCase {
+  return async (scope) => ({
+    deleted: await dependencies.priceAlerts.deleteFiredPriceAlerts(scope),
+  });
 }

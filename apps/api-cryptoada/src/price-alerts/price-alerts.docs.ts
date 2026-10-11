@@ -102,6 +102,19 @@ export const PRICE_ALERT_DOCUMENTATION = {
     ],
     errors: [VALIDATION, NOT_FOUND, LIMIT],
   },
+  clearFired: {
+    summary:
+      'Apaga de uma vez os alertas de preço já disparados do usuário (os armados e os desligados à mão ficam) e devolve quantos foram apagados.',
+    tag: TAG,
+    successes: [
+      {
+        status: HTTP_STATUS.OK,
+        description: 'Quantos alertas disparados foram apagados.',
+        schema: z.strictObject({ deleted: z.number().int().nonnegative() }),
+      },
+    ],
+    errors: [],
+  },
   delete: {
     summary: 'Apaga um alerta de preço.',
     tag: TAG,

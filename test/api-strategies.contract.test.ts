@@ -71,11 +71,23 @@ describe('POST /v1/strategies', () => {
     expect(data.version.config).toMatchObject({ schemaVersion: 1, thresholds: { buy: '2' } });
     expect(Object.keys(data.version).sort()).toStrictEqual([
       'config',
+      'configHash',
       'createdAt',
       'id',
       'strategyId',
       'version',
     ]);
+  });
+
+  test('a versão traz o hash da configuração, igual para a mesma configuração e diferente para outra', async () => {
+    const first = await createStrategy(SUBJECT_A, 'Hash 1');
+    const same = await createStrategy(SUBJECT_A, 'Hash 2');
+    const other = await createStrategy(SUBJECT_A, 'Hash 3', changedConfig('2.5'));
+    const hashOf = (created: { data: StrategyBody['data'] }): unknown =>
+      (created.data.version as Record<string, unknown>)['configHash'];
+    expect(hashOf(first)).toMatch(/^[0-9a-f]{64}$/);
+    expect(hashOf(same)).toBe(hashOf(first));
+    expect(hashOf(other)).not.toBe(hashOf(first));
   });
 
   test('a resposta bate com o esquema documentado', async () => {

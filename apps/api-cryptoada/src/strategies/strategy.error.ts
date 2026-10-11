@@ -22,3 +22,13 @@ export class StrategyVersionNotFoundError extends DomainError {
     });
   }
 }
+
+export class StrategyIsExampleError extends DomainError {
+  constructor() {
+    super({
+      code: STRATEGY_ERROR_CODE.STRATEGY_IS_EXAMPLE,
+      message: 'A estratégia de exemplo não pode ser apagada. Duplique-a para ter uma cópia sua.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}

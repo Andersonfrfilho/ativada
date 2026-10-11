@@ -21,6 +21,7 @@ import type { AssetRouteDependencies } from '../assets/assets.routes.js';
 import type { Environment } from '../environment.js';
 import {
   createCreatePriceAlertUseCase,
+  createClearFiredPriceAlertsUseCase,
   createDeletePriceAlertUseCase,
   createGetPriceAlertUseCase,
   createListPriceAlertsUseCase,
@@ -50,6 +51,7 @@ export function createPriceAlertDependencies(
     getPriceAlert: createGetPriceAlertUseCase(dependencies),
     updatePriceAlert: createUpdatePriceAlertUseCase(dependencies),
     deletePriceAlert: createDeletePriceAlertUseCase(dependencies),
+    clearFiredPriceAlerts: createClearFiredPriceAlertsUseCase(dependencies),
   };
 }
 

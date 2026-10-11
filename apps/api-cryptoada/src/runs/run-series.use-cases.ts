@@ -9,6 +9,7 @@ import type {
   OwnerScope,
   PositionCursor,
   PositionInput,
+  ResultOrder,
   ResultPage,
   RunResultRepository,
   SignalInput,
@@ -36,10 +37,12 @@ export type RunSeriesDependencies = {
   >;
 };
 
+export type SeriesPageInput<TCursor> = PageInput<TCursor> & { readonly order?: ResultOrder };
+
 export type RunSeriesUseCase<TItem, TCursor> = (
   scope: OwnerScope,
   runId: string,
-  input: PageInput<TCursor>,
+  input: SeriesPageInput<TCursor>,
 ) => Promise<PageOutput<TItem>>;
 
 type ListFunction<TItem, TCursor> = (

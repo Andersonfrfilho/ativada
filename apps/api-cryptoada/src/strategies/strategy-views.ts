@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { JsonValue, StrategyRecord, StrategyVersionRecord } from '@cryptoada/database';
 
-// O que a API devolve: sem dono e sem hash (dado interno que a exportação também não leva).
+// O que a API devolve: sem dono. O hash da versão (SHA-256 da configuração) é público para o dono: o painel o mostra.
 export type StrategyView = {
   readonly id: string;
   readonly name: string;
@@ -15,6 +15,7 @@ export type StrategyVersionView = {
   readonly strategyId: string;
   readonly version: number;
   readonly config: JsonValue;
+  readonly configHash: string;
   readonly createdAt: string;
 };
 
@@ -34,6 +35,7 @@ export function toStrategyVersionView(record: StrategyVersionRecord): StrategyVe
     strategyId: record.strategyId,
     version: record.version,
     config: record.config,
+    configHash: record.configHash,
     createdAt: record.createdAt.toISOString(),
   };
 }

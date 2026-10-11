@@ -108,6 +108,13 @@ export function createInMemoryPriceAlerts(): InMemoryPriceAlerts {
       stored.splice(index, 1);
       return Promise.resolve(true);
     },
+    deleteFiredPriceAlerts: (scope) => {
+      const fired = stored.filter(
+        (entry) => entry.userId === scope.ownerUserId && entry.record.triggeredAt !== undefined,
+      );
+      for (const entry of fired) stored.splice(stored.indexOf(entry), 1);
+      return Promise.resolve(fired.length);
+    },
   };
   return {
     repository,

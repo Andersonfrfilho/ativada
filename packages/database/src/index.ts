@@ -80,6 +80,7 @@ export type * from './alerts/alerts.public-types.js';
 export type * from './runs/run.types.js';
 export type { DataWaitState, RecordDataWaitParams } from './runs/run-data-wait.js';
 export { createRunResultRepository } from './run-results/run-result.repository.js';
+export { RESULT_ORDER } from './run-results/run-result.types.js';
 export type {
   AppendResult,
   CommandInput,
@@ -91,6 +92,7 @@ export type {
   OrderInput,
   PositionCursor,
   PositionInput,
+  ResultOrder,
   ResultPage,
   RunResultRepository,
   SignalInput,

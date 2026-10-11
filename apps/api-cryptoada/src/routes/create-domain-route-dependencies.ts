@@ -47,6 +47,7 @@ import type { RunRouteDependencies } from '../runs/runs.routes.js';
 import type { RunRoutesBundle } from './create-api-routes.js';
 import {
   createAddVersionUseCase,
+  createDeleteStrategyUseCase,
   createCreateStrategyUseCase,
   createGetStrategyUseCase,
   createListStrategiesUseCase,
@@ -79,6 +80,7 @@ function createStrategyDependencies(database: DatabaseHandle): StrategyRouteDepe
     getStrategy: createGetStrategyUseCase(dependencies),
     listVersions: createListVersionsUseCase(dependencies),
     addVersion: createAddVersionUseCase(dependencies),
+    deleteStrategy: createDeleteStrategyUseCase(dependencies),
   };
 }
 

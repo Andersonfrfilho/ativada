@@ -88,4 +88,6 @@ export type PriceAlertRepository = {
     params: UpdatePriceAlertParams,
   ) => Promise<UpdatePriceAlertResult>;
   readonly deletePriceAlert: (scope: OwnerScope, alertId: string) => Promise<boolean>;
+  // Limpeza: apaga os alertas do dono que já dispararam (têm `triggeredAt`) e devolve quantos. Armados e desligados à mão ficam.
+  readonly deleteFiredPriceAlerts: (scope: OwnerScope) => Promise<number>;
 };

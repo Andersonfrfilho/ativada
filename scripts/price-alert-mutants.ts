@@ -81,6 +81,26 @@ const MUTANTS: readonly DatabaseMutant[] = [
       },
     ],
   },
+  {
+    name: 'CLEAR_FIRED_WITHOUT_THE_OWNER',
+    edits: [
+      {
+        file: REPOSITORY,
+        find: '.where(and(ownerCondition(scope, priceAlerts.userId), isNotNull(priceAlerts.triggeredAt)))',
+        replace: '.where(isNotNull(priceAlerts.triggeredAt))',
+      },
+    ],
+  },
+  {
+    name: 'CLEAR_FIRED_ALSO_DELETES_THE_ARMED',
+    edits: [
+      {
+        file: REPOSITORY,
+        find: '.where(and(ownerCondition(scope, priceAlerts.userId), isNotNull(priceAlerts.triggeredAt)))',
+        replace: '.where(ownerCondition(scope, priceAlerts.userId))',
+      },
+    ],
+  },
   dropConstraint(
     'NO_SYMBOL_CHECK',
     'CONSTRAINT "price_alerts_symbol_check" CHECK ("price_alerts"."symbol" ~ \'^[A-Z0-9]{2,16}USDT$\'),\n\t',
