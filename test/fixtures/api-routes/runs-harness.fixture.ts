@@ -71,6 +71,10 @@ export type RunsHarnessOptions = {
   readonly csvLimits?: { maxRows?: number; maxDurationMilliseconds?: number };
   readonly extraRoutes?: (app: ApiApp, parts: HarnessParts) => readonly Route[];
   readonly symbols?: readonly string[];
+  readonly strategyLimits?: {
+    readonly maxStrategies: number;
+    readonly maxVersionsPerStrategy: number;
+  };
 };
 
 export type RunsHarness = {
@@ -149,7 +153,10 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     },
   };
   const queue = createInMemoryRunQueue(runs);
-  const strategyDeps = { strategies: strategies.repository };
+  const strategyDeps = {
+    strategies: strategies.repository,
+    limits: options.strategyLimits ?? { maxStrategies: 10_000, maxVersionsPerStrategy: 10_000 },
+  };
   const runDeps = {
     runs: runs.repository,
     candles: candles.repository,

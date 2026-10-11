@@ -77,7 +77,10 @@ export const STRATEGY_DOCUMENTATION = {
         }),
       },
     ],
-    errors: [VALIDATION],
+    errors: [
+      VALIDATION,
+      { status: HTTP_STATUS.CONFLICT, code: STRATEGY_ERROR_CODE.STRATEGY_LIMIT_REACHED },
+    ],
   },
   get: {
     summary: 'Uma estratégia com a versão mais recente.',
@@ -132,6 +135,10 @@ export const STRATEGY_DOCUMENTATION = {
         schema: z.strictObject({ version: STRATEGY_VERSION_VIEW_SCHEMA }),
       },
     ],
-    errors: [VALIDATION, NOT_FOUND],
+    errors: [
+      VALIDATION,
+      NOT_FOUND,
+      { status: HTTP_STATUS.CONFLICT, code: STRATEGY_ERROR_CODE.STRATEGY_VERSION_LIMIT_REACHED },
+    ],
   },
 } as const satisfies Readonly<Record<string, RouteDocumentation>>;

@@ -1,10 +1,21 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { OwnerScope, StrategyCursor, StrategyRepository } from '@cryptoada/database';
+import {
+  STORAGE_QUOTA_RESOURCE,
+  StorageQuotaReachedError,
+  type OwnerScope,
+  type StrategyCursor,
+  type StrategyRepository,
+} from '@cryptoada/database';
 import type { StrategyVersion } from '@cryptoada/strategy-engine';
 
 import { parseJsonContainer } from '@cryptoada/run-recording';
 import { encodeStrategyCursor, encodeVersionCursor } from './strategy-cursor.js';
-import { StrategyIsExampleError, StrategyNotFoundError } from './strategy.error.js';
+import {
+  StrategyIsExampleError,
+  StrategyLimitReachedError,
+  StrategyNotFoundError,
+  StrategyVersionLimitReachedError,
+} from './strategy.error.js';
 import {
   toStrategyVersionView,
   toStrategyView,
@@ -22,6 +33,11 @@ export type StrategyUseCaseDependencies = {
     | 'findStrategy'
     | 'softDeleteStrategy'
   >;
+  // Tetos de armazenamento por usuário (RF00b): estratégias não apagadas e versões de cada estratégia.
+  readonly limits: {
+    readonly maxStrategies: number;
+    readonly maxVersionsPerStrategy: number;
+  };
 };
 
 export type PageInput<TCursor> = { readonly limit: number; readonly after: TCursor | undefined };
@@ -69,16 +85,31 @@ function toConfigJson(version: StrategyVersion): ReturnType<typeof parseJsonCont
   return parseJsonContainer(JSON.stringify(version.config));
 }
 
+// O teto vem do banco como erro tipado (conferido sob trava na transação); aqui vira o 409 da rota.
+async function translateQuota<TResult>(work: Promise<TResult>): Promise<TResult> {
+  try {
+    return await work;
+  } catch (error: unknown) {
+    if (!(error instanceof StorageQuotaReachedError)) throw error;
+    throw error.resource === STORAGE_QUOTA_RESOURCE.STRATEGIES
+      ? new StrategyLimitReachedError()
+      : new StrategyVersionLimitReachedError();
+  }
+}
+
 export function createCreateStrategyUseCase(
   dependencies: StrategyUseCaseDependencies,
 ): CreateStrategyUseCase {
   return async (scope, input) => {
-    const created = await dependencies.strategies.createStrategyWithFirstVersion(scope, {
-      name: input.name,
-      isExample: false,
-      config: toConfigJson(input.version),
-      configHash: input.version.configHash,
-    });
+    const created = await translateQuota(
+      dependencies.strategies.createStrategyWithFirstVersion(scope, {
+        name: input.name,
+        isExample: false,
+        config: toConfigJson(input.version),
+        configHash: input.version.configHash,
+        maxStrategies: dependencies.limits.maxStrategies,
+      }),
+    );
     return {
       strategy: toStrategyView(created.strategy),
       version: toStrategyVersionView(created.version),
@@ -137,11 +168,14 @@ export function createAddVersionUseCase(
   dependencies: StrategyUseCaseDependencies,
 ): AddVersionUseCase {
   return async (scope, input) => {
-    const added = await dependencies.strategies.addVersion(scope, {
-      strategyId: input.strategyId,
-      config: toConfigJson(input.version),
-      configHash: input.version.configHash,
-    });
+    const added = await translateQuota(
+      dependencies.strategies.addVersion(scope, {
+        strategyId: input.strategyId,
+        config: toConfigJson(input.version),
+        configHash: input.version.configHash,
+        maxVersions: dependencies.limits.maxVersionsPerStrategy,
+      }),
+    );
     if (added === undefined) throw new StrategyNotFoundError();
     return { version: toStrategyVersionView(added.version), isNew: added.isNew };
   };

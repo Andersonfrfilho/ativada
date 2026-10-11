@@ -92,6 +92,19 @@ export function createInMemoryPriceAlerts(): InMemoryPriceAlerts {
       if (isRearming && enabledCount(scope) >= params.maxEnabled) {
         return Promise.resolve({ outcome: PRICE_ALERT_UPDATE_OUTCOME.LIMIT_REACHED });
       }
+      const disabledByHand = ownedBy(scope).filter(
+        (candidate) =>
+          candidate !== entry &&
+          !candidate.record.isEnabled &&
+          candidate.record.triggeredAt === undefined,
+      ).length;
+      if (
+        params.patch.isEnabled === false &&
+        params.maxDisabled !== undefined &&
+        disabledByHand >= params.maxDisabled
+      ) {
+        return Promise.resolve({ outcome: PRICE_ALERT_UPDATE_OUTCOME.DISABLED_LIMIT_REACHED });
+      }
       entry.record = {
         ...entry.record,
         ...params.patch,

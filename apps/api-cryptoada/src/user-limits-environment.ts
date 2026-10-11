@@ -6,6 +6,14 @@ const ASSETS_EXPECTATION = 'inteiro entre 1 e 200';
 const MAX_ENABLED_PRICE_ALERTS = 500;
 const DEFAULT_ENABLED_PRICE_ALERTS = 50;
 const MAX_USER_ASSETS = 200;
+const DISABLED_ALERTS_EXPECTATION = 'inteiro entre 1 e 500';
+const DEFAULT_DISABLED_PRICE_ALERTS = 100;
+const STRATEGIES_EXPECTATION = 'inteiro entre 1 e 1000';
+const MAX_STRATEGIES = 1_000;
+const DEFAULT_STRATEGIES = 100;
+const VERSIONS_EXPECTATION = 'inteiro entre 1 e 2000';
+const MAX_VERSIONS_PER_STRATEGY = 2_000;
+const DEFAULT_VERSIONS_PER_STRATEGY = 200;
 const DEFAULT_USER_ASSETS = 50;
 
 function boundedInteger(params: {
@@ -31,6 +39,22 @@ export const userLimitsEnvironmentShape = {
     expectation: ALERTS_EXPECTATION,
     maximum: MAX_ENABLED_PRICE_ALERTS,
     fallback: DEFAULT_ENABLED_PRICE_ALERTS,
+  }),
+  // Alertas de preço desligados à mão (os disparados têm a limpeza própria): o teto de armazenamento do dono.
+  PRICE_ALERT_MAX_DISABLED_PER_USER: boundedInteger({
+    expectation: DISABLED_ALERTS_EXPECTATION,
+    maximum: MAX_ENABLED_PRICE_ALERTS,
+    fallback: DEFAULT_DISABLED_PRICE_ALERTS,
+  }),
+  STRATEGY_MAX_PER_USER: boundedInteger({
+    expectation: STRATEGIES_EXPECTATION,
+    maximum: MAX_STRATEGIES,
+    fallback: DEFAULT_STRATEGIES,
+  }),
+  STRATEGY_MAX_VERSIONS_PER_STRATEGY: boundedInteger({
+    expectation: VERSIONS_EXPECTATION,
+    maximum: MAX_VERSIONS_PER_STRATEGY,
+    fallback: DEFAULT_VERSIONS_PER_STRATEGY,
   }),
   USER_ASSET_MAX_PER_USER: boundedInteger({
     expectation: ASSETS_EXPECTATION,

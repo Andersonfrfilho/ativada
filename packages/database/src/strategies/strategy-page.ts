@@ -6,6 +6,7 @@ import type { DatabaseExecutor } from '../database-executor.js';
 import { toJsonb } from '../jsonb.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
 import { strategies, strategyVersions } from '../schema/strategies.schema.js';
+import { assertStrategyRoom } from './strategy-quota.js';
 import { STRATEGY_COLUMNS, toVersionRecord, VERSION_COLUMNS } from './strategy-record.mapper.js';
 import type {
   CreateStrategyWithVersionParams,
@@ -110,6 +111,9 @@ export async function createStrategyWithFirstVersion(
   params: CreateStrategyWithVersionParams,
 ): Promise<CreateStrategyWithVersionResult> {
   return database.transaction(async (transaction) => {
+    if (params.maxStrategies !== undefined) {
+      await assertStrategyRoom(transaction, { scope, maxStrategies: params.maxStrategies });
+    }
     const strategyRows = await transaction
       .insert(strategies)
       .values({

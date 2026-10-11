@@ -84,11 +84,15 @@ function createLifecycle(params: LifecycleParams): Pick<Application, 'start' | '
   };
 }
 
-export function createApplication(params: CreateApplicationParams): Application {
-  const { environment, logger } = params;
-  const database = openDatabase(environment.DATABASE_URL, {
+function openApplicationDatabase(environment: Environment): DatabaseHandle {
+  return openDatabase(environment.DATABASE_URL, {
     sslRootCertificate: environment.DATABASE_SSL_ROOT_CERT,
   });
+}
+
+export function createApplication(params: CreateApplicationParams): Application {
+  const { environment, logger } = params;
+  const database = openApplicationDatabase(environment);
   const runners = createApplicationRunners({ environment, database });
   // A TROCA da T3.4 para a T3.6: o despachante sem tetos deu lugar ao da fila durável, que reivindica as execuções do banco.
   const dispatcher = createApplicationDispatcher({

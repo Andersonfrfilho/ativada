@@ -59,6 +59,7 @@ import { checkRunQueueClaims } from './run-queue-checks.js';
 import { checkRunQueueLifecycle } from './run-queue-lifecycle-checks.js';
 import { checkRunQueueReading } from './run-queue-reading-checks.js';
 import { checkStrategyRepository } from './strategy-checks.js';
+import { checkStorageQuotas } from './storage-quota-checks.js';
 import { checkStrategyPages } from './strategy-page-checks.js';
 import { checkProfileRepository } from './profile-checks.js';
 import { checkTelegramLink, checkTelegramRaces } from './telegram-checks.js';
@@ -152,6 +153,7 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkAlerts(context);
   await checkGoals(context);
   await checkPriceAlerts(context);
+  await checkStorageQuotas(context);
   await checkUserAssets(context);
   await checkGoalRuns(context);
   await checkRunLog(context);

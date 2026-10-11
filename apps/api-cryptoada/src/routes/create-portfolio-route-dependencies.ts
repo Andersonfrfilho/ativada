@@ -43,6 +43,7 @@ export function createPriceAlertDependencies(
   const dependencies = {
     priceAlerts: createPriceAlertRepository(database),
     maxEnabled: environment.PRICE_ALERT_MAX_ENABLED_PER_USER,
+    maxDisabled: environment.PRICE_ALERT_MAX_DISABLED_PER_USER,
   };
   return {
     enabledSymbols: environment.MARKET_SYMBOLS,

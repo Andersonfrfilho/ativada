@@ -11,11 +11,16 @@ import {
 import { encodePriceAlertCursor } from './price-alert-cursor.js';
 import type { CreatePriceAlertBody, PatchPriceAlertBody } from './price-alert-requests.js';
 import { toPriceAlertView, type PriceAlertView } from './price-alert-views.js';
-import { PriceAlertLimitReachedError, PriceAlertNotFoundError } from './price-alert.error.js';
+import {
+  PriceAlertDisabledLimitReachedError,
+  PriceAlertLimitReachedError,
+  PriceAlertNotFoundError,
+} from './price-alert.error.js';
 
 export type PriceAlertUseCaseDependencies = {
   readonly priceAlerts: PriceAlertRepository;
   readonly maxEnabled: number;
+  readonly maxDisabled: number;
 };
 
 export type PriceAlertPageInput = {
@@ -103,11 +108,15 @@ export function createUpdatePriceAlertUseCase(
       alertId: input.alertId,
       patch: definedFields(input.patch),
       maxEnabled: dependencies.maxEnabled,
+      maxDisabled: dependencies.maxDisabled,
     });
     if (result.outcome === PRICE_ALERT_UPDATE_OUTCOME.NOT_FOUND)
       throw new PriceAlertNotFoundError();
     if (result.outcome === PRICE_ALERT_UPDATE_OUTCOME.LIMIT_REACHED) {
       throw new PriceAlertLimitReachedError();
+    }
+    if (result.outcome === PRICE_ALERT_UPDATE_OUTCOME.DISABLED_LIMIT_REACHED) {
+      throw new PriceAlertDisabledLimitReachedError();
     }
     return toPriceAlertView(result.alert);
   };

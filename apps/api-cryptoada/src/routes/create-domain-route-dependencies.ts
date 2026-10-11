@@ -82,8 +82,16 @@ export type DomainRouteParams = {
   readonly computeGoal: ComputeGoalCombination;
 };
 
-function createStrategyDependencies(database: DatabaseHandle): StrategyRouteDependencies {
-  const dependencies = { strategies: createStrategyRepository(database) };
+function createStrategyDependencies(
+  params: Pick<DomainRouteParams, 'database' | 'environment'>,
+): StrategyRouteDependencies {
+  const dependencies = {
+    strategies: createStrategyRepository(params.database),
+    limits: {
+      maxStrategies: params.environment.STRATEGY_MAX_PER_USER,
+      maxVersionsPerStrategy: params.environment.STRATEGY_MAX_VERSIONS_PER_STRATEGY,
+    },
+  };
   return {
     createStrategy: createCreateStrategyUseCase(dependencies),
     listStrategies: createListStrategiesUseCase(dependencies),
@@ -188,7 +196,7 @@ export function createDomainRouteDependencies(params: DomainRouteParams): Domain
     sentiment: {
       getSentiment: createGetSentimentUseCase({ sentiments: createSentimentRepository(database) }),
     },
-    strategies: createStrategyDependencies(database),
+    strategies: createStrategyDependencies(params),
     goals: createGoalDependencies(params),
     priceAlerts: createPriceAlertDependencies(params),
     assets: createAssetDependencies(params),

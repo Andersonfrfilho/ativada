@@ -30,6 +30,9 @@ export type AddStrategyVersionParams = {
   readonly strategyId: string;
   readonly config: JsonContainer;
   readonly configHash: string;
+  // Teto de versões da estratégia, conferido sob trava: passar dele lança `StorageQuotaReachedError`. A configuração que
+  // já existe (mesmo hash) devolve a versão dela mesmo no teto. Ausente = sem teto.
+  readonly maxVersions?: number | undefined;
 };
 
 export type AddStrategyVersionResult = {
@@ -68,6 +71,8 @@ export type VersionsPage = {
 export type CreateStrategyWithVersionParams = CreateStrategyParams & {
   readonly config: JsonContainer;
   readonly configHash: string;
+  // Teto de estratégias NÃO apagadas do dono, conferido sob trava: passar dele lança `StorageQuotaReachedError`.
+  readonly maxStrategies?: number | undefined;
 };
 
 export type CreateStrategyWithVersionResult = {

@@ -38,6 +38,11 @@ export {
   type AuditEventRepository,
 } from './audit/audit-event.repository.js';
 export {
+  StorageQuotaReachedError,
+  STORAGE_QUOTA_RESOURCE,
+  type StorageQuotaResource,
+} from './quota/storage-quota.error.js';
+export {
   closeDatabase,
   openDatabase,
   type OpenDatabaseOptions,

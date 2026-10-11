@@ -23,3 +23,13 @@ export class PriceAlertLimitReachedError extends DomainError {
     });
   }
 }
+
+export class PriceAlertDisabledLimitReachedError extends DomainError {
+  constructor() {
+    super({
+      code: PRICE_ALERT_ERROR_CODE.PRICE_ALERT_DISABLED_LIMIT_REACHED,
+      message: 'Você tem alertas de preço desligados demais. Apague algum para desligar outro.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}

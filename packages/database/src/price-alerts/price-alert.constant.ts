@@ -24,4 +24,5 @@ export const PRICE_ALERT_UPDATE_OUTCOME = {
   UPDATED: 'updated',
   NOT_FOUND: 'not_found',
   LIMIT_REACHED: 'limit_reached',
+  DISABLED_LIMIT_REACHED: 'disabled_limit_reached',
 } as const;

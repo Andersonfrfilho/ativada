@@ -100,7 +100,15 @@ export const PRICE_ALERT_DOCUMENTATION = {
         schema: PRICE_ALERT_VIEW_SCHEMA,
       },
     ],
-    errors: [VALIDATION, NOT_FOUND, LIMIT],
+    errors: [
+      VALIDATION,
+      NOT_FOUND,
+      LIMIT,
+      {
+        status: HTTP_STATUS.CONFLICT,
+        code: PRICE_ALERT_ERROR_CODE.PRICE_ALERT_DISABLED_LIMIT_REACHED,
+      },
+    ],
   },
   clearFired: {
     summary:

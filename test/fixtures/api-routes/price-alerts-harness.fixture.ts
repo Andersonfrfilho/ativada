@@ -9,13 +9,17 @@ import { createRunsHarness, type RunsHarness } from './runs-harness.fixture.js';
 export type PriceAlertsHarness = RunsHarness & { readonly priceAlerts: InMemoryPriceAlerts };
 
 export async function createPriceAlertsHarness(
-  options: { readonly maxEnabled?: number } = {},
+  options: { readonly maxEnabled?: number; readonly maxDisabled?: number } = {},
 ): Promise<PriceAlertsHarness> {
   const priceAlerts = createInMemoryPriceAlerts();
   const harness = await createRunsHarness({
     extraRoutes: (app): readonly Route[] => {
       const useCases = app.priceAlertUseCases;
-      const base = { priceAlerts: priceAlerts.repository, maxEnabled: options.maxEnabled ?? 50 };
+      const base = {
+        priceAlerts: priceAlerts.repository,
+        maxEnabled: options.maxEnabled ?? 50,
+        maxDisabled: options.maxDisabled ?? 1_000,
+      };
       return app.priceAlertRoutes.createPriceAlertRoutes({
         enabledSymbols: ['BTCUSDT', 'ETHUSDT'],
         createPriceAlert: useCases.createCreatePriceAlertUseCase(base),

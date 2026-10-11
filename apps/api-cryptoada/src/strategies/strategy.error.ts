@@ -32,3 +32,24 @@ export class StrategyIsExampleError extends DomainError {
     });
   }
 }
+
+export class StrategyLimitReachedError extends DomainError {
+  constructor() {
+    super({
+      code: STRATEGY_ERROR_CODE.STRATEGY_LIMIT_REACHED,
+      message: 'Você atingiu o limite de estratégias. Apague uma para criar outra.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}
+
+export class StrategyVersionLimitReachedError extends DomainError {
+  constructor() {
+    super({
+      code: STRATEGY_ERROR_CODE.STRATEGY_VERSION_LIMIT_REACHED,
+      message:
+        'Esta estratégia atingiu o limite de versões. Crie uma nova estratégia a partir dela.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}

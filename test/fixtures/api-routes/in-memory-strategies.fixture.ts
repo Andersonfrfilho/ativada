@@ -1,4 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import {
+  STORAGE_QUOTA_RESOURCE,
+  StorageQuotaReachedError,
+} from '../../../packages/database/src/quota/storage-quota.error.js';
 import type {
   StrategiesPage,
   StrategyRecord,
@@ -79,6 +83,12 @@ export function createInMemoryStrategies(): InMemoryStrategies {
     createStrategy: (scope, params) =>
       Promise.resolve(insertStrategy(scope, params.name, params.isExample)),
     createStrategyWithFirstVersion: (scope, params) => {
+      const active = strategies.filter(
+        (stored) => stored.userId === scope.ownerUserId && stored.deletedAt === undefined,
+      ).length;
+      if (params.maxStrategies !== undefined && active >= params.maxStrategies) {
+        return Promise.reject(new StorageQuotaReachedError(STORAGE_QUOTA_RESOURCE.STRATEGIES));
+      }
       const strategy = insertStrategy(scope, params.name, params.isExample);
       const version = insertVersion(scope, { strategyId: strategy.id, ...params });
       return Promise.resolve({ strategy, version });
@@ -110,6 +120,14 @@ export function createInMemoryStrategies(): InMemoryStrategies {
           stored.record.configHash === params.configHash,
       );
       if (same !== undefined) return Promise.resolve({ version: same.record, isNew: false });
+      const count = versions.filter(
+        (stored) => stored.record.strategyId === params.strategyId,
+      ).length;
+      if (params.maxVersions !== undefined && count >= params.maxVersions) {
+        return Promise.reject(
+          new StorageQuotaReachedError(STORAGE_QUOTA_RESOURCE.STRATEGY_VERSIONS),
+        );
+      }
       return Promise.resolve({ version: insertVersion(scope, params), isNew: true });
     },
     findVersion: (scope, versionId) =>

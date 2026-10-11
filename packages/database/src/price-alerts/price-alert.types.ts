@@ -47,6 +47,8 @@ export type UpdatePriceAlertParams = {
   readonly alertId: string;
   readonly patch: PriceAlertPatch;
   readonly maxEnabled: number;
+  // Teto de alertas desligados À MÃO (sem disparo) do dono; desligar acima dele é `disabled_limit_reached`. Ausente = sem teto.
+  readonly maxDisabled?: number | undefined;
 };
 
 export type UpdatePriceAlertResult =
@@ -55,7 +57,8 @@ export type UpdatePriceAlertResult =
       readonly alert: PriceAlertRecord;
     }
   | { readonly outcome: typeof PRICE_ALERT_UPDATE_OUTCOME.NOT_FOUND }
-  | { readonly outcome: typeof PRICE_ALERT_UPDATE_OUTCOME.LIMIT_REACHED };
+  | { readonly outcome: typeof PRICE_ALERT_UPDATE_OUTCOME.LIMIT_REACHED }
+  | { readonly outcome: typeof PRICE_ALERT_UPDATE_OUTCOME.DISABLED_LIMIT_REACHED };
 
 export type PriceAlertCursor = { readonly createdAt: string; readonly id: string };
 

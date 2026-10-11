@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, count, desc, eq, isNotNull, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, isNotNull, isNull, ne, sql, type SQL } from 'drizzle-orm';
 
 import type { DatabaseExecutor } from '../database-executor.js';
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
@@ -120,6 +120,25 @@ async function listPriceAlertsPage(
   };
 }
 
+// Os desligados à mão: sem disparo (o disparado tem a limpeza própria) e sem contar o que está sendo alterado.
+async function countDisabledByHand(
+  executor: DatabaseExecutor,
+  params: { readonly scope: OwnerScope; readonly exceptAlertId: string },
+): Promise<number> {
+  const rows = await executor
+    .select({ total: count() })
+    .from(priceAlerts)
+    .where(
+      and(
+        ownerCondition(params.scope, priceAlerts.userId),
+        eq(priceAlerts.isEnabled, false),
+        isNull(priceAlerts.triggeredAt),
+        ne(priceAlerts.id, params.exceptAlertId),
+      ),
+    );
+  return rows[0]?.total ?? 0;
+}
+
 // Religar rearma (limpa o disparo) e conta no teto; desligar guarda o instante do disparo, se houve.
 async function updatePriceAlert(
   database: Database,
@@ -134,6 +153,12 @@ async function updatePriceAlert(
     const isRearming = patch.isEnabled === true && !current.isEnabled;
     if (isRearming && (await countEnabled(transaction, scope)) >= params.maxEnabled) {
       return { outcome: PRICE_ALERT_UPDATE_OUTCOME.LIMIT_REACHED };
+    }
+    if (patch.isEnabled === false && params.maxDisabled !== undefined) {
+      const disabled = await countDisabledByHand(transaction, { scope, exceptAlertId: alertId });
+      if (disabled >= params.maxDisabled) {
+        return { outcome: PRICE_ALERT_UPDATE_OUTCOME.DISABLED_LIMIT_REACHED };
+      }
     }
     const rows = await transaction
       .update(priceAlerts)

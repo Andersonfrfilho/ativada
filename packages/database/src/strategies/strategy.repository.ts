@@ -6,6 +6,7 @@ import type { DatabaseExecutor } from '../database-executor.js';
 import { toJsonb } from '../jsonb.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
 import { strategies, strategyVersions } from '../schema/strategies.schema.js';
+import { assertVersionRoom } from './strategy-quota.js';
 import { seedExampleStrategy } from './example-strategy-seed.js';
 import {
   createStrategyWithFirstVersion,
@@ -141,6 +142,7 @@ async function addVersion(
       .where(activeStrategy(scope, params.strategyId))
       .for('update');
     if (locked.length === 0) return undefined;
+    await assertVersionRoom(transaction, params);
     const inserted = await insertNextVersion(transaction, scope, params);
     if (inserted !== undefined) {
       await transaction
