@@ -370,3 +370,8 @@ opaco, `limit` 1 a 100). O OpenAPI 3.1 é GERADO da tabela de rotas e servido co
 | WebSocket da Binance cair | Reconexão com backoff e backfill da lacuna pelo REST |
 | Um usuário ver dado de outro | D11 (filtro obrigatório no tipo) + contrato negativo por rota |
 | Walk-forward de um usuário travar os outros | Fila durável no banco com tetos por usuário e tipo, round-robin entre usuários e teto global por instância (RF00b, T3.6) |
+
+## 9. Correções da auditoria T6.2
+
+A auditoria de segurança da T6.2 (`evidence.md`) aprovou com ressalvas para uso interno fechado e listou A1–A3, M1–M5 e baixos. Corrigidos em código: A1 (avaliação de metas em pool de threads com portão e orçamento a frio), A2 (tetos de estratégias, versões, alertas desligados e execuções guardadas; `DELETE /v1/runs/:id` lógico; exportação LGPD em NDJSON paginado), M1 (`verify-full`, CA própria, SCRAM com piso/teto e `-PLUS`), M3, M4 (parte de código), M5 e os baixos B1, B6 e documentação por lista. Decisões e provas em ADR 0001 §v e ADR 0002 "Metas: CPU fora da thread da API". Ficam com o responsável: M2 (cifra do `telegram_chat_id`), A3 (CI, deploy, réplica única, `TRUSTED_PROXY_HOPS`), cabeçalhos HTTP da borda do painel (M4, plataforma) e a purga de retenção proposta no ADR.
+
