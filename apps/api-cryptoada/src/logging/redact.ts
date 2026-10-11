@@ -10,6 +10,7 @@ import {
   SENSITIVE_KEY_FRAGMENTS,
   TRUNCATED_VALUE,
 } from './logging.constant.js';
+import { isOwnError, readErrorCode } from './own-error.js';
 
 type RedactionState = {
   readonly depth: number;
@@ -37,14 +38,20 @@ function describeError(error: Error, state: RedactionState): Record<string, unkn
   if (isDatabaseError(error)) {
     return { name: DATABASE_ERROR_LOG_NAME, code: readPostgresErrorCode(error) };
   }
-  return redactEntries(
-    [
-      ['name', error.name],
-      ['message', error.message],
-      ['stack', error.stack],
-    ],
-    state,
-  );
+  const code = readErrorCode(error);
+  if (!isOwnError(error)) return { name: error.name, ...(code === undefined ? {} : { code }) };
+  // `code` é o código estável do erro, não o código de autorização OAuth que a chave sensível `code` protege.
+  return {
+    name: error.name,
+    ...(code === undefined ? {} : { code }),
+    ...redactEntries(
+      [
+        ['message', error.message],
+        ['stack', error.stack],
+      ],
+      state,
+    ),
+  };
 }
 
 export function redactValue(value: unknown, state: RedactionState): unknown {

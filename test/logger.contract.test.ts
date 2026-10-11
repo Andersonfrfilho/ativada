@@ -2,6 +2,8 @@
 import { describe, expect, test } from 'bun:test';
 
 import { createLogger } from '../apps/api-cryptoada/src/logging/logger.js';
+import { RunNotFoundError } from '../apps/api-cryptoada/src/runs/run.error.js';
+import { RUN_ERROR_CODE } from '../apps/api-cryptoada/src/shared/errors/error-code.constant.js';
 
 const REDACTED = '[REDACTED]';
 const SENSITIVE_VALUES: Readonly<Record<string, string>> = {
@@ -101,13 +103,14 @@ describe('structured logger', () => {
     expect(output).toContain('api.test');
   });
 
-  test('serializes errors with name, message and stack', () => {
+  test('an error of our own keeps name, code, message and stack', () => {
     const { lines, logger } = createCapturedLogger();
-    logger.error('unexpected', { error: new TypeError('boom') });
+    logger.error('unexpected', { error: new RunNotFoundError() });
     const entry = JSON.parse(lines[0] ?? '') as { error: Record<string, string> };
-    expect(entry.error['name']).toBe('TypeError');
-    expect(entry.error['message']).toBe('boom');
-    expect(entry.error['stack']).toContain('TypeError');
+    expect(entry.error['name']).toBe('RunNotFoundError');
+    expect(entry.error['code']).toBe(RUN_ERROR_CODE.RUN_NOT_FOUND);
+    expect(entry.error['message']).toBe(new RunNotFoundError().message);
+    expect(entry.error['stack']).toContain('RunNotFoundError');
   });
 
   describe('database errors', () => {
@@ -147,11 +150,24 @@ describe('structured logger', () => {
       expect(lines.join('')).not.toContain(SECRET_PARAMETER);
     });
 
-    test('an ordinary error keeps its name, message and stack', () => {
+    test('a foreign error leaves only its name and code, never message, stack or cause', () => {
       const { lines, logger } = createCapturedLogger();
-      logger.error('plain', { error: new RangeError('out of range') });
-      const entry = JSON.parse(lines[0] ?? '') as { error: Record<string, string> };
-      expect(entry.error['message']).toBe('out of range');
+      const leaked = 'https://api.telegram.org/bot123:segredo/sendMessage';
+      const failure = Object.assign(new TypeError(`fetch failed ${leaked}`), {
+        code: 'ECONNREFUSED',
+        cause: new Error(leaked),
+      });
+      logger.error('plain', { error: failure });
+      expect(lines.join('')).not.toContain('segredo');
+      const entry = JSON.parse(lines[0] ?? '') as { error: Record<string, unknown> };
+      expect(entry.error).toStrictEqual({ name: 'TypeError', code: 'ECONNREFUSED' });
+    });
+
+    test('a foreign error without a string code leaves only its name', () => {
+      const { lines, logger } = createCapturedLogger();
+      logger.error('plain', { error: Object.assign(new RangeError('out of range'), { code: 7 }) });
+      const entry = JSON.parse(lines[0] ?? '') as { error: Record<string, unknown> };
+      expect(entry.error).toStrictEqual({ name: 'RangeError' });
     });
   });
 
