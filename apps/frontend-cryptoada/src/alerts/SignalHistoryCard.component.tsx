@@ -50,7 +50,11 @@ function History({
         <ListStatus
           isPending={history.isPending}
           isError={history.isError}
-          emptyText="Ainda não houve compra nem venda."
+          emptyText={
+            history.hasNextPage === true
+              ? 'Nenhuma compra nem venda nas últimas 500 decisões.'
+              : 'Ainda não houve compra nem venda.'
+          }
         />
       ) : (
         <ul className={styles.list} aria-label="Histórico de sinais">

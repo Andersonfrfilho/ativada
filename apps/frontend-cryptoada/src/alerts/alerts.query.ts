@@ -33,7 +33,10 @@ function pagePath(base: string, extra: Record<string, string>, cursor: string | 
   return `${base}?${query.toString()}`;
 }
 
-// Do mais novo para o mais antigo; neutro é a decisão de quase todo candle e não é aviso, então sai da lista.
+const MAX_NEUTRAL_PAGES = 5;
+
+// Do mais novo para o mais antigo; neutro é a decisão de quase todo candle e não é aviso, então sai da lista. Uma página só
+// de neutro não vira lista vazia: busca a próxima sozinho, até `MAX_NEUTRAL_PAGES` páginas por vez.
 export function useSignalHistoryQuery(
   runId: string,
 ): UseInfiniteQueryResult<InfiniteData<Page<Signal>, string | null>> {
@@ -42,14 +45,20 @@ export function useSignalHistoryQuery(
     queryKey: [LIVE_QUERY_ROOT.RUNS, runId, 'signals', 'history'],
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const page = await client.requestPage({
-        path: pagePath(`${API_PATH.RUNS}/${runId}/signals`, { order: 'desc' }, pageParam),
-        schema: signalSchema,
-      });
-      return {
-        items: page.items.filter((signal) => signal.action !== SIGNAL_ACTION.HOLD),
-        nextCursor: page.nextCursor,
-      };
+      let cursor: string | null = pageParam;
+      let nextCursor: string | null = null;
+      for (let scanned = 0; scanned < MAX_NEUTRAL_PAGES; scanned += 1) {
+        // Cada página depende do cursor da anterior.
+        const page: Page<Signal> = await client.requestPage({
+          path: pagePath(`${API_PATH.RUNS}/${runId}/signals`, { order: 'desc' }, cursor),
+          schema: signalSchema,
+        });
+        const items = page.items.filter((signal) => signal.action !== SIGNAL_ACTION.HOLD);
+        nextCursor = page.nextCursor;
+        if (items.length > 0 || nextCursor === null) return { items, nextCursor };
+        cursor = nextCursor;
+      }
+      return { items: [], nextCursor };
     },
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   });

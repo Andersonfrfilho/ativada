@@ -182,6 +182,53 @@ describe('signal history', () => {
   });
 });
 
+describe('signal history with pages full of neutral decisions', () => {
+  function holdPage(): Record<string, unknown>[] {
+    return Array.from({ length: 100 }, (_unused, index) =>
+      signal('HOLD', 'Neutro: placar entre os limiares', index + 1),
+    );
+  }
+
+  function routesWithPages(pageFor: (cursor: string | null) => Response): readonly FakeRoute[] {
+    return [
+      ...routes(newWorld()).filter((route) => !route.path.endsWith('/signals')),
+      {
+        method: 'GET',
+        path: '/v1/runs/run-1/signals',
+        respond: (call): Response => pageFor(call.query.get('cursor')),
+      },
+    ];
+  }
+
+  test('keeps fetching older pages on its own until a buy or sell shows up', async () => {
+    renderApp({
+      path: '/alertas',
+      isAuthenticated: true,
+      routes: routesWithPages((cursor) =>
+        cursor === null
+          ? pageResponse(holdPage(), 'p2')
+          : pageResponse([signal('BUY', 'Compra 3/4: achada na segunda página', 150)]),
+      ),
+    });
+    const list = await screen.findByRole('list', { name: 'Histórico de sinais' });
+    expect(list.textContent).toContain('achada na segunda página');
+  });
+
+  test('after 5 neutral pages it says so honestly and offers to keep looking', async () => {
+    renderApp({
+      path: '/alertas',
+      isAuthenticated: true,
+      routes: routesWithPages((cursor) =>
+        pageResponse(holdPage(), `p${Number(cursor?.slice(1) ?? '0') + 1}`),
+      ),
+    });
+    expect(
+      await screen.findByText(/Nenhuma compra nem venda nas últimas 500 decisões/),
+    ).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Carregar sinais mais antigos' })).toBeDefined();
+  });
+});
+
 describe('fired price alerts', () => {
   test('lists the fired ones with their trigger and keeps the armed ones apart', async () => {
     renderApp({ path: '/alertas', isAuthenticated: true, routes: routes(newWorld()) });
