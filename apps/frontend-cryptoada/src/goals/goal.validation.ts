@@ -18,9 +18,9 @@ const ruleTriggerSchema = z.object({
   metric: z.string(),
   direction: z.enum(['above', 'below']),
   basis: z.enum(['exact', 'indicative']),
-  current: z.string(),
-  threshold: z.string(),
-  distance: z.string(),
+  current: z.string().nullable(),
+  threshold: z.string().nullable(),
+  distance: z.string().nullable(),
   distanceRate: z.string().nullable(),
 });
 
@@ -36,10 +36,10 @@ const situationSchema = z.object({
 
 const evaluationSchema = z.object({
   windowCount: z.number(),
-  reachRate: z.string(),
-  stopRate: z.string(),
+  reachRate: z.string().nullable(),
+  stopRate: z.string().nullable(),
   medianDaysToTarget: z.string().nullable(),
-  benchmark: z.object({ reachRate: z.string(), stopRate: z.string() }),
+  benchmark: z.object({ reachRate: z.string().nullable(), stopRate: z.string().nullable() }),
   verdict: z.string(),
 });
 

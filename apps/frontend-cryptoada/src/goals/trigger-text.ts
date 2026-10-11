@@ -6,7 +6,8 @@ import type { RuleTrigger } from './goal.validation.js';
 export type FamilyTrigger = { readonly family: string; readonly rule: RuleTrigger };
 
 function distanceOf(rule: RuleTrigger): number {
-  return Math.abs(Number(rule.distanceRate ?? rule.distance));
+  const distance = rule.distanceRate ?? rule.distance;
+  return distance === null ? Number.POSITIVE_INFINITY : Math.abs(Number(distance));
 }
 
 // O próximo gatilho de uma família é a regra ainda não cumprida mais perto de votar; se todas já votaram, a primeira.
@@ -23,6 +24,9 @@ export function nextTriggerByFamily(rules: readonly RuleTrigger[]): FamilyTrigge
 export function describeTrigger(rule: RuleTrigger): string {
   const metric = METRIC_LABEL[rule.metric] ?? rule.metric;
   if (rule.isMet) return `${metric}: já cumprida`;
+  if (rule.current === null || rule.threshold === null || rule.distance === null) {
+    return `${metric}: sem leitura agora`;
+  }
   const verb = rule.direction === 'below' ? 'precisa cair abaixo de' : 'precisa subir acima de';
   const rate = rule.distanceRate === null ? '' : ` (${formatPercent(Number(rule.distanceRate))})`;
   const basis = rule.basis === 'exact' ? 'exato' : 'indicativo';

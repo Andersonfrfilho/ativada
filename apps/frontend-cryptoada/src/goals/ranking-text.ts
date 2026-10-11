@@ -13,16 +13,21 @@ export function formatDays(text: string | null): string {
   return `tempo típico ${shown} ${days === 1 ? 'dia' : 'dias'}`;
 }
 
+function formatRate(rate: string | null): string {
+  return rate === null ? '—' : formatPercent(Number(rate));
+}
+
 export function describeOutcomes(combination: Combination): string {
   const { evaluation } = combination;
+  if (evaluation.windowCount === 0) return 'histórico curto demais para formar janelas';
   return [
-    `chegou ao alvo em ${formatPercent(Number(evaluation.reachRate))} das ${evaluation.windowCount} janelas`,
-    `parou na perda máxima em ${formatPercent(Number(evaluation.stopRate))}`,
+    `chegou ao alvo em ${formatRate(evaluation.reachRate)} das ${evaluation.windowCount} janelas`,
+    `parou na perda máxima em ${formatRate(evaluation.stopRate)}`,
     formatDays(evaluation.medianDaysToTarget),
   ].join(' · ');
 }
 
 export function describeBenchmark(combination: Combination): string {
   const { benchmark } = combination.evaluation;
-  return `comprar e segurar: ${formatPercent(Number(benchmark.reachRate))} chegaram ao alvo e ${formatPercent(Number(benchmark.stopRate))} pararam na perda máxima`;
+  return `comprar e segurar: ${formatRate(benchmark.reachRate)} chegaram ao alvo e ${formatRate(benchmark.stopRate)} pararam na perda máxima`;
 }

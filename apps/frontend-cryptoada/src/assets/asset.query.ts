@@ -17,13 +17,17 @@ import { ASSET_OPERATION, ASSET_QUERY_ROOT, type AssetOperation } from './asset.
 import { assetSummarySchema, savedAssetSchema, type AssetSummary } from './asset.validation.js';
 
 // Com o socket vivo o preço de cada ativo vem pelos ticks; fora dele (ou velho) o resumo é consultado de novo a cada 15 s.
-export function useAssetSummaryQuery(strategyId: string): UseQueryResult<AssetSummary> {
+export function useAssetSummaryQuery(
+  strategyId: string,
+  isEnabled: boolean,
+): UseQueryResult<AssetSummary> {
   const client = useApiClient();
   const { fallbackPollMilliseconds = FALLBACK_POLL_MILLISECONDS } = useAppConfig();
   const market = useLiveMarket();
   const needsFallback = market.state === 'offline' || market.state === 'stale';
   return useQuery({
     queryKey: [ASSET_QUERY_ROOT, 'summary', strategyId],
+    enabled: isEnabled,
     refetchInterval: needsFallback ? fallbackPollMilliseconds : false,
     queryFn: () => {
       const query = strategyId === '' ? '' : `?${new URLSearchParams({ strategyId }).toString()}`;

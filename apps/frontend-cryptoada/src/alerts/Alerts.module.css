@@ -50,3 +50,9 @@
   display: flex;
   gap: 8px;
 }
+
+@media (max-width: 560px) {
+  .boardItem {
+    grid-template-columns: 1fr;
+  }
+}

@@ -108,6 +108,20 @@ describe('price alert board', () => {
     await waitFor(() => expect(list.textContent).toContain('ETH/USDT caiu abaixo de 3.000,50'));
   });
 
+  test('accepts the Brazilian comma and sends the value with a dot', async () => {
+    const { fake } = await openBoard({ alerts: [] }, [
+      {
+        method: 'POST',
+        path: '/v1/price-alerts',
+        respond: (): Response => dataResponse({ id: 'x' }, HTTP_STATUS.CREATED),
+      },
+    ]);
+    fireEvent.change(screen.getByLabelText('Valor do alerta'), { target: { value: '3000,5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar alerta' }));
+    await waitFor(() => expect(fake.callsTo('POST', '/v1/price-alerts')).toHaveLength(1));
+    expect(fake.callsTo('POST', '/v1/price-alerts')[0]?.body).toMatchObject({ value: '3000.5' });
+  });
+
   test('a bad value is stopped before the API', async () => {
     const { fake } = await openBoard({ alerts: [] });
     fireEvent.change(screen.getByLabelText('Valor do alerta'), { target: { value: 'abc' } });

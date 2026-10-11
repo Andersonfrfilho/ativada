@@ -4,6 +4,7 @@ import { useState, type ReactElement } from 'react';
 import { SelectField, TextField } from '../forms/Fields.component.js';
 import { Card } from '../layout/Card.component.js';
 import { useStrategiesQuery } from '../strategies/strategy.query.js';
+import type { Strategy } from '../strategies/strategy.validation.js';
 import runStyles from '../runs/Runs.module.css';
 import controls from '../styles/Controls.module.css';
 import { AssetCard } from './AssetCard.component.js';
@@ -49,15 +50,17 @@ function Totals({
 type AssetControlsProps = {
   readonly usdt: UsdtRate;
   readonly strategyId: string;
+  readonly strategies: readonly Strategy[];
   readonly onStrategyChange: (strategyId: string) => void;
 };
 
-function AssetControls({ usdt, strategyId, onStrategyChange }: AssetControlsProps): ReactElement {
-  const strategies = useStrategiesQuery().data ?? [];
-  const options = [
-    { value: '', label: 'Estratégia mais recente' },
-    ...strategies.map((strategy) => ({ value: strategy.id, label: strategy.name })),
-  ];
+function AssetControls({
+  usdt,
+  strategyId,
+  strategies,
+  onStrategyChange,
+}: AssetControlsProps): ReactElement {
+  const options = strategies.map((strategy) => ({ value: strategy.id, label: strategy.name }));
   return (
     <Card title="Como ler">
       <div className={styles.controls}>
@@ -84,14 +87,23 @@ function AssetControls({ usdt, strategyId, onStrategyChange }: AssetControlsProp
 }
 
 export function AssetsPage(): ReactElement {
-  const [strategyId, setStrategyId] = useState('');
+  const [picked, setPicked] = useState('');
   const usdt = useUsdtRate();
-  const summary = useAssetSummaryQuery(strategyId);
+  const strategiesQuery = useStrategiesQuery();
+  const strategies = strategiesQuery.data ?? [];
+  // A regra do dia precisa de uma estratégia: sem escolha vale a primeira da lista.
+  const strategyId = picked === '' ? (strategies[0]?.id ?? '') : picked;
+  const summary = useAssetSummaryQuery(strategyId, !strategiesQuery.isPending);
   const items = summary.data?.items ?? [];
   return (
     <div className={runStyles.page}>
       <h1 className={runStyles.title}>Seus ativos</h1>
-      <AssetControls usdt={usdt} strategyId={strategyId} onStrategyChange={setStrategyId} />
+      <AssetControls
+        usdt={usdt}
+        strategyId={strategyId}
+        strategies={strategies}
+        onStrategyChange={setPicked}
+      />
       {summary.isError ? (
         <p role="alert" className={controls.error}>
           Não foi possível carregar seus ativos. Tente novamente em instantes.

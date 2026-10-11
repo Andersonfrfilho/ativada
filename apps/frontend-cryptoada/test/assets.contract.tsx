@@ -143,6 +143,21 @@ describe('assets board', () => {
     expect(fake.callsTo('GET', '/v1/assets/summary').length).toBe(calls);
   });
 
+  test('a live tick above the target or below the stop flags it, a sealed (stale) tick is ignored', async () => {
+    const { stream } = await openAssets({ summary: buildSummary([buildAssetItem()]) });
+    const card = await screen.findByRole('article', { name: 'BTC/USDT' });
+    act(() => stream.setStatus('live'));
+    act(() => stream.tick(tick('67000')));
+    await waitFor(() => expect(card.textContent).toContain('Alvo atingido'));
+    act(() => stream.tick(tick('50000')));
+    await waitFor(() => expect(card.textContent).toContain('Stop atingido'));
+    expect(card.textContent).not.toContain('Alvo atingido');
+    act(() => stream.tick({ ...tick('3000'), symbol: 'ETHUSDT' }));
+    act(() => stream.tick({ ...tick('99000'), isStale: true }));
+    await waitFor(() => expect(card.textContent).toContain('31.000,00 USDT'));
+    expect(card.textContent).not.toContain('Alvo atingido');
+  });
+
   test('with the socket down it polls the summary again on its own', async () => {
     const { stream, fake } = await openAssets({ summary: buildSummary([buildAssetItem()]) });
     await screen.findByRole('article', { name: 'BTC/USDT' });
@@ -153,10 +168,21 @@ describe('assets board', () => {
     );
   });
 
-  test('picking another strategy asks the summary with that strategy for the day rule', async () => {
+  test('asks the day rule with the first strategy on its own, and with the one picked afterwards', async () => {
     const { fake } = await openAssets({ summary: buildSummary([buildAssetItem()]) });
     const select = await screen.findByLabelText('Regra do dia pela estratégia');
-    await screen.findByRole('option', { name: 'Minha regra' });
+    await waitFor(() =>
+      expect(
+        fake
+          .callsTo('GET', '/v1/assets/summary')
+          .some((call) => call.query.get('strategyId') === 'strategy-1'),
+      ).toBe(true),
+    );
+    expect(
+      fake
+        .callsTo('GET', '/v1/assets/summary')
+        .every((call) => call.query.get('strategyId') !== null),
+    ).toBe(true);
     fireEvent.change(select, { target: { value: 'strategy-2' } });
     await waitFor(() =>
       expect(

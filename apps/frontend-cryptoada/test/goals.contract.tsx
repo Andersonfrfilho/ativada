@@ -95,6 +95,37 @@ describe('new goal', () => {
     expect(fake.callsTo('POST', '/v1/goals')).toHaveLength(0);
   });
 
+  test('the deadline is at most a year: 365 goes through, 366 is stopped', async () => {
+    const { fake } = renderApp({
+      path: '/metas',
+      isAuthenticated: true,
+      routes: goalRoutes([
+        {
+          method: 'POST',
+          path: '/v1/goals',
+          respond: (): Response => dataResponse(buildGoal({ id: 'goal-new' }), HTTP_STATUS.CREATED),
+        },
+        {
+          method: 'GET',
+          path: '/v1/goals/goal-new',
+          respond: (): Response => dataResponse(buildGoal({ id: 'goal-new' })),
+        },
+        {
+          method: 'GET',
+          path: '/v1/goals/goal-new/evaluation',
+          respond: (): Response => dataResponse(buildEvaluation([])),
+        },
+      ]),
+    });
+    fireEvent.change(await screen.findByLabelText('Prazo (dias)'), { target: { value: '366' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Declarar meta' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('Prazo');
+    expect(fake.callsTo('POST', '/v1/goals')).toHaveLength(0);
+    fireEvent.change(screen.getByLabelText('Prazo (dias)'), { target: { value: '365' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Declarar meta' }));
+    await waitFor(() => expect(fake.callsTo('POST', '/v1/goals')).toHaveLength(1));
+  });
+
   test('shows the API problems by field and the limit in words', async () => {
     renderApp({
       path: '/metas',
@@ -310,6 +341,114 @@ describe('goal ranking', () => {
     expect(bitcoin.textContent).toContain('Tendência');
     expect(bitcoin.textContent).toContain('0,82%');
     expect(bitcoin.textContent).toContain('indicativo');
+  });
+});
+
+describe('what the engine leaves empty', () => {
+  const EMPTY_EVALUATION = {
+    ...(buildCombination()['evaluation'] as object),
+    windowCount: 0,
+    reachRate: null,
+    stopRate: null,
+    medianDaysToTarget: null,
+    benchmark: { reachRate: null, stopRate: null },
+    verdict: 'SEGURAR',
+  };
+
+  test('a history with no windows says so instead of failing to load', async () => {
+    renderApp({
+      path: '/metas/goal-1',
+      isAuthenticated: true,
+      routes: goalRoutes([
+        {
+          method: 'GET',
+          path: '/v1/goals/goal-1/evaluation',
+          respond: (): Response =>
+            dataResponse(buildEvaluation([buildCombination({ evaluation: EMPTY_EVALUATION })])),
+        },
+      ]),
+    });
+    const list = await screen.findByRole('list', { name: 'Ranking de estratégias por moeda' });
+    expect(list.textContent).toContain('histórico curto demais');
+    expect(list.textContent).toContain('SEGURAR');
+  });
+
+  test('of several rules in a family it shows the nearest one that has not voted yet', async () => {
+    const situation = buildCombination()['situation'] as {
+      triggers: { rules: Record<string, unknown>[] };
+    };
+    const trend = (
+      ruleId: string,
+      distanceRate: string,
+      current: string,
+    ): Record<string, unknown> => ({
+      ...situation.triggers.rules[1],
+      ruleId,
+      distanceRate,
+      current,
+    });
+    const crowded = {
+      ...situation,
+      triggers: {
+        ...situation.triggers,
+        rules: [trend('far', '0.0500', '111'), trend('near', '0.0100', '222')],
+      },
+    };
+    renderApp({
+      path: '/metas/goal-1',
+      isAuthenticated: true,
+      routes: goalRoutes([
+        {
+          method: 'GET',
+          path: '/v1/goals/goal-1/evaluation',
+          respond: (): Response =>
+            dataResponse(buildEvaluation([buildCombination({ situation: crowded })])),
+        },
+      ]),
+    });
+    const coins = await screen.findByRole('region', { name: 'Moedas: situação e próximo gatilho' });
+    const article = within(coins).getByRole('article', { name: 'BTC/USDT' });
+    expect(article.textContent).toContain('agora 222,00');
+    expect(article.textContent).not.toContain('agora 111,00');
+  });
+
+  test('a rule with no reading (sentiment without a fresh observation) still shows its family', async () => {
+    const situation = buildCombination()['situation'] as {
+      triggers: { rules: Record<string, unknown>[] };
+    };
+    const blank = {
+      ...situation,
+      triggers: {
+        ...situation.triggers,
+        rules: [
+          {
+            ...situation.triggers.rules[0],
+            family: 'sentiment',
+            metric: 'fear_greed_index',
+            current: null,
+            threshold: null,
+            distance: null,
+            distanceRate: null,
+          },
+        ],
+      },
+    };
+    renderApp({
+      path: '/metas/goal-1',
+      isAuthenticated: true,
+      routes: goalRoutes([
+        {
+          method: 'GET',
+          path: '/v1/goals/goal-1/evaluation',
+          respond: (): Response =>
+            dataResponse(buildEvaluation([buildCombination({ situation: blank })])),
+        },
+      ]),
+    });
+    const coins = await screen.findByRole('region', { name: 'Moedas: situação e próximo gatilho' });
+    const article = within(coins).getByRole('article', { name: 'BTC/USDT' });
+    expect(article.textContent).toContain('Sentimento');
+    expect(article.textContent).toContain('sem leitura');
   });
 });
 
