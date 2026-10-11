@@ -271,6 +271,12 @@ describe('goal ranking', () => {
     });
   });
 
+  test('links the goal pair to its operation plan with the strategy in the address', async () => {
+    open();
+    const link = await screen.findByRole('link', { name: 'Ver o plano com Placar clássico' });
+    expect(link.getAttribute('href')).toBe('/metas/goal-1/plano?strategyId=strategy-1');
+  });
+
   test('another pair cannot be simulated for this goal, and it says so', async () => {
     open();
     const list = await screen.findByRole('list', { name: 'Ranking de estratégias por moeda' });

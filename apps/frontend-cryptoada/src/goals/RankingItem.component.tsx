@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
+import { Link } from 'react-router';
 
 import { formatSymbol } from '../format/format.js';
 import controls from '../styles/Controls.module.css';
@@ -9,6 +10,7 @@ import styles from './Goals.module.css';
 import { describeBenchmark, describeOutcomes } from './ranking-text.js';
 
 export type RankingItemProps = {
+  readonly goalId: string;
   readonly combination: Combination;
   readonly isSimulating: boolean;
   readonly onSimulate: (combination: Combination) => void;
@@ -20,11 +22,39 @@ function verdictClass(verdict: string): string {
   return styles.verdictHold ?? '';
 }
 
-export function RankingItem({
+function RankingActions({
+  goalId,
   combination,
   isSimulating,
   onSimulate,
 }: RankingItemProps): ReactElement {
+  const { strategy } = combination;
+  if (!combination.isGoalSymbol) {
+    return <p className={controls.muted}>a simulação usa o par da meta</p>;
+  }
+  return (
+    <div className={styles.rowActions}>
+      <Link
+        to={`/metas/${goalId}/plano?strategyId=${strategy.id}`}
+        aria-label={`Ver o plano com ${strategy.name}`}
+      >
+        Ver o plano
+      </Link>
+      <button
+        type="button"
+        className={`${controls.button} ${controls.primary}`}
+        aria-label={`Simular esta meta com ${strategy.name}`}
+        disabled={isSimulating}
+        onClick={() => onSimulate(combination)}
+      >
+        Simular esta meta
+      </button>
+    </div>
+  );
+}
+
+export function RankingItem(props: RankingItemProps): ReactElement {
+  const { combination } = props;
   const { strategy, evaluation } = combination;
   return (
     <li className={styles.combination}>
@@ -42,21 +72,7 @@ export function RankingItem({
       </div>
       <p>No histórico: {describeOutcomes(combination)}</p>
       <p className={controls.muted}>{describeBenchmark(combination)}</p>
-      {combination.isGoalSymbol ? (
-        <div>
-          <button
-            type="button"
-            className={`${controls.button} ${controls.primary}`}
-            aria-label={`Simular esta meta com ${strategy.name}`}
-            disabled={isSimulating}
-            onClick={() => onSimulate(combination)}
-          >
-            Simular esta meta
-          </button>
-        </div>
-      ) : (
-        <p className={controls.muted}>a simulação usa o par da meta</p>
-      )}
+      <RankingActions {...props} />
     </li>
   );
 }

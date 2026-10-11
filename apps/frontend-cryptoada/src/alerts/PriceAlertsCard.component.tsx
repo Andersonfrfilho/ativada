@@ -1,17 +1,13 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
-import { formatDateTime, formatDecimal, formatSymbol } from '../format/format.js';
+import { formatDateTime } from '../format/format.js';
 import { Card } from '../layout/Card.component.js';
 import controls from '../styles/Controls.module.css';
+import { describeAlert } from './alert-text.js';
 import styles from './Alerts.module.css';
 import { useClearFiredMutation, usePriceAlertsQuery } from './alerts.query.js';
 import type { PriceAlert } from './alerts.validation.js';
-
-function describeAlert(alert: PriceAlert): string {
-  const verb = alert.direction === 'above' ? 'subiu acima de' : 'caiu abaixo de';
-  return `${formatSymbol(alert.symbol)} ${verb} ${formatDecimal(alert.value)}`;
-}
 
 function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;

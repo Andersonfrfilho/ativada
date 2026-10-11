@@ -36,3 +36,17 @@
   background: var(--sell-soft);
   color: var(--sell);
 }
+
+.boardItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}

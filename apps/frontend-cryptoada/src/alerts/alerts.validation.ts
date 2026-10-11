@@ -12,6 +12,10 @@ export const priceAlertSchema = z.object({
   createdAt: z.string(),
 });
 
+// O painel só precisa saber que gravou: a lista se refaz pela invalidação.
+export const savedAlertSchema = z.object({ id: z.string() });
+
 export const clearedSchema = z.object({ deleted: z.number().int().nonnegative() });
 
 export type PriceAlert = z.infer<typeof priceAlertSchema>;
+export type SavedAlert = z.infer<typeof savedAlertSchema>;

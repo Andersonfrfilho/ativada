@@ -112,3 +112,71 @@
   gap: 8px;
   align-items: center;
 }
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.priceLine {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1.8;
+}
+
+.levelBuy,
+.levelTarget,
+.levelStop,
+.levelNow {
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+
+.levelBuy {
+  stroke: var(--accent);
+}
+
+.levelTarget {
+  stroke: var(--buy);
+}
+
+.levelStop {
+  stroke: var(--sell);
+}
+
+.levelNow {
+  stroke: var(--ink-3);
+}
+
+.chartLabel {
+  font-size: 11px;
+  fill: var(--ink-2);
+  text-anchor: end;
+}
+
+.levels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.level {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.levelValue {
+  font: 500 20px/1.2 var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}

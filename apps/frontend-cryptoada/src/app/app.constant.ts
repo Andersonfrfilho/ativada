@@ -15,6 +15,8 @@ export const ROUTE_PATH = {
   ALERTS: '/alertas',
   GOALS: '/metas',
   GOAL: '/metas/:goalId',
+  GOAL_PLAN: '/metas/:goalId/plano',
+  ASSETS: '/ativos',
   LOGIN: '/login',
   AUTH_CALLBACK: '/auth/callback',
 } as const;
@@ -30,5 +32,7 @@ export const API_PATH = {
   STRATEGIES: '/v1/strategies',
   PRICE_ALERTS: '/v1/price-alerts',
   GOALS: '/v1/goals',
+  ASSETS: '/v1/assets',
+  ASSETS_SUMMARY: '/v1/assets/summary',
   STREAM_TICKETS: '/v1/stream/tickets',
 } as const;

@@ -3,6 +3,7 @@ export const GOAL_QUERY_ROOT = 'goals';
 export const GOAL_TIMEFRAME = '1d';
 export const GOAL_PAGE_SIZE = 100;
 export const MILLISECONDS_PER_DAY = 86_400_000;
+export const PLAN_HISTORY_DAYS = 60;
 export const FULL_PERCENT = 100;
 
 export const DEFAULT_TARGET_PERCENT = '3';

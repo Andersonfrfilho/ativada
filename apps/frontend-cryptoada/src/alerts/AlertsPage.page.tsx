@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 
 import runStyles from '../runs/Runs.module.css';
 import { AlertPreferencesCard } from './AlertPreferencesCard.component.js';
+import { PriceAlertBoardCard } from './PriceAlertBoardCard.component.js';
 import { PriceAlertsCard } from './PriceAlertsCard.component.js';
 import { SignalHistoryCard } from './SignalHistoryCard.component.js';
 
@@ -12,6 +13,7 @@ export function AlertsPage(): ReactElement {
     <div className={runStyles.page}>
       <h1 className={runStyles.title}>Alertas</h1>
       <SignalHistoryCard />
+      <PriceAlertBoardCard />
       <PriceAlertsCard />
       <AlertPreferencesCard />
     </div>

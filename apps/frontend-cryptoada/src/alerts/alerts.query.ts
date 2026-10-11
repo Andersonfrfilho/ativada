@@ -16,7 +16,13 @@ import type { Page } from '../http/api-client.js';
 import { SIGNAL_ACTION } from '../overview/overview.constant.js';
 import { signalSchema, type Signal } from '../overview/overview.validation.js';
 import { LIVE_QUERY_ROOT } from '../live/useLiveStream.hook.js';
-import { clearedSchema, priceAlertSchema, type PriceAlert } from './alerts.validation.js';
+import {
+  clearedSchema,
+  priceAlertSchema,
+  savedAlertSchema,
+  type PriceAlert,
+  type SavedAlert,
+} from './alerts.validation.js';
 
 const PAGE_SIZE = 100;
 const FIRST_PAGE: string | null = null;
@@ -76,5 +82,70 @@ export function useClearFiredMutation(): UseMutationResult<{ deleted: number }, 
         schema: clearedSchema,
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [LIVE_QUERY_ROOT.PRICE_ALERTS] }),
+  });
+}
+
+export type PriceAlertDraft = {
+  readonly symbol: string;
+  readonly direction: 'above' | 'below';
+  readonly value: string;
+  readonly origin: 'manual' | 'plan';
+};
+
+function useInvalidatePriceAlerts(): () => Promise<void> {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: [LIVE_QUERY_ROOT.PRICE_ALERTS] });
+}
+
+export function useCreatePriceAlertMutation(): UseMutationResult<
+  SavedAlert,
+  Error,
+  PriceAlertDraft
+> {
+  const client = useApiClient();
+  const invalidate = useInvalidatePriceAlerts();
+  return useMutation({
+    mutationFn: (draft: PriceAlertDraft) =>
+      client.request({
+        method: HTTP_METHOD.POST,
+        path: API_PATH.PRICE_ALERTS,
+        body: draft,
+        schema: savedAlertSchema,
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+export type PriceAlertToggle = { readonly alertId: string; readonly isEnabled: boolean };
+
+export function useTogglePriceAlertMutation(): UseMutationResult<
+  SavedAlert,
+  Error,
+  PriceAlertToggle
+> {
+  const client = useApiClient();
+  const invalidate = useInvalidatePriceAlerts();
+  return useMutation({
+    mutationFn: (toggle: PriceAlertToggle) =>
+      client.request({
+        method: HTTP_METHOD.PATCH,
+        path: `${API_PATH.PRICE_ALERTS}/${toggle.alertId}`,
+        body: { isEnabled: toggle.isEnabled },
+        schema: savedAlertSchema,
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeletePriceAlertMutation(): UseMutationResult<void, Error, string> {
+  const client = useApiClient();
+  const invalidate = useInvalidatePriceAlerts();
+  return useMutation({
+    mutationFn: (alertId: string) =>
+      client.requestEmpty({
+        method: HTTP_METHOD.DELETE,
+        path: `${API_PATH.PRICE_ALERTS}/${alertId}`,
+      }),
+    onSuccess: invalidate,
   });
 }

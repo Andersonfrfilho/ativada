@@ -82,6 +82,7 @@ export function RankingCard({ goalId, evaluation }: RankingCardProps): ReactElem
       <ol className={styles.ranking} aria-label="Ranking de estratégias por moeda">
         {shown.map((combination) => (
           <RankingItem
+            goalId={goalId}
             key={`${combination.strategy.id}:${combination.symbol}`}
             combination={combination}
             isSimulating={simulation.isPending}
