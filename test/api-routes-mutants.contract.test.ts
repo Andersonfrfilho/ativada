@@ -100,6 +100,34 @@ const MUTANTS: readonly SourceMutant[] = [
     ),
   },
   {
+    name: 'STRATEGY_DELETE_ALLOWS_THE_EXAMPLE',
+    edits: edit(
+      'strategies/strategy.use-cases.ts',
+      'if (strategy?.isExample === true) throw new StrategyIsExampleError();',
+      '',
+    ),
+  },
+  {
+    name: 'STRATEGY_VERSION_HIDES_THE_CONFIG_HASH',
+    edits: edit('strategies/strategy-views.ts', '    configHash: record.configHash,\n', ''),
+  },
+  {
+    name: 'SERIES_ORDER_IS_DROPPED',
+    edits: edit(
+      'runs/run-series.routes.ts',
+      '    ...(query.order === undefined ? {} : { order: query.order }),\n',
+      '',
+    ),
+  },
+  {
+    name: 'SERIES_ORDER_ACCEPTED_BY_EVERY_SERIES',
+    edits: edit(
+      'runs/run-series.routes.ts',
+      'if (spec.isOrderable !== true) return readPage(request, spec.decode);',
+      '',
+    ),
+  },
+  {
     name: 'USER_ID_ACCEPTED_IN_THE_RUN_BODY',
     edits: edit(
       'runs/create-run-request.schema.ts',

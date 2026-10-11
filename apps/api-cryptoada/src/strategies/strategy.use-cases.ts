@@ -153,10 +153,10 @@ export function createDeleteStrategyUseCase(
 ): DeleteStrategyUseCase {
   return async (scope, strategyId) => {
     const strategy = await dependencies.strategies.findStrategy(scope, strategyId);
-    if (strategy === undefined) throw new StrategyNotFoundError();
-    if (strategy.isExample) throw new StrategyIsExampleError();
-    if (!(await dependencies.strategies.softDeleteStrategy(scope, strategyId))) {
-      throw new StrategyNotFoundError();
-    }
+    if (strategy?.isExample === true) throw new StrategyIsExampleError();
+    const isDeleted =
+      strategy !== undefined &&
+      (await dependencies.strategies.softDeleteStrategy(scope, strategyId));
+    if (!isDeleted) throw new StrategyNotFoundError();
   };
 }
