@@ -7,6 +7,7 @@ import { fills } from '../schema/fills.schema.js';
 import { goals } from '../schema/goals.schema.js';
 import { orders } from '../schema/orders.schema.js';
 import { positions } from '../schema/positions.schema.js';
+import { priceAlerts } from '../schema/price-alerts.schema.js';
 import { runCommands } from '../schema/run-commands.schema.js';
 import { runs } from '../schema/runs.schema.js';
 import { signals } from '../schema/signals.schema.js';
@@ -163,6 +164,16 @@ export const OWNED_TABLE_EXPORTS: readonly OwnedTableExportStep[] = [
     'isActive',
     'createdAt',
     'updatedAt',
+  ]),
+  exportColumns(priceAlerts, [
+    'id',
+    'symbol',
+    'direction',
+    'value',
+    'origin',
+    'isEnabled',
+    'triggeredAt',
+    'createdAt',
   ]),
   exportColumns(alerts, [
     'id',

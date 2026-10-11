@@ -51,6 +51,7 @@ import {
 } from './run-result-rule-checks.js';
 import { checkExampleStrategySeeding } from './example-strategy-checks.js';
 import { checkGoals } from './goal-checks.js';
+import { checkPriceAlerts } from './price-alert-checks.js';
 import { checkGoalRuns } from './goal-run-checks.js';
 import { checkLiveRuns } from './live-run-checks.js';
 import { checkRunQueueClaims } from './run-queue-checks.js';
@@ -149,6 +150,7 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkLiveRuns(context);
   await checkAlerts(context);
   await checkGoals(context);
+  await checkPriceAlerts(context);
   await checkGoalRuns(context);
   await checkRunLog(context);
 }

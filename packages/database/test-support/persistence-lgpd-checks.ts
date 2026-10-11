@@ -8,6 +8,7 @@ import { RUN_KIND, RUN_STATUS } from '../src/runs/run.constant.js';
 import { createRunRepository } from '../src/runs/run.repository.js';
 import { createRunResultRepository } from '../src/run-results/run-result.repository.js';
 import { createGoalRepository } from '../src/goals/goal.repository.js';
+import { createPriceAlertRepository } from '../src/price-alerts/price-alert.repository.js';
 import { createStrategyRepository } from '../src/strategies/strategy.repository.js';
 import type {
   LifecycleCheckContext,
@@ -45,6 +46,7 @@ export const PERSISTENCE_TABLES = [
   'walk_forward_windows',
   'alerts',
   'goals',
+  'price_alerts',
 ] as const;
 const ENGINE_STATE_MARKER = 'engine-state-marker';
 const ALERT_REASON_MARKER = 'alert-reason-marker';
@@ -63,6 +65,7 @@ export const PERSISTENCE_EXPECTED_ROWS: Readonly<
   walk_forward_windows: 2,
   alerts: 1,
   goals: 2,
+  price_alerts: 2,
 };
 
 export function strategyNameOf(owner: LifecycleOwner): string {
@@ -110,6 +113,23 @@ export async function seedOwnerPersistence(
   await results.appendWindows(owner.scope, run.id, buildWindows(2));
   await seedAlert(handle, owner, run.id);
   await seedGoals(handle, owner);
+  await seedPriceAlerts(handle, owner);
+}
+
+const PRICE_ALERT_SEED_LIMIT = 50;
+
+// O alerta de preço revela o que o dono acompanha: entra na exportação e some com a exclusão da conta.
+async function seedPriceAlerts(handle: DatabaseHandle, owner: LifecycleOwner): Promise<void> {
+  const priceAlerts = createPriceAlertRepository(handle);
+  for (const direction of ['above', 'below'] as const) {
+    await priceAlerts.createPriceAlert(owner.scope, {
+      symbol: 'BTCUSDT',
+      direction,
+      value: '70000.5',
+      origin: 'manual',
+      maxEnabled: PRICE_ALERT_SEED_LIMIT,
+    });
+  }
 }
 
 const GOAL_SEED_LIMIT = 20;

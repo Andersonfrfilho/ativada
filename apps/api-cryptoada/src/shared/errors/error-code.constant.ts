@@ -63,6 +63,11 @@ export const GOAL_ERROR_CODE = {
   GOAL_PLAN_UNAVAILABLE: 'GOAL_PLAN_UNAVAILABLE',
 } as const;
 
+export const PRICE_ALERT_ERROR_CODE = {
+  PRICE_ALERT_NOT_FOUND: 'PRICE_ALERT_NOT_FOUND',
+  PRICE_ALERT_LIMIT_REACHED: 'PRICE_ALERT_LIMIT_REACHED',
+} as const;
+
 // Os cinco últimos são os códigos do walk-forward do motor, recusados ANTES de aceitar a execução (T3.4);
 // `RUN_QUEUE_FULL` e `LIVE_RUN_LIMIT_REACHED` são os tetos de uso por usuário (T3.6, RF00b).
 export const RUN_ERROR_CODE = {

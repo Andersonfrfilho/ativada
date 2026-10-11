@@ -120,6 +120,13 @@
       "when": 1791677458508,
       "tag": "0016_run_data_wait",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791692722234,
+      "tag": "0017_price_alerts",
+      "breakpoints": true
     }
   ]
 }

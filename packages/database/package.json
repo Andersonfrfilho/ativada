@@ -12,6 +12,7 @@
     "db:migration-test": "bun run test-support/migration-test.ts",
     "db:database-test": "bun run test-support/database-test.ts",
     "db:example-strategy-test": "bun run test-support/example-strategy-test.ts",
+    "db:price-alert-test": "bun run test-support/price-alert-test.ts",
     "db:run-queue-test": "bun run test-support/run-queue-test.ts"
   },
   "dependencies": {

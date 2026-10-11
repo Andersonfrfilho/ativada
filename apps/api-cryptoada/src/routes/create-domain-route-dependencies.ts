@@ -2,6 +2,7 @@
 import {
   createCandleRepository,
   createGoalRepository,
+  createPriceAlertRepository,
   createRunRepository,
   createRunQueueRepository,
   createRunResultRepository,
@@ -26,6 +27,14 @@ import {
   createUpdateGoalUseCase,
 } from '../goals/goal.use-cases.js';
 import type { GoalRouteDependencies } from '../goals/goals.routes.js';
+import {
+  createCreatePriceAlertUseCase,
+  createDeletePriceAlertUseCase,
+  createGetPriceAlertUseCase,
+  createListPriceAlertsUseCase,
+  createUpdatePriceAlertUseCase,
+} from '../price-alerts/price-alert.use-cases.js';
+import type { PriceAlertRouteDependencies } from '../price-alerts/price-alerts.routes.js';
 import { createListCandlesUseCase } from '../markets/list-candles.use-case.js';
 import type { MarketRouteDependencies } from '../markets/markets.routes.js';
 import { createCreateRunUseCase } from '../runs/create-run.use-case.js';
@@ -52,6 +61,7 @@ export type DomainRouteDependencies = {
   readonly markets: MarketRouteDependencies;
   readonly strategies: StrategyRouteDependencies;
   readonly goals: GoalRouteDependencies;
+  readonly priceAlerts: PriceAlertRouteDependencies;
   readonly runs: RunRoutesBundle;
 };
 
@@ -105,6 +115,22 @@ function createGoalDependencies(params: DomainRouteParams): GoalRouteDependencie
       now: params.now,
       cache: createGoalPlanCache(),
     }),
+  };
+}
+
+function createPriceAlertDependencies(params: DomainRouteParams): PriceAlertRouteDependencies {
+  const { database, environment } = params;
+  const dependencies = {
+    priceAlerts: createPriceAlertRepository(database),
+    maxEnabled: environment.PRICE_ALERT_MAX_ENABLED_PER_USER,
+  };
+  return {
+    enabledSymbols: environment.MARKET_SYMBOLS,
+    createPriceAlert: createCreatePriceAlertUseCase(dependencies),
+    listPriceAlerts: createListPriceAlertsUseCase(dependencies),
+    getPriceAlert: createGetPriceAlertUseCase(dependencies),
+    updatePriceAlert: createUpdatePriceAlertUseCase(dependencies),
+    deletePriceAlert: createDeletePriceAlertUseCase(dependencies),
   };
 }
 
@@ -162,6 +188,7 @@ export function createDomainRouteDependencies(params: DomainRouteParams): Domain
     },
     strategies: createStrategyDependencies(database),
     goals: createGoalDependencies(params),
+    priceAlerts: createPriceAlertDependencies(params),
     runs: createRunDependencies(params, enabled),
   };
 }

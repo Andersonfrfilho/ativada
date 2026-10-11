@@ -61,3 +61,12 @@ export const GOALS_MUTANT_TARGET: MutantTarget = {
   ],
   sourceVariable: 'API_ROUTES_APP_SOURCE',
 };
+
+// Os alertas de preço (T4b.6, RF14): as rotas, a validação e os casos de uso, julgados só pelo contrato deles.
+export const PRICE_ALERTS_MUTANT_TARGET: MutantTarget = {
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
+  directoryPrefix: 'price-alerts-',
+  judgeTestFiles: ['test/api-price-alerts.contract.test.ts', 'test/api-openapi.contract.test.ts'],
+  sourceVariable: 'API_ROUTES_APP_SOURCE',
+};

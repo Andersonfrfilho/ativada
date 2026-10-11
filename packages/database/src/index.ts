@@ -190,3 +190,13 @@ export {
   isForeignKeyViolation,
   readPostgresErrorCode,
 } from './postgres-error-code.js';
+export { createPriceAlertRepository } from './price-alerts/price-alert.repository.js';
+export {
+  PRICE_ALERT_CREATE_OUTCOME,
+  PRICE_ALERT_DIRECTION,
+  PRICE_ALERT_ORIGIN,
+  PRICE_ALERT_UPDATE_OUTCOME,
+  type PriceAlertDirection,
+  type PriceAlertOrigin,
+} from './price-alerts/price-alert.constant.js';
+export type * from './price-alerts/price-alert.types.js';

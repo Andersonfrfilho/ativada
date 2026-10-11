@@ -10,6 +10,7 @@ import { fills } from '../schema/fills.schema.js';
 import { goals } from '../schema/goals.schema.js';
 import { orders } from '../schema/orders.schema.js';
 import { positions } from '../schema/positions.schema.js';
+import { priceAlerts } from '../schema/price-alerts.schema.js';
 import { runCommands } from '../schema/run-commands.schema.js';
 import { runs } from '../schema/runs.schema.js';
 import { sentimentDaily } from '../schema/sentiment-daily.schema.js';
@@ -45,6 +46,7 @@ export const OWNED_TABLES: readonly PgTable[] = [
   walkForwardWindows,
   alerts,
   goals,
+  priceAlerts,
 ];
 
 // Ordem da exclusão (ADR 0001 §h passo 3): filhas antes dos pais, porque a FK é ON DELETE RESTRICT.
@@ -60,6 +62,7 @@ export const OWNED_TABLE_DELETION_ORDER: readonly PgTable[] = [
   signals,
   runs,
   goals,
+  priceAlerts,
   strategyVersions,
   strategies,
 ];

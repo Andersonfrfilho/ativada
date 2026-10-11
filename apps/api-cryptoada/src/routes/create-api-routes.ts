@@ -3,6 +3,10 @@ import { createAccountRoutes, type AccountRouteDependencies } from '../account/a
 import { createAdminRoutes, type AdminRouteDependencies } from '../admin/admin.routes.js';
 import { createDocsRoutes } from '../docs/docs.routes.js';
 import { createGoalRoutes, type GoalRouteDependencies } from '../goals/goals.routes.js';
+import {
+  createPriceAlertRoutes,
+  type PriceAlertRouteDependencies,
+} from '../price-alerts/price-alerts.routes.js';
 import { createMarketRoutes, type MarketRouteDependencies } from '../markets/markets.routes.js';
 import { createProfileRoutes, type ProfileRouteDependencies } from '../profile/profile.routes.js';
 import type { Route } from '../router/route.types.js';
@@ -40,6 +44,7 @@ export type ApiRouteDependencies = HealthRouteDependencies & {
   readonly markets: MarketRouteDependencies;
   readonly strategies: StrategyRouteDependencies;
   readonly goals: GoalRouteDependencies;
+  readonly priceAlerts: PriceAlertRouteDependencies;
   readonly runs: RunRoutesBundle;
   // `/v1/openapi.json` e `/v1/docs` existem só fora de produção: em produção nem entram na tabela.
   readonly isDocumentationEnabled: boolean;
@@ -57,6 +62,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     ...createMarketRoutes(dependencies.markets),
     ...createStrategyRoutes(dependencies.strategies),
     ...createGoalRoutes(dependencies.goals),
+    ...createPriceAlertRoutes(dependencies.priceAlerts),
     ...createRunRoutes(dependencies.runs.routes),
     ...createRunSeriesRoutes(dependencies.runs.series),
     ...createRunExportRoutes(dependencies.runs.exportRunCsv),

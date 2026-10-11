@@ -66,6 +66,14 @@ export function buildApiRouteDependencies(
       evaluateGoal: notUsed,
       getGoalPlan: notUsed,
     },
+    priceAlerts: {
+      enabledSymbols: ENABLED_MARKETS.symbols,
+      createPriceAlert: notUsed,
+      listPriceAlerts: notUsed,
+      getPriceAlert: notUsed,
+      updatePriceAlert: notUsed,
+      deletePriceAlert: notUsed,
+    },
     runs: {
       routes: {
         enabled: ENABLED_MARKETS,
