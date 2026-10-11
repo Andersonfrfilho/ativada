@@ -6,6 +6,7 @@ import {
   createTemporaryDatabase,
   dropTemporaryDatabase,
 } from '../packages/database/test-support/temporary-database.js';
+import { checkClearFired } from './price-alerts-test/check-clear-fired.js';
 import { checkFiringOnce, checkIsolationAndSymbols } from './price-alerts-test/check-firing.js';
 import { checkOutage } from './price-alerts-test/check-outage.js';
 import { checkPrivacy } from './price-alerts-test/check-privacy.js';
@@ -31,6 +32,7 @@ async function runChecks(context: PriceAlertsTestContext): Promise<void> {
   await checkIsolationAndSymbols(context, { a, b });
   await checkTwoInstances(context, a);
   await checkRearm(context, a);
+  await checkClearFired(context, { a, b });
   await checkOutage(context, withoutTelegram);
   await checkPrivacy(context, a);
 }
