@@ -119,8 +119,8 @@ const MUTANTS: readonly AlertsSourceMutant[] = [
     name: 'UNLINKED_ALERT_IS_SENT_ANYWAY',
     edits: edit(
       DISPATCHER,
-      '  if (alert.chatId === undefined) {',
-      '  if ((alert.chatId as string | undefined) === "nunca") {',
+      '  if (alert.chatId === undefined) return skip(',
+      '  if ((alert.chatId as string | undefined) === "nunca") return skip(',
     ),
   },
   {

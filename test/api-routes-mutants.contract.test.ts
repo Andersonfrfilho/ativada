@@ -319,8 +319,8 @@ const MUTANTS: readonly SourceMutant[] = [
     name: 'IDENTICAL_CONFIGURATION_CREATES_A_DUPLICATE_VERSION',
     edits: edit(
       'strategies/strategy.use-cases.ts',
-      '      strategyId: input.strategyId,\n      config: toConfigJson(input.version),\n      configHash: input.version.configHash,',
-      "      strategyId: input.strategyId,\n      config: toConfigJson(input.version),\n      configHash: crypto.randomUUID().replaceAll('-', '').padEnd(64, '0'),",
+      '        strategyId: input.strategyId,\n        config: toConfigJson(input.version),\n        configHash: input.version.configHash,',
+      "        strategyId: input.strategyId,\n        config: toConfigJson(input.version),\n        configHash: crypto.randomUUID().replaceAll('-', '').padEnd(64, '0'),",
     ),
   },
   {
