@@ -1,42 +1,32 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { useState, type ReactElement } from 'react';
 
-import {
-  formatChangePercent,
-  formatDecimal,
-  formatQuantity,
-  formatReais,
-  formatSignedDecimal,
-  formatSymbol,
-} from '../format/format.js';
+import { formatScaled, formatSignedScaled, formatSignedScaledPercent } from '../format/decimal.js';
+import { formatPrice, formatQuantity, formatSymbol } from '../format/format.js';
 import { useLivePrice } from '../live/useShownPrice.hook.js';
 import controls from '../styles/Controls.module.css';
 import { RULE_LABEL } from './asset.constant.js';
-import { computeAssetNumbers, type AssetNumbers } from './asset-math.js';
+import { computeAssetNumbers, toReais, type AssetNumbers } from './asset-math.js';
 import { useDeleteAssetMutation } from './asset.query.js';
 import type { AssetItem } from './asset.validation.js';
 import styles from './Assets.module.css';
 
-export type AssetCardProps = { readonly item: AssetItem; readonly rate: number | undefined };
+export type AssetCardProps = { readonly item: AssetItem; readonly rate: bigint | undefined };
 
-function ValueLines({
-  numbers,
-  rate,
-}: {
-  readonly numbers: AssetNumbers;
-  readonly rate: number | undefined;
-}): ReactElement {
+type ValueLinesProps = { readonly numbers: AssetNumbers; readonly rate: bigint | undefined };
+
+function ValueLines({ numbers, rate }: ValueLinesProps): ReactElement {
   if (numbers.value === undefined) return <p className={controls.muted}>Sem preço ainda.</p>;
   const resultRate =
-    numbers.resultRate === undefined ? '' : ` (${formatChangePercent(numbers.resultRate)})`;
+    numbers.resultRate === undefined ? '' : ` (${formatSignedScaledPercent(numbers.resultRate)})`;
   return (
     <>
-      <p className={styles.value}>{formatDecimal(String(numbers.value))} USDT</p>
+      <p className={styles.value}>{formatScaled(numbers.value)} USDT</p>
       {rate === undefined ? null : (
-        <p className={controls.muted}>≈ {formatReais(numbers.value * rate)}</p>
+        <p className={controls.muted}>≈ R$ {formatScaled(toReais(numbers.value, rate))}</p>
       )}
       <p>
-        Resultado {numbers.result === undefined ? '—' : formatSignedDecimal(numbers.result)}
+        Resultado {numbers.result === undefined ? '—' : formatSignedScaled(numbers.result)}
         {resultRate}
       </p>
     </>
@@ -59,7 +49,7 @@ function RuleLines({
         </p>
       )}
       <p>
-        Alvo {formatDecimal(item.targetPrice)} · Stop {formatDecimal(item.stopPrice)}
+        Alvo {formatPrice(item.targetPrice)} · Stop {formatPrice(item.stopPrice)}
       </p>
       {numbers.isTargetReached === true ? <span className={styles.flag}>Alvo atingido</span> : null}
       {numbers.isStopReached === true ? <span className={styles.flag}>Stop atingido</span> : null}
@@ -85,7 +75,7 @@ export function AssetCard({ item, rate }: AssetCardProps): ReactElement {
     <article className={styles.asset} aria-label={name}>
       <h3 className={styles.symbol}>{name}</h3>
       <p className={controls.muted}>
-        Quantidade {formatQuantity(item.quantity)} · Preço médio {formatDecimal(item.averagePrice)}
+        Quantidade {formatQuantity(item.quantity)} · Preço médio {formatPrice(item.averagePrice)}
       </p>
       <ValueLines numbers={numbers} rate={rate} />
       <RuleLines item={item} numbers={numbers} />

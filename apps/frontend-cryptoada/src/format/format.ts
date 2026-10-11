@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { formatDecimalText, isPlainDecimal } from './decimal.js';
+
 const LOCALE = 'pt-BR';
 const QUOTE_ASSET = 'USDT';
 const FRACTION_DIGITS = 2;
@@ -22,7 +24,22 @@ const dateTimeFormat = new Intl.DateTimeFormat(LOCALE, {
 
 // Só para exibição: o cálculo e a persistência seguem em texto decimal na API.
 export function formatDecimal(decimalText: string): string {
-  return numberFormat.format(Number(decimalText));
+  if (!isPlainDecimal(decimalText)) return numberFormat.format(Number(decimalText));
+  return formatDecimalText(decimalText, {
+    minimumFraction: FRACTION_DIGITS,
+    maximumFraction: FRACTION_DIGITS,
+  });
+}
+
+const PRICE_MAXIMUM_FRACTION = 8;
+
+// Preço, nível e valor de alerta aceitam até 8 casas: mostra todas as que existem (mínimo 2), sem cortar moeda barata.
+export function formatPrice(decimalText: string): string {
+  if (!isPlainDecimal(decimalText)) return numberFormat.format(Number(decimalText));
+  return formatDecimalText(decimalText, {
+    minimumFraction: FRACTION_DIGITS,
+    maximumFraction: PRICE_MAXIMUM_FRACTION,
+  });
 }
 
 export function formatChangePercent(ratio: number): string {
@@ -55,18 +72,11 @@ export function formatDate(epochMilliseconds: number): string {
   return dateFormat.format(new Date(epochMilliseconds));
 }
 
-const quantityFormat = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 8 });
-
 // Quantidade de moeda: até 8 casas, sem zeros à direita ("0,5", não "0,50").
 export function formatQuantity(decimalText: string): string {
-  return quantityFormat.format(Number(decimalText));
-}
-
-// Valor com sinal explícito para o que ganhou ("+1.000,00"); perda já vem com o sinal de menos.
-export function formatSignedDecimal(value: number): string {
-  return `${value > 0 ? '+' : ''}${numberFormat.format(value)}`;
-}
-
-export function formatReais(value: number): string {
-  return `R$ ${numberFormat.format(value)}`;
+  if (!isPlainDecimal(decimalText)) return numberFormat.format(Number(decimalText));
+  return formatDecimalText(decimalText, {
+    minimumFraction: 0,
+    maximumFraction: PRICE_MAXIMUM_FRACTION,
+  });
 }

@@ -6,7 +6,7 @@ import { parseRate } from './asset-math.js';
 
 export type UsdtRate = {
   readonly text: string;
-  readonly rate: number | undefined;
+  readonly rate: bigint | undefined;
   readonly setText: (text: string) => void;
 };
 

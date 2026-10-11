@@ -158,6 +158,61 @@ describe('assets board', () => {
     expect(card.textContent).not.toContain('Alvo atingido');
   });
 
+  test('the summary and the total in reais are rebuilt from the same live numbers, so they add up with the cards', async () => {
+    const ether = buildAssetItem({
+      symbol: 'ETHUSDT',
+      quantity: '3.33333333',
+      averagePrice: '3000',
+      price: { value: '3100', at: 1, source: '15m' },
+      value: '10333.33332300',
+      cost: '9999.99999000',
+      result: '333.33333300',
+      resultRate: '0.03333333',
+      targetPrice: '3300',
+      stopPrice: '2760',
+    });
+    const { stream } = await openAssets({ summary: buildSummary([buildAssetItem(), ether]) });
+    await screen.findByRole('article', { name: 'BTC/USDT' });
+    fireEvent.change(screen.getByLabelText('Cotação do USDT em R$'), {
+      target: { value: '5,555' },
+    });
+    act(() => stream.setStatus('live'));
+    act(() => stream.tick(tick('63333.33')));
+    act(() => stream.tick({ ...tick('3123.45'), symbol: 'ETHUSDT' }));
+    const btc = screen.getByRole('article', { name: 'BTC/USDT' });
+    const eth = screen.getByRole('article', { name: 'ETH/USDT' });
+    await waitFor(() => expect(btc.textContent).toContain('31.666,67 USDT'));
+    await waitFor(() => expect(eth.textContent).toContain('10.411,50 USDT'));
+    const reais = (card: HTMLElement): number => {
+      const match = /R\$ ([\d.]+,\d{2})/.exec(card.textContent ?? '');
+      return Number((match?.[1] ?? '0').replace(/\./g, '').replace(',', '.'));
+    };
+    const total = /Total em R\$: R\$ ([\d.]+,\d{2})/.exec(document.body.textContent ?? '');
+    const shown = Number((total?.[1] ?? '0').replace(/\./g, '').replace(',', '.'));
+    expect(Math.round((reais(btc) + reais(eth)) * 100)).toBe(Math.round(shown * 100));
+    expect(screen.getByText(/Total: 42\.078,16 USDT/)).toBeDefined();
+  });
+
+  test('big quantities keep every digit (no float in the money)', async () => {
+    const big = buildAssetItem({
+      quantity: '123456789.12345678',
+      averagePrice: '1',
+      price: { value: '1', at: 1, source: '15m' },
+      value: '123456789.12345678',
+      cost: '123456789.12345678',
+      result: '0',
+      resultRate: '0',
+      targetPrice: '2',
+      stopPrice: '0.5',
+    });
+    const { stream } = await openAssets({ summary: buildSummary([big]) });
+    const card = await screen.findByRole('article', { name: 'BTC/USDT' });
+    act(() => stream.setStatus('live'));
+    act(() => stream.tick(tick('1.00000001')));
+    await waitFor(() => expect(card.textContent).toContain('123.456.790,36 USDT'));
+    expect(card.textContent).toContain('Quantidade 123.456.789,12345678');
+  });
+
   test('with the socket down it polls the summary again on its own', async () => {
     const { stream, fake } = await openAssets({ summary: buildSummary([buildAssetItem()]) });
     await screen.findByRole('article', { name: 'BTC/USDT' });

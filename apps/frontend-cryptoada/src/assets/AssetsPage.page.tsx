@@ -8,36 +8,41 @@ import type { Strategy } from '../strategies/strategy.validation.js';
 import runStyles from '../runs/Runs.module.css';
 import controls from '../styles/Controls.module.css';
 import { AssetCard } from './AssetCard.component.js';
-import {
-  formatChangePercent,
-  formatDecimal,
-  formatReais,
-  formatSignedDecimal,
-} from '../format/format.js';
+import { formatScaled, formatSignedScaled, formatSignedScaledPercent } from '../format/decimal.js';
+import { useLiveMarket } from '../live/useLiveMarket.hook.js';
 import { OperationCard } from './OperationCard.component.js';
 import styles from './Assets.module.css';
+import { computeAssetNumbers, sumAssetNumbers, toReais } from './asset-math.js';
 import { useAssetSummaryQuery } from './asset.query.js';
 import type { AssetSummary } from './asset.validation.js';
 import { useUsdtRate, type UsdtRate } from './useUsdtRate.hook.js';
 
-function Totals({
-  summary,
-  rate,
-}: {
-  readonly summary: AssetSummary;
-  readonly rate: number | undefined;
-}): ReactElement {
-  const { totals } = summary;
+type TotalsProps = { readonly summary: AssetSummary; readonly rate: bigint | undefined };
+
+// Resumo e total em R$ saem dos MESMOS números vivos dos cartões, então somam com eles.
+function Totals({ summary, rate }: TotalsProps): ReactElement {
+  const market = useLiveMarket();
+  const all = summary.items.map((item) =>
+    computeAssetNumbers(item, market.freshPrice(item.symbol)?.price),
+  );
+  const totals = sumAssetNumbers(all);
+  const totalReais =
+    rate === undefined
+      ? undefined
+      : all.reduce(
+          (sum, numbers) => sum + (numbers.value === undefined ? 0n : toReais(numbers.value, rate)),
+          0n,
+        );
   const resultRate =
-    totals.resultRate === null ? '' : ` (${formatChangePercent(Number(totals.resultRate))})`;
+    totals.resultRate === undefined ? '' : ` (${formatSignedScaledPercent(totals.resultRate)})`;
   return (
     <Card title="Resumo">
       <p>
-        Total: {formatDecimal(totals.value)} USDT · custo {formatDecimal(totals.cost)} · resultado{' '}
-        {formatSignedDecimal(Number(totals.result))}
+        Total: {formatScaled(totals.value)} USDT · custo {formatScaled(totals.cost)} · resultado{' '}
+        {formatSignedScaled(totals.result)}
         {resultRate}
       </p>
-      {rate === undefined ? null : <p>Total em R$: {formatReais(Number(totals.value) * rate)}</p>}
+      {totalReais === undefined ? null : <p>Total em R$: R$ {formatScaled(totalReais)}</p>}
       {totals.unpricedAssets === 0 ? null : (
         <p className={controls.muted}>
           {totals.unpricedAssets} ativo(s) ainda sem preço, fora do total.
