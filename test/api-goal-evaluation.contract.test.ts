@@ -414,3 +414,278 @@ describe('o cache de avaliações é limitado e descarta o mais antigo', () => {
     expect(cache.get(key('A'))).toBe(value);
   });
 });
+
+type ErrorBody = { error: { code: string } };
+
+async function errorOf(response: Response): Promise<ErrorBody['error']> {
+  return ((await response.json()) as ErrorBody).error;
+}
+
+async function evaluateStatus(
+  target: GoalsHarness,
+  subject: string,
+  goalId: string,
+): Promise<Response> {
+  return target.call({ subject, path: `${GOALS}/${goalId}/evaluation` });
+}
+
+async function createGoalOn(
+  target: GoalsHarness,
+  subject: string,
+  overrides: Record<string, unknown>,
+): Promise<string> {
+  const { body } = await readJson(
+    await target.call({
+      subject,
+      method: 'POST',
+      path: GOALS,
+      body: { ...BASE_GOAL, ...overrides },
+    }),
+  );
+  return (body as { data: { id: string } }).data.id;
+}
+
+describe('orçamento das avaliações a frio (3 por minuto por usuário, cobrado só quando o cache erra)', () => {
+  test('a quarta avaliação a frio no mesmo minuto é 429 RATE_LIMITED com Retry-After, e um token volta em 20 s', async () => {
+    const goals = [60, 61, 62, 63];
+    const ids: string[] = [];
+    for (const horizonDays of goals) ids.push(await createGoal(SUBJECT_A, { horizonDays }));
+    for (const goalId of ids.slice(0, 3)) {
+      expect((await evaluateStatus(harness, SUBJECT_A, goalId)).status).toBe(200);
+    }
+    const refused = await evaluateStatus(harness, SUBJECT_A, ids[3] ?? '');
+    expect(refused.status).toBe(429);
+    expect(Number(refused.headers.get('Retry-After'))).toBeGreaterThan(0);
+    expect((await errorOf(refused)).code).toBe('RATE_LIMITED');
+    harness.clock.now += 21_000;
+    expect((await evaluateStatus(harness, SUBJECT_A, ids[3] ?? '')).status).toBe(200);
+  });
+
+  test('o cache que acerta NÃO gasta o orçamento: repetir a mesma meta 15 vezes e ainda avaliar três metas novas', async () => {
+    const repeated = await createGoal(SUBJECT_A, { horizonDays: 64 });
+    for (let call = 0; call < 15; call += 1) {
+      expect((await evaluateStatus(harness, SUBJECT_A, repeated)).status).toBe(200);
+    }
+    const fresh = [65, 66].map((horizonDays) => createGoal(SUBJECT_A, { horizonDays }));
+    for (const goalId of await Promise.all(fresh)) {
+      expect((await evaluateStatus(harness, SUBJECT_A, goalId)).status).toBe(200);
+    }
+    const third = await createGoal(SUBJECT_A, { horizonDays: 67 });
+    expect((await evaluateStatus(harness, SUBJECT_A, third)).status).toBe(429);
+  });
+
+  test('cada usuário tem o próprio orçamento: esgotar o de A não atrapalha B', async () => {
+    for (const horizonDays of [68, 69, 70]) {
+      await evaluateStatus(harness, SUBJECT_A, await createGoal(SUBJECT_A, { horizonDays }));
+    }
+    const blocked = await createGoal(SUBJECT_A, { horizonDays: 71 });
+    expect((await evaluateStatus(harness, SUBJECT_A, blocked)).status).toBe(429);
+    const ofB = await createGoal(SUBJECT_B, { horizonDays: 71 });
+    expect((await evaluateStatus(harness, SUBJECT_B, ofB)).status).toBe(200);
+  });
+
+  test('o PATCH que muda alvo, prazo ou perda máxima gasta o MESMO orçamento (o cache dela some)', async () => {
+    const goalId = await createGoal(SUBJECT_A, { horizonDays: 72 });
+    const patch = (body: Record<string, unknown>): Promise<Response> =>
+      harness.call({ subject: SUBJECT_A, method: 'PATCH', path: `${GOALS}/${goalId}`, body });
+    expect((await patch({ targetRate: '0.03' })).status).toBe(200);
+    expect((await patch({ horizonDays: 73 })).status).toBe(200);
+    expect((await patch({ maxLossRate: '0.06' })).status).toBe(200);
+    const refused = await patch({ targetRate: '0.04' });
+    expect(refused.status).toBe(429);
+    expect(Number(refused.headers.get('Retry-After'))).toBeGreaterThan(0);
+    const unchanged = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${GOALS}/${goalId}` }),
+    );
+    expect((unchanged.body as { data: { targetRate: string } }).data.targetRate).toBe('0.03');
+    expect((await evaluateStatus(harness, SUBJECT_A, goalId)).status).toBe(429);
+  });
+
+  test('o PATCH de uma meta e a avaliação dela dividem as três cobranças', async () => {
+    const goalId = await createGoal(SUBJECT_A, { horizonDays: 74 });
+    const patch = (body: Record<string, unknown>): Promise<Response> =>
+      harness.call({ subject: SUBJECT_A, method: 'PATCH', path: `${GOALS}/${goalId}`, body });
+    expect((await evaluateStatus(harness, SUBJECT_A, goalId)).status).toBe(200);
+    expect((await patch({ targetRate: '0.05' })).status).toBe(200);
+    expect((await evaluateStatus(harness, SUBJECT_A, goalId)).status).toBe(200);
+    expect((await patch({ targetRate: '0.06' })).status).toBe(429);
+  });
+
+  test('o PATCH que só liga/desliga ou troca o par não gasta nada (o cache não depende deles)', async () => {
+    const goalId = await createGoal(SUBJECT_A, { horizonDays: 75 });
+    for (const body of [{ isActive: false }, { isActive: true }, { symbol: 'ETHUSDT' }]) {
+      const response = await harness.call({
+        subject: SUBJECT_A,
+        method: 'PATCH',
+        path: `${GOALS}/${goalId}`,
+        body,
+      });
+      expect(response.status).toBe(200);
+    }
+    for (const horizonDays of [76, 77, 78]) {
+      const fresh = await createGoal(SUBJECT_A, { horizonDays });
+      expect((await evaluateStatus(harness, SUBJECT_A, fresh)).status).toBe(200);
+    }
+  });
+
+  test('com o orçamento esgotado, o PATCH de meta alheia ou inexistente responde 429 como o da própria: nada vaza', async () => {
+    for (const horizonDays of [79, 80, 81]) {
+      await evaluateStatus(harness, SUBJECT_A, await createGoal(SUBJECT_A, { horizonDays }));
+    }
+    const ofB = await createGoal(SUBJECT_B, { horizonDays: 82 });
+    const alien = await harness.call({
+      subject: SUBJECT_A,
+      method: 'PATCH',
+      path: `${GOALS}/${ofB}`,
+      body: { targetRate: '0.03' },
+    });
+    expect(alien.status).toBe(429);
+    const withoutBudgetField = await harness.call({
+      subject: SUBJECT_A,
+      method: 'PATCH',
+      path: `${GOALS}/${ofB}`,
+      body: { isActive: false },
+    });
+    expect(withoutBudgetField.status).toBe(404);
+  });
+});
+
+describe('teto global e uma avaliação a frio por usuário', () => {
+  async function waitForComputation(target: GoalsHarness): Promise<void> {
+    const deadline = performance.now() + 2_000;
+    while (target.evaluations.count === 0 && performance.now() < deadline) await Bun.sleep(5);
+    expect(target.evaluations.count).toBeGreaterThan(0);
+  }
+
+  test('com o teto cheio a API responde 503 GOAL_EVALUATION_BUSY com Retry-After, sem gastar o orçamento de quem foi recusado', async () => {
+    const limited = await createGoalsHarness({ maxConcurrentColdEvaluations: 1 });
+    try {
+      await limited.seedStrategy(SUBJECT_A, 'principal');
+      await limited.seedStrategy(SUBJECT_B, 'de-b');
+      const goalOfA = await createGoalOn(limited, SUBJECT_A, { horizonDays: 90 });
+      const goalOfB = await createGoalOn(limited, SUBJECT_B, { horizonDays: 90 });
+      let release: () => void = () => undefined;
+      limited.evaluations.hold = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const inFlight = evaluateStatus(limited, SUBJECT_A, goalOfA);
+      await waitForComputation(limited);
+      const refused = await evaluateStatus(limited, SUBJECT_B, goalOfB);
+      expect(refused.status).toBe(503);
+      expect(Number(refused.headers.get('Retry-After'))).toBeGreaterThan(0);
+      expect((await errorOf(refused)).code).toBe('GOAL_EVALUATION_BUSY');
+      limited.evaluations.hold = undefined;
+      release();
+      expect((await inFlight).status).toBe(200);
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const retried = await evaluateStatus(limited, SUBJECT_B, goalOfB);
+        expect(retried.status).toBe(200);
+        limited.clock.now += 120_000;
+      }
+    } finally {
+      limited.evaluations.hold = undefined;
+      await limited.stop();
+    }
+  });
+
+  test('o mesmo usuário com OUTRA meta enquanto uma voa recebe 429; com a MESMA meta divide a avaliação em voo', async () => {
+    const limited = await createGoalsHarness({ maxConcurrentColdEvaluations: 4 });
+    try {
+      await limited.seedStrategy(SUBJECT_A, 'principal');
+      const first = await createGoalOn(limited, SUBJECT_A, { horizonDays: 91 });
+      const second = await createGoalOn(limited, SUBJECT_A, { horizonDays: 92 });
+      let release: () => void = () => undefined;
+      limited.evaluations.hold = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const firstCall = evaluateStatus(limited, SUBJECT_A, first);
+      await waitForComputation(limited);
+      const computedWhileInFlight = limited.evaluations.count;
+      const other = await evaluateStatus(limited, SUBJECT_A, second);
+      expect(other.status).toBe(429);
+      expect((await errorOf(other)).code).toBe('RATE_LIMITED');
+      const joined = evaluateStatus(limited, SUBJECT_A, first);
+      limited.evaluations.hold = undefined;
+      release();
+      const [original, shared] = await Promise.all([firstCall, joined]);
+      expect(original.status).toBe(200);
+      expect(shared.status).toBe(200);
+      expect(await shared.json()).toStrictEqual(await original.json());
+      expect(limited.evaluations.count).toBe(computedWhileInFlight);
+    } finally {
+      limited.evaluations.hold = undefined;
+      await limited.stop();
+    }
+  });
+});
+
+describe('cancelamento da avaliação', () => {
+  test('o cliente que desiste cancela o cálculo em andamento: o sinal do pedido chega ao pool', async () => {
+    const goalId = await createGoal(SUBJECT_A, { horizonDays: 95 });
+    let release: () => void = () => undefined;
+    harness.evaluations.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const controller = new AbortController();
+    const before = harness.evaluations.signals.length;
+    const pending = harness
+      .call({
+        subject: SUBJECT_A,
+        path: `${GOALS}/${goalId}/evaluation`,
+        signal: controller.signal,
+      })
+      .catch((error: unknown) => error);
+    try {
+      const deadline = performance.now() + 2_000;
+      while (harness.evaluations.signals.length === before && performance.now() < deadline) {
+        await Bun.sleep(5);
+      }
+      const received = harness.evaluations.signals.slice(before);
+      expect(received.length).toBeGreaterThan(0);
+      expect(received.every((signal) => signal?.aborted === false)).toBe(true);
+      controller.abort();
+      expect(received.every((signal) => signal?.aborted === true)).toBe(true);
+    } finally {
+      harness.evaluations.hold = undefined;
+      release();
+      await pending;
+    }
+  });
+
+  test('o sinal do pedido chega ao cálculo de cada combinação', async () => {
+    const goalId = await createGoal(SUBJECT_A, { horizonDays: 93 });
+    const controller = new AbortController();
+    const before = harness.evaluations.signals.length;
+    await harness.evaluateGoal(harness.scopeOf(SUBJECT_A), goalId, controller.signal);
+    const received = harness.evaluations.signals.slice(before);
+    expect(received.length).toBeGreaterThan(0);
+    for (const signal of received) {
+      controller.abort();
+      expect(signal?.aborted).toBe(true);
+    }
+  });
+
+  test('uma combinação que falha cancela as outras em vez de deixá-las ocupando o pool', async () => {
+    const goalId = await createGoal(SUBJECT_A, { horizonDays: 94 });
+    let release: () => void = () => undefined;
+    harness.evaluations.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    harness.evaluations.failFirst = true;
+    harness.evaluations.count = 0;
+    const before = harness.evaluations.signals.length;
+    try {
+      const failure = await harness
+        .evaluateGoal(harness.scopeOf(SUBJECT_A), goalId)
+        .catch((error: unknown) => error);
+      expect((failure as Error).message).toBe('thread perdida');
+      const others = harness.evaluations.signals.slice(before + 1);
+      expect(others.length).toBeGreaterThan(0);
+      expect(others.every((signal) => signal?.aborted === true)).toBe(true);
+    } finally {
+      harness.evaluations.failFirst = false;
+      harness.evaluations.hold = undefined;
+      release();
+    }
+  });
+});

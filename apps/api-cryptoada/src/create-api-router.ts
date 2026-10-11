@@ -23,6 +23,7 @@ import {
 import { createGetProfileUseCase, createUpdateProfileUseCase } from './profile/profile.use-case.js';
 import { createTelegramRouteDependencies } from './telegram/create-telegram-route-dependencies.js';
 import { createRateLimiter } from './rate-limit/rate-limiter.js';
+import type { ComputeGoalCombination } from './goals/goal-evaluation-pool.js';
 import type { RunDispatcher } from './runs/run-dispatcher.js';
 import { createSessionRouteDependencies } from './session/create-session-routes-dependencies.js';
 import { createExampleSeedingUserResolver } from './strategies/example-seeding-user-resolver.js';
@@ -45,6 +46,7 @@ export type ApiRouterParams = {
   readonly ticketStore: StreamTicketStore;
   readonly closeUserSockets: (userId: string) => void;
   readonly readListenerHealth: () => ListenerHealth;
+  readonly computeGoal: ComputeGoalCombination;
 };
 
 function createSeedingUserResolver(params: {
@@ -91,40 +93,50 @@ function createProfileDependencies(database: DatabaseHandle): ApiRouteDependenci
   };
 }
 
-export function createApiRouter(params: ApiRouterParams): Router {
+type RouteAssemblyParams = {
+  readonly params: ApiRouterParams;
+  readonly domain: ReturnType<typeof createDomainRouteDependencies>;
+};
+
+function assembleRouteDependencies(assembly: RouteAssemblyParams): ApiRouteDependencies {
+  const { params, domain } = assembly;
   const { environment, logger, database, identity, verifyAccessToken } = params;
+  return {
+    checkDatabase: () => pingDatabase(database),
+    readRunQueueSummary: () => createRunQueueRepository(database).readQueueSummary(),
+    readListenerHealth: params.readListenerHealth,
+    session: createSessionRouteDependencies({ environment, verifyAccessToken }),
+    ...createScopedDependencies({ database, identity, closeUserSockets: params.closeUserSockets }),
+    profile: createProfileDependencies(database),
+    telegram: createTelegramRouteDependencies({
+      environment,
+      database,
+      logger,
+      now: () => Date.now(),
+    }),
+    streamTicketStore: params.ticketStore,
+    ...domain,
+    isDocumentationEnabled: isDocumentationEnvironment(environment.ENV),
+  };
+}
+
+export function createApiRouter(params: ApiRouterParams): Router {
+  const { environment, logger, database, verifyAccessToken } = params;
+  const rateLimiter = createRateLimiter({ now: () => Date.now() });
   const domain = createDomainRouteDependencies({
     environment,
     database,
     dispatcher: params.dispatcher,
     now: () => Date.now(),
     reportUnexpectedError: (error) => logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { error }),
+    rateLimiter,
+    computeGoal: params.computeGoal,
   });
   return createRouter({
-    routes: createApiRoutes({
-      checkDatabase: () => pingDatabase(database),
-      readRunQueueSummary: () => createRunQueueRepository(database).readQueueSummary(),
-      readListenerHealth: params.readListenerHealth,
-      session: createSessionRouteDependencies({ environment, verifyAccessToken }),
-      ...createScopedDependencies({
-        database,
-        identity,
-        closeUserSockets: params.closeUserSockets,
-      }),
-      profile: createProfileDependencies(database),
-      telegram: createTelegramRouteDependencies({
-        environment,
-        database,
-        logger,
-        now: () => Date.now(),
-      }),
-      streamTicketStore: params.ticketStore,
-      ...domain,
-      isDocumentationEnabled: isDocumentationEnvironment(environment.ENV),
-    }),
+    routes: createApiRoutes(assembleRouteDependencies({ params, domain })),
     verifyAccessToken,
     resolveUser: createSeedingUserResolver({ database, logger }),
-    rateLimiter: createRateLimiter({ now: () => Date.now() }),
+    rateLimiter,
     trustedProxyHops: environment.TRUSTED_PROXY_HOPS,
     reportUnexpectedError: (error, traceId) =>
       logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { traceId, error }),

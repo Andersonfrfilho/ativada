@@ -33,6 +33,9 @@ import type * as StrategyRoutesModule from '../../../apps/api-cryptoada/src/stra
 import type * as GoalCandlesModule from '../../../apps/api-cryptoada/src/goals/goal-evaluation-candles.js';
 import type * as GoalCacheModule from '../../../apps/api-cryptoada/src/goals/goal-evaluation-cache.js';
 import type * as GoalEvaluationModule from '../../../apps/api-cryptoada/src/goals/goal-evaluation.use-case.js';
+import type * as GoalColdBudgetModule from '../../../apps/api-cryptoada/src/goals/goal-cold-budget.js';
+import type * as GoalColdGateModule from '../../../apps/api-cryptoada/src/goals/goal-cold-gate.js';
+import type * as GoalComputationModule from '../../../apps/api-cryptoada/src/goals/goal-computation.js';
 import type * as GoalPlanCacheModule from '../../../apps/api-cryptoada/src/goals/goal-plan-cache.js';
 import type * as GoalPlanModule from '../../../apps/api-cryptoada/src/goals/goal-plan.use-case.js';
 import type * as AssetPositionModule from '../../../apps/api-cryptoada/src/assets/asset-position.js';
@@ -87,6 +90,9 @@ export type ApiApp = {
   readonly goalUseCases: typeof GoalUseCasesModule;
   readonly goalEvaluation: typeof GoalEvaluationModule;
   readonly goalCache: typeof GoalCacheModule;
+  readonly goalColdBudget: typeof GoalColdBudgetModule;
+  readonly goalColdGate: typeof GoalColdGateModule;
+  readonly goalComputation: typeof GoalComputationModule;
   readonly assetPosition: typeof AssetPositionModule;
   readonly assetRule: typeof AssetRuleModule;
   readonly assetSummary: typeof AssetSummaryModule;
@@ -150,6 +156,9 @@ export async function loadApiApp(): Promise<ApiApp> {
     goalUseCases: await load('goals/goal.use-cases'),
     goalEvaluation: await load('goals/goal-evaluation.use-case'),
     goalCache: await load('goals/goal-evaluation-cache'),
+    goalColdBudget: await load('goals/goal-cold-budget'),
+    goalColdGate: await load('goals/goal-cold-gate'),
+    goalComputation: await load('goals/goal-computation'),
     assetPosition: await load('assets/asset-position'),
     assetRule: await load('assets/asset-rule'),
     assetSummary: await load('assets/asset-summary.use-case'),

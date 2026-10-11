@@ -8,6 +8,7 @@ import {
   type OwnerScope,
 } from '@cryptoada/database';
 
+import type { GoalColdBudget } from './goal-cold-budget.js';
 import { encodeGoalCursor } from './goal-cursor.js';
 import { toGoalView, type GoalView } from './goal-views.js';
 import type { CreateGoalBody, PatchGoalBody } from './goal-requests.js';
@@ -19,6 +20,11 @@ export type GoalUseCaseDependencies = {
     'createGoal' | 'findGoal' | 'listGoalsPage' | 'updateGoal' | 'deleteGoal'
   >;
   readonly maxGoals: number;
+};
+
+// O PATCH que muda alvo, prazo ou perda máxima invalida o cache da avaliação: gasta o mesmo orçamento a frio dela.
+export type GoalUpdateDependencies = GoalUseCaseDependencies & {
+  readonly coldBudget: GoalColdBudget;
 };
 
 export type GoalPageInput = { readonly limit: number; readonly after: GoalCursor | undefined };
@@ -79,8 +85,17 @@ function definedFields(patch: PatchGoalBody): GoalPatch {
   };
 }
 
-export function createUpdateGoalUseCase(dependencies: GoalUseCaseDependencies): UpdateGoalUseCase {
+function changesEvaluation(patch: PatchGoalBody): boolean {
+  return (
+    patch.targetRate !== undefined ||
+    patch.maxLossRate !== undefined ||
+    patch.horizonDays !== undefined
+  );
+}
+
+export function createUpdateGoalUseCase(dependencies: GoalUpdateDependencies): UpdateGoalUseCase {
   return async (scope, input) => {
+    if (changesEvaluation(input.patch)) dependencies.coldBudget.charge(scope);
     const updated = await dependencies.goals.updateGoal(
       scope,
       input.goalId,

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { evaluateGoal } from '../../../packages/strategy-engine/src/index.js';
 import type { CandleRecord } from '../../../packages/database/src/index.js';
 import type { SentimentObservationRepository } from '../../../packages/database/src/sentiment/sentiment-observation.types.js';
+import type { EvaluateGoalUseCase } from '../../../apps/api-cryptoada/src/goals/goal-evaluation.use-case.js';
 import type { Route } from '../../../apps/api-cryptoada/src/router/route.types.js';
 import ethDaily from '../strategy-engine/market/ethusdt-1d-400.json' with { type: 'json' };
 import {
@@ -49,7 +49,17 @@ export function buildDailyCandles(symbols: readonly string[]): CandleRecord[] {
 export type GoalsHarness = RunsHarness & {
   // O mesmo vetor que o repositório em memória lê: um teste que acrescenta ou remove candle muda o que a API enxerga.
   readonly candleRecords: CandleRecord[];
-  readonly evaluations: { count: number };
+  // `count`: cálculos pedidos ao pool (um por combinação que errou o cache). `hold`: enquanto existir, cada cálculo espera
+  // por ela, o que mantém uma avaliação a frio "em voo" para os testes do portão.
+  readonly evaluations: {
+    count: number;
+    hold: Promise<void> | undefined;
+    // O primeiro cálculo pedido falha (o pool perdeu a thread): as demais combinações devem ser canceladas.
+    failFirst: boolean;
+    readonly signals: (AbortSignal | undefined)[];
+  };
+  // O caso de uso da avaliação, para os testes que passam o sinal de cancelamento direto.
+  readonly evaluateGoal: EvaluateGoalUseCase;
   readonly sentimentReads: { count: number };
 };
 
@@ -58,7 +68,11 @@ export type GoalsHarnessOptions = Pick<RunsHarnessOptions, 'queuePerUserLimit'> 
   // Pares habilitados que não têm nenhum candle gravado.
   readonly symbolsWithoutCandles?: readonly string[];
   readonly maxGoals?: number;
+  // Teto global de avaliações a frio simultâneas (padrão alto: só os testes do portão o baixam).
+  readonly maxConcurrentColdEvaluations?: number;
 };
+
+const DEFAULT_MAX_CONCURRENT_COLD_EVALUATIONS = 8;
 
 const NO_SENTIMENT: Pick<SentimentObservationRepository, 'listAvailable'> = {
   listAvailable: () => Promise.resolve([]),
@@ -68,7 +82,13 @@ export async function createGoalsHarness(options: GoalsHarnessOptions = {}): Pro
   const withCandles = options.symbols ?? GOAL_SYMBOLS;
   const symbols = [...withCandles, ...(options.symbolsWithoutCandles ?? [])];
   const candleRecords = buildDailyCandles(withCandles);
-  const evaluations = { count: 0 };
+  const evaluations: GoalsHarness['evaluations'] = {
+    count: 0,
+    hold: undefined,
+    failFirst: false,
+    signals: [],
+  };
+  let evaluateGoal: EvaluateGoalUseCase | undefined;
   const sentimentReads = { count: 0 };
   const harness = await createRunsHarness({
     candles: candleRecords,
@@ -78,7 +98,10 @@ export async function createGoalsHarness(options: GoalsHarnessOptions = {}): Pro
       : { queuePerUserLimit: options.queuePerUserLimit }),
     extraRoutes: (app, parts): readonly Route[] => {
       const useCases = app.goalUseCases;
-      const base = { goals: parts.goals.repository, maxGoals: options.maxGoals ?? 20 };
+      const coldBudget = app.goalColdBudget.createGoalColdBudget({
+        rateLimiter: app.rateLimiter.createRateLimiter({ now: () => parts.clock.now }),
+      });
+      const base = { goals: parts.goals.repository, maxGoals: options.maxGoals ?? 20, coldBudget };
       const evaluation = app.goalEvaluation.createGoalEvaluationUseCase({
         goals: parts.goals.repository,
         strategies: parts.strategies.repository,
@@ -93,11 +116,20 @@ export async function createGoalsHarness(options: GoalsHarnessOptions = {}): Pro
         symbols,
         now: () => parts.clock.now,
         cache: app.goalCache.createGoalEvaluationCache(),
-        evaluate: (request) => {
+        compute: async (request, signal) => {
           evaluations.count += 1;
-          return evaluateGoal(request);
+          evaluations.signals.push(signal);
+          if (evaluations.failFirst && evaluations.count === 1) throw new Error('thread perdida');
+          await evaluations.hold;
+          return app.goalComputation.computeGoalCombination(request);
         },
+        coldGate: app.goalColdGate.createColdEvaluationGate({
+          maxConcurrent:
+            options.maxConcurrentColdEvaluations ?? DEFAULT_MAX_CONCURRENT_COLD_EVALUATIONS,
+          budget: coldBudget,
+        }),
       });
+      evaluateGoal = evaluation;
       return app.goalRoutes.createGoalRoutes({
         enabledSymbols: symbols,
         createGoal: useCases.createCreateGoalUseCase(base),
@@ -118,5 +150,6 @@ export async function createGoalsHarness(options: GoalsHarnessOptions = {}): Pro
       });
     },
   });
-  return { ...harness, candleRecords, evaluations, sentimentReads };
+  if (evaluateGoal === undefined) throw new Error('as rotas de metas não foram montadas');
+  return { ...harness, candleRecords, evaluations, sentimentReads, evaluateGoal };
 }

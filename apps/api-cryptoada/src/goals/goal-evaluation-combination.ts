@@ -1,22 +1,21 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { GoalRecord } from '@cryptoada/database';
-import {
-  computeLatestTriggers,
-  TRIGGER_STATE,
-  type EngineCandle,
-  type EvaluateGoalParams,
-  type GoalEvaluation,
-  type RunSetup,
-  type SentimentObservation,
-  type StrategyVersion,
+import type {
+  EngineCandle,
+  RunSetup,
+  SentimentObservation,
+  StrategyVersion,
 } from '@cryptoada/strategy-engine';
 
-import type { CachedCombination, GoalEvaluationCache } from './goal-evaluation-cache.js';
+import { GOAL_COMPUTATION_KIND, type GoalComputation } from './goal-computation.js';
+import type { GoalCacheKeyParams, GoalEvaluationCache } from './goal-evaluation-cache.js';
+import type { ComputeGoalCombination } from './goal-evaluation-pool.js';
 import type { GoalStrategyRef } from './goal-evaluation-view.js';
 
 export type CombinationDependencies = {
   readonly cache: GoalEvaluationCache;
-  readonly evaluate: (request: EvaluateGoalParams) => GoalEvaluation;
+  // O cálculo roda numa thread do pool (nunca na da API): por isso devolve uma promessa e aceita cancelamento.
+  readonly compute: ComputeGoalCombination;
 };
 
 export type StrategyEntry = {
@@ -31,20 +30,18 @@ export type CombinationRequest = {
   readonly run: RunSetup;
   readonly candles: readonly EngineCandle[];
   readonly sentiments: readonly (SentimentObservation | undefined)[] | undefined;
+  readonly signal?: AbortSignal | undefined;
 };
+
+export type CombinationKeyParams = Pick<CombinationRequest, 'goal' | 'entry' | 'run' | 'candles'>;
 
 function lastOpenTimeOf(candles: readonly EngineCandle[]): number | null {
   return candles.at(-1)?.openTime ?? null;
 }
 
-// Avalia UMA combinação (estratégia × par), ou devolve o que já foi calculado para a mesma meta, versão, par e último
-// candle. A meta do motor leva só os três números da meta: o par dela não entra no cálculo.
-export function evaluateCombination(
-  dependencies: CombinationDependencies,
-  request: CombinationRequest,
-): CachedCombination {
+export function buildCombinationKey(request: CombinationKeyParams): GoalCacheKeyParams {
   const { goal, entry, run, candles } = request;
-  const key = {
+  return {
     goalId: goal.id,
     targetRate: goal.targetRate,
     maxLossRate: goal.maxLossRate,
@@ -53,27 +50,34 @@ export function evaluateCombination(
     symbol: run.parameters.symbol,
     lastCandleOpenTime: lastOpenTimeOf(candles),
   };
+}
+
+// Avalia UMA combinação (estratégia × par), ou devolve o que já foi calculado para a mesma meta, versão, par e último
+// candle. A meta do motor leva só os três números da meta: o par dela não entra no cálculo.
+export async function evaluateCombination(
+  dependencies: CombinationDependencies,
+  request: CombinationRequest,
+): Promise<GoalComputation> {
+  const { goal, entry, run, candles } = request;
+  const key = buildCombinationKey(request);
   const cached = dependencies.cache.get(key);
-  if (cached !== undefined) return cached;
-  const evaluation = dependencies.evaluate({
-    strategy: entry.strategy,
-    run,
-    candles,
-    sentiments: request.sentiments,
-    goal: {
-      targetRate: goal.targetRate,
-      maxLossRate: goal.maxLossRate,
-      horizonDays: goal.horizonDays,
+  if (cached !== undefined) return { kind: GOAL_COMPUTATION_KIND.COMPUTED, combination: cached };
+  const computation = await dependencies.compute(
+    {
+      strategy: entry.strategy,
+      run,
+      candles,
+      sentiments: request.sentiments,
+      goal: {
+        targetRate: goal.targetRate,
+        maxLossRate: goal.maxLossRate,
+        horizonDays: goal.horizonDays,
+      },
     },
-  });
-  const situation = computeLatestTriggers({
-    strategy: entry.strategy,
-    run,
-    candles,
-    sentiments: request.sentiments,
-    state: TRIGGER_STATE.AWAITING_ENTRY,
-  });
-  const computed: CachedCombination = { evaluation, situation };
-  dependencies.cache.set(key, computed);
-  return computed;
+    request.signal,
+  );
+  if (computation.kind === GOAL_COMPUTATION_KIND.COMPUTED) {
+    dependencies.cache.set(key, computation.combination);
+  }
+  return computation;
 }

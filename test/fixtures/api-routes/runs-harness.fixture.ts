@@ -53,6 +53,8 @@ export type CallParams = {
   readonly path: string;
   readonly body?: unknown;
   readonly rawBody?: string;
+  // O cliente que desiste: o sinal do pedido chega às rotas que sabem cancelar.
+  readonly signal?: AbortSignal;
 };
 
 // O que as rotas extras de um teste compartilham com as do harness: os mesmos repositórios em memória e o mesmo relógio.
@@ -269,6 +271,7 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
           method: params.method ?? 'GET',
           headers,
           ...(body === undefined ? {} : { body }),
+          ...(params.signal === undefined ? {} : { signal: params.signal }),
         }),
         '203.0.113.7',
       );

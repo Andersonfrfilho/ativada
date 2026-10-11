@@ -11,10 +11,12 @@ import {
   type DatabaseHandle,
 } from '@cryptoada/database';
 
-import { evaluateGoal } from '@cryptoada/strategy-engine';
-
 import type { Environment } from '../environment.js';
+import type { RateLimiter } from '../rate-limit/rate-limiter.js';
+import { createGoalColdBudget } from '../goals/goal-cold-budget.js';
+import { createColdEvaluationGate } from '../goals/goal-cold-gate.js';
 import { createGoalEvaluationCache } from '../goals/goal-evaluation-cache.js';
+import type { ComputeGoalCombination } from '../goals/goal-evaluation-pool.js';
 import { createGoalEvaluationUseCase } from '../goals/goal-evaluation.use-case.js';
 import { createGoalPlanCache } from '../goals/goal-plan-cache.js';
 import { createGoalPlanUseCase } from '../goals/goal-plan.use-case.js';
@@ -74,6 +76,10 @@ export type DomainRouteParams = {
   readonly dispatcher: RunDispatcher;
   readonly now: () => number;
   readonly reportUnexpectedError: (error: unknown) => void;
+  // O limitador do roteador: o orçamento das avaliações a frio de metas gasta dele.
+  readonly rateLimiter: RateLimiter;
+  // O cálculo do motor roda no pool de threads (nunca na thread da API).
+  readonly computeGoal: ComputeGoalCombination;
 };
 
 function createStrategyDependencies(database: DatabaseHandle): StrategyRouteDependencies {
@@ -91,7 +97,8 @@ function createStrategyDependencies(database: DatabaseHandle): StrategyRouteDepe
 function createGoalDependencies(params: DomainRouteParams): GoalRouteDependencies {
   const { database, environment } = params;
   const goals = createGoalRepository(database);
-  const dependencies = { goals, maxGoals: MAX_GOALS_PER_USER };
+  const coldBudget = createGoalColdBudget({ rateLimiter: params.rateLimiter });
+  const dependencies = { goals, maxGoals: MAX_GOALS_PER_USER, coldBudget };
   return {
     enabledSymbols: environment.MARKET_SYMBOLS,
     createGoal: createCreateGoalUseCase(dependencies),
@@ -108,7 +115,11 @@ function createGoalDependencies(params: DomainRouteParams): GoalRouteDependencie
       symbols: environment.MARKET_SYMBOLS,
       now: params.now,
       cache: createGoalEvaluationCache(),
-      evaluate: evaluateGoal,
+      compute: params.computeGoal,
+      coldGate: createColdEvaluationGate({
+        maxConcurrent: environment.GOAL_EVALUATION_MAX_CONCURRENT,
+        budget: coldBudget,
+      }),
     }),
     getGoalPlan: createGoalPlanUseCase({
       goals,

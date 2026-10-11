@@ -136,7 +136,11 @@ function createEvaluationRoute(dependencies: GoalRouteDependencies): Route {
     documentation: GOAL_DOCUMENTATION.evaluation,
     handler: async (context): Promise<RouteResult> => ({
       status: HTTP_STATUS.OK,
-      data: await dependencies.evaluateGoal(context.scope, readGoalId(context)),
+      data: await dependencies.evaluateGoal(
+        context.scope,
+        readGoalId(context),
+        context.request.signal,
+      ),
     }),
   };
 }

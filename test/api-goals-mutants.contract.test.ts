@@ -17,6 +17,7 @@ const REQUESTS = 'goals/goal-requests.ts';
 const USE_CASES = 'goals/goal.use-cases.ts';
 const ROUTES = 'goals/goals.routes.ts';
 const COMBINATION = 'goals/goal-evaluation-combination.ts';
+const COMPUTATION = 'goals/goal-computation.ts';
 const CANDLES = 'goals/goal-evaluation-candles.ts';
 const EVALUATION = 'goals/goal-evaluation.use-case.ts';
 const STRATEGIES = 'goals/goal-evaluation-strategies.ts';
@@ -160,11 +161,15 @@ const MUTANTS: readonly SourceMutant[] = [
   },
   {
     name: 'EVALUATION_CACHE_NEVER_READ',
-    edits: edit(COMBINATION, 'if (cached !== undefined) return cached;', ''),
+    edits: edit(
+      COMBINATION,
+      'if (cached !== undefined) return { kind: GOAL_COMPUTATION_KIND.COMPUTED, combination: cached };',
+      '',
+    ),
   },
   {
     name: 'EVALUATION_CACHE_NEVER_WRITTEN',
-    edits: edit(COMBINATION, 'dependencies.cache.set(key, computed);', ''),
+    edits: edit(COMBINATION, 'dependencies.cache.set(key, computation.combination);', ''),
   },
   {
     name: 'CACHE_IGNORES_THE_LAST_CANDLE',
@@ -185,7 +190,7 @@ const MUTANTS: readonly SourceMutant[] = [
   {
     name: 'EVALUATION_SITUATION_FOR_THE_HOLDING_STATE',
     edits: edit(
-      COMBINATION,
+      COMPUTATION,
       'state: TRIGGER_STATE.AWAITING_ENTRY,',
       'state: TRIGGER_STATE.HOLDING,',
     ),
@@ -337,6 +342,74 @@ const MUTANTS: readonly SourceMutant[] = [
   {
     name: 'PLAN_CACHE_IGNORES_THE_HORIZON',
     edits: edit(PLAN_CACHE, '    key.horizonDays,\n', ''),
+  },
+  {
+    name: 'COLD_GATE_NEVER_ENTERED',
+    edits: edit(
+      EVALUATION,
+      'if (!isCold(dependencies, input)) return evaluate();',
+      'return evaluate();',
+    ),
+  },
+  {
+    name: 'WARM_EVALUATION_ENTERS_THE_COLD_GATE',
+    edits: edit(EVALUATION, 'if (!isCold(dependencies, input)) return evaluate();', ''),
+  },
+  {
+    name: 'COLD_CHECK_INVERTED',
+    edits: edit(EVALUATION, ') === undefined,', ') !== undefined,'),
+  },
+  {
+    name: 'COLD_SIGNATURE_IGNORES_THE_GOAL',
+    edits: edit(EVALUATION, 'signature: JSON.stringify(toGoalView(goal))', "signature: 'meta'"),
+  },
+  {
+    name: 'CANCEL_SIGNAL_NOT_FORWARDED_TO_THE_POOL',
+    edits: edit(COMBINATION, '    request.signal,\n  );', '    undefined,\n  );'),
+  },
+  {
+    name: 'CANCEL_SIGNAL_NOT_TAKEN_FROM_THE_REQUEST',
+    edits: edit(ROUTES, '        context.request.signal,\n', '        undefined,\n'),
+  },
+  {
+    name: 'FAILED_COMBINATION_DOES_NOT_CANCEL_THE_OTHERS',
+    edits: edit(EVALUATION, '    failure.abort(error);\n', ''),
+  },
+  {
+    name: 'PARENT_SIGNAL_IGNORED',
+    edits: edit(
+      EVALUATION,
+      'params.signal === undefined ? failure.signal : AbortSignal.any([params.signal, failure.signal])',
+      'failure.signal',
+    ),
+  },
+  {
+    name: 'PATCH_THAT_CHANGES_THE_EVALUATION_IS_FREE',
+    edits: edit(
+      USE_CASES,
+      'if (changesEvaluation(input.patch)) dependencies.coldBudget.charge(scope);',
+      '',
+    ),
+  },
+  {
+    name: 'PATCH_OF_THE_SWITCH_ALSO_CHARGES',
+    edits: edit(
+      USE_CASES,
+      '    patch.targetRate !== undefined ||',
+      '    patch.isActive !== undefined ||\n    patch.targetRate !== undefined ||',
+    ),
+  },
+  {
+    name: 'PATCH_OF_THE_HORIZON_IS_FREE',
+    edits: edit(USE_CASES, ' ||\n    patch.horizonDays !== undefined', ''),
+  },
+  {
+    name: 'PATCH_OF_THE_MAX_LOSS_IS_FREE',
+    edits: edit(USE_CASES, ' ||\n    patch.maxLossRate !== undefined', ''),
+  },
+  {
+    name: 'PATCH_OF_THE_TARGET_IS_FREE',
+    edits: edit(USE_CASES, '    patch.targetRate !== undefined ||\n', ''),
   },
 ];
 

@@ -16,7 +16,7 @@ import {
 } from '../shared/errors/error-code.constant.js';
 import { HTTP_STATUS } from '../shared/http/http.constant.js';
 import { GOAL_ID_PARAM } from './goal.constant.js';
-import { GOAL_VIEW_SCHEMA } from './goals.docs.js';
+import { GOAL_VIEW_SCHEMA } from './goal-view.schema.js';
 
 const TAG = 'Metas';
 const NULLABLE_RATE = decimalTextSchema.nullable();

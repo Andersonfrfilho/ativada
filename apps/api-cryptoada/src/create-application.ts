@@ -10,6 +10,8 @@ import type { BacktestThreadRunner } from './backtest/backtest-thread-runner.js'
 import { createAccessTokenVerifier } from './authentication/access-token-verifier.js';
 import { createRemoteKeyResolver } from './authentication/remote-key-resolver.js';
 import { createApiRouter } from './create-api-router.js';
+import { createApplicationGoalPool } from './goals/create-application-goal-pool.js';
+import type { GoalEvaluationPool } from './goals/goal-evaluation-pool.js';
 import type { Environment } from './environment.js';
 import { createRequestHandler, type RequestHandler } from './http/create-request-handler.js';
 import { createIdentityAdmin } from './identity/create-identity-admin.js';
@@ -63,10 +65,11 @@ type LifecycleParams = {
   readonly database: DatabaseHandle;
   readonly dispatcher: RunQueueDispatcher;
   readonly stream: ApplicationStream;
+  readonly goalPool: GoalEvaluationPool;
 };
 
 function createLifecycle(params: LifecycleParams): Pick<Application, 'start' | 'closeResources'> {
-  const { database, dispatcher, stream } = params;
+  const { database, dispatcher, stream, goalPool } = params;
   return {
     start: async (): Promise<void> => {
       stream.start();
@@ -74,6 +77,7 @@ function createLifecycle(params: LifecycleParams): Pick<Application, 'start' | '
     },
     closeResources: async (): Promise<void> => {
       await stream.close();
+      goalPool.close();
       await dispatcher.stop();
       await closeDatabase(database);
     },
@@ -83,19 +87,18 @@ function createLifecycle(params: LifecycleParams): Pick<Application, 'start' | '
 export function createApplication(params: CreateApplicationParams): Application {
   const { environment, logger } = params;
   const database = openDatabase(environment.DATABASE_URL);
-  const reportUnexpectedError = (error: unknown): void =>
-    logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { error });
   const runners = createApplicationRunners({ environment, database });
   // A TROCA da T3.4 para a T3.6: o despachante sem tetos deu lugar ao da fila durável, que reivindica as execuções do banco.
   const dispatcher = createApplicationDispatcher({
     environment,
     queue: createRunQueueRepository(database),
     runners,
-    reportUnexpectedError,
+    reportUnexpectedError: (error) => logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { error }),
   });
   const ticketStore = createStreamTicketStore({ now: () => Date.now() });
   const stream = createApplicationStream({ environment, logger, database, ticketStore });
   registerPriceAlertEvaluation({ environment, database, stream });
+  const goalPool = createApplicationGoalPool(environment);
   const router = createApiRouter({
     environment,
     logger,
@@ -106,6 +109,7 @@ export function createApplication(params: CreateApplicationParams): Application 
     ticketStore,
     closeUserSockets: (userId) => void stream.endpoint.closeUser(userId),
     readListenerHealth: stream.readListenerHealth,
+    computeGoal: goalPool.compute,
   });
   return {
     handler: createRequestHandler({
@@ -117,6 +121,6 @@ export function createApplication(params: CreateApplicationParams): Application 
     walkForwardRunner: runners.walkForwardRunner,
     dispatcher,
     stream: stream.endpoint,
-    ...createLifecycle({ database, dispatcher, stream }),
+    ...createLifecycle({ database, dispatcher, stream, goalPool }),
   };
 }

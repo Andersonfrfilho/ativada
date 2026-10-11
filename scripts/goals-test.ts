@@ -8,6 +8,7 @@ import {
 } from '../packages/database/test-support/temporary-database.js';
 import { createLiveTestContext, createLiveUser } from './live-test/live-test-context.js';
 import {
+  checkColdEvaluationLimits,
   checkCrudAndIsolation,
   checkEvaluation,
   seedEvaluationMarket,
@@ -26,6 +27,7 @@ async function runChecks(context: GoalsTestContext): Promise<void> {
   await seedEvaluationMarket(context);
   await checkCrudAndIsolation(context, { a, b });
   await checkEvaluation(context, b);
+  await checkColdEvaluationLimits(context, { busy: a, exhausted: b });
   const scenarios = await checkThreeOutcomes(context);
   await checkRestart(context, scenarios);
 }

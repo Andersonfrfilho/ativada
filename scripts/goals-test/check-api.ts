@@ -267,3 +267,74 @@ export async function checkEvaluation(context: GoalsTestContext, user: LiveUser)
     `avaliação estratégia x par: ${cold.combinations.length} combinações (${cold.evaluatedStrategies} estratégias x 5 pares) em ${coldMilliseconds} ms a frio (limite de ${EVALUATION_BUDGET_MILLISECONDS} ms por estratégia, ${budgetMilliseconds} ms) e ${warmMilliseconds} ms em cache, ranking 1..${ranks.length}, um par da meta`,
   );
 }
+
+const HEALTH_POLL_MILLISECONDS = 20;
+const LOOP_STALL_LIMIT_MILLISECONDS = 250;
+
+// Mede o quanto a API demora a responder `/v1/health` ENQUANTO uma avaliação a frio roda: com o cálculo na thread da API,
+// o laço de eventos para e a saúde espera a avaliação inteira; no pool, responde em milissegundos.
+async function measureHealthDuring(
+  context: GoalsTestContext,
+  work: Promise<unknown>,
+): Promise<{ readonly polls: number; readonly worstMilliseconds: number }> {
+  let isRunning = true;
+  void work.finally(() => {
+    isRunning = false;
+  });
+  let polls = 0;
+  let worstMilliseconds = 0;
+  while (isRunning) {
+    const startedAt = performance.now();
+    await context.api.call({ path: '/v1/health' });
+    worstMilliseconds = Math.max(worstMilliseconds, performance.now() - startedAt);
+    polls += 1;
+    await Bun.sleep(HEALTH_POLL_MILLISECONDS);
+  }
+  return { polls, worstMilliseconds: Math.round(worstMilliseconds) };
+}
+
+export async function checkColdEvaluationLimits(
+  context: GoalsTestContext,
+  users: { readonly busy: LiveUser; readonly exhausted: LiveUser },
+): Promise<void> {
+  const goalId = await createGoal(context, { user: users.busy, spec: SPEC });
+  const evaluation = context.api.call({
+    subject: users.busy.subject,
+    path: `/v1/goals/${goalId}/evaluation`,
+  });
+  const health = await measureHealthDuring(context, evaluation);
+  assertCondition((await evaluation).status === 200, 'a avaliação a frio responde 200');
+  assertCondition(health.polls >= 1, 'a saúde foi consultada durante a avaliação');
+  assertCondition(
+    health.worstMilliseconds < LOOP_STALL_LIMIT_MILLISECONDS,
+    `a API ficou ${health.worstMilliseconds} ms sem responder durante a avaliação (limite ${LOOP_STALL_LIMIT_MILLISECONDS} ms): o cálculo está na thread da API`,
+  );
+  reportGoals(
+    `avaliação fora da thread da API: ${health.polls} consultas de saúde durante a avaliação a frio, a pior em ${health.worstMilliseconds} ms (limite ${LOOP_STALL_LIMIT_MILLISECONDS} ms)`,
+  );
+  // O usuário `exhausted` já gastou as três avaliações a frio do minuto em `checkEvaluation`.
+  const fresh = await createGoal(context, { user: users.exhausted, spec: SPEC });
+  const refused = await context.api.call({
+    subject: users.exhausted.subject,
+    path: `/v1/goals/${fresh}/evaluation`,
+  });
+  assertCondition(
+    refused.status === 429 && Number(refused.headers.get('Retry-After')) > 0,
+    `a 4ª avaliação a frio do minuto: ${refused.status}`,
+  );
+  const patched = await context.api.call({
+    subject: users.exhausted.subject,
+    method: 'PATCH',
+    path: `/v1/goals/${fresh}`,
+    body: { targetRate: '0.07' },
+  });
+  assertCondition(patched.status === 429, `o PATCH de alvo no mesmo orçamento: ${patched.status}`);
+  const foreign = await context.api.call({
+    subject: users.exhausted.subject,
+    path: `/v1/goals/${goalId}/evaluation`,
+  });
+  assertCondition(foreign.status === 404, 'a meta de outro usuário segue sendo 404');
+  reportGoals(
+    'orçamento a frio: a 4ª avaliação do minuto e o PATCH de alvo respondem 429 com Retry-After; avaliação em cache não gasta',
+  );
+}
