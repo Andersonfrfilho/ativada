@@ -150,6 +150,18 @@ describe('CORS uses an exact allowlist with credentials', () => {
     expectSecurityHeaders(response);
   });
 
+  test('the preflight lists every verb the routes use, PUT included', async () => {
+    const response = await harness.sendThroughHandler({
+      path: USER_PATH,
+      method: 'OPTIONS',
+      headers: { Origin: ALLOWED_ORIGIN, 'Access-Control-Request-Method': 'PUT' },
+    });
+    const methods = (response.headers.get('Access-Control-Allow-Methods') ?? '')
+      .split(',')
+      .map((method) => method.trim());
+    expect(methods).toStrictEqual(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
+  });
+
   test('a preflight from a foreign origin is rejected without CORS headers', async () => {
     const response = await harness.sendThroughHandler({
       path: USER_PATH,

@@ -214,6 +214,11 @@ test('PWA: manifesto válido, service worker ativo e nada de /v1 em cache; CSP s
   expect(html).toContain('Content-Security-Policy');
   expect(html).not.toContain('unsafe-inline');
   expect(html).not.toContain('unsafe-eval');
+  const served = (await page.request.get('/')).headers();
+  expect(served['content-security-policy']).toContain("frame-ancestors 'none'");
+  expect(served['x-frame-options']).toBe('DENY');
+  expect(served['strict-transport-security']).toContain('max-age=');
+  expect(served['permissions-policy']).toContain('camera=()');
 });
 
 test('celular: sem rolagem horizontal em nenhuma tela do painel', async () => {

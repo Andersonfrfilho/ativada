@@ -22,7 +22,7 @@ export const CORS_HEADER = {
   REQUEST_METHOD: 'Access-Control-Request-Method',
 } as const;
 
-export const CORS_ALLOWED_METHODS = 'GET, POST, PATCH, DELETE, OPTIONS';
+export const CORS_ALLOWED_METHODS = 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
 export const CORS_ALLOWED_HEADERS = 'Authorization, Content-Type, X-Requested-With';
 export const CORS_EXPOSED_HEADERS = 'Retry-After, X-Trace-Id';
 export const CORS_PREFLIGHT_MAX_AGE_SECONDS = '600';

@@ -3,19 +3,15 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv, type Plugin, type UserConfig } from 'vite';
 
+import {
+  PANEL_CONTENT_SECURITY_POLICY_DIRECTIVES,
+  PANEL_SECURITY_HEADERS,
+} from './panel-security-headers.constant.js';
+
 const API_PATH_PREFIX = '/v1';
 const LOOPBACK_HOST = '127.0.0.1';
 const DEFAULT_PANEL_PORT = 56100;
-const CONTENT_SECURITY_POLICY = [
-  "default-src 'self'",
-  "script-src 'self'",
-  "style-src 'self'",
-  "img-src 'self' data:",
-  "connect-src 'self'",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-].join('; ');
+const CONTENT_SECURITY_POLICY = PANEL_CONTENT_SECURITY_POLICY_DIRECTIVES.join('; ');
 
 // A política só vale no build: o servidor de desenvolvimento injeta um script embutido (React Refresh).
 function createContentSecurityPolicyPlugin(): Plugin {
@@ -44,7 +40,13 @@ export default defineConfig(({ mode }): UserConfig => {
   return {
     plugins: [react(), createContentSecurityPolicyPlugin()],
     server: { host: LOOPBACK_HOST, port, strictPort: true, proxy },
-    preview: { host: LOOPBACK_HOST, port, strictPort: true, proxy },
+    preview: {
+      host: LOOPBACK_HOST,
+      port,
+      strictPort: true,
+      proxy,
+      headers: PANEL_SECURITY_HEADERS,
+    },
     build: { target: 'es2023', sourcemap: false },
   };
 });
