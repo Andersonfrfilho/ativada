@@ -85,15 +85,15 @@ describe('alvo e stop de uma posição já comprada: partem do preço médio e s
     'médio %s, taxa %s, slippage %s, tick %s, alvo %s, perda %s -> alvo %s e stop %s',
     (average, feeRate, slippageRate, tickSize, targetRate, maxLossRate, target, stop) => {
       const levels = api.computeHoldingLevels({
-        averagePrice: new EngineDecimal(average as string),
+        averagePrice: new EngineDecimal(average),
         parameters: parametersWith({
-          feeRate: feeRate as string,
-          slippageRate: slippageRate as string,
-          tickSize: tickSize as string,
+          feeRate: feeRate,
+          slippageRate: slippageRate,
+          tickSize: tickSize,
         }),
         goal: {
-          targetRate: targetRate as string,
-          maxLossRate: maxLossRate as string,
+          targetRate: targetRate,
+          maxLossRate: maxLossRate,
           horizonDays: 1,
         },
       });

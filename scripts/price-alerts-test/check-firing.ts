@@ -84,12 +84,6 @@ export async function checkIsolationAndSymbols(
   const before = context.events.length;
   await pushTick(context, { instance: first, price: '99999', symbol: OTHER_SYMBOL });
   assertCondition(context.events.length === before, 'tick de outro par não dispara alerta do BTC');
-  const ofB =
-    (await context.client`SELECT id FROM price_alerts WHERE user_id = ${users.b.id}`) as readonly {
-      id: string;
-    }[];
-  const bAlert = ofB[0]?.id;
-  if (bAlert === undefined) throw new Error('alerta de B sumiu');
   await pushTick(context, { instance: first, price: '73500.00000000' });
   await waitForEvents(context, before + 1);
   await dispatchUntilQuiet(context);

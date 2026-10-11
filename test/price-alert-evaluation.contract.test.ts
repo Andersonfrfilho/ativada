@@ -79,7 +79,9 @@ describe('avaliador do alerta de preço: cada tick agregado vai ao banco, o dado
       now: () => NOW,
       staleAfterMilliseconds: STALE_AFTER,
     });
-    await expect(Promise.resolve(listener.onTick(tick()))).rejects.toThrow('banco fora');
+    const failure = await Promise.resolve(listener.onTick(tick())).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(Error);
+    expect((failure as Error).message).toBe('banco fora');
   });
 });
 
