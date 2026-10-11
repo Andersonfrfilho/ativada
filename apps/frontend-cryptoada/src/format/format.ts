@@ -32,13 +32,19 @@ export function formatDecimal(decimalText: string): string {
 }
 
 const PRICE_MAXIMUM_FRACTION = 8;
+const PRICE_TIERS: readonly (readonly [number, number])[] = [
+  [1_000, 2],
+  [1, 4],
+];
 
-// Preço, nível e valor de alerta aceitam até 8 casas: mostra todas as que existem (mínimo 2), sem cortar moeda barata.
+// Preço, nível e valor de alerta: moeda barata mostra até 8 casas e preço alto não arrasta cauda de 8 (a partir de 1.000, centavos).
 export function formatPrice(decimalText: string): string {
   if (!isPlainDecimal(decimalText)) return numberFormat.format(Number(decimalText));
+  const magnitude = Math.abs(Number(decimalText));
+  const tier = PRICE_TIERS.find(([floor]) => magnitude >= floor);
   return formatDecimalText(decimalText, {
     minimumFraction: FRACTION_DIGITS,
-    maximumFraction: PRICE_MAXIMUM_FRACTION,
+    maximumFraction: tier?.[1] ?? PRICE_MAXIMUM_FRACTION,
   });
 }
 

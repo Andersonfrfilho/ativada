@@ -10,6 +10,7 @@ import {
   roundScaledHalfUp,
   toPlainText,
 } from '../src/format/decimal.js';
+import { formatPrice } from '../src/format/format.js';
 
 describe('scaled decimal parsing', () => {
   test('keeps 8 places exactly and truncates the rest toward zero', () => {
@@ -77,6 +78,23 @@ describe('exact pt-BR formatting', () => {
       expect(formatDecimalText(text, { minimumFraction: minimum, maximumFraction: maximum })).toBe(
         expected,
       );
+    });
+  }
+});
+
+describe('price formatting by magnitude', () => {
+  const cases: readonly (readonly [string, string])[] = [
+    ['66099.11562388', '66.099,12'],
+    ['62000', '62.000,00'],
+    ['12.34567', '12,3457'],
+    ['3.5', '3,50'],
+    ['0.00001234', '0,00001234'],
+    ['0.5', '0,50'],
+    ['-0.00001234', '-0,00001234'],
+  ];
+  for (const [text, expected] of cases) {
+    test(`${text} shows as ${expected}`, () => {
+      expect(formatPrice(text)).toBe(expected);
     });
   }
 });

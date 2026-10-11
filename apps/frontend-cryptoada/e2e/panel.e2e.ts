@@ -21,6 +21,7 @@ const NOTICE = 'Simulação com dinheiro fictício. Não é recomendação de in
 const REFRESH_COOKIE = '__Host-cryptoada_refresh';
 const JWT_PATTERN = /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\./;
 const DIST_INDEX = new URL('../dist/index.html', import.meta.url);
+const ROUND_PAUSE_MILLISECONDS = 6_000;
 const consoleProblems: string[] = [];
 let page: Page;
 
@@ -163,6 +164,8 @@ test('estratégias: duplicar o exemplo, editar um parâmetro gera a versão 2 e 
   for (let round = 0; round < environment.strategyRepeat; round += 1) {
     await editStrategyIntoANewVersion(page);
     await deleteTheCopy(page);
+    // O limite de 120 requisições por minuto vale no E2E: nas repetições, espaça as rodadas.
+    if (environment.strategyRepeat > 1) await page.waitForTimeout(ROUND_PAUSE_MILLISECONDS);
   }
 });
 
