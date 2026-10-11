@@ -381,6 +381,53 @@ async function checkOutboxRules(context: LifecycleCheckContext): Promise<void> {
   );
 }
 
+// Limpar os disparados (T5.5): só os do dono, só os que já dispararam; armado, desligado à mão e alheio ficam.
+async function checkClearFired(context: LifecycleCheckContext): Promise<void> {
+  const { handle, client, assertCondition, reportCheck } = context;
+  const owner = await resolvePersistenceOwner(handle, 'subject-price-alert-clear-owner');
+  const other = await resolvePersistenceOwner(handle, 'subject-price-alert-clear-other');
+  const alerts = createPriceAlertRepository(handle);
+  const fired = [await created(alerts, owner.scope), await created(alerts, owner.scope)];
+  const armed = await created(alerts, owner.scope);
+  const disabled = await created(alerts, owner.scope);
+  const foreignFired = await created(alerts, other.scope);
+  for (const alert of [...fired, foreignFired]) {
+    await client`UPDATE price_alerts SET is_enabled = false, triggered_at = now() WHERE id = ${alert.id}`;
+  }
+  await alerts.updatePriceAlert(owner.scope, {
+    alertId: disabled.id,
+    patch: { isEnabled: false },
+    maxEnabled: 50,
+  });
+  assertCondition(
+    (await alerts.deleteFiredPriceAlerts(owner.scope)) === fired.length,
+    'limpar apaga exatamente os disparados do dono',
+  );
+  for (const alert of fired) {
+    assertCondition(
+      (await alerts.findPriceAlert(owner.scope, alert.id)) === undefined,
+      'o disparado some',
+    );
+  }
+  assertCondition(
+    (await alerts.findPriceAlert(owner.scope, armed.id)) !== undefined,
+    'o armado fica',
+  );
+  assertCondition(
+    (await alerts.findPriceAlert(owner.scope, disabled.id)) !== undefined,
+    'o desligado à mão fica',
+  );
+  assertCondition(
+    (await alerts.findPriceAlert(other.scope, foreignFired.id)) !== undefined,
+    'o disparado de outro usuário fica',
+  );
+  assertCondition(
+    (await alerts.deleteFiredPriceAlerts(owner.scope)) === 0,
+    'repetir não apaga nada',
+  );
+  reportCheck('alertas de preço: limpar os disparados é por dono e não leva armado nem desligado');
+}
+
 export async function checkPriceAlerts(context: LifecycleCheckContext): Promise<void> {
   await checkRoundTrip(context);
   await checkIsolation(context);
@@ -388,6 +435,7 @@ export async function checkPriceAlerts(context: LifecycleCheckContext): Promise<
   await checkCeilingUnderRace(context);
   await checkDatabaseRules(context);
   await checkFiring(context);
+  await checkClearFired(context);
   await checkFiringRaces(context);
   await checkActiveOwner(context);
   await checkOutboxRules(context);
