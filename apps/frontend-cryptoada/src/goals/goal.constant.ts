@@ -10,6 +10,11 @@ export const DEFAULT_TARGET_PERCENT = '3';
 export const DEFAULT_HORIZON_DAYS = '30';
 export const DEFAULT_MAX_LOSS_PERCENT = '5';
 export const MAXIMUM_HORIZON_DAYS = 365;
+// RF13: o prazo da meta é um destes cinco (a API aceita de 1 a 365, mas a tela segue a especificação).
+export const HORIZON_OPTIONS = [7, 14, 30, 60, 90].map((days) => ({
+  value: String(days),
+  label: `${days} dias`,
+}));
 
 export const GOAL_FIELD_LABEL: Readonly<Record<string, string>> = {
   symbol: 'Par',

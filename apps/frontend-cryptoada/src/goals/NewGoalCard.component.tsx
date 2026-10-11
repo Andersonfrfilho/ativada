@@ -13,6 +13,7 @@ import {
   DEFAULT_HORIZON_DAYS,
   DEFAULT_MAX_LOSS_PERCENT,
   DEFAULT_TARGET_PERCENT,
+  HORIZON_OPTIONS,
 } from './goal.constant.js';
 import {
   buildGoalRequest,
@@ -44,10 +45,11 @@ function GoalFields({ values, symbols, onChange }: GoalFieldsProps): ReactElemen
         value={values.targetPercent}
         onChange={(targetPercent) => onChange({ targetPercent })}
       />
-      <TextField
+      <SelectField
         id="goal-horizon"
         label="Prazo (dias)"
         value={values.horizonDays}
+        options={HORIZON_OPTIONS}
         onChange={(horizonDays) => onChange({ horizonDays })}
       />
       <TextField

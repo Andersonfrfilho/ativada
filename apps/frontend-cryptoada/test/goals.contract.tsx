@@ -95,35 +95,16 @@ describe('new goal', () => {
     expect(fake.callsTo('POST', '/v1/goals')).toHaveLength(0);
   });
 
-  test('the deadline is at most a year: 365 goes through, 366 is stopped', async () => {
-    const { fake } = renderApp({
-      path: '/metas',
-      isAuthenticated: true,
-      routes: goalRoutes([
-        {
-          method: 'POST',
-          path: '/v1/goals',
-          respond: (): Response => dataResponse(buildGoal({ id: 'goal-new' }), HTTP_STATUS.CREATED),
-        },
-        {
-          method: 'GET',
-          path: '/v1/goals/goal-new',
-          respond: (): Response => dataResponse(buildGoal({ id: 'goal-new' })),
-        },
-        {
-          method: 'GET',
-          path: '/v1/goals/goal-new/evaluation',
-          respond: (): Response => dataResponse(buildEvaluation([])),
-        },
-      ]),
-    });
-    fireEvent.change(await screen.findByLabelText('Prazo (dias)'), { target: { value: '366' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Declarar meta' }));
-    expect((await screen.findByRole('alert')).textContent).toContain('Prazo');
-    expect(fake.callsTo('POST', '/v1/goals')).toHaveLength(0);
-    fireEvent.change(screen.getByLabelText('Prazo (dias)'), { target: { value: '365' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Declarar meta' }));
-    await waitFor(() => expect(fake.callsTo('POST', '/v1/goals')).toHaveLength(1));
+  test('the deadline offers the spec presets (7, 14, 30, 60 and 90 days), 30 by default', async () => {
+    renderApp({ path: '/metas', isAuthenticated: true, routes: goalRoutes() });
+    const select = await screen.findByLabelText('Prazo (dias)');
+    expect(select.tagName).toBe('SELECT');
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['7 dias', '14 dias', '30 dias', '60 dias', '90 dias']);
+    expect(select).toHaveProperty('value', '30');
   });
 
   test('shows the API problems by field and the limit in words', async () => {
