@@ -1601,6 +1601,18 @@ Migration `0019_user_assets`: `user_assets` (`id`, `user_id`, `symbol`, `quantit
 
 **Prova.** Contas à mão da média ponderada (tabela de 8 casos, dízima, 8 casas, posição zerada), 37 contratos das rotas (404 idêntico, teto, validação sem eco, venda além da quantidade), 21 do resumo (valor, custo, resultado, alvo e stop contra o oráculo Decimal do Python, sem preço, regra do dia, cache, cota), 52 mutantes da API; `make database-test` e `make user-asset-mutants` (14 mutantes contra Postgres real: dono, trava, teto, recusa, cursor, ordem, CHECKs e unicidade); `make lgpd-test` (exportação e exclusão da conta com `user_assets`).
 
+## Painel: metas, plano, ativos e preços ao vivo (T5.6 a T5.8)
+
+| Peça | Decisão | Motivo |
+|---|---|---|
+| Porcentagem → fração | O formulário recebe `%` e envia a fração movendo a vírgula NO TEXTO (`"2.5"` → `"0.025"`); nunca passa por `number` | A API valida a mesma grafia do motor; `0.07 / 100` em ponto flutuante não é `0.0007` |
+| Ranking é histórico | A tela de uma meta traz o aviso fixo de que são janelas passadas e que COMPRAR/SEGURAR/EVITAR não é recomendação; campos nulos do motor (janela vazia, sentimento sem observação) têm texto próprio | RNF de linguagem; o motor devolve `null` e a tela não pode quebrar |
+| Simular esta meta | Só para o par da meta (a API recusa outro par com `GOAL_SYMBOL_MISMATCH`); o cartão "Meta ativa" lê meta, detalhe e curva da simulação ligada e calcula progresso, ritmo e prazo no navegador | A simulação é a fonte da verdade do saldo |
+| Regra do dia dos ativos | A API só calcula a regra com `strategyId`; o painel manda a primeira estratégia da lista até a pessoa escolher | Sem estratégia, `rule` é `null` e a tela ficaria sem a regra |
+| Câmbio | O produto NÃO tem fonte de câmbio: a cotação USDT→R$ é digitada, guardada em `localStorage` e só multiplica na tela | Nenhuma fonte de dado de câmbio foi aprovada; o valor em USDT continua sendo o da API |
+| Preços ao vivo | `MarketStore` fora do React (`useSyncExternalStore`), selo "ao vivo"/"sem dados há N s" pelo estado `live`/`waiting`/`stale`/`offline`, REST de reserva a cada 15 s e rebusca no `resync` | RF16: a tela não depende de recarregar, e nunca mostra preço velho como se fosse de agora |
+| Sentimento | `GET /v1/market/sentiment` devolve o último valor gravado e o objeto `source` com o crédito; o painel mostra o crédito e o link junto do valor | RF01, D14 |
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |

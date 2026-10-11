@@ -217,7 +217,7 @@ Entregues nas T4b.5 a T4b.8; a definição fechada está no ADR 0002 ("Plano de 
   de 15 s quando o WebSocket não conecta. Ao reconectar, rebusca o estado por REST.
 - Alerta de preço (RF14) é avaliado no servidor a cada tick consolidado (o cliente nunca decide).
 
-## 5d. Painel (T5.1, T5.1b e T5.2)
+## 5d. Painel (T5.1 a T5.8)
 
 `apps/frontend-cryptoada`: React 19 + Vite 8 + react-router 8 + TanStack Query 5. Sem biblioteca de componentes, de estilo
 nem de PWA (o service worker `public/sw.js` é escrito à mão, guarda só a casca e nunca responde a `/v1`).
@@ -239,8 +239,8 @@ nem de PWA (o service worker `public/sw.js` é escrito à mão, guarda só a cas
 - **Visão geral (T5.2).** Uma ideia por cartão: saldo e resultado × comprar e segurar da simulação ao vivo ativa (estado
   "Rodando", "Aguardando dados do mercado" ou "Na fila"), últimos sinais com o motivo, um cartão por moeda
   (`VITE_MARKET_SYMBOLS`, padrão `BTCUSDT,ETHUSDT`) com o último fechamento de `1h` e a variação de 24 h, e o crédito
-  "Fear & Greed Index por alternative.me" com link `rel="noopener noreferrer"` (RF01, D14). A API não tem rota do valor do
-  índice: hoje a página só credita a fonte; o cartão do valor entra quando houver rota.
+  "Fear & Greed Index por alternative.me" com link `rel="noopener noreferrer"` (RF01, D14). O valor do índice vem de
+  `GET /v1/market/sentiment` (T5.8).
 - **Último ponto sem varrer a série (T5.3).** `GET /v1/runs/:id/equity` e `/signals` aceitam `order=desc` (padrão `asc`; nas
   outras séries o parâmetro é `400`): a primeira página já é o ponto mais recente. A visão geral lê UMA página decrescente de
   100 (saldo de agora e curva recente) e filtra o neutro dos sinais; a curva inteira de um backtest vem do CSV do registro
@@ -264,6 +264,27 @@ nem de PWA (o service worker `public/sw.js` é escrito à mão, guarda só a cas
   origem, renovação dentro do socket antes de o token vencer (sessão renovada antes do ticket), reconexão com espera
   crescente (teto de 30 s), `4401` reconecta na hora, `4403` para de vez ("Conta inativa") e todo `resync` ou reconexão rebusca
   por REST (o aviso só diz o que mudou). O selo do cabeçalho mostra "Ao vivo", "Reconectando…" ou "Conta inativa".
+- **Metas (T5.6).** `/metas` declara a meta (par, retorno alvo %, prazo em dias, perda máxima %): a porcentagem vira fração
+  MOVENDO A VÍRGULA NO TEXTO (`percentToFraction`, nunca `Number`), então `2.5` vira `"0.025"` exato. `/metas/:goalId` lê
+  `GET /v1/goals/:id/evaluation` e mostra o ranking estratégia × moeda (taxa de chegada ao alvo sobre as N janelas, taxa de
+  stop, tempo típico, comprar e segurar ao lado e a régua COMPRAR/SEGURAR/EVITAR) com o aviso fixo de que é HISTÓRICO e não
+  promessa. "Simular esta meta" cria um `live_paper` com `goalId` (só para o par da meta: a API recusa outro) e leva ao painel,
+  onde o cartão "Meta ativa" mostra retorno, progresso até o alvo e até a perda máxima, dias restantes, ritmo e, encerrada, o
+  desfecho. Cada moeda mostra a situação e o PRÓXIMO GATILHO por família (a regra ainda não cumprida mais perto de votar).
+  Campos que o motor deixa nulos (janela vazia, sentimento sem observação) aparecem em palavras, nunca derrubam a tela.
+- **Plano, alertas e ativos (T5.7).** `/metas/:goalId/plano?strategyId=` desenha à mão, em SVG, o preço dos últimos 60 dias e
+  as linhas de compra, alvo, stop e preço de agora (`mapPlanChart` é a escala pura), com os níveis em texto, o prazo e a base
+  (exato ou indicativo). "Avisar no plano" cria o alerta com `origin: plan`, do lado de onde o preço vem. `/alertas` ganhou o
+  quadro de alertas de preço (criar, ligar, desligar, religar o disparado, apagar). `/ativos` ("Seus ativos") registra compra,
+  venda ou posição (o preço médio ponderado é da API), mostra valor em USDT, resultado, regra do dia pela estratégia escolhida
+  (padrão: a primeira da lista; a API só calcula a regra com `strategyId`), alvo e stop. **Não há fonte de câmbio no produto:**
+  a cotação USDT→R$ é a que o usuário digita, guardada só no `localStorage` deste navegador, e só multiplica na tela.
+- **Tempo real e sentimento (T5.8, RF16).** `src/live/`: `MarketStore` (fora do React) guarda o último tick de cada par e só quem
+  lê o preço re-renderiza; `computeMarketState` diz `live`, `waiting`, `stale` ou `offline` (socket fora, ou 10 s sem tick, ou
+  todos os pares selados pelo servidor). O selo mostra "Preços ao vivo" ou "Sem dados há N s". Com o socket vivo o preço vem
+  pelos ticks; fora dele (ou velho) o REST é consultado de 15 em 15 s (cartões de moeda e resumo de ativos), e a volta
+  rebusca tudo (`resync`). Preço, plano, ativos e alertas se atualizam sozinhos; o aviso `price_alert` refaz a lista. A
+  visão geral mostra o Fear & Greed de `GET /v1/market/sentiment` com o crédito "Fear & Greed Index por alternative.me" e o link.
 - **Build e segurança.** `vite build` injeta CSP por `<meta>` só no build (`default-src 'self'`, sem `unsafe-inline` nem
   `unsafe-eval`); `VITE_*` é público e só leva URL do Keycloak, `client_id` público e lista de pares. Dev e preview servem
   na origem do painel com proxy de `/v1` (cookie `__Host-` não atravessa origens).
@@ -276,6 +297,7 @@ nem de PWA (o service worker `public/sw.js` é escrito à mão, guarda só a cas
 | Método | Rota | Uso |
 |---|---|---|
 | `GET` | `/v1/markets/candles?symbol&timeframe&from&to` | Candles para gráfico (pares e timeframes habilitados; `from` incluído, `to` excluído; até 5.000; texto decimal; 60/min) |
+| `GET` | `/v1/market/sentiment` | (T5.8) Último Fear & Greed gravado em `sentiment_daily` (`fearGreed`, `classification`, `date`) com o objeto `source` (`name`, `creditText`, `url`) que o painel exibe como crédito (RF01, D14); sem dado ⇒ `404 SENTIMENT_NOT_AVAILABLE`; só leitura, sem dono |
 | `GET/POST` | `/v1/strategies` | Listar (por cursor) / criar (nome + configuração validada pelo motor; cria a versão 1) |
 | `DELETE` | `/v1/strategies/:id` | (T5.4) Apaga (exclusão lógica: some da lista e do detalhe, execuções e resultados ficam); `204`; a de exemplo é `409 STRATEGY_IS_EXAMPLE`; alheia = `404` idêntico |
 | `GET` | `/v1/strategies/:id` | Estratégia com a versão mais recente (a versão traz `configHash`, o SHA-256 canônico da configuração, desde a T5.4) |

@@ -8,7 +8,7 @@ Contexto operacional do **CryptoAdA**. Produto e regras em `README.md`,
 Spec 001 em andamento (progresso real em `specs/001-simulador-e-sinais/evidence.md`). Prontos: Fase 0
 (fundação), Fase 0b (contas, login, isolamento entre usuários, LGPD) e Fase 1 (candles da Binance:
 backfill, Fear & Greed e stream ao vivo com recuperação de lacuna). Fase 2 (o motor em
-`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) a estratégia de exemplo por usuário (T3.5) e a fila durável de execuções com tetos por usuário (T3.6); Fase 4 com a simulação ao vivo no worker (T4.1), a paridade com o backtest (T4.2) e a sobrevivência do saldo (T4.3, piso e meta de dobro em `GET /v1/runs/:id`); tempo real com `LISTEN/NOTIFY` → WebSocket `GET /v1/stream` (T4.4) e o ticker público da Binance (T4.7); alerta de sinal no Telegram com caixa de saída durável e despachante com retry (T4.5) e registro cronológico em CSV (T4.6); Fase 4b com o motor de metas (T4b.1), o próximo gatilho (T4b.2), as rotas `/v1/goals*` com a avaliação em cache (T4b.3) e a simulação ao vivo atrelada a uma meta (T4b.4), o plano de operação (T4b.5), os alertas de preço (T4b.6 e T4b.7) e Seus ativos (T4b.8); Fase 5 do painel: T5.1 (app React/Vite PWA, login PKCE pelo token handler, aviso de simulação em toda rota), T5.1b (conta), T5.2 (visão geral com o crédito do Fear & Greed), T5.3 (backtests: criar, listar, detalhe com curva, comparar), T5.4 (estratégias: editar gera versão nova, duplicar, apagar, walk-forward) e T5.5 (alertas e WebSocket `/v1/stream`); próximo passo: T5.6 do `tasks.md`.
+`packages/strategy-engine`) com as métricas fechadas (T2.6-metricas); Fase 3 com backtest, walk-forward, as rotas REST (T3.4) a estratégia de exemplo por usuário (T3.5) e a fila durável de execuções com tetos por usuário (T3.6); Fase 4 com a simulação ao vivo no worker (T4.1), a paridade com o backtest (T4.2) e a sobrevivência do saldo (T4.3, piso e meta de dobro em `GET /v1/runs/:id`); tempo real com `LISTEN/NOTIFY` → WebSocket `GET /v1/stream` (T4.4) e o ticker público da Binance (T4.7); alerta de sinal no Telegram com caixa de saída durável e despachante com retry (T4.5) e registro cronológico em CSV (T4.6); Fase 4b com o motor de metas (T4b.1), o próximo gatilho (T4b.2), as rotas `/v1/goals*` com a avaliação em cache (T4b.3) e a simulação ao vivo atrelada a uma meta (T4b.4), o plano de operação (T4b.5), os alertas de preço (T4b.6 e T4b.7) e Seus ativos (T4b.8); Fase 5 do painel: T5.1 (app React/Vite PWA, login PKCE pelo token handler, aviso de simulação em toda rota), T5.1b (conta), T5.2 (visão geral com o crédito do Fear & Greed), T5.3 (backtests: criar, listar, detalhe com curva, comparar), T5.4 (estratégias: editar gera versão nova, duplicar, apagar, walk-forward) T5.5 (alertas e WebSocket `/v1/stream`), T5.6 (metas, ranking e cartão de meta ativa), T5.7 (plano com gráfico, quadro de alertas e Seus ativos) e T5.8 (preços ao vivo, selo "sem dados", sentimento com crédito); próximo passo: a revisão final da Fase 5 do `tasks.md`.
 
 ## Stack decidida
 
@@ -260,7 +260,22 @@ mão e não cacheia `/v1`). Detalhe e decisões em `specs/001-simulador-e-sinais
   (`scripts/panel-e2e/control-server.ts`) só grava a linha no banco e dá o `pg_notify` que o worker e o ticker dariam; todo o
   resto é o caminho de produção. O limite de 10 renovações de sessão por minuto vale no E2E: navegue por links, não por
   `page.goto`.
-- **Limites conhecidos.** A API ainda não expõe o valor do Fear & Greed: o painel só credita a fonte. O histórico de sinais
+- **Metas, plano e ativos (`src/goals/`, `src/assets/`).** Rotas `/metas`, `/metas/:goalId`, `/metas/:goalId/plano`, `/ativos`.
+  Porcentagem do formulário vira fração movendo a vírgula no TEXTO (`percentToFraction`): nunca `Number` em valor que vai à
+  API. O ranking é HISTÓRICO e a tela diz isso; COMPRAR/SEGURAR/EVITAR não é recomendação. "Simular esta meta" só existe para o
+  par da meta (a API recusa outro). Campo que o motor devolve nulo (taxas de janela vazia, leitura de sentimento) tem texto
+  próprio. O gráfico do plano é SVG à mão (`plan-chart.ts` é a escala pura). **Sem fonte de câmbio:** a cotação USDT→R$ é
+  digitada pelo usuário e guardada só no `localStorage`. A regra do dia dos ativos exige `strategyId` na consulta (a API não
+  adivinha a estratégia); o painel manda a primeira da lista até o usuário escolher.
+- **Preços ao vivo (`src/live/`).** `MarketStore` + `useSyncExternalStore`: o tick por par re-renderiza só quem lê o preço.
+  `computeMarketState` (`live`/`waiting`/`stale`/`offline`) alimenta o selo e o REST de reserva (15 s) dos cartões de moeda e do
+  resumo de ativos. Hooks: `useShownPrice` (tick vivo, senão REST) e `useLivePrice` (só o tick em dia; senão o preço do servidor).
+- **E2E de tempo real.** O harness sobe uma Binance falsa (`packages/market-data/test-support`), liga o ticker da API nela e o
+  servidor de controle ganhou `POST /tick {symbol, price}`: o preço entra pela Binance falsa e o resto (agregação, alerta de
+  preço, WebSocket, painel) é o caminho de produção. A série diária do seed usa `DAILY_SEED = 7` porque o plano precisa de
+  compra alcançável (com a semente antiga a compra era "inalcançável" e não havia alvo nem stop). Derrubar o socket é feito
+  com `page.routeWebSocket` numa segunda aba da mesma sessão.
+- **Limites conhecidos.** O histórico de sinais
   lê páginas de 100 (decrescentes) e esconde o neutro: com muito neutro seguido, "Carregar sinais mais antigos" é preciso.
 
 ## Regras que não se negociam
