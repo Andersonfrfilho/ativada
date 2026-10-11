@@ -201,6 +201,39 @@ async function countRows(client: Bun.SQL, table: string, userId: string): Promis
   return (rows as readonly { total: number }[])[0]?.total ?? 0;
 }
 
+// Página de UMA linha: o cursor pela chave primária (inclusive a composta de equity_points e a de uma tabela cuja PK a
+// exportação exclui) entrega o MESMO conteúdo, sem repetir nem pular linha, e nenhuma página passa do tamanho pedido.
+async function checkPagedExport(
+  context: LifecycleCheckContext,
+  params: {
+    readonly exports: ReturnType<typeof createAccountExportRepository>;
+    readonly owners: LifecycleOwners;
+    readonly whole: Readonly<Record<string, readonly unknown[]>>;
+  },
+): Promise<void> {
+  const paged: Record<string, string[]> = {};
+  let largestPage = 0;
+  for await (const chunk of params.exports.streamOwnerRows(params.owners.ownerA.scope, {
+    pageSize: 1,
+  })) {
+    if (chunk.kind !== 'rows') continue;
+    largestPage = Math.max(largestPage, chunk.rows.length);
+    (paged[chunk.table] ??= []).push(...chunk.rows.map((row) => JSON.stringify(row)));
+  }
+  context.assertCondition(largestPage === 1, `página maior que o pedido: ${largestPage}`);
+  for (const table of PERSISTENCE_TABLES) {
+    const expected = (params.whole[table] ?? []).map((row) => JSON.stringify(row)).sort();
+    const got = [...(paged[table] ?? [])].sort();
+    context.assertCondition(
+      JSON.stringify(got) === JSON.stringify(expected),
+      `exportação paginada de ${table}: ${got.length} linhas contra ${expected.length}`,
+    );
+  }
+  context.reportCheck(
+    'exportação em fluxo: páginas de 1 linha entregam o mesmo conteúdo, sem repetir',
+  );
+}
+
 export async function checkPersistenceExport(
   context: LifecycleCheckContext,
   owners: LifecycleOwners,
@@ -232,6 +265,7 @@ export async function checkPersistenceExport(
   ]) {
     assertCondition(!text.includes(internal), `a exportação carregou dado interno: ${internal}`);
   }
+  await checkPagedExport(context, { exports, owners, whole: data.tables });
   reportCheck(
     'exportação: estratégias, execuções e resultados só de A, sem estado do motor nem hashes',
   );

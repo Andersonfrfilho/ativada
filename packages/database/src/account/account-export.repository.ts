@@ -1,21 +1,31 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, asc, eq, getTableName, isNull, ne, or, sql } from 'drizzle-orm';
+import { getTableName } from 'drizzle-orm';
 import type { BunSQLDatabase } from 'drizzle-orm/bun-sql';
 
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
 import { OWNED_TABLE_EXPORT_MODE, OWNED_TABLE_EXPORTS } from '../ownership/ownership-registry.js';
-import { auditEvents } from '../schema/audit-events.schema.js';
 import { users } from '../schema/users.schema.js';
-import { EXPORT_STATEMENT_TIMEOUT_MILLISECONDS } from './account.constant.js';
-import type { AccountExport, AccountExportAuditEvents, ExportRow } from './account-export.types.js';
-import { pickColumns, readUserIdColumn } from './owned-table-columns.js';
+import { streamOwnerRows } from './account-export-stream.js';
+import {
+  EXPORT_AUDIT_AUDIENCE,
+  type AccountExport,
+  type AccountExportChunk,
+  type ExportRow,
+  type StreamExportOptions,
+} from './account-export.types.js';
 
 export type AccountExportRepository = {
+  // O perfil do dono (`undefined` se a conta não existe): é a primeira linha da exportação.
+  readonly readAccount: (scope: OwnerScope) => Promise<ExportRow | undefined>;
+  // As tabelas do dono e a auditoria, em PÁGINAS por cursor: quem consome puxa uma página por vez.
+  readonly streamOwnerRows: (
+    scope: OwnerScope,
+    options?: StreamExportOptions,
+  ) => AsyncIterable<AccountExportChunk>;
+  // O conjunto inteiro de uma vez (junta as páginas): para verificação em teste; a rota de exportação NUNCA o usa.
   readonly exportOwnerData: (scope: OwnerScope) => Promise<AccountExport | undefined>;
 };
-
-type ExportExecutor = Pick<BunSQLDatabase, 'select' | 'execute'>;
 
 const ACCOUNT_COLUMNS = {
   displayName: users.displayName,
@@ -28,31 +38,11 @@ const ACCOUNT_COLUMNS = {
   updatedAt: users.updatedAt,
 } as const;
 
-const AUDIT_ACTOR_COLUMNS = {
-  id: auditEvents.id,
-  actorKind: auditEvents.actorKind,
-  targetKind: auditEvents.targetKind,
-  action: auditEvents.action,
-  ip: auditEvents.ip,
-  createdAt: auditEvents.createdAt,
-  payload: auditEvents.payload,
-} as const;
-
-// Quando o dono é só o alvo, o ator e o IP são de outra pessoa e ficam fora.
-const AUDIT_TARGET_COLUMNS = {
-  id: auditEvents.id,
-  actorKind: auditEvents.actorKind,
-  targetKind: auditEvents.targetKind,
-  action: auditEvents.action,
-  createdAt: auditEvents.createdAt,
-  payload: auditEvents.payload,
-} as const;
-
-async function selectAccount(
-  executor: ExportExecutor,
+async function readAccount(
+  database: BunSQLDatabase,
   scope: OwnerScope,
 ): Promise<ExportRow | undefined> {
-  const rows = await executor
+  const rows = await database
     .select(ACCOUNT_COLUMNS)
     .from(users)
     .where(ownerCondition(scope, users.id))
@@ -60,62 +50,32 @@ async function selectAccount(
   return rows[0];
 }
 
-async function selectOwnedTables(
-  executor: ExportExecutor,
-  scope: OwnerScope,
-): Promise<Readonly<Record<string, readonly ExportRow[]>>> {
-  const tables: Record<string, readonly ExportRow[]> = {};
-  for (const step of OWNED_TABLE_EXPORTS) {
-    if (step.mode !== OWNED_TABLE_EXPORT_MODE.COLUMNS) continue;
-    tables[getTableName(step.table)] = await executor
-      .select(pickColumns(step.table, step.columns))
-      .from(step.table)
-      .where(ownerCondition(scope, readUserIdColumn(step.table)));
-  }
-  return tables;
-}
-
-async function selectAuditEvents(
-  executor: ExportExecutor,
-  scope: OwnerScope,
-): Promise<AccountExportAuditEvents> {
-  const asActor = await executor
-    .select(AUDIT_ACTOR_COLUMNS)
-    .from(auditEvents)
-    .where(eq(auditEvents.actorUserId, scope.ownerUserId))
-    .orderBy(asc(auditEvents.createdAt), asc(auditEvents.id));
-  const asTarget = await executor
-    .select(AUDIT_TARGET_COLUMNS)
-    .from(auditEvents)
-    .where(
-      and(
-        eq(auditEvents.targetId, scope.ownerUserId),
-        or(isNull(auditEvents.actorUserId), ne(auditEvents.actorUserId, scope.ownerUserId)),
-      ),
-    )
-    .orderBy(asc(auditEvents.createdAt), asc(auditEvents.id));
-  return { asActor, asTarget };
-}
-
-async function readExport(
+async function collect(
   database: BunSQLDatabase,
   scope: OwnerScope,
 ): Promise<AccountExport | undefined> {
-  return database.transaction(async (transaction) => {
-    await transaction.execute(
-      sql`select set_config('statement_timeout', ${String(EXPORT_STATEMENT_TIMEOUT_MILLISECONDS)}, true)`,
-    );
-    const account = await selectAccount(transaction, scope);
-    if (account === undefined) return undefined;
-    return {
-      account,
-      tables: await selectOwnedTables(transaction, scope),
-      auditEvents: await selectAuditEvents(transaction, scope),
-    };
-  });
+  const account = await readAccount(database, scope);
+  if (account === undefined) return undefined;
+  const tables: Record<string, ExportRow[]> = {};
+  for (const step of OWNED_TABLE_EXPORTS) {
+    if (step.mode === OWNED_TABLE_EXPORT_MODE.COLUMNS) tables[getTableName(step.table)] = [];
+  }
+  const audit = { asActor: [] as ExportRow[], asTarget: [] as ExportRow[] };
+  for await (const chunk of streamOwnerRows(database, scope)) {
+    if (chunk.kind === 'rows') tables[chunk.table]?.push(...chunk.rows);
+    else
+      audit[chunk.audience === EXPORT_AUDIT_AUDIENCE.ACTOR ? 'asActor' : 'asTarget'].push(
+        ...chunk.rows,
+      );
+  }
+  return { account, tables, auditEvents: audit };
 }
 
 export function createAccountExportRepository(handle: DatabaseHandle): AccountExportRepository {
   const { database } = readOpenDatabase(handle);
-  return { exportOwnerData: (scope) => readExport(database, scope) };
+  return {
+    readAccount: (scope) => readAccount(database, scope),
+    streamOwnerRows: (scope, options) => streamOwnerRows(database, scope, options),
+    exportOwnerData: (scope) => collect(database, scope),
+  };
 }

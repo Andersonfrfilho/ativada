@@ -72,7 +72,9 @@ function seedOwners(users: InMemoryUserStore, keycloak: FakeKeycloak): void {
   }
 }
 
-export async function createAccountHarness(): Promise<AccountHarness> {
+export async function createAccountHarness(
+  options: { readonly exportPageSize?: number } = {},
+): Promise<AccountHarness> {
   const events: string[] = [];
   const closedSockets: string[] = [];
   const users = createInMemoryUserStore();
@@ -117,6 +119,7 @@ export async function createAccountHarness(): Promise<AccountHarness> {
           exports: store.exports,
           identity,
           now: () => Date.now(),
+          pageSize: options.exportPageSize,
         }),
         deleteAccount: createDeleteAccountUseCase({
           deletions: store.deletions,

@@ -2,6 +2,7 @@
 import type { AccountExportRepository, OwnerScope } from '@cryptoada/database';
 import { IDENTITY_OUTCOME, type IdentityAdminClient } from '@cryptoada/identity-admin';
 
+import { createAccountExportBody } from './account-export-ndjson.js';
 import { ProfileNotFoundError } from '../profile/profile.error.js';
 import { IdentityProviderUnavailableError } from '../shared/errors/identity-provider-unavailable.error.js';
 
@@ -10,22 +11,20 @@ export type ExportAccountInput = {
   readonly keycloakSubject: string;
 };
 
-export type AccountExportDocument = {
+// O corpo é o fluxo NDJSON (ver `account-export-ndjson.ts`); `exportedAt` vai ao nome do arquivo.
+export type AccountExportStream = {
   readonly exportedAt: string;
-  readonly account: Readonly<Record<string, unknown>>;
-  readonly tables: Readonly<Record<string, readonly unknown[]>>;
-  readonly auditEvents: {
-    readonly asActor: readonly unknown[];
-    readonly asTarget: readonly unknown[];
-  };
+  readonly body: ReadableStream<Uint8Array>;
 };
 
-export type ExportAccountUseCase = (input: ExportAccountInput) => Promise<AccountExportDocument>;
+export type ExportAccountUseCase = (input: ExportAccountInput) => Promise<AccountExportStream>;
 
 export type ExportAccountDependencies = {
   readonly exports: AccountExportRepository;
   readonly identity: IdentityAdminClient;
   readonly now: () => number;
+  // Linhas por página lidas do banco (padrão do repositório); os testes baixam para provar a leitura sob demanda.
+  readonly pageSize?: number | undefined;
 };
 
 // O e-mail mora só no Keycloak: sem ele a exportação seria incompleta, então falha em 503 (e a cota não é gasta).
@@ -42,16 +41,21 @@ export function createExportAccountUseCase(
   dependencies: ExportAccountDependencies,
 ): ExportAccountUseCase {
   return async (input) => {
-    const [data, email] = await Promise.all([
-      dependencies.exports.exportOwnerData(input.scope),
+    const [account, email] = await Promise.all([
+      dependencies.exports.readAccount(input.scope),
       readEmailOrFail(dependencies.identity, input.keycloakSubject),
     ]);
-    if (data === undefined) throw new ProfileNotFoundError();
+    if (account === undefined) throw new ProfileNotFoundError();
+    const exportedAt = new Date(dependencies.now()).toISOString();
     return {
-      exportedAt: new Date(dependencies.now()).toISOString(),
-      account: { email, ...data.account },
-      tables: data.tables,
-      auditEvents: data.auditEvents,
+      exportedAt,
+      body: createAccountExportBody({
+        exportedAt,
+        account: { email, ...account },
+        chunks: dependencies.exports.streamOwnerRows(input.scope, {
+          pageSize: dependencies.pageSize,
+        }),
+      }),
     };
   };
 }

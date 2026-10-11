@@ -2,7 +2,6 @@
 import { z } from '@cryptoada/environment';
 
 import type { RouteDocumentation } from '../openapi/route-documentation.types.js';
-import { isoDateTimeSchema } from '../openapi/schema-primitives.js';
 import {
   ADMIN_ERROR_CODE,
   AUTHENTICATION_ERROR_CODE,
@@ -23,21 +22,15 @@ const IDENTITY_UNAVAILABLE = {
 
 export const ACCOUNT_DOCUMENTATION = {
   export: {
-    summary: 'Exporta todos os dados do próprio usuário (LGPD), 1 exportação por hora.',
+    summary:
+      'Exporta todos os dados do próprio usuário (LGPD) em NDJSON, em fluxo por páginas, 1 exportação por hora. Linhas: `header` (data e perfil), `row` (uma por registro de cada tabela), `audit` (auditoria como ator e como alvo) e `end` (contagens: arquivo sem ela está incompleto).',
     tag: TAG,
     successes: [
       {
         status: HTTP_STATUS.OK,
-        description: 'O documento de exportação (`Content-Disposition: attachment`).',
-        schema: z.strictObject({
-          exportedAt: isoDateTimeSchema,
-          account: z.record(z.string(), z.unknown()),
-          tables: z.record(z.string(), z.array(z.unknown())),
-          auditEvents: z.strictObject({
-            asActor: z.array(z.unknown()),
-            asTarget: z.array(z.unknown()),
-          }),
-        }),
+        description: 'O arquivo NDJSON (`Content-Disposition: attachment`).',
+        contentType: 'application/x-ndjson; charset=utf-8',
+        schema: z.string(),
       },
     ],
     errors: [NOT_FOUND, IDENTITY_UNAVAILABLE],

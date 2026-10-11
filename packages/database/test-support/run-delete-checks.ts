@@ -20,6 +20,8 @@ export async function checkRunDeletion(context: LifecycleCheckContext): Promise<
   const active = await seedRun(handle, owner);
   await runs.transitionRun(owner.scope, { runId: finished.id, to: RUN_STATUS.RUNNING });
   await runs.transitionRun(owner.scope, { runId: finished.id, to: RUN_STATUS.COMPLETED });
+  const running = await seedRun(handle, owner);
+  await runs.transitionRun(owner.scope, { runId: running.id, to: RUN_STATUS.RUNNING });
   const before = await queue.countStoredRuns(owner.scope);
   assertCondition(
     (await runs.deleteRun(stranger.scope, finished.id)) === RUN_DELETE_OUTCOME.NOT_FOUND,
@@ -29,8 +31,6 @@ export async function checkRunDeletion(context: LifecycleCheckContext): Promise<
     (await runs.deleteRun(owner.scope, active.id)) === RUN_DELETE_OUTCOME.NOT_FINISHED,
     'a execução ainda na fila não se apaga',
   );
-  const running = await seedRun(handle, owner);
-  await runs.transitionRun(owner.scope, { runId: running.id, to: RUN_STATUS.RUNNING });
   assertCondition(
     (await runs.deleteRun(owner.scope, running.id)) === RUN_DELETE_OUTCOME.NOT_FINISHED,
     'a execução rodando também não se apaga',

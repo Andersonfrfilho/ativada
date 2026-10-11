@@ -4,6 +4,7 @@ import {
   PERSISTENCE_TABLES,
   SEEDED_REQUEST,
 } from '../../packages/database/test-support/persistence-lgpd-checks.js';
+import { parseExportText } from '../../test/fixtures/account-export-ndjson.fixture.js';
 import { assertCondition } from '../identity-test/identity-test.error.js';
 import { expectedRowsOf } from './expected-rows.js';
 import { readUserId } from './database-reads.js';
@@ -50,14 +51,24 @@ function assertAttachmentHeaders(headers: Headers): void {
   );
   const disposition = headers.get('content-disposition') ?? '';
   assertCondition(
-    /^attachment; filename="cryptoada-export-\d{4}-\d{2}-\d{2}\.json"$/.test(disposition),
+    /^attachment; filename="cryptoada-export-\d{4}-\d{2}-\d{2}\.ndjson"$/.test(disposition),
     `Content-Disposition: ${disposition}`,
   );
 }
 
+// NDJSON em fluxo: o cabeçalho abre, o fecho (`end`) com as contagens é a última linha e a soma delas é o número de registros.
+function assertStreamedLayout(text: string): void {
+  const document = parseExportText(text);
+  assertCondition(document.lineTypes[0] === 'header', 'a exportação abre com o cabeçalho');
+  assertCondition(document.lineTypes.at(-1) === 'end', 'a exportação fecha com a linha end');
+  const records = document.lineTypes.filter((type) => type === 'row' || type === 'audit').length;
+  const counted = Object.values(document.counts ?? {}).reduce((sum, count) => sum + count, 0);
+  assertCondition(counted === records, `contagens do fecho: ${counted} para ${records} registros`);
+}
+
 function assertOwnData(response: ExportResponse, own: Side): ExportBody {
   assertCondition(response.status === 200, `exportação: ${response.status} ${response.text}`);
-  const body = JSON.parse(response.text) as ExportBody;
+  const body: ExportBody = { data: parseExportText(response.text) };
   const { account, tables } = body.data;
   assertCondition(account['email'] === own.actor.email, 'e-mail do Keycloak ausente');
   assertCondition(account['displayName'] === own.name, 'perfil ausente');
@@ -131,6 +142,7 @@ export async function checkExports(context: LgpdContext, owners: LgpdOwners): Pr
   const sideOfB: Side = { actor: owners.ownerB, name: NAME_OF_B, chat: CHAT_OF_B };
   const exportOfA = await fetchExport(context, owners.ownerA);
   assertAttachmentHeaders(exportOfA.headers);
+  assertStreamedLayout(exportOfA.text);
   const bodyOfA = assertOwnData(exportOfA, sideOfA);
   await assertNothingForeign(context, { text: exportOfA.text, own: sideOfA, other: sideOfB });
   assertAuditAsTarget(bodyOfA);
