@@ -54,7 +54,7 @@ function DetailBody({ strategy, versions }: DetailBodyProps): ReactElement {
         saveError={editing.saveError}
         onSave={editing.save}
       />
-      <VersionsCard versions={versions} baseId={base.id} onUseAsBase={editing.selectBase} />
+      <VersionsCard versions={editing.versions} baseId={base.id} onUseAsBase={editing.selectBase} />
       <WalkForwardCard version={latest} />
     </div>
   );

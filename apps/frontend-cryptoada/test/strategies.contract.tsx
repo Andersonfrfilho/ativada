@@ -173,7 +173,7 @@ describe('strategy editor', () => {
     fireEvent.change(screen.getByLabelText('RSI 14: período'), { target: { value: '21' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar como nova versão' }));
     expect(await screen.findByText(/Versão 3 criada/)).toBeDefined();
-    expect(screen.getByText(/cccccccc/)).toBeDefined();
+    expect(screen.getAllByText(/cccccccc/).length).toBeGreaterThan(0);
     const body = fake.callsTo('POST', '/v1/strategies/strategy-1/versions')[0]?.body as {
       config: typeof CLASSIC_CONFIG;
     };
@@ -225,6 +225,46 @@ describe('strategy editor', () => {
     expect(await screen.findByText(/Versão 3 criada/)).toBeDefined();
     await waitFor(() => expect(screen.getByText(/base: versão 3/)).toBeDefined());
     expect(screen.getByText(/Versão 3 criada/)).toBeDefined();
+  });
+
+  test('a lagging versions list right after saving does not flip the base back: version 3 stays the base and the notice stays', async () => {
+    const version3 = buildVersion({ id: 'version-3', version: 3, configHash: 'c'.repeat(64) });
+    let listCallsAfterSave = -1;
+    renderApp({
+      path: '/estrategias/strategy-1',
+      isAuthenticated: true,
+      routes: strategyRoutes([
+        {
+          method: 'POST',
+          path: '/v1/strategies/strategy-1/versions',
+          respond: (): Response => {
+            listCallsAfterSave = 0;
+            return dataResponse({ version: version3 }, HTTP_STATUS.CREATED);
+          },
+        },
+        {
+          method: 'GET',
+          path: '/v1/strategies/strategy-1/versions',
+          respond: (): Response => {
+            if (listCallsAfterSave < 0) return pageResponse([VERSION_2, VERSION_1]);
+            listCallsAfterSave += 1;
+            return pageResponse(
+              listCallsAfterSave === 1 ? [VERSION_2, VERSION_1] : [version3, VERSION_2, VERSION_1],
+            );
+          },
+        },
+      ]),
+    });
+    fireEvent.change(await screen.findByLabelText('Limiar de compra'), {
+      target: { value: '2.5' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar como nova versão' }));
+    expect(await screen.findByText(/Versão 3 criada/)).toBeDefined();
+    expect(screen.getByText(/base: versão 3/)).toBeDefined();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(screen.getByText(/Versão 3 criada/)).toBeDefined();
+    expect(screen.getByText(/base: versão 3/)).toBeDefined();
+    expect(screen.getByText(/Versão atual: versão 3/)).toBeDefined();
   });
 
   test('the same configuration answers with the existing version and says nothing changed', async () => {

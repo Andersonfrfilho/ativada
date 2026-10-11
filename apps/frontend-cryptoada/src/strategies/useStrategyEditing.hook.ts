@@ -6,6 +6,8 @@ import { useAddVersionMutation } from './strategy.mutation.js';
 import type { StrategyVersion } from './strategy.validation.js';
 
 export type StrategyEditing = {
+  // A lista do servidor mais a versão recém-salva enquanto a lista ainda não a trouxe (a releitura pode chegar atrasada).
+  readonly versions: readonly StrategyVersion[];
   readonly base: StrategyVersion | undefined;
   readonly latest: StrategyVersion | undefined;
   readonly saved: SavedVersion | undefined;
@@ -18,11 +20,14 @@ export type StrategyEditing = {
 // A mutação mora fora do editor: ele troca de chave ao mudar a base e levaria o callback da mutação junto.
 export function useStrategyEditing(
   strategyId: string,
-  versions: readonly StrategyVersion[],
+  serverVersions: readonly StrategyVersion[],
 ): StrategyEditing {
   const [baseId, setBaseId] = useState<string | undefined>(undefined);
   const [saved, setSaved] = useState<SavedVersion | undefined>(undefined);
   const add = useAddVersionMutation();
+  const isSavedMissing =
+    saved !== undefined && !serverVersions.some((version) => version.id === saved.version.id);
+  const versions = isSavedMissing ? [saved.version, ...serverVersions] : serverVersions;
   const latest = versions[0];
 
   function save(config: unknown): void {
@@ -39,6 +44,7 @@ export function useStrategyEditing(
   }
 
   return {
+    versions,
     base: versions.find((version) => version.id === baseId) ?? latest,
     latest,
     saved,
