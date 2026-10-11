@@ -21,6 +21,8 @@ export type ClaimAlertsParams = {
 // para `alerts`. `attempts` já conta esta tentativa.
 export type ClaimedAlert = {
   readonly id: string;
+  // O dono da linha: o despachante conta as mensagens enviadas a ele para impor o teto diário.
+  readonly userId: string;
   // Nulo no alerta de preço (lado PRICE), que não nasce de uma execução.
   readonly runId: string | undefined;
   readonly candleTime: number;
@@ -40,10 +42,14 @@ export type RescheduleAlertParams = {
 
 export type CloseAlertParams = { readonly alertId: string; readonly errorCode: string };
 
+export type CountSentParams = { readonly userId: string; readonly since: Date };
+
 // Sem `OwnerScope`: quem entrega é o processo do worker, que lê o chat do dono da PRÓPRIA linha do alerta.
 export type AlertRepository = {
   // Reivindica os alertas vencidos (`FOR UPDATE SKIP LOCKED` + arrendamento): dois despachantes nunca pegam o mesmo.
   readonly claimDue: (params: ClaimAlertsParams) => Promise<readonly ClaimedAlert[]>;
+  // Quantas mensagens FORAM enviadas ao usuário desde `since` (só as `sent`: dispensadas e falhas não contam).
+  readonly countSentSince: (params: CountSentParams) => Promise<number>;
   readonly markSent: (params: MarkAlertParams) => Promise<void>;
   readonly reschedule: (params: RescheduleAlertParams) => Promise<void>;
   readonly markFailed: (params: CloseAlertParams) => Promise<void>;

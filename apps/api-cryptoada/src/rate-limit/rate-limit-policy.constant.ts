@@ -62,6 +62,14 @@ export const RATE_LIMIT_POLICY = {
     keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
     maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
+  // Criar, alterar e apagar alertas de preço: religar em laço rearma o alerta e gera aviso (Telegram) a cada ciclo.
+  PRICE_ALERT_MUTATION: {
+    name: 'price-alert-mutation',
+    limit: 10,
+    windowMilliseconds: ONE_MINUTE_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
+  },
   RUN_EXPORT: {
     name: 'run-export',
     limit: 10,

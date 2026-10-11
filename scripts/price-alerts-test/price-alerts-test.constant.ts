@@ -12,3 +12,6 @@ export const MAX_ENABLED = 50;
 // O relógio do despachante parte de uma hora à frente do relógio do banco: tudo o que já foi enfileirado está vencido.
 export const CLOCK_HEAD_START_MILLISECONDS = 3_600_000;
 export const NOTIFY_WAIT_MILLISECONDS = 5_000;
+export const DAILY_LIMIT_PER_USER = 1_000;
+// O script fecha vários ciclos de disparo e rearme em segundos: o intervalo mínimo entre disparos fica desligado aqui.
+export const NO_REFIRE_INTERVAL_MILLISECONDS = 0;

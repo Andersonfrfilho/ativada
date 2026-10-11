@@ -7,7 +7,10 @@ import type { ApplicationStream } from '../stream/create-application-stream.js';
 import { createPriceAlertEvaluator } from './price-alert-evaluator.js';
 
 export type RegisterPriceAlertEvaluationParams = {
-  readonly environment: Pick<Environment, 'TICKER_STALE_SECONDS'>;
+  readonly environment: Pick<
+    Environment,
+    'TICKER_STALE_SECONDS' | 'PRICE_ALERT_MIN_REFIRE_SECONDS'
+  >;
   readonly database: DatabaseHandle;
   readonly stream: Pick<ApplicationStream, 'addPriceTickListener'>;
 };
@@ -19,6 +22,8 @@ export function registerPriceAlertEvaluation(params: RegisterPriceAlertEvaluatio
       repository: createPriceAlertEvaluationRepository(params.database),
       now: () => Date.now(),
       staleAfterMilliseconds: params.environment.TICKER_STALE_SECONDS * MILLISECONDS_PER_SECOND,
+      minimumRefireMilliseconds:
+        params.environment.PRICE_ALERT_MIN_REFIRE_SECONDS * MILLISECONDS_PER_SECOND,
     }),
   );
 }

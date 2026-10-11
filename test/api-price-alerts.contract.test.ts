@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 
 import {
   createPriceAlertsHarness,
@@ -38,6 +38,12 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await harness.stop();
+});
+
+// Cada teste anda dois minutos no relógio injetado: o limite de mutações por minuto é medido nele e os testes não
+// consomem a cota uns dos outros.
+beforeEach(() => {
+  harness.clock.now += 2 * 60_000;
 });
 
 async function create(
@@ -355,5 +361,100 @@ describe('contrato negativo entre usuários', () => {
       data: AlertData;
     };
     expect(own.data).toMatchObject({ value: '12345', isEnabled: true });
+  });
+});
+
+describe('limite de mutações de alertas de preço (10 por minuto por usuário)', () => {
+  const MUTATIONS_PER_MINUTE = 10;
+
+  test('a 11ª mutação do minuto é 429 com Retry-After, seja POST, PATCH, DELETE ou a limpeza dos disparados', async () => {
+    const alerts: AlertData[] = [];
+    for (let created = 0; created < 4; created += 1) alerts.push(await createdAlert(SUBJECT_A));
+    for (const alert of alerts.slice(0, 3)) {
+      const patched = await harness.call({
+        subject: SUBJECT_A,
+        method: 'PATCH',
+        path: `${PATH}/${alert.id}`,
+        body: { value: '71000' },
+      });
+      expect(patched.status).toBe(200);
+    }
+    for (const alert of alerts.slice(0, 2)) {
+      const deleted = await harness.call({
+        subject: SUBJECT_A,
+        method: 'DELETE',
+        path: `${PATH}/${alert.id}`,
+      });
+      expect(deleted.status).toBe(204);
+    }
+    const cleared = await harness.call({
+      subject: SUBJECT_A,
+      method: 'DELETE',
+      path: `${PATH}/fired`,
+    });
+    expect(cleared.status).toBe(200);
+    const target = alerts[3]?.id ?? MISSING_ID;
+    const refused = [
+      await harness.call({ subject: SUBJECT_A, method: 'POST', path: PATH, body: BODY }),
+      await harness.call({
+        subject: SUBJECT_A,
+        method: 'PATCH',
+        path: `${PATH}/${target}`,
+        body: { isEnabled: false },
+      }),
+      await harness.call({ subject: SUBJECT_A, method: 'DELETE', path: `${PATH}/${target}` }),
+      await harness.call({ subject: SUBJECT_A, method: 'DELETE', path: `${PATH}/fired` }),
+    ];
+    expect(refused.map((response) => response.status)).toStrictEqual([429, 429, 429, 429]);
+    for (const response of refused) {
+      expect(Number(response.headers.get('Retry-After'))).toBeGreaterThan(0);
+    }
+    expect(alerts.length + 3 + 2 + 1).toBe(MUTATIONS_PER_MINUTE);
+  });
+
+  test('ler não gasta o limite, e o limite é de cada usuário', async () => {
+    for (let created = 0; created < MUTATIONS_PER_MINUTE; created += 1)
+      await createdAlert(SUBJECT_A);
+    expect((await create(SUBJECT_A)).status).toBe(429);
+    for (let reads = 0; reads < 5; reads += 1) {
+      expect((await harness.call({ subject: SUBJECT_A, path: PATH })).status).toBe(200);
+    }
+    expect((await create(SUBJECT_B)).status).toBe(201);
+  });
+
+  test('o rearme em laço (religar, disparar, religar) para no limite em vez de gerar volume sem fim', async () => {
+    const alert = await createdAlert(SUBJECT_A);
+    const statuses: number[] = [];
+    for (let cycle = 0; cycle < 14; cycle += 1) {
+      const response = await harness.call({
+        subject: SUBJECT_A,
+        method: 'PATCH',
+        path: `${PATH}/${alert.id}`,
+        body: { isEnabled: cycle % 2 === 0 },
+      });
+      statuses.push(response.status);
+    }
+    expect(statuses.filter((status) => status === 200)).toHaveLength(MUTATIONS_PER_MINUTE - 1);
+    expect(statuses.filter((status) => status === 429)).toHaveLength(
+      14 - (MUTATIONS_PER_MINUTE - 1),
+    );
+  });
+
+  test('um token volta a cada 6 segundos', async () => {
+    for (let created = 0; created < MUTATIONS_PER_MINUTE; created += 1)
+      await createdAlert(SUBJECT_A);
+    expect((await create(SUBJECT_A)).status).toBe(429);
+    harness.clock.now += 6_100;
+    expect((await create(SUBJECT_A)).status).toBe(201);
+    expect((await create(SUBJECT_A)).status).toBe(429);
+  });
+});
+
+describe('política PRICE_ALERT_MUTATION', () => {
+  test('é própria, por usuário, 10 por minuto', () => {
+    const policy = harness.app.policies.RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION;
+    expect(policy.limit).toBe(10);
+    expect(policy.windowMilliseconds).toBe(60_000);
+    expect(policy.keyScope).toBe('subject');
   });
 });

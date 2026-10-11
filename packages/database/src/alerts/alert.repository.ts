@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, asc, eq, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, gte, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
 
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import { readJsonb } from '../jsonb.js';
@@ -11,7 +11,12 @@ import {
   ALERT_STATUS,
   type AlertSide,
 } from './alert.constant.js';
-import type { AlertRepository, ClaimAlertsParams, ClaimedAlert } from './alert.types.js';
+import type {
+  AlertRepository,
+  ClaimAlertsParams,
+  ClaimedAlert,
+  CountSentParams,
+} from './alert.types.js';
 
 type Database = ReturnType<typeof readOpenDatabase>['database'];
 
@@ -67,6 +72,7 @@ function toClaimedAlerts(
 ): ClaimedAlert[] {
   return taken.map((row) => ({
     id: row.id,
+    userId: row.userId,
     runId: row.runId ?? undefined,
     candleTime: row.candleTime,
     side: row.side as AlertSide,
@@ -110,12 +116,27 @@ async function claimDue(database: Database, params: ClaimAlertsParams): Promise<
   });
 }
 
+async function countSentSince(database: Database, params: CountSentParams): Promise<number> {
+  const rows = await database
+    .select({ total: count() })
+    .from(alerts)
+    .where(
+      and(
+        eq(alerts.userId, params.userId),
+        eq(alerts.status, ALERT_STATUS.SENT),
+        gte(alerts.sentAt, params.since),
+      ),
+    );
+  return rows[0]?.total ?? 0;
+}
+
 export function createAlertRepository(handle: DatabaseHandle): AlertRepository {
   const { database } = readOpenDatabase(handle);
   const pending = (alertId: string): ReturnType<typeof and> =>
     and(eq(alerts.id, alertId), eq(alerts.status, ALERT_STATUS.PENDING));
   return {
     claimDue: (params) => claimDue(database, params),
+    countSentSince: (params) => countSentSince(database, params),
     markSent: async ({ alertId, now }): Promise<void> => {
       await database
         .update(alerts)

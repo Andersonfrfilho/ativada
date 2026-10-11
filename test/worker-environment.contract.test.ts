@@ -22,6 +22,7 @@ const WORKER_VARIABLES: readonly string[] = [
   'TELEGRAM_BOT_TOKEN',
   'TELEGRAM_API_BASE_URL',
   'ALERT_POLL_SECONDS',
+  'ALERT_TELEGRAM_DAILY_LIMIT_PER_USER',
 ];
 const SECRET_FRAGMENT = 'ValorQueNaoPodeVazar';
 const PRODUCTION_DATABASE_URL =
@@ -229,4 +230,27 @@ describe('worker environment in production', () => {
     const source = await buildProductionSource({ DATABASE_URL: 'postgres://u:p@h:5432/d' });
     expect(issuesOf(source)).toContain('DATABASE_URL');
   });
+});
+
+describe('worker environment: teto diário de mensagens do Telegram por usuário', () => {
+  test('o padrão é 100 mensagens por usuário nas últimas 24 horas', async () => {
+    const environment = parseEnvironment(environmentSchema, await buildSource());
+    expect(environment.ALERT_TELEGRAM_DAILY_LIMIT_PER_USER).toBe(100);
+  });
+
+  test.each(['1', '1000'])('aceita %s', async (value) => {
+    const environment = parseEnvironment(
+      environmentSchema,
+      await buildSource({ ALERT_TELEGRAM_DAILY_LIMIT_PER_USER: value }),
+    );
+    expect(environment.ALERT_TELEGRAM_DAILY_LIMIT_PER_USER).toBe(Number(value));
+  });
+
+  test.each(['0', '1001', '-1', '1.5', 'muitos'])(
+    'recusa %s, nomeando a variável',
+    async (value) => {
+      const message = issuesOf(await buildSource({ ALERT_TELEGRAM_DAILY_LIMIT_PER_USER: value }));
+      expect(message).toContain('ALERT_TELEGRAM_DAILY_LIMIT_PER_USER');
+    },
+  );
 });

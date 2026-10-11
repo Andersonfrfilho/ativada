@@ -12,6 +12,7 @@ import type { WorkerLogger } from '../logging/worker-logger.js';
 import {
   ALERT_BACKOFF_BASE_MILLISECONDS,
   ALERT_BATCH_SIZE,
+  ALERT_DAILY_WINDOW_MILLISECONDS,
   ALERT_ERROR_CODE,
   ALERT_LEASE_MILLISECONDS,
   ALERT_LOG,
@@ -41,6 +42,8 @@ export type AlertDispatcherDependencies = {
   readonly client: TelegramClient;
   readonly logger: WorkerLogger;
   readonly now: () => number;
+  // Mensagens por usuário nas últimas 24 horas: acima disso o alerta é dispensado em vez de virar enxurrada no chat.
+  readonly dailyLimitPerUser: number;
 };
 
 type Outcome = Exclude<keyof AlertDispatchSummary, 'claimed'>;
@@ -94,13 +97,23 @@ function renderAlertText(alert: ClaimedAlert): string | undefined {
     : undefined;
 }
 
+async function skip(context: Context, errorCode: string): Promise<Outcome> {
+  const { alerts, alert, logger } = context;
+  await alerts.markSkipped({ alertId: alert.id, errorCode });
+  logger.info(ALERT_LOG.SKIPPED, { alertId: alert.id, code: errorCode });
+  return 'skipped';
+}
+
+async function hasReachedDailyLimit(context: Context): Promise<boolean> {
+  const since = new Date(context.now() - ALERT_DAILY_WINDOW_MILLISECONDS);
+  const sent = await context.alerts.countSentSince({ userId: context.alert.userId, since });
+  return sent >= context.dailyLimitPerUser;
+}
+
 async function deliver(context: Context): Promise<Outcome> {
   const { alerts, alert, client, logger } = context;
-  if (alert.chatId === undefined) {
-    await alerts.markSkipped({ alertId: alert.id, errorCode: ALERT_ERROR_CODE.NO_LINK });
-    logger.info(ALERT_LOG.SKIPPED, { alertId: alert.id, code: ALERT_ERROR_CODE.NO_LINK });
-    return 'skipped';
-  }
+  if (alert.chatId === undefined) return skip(context, ALERT_ERROR_CODE.NO_LINK);
+  if (await hasReachedDailyLimit(context)) return skip(context, ALERT_ERROR_CODE.DAILY_LIMIT);
   const text = renderAlertText(alert);
   if (text === undefined) {
     await alerts.markFailed({ alertId: alert.id, errorCode: ALERT_ERROR_CODE.BAD_PAYLOAD });

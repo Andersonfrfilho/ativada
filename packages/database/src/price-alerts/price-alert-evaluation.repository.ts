@@ -17,6 +17,9 @@ export type FireDueAlertsParams = {
   // Preço do tick agregado, em texto decimal exato, e o instante dele (ms): a chave de unicidade do aviso.
   readonly price: string;
   readonly eventTime: number;
+  // Quanto tempo o MESMO alerta espera, desde o último disparo, para poder disparar de novo. Religar (rearmar) não zera a
+  // espera; é o que impede o laço "religar, disparar, religar" de virar volume de avisos.
+  readonly minimumRefireMilliseconds: number;
 };
 
 export type FireDueAlertsResult = { readonly firedAlertIds: readonly string[] };
@@ -39,6 +42,13 @@ type FiredRow = {
   readonly direction: string;
   readonly value: string;
 };
+
+function isOutsideRefireInterval(minimumRefireMilliseconds: number): ReturnType<typeof or> {
+  return or(
+    isNull(priceAlerts.lastFiredAt),
+    sql`${priceAlerts.lastFiredAt} <= now() - (${minimumRefireMilliseconds}::double precision * interval '1 millisecond')`,
+  );
+}
 
 function isCrossedBy(price: string): ReturnType<typeof or> {
   const observed = sql`${price}::numeric`;
@@ -93,13 +103,14 @@ async function fireDueAlerts(
   return database.transaction(async (transaction): Promise<FireDueAlertsResult> => {
     const fired = await transaction
       .update(priceAlerts)
-      .set({ isEnabled: false, triggeredAt: sql`now()` })
+      .set({ isEnabled: false, triggeredAt: sql`now()`, lastFiredAt: sql`now()` })
       .where(
         and(
           eq(priceAlerts.symbol, params.symbol),
           eq(priceAlerts.isEnabled, true),
           isNull(priceAlerts.triggeredAt),
           isCrossedBy(params.price),
+          isOutsideRefireInterval(params.minimumRefireMilliseconds),
         ),
       )
       .returning({

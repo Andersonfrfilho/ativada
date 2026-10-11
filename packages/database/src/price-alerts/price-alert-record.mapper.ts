@@ -14,7 +14,7 @@ export const PRICE_ALERT_COLUMNS = {
   createdAt: priceAlerts.createdAt,
 } as const;
 
-type PriceAlertRow = Omit<typeof priceAlerts.$inferSelect, 'userId'>;
+type PriceAlertRow = Omit<typeof priceAlerts.$inferSelect, 'userId' | 'lastFiredAt'>;
 
 // Os CHECKs do banco garantem os vocabulários; o mapeamento só os estreita para o tipo.
 export function toPriceAlertRecord(row: PriceAlertRow): PriceAlertRecord {

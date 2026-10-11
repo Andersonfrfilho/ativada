@@ -13,6 +13,7 @@ export type AlertEnvironment = {
   readonly TELEGRAM_BOT_TOKEN?: string | undefined;
   readonly TELEGRAM_API_BASE_URL: string;
   readonly ALERT_POLL_SECONDS: number;
+  readonly ALERT_TELEGRAM_DAILY_LIMIT_PER_USER: number;
 };
 
 export type AlertWiring = {
@@ -42,6 +43,7 @@ export function createAlertWiring(params: CreateAlertWiringParams): AlertWiring 
         client: createTelegramClient({ apiBaseUrl: environment.TELEGRAM_API_BASE_URL, botToken }),
         logger,
         now: Date.now,
+        dailyLimitPerUser: environment.ALERT_TELEGRAM_DAILY_LIMIT_PER_USER,
       }),
     }),
   };

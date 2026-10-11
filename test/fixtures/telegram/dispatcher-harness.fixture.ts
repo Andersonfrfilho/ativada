@@ -39,7 +39,11 @@ export type DispatcherHarness = {
 export type DispatcherHarnessOptions = {
   readonly bot?: FakeTelegramBot;
   readonly linked?: boolean;
+  // Teto de mensagens enviadas por usuário nas últimas 24 h (padrão alto: só os testes do teto o baixam).
+  readonly dailyLimitPerUser?: number;
 };
+
+const DEFAULT_DAILY_LIMIT_PER_USER = 1_000;
 
 let candleCounter = 0;
 
@@ -58,6 +62,7 @@ export function createDispatcherHarness(options: DispatcherHarnessOptions = {}):
       write: (line) => void logLines.push(line),
     }),
     now: () => clock.now,
+    dailyLimitPerUser: options.dailyLimitPerUser ?? DEFAULT_DAILY_LIMIT_PER_USER,
   });
   return {
     bot,

@@ -71,6 +71,7 @@ export function createInMemoryAlerts(now: () => number): InMemoryAlerts {
           .filter((row) => row.status === 'pending')
           .map((row) => ({
             id: row.id,
+            userId: row.userId,
             runId: row.runId,
             candleTime: row.candleTime,
             side: row.side,
@@ -80,6 +81,16 @@ export function createInMemoryAlerts(now: () => number): InMemoryAlerts {
           })),
       );
     },
+    countSentSince: ({ userId, since }): Promise<number> =>
+      Promise.resolve(
+        rows.filter(
+          (row) =>
+            row.userId === userId &&
+            row.status === 'sent' &&
+            row.sentAt !== undefined &&
+            row.sentAt >= since.getTime(),
+        ).length,
+      ),
     markSent: ({ alertId, now: at }): Promise<void> => {
       const row = find(alertId);
       if (row !== undefined) {

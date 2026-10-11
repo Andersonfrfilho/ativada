@@ -11,6 +11,12 @@ export const ALERT_BATCH_SIZE = 10;
 export const ALERT_REQUEST_TIMEOUT_MILLISECONDS = 8_000;
 export const ALERT_LEASE_MILLISECONDS = 120_000;
 
+// Teto de mensagens do Telegram por usuário numa janela móvel de 24 horas (env `ALERT_TELEGRAM_DAILY_LIMIT_PER_USER`).
+export const ALERT_DAILY_WINDOW_MILLISECONDS = 24 * 3_600_000;
+export const ALERT_DEFAULT_DAILY_LIMIT_PER_USER = 100;
+export const ALERT_MINIMUM_DAILY_LIMIT_PER_USER = 1;
+export const ALERT_MAXIMUM_DAILY_LIMIT_PER_USER = 1_000;
+
 export const ALERT_MAX_ATTEMPTS = 5;
 export const ALERT_BACKOFF_BASE_MILLISECONDS = 30_000;
 export const ALERT_RETRY_AFTER_CAP_MILLISECONDS = 900_000;
@@ -21,6 +27,7 @@ export const TELEGRAM_MESSAGE_MAX_LENGTH = 4_096;
 // Códigos curtos gravados em `alerts.last_error`: nunca texto de erro, URL, token nem chat.
 export const ALERT_ERROR_CODE = {
   NO_LINK: 'no_link',
+  DAILY_LIMIT: 'daily_limit',
   BAD_PAYLOAD: 'bad_payload',
   NETWORK: 'network',
   BAD_RESPONSE: 'bad_response',

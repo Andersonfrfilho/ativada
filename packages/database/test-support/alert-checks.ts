@@ -331,12 +331,59 @@ async function checkLatestMetrics(context: LifecycleCheckContext): Promise<void>
   reportCheck('métricas do último walk-forward: só do dono, só do tipo, só concluído');
 }
 
+// A contagem do teto diário: só `sent`, só do usuário, só a partir do instante dado; a reivindicação traz o dono da linha.
+async function checkSentCount(context: LifecycleCheckContext): Promise<void> {
+  const { assertCondition, reportCheck } = context;
+  const owner = await seedAlertOwner(context, {
+    subject: 'subject-alert-count',
+    chat: '730000006',
+  });
+  const stranger = await seedAlertOwner(context, {
+    subject: 'subject-alert-count-other',
+    chat: '730000007',
+  });
+  await enqueue(context, owner, [draftOf(1), draftOf(2), draftOf(3), draftOf(4)]);
+  await enqueue(context, stranger, [draftOf(1)]);
+  const alerts = createAlertRepository(context.handle);
+  const claimed = await alerts.claimDue({
+    now: NOW,
+    limit: 50,
+    leaseMilliseconds: 1,
+    maximumAttempts: MAXIMUM_ATTEMPTS,
+  });
+  const mine = claimed.filter((item) => item.runId === owner.runId);
+  const theirs = claimed.filter((item) => item.runId === stranger.runId);
+  assertCondition(
+    mine.length === 4 && mine.every((item) => item.userId === owner.userId),
+    'a reivindicação traz o dono de cada linha',
+  );
+  const [first, second, third, fourth] = mine;
+  const earlier = new Date(NOW.getTime() - 60_000);
+  await alerts.markSent({ alertId: first?.id ?? '', now: NOW });
+  await alerts.markSent({ alertId: second?.id ?? '', now: earlier });
+  await alerts.markFailed({ alertId: third?.id ?? '', errorCode: 'http_400' });
+  await alerts.markSkipped({ alertId: fourth?.id ?? '', errorCode: 'daily_limit' });
+  await alerts.markSent({ alertId: theirs[0]?.id ?? '', now: NOW });
+  const since = (offsetMilliseconds: number): { userId: string; since: Date } => ({
+    userId: owner.userId,
+    since: new Date(NOW.getTime() + offsetMilliseconds),
+  });
+  assertCondition((await alerts.countSentSince(since(-120_000))) === 2, 'conta só as enviadas');
+  assertCondition((await alerts.countSentSince(since(-30_000))) === 1, 'e só a partir do instante');
+  assertCondition((await alerts.countSentSince(since(0))) === 1, 'inclusive no instante exato');
+  assertCondition((await alerts.countSentSince(since(1))) === 0, 'e nada depois');
+  const other = await alerts.countSentSince({ userId: stranger.userId, since: earlier });
+  assertCondition(other === 1, 'a contagem é de cada usuário');
+  reportCheck('alertas: a contagem do teto diário conta só enviadas, do usuário, na janela');
+}
+
 export async function checkAlerts(context: LifecycleCheckContext): Promise<void> {
   const owner = await checkEnqueueRules(context);
   await checkForeignKey(context, owner);
   await checkClaiming(context, owner);
   await checkRace(context);
   await checkTransitions(context);
+  await checkSentCount(context);
   await checkPoisonedAlert(context);
   await checkLatestMetrics(context);
 }

@@ -37,6 +37,8 @@ export const priceAlerts = pgTable(
     origin: varchar('origin', { length: 8 }).notNull(),
     isEnabled: boolean('is_enabled').notNull().default(true),
     triggeredAt: timestamp('triggered_at', { withTimezone: true }),
+    // O último disparo, que religar NÃO apaga: é o que impõe o intervalo mínimo entre dois disparos do mesmo alerta.
+    lastFiredAt: timestamp('last_fired_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

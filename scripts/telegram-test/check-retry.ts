@@ -16,7 +16,7 @@ import {
 } from '../../test/fixtures/telegram/fake-telegram-bot.fixture.js';
 import { createLiveRun, LEAD_IN_CANDLES, type LiveUser } from '../live-test/live-test-context.js';
 import { REAL_DATASETS } from '../../test/fixtures/strategy-engine/signal/classic-signals.fixture.js';
-import { CHAT_OF_F, SECOND } from './telegram-test.constant.js';
+import { CHAT_OF_F, DAILY_LIMIT_PER_USER, SECOND } from './telegram-test.constant.js';
 import {
   assertCondition,
   dispatchUntilQuiet,
@@ -145,6 +145,7 @@ async function checkTelegramDown(context: TelegramTestContext, seed: Seed): Prom
       write: (l) => void context.logLines.push(l),
     }),
     now: () => context.clock.now,
+    dailyLimitPerUser: DAILY_LIMIT_PER_USER,
   });
   const [alert] = await enqueue(context, seed);
   if (alert === undefined) throw new Error('sem alerta');

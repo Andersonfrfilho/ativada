@@ -32,7 +32,9 @@ import {
 } from '../../test/fixtures/telegram/fake-telegram-bot.fixture.js';
 import {
   CLOCK_HEAD_START_MILLISECONDS,
+  DAILY_LIMIT_PER_USER,
   MAX_ENABLED,
+  NO_REFIRE_INTERVAL_MILLISECONDS,
   OTHER_SYMBOL,
   SECOND,
   STALE_MILLISECONDS,
@@ -100,6 +102,7 @@ function createInstance(
     repository: createPriceAlertEvaluationRepository(handle),
     now: () => clock.now,
     staleAfterMilliseconds: STALE_MILLISECONDS,
+    minimumRefireMilliseconds: NO_REFIRE_INTERVAL_MILLISECONDS,
   });
   publisher.addListener({
     onTick: (tick) => {
@@ -129,6 +132,7 @@ export async function createPriceAlertsTestContext(
       write: (line) => void logLines.push(line),
     }),
     now: () => dispatcherClock,
+    dailyLimitPerUser: DAILY_LIMIT_PER_USER,
   });
   const events: PriceAlertEvent[] = [];
   const notificationState = { malformed: 0 };

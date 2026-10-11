@@ -20,7 +20,7 @@ import {
   type LiveTestContext,
   type LiveUser,
 } from '../live-test/live-test-context.js';
-import { CLOCK_HEAD_START_MILLISECONDS } from './telegram-test.constant.js';
+import { CLOCK_HEAD_START_MILLISECONDS, DAILY_LIMIT_PER_USER } from './telegram-test.constant.js';
 
 export type TelegramTestContext = {
   readonly live: LiveTestContext;
@@ -63,6 +63,7 @@ export function createTelegramTestContext(live: LiveTestContext): TelegramTestCo
     client: createTelegramClient({ apiBaseUrl: bot.baseUrl, botToken: BOT_TOKEN }),
     logger,
     now: () => clock.now,
+    dailyLimitPerUser: DAILY_LIMIT_PER_USER,
   });
   return { live, bot, clock, logLines, dispatcher };
 }

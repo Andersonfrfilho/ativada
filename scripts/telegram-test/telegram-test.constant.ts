@@ -9,6 +9,7 @@ export const CHAT_OF_F = '740000006';
 export const CHAT_OF_G = '740000007';
 export const CHAT_STRANGER = '740000099';
 export const SECOND = 1_000;
+export const DAILY_LIMIT_PER_USER = 1_000;
 export const FRESH_FOREVER_CANDLES = 1_000_000;
 export const EVALUATOR_PASS_STEPS = 64;
 export const WALK_FORWARD_WIN_RATE = '0.6';

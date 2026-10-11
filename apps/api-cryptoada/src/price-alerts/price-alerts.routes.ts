@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { RATE_LIMIT_POLICY } from '../rate-limit/rate-limit-policy.constant.js';
 import { ROUTE_ACCESS } from '../router/route-access.constant.js';
 import type { ProtectedRouteContext, Route } from '../router/route.types.js';
 import { HTTP_METHOD, HTTP_STATUS } from '../shared/http/http.constant.js';
@@ -68,6 +69,7 @@ function createCreateRoute(dependencies: PriceAlertRouteDependencies): Route {
     method: HTTP_METHOD.POST,
     path: PRICE_ALERTS_PATH,
     access: ROUTE_ACCESS.USER,
+    rateLimitPolicy: RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION,
     documentation: PRICE_ALERT_DOCUMENTATION.create,
     handler: async ({ scope, request }): Promise<RouteResult> => ({
       status: HTTP_STATUS.CREATED,
@@ -94,6 +96,7 @@ function createUpdateRoute(dependencies: PriceAlertRouteDependencies): Route {
     method: HTTP_METHOD.PATCH,
     path: PRICE_ALERT_PATH,
     access: ROUTE_ACCESS.USER,
+    rateLimitPolicy: RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION,
     documentation: PRICE_ALERT_DOCUMENTATION.update,
     handler: async (context): Promise<RouteResult> => {
       const alertId = readAlertId(context);
@@ -111,6 +114,7 @@ function createDeleteRoute(dependencies: PriceAlertRouteDependencies): Route {
     method: HTTP_METHOD.DELETE,
     path: PRICE_ALERT_PATH,
     access: ROUTE_ACCESS.USER,
+    rateLimitPolicy: RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION,
     documentation: PRICE_ALERT_DOCUMENTATION.delete,
     handler: async (context): Promise<RouteResult> => {
       await dependencies.deletePriceAlert(context.scope, readAlertId(context));
@@ -124,6 +128,7 @@ function createClearFiredRoute(dependencies: PriceAlertRouteDependencies): Route
     method: HTTP_METHOD.DELETE,
     path: PRICE_ALERTS_FIRED_PATH,
     access: ROUTE_ACCESS.USER,
+    rateLimitPolicy: RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION,
     documentation: PRICE_ALERT_DOCUMENTATION.clearFired,
     handler: async ({ scope }): Promise<RouteResult> => ({
       status: HTTP_STATUS.OK,

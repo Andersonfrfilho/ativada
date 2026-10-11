@@ -7,6 +7,8 @@ export type PriceAlertEvaluatorParams = {
   readonly now: () => number;
   // Tick mais velho que isto não avalia nada: o painel mostraria "sem dados", e o alerta não dispara com preço parado.
   readonly staleAfterMilliseconds: number;
+  // Intervalo mínimo entre dois disparos do MESMO alerta, mesmo religado: sem ele, religar em laço gera um aviso por ciclo.
+  readonly minimumRefireMilliseconds: number;
 };
 
 // Avalia os alertas LIGADOS do par a cada tick agregado (RF14, ADR 0002 §"Alerta de preço no tick"): o cliente nunca decide.
@@ -19,6 +21,7 @@ export function createPriceAlertEvaluator(params: PriceAlertEvaluatorParams): Pr
         symbol: tick.symbol,
         price: tick.price,
         eventTime: tick.eventTime,
+        minimumRefireMilliseconds: params.minimumRefireMilliseconds,
       });
     },
   };

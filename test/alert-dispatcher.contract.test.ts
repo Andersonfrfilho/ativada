@@ -316,6 +316,7 @@ describe('despacho do alerta: falha do Telegram, repetição e desistência', ()
       client: createTelegramClient({ apiBaseUrl: subject.bot.baseUrl, botToken: BOT_TOKEN }),
       logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
       now: () => subject.clock.now,
+      dailyLimitPerUser: 1_000,
     });
     await dispatcher.tick();
     expect(subject.bot.requests).toHaveLength(2);
@@ -337,6 +338,7 @@ describe('despacho do alerta: o alerta veneno não é reivindicado para sempre',
       client: createTelegramClient({ apiBaseUrl: subject.bot.baseUrl, botToken: BOT_TOKEN }),
       logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
       now: () => subject.clock.now,
+      dailyLimitPerUser: 1_000,
     });
   }
 
@@ -356,6 +358,7 @@ describe('despacho do alerta: o alerta veneno não é reivindicado para sempre',
       client: createTelegramClient({ apiBaseUrl: subject.bot.baseUrl, botToken: BOT_TOKEN }),
       logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
       now: () => subject.clock.now,
+      dailyLimitPerUser: 1_000,
     });
     await dispatcher.tick();
     expect(seen).toStrictEqual([constants.ALERT_MAX_ATTEMPTS]);
@@ -401,6 +404,7 @@ describe('despacho do alerta: o arrendamento cobre o pior caso do lote', () => {
       client: createTelegramClient({ apiBaseUrl: subject.bot.baseUrl, botToken: BOT_TOKEN }),
       logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
       now: () => subject.clock.now,
+      dailyLimitPerUser: 1_000,
     });
     await dispatcher.tick();
     expect(seen).toStrictEqual([
@@ -409,5 +413,59 @@ describe('despacho do alerta: o arrendamento cobre o pior caso do lote', () => {
     expect(constants.ALERT_LEASE_MILLISECONDS).toBeGreaterThan(
       constants.ALERT_BATCH_SIZE * constants.ALERT_REQUEST_TIMEOUT_MILLISECONDS,
     );
+  });
+});
+
+describe('despacho do alerta: teto de mensagens por usuário nas últimas 24 horas', () => {
+  const LIMIT = 3;
+  const DAY = 24 * 3_600 * SECOND;
+
+  test('acima do teto o alerta é dispensado com daily_limit e nada sai para o Telegram', async () => {
+    const subject = harness({ dailyLimitPerUser: LIMIT });
+    for (let alert = 0; alert < 5; alert += 1) subject.enqueue();
+    const summary = await subject.dispatcher.tick();
+    expect(summary).toMatchObject({ claimed: 5, sent: LIMIT, skipped: 2, failed: 0 });
+    expect(subject.bot.requests).toHaveLength(LIMIT);
+    const skipped = subject.alerts.rows.filter((row) => row.status === 'skipped');
+    expect(skipped.map((row) => row.lastError)).toStrictEqual(['daily_limit', 'daily_limit']);
+  });
+
+  test('o teto é por usuário: o outro dono continua recebendo', async () => {
+    const subject = harness({ dailyLimitPerUser: LIMIT });
+    subject.alerts.linkChat(USER_B, CHAT_OF_B);
+    for (let alert = 0; alert < 5; alert += 1) subject.enqueue();
+    subject.enqueue({ userId: USER_B, runId: RUN_OF_B });
+    await subject.dispatcher.tick();
+    const toB = subject.bot.requests.filter((request) => request.body.chat_id === CHAT_OF_B);
+    expect(toB).toHaveLength(1);
+    expect(subject.bot.requests).toHaveLength(LIMIT + 1);
+  });
+
+  test('a janela anda: 24 horas depois do envio o usuário volta a receber', async () => {
+    const subject = harness({ dailyLimitPerUser: LIMIT });
+    for (let alert = 0; alert < LIMIT; alert += 1) subject.enqueue();
+    await subject.dispatcher.tick();
+    subject.enqueue();
+    await subject.dispatcher.tick();
+    expect(subject.bot.requests).toHaveLength(LIMIT);
+    subject.clock.now += DAY - SECOND;
+    subject.enqueue();
+    await subject.dispatcher.tick();
+    expect(subject.bot.requests).toHaveLength(LIMIT);
+    subject.clock.now += 2 * SECOND;
+    subject.enqueue();
+    await subject.dispatcher.tick();
+    expect(subject.bot.requests).toHaveLength(LIMIT + 1);
+  });
+
+  test('só mensagem ENVIADA conta: dispensadas e falhas não gastam o teto', async () => {
+    const subject = harness({ dailyLimitPerUser: 1, linked: false });
+    for (let alert = 0; alert < 3; alert += 1) subject.enqueue();
+    await subject.dispatcher.tick();
+    expect(subject.alerts.rows.every((row) => row.status === 'skipped')).toBe(true);
+    subject.alerts.linkChat(USER_A, CHAT_OF_A);
+    subject.enqueue();
+    await subject.dispatcher.tick();
+    expect(subject.bot.requests).toHaveLength(1);
   });
 });

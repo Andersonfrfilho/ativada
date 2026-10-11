@@ -37,8 +37,8 @@ const MUTANTS: readonly SourceMutant[] = [
     name: 'ROUTE_CREATE_WITHOUT_ACCESS',
     edits: edit(
       ROUTES,
-      'path: PRICE_ALERTS_PATH,\n    access: ROUTE_ACCESS.USER,\n    documentation: PRICE_ALERT_DOCUMENTATION.create,',
-      'path: PRICE_ALERTS_PATH,\n    documentation: PRICE_ALERT_DOCUMENTATION.create,',
+      'path: PRICE_ALERTS_PATH,\n    access: ROUTE_ACCESS.USER,\n    rateLimitPolicy: RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION,\n    documentation: PRICE_ALERT_DOCUMENTATION.create,',
+      'path: PRICE_ALERTS_PATH,\n    rateLimitPolicy: RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION,\n    documentation: PRICE_ALERT_DOCUMENTATION.create,',
     ),
   },
   {
@@ -53,16 +53,16 @@ const MUTANTS: readonly SourceMutant[] = [
     name: 'ROUTE_UPDATE_WITHOUT_ACCESS',
     edits: edit(
       ROUTES,
-      'path: PRICE_ALERT_PATH,\n    access: ROUTE_ACCESS.USER,\n    documentation: PRICE_ALERT_DOCUMENTATION.update,',
-      'path: PRICE_ALERT_PATH,\n    documentation: PRICE_ALERT_DOCUMENTATION.update,',
+      'path: PRICE_ALERT_PATH,\n    access: ROUTE_ACCESS.USER,\n    rateLimitPolicy: RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION,\n    documentation: PRICE_ALERT_DOCUMENTATION.update,',
+      'path: PRICE_ALERT_PATH,\n    rateLimitPolicy: RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION,\n    documentation: PRICE_ALERT_DOCUMENTATION.update,',
     ),
   },
   {
     name: 'ROUTE_DELETE_WITHOUT_ACCESS',
     edits: edit(
       ROUTES,
-      'path: PRICE_ALERT_PATH,\n    access: ROUTE_ACCESS.USER,\n    documentation: PRICE_ALERT_DOCUMENTATION.delete,',
-      'path: PRICE_ALERT_PATH,\n    documentation: PRICE_ALERT_DOCUMENTATION.delete,',
+      'path: PRICE_ALERT_PATH,\n    access: ROUTE_ACCESS.USER,\n    rateLimitPolicy: RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION,\n    documentation: PRICE_ALERT_DOCUMENTATION.delete,',
+      'path: PRICE_ALERT_PATH,\n    rateLimitPolicy: RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION,\n    documentation: PRICE_ALERT_DOCUMENTATION.delete,',
     ),
   },
   {
@@ -224,6 +224,46 @@ const MUTANTS: readonly SourceMutant[] = [
   {
     name: 'EVALUATOR_SENDS_THE_WRONG_SYMBOL',
     edits: edit(EVALUATOR, 'symbol: tick.symbol,', "symbol: 'BTCUSDT',"),
+  },
+  {
+    name: 'EVALUATOR_DROPS_THE_REFIRE_INTERVAL',
+    edits: edit(
+      EVALUATOR,
+      'minimumRefireMilliseconds: params.minimumRefireMilliseconds,',
+      'minimumRefireMilliseconds: 0,',
+    ),
+  },
+  {
+    name: 'MUTATION_ROUTE_CREATE_WITHOUT_RATE_LIMIT',
+    edits: edit(
+      ROUTES,
+      '    rateLimitPolicy: RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION,\n    documentation: PRICE_ALERT_DOCUMENTATION.create,',
+      '    documentation: PRICE_ALERT_DOCUMENTATION.create,',
+    ),
+  },
+  {
+    name: 'MUTATION_ROUTE_UPDATE_WITHOUT_RATE_LIMIT',
+    edits: edit(
+      ROUTES,
+      '    rateLimitPolicy: RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION,\n    documentation: PRICE_ALERT_DOCUMENTATION.update,',
+      '    documentation: PRICE_ALERT_DOCUMENTATION.update,',
+    ),
+  },
+  {
+    name: 'MUTATION_ROUTE_DELETE_WITHOUT_RATE_LIMIT',
+    edits: edit(
+      ROUTES,
+      '    rateLimitPolicy: RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION,\n    documentation: PRICE_ALERT_DOCUMENTATION.delete,',
+      '    documentation: PRICE_ALERT_DOCUMENTATION.delete,',
+    ),
+  },
+  {
+    name: 'MUTATION_ROUTE_CLEARFIRED_WITHOUT_RATE_LIMIT',
+    edits: edit(
+      ROUTES,
+      '    rateLimitPolicy: RATE_LIMIT_POLICY.PRICE_ALERT_MUTATION,\n    documentation: PRICE_ALERT_DOCUMENTATION.clearFired,',
+      '    documentation: PRICE_ALERT_DOCUMENTATION.clearFired,',
+    ),
   },
   {
     name: 'EVALUATOR_DROPS_THE_EVENT_TIME',

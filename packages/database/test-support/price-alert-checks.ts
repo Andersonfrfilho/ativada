@@ -184,6 +184,8 @@ async function checkDatabaseRules(context: LifecycleCheckContext): Promise<void>
 }
 
 const FIRING_CHAT = '760000001';
+const NO_REFIRE_INTERVAL = 0;
+const FIVE_MINUTES = 300_000;
 
 type FiringSetup = {
   readonly alerts: ReturnType<typeof createPriceAlertRepository>;
@@ -231,7 +233,14 @@ async function checkFiring(context: LifecycleCheckContext): Promise<void> {
     value: '100',
   });
   const fire = (price: string, eventTime: number): Promise<readonly string[]> =>
-    evaluation.fireDueAlerts({ symbol: 'LTCUSDT', price, eventTime }).then((r) => r.firedAlertIds);
+    evaluation
+      .fireDueAlerts({
+        symbol: 'LTCUSDT',
+        price,
+        eventTime,
+        minimumRefireMilliseconds: NO_REFIRE_INTERVAL,
+      })
+      .then((r) => r.firedAlertIds);
   assertCondition((await fire('89.99999999', 1)).length === 0, 'entre os valores nada dispara');
   const crossed = await fire('100', 2);
   assertCondition(
@@ -276,7 +285,12 @@ async function checkFiringRaces(context: LifecycleCheckContext): Promise<void> {
   const alert = await created(alerts, withTelegram.scope, { symbol: 'ADAUSDT', value: '2' });
   const results = await Promise.all(
     Array.from({ length: 10 }, () =>
-      evaluation.fireDueAlerts({ symbol: 'ADAUSDT', price: '2.5', eventTime: 7 }),
+      evaluation.fireDueAlerts({
+        symbol: 'ADAUSDT',
+        price: '2.5',
+        eventTime: 7,
+        minimumRefireMilliseconds: NO_REFIRE_INTERVAL,
+      }),
     ),
   );
   const total = results.reduce((sum, result) => sum + result.firedAlertIds.length, 0);
@@ -291,7 +305,12 @@ async function checkFiringRaces(context: LifecycleCheckContext): Promise<void> {
     maxEnabled: 50,
   });
   assertCondition(rearmed.outcome === PRICE_ALERT_UPDATE_OUTCOME.UPDATED, 'religa');
-  await evaluation.fireDueAlerts({ symbol: 'ADAUSDT', price: '2.5', eventTime: 8 });
+  await evaluation.fireDueAlerts({
+    symbol: 'ADAUSDT',
+    price: '2.5',
+    eventTime: 8,
+    minimumRefireMilliseconds: NO_REFIRE_INTERVAL,
+  });
   assertCondition(
     (await outboxRows(context, alert.id)).length === 2,
     'rearmado, o novo cruzamento é outro aviso (outro instante)',
@@ -302,10 +321,59 @@ async function checkFiringRaces(context: LifecycleCheckContext): Promise<void> {
     maxEnabled: 50,
   });
   await context.client`UPDATE price_alerts SET is_enabled = false WHERE id = ${alert.id}`;
-  const none = await evaluation.fireDueAlerts({ symbol: 'ADAUSDT', price: '9', eventTime: 9 });
+  const none = await evaluation.fireDueAlerts({
+    symbol: 'ADAUSDT',
+    price: '9',
+    eventTime: 9,
+    minimumRefireMilliseconds: NO_REFIRE_INTERVAL,
+  });
   assertCondition(none.firedAlertIds.length === 0, 'alerta desligado nunca dispara');
   reportCheck(
     'alertas de preço: 10 processos no mesmo tick = 1 disparo e 1 aviso; religar rearma; desligado não dispara',
+  );
+}
+
+// Rearmar em laço não gera volume: o mesmo alerta só dispara de novo depois do intervalo mínimo, mesmo religado e com o
+// preço ainda cruzado; religar NÃO apaga o carimbo do último disparo.
+async function checkRefireInterval(context: LifecycleCheckContext): Promise<void> {
+  const { client, assertCondition, reportCheck } = context;
+  const { alerts, evaluation, withTelegram } = await openFiringSetup(context);
+  const alert = await created(alerts, withTelegram.scope, { symbol: 'DOGEUSDT', value: '0.1' });
+  const fire = (eventTime: number, minimumRefireMilliseconds: number): Promise<number> =>
+    evaluation
+      .fireDueAlerts({ symbol: 'DOGEUSDT', price: '0.2', eventTime, minimumRefireMilliseconds })
+      .then((result) => result.firedAlertIds.length);
+  const rearm = (): Promise<unknown> =>
+    alerts.updatePriceAlert(withTelegram.scope, {
+      alertId: alert.id,
+      patch: { isEnabled: true },
+      maxEnabled: 50,
+    });
+  assertCondition((await fire(100, FIVE_MINUTES)) === 1, 'o primeiro disparo passa');
+  await rearm();
+  const stamp: unknown =
+    await client`SELECT last_fired_at FROM price_alerts WHERE id = ${alert.id}`;
+  assertCondition(
+    (stamp as readonly { last_fired_at: Date | null }[])[0]?.last_fired_at !== null,
+    'religar não apaga o carimbo do último disparo',
+  );
+  assertCondition(
+    (await fire(101, FIVE_MINUTES)) === 0,
+    'dentro dos 5 minutos não dispara de novo',
+  );
+  const still = await alerts.findPriceAlert(withTelegram.scope, alert.id);
+  assertCondition(
+    still?.isEnabled === true && still.triggeredAt === undefined,
+    'e o alerta segue armado, esperando o intervalo',
+  );
+  assertCondition((await outboxRows(context, alert.id)).length === 1, 'sem segundo aviso');
+  await client`UPDATE price_alerts SET last_fired_at = now() - interval '6 minutes' WHERE id = ${alert.id}`;
+  assertCondition((await fire(102, FIVE_MINUTES)) === 1, 'passado o intervalo, dispara');
+  assertCondition((await outboxRows(context, alert.id)).length === 2, 'e avisa de novo');
+  await rearm();
+  assertCondition((await fire(103, NO_REFIRE_INTERVAL)) === 1, 'intervalo zero: sem espera');
+  reportCheck(
+    'alertas de preço: o mesmo alerta só dispara de novo depois do intervalo mínimo; religar não o zera',
   );
 }
 
@@ -437,6 +505,7 @@ export async function checkPriceAlerts(context: LifecycleCheckContext): Promise<
   await checkFiring(context);
   await checkClearFired(context);
   await checkFiringRaces(context);
+  await checkRefireInterval(context);
   await checkActiveOwner(context);
   await checkOutboxRules(context);
 }

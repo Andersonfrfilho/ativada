@@ -21,6 +21,10 @@ function boundedInteger(params: {
     .default(params.fallback);
 }
 
+const REFIRE_EXPECTATION = 'inteiro de segundos entre 0 e 86400';
+const MAX_MIN_REFIRE_SECONDS = 86_400;
+const DEFAULT_MIN_REFIRE_SECONDS = 300;
+
 // Tetos de uso por usuário (RF00b) dos alertas de preço ligados (RF14) e dos ativos cadastrados (RF15).
 export const userLimitsEnvironmentShape = {
   PRICE_ALERT_MAX_ENABLED_PER_USER: boundedInteger({
@@ -33,4 +37,11 @@ export const userLimitsEnvironmentShape = {
     maximum: MAX_USER_ASSETS,
     fallback: DEFAULT_USER_ASSETS,
   }),
+  // Quanto tempo o MESMO alerta de preço espera, desde o último disparo, para disparar de novo (0 desliga a espera).
+  PRICE_ALERT_MIN_REFIRE_SECONDS: z.coerce
+    .number({ error: REFIRE_EXPECTATION })
+    .int({ error: REFIRE_EXPECTATION })
+    .min(0, { error: REFIRE_EXPECTATION })
+    .max(MAX_MIN_REFIRE_SECONDS, { error: REFIRE_EXPECTATION })
+    .default(DEFAULT_MIN_REFIRE_SECONDS),
 } as const;

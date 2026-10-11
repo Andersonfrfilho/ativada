@@ -11,6 +11,7 @@ const { hub: hubModule } = await loadStreamApp();
 
 const NOW = 1_760_000_000_000;
 const STALE_AFTER = 10_000;
+const MINIMUM_REFIRE = 300_000;
 const ALERT_OF_A = '0192f3a1-7c4e-7b2a-9d3f-5e6a7b8c9a01';
 const ALERT_OF_B = '0192f3a1-7c4e-7b2a-9d3f-5e6a7b8c9b02';
 const UNKNOWN_ALERT = '0192f3a1-7c4e-7b2a-9d3f-5e6a7b8c9c03';
@@ -38,6 +39,7 @@ function openEvaluator(): { onTick: (tick: Tick) => unknown; calls: FireDueAlert
     },
     now: () => NOW,
     staleAfterMilliseconds: STALE_AFTER,
+    minimumRefireMilliseconds: MINIMUM_REFIRE,
   });
   return { onTick: listener.onTick, calls };
 }
@@ -47,7 +49,12 @@ describe('avaliador do alerta de preço: cada tick agregado vai ao banco, o dado
     const { onTick, calls } = openEvaluator();
     await onTick(tick({ eventTime: NOW - 1_234 }));
     expect(calls).toStrictEqual([
-      { symbol: 'BTCUSDT', price: '70001.25000000', eventTime: NOW - 1_234 },
+      {
+        symbol: 'BTCUSDT',
+        price: '70001.25000000',
+        eventTime: NOW - 1_234,
+        minimumRefireMilliseconds: MINIMUM_REFIRE,
+      },
     ]);
   });
 
@@ -78,6 +85,7 @@ describe('avaliador do alerta de preço: cada tick agregado vai ao banco, o dado
       repository: { fireDueAlerts: () => Promise.reject(new Error('banco fora')) },
       now: () => NOW,
       staleAfterMilliseconds: STALE_AFTER,
+      minimumRefireMilliseconds: MINIMUM_REFIRE,
     });
     const failure = await Promise.resolve(listener.onTick(tick())).catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(Error);
