@@ -43,3 +43,14 @@ export class GoalInUseError extends DomainError {
     });
   }
 }
+
+// Sem candles suficientes para o aquecimento da estratégia (ou configuração que o motor já não aceita): não há plano.
+export class GoalPlanUnavailableError extends DomainError {
+  constructor() {
+    super({
+      code: GOAL_ERROR_CODE.GOAL_PLAN_UNAVAILABLE,
+      message: 'Ainda não há candles suficientes para montar o plano desta estratégia neste par.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}

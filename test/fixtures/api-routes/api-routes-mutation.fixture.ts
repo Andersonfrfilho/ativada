@@ -56,6 +56,7 @@ export const GOALS_MUTANT_TARGET: MutantTarget = {
     'test/api-goals.contract.test.ts',
     'test/api-goal-evaluation.contract.test.ts',
     'test/api-goal-runs.contract.test.ts',
+    'test/api-goal-plan.contract.test.ts',
     'test/api-openapi.contract.test.ts',
   ],
   sourceVariable: 'API_ROUTES_APP_SOURCE',

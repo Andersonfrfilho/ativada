@@ -106,6 +106,15 @@ export async function createGoalsHarness(options: GoalsHarnessOptions = {}): Pro
         updateGoal: useCases.createUpdateGoalUseCase(base),
         deleteGoal: useCases.createDeleteGoalUseCase(base),
         evaluateGoal: evaluation,
+        getGoalPlan: app.goalPlan.createGoalPlanUseCase({
+          goals: parts.goals.repository,
+          strategies: parts.strategies.repository,
+          candles: parts.candles.repository,
+          sentiments: NO_SENTIMENT,
+          exchange: EXCHANGE,
+          now: () => parts.clock.now,
+          cache: app.goalPlanCache.createGoalPlanCache(),
+        }),
       });
     },
   });

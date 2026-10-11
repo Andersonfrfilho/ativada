@@ -15,6 +15,8 @@ import { evaluateGoal } from '@cryptoada/strategy-engine';
 import type { Environment } from '../environment.js';
 import { createGoalEvaluationCache } from '../goals/goal-evaluation-cache.js';
 import { createGoalEvaluationUseCase } from '../goals/goal-evaluation.use-case.js';
+import { createGoalPlanCache } from '../goals/goal-plan-cache.js';
+import { createGoalPlanUseCase } from '../goals/goal-plan.use-case.js';
 import { MAX_GOALS_PER_USER } from '../goals/goal.constant.js';
 import {
   createCreateGoalUseCase,
@@ -93,6 +95,15 @@ function createGoalDependencies(params: DomainRouteParams): GoalRouteDependencie
       now: params.now,
       cache: createGoalEvaluationCache(),
       evaluate: evaluateGoal,
+    }),
+    getGoalPlan: createGoalPlanUseCase({
+      goals,
+      strategies: createStrategyRepository(database),
+      candles: createCandleRepository(database),
+      sentiments: createSentimentObservationRepository(database),
+      exchange: environment.MARKET_EXCHANGE,
+      now: params.now,
+      cache: createGoalPlanCache(),
     }),
   };
 }

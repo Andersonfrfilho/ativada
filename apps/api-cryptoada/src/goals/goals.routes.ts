@@ -9,7 +9,17 @@ import type { RouteResult } from '../shared/http/response-envelope.js';
 import { readPage } from '../shared/pagination/read-page.js';
 import { decodeGoalCursor } from './goal-cursor.js';
 import { createGoalSchema, patchGoalSchema } from './goal-requests.js';
-import { GOAL_EVALUATION_PATH, GOAL_ID_PARAM, GOAL_PATH, GOALS_PATH } from './goal.constant.js';
+import { z } from '@cryptoada/environment';
+
+import { readValidatedQuery } from '../shared/http/read-validated-query.js';
+import {
+  GOAL_EVALUATION_PATH,
+  GOAL_ID_PARAM,
+  GOAL_PATH,
+  GOAL_PLAN_PATH,
+  GOALS_PATH,
+} from './goal.constant.js';
+import type { GetGoalPlanUseCase } from './goal-plan.use-case.js';
 import { GoalNotFoundError } from './goal.error.js';
 import type { EvaluateGoalUseCase } from './goal-evaluation.use-case.js';
 import type {
@@ -19,6 +29,7 @@ import type {
   ListGoalsUseCase,
   UpdateGoalUseCase,
 } from './goal.use-cases.js';
+import { GOAL_PLAN_DOCUMENTATION } from './goal-plan.docs.js';
 import { GOAL_DOCUMENTATION } from './goals.docs.js';
 
 export type GoalRouteDependencies = {
@@ -29,7 +40,10 @@ export type GoalRouteDependencies = {
   readonly updateGoal: UpdateGoalUseCase;
   readonly deleteGoal: DeleteGoalUseCase;
   readonly evaluateGoal: EvaluateGoalUseCase;
+  readonly getGoalPlan: GetGoalPlanUseCase;
 };
+
+const PLAN_QUERY_SCHEMA = z.strictObject({ strategyId: z.uuid() });
 
 // UUID malformado e meta inexistente são o MESMO 404 (ADR 0001 §e).
 function readGoalId(context: ProtectedRouteContext): string {
@@ -127,6 +141,24 @@ function createEvaluationRoute(dependencies: GoalRouteDependencies): Route {
   };
 }
 
+function createPlanRoute(dependencies: GoalRouteDependencies): Route {
+  return {
+    method: HTTP_METHOD.GET,
+    path: GOAL_PLAN_PATH,
+    access: ROUTE_ACCESS.USER,
+    rateLimitPolicy: RATE_LIMIT_POLICY.GOAL_EVALUATION,
+    documentation: GOAL_PLAN_DOCUMENTATION.plan,
+    handler: async (context): Promise<RouteResult> => {
+      const goalId = readGoalId(context);
+      const { strategyId } = readValidatedQuery(context.request, PLAN_QUERY_SCHEMA);
+      return {
+        status: HTTP_STATUS.OK,
+        data: await dependencies.getGoalPlan(context.scope, { goalId, strategyId }),
+      };
+    },
+  };
+}
+
 export function createGoalRoutes(dependencies: GoalRouteDependencies): readonly Route[] {
   return [
     createListRoute(dependencies),
@@ -135,5 +167,6 @@ export function createGoalRoutes(dependencies: GoalRouteDependencies): readonly 
     createUpdateRoute(dependencies),
     createDeleteRoute(dependencies),
     createEvaluationRoute(dependencies),
+    createPlanRoute(dependencies),
   ];
 }

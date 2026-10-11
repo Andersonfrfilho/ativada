@@ -64,6 +64,7 @@ export function buildApiRouteDependencies(
       updateGoal: notUsed,
       deleteGoal: notUsed,
       evaluateGoal: notUsed,
+      getGoalPlan: notUsed,
     },
     runs: {
       routes: {

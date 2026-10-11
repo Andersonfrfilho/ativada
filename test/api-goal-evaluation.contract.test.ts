@@ -1,5 +1,13 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  setDefaultTimeout,
+  test,
+} from 'bun:test';
 
 import type { GoalCacheKeyParams } from '../apps/api-cryptoada/src/goals/goal-evaluation-cache.js';
 import {
@@ -14,6 +22,9 @@ import {
   SUBJECT_A,
   SUBJECT_B,
 } from './fixtures/api-routes/runs-harness.fixture.js';
+
+// Sem o cache (mutante) a avaliação leva segundos por chamada: o teste precisa FALHAR pela asserção, não por tempo esgotado.
+setDefaultTimeout(120_000);
 
 const GOALS = '/v1/goals';
 const DAY = 24 * HOUR;

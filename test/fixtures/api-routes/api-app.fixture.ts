@@ -31,6 +31,8 @@ import type * as StrategyRoutesModule from '../../../apps/api-cryptoada/src/stra
 import type * as GoalCandlesModule from '../../../apps/api-cryptoada/src/goals/goal-evaluation-candles.js';
 import type * as GoalCacheModule from '../../../apps/api-cryptoada/src/goals/goal-evaluation-cache.js';
 import type * as GoalEvaluationModule from '../../../apps/api-cryptoada/src/goals/goal-evaluation.use-case.js';
+import type * as GoalPlanCacheModule from '../../../apps/api-cryptoada/src/goals/goal-plan-cache.js';
+import type * as GoalPlanModule from '../../../apps/api-cryptoada/src/goals/goal-plan.use-case.js';
 import type * as GoalRoutesModule from '../../../apps/api-cryptoada/src/goals/goals.routes.js';
 import type * as GoalUseCasesModule from '../../../apps/api-cryptoada/src/goals/goal.use-cases.js';
 import type * as StrategyUseCasesModule from '../../../apps/api-cryptoada/src/strategies/strategy.use-cases.js';
@@ -72,6 +74,8 @@ export type ApiApp = {
   readonly goalUseCases: typeof GoalUseCasesModule;
   readonly goalEvaluation: typeof GoalEvaluationModule;
   readonly goalCache: typeof GoalCacheModule;
+  readonly goalPlan: typeof GoalPlanModule;
+  readonly goalPlanCache: typeof GoalPlanCacheModule;
   readonly goalCandles: typeof GoalCandlesModule;
   readonly seedExample: typeof SeedExampleModule;
   readonly seedingResolver: typeof SeedingResolverModule;
@@ -122,6 +126,8 @@ export async function loadApiApp(): Promise<ApiApp> {
     goalUseCases: await load('goals/goal.use-cases'),
     goalEvaluation: await load('goals/goal-evaluation.use-case'),
     goalCache: await load('goals/goal-evaluation-cache'),
+    goalPlan: await load('goals/goal-plan.use-case'),
+    goalPlanCache: await load('goals/goal-plan-cache'),
     goalCandles: await load('goals/goal-evaluation-candles'),
     seedExample: await load('strategies/seed-example-strategy.use-case'),
     seedingResolver: await load('strategies/example-seeding-user-resolver'),

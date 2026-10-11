@@ -22,6 +22,8 @@ const EVALUATION = 'goals/goal-evaluation.use-case.ts';
 const STRATEGIES = 'goals/goal-evaluation-strategies.ts';
 const CACHE = 'goals/goal-evaluation-cache.ts';
 const CONSTANT = 'goals/goal.constant.ts';
+const PLAN = 'goals/goal-plan.use-case.ts';
+const PLAN_CACHE = 'goals/goal-plan-cache.ts';
 const RUN_REQUEST = 'runs/create-run-request.schema.ts';
 const CREATE_RUN = 'runs/create-run.use-case.ts';
 const RUN_VIEW = 'runs/run-view.ts';
@@ -54,7 +56,19 @@ const MUTANTS: readonly SourceMutant[] = [
   },
   {
     name: 'EVALUATION_WITHOUT_ITS_RATE_LIMIT',
-    edits: edit(ROUTES, '    rateLimitPolicy: RATE_LIMIT_POLICY.GOAL_EVALUATION,\n', ''),
+    edits: edit(
+      ROUTES,
+      '    rateLimitPolicy: RATE_LIMIT_POLICY.GOAL_EVALUATION,\n    documentation: GOAL_DOCUMENTATION.evaluation,',
+      '    documentation: GOAL_DOCUMENTATION.evaluation,',
+    ),
+  },
+  {
+    name: 'PLAN_WITHOUT_ITS_RATE_LIMIT',
+    edits: edit(
+      ROUTES,
+      '    rateLimitPolicy: RATE_LIMIT_POLICY.GOAL_EVALUATION,\n    documentation: GOAL_PLAN_DOCUMENTATION.plan,',
+      '    documentation: GOAL_PLAN_DOCUMENTATION.plan,',
+    ),
   },
   {
     name: 'MALFORMED_ID_IS_NOT_A_NOT_FOUND',
@@ -271,6 +285,58 @@ const MUTANTS: readonly SourceMutant[] = [
   {
     name: 'RUN_VIEW_HIDES_THE_OUTCOME',
     edits: edit(RUN_VIEW, 'goalOutcome: record.goalOutcome ?? null,', 'goalOutcome: null,'),
+  },
+  {
+    name: 'PLAN_ROUTE_WITHOUT_ACCESS',
+    edits: edit(
+      ROUTES,
+      'path: GOAL_PLAN_PATH,\n    access: ROUTE_ACCESS.USER,',
+      'path: GOAL_PLAN_PATH,',
+    ),
+  },
+  {
+    name: 'PLAN_QUERY_STRATEGY_OPTIONAL',
+    edits: edit(
+      ROUTES,
+      'z.strictObject({ strategyId: z.uuid() })',
+      'z.strictObject({ strategyId: z.uuid().optional() })',
+    ),
+  },
+  {
+    name: 'PLAN_GOAL_NOT_CHECKED',
+    edits: edit(PLAN, 'if (goal === undefined) throw new GoalNotFoundError();', ''),
+  },
+  {
+    name: 'PLAN_NULL_NOT_REFUSED',
+    edits: edit(PLAN, 'if (plan === null) throw new GoalPlanUnavailableError();', ''),
+  },
+  {
+    name: 'PLAN_DEADLINE_FROM_THE_START',
+    edits: edit(
+      PLAN,
+      'deadline: new Date(plan.deadlineAt).toISOString(),',
+      'deadline: new Date(plan.startsAt).toISOString(),',
+    ),
+  },
+  {
+    name: 'PLAN_SYMBOL_OF_ANOTHER_PAIR',
+    edits: edit(PLAN, 'symbol: goal.symbol,', "symbol: 'ETHUSDT',"),
+  },
+  {
+    name: 'PLAN_CACHE_IGNORES_THE_LAST_CANDLE',
+    edits: edit(PLAN_CACHE, '    key.lastCandleOpenTime,\n', ''),
+  },
+  {
+    name: 'PLAN_CACHE_IGNORES_THE_TARGET_RATE',
+    edits: edit(PLAN_CACHE, '    key.targetRate,\n', ''),
+  },
+  {
+    name: 'PLAN_CACHE_IGNORES_THE_MAX_LOSS_RATE',
+    edits: edit(PLAN_CACHE, '    key.maxLossRate,\n', ''),
+  },
+  {
+    name: 'PLAN_CACHE_IGNORES_THE_HORIZON',
+    edits: edit(PLAN_CACHE, '    key.horizonDays,\n', ''),
   },
 ];
 

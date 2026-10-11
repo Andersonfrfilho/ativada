@@ -31,6 +31,8 @@ export type RunSourceMutantParams = {
   readonly prefix: string;
   readonly variable: string;
   readonly judgeTestFiles: readonly string[];
+  // Mutante que trava a busca nunca termina: passado o prazo o processo é morto e isso conta como reprovação.
+  readonly timeoutMilliseconds?: number;
 };
 
 async function applyEdit(directory: string, name: string, edit: SourceEdit): Promise<void> {
@@ -63,6 +65,7 @@ export async function runSourceMutant(params: RunSourceMutantParams): Promise<So
     env: { PATH: Bun.env.PATH ?? '', HOME: Bun.env.HOME ?? '', [params.variable]: directory },
     stdout: 'pipe',
     stderr: 'pipe',
+    ...(params.timeoutMilliseconds === undefined ? {} : { timeout: params.timeoutMilliseconds }),
   });
   const [output, errors, exitCode] = await Promise.all([
     new Response(child.stdout).text(),
@@ -70,9 +73,11 @@ export async function runSourceMutant(params: RunSourceMutantParams): Promise<So
     child.exited,
   ]);
   const report = `${output}\n${errors}`;
+  const failedLines = report.split('\n').filter((line) => line.startsWith('(fail)')).length;
+  const hasTimedOut = child.signalCode !== null;
   return {
     exitCode,
-    failedTests: report.split('\n').filter((line) => line.startsWith('(fail)')).length,
+    failedTests: hasTimedOut ? Math.max(failedLines, 1) : failedLines,
     hasLoadError: report.includes('Unhandled error between tests'),
   };
 }

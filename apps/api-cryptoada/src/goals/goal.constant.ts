@@ -4,6 +4,7 @@ import { ENGINE_TIMEFRAME } from '@cryptoada/strategy-engine';
 export const GOALS_PATH = '/v1/goals';
 export const GOAL_PATH = '/v1/goals/:goalId';
 export const GOAL_EVALUATION_PATH = '/v1/goals/:goalId/evaluation';
+export const GOAL_PLAN_PATH = '/v1/goals/:goalId/plan';
 export const GOAL_ID_PARAM = 'goalId';
 
 // Teto de metas por usuário (RF00b): um usuário não enche o banco nem a avaliação dos outros.
