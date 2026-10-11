@@ -7,12 +7,12 @@ import {
   resolveUserBySubject,
   type DatabaseHandle,
 } from '@cryptoada/database';
-import { PRODUCTION_ENVIRONMENT } from '@cryptoada/environment';
 
 import { createAccountRouteDependencies } from './account/create-account-route-dependencies.js';
 import { createAdminRouteDependencies } from './admin/create-admin-route-dependencies.js';
 import type { AccessTokenVerifier } from './authentication/access-token-verifier.js';
 import type { UserResolver } from './authentication/resolve-authenticated-user.js';
+import { isDocumentationEnvironment } from './docs/documentation-environment.js';
 import type { Environment } from './environment.js';
 import type { createIdentityAdmin } from './identity/create-identity-admin.js';
 import type { Logger } from './logging/logger.js';
@@ -120,7 +120,7 @@ export function createApiRouter(params: ApiRouterParams): Router {
       }),
       streamTicketStore: params.ticketStore,
       ...domain,
-      isDocumentationEnabled: environment.ENV !== PRODUCTION_ENVIRONMENT,
+      isDocumentationEnabled: isDocumentationEnvironment(environment.ENV),
     }),
     verifyAccessToken,
     resolveUser: createSeedingUserResolver({ database, logger }),
