@@ -54,3 +54,19 @@ export function formatPercent(ratio: number): string {
 export function formatDate(epochMilliseconds: number): string {
   return dateFormat.format(new Date(epochMilliseconds));
 }
+
+const quantityFormat = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 8 });
+
+// Quantidade de moeda: até 8 casas, sem zeros à direita ("0,5", não "0,50").
+export function formatQuantity(decimalText: string): string {
+  return quantityFormat.format(Number(decimalText));
+}
+
+// Valor com sinal explícito para o que ganhou ("+1.000,00"); perda já vem com o sinal de menos.
+export function formatSignedDecimal(value: number): string {
+  return `${value > 0 ? '+' : ''}${numberFormat.format(value)}`;
+}
+
+export function formatReais(value: number): string {
+  return `R$ ${numberFormat.format(value)}`;
+}

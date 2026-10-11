@@ -8,6 +8,7 @@ import { StrategiesPage } from '../strategies/StrategiesPage.page.js';
 import { StrategyDetailPage } from '../strategies/StrategyDetailPage.page.js';
 import { AccountPage } from '../account/AccountPage.page.js';
 import { AlertsPage } from '../alerts/AlertsPage.page.js';
+import { AssetsPage } from '../assets/AssetsPage.page.js';
 import { GoalDetailPage } from '../goals/GoalDetailPage.page.js';
 import { PlanPage } from '../goals/PlanPage.page.js';
 import { GoalsPage } from '../goals/GoalsPage.page.js';
@@ -44,6 +45,7 @@ export function createAppRoutes(): RouteObject[] {
                 { path: ROUTE_PATH.GOALS, element: <GoalsPage /> },
                 { path: ROUTE_PATH.GOAL, element: <GoalDetailPage /> },
                 { path: ROUTE_PATH.GOAL_PLAN, element: <PlanPage /> },
+                { path: ROUTE_PATH.ASSETS, element: <AssetsPage /> },
                 { path: ROUTE_PATH.ACCOUNT, element: <AccountPage /> },
               ],
             },

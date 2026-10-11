@@ -13,6 +13,7 @@ const LINKS: readonly { readonly to: string; readonly label: string; readonly is
   [
     { to: ROUTE_PATH.OVERVIEW, label: 'Visão geral', isExact: true },
     { to: ROUTE_PATH.GOALS, label: 'Metas', isExact: false },
+    { to: ROUTE_PATH.ASSETS, label: 'Ativos', isExact: false },
     { to: ROUTE_PATH.BACKTESTS, label: 'Backtests', isExact: false },
     { to: ROUTE_PATH.STRATEGIES, label: 'Estratégias', isExact: false },
     { to: ROUTE_PATH.ALERTS, label: 'Alertas', isExact: false },

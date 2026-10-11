@@ -1,0 +1,44 @@
+.list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.asset {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.symbol {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.value {
+  font: 500 22px/1.2 var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.rule {
+  font-weight: 600;
+}
+
+.flag {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  justify-self: start;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
