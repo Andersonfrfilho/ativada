@@ -41,7 +41,7 @@ export type SeedParams = { readonly handle: DatabaseHandle; readonly scope: Owne
 export type SeededPanel = { readonly runId: string; readonly lastOpenTime: number };
 
 const DAILY_CANDLES = 430;
-const DAILY_SEED = 20_261_011;
+const DAILY_SEED = 7;
 const DAY_MILLISECONDS = 86_400_000;
 
 function lastClosedHourStart(now: number): number {

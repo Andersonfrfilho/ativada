@@ -232,7 +232,7 @@ stream-mutants: ## Prova que o NOTIFY do passo ao vivo reprova 8 mutantes (tipo 
 identity-logs: ## Segue os logs do Keycloak do ambiente atual
 	$(COMPOSE) logs -f keycloak
 
-panel-e2e: ## Prova o painel no navegador (Playwright) contra a API real, Postgres e Keycloak de teste descartáveis: aviso de simulação em todas as rotas, login PKCE, visão geral com dados do seed e o crédito do Fear & Greed, conta (preferências, Telegram, exportar, apagar), PWA sem cache de /v1 e CSP sem unsafe-inline
+panel-e2e: ## Prova o painel no navegador (Playwright) contra a API real, Postgres e Keycloak de teste descartáveis: metas com ranking, plano com alerta, ativos e preço ao vivo pelo ticker (Binance falsa), socket derrubado e recuperado; aviso de simulação em todas as rotas, login PKCE, visão geral com dados do seed e o crédito do Fear & Greed, conta (preferências, Telegram, exportar, apagar), PWA sem cache de /v1 e CSP sem unsafe-inline
 	set -a; . envs/env.test; set +a; \
 	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
 	trap 'exit 130' INT; \

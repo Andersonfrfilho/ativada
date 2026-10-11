@@ -5,11 +5,15 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { readE2eEnvironment } from './e2e-environment.js';
 import { receiveLiveAlertsWithoutReloading } from './flows/alerts.flow.js';
+import { registerAPurchaseAndWatchThePrice } from './flows/assets.flow.js';
 import {
   compareTheTwoBacktests,
   expectBacktestResult,
   runBacktestThroughTheScreen,
 } from './flows/backtest.flow.js';
+import { declareGoalRankAndSimulate, openPlanOfTheFirstGoal } from './flows/goals.flow.js';
+import { dropTheSocketAndComeBack } from './flows/live.flow.js';
+import { alertOnTheTargetAndLetTheTickFireIt } from './flows/plan-alert.flow.js';
 import { deleteTheCopy, editStrategyIntoANewVersion } from './flows/strategy.flow.js';
 
 const environment = readE2eEnvironment();
@@ -166,6 +170,29 @@ test('alertas: sinal e alerta de preço chegam pelo WebSocket e aparecem sem rec
   });
 });
 
+test('metas: declarar a meta, ver o ranking estratégia x moeda e simular, com o cartão de meta ativa no painel', async () => {
+  await declareGoalRankAndSimulate(page);
+});
+
+test('plano: níveis e gráfico; "Avisar no plano" cria o alerta e o tick o dispara sem recarregar', async () => {
+  await openPlanOfTheFirstGoal(page);
+  await alertOnTheTargetAndLetTheTickFireIt(page, {
+    request: page.request,
+    url: environment.controlUrl,
+  });
+});
+
+test('ativos: registrar a compra mostra valor, regra, alvo e stop, e o preço muda sem recarregar', async () => {
+  await registerAPurchaseAndWatchThePrice(page, {
+    request: page.request,
+    url: environment.controlUrl,
+  });
+});
+
+test('tempo real: derrubar o socket mostra "sem dados" e a volta corrige a tela', async () => {
+  await dropTheSocketAndComeBack(page, { request: page.request, url: environment.controlUrl });
+});
+
 test('PWA: manifesto válido, service worker ativo e nada de /v1 em cache; CSP sem unsafe-inline', async () => {
   const manifest = await page.request.get('/manifest.webmanifest');
   const manifestBody: unknown = await manifest.json();
@@ -186,7 +213,15 @@ test('PWA: manifesto válido, service worker ativo e nada de /v1 em cache; CSP s
 test('celular: sem rolagem horizontal em nenhuma tela do painel', async () => {
   await page.setViewportSize({ width: 375, height: 812 });
   const navigation = page.getByRole('navigation', { name: 'Principal' });
-  for (const link of ['Visão geral', 'Backtests', 'Estratégias', 'Alertas', 'Conta']) {
+  for (const link of [
+    'Visão geral',
+    'Metas',
+    'Ativos',
+    'Backtests',
+    'Estratégias',
+    'Alertas',
+    'Conta',
+  ]) {
     await navigation.getByRole('link', { name: link }).click();
     await expect(navigation).toBeVisible();
     const overflow = await page.evaluate(

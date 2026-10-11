@@ -29,6 +29,7 @@ import { startControlServer } from './panel-e2e/control-server.js';
 import { runPlaywright } from './panel-e2e/run-playwright.js';
 import { seedPanelData } from './panel-e2e/seed-panel-data.js';
 import { startPanel } from './panel-e2e/start-panel.js';
+import { startFakeBinanceStreamServer } from '../packages/market-data/test-support/fake-binance-stream-server.js';
 import { startApi } from './session-test/start-api.js';
 
 const EXPECTED_DISPLAY = {
@@ -67,6 +68,11 @@ async function main(): Promise<void> {
     await checkDiscovery(identity);
     const telegram = startFakeTelegramServer(Bun.env['TELEGRAM_API_BASE_URL'] ?? '');
     identity.cleanup.register('parar o Telegram falso', () => telegram.stop());
+    const binance = startFakeBinanceStreamServer();
+    identity.cleanup.register('parar a Binance falsa', () => binance.stop());
+    Bun.env['TICKER_STREAM_ENABLED'] = 'true';
+    Bun.env['BINANCE_BASE_URL'] = binance.restUrl;
+    Bun.env['BINANCE_STREAM_URL'] = binance.streamUrl;
     const api = startApi();
     identity.cleanup.register('parar a API', () => api.stop());
     const sql = new Bun.SQL(temporary.url);
@@ -84,6 +90,7 @@ async function main(): Promise<void> {
       scope: resolution.scope,
       runId: seeded.runId,
       lastOpenTime: seeded.lastOpenTime,
+      binance,
     });
     identity.cleanup.register('parar o servidor de controle', () => control.stop());
 

@@ -5,6 +5,7 @@ import {
   type DatabaseHandle,
   type OwnerScope,
 } from '../../packages/database/src/index.js';
+import type { FakeBinanceStreamServer } from '../../packages/market-data/test-support/fake-binance-stream-server.js';
 import { parseJsonContainer } from '../../packages/run-recording/src/index.js';
 import { HOUR_MILLISECONDS } from './panel-e2e.constant.js';
 
@@ -19,6 +20,8 @@ export type ControlParams = {
   readonly scope: OwnerScope;
   readonly runId: string;
   readonly lastOpenTime: number;
+  // A Binance falsa que a API consome: o `/tick` do E2E empurra o preço por ela, e o resto (agregação, alerta, socket) é real.
+  readonly binance: FakeBinanceStreamServer;
 };
 
 export type ControlServer = { readonly url: string; readonly stop: () => Promise<void> };
@@ -60,6 +63,40 @@ async function pushPriceAlert(params: ControlParams): Promise<void> {
   await notify(params.sql, { kind: 'price_alert', alertId });
 }
 
+const TICKER_CONNECTION_TIMEOUT_MILLISECONDS = 15_000;
+const TICKER_POLL_MILLISECONDS = 50;
+
+async function waitForTickerConnection(binance: FakeBinanceStreamServer): Promise<void> {
+  const deadline = Date.now() + TICKER_CONNECTION_TIMEOUT_MILLISECONDS;
+  while (binance.openConnectionCount() === 0) {
+    if (Date.now() > deadline) throw new Error('a API não conectou ao ticker da Binance falsa');
+    await Bun.sleep(TICKER_POLL_MILLISECONDS);
+  }
+}
+
+type TickBody = { readonly symbol: string; readonly price: string };
+
+function isTickBody(value: unknown): value is TickBody {
+  if (typeof value !== 'object' || value === null) return false;
+  return (
+    typeof Reflect.get(value, 'symbol') === 'string' &&
+    typeof Reflect.get(value, 'price') === 'string'
+  );
+}
+
+// Faz o papel da Binance: um preço novo para o par, no mesmo formato do miniTicker.
+async function pushTick(params: ControlParams, request: Request): Promise<void> {
+  const body: unknown = await request.json();
+  if (!isTickBody(body)) throw new Error('corpo do /tick inválido');
+  await waitForTickerConnection(params.binance);
+  params.binance.sendTicker({
+    symbol: body.symbol,
+    price: body.price,
+    openPrice: body.price,
+    eventTime: Date.now(),
+  });
+}
+
 export function startControlServer(params: ControlParams): ControlServer {
   let signals = 0;
   const server = Bun.serve({
@@ -70,6 +107,7 @@ export function startControlServer(params: ControlParams): ControlServer {
       if (request.method !== 'POST') return new Response(null, { status: 405 });
       if (pathname === '/signal') await pushSignal(params, (signals += 1));
       else if (pathname === '/price-alert') await pushPriceAlert(params);
+      else if (pathname === '/tick') await pushTick(params, request);
       else return new Response(null, { status: 404 });
       return Response.json({ ok: true });
     },
