@@ -25,7 +25,7 @@ const WORKER_VARIABLES: readonly string[] = [
 ];
 const SECRET_FRAGMENT = 'ValorQueNaoPodeVazar';
 const PRODUCTION_DATABASE_URL =
-  'postgres://cryptoada:prod-password-0123456789@db.internal:5432/crypto?sslmode=require';
+  'postgres://cryptoada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?sslmode=verify-full';
 
 async function buildSource(overrides: Source = {}): Promise<Source> {
   const base = await readEnvironmentFile('env.test');

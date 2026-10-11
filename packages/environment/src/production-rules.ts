@@ -6,12 +6,14 @@ export const MINIMUM_PRODUCTION_SECRET_LENGTH = 32;
 
 const HTTPS_PROTOCOL = 'https:';
 const SECURE_WEBSOCKET_PROTOCOL = 'wss:';
-const ACCEPTED_SSL_MODES: readonly string[] = ['require', 'verify-ca', 'verify-full'];
+const REQUIRED_SSL_MODE = 'verify-full';
 const DEVELOPMENT_MARKERS: readonly string[] = ['_dev_only', '_test_only'];
 
 const HTTPS_REASON = 'em produção deve ser https://';
 const WSS_REASON = 'em produção deve ser wss://';
-const SSL_MODE_REASON = 'em produção deve exigir TLS (sslmode=require)';
+const SSL_MODE_REASON =
+  'em produção deve usar sslmode=verify-full (valida o certificado e o nome do servidor)';
+const DATABASE_PASSWORD_REASON = `a senha da URL do banco em produção deve ter ao menos ${MINIMUM_PRODUCTION_SECRET_LENGTH} caracteres`;
 const SECRET_REASON = `em produção deve ter ao menos ${MINIMUM_PRODUCTION_SECRET_LENGTH} caracteres`;
 const MARKER_REASON = 'em produção não pode manter valor de desenvolvimento';
 
@@ -30,8 +32,18 @@ function textsOf(value: unknown): readonly string[] {
 
 function hasRequiredSslMode(databaseUrl: string): boolean {
   if (!URL.canParse(databaseUrl)) return false;
-  const sslMode = new URL(databaseUrl).searchParams.get('sslmode');
-  return sslMode !== null && ACCEPTED_SSL_MODES.includes(sslMode);
+  return new URL(databaseUrl).searchParams.get('sslmode') === REQUIRED_SSL_MODE;
+}
+
+function hasStrongPassword(databaseUrl: string): boolean {
+  if (!URL.canParse(databaseUrl)) return false;
+  try {
+    return (
+      decodeURIComponent(new URL(databaseUrl).password).length >= MINIMUM_PRODUCTION_SECRET_LENGTH
+    );
+  } catch {
+    return false;
+  }
 }
 
 function isHttpsUrl(value: string): boolean {
@@ -65,6 +77,9 @@ export function checkProductionRules(
   const databaseUrl = textsOf(values[profile.databaseUrlVariable])[0] ?? '';
   if (!hasRequiredSslMode(databaseUrl)) {
     addViolation(context, profile.databaseUrlVariable, SSL_MODE_REASON);
+  }
+  if (!hasStrongPassword(databaseUrl)) {
+    addViolation(context, profile.databaseUrlVariable, DATABASE_PASSWORD_REASON);
   }
   for (const variable of profile.secretVariables) {
     const secret = textsOf(values[variable])[0];

@@ -19,7 +19,7 @@ async function buildProductionEnvironment(): Promise<EnvironmentSource> {
     ...base,
     ENV: 'production',
     DATABASE_URL:
-      'postgres://cryptoada:prod-password-0123456789@db.internal:5432/crypto?sslmode=require',
+      'postgres://cryptoada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?sslmode=verify-full',
     KEYCLOAK_ISSUER: realm,
     KEYCLOAK_JWKS_URL: `${realm}/protocol/openid-connect/certs`,
     KEYCLOAK_TOKEN_URL: `${realm}/protocol/openid-connect/token`,
@@ -93,17 +93,65 @@ describe('api-cryptoada in production', () => {
   });
 
   test.each([
-    ['without sslmode', 'postgres://cryptoada:prod-password-0123456789@db.internal:5432/crypto'],
+    [
+      'without sslmode',
+      'postgres://cryptoada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto',
+    ],
     [
       'with sslmode=disable',
-      'postgres://cryptoada:prod-password-0123456789@db.internal:5432/crypto?sslmode=disable',
+      'postgres://cryptoada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?sslmode=disable',
     ],
   ])('rejects DATABASE_URL %s', async (_name, value) => {
     const source = await buildProductionEnvironment();
     source['DATABASE_URL'] = value;
     const message = issuesOf(apiEnvironmentSchema, source);
     expect(message).toContain('DATABASE_URL');
-    expect(message).not.toContain('prod-password-0123456789');
+    expect(message).not.toContain('prod-password-0123456789-abcdefghijkl');
+  });
+
+  test.each([
+    ['sslmode=require', 'sslmode=require'],
+    ['sslmode=verify-ca', 'sslmode=verify-ca'],
+    ['sslmode=prefer', 'sslmode=prefer'],
+  ])(
+    'rejects DATABASE_URL with %s: production verifies the certificate AND the host',
+    async (_name, query) => {
+      const source = await buildProductionEnvironment();
+      source['DATABASE_URL'] =
+        `postgres://cryptoada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?${query}`;
+      const message = issuesOf(apiEnvironmentSchema, source);
+      expect(message).toContain('DATABASE_URL');
+      expect(message).toContain('verify-full');
+      expect(message).not.toContain('prod-password-0123456789');
+    },
+  );
+
+  test.each([
+    ['short', 'postgres://cryptoada:curta_0123456789@db.internal:5432/crypto?sslmode=verify-full'],
+    ['empty', 'postgres://cryptoada@db.internal:5432/crypto?sslmode=verify-full'],
+    [
+      '31 characters',
+      `postgres://cryptoada:${'p'.repeat(31)}@db.internal:5432/crypto?sslmode=verify-full`,
+    ],
+  ])(
+    'rejects a DATABASE_URL password that is %s (the 32-character rule applies to it too)',
+    async (_name, value) => {
+      const source = await buildProductionEnvironment();
+      source['DATABASE_URL'] = value;
+      const message = issuesOf(apiEnvironmentSchema, source);
+      expect(message).toContain('DATABASE_URL');
+      expect(message).not.toContain('curta_0123456789');
+    },
+  );
+
+  test('accepts a DATABASE_URL password of exactly 32 characters, percent-decoded', async () => {
+    const source = await buildProductionEnvironment();
+    source['DATABASE_URL'] =
+      `postgres://cryptoada:${'p'.repeat(30)}%40%21@db.internal:5432/crypto?sslmode=verify-full`;
+    expect(issuesOf(apiEnvironmentSchema, source)).toBe('');
+    source['DATABASE_URL'] =
+      `postgres://cryptoada:${'p'.repeat(28)}%40%21@db.internal:5432/crypto?sslmode=verify-full`;
+    expect(issuesOf(apiEnvironmentSchema, source)).toContain('DATABASE_URL');
   });
 
   test.each([

@@ -11,7 +11,7 @@ const FEAR_GREED_VARIABLES: readonly string[] = ['FEAR_GREED_API_URL', 'FEAR_GRE
 const PRODUCTION: Source = {
   ENV: 'production',
   DATABASE_URL:
-    'postgres://cryptoada:prod-password-0123456789@db.internal:5432/crypto?sslmode=require',
+    'postgres://cryptoada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?sslmode=verify-full',
   KEYCLOAK_TOKEN_URL: 'https://auth.crypto.example.com/token',
   KEYCLOAK_ADMIN_API_URL: 'https://auth.crypto.example.com/admin',
   KEYCLOAK_SERVICE_CLIENT_SECRET: 'S'.repeat(40),
