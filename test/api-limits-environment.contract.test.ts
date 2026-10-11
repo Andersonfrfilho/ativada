@@ -18,36 +18,44 @@ const LIMITS: readonly LimitCase[] = [
   { variable: 'GOAL_EVALUATION_MAX_CONCURRENT', fallback: 4, minimum: 1, maximum: 32 },
 ];
 
-function parseWith(
-  base: Record<string, string>,
-  overrides: Record<string, string>,
-): Record<string, unknown> {
+type Source = Record<string, string>;
+
+function parseWith(base: Source, overrides: Source): Record<string, unknown> {
   return parseEnvironment(environmentSchema, { ...base, ...overrides });
 }
 
-describe.each(LIMITS)('$variable', ({ variable, fallback, minimum, maximum }) => {
-  test('has a small default when omitted', async () => {
-    const base = await readEnvironmentFile('env.test');
-    delete base[variable];
-    expect(parseWith(base, {})[variable]).toBe(fallback);
-  });
+const REJECTED_VALUES: readonly {
+  readonly name: string;
+  readonly valueOf: (limit: LimitCase) => string;
+}[] = [
+  { name: 'below the minimum', valueOf: (limit) => String(limit.minimum - 1) },
+  { name: 'above the maximum', valueOf: (limit) => String(limit.maximum + 1) },
+  { name: 'not an integer', valueOf: () => '1.5' },
+  { name: 'text', valueOf: () => 'muitos' },
+];
 
-  test('accepts both ends of its range', async () => {
-    const base = await readEnvironmentFile('env.test');
-    expect(parseWith(base, { [variable]: String(minimum) })[variable]).toBe(minimum);
-    expect(parseWith(base, { [variable]: String(maximum) })[variable]).toBe(maximum);
-  });
+for (const limit of LIMITS) {
+  const { variable } = limit;
+  describe(variable, () => {
+    test('has a small default when omitted', async () => {
+      const base = await readEnvironmentFile('env.test');
+      delete base[variable];
+      expect(parseWith(base, {})[variable]).toBe(limit.fallback);
+    });
 
-  test.each([
-    ['below the minimum', (limit: LimitCase) => String(limit.minimum - 1)],
-    ['above the maximum', (limit: LimitCase) => String(limit.maximum + 1)],
-    ['not an integer', () => '1.5'],
-    ['text', () => 'muitos'],
-  ])('rejects a value %s, naming the variable', async (_name, valueOf) => {
-    const base = await readEnvironmentFile('env.test');
-    const attempt = (): unknown =>
-      parseWith(base, { [variable]: valueOf({ variable, fallback, minimum, maximum }) });
-    expect(attempt).toThrow(EnvironmentError);
-    expect(attempt).toThrow(variable);
+    test('accepts both ends of its range', async () => {
+      const base = await readEnvironmentFile('env.test');
+      expect(parseWith(base, { [variable]: String(limit.minimum) })[variable]).toBe(limit.minimum);
+      expect(parseWith(base, { [variable]: String(limit.maximum) })[variable]).toBe(limit.maximum);
+    });
+
+    for (const rejected of REJECTED_VALUES) {
+      test(`rejects a value ${rejected.name}, naming the variable`, async () => {
+        const base = await readEnvironmentFile('env.test');
+        const attempt = (): unknown => parseWith(base, { [variable]: rejected.valueOf(limit) });
+        expect(attempt).toThrow(EnvironmentError);
+        expect(attempt).toThrow(variable);
+      });
+    }
   });
-});
+}
