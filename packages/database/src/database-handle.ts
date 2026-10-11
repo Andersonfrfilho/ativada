@@ -15,8 +15,22 @@ type OpenDatabase = {
 
 const openDatabases = new WeakMap<DatabaseHandle, OpenDatabase>();
 
-export function openDatabase(databaseUrl: string): DatabaseHandle {
-  const client = new Bun.SQL(databaseUrl);
+export type OpenDatabaseOptions = {
+  // A CA (PEM) de um banco que o sistema não conhece (o Railway): com `sslmode=verify-full` na URL, o certificado é validado
+  // contra ela E contra o nome do servidor. Sem ela, vale a loja de CAs do sistema.
+  readonly sslRootCertificate?: string | undefined;
+};
+
+export function openDatabase(
+  databaseUrl: string,
+  options: OpenDatabaseOptions = {},
+): DatabaseHandle {
+  const client =
+    options.sslRootCertificate === undefined
+      ? new Bun.SQL(databaseUrl)
+      : new Bun.SQL(databaseUrl, {
+          tls: { ca: options.sslRootCertificate, rejectUnauthorized: true },
+        });
   const handle = Object.freeze({}) as DatabaseHandle;
   openDatabases.set(handle, { client, database: drizzle(client) });
   return handle;

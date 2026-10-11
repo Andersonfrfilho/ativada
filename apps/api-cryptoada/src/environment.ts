@@ -5,6 +5,7 @@ import {
   httpUrlSchema,
   nonEmptyTextSchema,
   parseEnvironment,
+  pemCertificateSchema,
   postgresUrlSchema,
   PRODUCTION_ENVIRONMENT,
   webSocketUrlSchema,
@@ -106,6 +107,7 @@ export const environmentSchema = z
   .object({
     ENV: environmentNameSchema,
     DATABASE_URL: postgresUrlSchema,
+    DATABASE_SSL_ROOT_CERT: pemCertificateSchema.optional(),
     API_HOST: nonEmptyTextSchema.default(DEFAULT_API_HOST),
     API_PORT: z.coerce
       .number({ error: API_PORT_EXPECTATION })
@@ -182,7 +184,10 @@ export function loadEnvironment(): Environment {
 }
 
 // O que a thread do backtest lê do ambiente que a API lhe passa: só a conexão com o banco.
-export const backtestWorkerEnvironmentSchema = z.object({ DATABASE_URL: postgresUrlSchema });
+export const backtestWorkerEnvironmentSchema = z.object({
+  DATABASE_URL: postgresUrlSchema,
+  DATABASE_SSL_ROOT_CERT: pemCertificateSchema.optional(),
+});
 
 export type BacktestWorkerEnvironment = z.infer<typeof backtestWorkerEnvironmentSchema>;
 
@@ -193,6 +198,7 @@ export function loadBacktestWorkerEnvironment(): BacktestWorkerEnvironment {
 // O que a thread do walk-forward lê do ambiente que a API lhe passa: a conexão com o banco e as threads de busca.
 export const walkForwardWorkerEnvironmentSchema = z.object({
   DATABASE_URL: postgresUrlSchema,
+  DATABASE_SSL_ROOT_CERT: pemCertificateSchema.optional(),
   WALK_FORWARD_THREADS: walkForwardThreadsSchema,
 });
 

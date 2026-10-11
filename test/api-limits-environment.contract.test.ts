@@ -59,3 +59,32 @@ for (const limit of LIMITS) {
     }
   });
 }
+
+describe('DATABASE_SSL_ROOT_CERT (a CA própria do banco, em PEM)', () => {
+  const PEM = '-----BEGIN CERTIFICATE-----\nMIIBdemo\n-----END CERTIFICATE-----';
+
+  test('é opcional', async () => {
+    const base = await readEnvironmentFile('env.test');
+    delete base['DATABASE_SSL_ROOT_CERT'];
+    expect(parseWith(base, {})['DATABASE_SSL_ROOT_CERT']).toBeUndefined();
+  });
+
+  test('aceita o PEM, inclusive numa linha só com \\n literal', async () => {
+    const base = await readEnvironmentFile('env.test');
+    expect(parseWith(base, { DATABASE_SSL_ROOT_CERT: PEM })['DATABASE_SSL_ROOT_CERT']).toBe(PEM);
+    const oneLine = PEM.replaceAll('\n', String.raw`\n`);
+    expect(parseWith(base, { DATABASE_SSL_ROOT_CERT: oneLine })['DATABASE_SSL_ROOT_CERT']).toBe(
+      PEM,
+    );
+  });
+
+  test.each([
+    'qualquer coisa',
+    '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----',
+    'x'.repeat(70_000),
+  ])('recusa o que não é certificado PEM, sem ecoar o valor', async (value) => {
+    const base = await readEnvironmentFile('env.test');
+    const attempt = (): unknown => parseWith(base, { DATABASE_SSL_ROOT_CERT: value });
+    expect(attempt).toThrow('DATABASE_SSL_ROOT_CERT');
+  });
+});

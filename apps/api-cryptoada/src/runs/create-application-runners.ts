@@ -26,11 +26,23 @@ export type ApplicationRunnersParams = {
   readonly database: DatabaseHandle;
 };
 
+// O que a thread precisa para abrir o PRÓPRIO banco: a URL e, se houver, a CA (PEM) em que o certificado dele é verificado.
+function databaseEnvironmentOf(
+  environment: Pick<Environment, 'DATABASE_URL' | 'DATABASE_SSL_ROOT_CERT'>,
+): Record<string, string> {
+  return {
+    DATABASE_URL: environment.DATABASE_URL,
+    ...(environment.DATABASE_SSL_ROOT_CERT === undefined
+      ? {}
+      : { DATABASE_SSL_ROOT_CERT: environment.DATABASE_SSL_ROOT_CERT }),
+  };
+}
+
 function createBacktestRunner(params: ApplicationRunnersParams): BacktestThreadRunner {
   const database = createBacktestDatabase(params.database);
   return createBacktestThreadRunner({
     workerUrl: new URL('../backtest/backtest.worker.ts', import.meta.url).href,
-    workerEnvironment: { DATABASE_URL: params.environment.DATABASE_URL },
+    workerEnvironment: databaseEnvironmentOf(params.environment),
     timeoutMilliseconds: params.environment.BACKTEST_TIMEOUT_SECONDS * MILLISECONDS_PER_SECOND,
     recordFailure: (failure) => failBacktestRun({ database, ...failure }),
   });
@@ -42,7 +54,7 @@ function createWalkForwardRunner(params: ApplicationRunnersParams): WalkForwardT
   return createWalkForwardThreadRunner({
     workerUrl: new URL('../walk-forward/walk-forward.worker.ts', import.meta.url).href,
     workerEnvironment: {
-      DATABASE_URL: environment.DATABASE_URL,
+      ...databaseEnvironmentOf(environment),
       WALK_FORWARD_THREADS: String(environment.WALK_FORWARD_THREADS),
     },
     timeoutMilliseconds: environment.WALK_FORWARD_TIMEOUT_SECONDS * MILLISECONDS_PER_SECOND,

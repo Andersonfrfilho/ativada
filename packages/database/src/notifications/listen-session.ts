@@ -142,6 +142,7 @@ export function startListenSession(params: ListenSessionParams): ListenSession {
     phase: SESSION_PHASE.CONNECTING,
     transport: undefined,
     scram: undefined,
+    channelBindingHash: undefined,
     isServerVerified: false,
     wasListening: false,
     isPingPending: false,

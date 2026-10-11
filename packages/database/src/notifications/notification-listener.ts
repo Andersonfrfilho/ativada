@@ -20,6 +20,8 @@ export type ListeningEvent = { readonly attempt: number; readonly isReconnect: b
 
 export type NotificationListenerSettings = {
   readonly databaseUrl: string;
+  // A CA (PEM) do banco, quando o sistema não a conhece (o Railway); vale com `sslmode=verify-full` ou `verify-ca`.
+  readonly tlsRootCertificate?: string | undefined;
   readonly channel: string;
   readonly onNotification: (payload: string) => void;
   readonly onListening: (event: ListeningEvent) => void;
@@ -162,7 +164,10 @@ function createLoopState(settings: NotificationListenerSettings): {
   });
   const state: LoopState = {
     settings,
-    connection: parseConnectionUrl(settings.databaseUrl),
+    connection: {
+      ...parseConnectionUrl(settings.databaseUrl),
+      rootCertificate: settings.tlsRootCertificate,
+    },
     closedSignal,
     releaseReady,
     isClosed: false,

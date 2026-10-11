@@ -60,6 +60,7 @@ function openRunEventListener(wiring: ListenerWiring): NotificationListener {
   const { logger, endpoint, dispatcher, priceAlertDispatcher } = wiring;
   return createRunEventListener({
     databaseUrl: wiring.environment.DATABASE_URL,
+    tlsRootCertificate: wiring.environment.DATABASE_SSL_ROOT_CERT,
     onEvent: (event) => void dispatcher.dispatch(event),
     onPriceAlert: (event) => void priceAlertDispatcher.dispatch(event),
     onMalformed: () => logger.warn(STREAM_LOG_MESSAGE, { event: 'stream.event.malformed' }),

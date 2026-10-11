@@ -18,5 +18,6 @@ export {
   environmentNameSchema,
   httpUrlSchema,
   nonEmptyTextSchema,
+  pemCertificateSchema,
   webSocketUrlSchema,
 } from './common-schemas.js';

@@ -131,7 +131,9 @@ function startWorker(environment: Environment): void {
     appName: WORKSPACE_NAME,
     write: (line) => process.stdout.write(line),
   });
-  const database = openDatabase(environment.DATABASE_URL);
+  const database = openDatabase(environment.DATABASE_URL, {
+    sslRootCertificate: environment.DATABASE_SSL_ROOT_CERT,
+  });
   const unfillable = new Set<string>();
   const recoveryClock = createRecoveryClock(() => Date.now());
   const alerts = createAlertWiring({ environment, database, logger });

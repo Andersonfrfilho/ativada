@@ -14,7 +14,9 @@ async function runAllTasks(environment: Environment): Promise<ExitCode> {
     appName: WORKSPACE_NAME,
     write: (line) => process.stdout.write(line),
   });
-  const database = openDatabase(environment.DATABASE_URL);
+  const database = openDatabase(environment.DATABASE_URL, {
+    sslRootCertificate: environment.DATABASE_SSL_ROOT_CERT,
+  });
   try {
     return await runCronTasks(createProductionTasks({ environment, database, logger }), logger);
   } finally {

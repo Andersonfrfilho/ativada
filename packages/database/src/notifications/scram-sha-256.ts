@@ -2,8 +2,7 @@
 import { timingSafeEqual } from 'node:crypto';
 
 // SCRAM-SHA-256 (RFC 5802 e 7677) do lado do cliente, só com Web Crypto: o Postgres 14+ usa este método por padrão.
-const GS2_HEADER = 'n,,';
-const CHANNEL_BINDING = 'c=biws';
+const CHANNEL_BINDING_TYPE = 'tls-server-end-point';
 const CLIENT_KEY_LABEL = 'Client Key';
 const SERVER_KEY_LABEL = 'Server Key';
 // Piso do RFC 7677 §4; o teto (2^18) protege a CPU de um servidor hostil e ainda cobre `scram_iterations` de 64x o padrão.
@@ -31,10 +30,19 @@ export class ScramError extends Error {
   }
 }
 
+// Como o cliente se coloca diante da ligação ao canal TLS (RFC 5802 §6): `none` não tem TLS (`n,,`); `unsupported-by-server`
+// tem TLS mas o servidor não ofereceu o mecanismo -PLUS (`y,,`: o servidor que SUPORTA recusa, o que denuncia o rebaixamento);
+// `tls-server-end-point` liga a prova ao hash do certificado do servidor (`p=tls-server-end-point,,`).
+export type ChannelBinding =
+  | { readonly mode: 'none' }
+  | { readonly mode: 'unsupported-by-server' }
+  | { readonly mode: 'tls-server-end-point'; readonly data: Uint8Array };
+
 export type ScramClientParams = {
   readonly username: string;
   readonly password: string;
   readonly nonce: string;
+  readonly channelBinding?: ChannelBinding;
 };
 
 export type ScramClient = {
@@ -119,7 +127,22 @@ function escapeUsername(username: string): string {
   return username.replaceAll('=', '=3D').replaceAll(',', '=2C');
 }
 
+function gs2HeaderOf(binding: ChannelBinding): string {
+  if (binding.mode === 'tls-server-end-point') return `p=${CHANNEL_BINDING_TYPE},,`;
+  return binding.mode === 'unsupported-by-server' ? 'y,,' : 'n,,';
+}
+
+function channelBindingInput(binding: ChannelBinding): Uint8Array<ArrayBuffer> {
+  const header = TEXT_ENCODER.encode(gs2HeaderOf(binding));
+  if (binding.mode !== 'tls-server-end-point') return header;
+  const joined = new Uint8Array(header.length + binding.data.length);
+  joined.set(header, 0);
+  joined.set(binding.data, header.length);
+  return joined;
+}
+
 export function createScramClient(params: ScramClientParams): ScramClient {
+  const binding = params.channelBinding ?? { mode: 'none' };
   const clientFirstBare = `n=${escapeUsername(params.username)},r=${params.nonce}`;
   let expectedServerSignature: Uint8Array | undefined;
 
@@ -128,7 +151,7 @@ export function createScramClient(params: ScramClientParams): ScramClient {
       throw new ScramError(SCRAM_ERROR_CODE.UNSUPPORTED_PASSWORD);
     }
     const server = parseServerFirst(serverFirst, params.nonce);
-    const withoutProof = `${CHANNEL_BINDING},r=${server.nonce}`;
+    const withoutProof = `c=${channelBindingInput(binding).toBase64()},r=${server.nonce}`;
     const authMessage = `${clientFirstBare},${serverFirst},${withoutProof}`;
     const salted = await deriveSaltedPassword(params.password, server);
     const clientKey = await hmac(salted, CLIENT_KEY_LABEL);
@@ -153,7 +176,7 @@ export function createScramClient(params: ScramClientParams): ScramClient {
   }
 
   return {
-    clientFirstMessage: `${GS2_HEADER}${clientFirstBare}`,
+    clientFirstMessage: `${gs2HeaderOf(binding)}${clientFirstBare}`,
     respondToServerFirst,
     verifyServerFinal,
   };

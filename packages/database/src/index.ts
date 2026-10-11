@@ -40,6 +40,7 @@ export {
 export {
   closeDatabase,
   openDatabase,
+  type OpenDatabaseOptions,
   pingDatabase,
   type DatabaseHandle,
 } from './database-handle.js';

@@ -5,6 +5,7 @@ import {
   httpUrlSchema,
   nonEmptyTextSchema,
   parseEnvironment,
+  pemCertificateSchema,
   postgresUrlSchema,
   webSocketUrlSchema,
   z,
@@ -17,8 +18,11 @@ import {
 } from '@cryptoada/market-data';
 
 import {
+  ALERT_DEFAULT_DAILY_LIMIT_PER_USER,
   ALERT_DEFAULT_POLL_SECONDS,
+  ALERT_MAXIMUM_DAILY_LIMIT_PER_USER,
   ALERT_MAXIMUM_POLL_SECONDS,
+  ALERT_MINIMUM_DAILY_LIMIT_PER_USER,
   ALERT_MINIMUM_POLL_SECONDS,
   DEFAULT_TELEGRAM_API_BASE_URL,
 } from './alerts/alerts.constant.js';
@@ -53,6 +57,7 @@ const LIVE_TIMEOUT_EXPECTATION = `inteiro de ${LIVE_MINIMUM_HEARTBEAT_TIMEOUT_SE
 
 const LIVE_GAP_EXPECTATION = `inteiro de ${LIVE_MINIMUM_GAP_CONFIRM_RECOVERIES} a ${LIVE_MAXIMUM_GAP_CONFIRM_RECOVERIES}`;
 const ALERT_POLL_EXPECTATION = `inteiro de ${ALERT_MINIMUM_POLL_SECONDS} a ${ALERT_MAXIMUM_POLL_SECONDS}`;
+const ALERT_DAILY_LIMIT_EXPECTATION = `inteiro de ${ALERT_MINIMUM_DAILY_LIMIT_PER_USER} a ${ALERT_MAXIMUM_DAILY_LIMIT_PER_USER}`;
 const MAXIMUM_TELEGRAM_TOKEN_LENGTH = 256;
 
 const PRODUCTION_PROFILE: ProductionProfile = {
@@ -66,6 +71,7 @@ export const environmentSchema = z
   .object({
     ENV: environmentNameSchema,
     DATABASE_URL: postgresUrlSchema,
+    DATABASE_SSL_ROOT_CERT: pemCertificateSchema.optional(),
     ...marketEnvironmentShape,
     BINANCE_BASE_URL: httpUrlSchema.default(BINANCE_MARKET_DATA_BASE_URL),
     BINANCE_STREAM_URL: webSocketUrlSchema.default(BINANCE_STREAM_BASE_URL),
@@ -114,6 +120,13 @@ export const environmentSchema = z
       .min(ALERT_MINIMUM_POLL_SECONDS, { error: ALERT_POLL_EXPECTATION })
       .max(ALERT_MAXIMUM_POLL_SECONDS, { error: ALERT_POLL_EXPECTATION })
       .default(ALERT_DEFAULT_POLL_SECONDS),
+    // Mensagens do Telegram por usuário nas últimas 24 horas: acima disso o alerta é dispensado (volume de aviso, não de dado).
+    ALERT_TELEGRAM_DAILY_LIMIT_PER_USER: z.coerce
+      .number({ error: ALERT_DAILY_LIMIT_EXPECTATION })
+      .int({ error: ALERT_DAILY_LIMIT_EXPECTATION })
+      .min(ALERT_MINIMUM_DAILY_LIMIT_PER_USER, { error: ALERT_DAILY_LIMIT_EXPECTATION })
+      .max(ALERT_MAXIMUM_DAILY_LIMIT_PER_USER, { error: ALERT_DAILY_LIMIT_EXPECTATION })
+      .default(ALERT_DEFAULT_DAILY_LIMIT_PER_USER),
   })
   .superRefine((values, context) => {
     checkProductionRules(values, PRODUCTION_PROFILE, context);

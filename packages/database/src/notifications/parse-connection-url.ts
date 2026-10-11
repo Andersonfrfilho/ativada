@@ -27,6 +27,8 @@ export type ConnectionSettings = {
   readonly password: string;
   readonly database: string;
   readonly sslMode: SslMode;
+  // A CA (PEM) em que o certificado do servidor é verificado; sem ela, a loja de CAs do sistema.
+  readonly rootCertificate?: string | undefined;
 };
 
 // Mensagem fixa: a URL traz a senha e nunca volta num erro.

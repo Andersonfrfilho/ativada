@@ -44,6 +44,8 @@ export type SessionContext = {
   phase: SessionPhase;
   transport: PostgresTransport | undefined;
   scram: ScramClient | undefined;
+  // O hash tls-server-end-point do certificado do servidor, quando há TLS e sabemos calculá-lo: a ligação ao canal do SCRAM.
+  channelBindingHash: Uint8Array | undefined;
   isServerVerified: boolean;
   wasListening: boolean;
   isPingPending: boolean;

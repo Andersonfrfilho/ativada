@@ -118,14 +118,50 @@ const SCRAM_MUTANTS: readonly SourceMutant[] = [
     name: 'NON_ASCII_PASSWORD_ACCEPTED',
     edits: edit(SCRAM, 'if (!ASCII_PATTERN.test(params.password)) {', 'if (false as boolean) {'),
   },
-  { name: 'GS2_HEADER_WRONG', edits: edit(SCRAM, "GS2_HEADER = 'n,,'", "GS2_HEADER = 'y,,'") },
+  { name: 'GS2_HEADER_WRONG', edits: edit(SCRAM, ": 'n,,';", ": 'y,,';") },
+  {
+    name: 'DOWNGRADE_HEADER_NOT_DECLARED',
+    edits: edit(SCRAM, "? 'y,,' :", "? 'n,,' :"),
+  },
+  {
+    name: 'CHANNEL_BINDING_PLUS_NEVER_CHOSEN',
+    edits: edit(
+      'notifications/listen-session-auth.ts',
+      'hash !== undefined && offered.includes(SCRAM_PLUS_MECHANISM)',
+      'false as boolean',
+    ),
+  },
+  {
+    name: 'CERTIFICATE_HASH_NOT_IN_THE_PROOF',
+    edits: edit(
+      SCRAM,
+      "if (binding.mode !== 'tls-server-end-point') return header;",
+      'return header;',
+    ),
+  },
+  {
+    name: 'SERVER_NAME_NOT_CHECKED_IN_THE_CERTIFICATE',
+    edits: edit(
+      'notifications/bun-postgres-transport.ts',
+      'options.shouldVerify && !certificateMatchesHost(certificate, options.serverName)',
+      'false as boolean',
+    ),
+  },
+  {
+    name: 'OWN_CA_NOT_PASSED_TO_TLS',
+    edits: edit(
+      'notifications/listen-session-startup.ts',
+      '...(rootCertificate === undefined ? {} : { caCertificate: rootCertificate }),',
+      '',
+    ),
+  },
   {
     name: 'CLIENT_KEY_LABEL_WRONG',
     edits: edit(SCRAM, "CLIENT_KEY_LABEL = 'Client Key'", "CLIENT_KEY_LABEL = 'Client key'"),
   },
   {
     name: 'CHANNEL_BINDING_WRONG',
-    edits: edit(SCRAM, "CHANNEL_BINDING = 'c=biws'", "CHANNEL_BINDING = 'c=bind'"),
+    edits: edit(SCRAM, 'c=${channelBindingInput(binding).toBase64()}', 'c=bind'),
   },
 ];
 

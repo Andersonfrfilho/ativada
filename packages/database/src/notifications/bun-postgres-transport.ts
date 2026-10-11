@@ -1,10 +1,25 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { isIP } from 'node:net';
+
 import type {
   OpenTransport,
   PostgresTransport,
+  TlsSession,
   TlsUpgradeOptions,
   TransportEvents,
 } from './postgres-transport.types.js';
+
+// `rejectUnauthorized` valida a cadeia e a CA, mas o Bun não confere o NOME do servidor no certificado: verify-full exige.
+function certificateMatchesHost(
+  certificate: {
+    checkHost: (name: string) => string | undefined;
+    checkIP: (ip: string) => string | undefined;
+  },
+  host: string,
+): boolean {
+  const matched = isIP(host) === 0 ? certificate.checkHost(host) : certificate.checkIP(host);
+  return matched !== undefined;
+}
 
 type BunSocket = Bun.Socket<undefined>;
 
@@ -39,8 +54,8 @@ function upgradeToTls(
   state: TransportState,
   events: TransportEvents,
   options: TlsUpgradeOptions,
-): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
+): Promise<TlsSession> {
+  return new Promise<TlsSession>((resolve, reject) => {
     if (state.socket === undefined) {
       reject(new Error('conexão fechada'));
       return;
@@ -48,15 +63,25 @@ function upgradeToTls(
     // Desde já o soquete cru só carrega bytes cifrados do handshake: nada dele chega ao protocolo.
     state.isUpgraded = true;
     state.socket.upgradeTLS<undefined>({
-      tls: { rejectUnauthorized: options.shouldVerify, serverName: options.serverName },
+      tls: {
+        rejectUnauthorized: options.shouldVerify,
+        serverName: options.serverName,
+        ...(options.caCertificate === undefined ? {} : { ca: options.caCertificate }),
+      },
       socket: {
         handshake: (secure, isSuccessful, authorizationError) => {
           if (!isSuccessful || (options.shouldVerify && authorizationError !== null)) {
             reject(authorizationError ?? new Error('handshake TLS falhou'));
             return;
           }
+          const certificate = secure.getPeerX509Certificate();
+          if (options.shouldVerify && !certificateMatchesHost(certificate, options.serverName)) {
+            secure.end();
+            reject(new Error('nome do servidor não consta no certificado'));
+            return;
+          }
           state.socket = secure;
-          resolve();
+          resolve({ serverCertificate: certificate.raw });
         },
         data: (_secure, chunk) => events.onData(new Uint8Array(chunk)),
         drain: () => flushOutbox(state),

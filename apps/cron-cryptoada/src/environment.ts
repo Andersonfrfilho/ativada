@@ -5,6 +5,7 @@ import {
   httpUrlSchema,
   nonEmptyTextSchema,
   parseEnvironment,
+  pemCertificateSchema,
   postgresUrlSchema,
   z,
   type ProductionProfile,
@@ -27,6 +28,7 @@ export const environmentSchema = z
   .object({
     ENV: environmentNameSchema,
     DATABASE_URL: postgresUrlSchema,
+    DATABASE_SSL_ROOT_CERT: pemCertificateSchema.optional(),
     KEYCLOAK_TOKEN_URL: httpUrlSchema,
     KEYCLOAK_ADMIN_API_URL: httpUrlSchema,
     KEYCLOAK_SERVICE_CLIENT_ID: nonEmptyTextSchema,

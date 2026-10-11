@@ -17,6 +17,7 @@ import {
 export type RunEventListenerSettings = Pick<
   NotificationListenerSettings,
   | 'databaseUrl'
+  | 'tlsRootCertificate'
   | 'onHandlerError'
   | 'openTransport'
   | 'reconnectBaseMilliseconds'

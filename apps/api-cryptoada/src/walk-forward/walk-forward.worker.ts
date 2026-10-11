@@ -10,7 +10,9 @@ const environment = loadWalkForwardWorkerEnvironment();
 serveWalkForwardWorker({
   threads: environment.WALK_FORWARD_THREADS,
   open: () => {
-    const handle = openDatabase(environment.DATABASE_URL);
+    const handle = openDatabase(environment.DATABASE_URL, {
+      sslRootCertificate: environment.DATABASE_SSL_ROOT_CERT,
+    });
     return Promise.resolve({
       database: createWalkForwardDatabase(handle),
       close: () => closeDatabase(handle),

@@ -12,6 +12,7 @@ import {
   type FakePostgresOptions,
 } from './fixtures/postgres-wire/in-memory-postgres.fixture.js';
 import { loadDatabaseListenerApi } from './fixtures/postgres-wire/database-source.fixture.js';
+import { OID_ED25519, syntheticCertificate } from './fixtures/tls/synthetic-certificate.fixture.js';
 import { waitFor } from './fixtures/wait-for.fixture.js';
 
 const { listener: listenerModule } = await loadDatabaseListenerApi();
@@ -455,5 +456,88 @@ describe('notification listener — close', () => {
     await Bun.sleep(150);
     expect(fake.connections).toHaveLength(0);
     expect(listener.isListening()).toBe(false);
+  });
+});
+
+describe('notification listener — ligação ao canal TLS (SCRAM-SHA-256-PLUS)', () => {
+  const FULL = '?sslmode=verify-full';
+
+  test('com TLS e o servidor oferecendo -PLUS, o cliente usa -PLUS com tls-server-end-point e autentica', async () => {
+    const fake = fakeWith({
+      authentication: 'scram',
+      password: PASSWORD,
+      tls: 'supported',
+      scramPlus: 'offered',
+    });
+    const { listener } = open(fake, { urlSuffix: FULL, hasPassword: true });
+    await settle(listener.ready, 'ready');
+    expect(fake.connections[0]?.saslMechanism).toBe('SCRAM-SHA-256-PLUS');
+    expect(fake.connections[0]?.gs2Header).toBe('p=tls-server-end-point,,');
+  });
+
+  test('com TLS mas sem -PLUS no servidor, o cabeçalho é y,, (e o servidor que não suporta aceita)', async () => {
+    const fake = fakeWith({
+      authentication: 'scram',
+      password: PASSWORD,
+      tls: 'supported',
+      scramPlus: 'not-offered',
+    });
+    const { listener } = open(fake, { urlSuffix: FULL, hasPassword: true });
+    await settle(listener.ready, 'ready');
+    expect(fake.connections[0]?.saslMechanism).toBe('SCRAM-SHA-256');
+    expect(fake.connections[0]?.gs2Header).toBe('y,,');
+  });
+
+  test('rebaixamento: servidor que SUPORTA -PLUS mas não o anuncia recusa o y,, e a autenticação falha', async () => {
+    const fake = fakeWith({
+      authentication: 'scram',
+      password: PASSWORD,
+      tls: 'supported',
+      scramPlus: 'hidden',
+    });
+    const { lost } = open(fake, { urlSuffix: FULL, hasPassword: true });
+    await until(() => lost.length >= 1, 'rebaixamento detectado');
+    expect(lost[0]).toMatchObject({ reason: 'authentication_failed' });
+  });
+
+  test('sem TLS (sslmode=disable) não há ligação ao canal: cabeçalho n,,', async () => {
+    const fake = fakeWith({
+      authentication: 'scram',
+      password: PASSWORD,
+      tls: 'supported',
+      scramPlus: 'offered',
+    });
+    const { listener } = open(fake, { urlSuffix: '?sslmode=disable', hasPassword: true });
+    await settle(listener.ready, 'ready');
+    expect(fake.connections[0]?.saslMechanism).toBe('SCRAM-SHA-256');
+    expect(fake.connections[0]?.gs2Header).toBe('n,,');
+  });
+
+  test('intermediário no canal: o certificado que o cliente vê não é o do servidor e a prova não fecha', async () => {
+    const fake = fakeWith({
+      authentication: 'scram',
+      password: PASSWORD,
+      tls: 'supported',
+      scramPlus: 'offered',
+      presentedCertificate: syntheticCertificate('2a864886f70d01010b', 2),
+    });
+    const { lost } = open(fake, { urlSuffix: FULL, hasPassword: true });
+    await until(() => lost.length >= 1, 'ligação ao canal recusada');
+    expect(lost[0]).toMatchObject({ reason: 'authentication_failed' });
+    expect(fake.connections[0]?.gs2Header).toBe('p=tls-server-end-point,,');
+  });
+
+  test('certificado com assinatura que não sabemos mapear: sem hash, usa o mecanismo comum com n,,', async () => {
+    const fake = fakeWith({
+      authentication: 'scram',
+      password: PASSWORD,
+      tls: 'supported',
+      scramPlus: 'offered',
+      serverCertificate: syntheticCertificate(OID_ED25519),
+    });
+    const { listener } = open(fake, { urlSuffix: FULL, hasPassword: true });
+    await settle(listener.ready, 'ready');
+    expect(fake.connections[0]?.saslMechanism).toBe('SCRAM-SHA-256');
+    expect(fake.connections[0]?.gs2Header).toBe('n,,');
   });
 });

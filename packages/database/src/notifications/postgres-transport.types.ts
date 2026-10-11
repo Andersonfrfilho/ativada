@@ -9,12 +9,17 @@ export type TransportEvents = {
 export type TlsUpgradeOptions = {
   readonly shouldVerify: boolean;
   readonly serverName: string;
+  // CA própria (PEM) para o `shouldVerify`; ausente = a loja de CAs do sistema.
+  readonly caCertificate?: string | undefined;
 };
+
+// O que o handshake deixa para a autenticação: o certificado (DER) que o servidor apresentou, de onde sai a ligação ao canal.
+export type TlsSession = { readonly serverCertificate: Uint8Array | undefined };
 
 export type PostgresTransport = {
   readonly write: (bytes: Uint8Array) => void;
   // Troca o soquete por TLS depois de o servidor aceitar o SSLRequest; rejeita se o handshake falhar.
-  readonly upgradeToTls: (options: TlsUpgradeOptions) => Promise<void>;
+  readonly upgradeToTls: (options: TlsUpgradeOptions) => Promise<TlsSession>;
   readonly close: () => void;
 };
 

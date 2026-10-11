@@ -15,6 +15,7 @@ export const DATABASE_LISTENER_MUTANT_TARGET: MutantTarget = {
     'test/scram-sha-256.contract.test.ts',
     'test/postgres-connection-url.contract.test.ts',
     'test/notification-listener.contract.test.ts',
+    'test/database-tls.contract.test.ts',
     'test/run-event.contract.test.ts',
   ],
   sourceVariable: DATABASE_SOURCE_VARIABLE,

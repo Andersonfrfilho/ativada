@@ -7,7 +7,10 @@ import { serveBacktestWorker } from './serve-backtest-worker.js';
 
 serveBacktestWorker({
   open: () => {
-    const handle = openDatabase(loadBacktestWorkerEnvironment().DATABASE_URL);
+    const environment = loadBacktestWorkerEnvironment();
+    const handle = openDatabase(environment.DATABASE_URL, {
+      sslRootCertificate: environment.DATABASE_SSL_ROOT_CERT,
+    });
     return Promise.resolve({
       database: createBacktestDatabase(handle),
       close: () => closeDatabase(handle),

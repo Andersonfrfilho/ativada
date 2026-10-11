@@ -7,6 +7,7 @@ import type {
   TlsUpgradeOptions,
   TransportEvents,
 } from '../../../packages/database/src/notifications/postgres-transport.types.js';
+import { OID_SHA256_WITH_RSA, syntheticCertificate } from '../tls/synthetic-certificate.fixture.js';
 
 // Um Postgres em memória: fala o protocolo v3 do lado do servidor (SSLRequest, startup, SCRAM-SHA-256, LISTEN,
 // NotificationResponse), sem soquete. Independente do código de produção: usa só `node:crypto` e `DataView`.
@@ -14,6 +15,8 @@ const SSL_REQUEST_CODE = 80_877_103;
 const PROTOCOL_VERSION = 196_608;
 const SCRAM_ITERATIONS = 4_096;
 const SCRAM_MECHANISM = 'SCRAM-SHA-256';
+const SCRAM_PLUS_MECHANISM = 'SCRAM-SHA-256-PLUS';
+const CHANNEL_BINDING_HEADER = 'p=tls-server-end-point,,';
 const CLIENT_KEY_LABEL = 'Client Key';
 const SERVER_KEY_LABEL = 'Server Key';
 const TEXT_ENCODER = new TextEncoder();
@@ -29,10 +32,19 @@ export type FakeAuthentication =
   | 'too-many-connections';
 export type FakeTls = 'unsupported' | 'supported' | 'handshake-fails';
 
+// `offered`: anuncia SCRAM-SHA-256-PLUS (só com TLS no ar). `hidden`: SUPORTA o -PLUS mas não o anuncia, o que um intermediário
+// faria para rebaixar a autenticação (o servidor tem de recusar o cabeçalho `y,,`). `not-offered`: não suporta.
+export type FakeScramPlus = 'offered' | 'hidden' | 'not-offered';
+
 export type FakePostgresOptions = {
   readonly authentication: FakeAuthentication;
   readonly password?: string;
   readonly tls?: FakeTls;
+  readonly scramPlus?: FakeScramPlus;
+  // O certificado (DER) do servidor, de que ele tira o hash do tls-server-end-point.
+  readonly serverCertificate?: Uint8Array;
+  // O certificado que o CLIENTE vê depois do handshake; diferente do anterior = intermediário no meio do canal.
+  readonly presentedCertificate?: Uint8Array;
 };
 
 export type FakeConnectionRecord = {
@@ -43,6 +55,10 @@ export type FakeConnectionRecord = {
   readonly queries: string[];
   readonly tlsUpgrades: TlsUpgradeOptions[];
   passwordMessages: number;
+  // O mecanismo e o cabeçalho GS2 do SASLInitialResponse (o que o cliente escolheu).
+  saslMechanism: string | undefined;
+  gs2Header: string | undefined;
+  isTlsActive: boolean;
   isTerminated: boolean;
   isOpen: boolean;
   isListening: boolean;
@@ -107,6 +123,7 @@ const READY_SEQUENCE: readonly Uint8Array[] = [
 ];
 
 type ScramExchange = {
+  readonly gs2Header: string;
   readonly clientFirstBare: string;
   readonly serverFirst: string;
   readonly serverNonce: string;
@@ -205,7 +222,9 @@ class FakeConnection {
     const mode = this.server.authentication;
     if (mode === 'trust') this.sendToClient(...READY_SEQUENCE);
     else if (mode === 'scram' || mode === 'scram-without-final') {
-      this.sendToClient(authentication(10, cString(SCRAM_MECHANISM), Uint8Array.of(0)));
+      const offersPlus = this.server.scramPlus === 'offered' && this.record.isTlsActive;
+      const mechanisms = offersPlus ? [SCRAM_PLUS_MECHANISM, SCRAM_MECHANISM] : [SCRAM_MECHANISM];
+      this.sendToClient(authentication(10, ...mechanisms.map(cString), Uint8Array.of(0)));
     } else if (mode === 'md5') this.sendToClient(authentication(5, randomBytes(4)));
     else if (mode === 'cleartext') this.sendToClient(authentication(3));
     else this.fail('53300');
@@ -224,6 +243,7 @@ class FakeConnection {
   private handleSasl(body: Uint8Array): void {
     if (this.scram === undefined) {
       const mechanismEnd = body.indexOf(0);
+      this.record.saslMechanism = TEXT_DECODER.decode(body.slice(0, mechanismEnd));
       const data = TEXT_DECODER.decode(body.slice(mechanismEnd + 1 + 4));
       this.startScram(data);
       return;
@@ -231,12 +251,29 @@ class FakeConnection {
     this.finishScram(TEXT_DECODER.decode(body));
   }
 
+  // As regras do servidor (RFC 5802 §6, as mesmas do Postgres): o cabeçalho tem de casar com o mecanismo e, se o servidor
+  // suporta o -PLUS e o cliente diz `y`, é rebaixamento.
+  private isGs2HeaderAcceptable(header: string): boolean {
+    const mechanism = this.record.saslMechanism;
+    const supportsPlus = this.server.scramPlus !== 'not-offered' && this.record.isTlsActive;
+    if (mechanism === SCRAM_PLUS_MECHANISM) return header === CHANNEL_BINDING_HEADER;
+    if (header === CHANNEL_BINDING_HEADER) return false;
+    return !(header === 'y,,' && supportsPlus);
+  }
+
   private startScram(clientFirst: string): void {
-    const clientFirstBare = clientFirst.replace(/^n,,/, '');
+    const headerMatch = /^(n,,|y,,|p=[^,]+,,)/.exec(clientFirst);
+    const gs2Header = headerMatch?.[1] ?? '';
+    this.record.gs2Header = gs2Header;
+    if (!this.isGs2HeaderAcceptable(gs2Header)) {
+      this.fail('28000');
+      return;
+    }
+    const clientFirstBare = clientFirst.slice(gs2Header.length);
     const clientNonce = parseAttributes(clientFirstBare).get('r') ?? '';
     const serverNonce = `${clientNonce}${randomBytes(12).toString('base64')}`;
     const serverFirst = `r=${serverNonce},s=${this.server.salt.toString('base64')},i=${SCRAM_ITERATIONS}`;
-    this.scram = { clientFirstBare, serverFirst, serverNonce };
+    this.scram = { gs2Header, clientFirstBare, serverFirst, serverNonce };
     this.sendToClient(authentication(11, TEXT_ENCODER.encode(serverFirst)));
   }
 
@@ -259,7 +296,15 @@ class FakeConnection {
     const expectedProof = Buffer.from(
       clientKey.map((byte, index) => byte ^ (signature[index] ?? 0)),
     );
+    const bindingData =
+      exchange.gs2Header === CHANNEL_BINDING_HEADER
+        ? sha256(this.server.serverCertificate)
+        : Buffer.alloc(0);
+    const expectedBinding = Buffer.concat([Buffer.from(exchange.gs2Header), bindingData]).toString(
+      'base64',
+    );
     const isValid =
+      attributes.get('c') === expectedBinding &&
       attributes.get('r') === exchange.serverNonce &&
       proof.length === expectedProof.length &&
       timingSafeEqual(proof, expectedProof);
@@ -292,6 +337,9 @@ class FakeConnection {
 }
 
 type FakeServerState = {
+  scramPlus: FakeScramPlus;
+  serverCertificate: Uint8Array;
+  presentedCertificate: Uint8Array;
   authentication: FakeAuthentication;
   password: string;
   tls: FakeTls;
@@ -303,7 +351,11 @@ type FakeServerState = {
 };
 
 export function createInMemoryPostgres(options: FakePostgresOptions): FakePostgres {
+  const serverCertificate = options.serverCertificate ?? syntheticCertificate(OID_SHA256_WITH_RSA);
   const state: FakeServerState = {
+    scramPlus: options.scramPlus ?? 'not-offered',
+    serverCertificate,
+    presentedCertificate: options.presentedCertificate ?? serverCertificate,
     authentication: options.authentication,
     password: options.password ?? '',
     tls: options.tls ?? 'unsupported',
@@ -326,6 +378,9 @@ export function createInMemoryPostgres(options: FakePostgresOptions): FakePostgr
       queries: [],
       tlsUpgrades: [],
       passwordMessages: 0,
+      saslMechanism: undefined,
+      gs2Header: undefined,
+      isTlsActive: false,
       isTerminated: false,
       isOpen: true,
       isListening: false,
@@ -342,9 +397,10 @@ export function createInMemoryPostgres(options: FakePostgresOptions): FakePostgr
       },
       upgradeToTls: (tlsOptions) => {
         record.tlsUpgrades.push(tlsOptions);
-        return state.tls === 'handshake-fails'
-          ? Promise.reject(new Error('handshake TLS falhou'))
-          : Promise.resolve();
+        if (state.tls === 'handshake-fails')
+          return Promise.reject(new Error('handshake TLS falhou'));
+        record.isTlsActive = true;
+        return Promise.resolve({ serverCertificate: state.presentedCertificate });
       },
       // Como `end()` do soquete: o que já foi escrito chega antes de a conexão fechar.
       close: () => {
