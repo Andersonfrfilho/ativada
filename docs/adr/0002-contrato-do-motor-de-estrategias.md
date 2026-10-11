@@ -1394,10 +1394,8 @@ ponta a ponta. `make live-mutants`: 6 mutantes do adaptador (passo em duas trans
 leitura de candles desde o começo, sem corte de inserção do sentimento, falha nunca gravada) reprovados pelo `live-test` inteiro.
 
 **Limitações assumidas.** (1) A simulação ao vivo não termina sozinha (sem `period_end`): só `stop`, falha tipada ou conta inativa a
-encerram; `progress` fica em 0 e o painel mostra `last_candle_time`. (2) A marca de lacuna inalcançável vive na memória do worker e só
-nasce para buraco com mais de 24 h dentro da janela de retrocesso (`STREAM_GAP_LOOKBACK_HOURS`, 168 h): buraco recente espera; buraco
-mais velho que a janela, depois de um reinício, não é mais marcado e a simulação fica esperando por ele até alguém preencher (o
-backfill do cron). Esperar é conservador (nenhuma decisão errada), mas uma posição aberta fica sem stop avaliado nesse tempo. (3) Uma
+encerram; `progress` fica em 0 e o painel mostra `last_candle_time`. (2) ~~A marca de lacuna inalcançável vive na memória do worker~~ — **deixou de existir** (spec 001, correção H1 da revisão da Fase 4):
+a decisão sobre uma lacuna agora é gravada na execução e não se perde num reinício; ver "Espera por dado" abaixo. (3) Uma
 ronda avalia no máximo 500 passos por execução; o batimento é renovado uma vez por ronda, então uma ronda mais longa que
 `LIVE_HEARTBEAT_TIMEOUT_SECONDS` (padrão 60) deixa outra instância assumir (o checkpoint monotônico impede dano: o passo repetido é
 recusado). (4) Conta bloqueada ou apagada no meio de uma ronda deixa terminar, no máximo, os passos dessa ronda (candles históricos já
@@ -1592,6 +1590,28 @@ Meta alheia, inexistente e id malformado são o MESMO `404 GOAL_NOT_FOUND` (ADR 
 - T3.3 (walk-forward, entregue: seção "Walk-forward (T3.3)") usa as metades do motor: sinal por combinação, carteira por janela.
 - Mudar a semântica do motor exige nova `engineVersion` e novo golden; execuções em curso migram (§b).
 - `@cryptoada/strategy-engine` depende só de `decimal.js@10.6.0` e `zod@4.6.5`.
+
+## Espera por dado (correção H1 da revisão da Fase 4)
+
+A simulação ao vivo que encontra um buraco de candles que a recuperação do stream ainda não confirmou como inalcançável **espera**
+(§a). Antes, isso era invisível (só um log) e a decisão dependia de uma marca em memória do worker, que só nascia para buraco com mais de
+24 h dentro da janela de retrocesso e se perdia no reinício: um buraco mais velho que a janela deixava a simulação presa para sempre,
+com a posição aberta sem stop avaliado. Agora:
+
+| Regra | Como funciona |
+|---|---|
+| A espera é do dado, não da memória | `runs.waiting_since`, `waiting_open_time`, `waiting_failed_recoveries` e `waiting_last_recovery_at` (migration 0016, com `.rollback.sql`) guardam desde quando a execução espera, por qual abertura e quantas recuperações limpas já deixaram o buraco como estava. Um worker novo continua a contagem de onde o outro parou |
+| Recuperação limpa | O worker anota o instante em que cada recuperação de lacunas termina SEM erro (`createRecoveryClock`). Ela conta uma vez para a espera quando terminou DEPOIS de a espera começar e depois da última já contada; uma rodada vista por dez rondas conta uma vez, e uma que terminou antes de a espera começar não conta |
+| Confirmação por contagem | `LIVE_GAP_CONFIRM_RECOVERIES` (padrão 3) recuperações limpas que não preencheram o buraco o confirmam, desde que o buraco tenha ao menos 10 minutos desde o fechamento do último candle que falta (um candle recém-fechado pode demorar no REST) |
+| Confirmação por idade | O buraco cujo último candle que falta fechou há mais que a janela de retrocesso (`STREAM_GAP_LOOKBACK_HOURS`) está fora do alcance da recuperação: esperar seria esperar para sempre, e ele é confirmado na hora |
+| Aviso ao dono | O primeiro registro da espera (ou a troca de buraco) emite, na mesma transação, o evento `{ runId, kind: "warning", eventId: <waiting_since> }` pelo canal da API; o painel relê a execução |
+| Visível na API | `GET /v1/runs/:id` traz `waitingForData: { since, openTime } | null` (só enquanto a execução está `running`) |
+| A espera termina com o buraco | O primeiro passo que atravessa o buraco (preenchido ou confirmado) apaga as quatro colunas na MESMA transação do passo; confirmar não muda o que o motor recebe (`confirmedGapCandles` exato, §a) |
+
+A confirmação em memória da recuperação do stream (`unfillable`) continua valendo e não grava espera. Prova: `test/live-gap-wait.contract.test.ts`
+(9 contratos e 11 mutantes), `make database-test` (a gravação e a contagem no SQL, o aviso por NOTIFY e o CHECK do par) e `make live-test`
+(buraco no meio, reinício do worker no meio da contagem, simulação que chega ao fim IDÊNTICA ao backtest com o mesmo buraco, e o buraco
+além da janela confirmado por idade).
 
 ## Riscos e o que ficou para depois
 

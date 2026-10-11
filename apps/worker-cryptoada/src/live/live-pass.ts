@@ -11,6 +11,8 @@ import type {
   LivePassOutcome,
   LiveRunSession,
 } from './live-run.types.js';
+import type { GapPolicy } from './gap-policy.js';
+import { isGapConfirmedByEvidence } from './gap-policy.js';
 import { loadLiveContext, type LiveContext } from './load-live-context.js';
 import { resolveLiveCursor, type LiveCursor } from './resolve-live-cursor.js';
 import { loadGoalTracking } from './goal-step.js';
@@ -23,6 +25,7 @@ export type LivePassParams = {
   readonly isGapConfirmed: GapConfirmation;
   readonly maxSteps: number;
   readonly alerting?: LiveAlertingSettings | undefined;
+  readonly gapPolicy?: GapPolicy | undefined;
 };
 
 type PassRun = LivePassParams & StepRun;
@@ -52,7 +55,36 @@ function isAlreadyProcessed(state: EngineState, candle: EngineCandle): boolean {
   return last !== null && candle.openTime <= last;
 }
 
-function findUnconfirmedGap(run: PassRun, cursor: LiveCursor, candle: EngineCandle): number[] {
+// Sem a recuperação em memória ter confirmado, a espera é GRAVADA na execução (e avisa o dono) e a evidência gravada decide:
+// recuperações limpas que não preencheram o buraco, ou um buraco além do alcance da recuperação. O reinício não perde nada.
+async function isGapConfirmedByRecord(
+  run: PassRun,
+  openTimes: readonly number[],
+): Promise<boolean> {
+  const { gapPolicy } = run;
+  const first = openTimes[0];
+  const last = openTimes.at(-1);
+  if (gapPolicy === undefined || first === undefined || last === undefined) return false;
+  const state = await run.session.recordDataWait({
+    openTime: first,
+    now: gapPolicy.now(),
+    lastCleanRecoveryAt: gapPolicy.lastCleanRecoveryAt(),
+  });
+  if (state === undefined) return false;
+  run.waiting.isPending = true;
+  return isGapConfirmedByEvidence({
+    policy: gapPolicy,
+    state,
+    lastMissingOpenTime: last,
+    durationMilliseconds: run.context.durationMilliseconds,
+  });
+}
+
+async function findUnconfirmedGap(
+  run: PassRun,
+  cursor: LiveCursor,
+  candle: EngineCandle,
+): Promise<number[]> {
   if (cursor.previousOpenTime === null) return [];
   const openTimes = missingOpenTimes({
     previousOpenTime: cursor.previousOpenTime,
@@ -61,7 +93,8 @@ function findUnconfirmedGap(run: PassRun, cursor: LiveCursor, candle: EngineCand
   });
   if (openTimes.length === 0) return [];
   const { symbol, timeframe } = run.context.setup.parameters;
-  return run.isGapConfirmed({ symbol, timeframe, openTimes }) ? [] : openTimes;
+  if (run.isGapConfirmed({ symbol, timeframe, openTimes })) return [];
+  return (await isGapConfirmedByRecord(run, openTimes)) ? [] : openTimes;
 }
 
 function settle(commit: LiveCommitOutcome, steps: number): LivePassOutcome {
@@ -80,7 +113,7 @@ async function stepThrough(
   let steps = 0;
   for (const candle of candles) {
     if (isAlreadyProcessed(cursor.state, candle)) continue;
-    const gap = findUnconfirmedGap(run, cursor, candle);
+    const gap = await findUnconfirmedGap(run, cursor, candle);
     if (gap.length > 0) {
       return { kind: LIVE_PASS_KIND.WAITING, steps, waitingFromOpenTime: gap[0] };
     }
@@ -131,6 +164,7 @@ export async function runLivePass(params: LivePassParams): Promise<LivePassOutco
     pickSentiment: createSentimentPicker({ observations, source }),
     tracker: createPositionTracker(cursor.state.wallet.position),
     goal: createGoalProgress(context),
+    waiting: { isPending: blueprint.run.waitingSince !== undefined },
   };
   return stepThrough(run, cursor, candles);
 }

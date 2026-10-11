@@ -8,6 +8,8 @@ export const RUN_EVENT_KIND = {
   SIGNAL: 'signal',
   TRADE: 'trade',
   BALANCE: 'balance',
+  // A simulação parou à espera de candles que faltam (`waitingForData` na execução).
+  WARNING: 'warning',
 } as const;
 
 export type RunEventKind = (typeof RUN_EVENT_KIND)[keyof typeof RUN_EVENT_KIND];

@@ -29,6 +29,8 @@ export const RUN_COLUMNS = {
   goalId: runs.goalId,
   goalOutcome: runs.goalOutcome,
   goalOutcomeCandleTime: runs.goalOutcomeCandleTime,
+  waitingSince: runs.waitingSince,
+  waitingOpenTime: runs.waitingOpenTime,
   createdAt: runs.createdAt,
   startedAt: runs.startedAt,
   finishedAt: runs.finishedAt,
@@ -57,6 +59,8 @@ export type RunRow = {
   readonly goalId: string | null;
   readonly goalOutcome: string | null;
   readonly goalOutcomeCandleTime: number | null;
+  readonly waitingSince: number | null;
+  readonly waitingOpenTime: number | null;
   readonly createdAt: Date;
   readonly startedAt: Date | null;
   readonly finishedAt: Date | null;
@@ -77,6 +81,8 @@ export function toRunRecord(row: RunRow): RunRecord {
     goalId: row.goalId ?? undefined,
     goalOutcome: (row.goalOutcome ?? undefined) as GoalRunOutcome | undefined,
     goalOutcomeCandleTime: row.goalOutcomeCandleTime ?? undefined,
+    waitingSince: row.waitingSince ?? undefined,
+    waitingOpenTime: row.waitingOpenTime ?? undefined,
     startedAt: row.startedAt ?? undefined,
     finishedAt: row.finishedAt ?? undefined,
   };

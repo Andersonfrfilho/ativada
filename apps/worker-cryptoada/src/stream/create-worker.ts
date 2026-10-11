@@ -24,6 +24,7 @@ import {
 import { createCandleWriter, type CandleWriter } from './candle-writer.js';
 import { recoverGaps } from './gap-recovery.js';
 import { createRecoveryRunner, type RecoveryRunner } from './recovery-runner.js';
+import type { RecoveryClock } from './recovery-clock.js';
 
 const DEFAULT_BACKOFF_BASE_MILLISECONDS = 2_000;
 const DEFAULT_BACKOFF_MAX_MILLISECONDS = 60_000;
@@ -57,6 +58,8 @@ export type WorkerDependencies = {
   readonly unfillable?: Set<string> | undefined;
   // Chamado depois de cada candle fechado gravado: acorda a avaliação das simulações ao vivo.
   readonly onCandleStored?: (() => void) | undefined;
+  // Cada recuperação de lacunas que termina sem erro é anotada: a simulação ao vivo conta com elas para confirmar um buraco.
+  readonly recoveryClock?: Pick<RecoveryClock, 'markCleanRound'> | undefined;
   readonly serverClock?: Pick<ServerClock, 'now' | 'refresh'> | undefined;
   readonly timing?: WorkerTiming;
 };
@@ -104,15 +107,20 @@ function resolveTiming(
 function createRecovery(dependencies: WorkerDependencies, timing: ResolvedTiming): RecoveryRunner {
   const unfillable = dependencies.unfillable ?? new Set<string>();
   return createRecoveryRunner({
-    recover: () =>
-      recoverGaps({
+    recover: async () => {
+      const outcome = await recoverGaps({
         ...dependencies,
         now: timing.marketNow,
         refreshClock: timing.refreshClock,
         lookbackMilliseconds: timing.lookbackMilliseconds,
         unfillable,
         signal: dependencies.abortController.signal,
-      }),
+      });
+      if (outcome.failures === 0 && !dependencies.abortController.signal.aborted) {
+        dependencies.recoveryClock?.markCleanRound();
+      }
+      return outcome;
+    },
     logger: dependencies.logger,
     sleep: timing.sleep,
     random: timing.random,

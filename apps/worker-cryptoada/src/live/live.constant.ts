@@ -8,6 +8,12 @@ export const LIVE_MAXIMUM_POLL_SECONDS = 300;
 export const LIVE_DEFAULT_HEARTBEAT_TIMEOUT_SECONDS = 60;
 export const LIVE_MINIMUM_HEARTBEAT_TIMEOUT_SECONDS = 5;
 export const LIVE_MAXIMUM_HEARTBEAT_TIMEOUT_SECONDS = 3_600;
+// Quantas recuperações de lacunas SEM erro precisam deixar um buraco como estava para a Binance valer como "não tem o candle".
+export const LIVE_DEFAULT_GAP_CONFIRM_RECOVERIES = 3;
+export const LIVE_MINIMUM_GAP_CONFIRM_RECOVERIES = 1;
+export const LIVE_MAXIMUM_GAP_CONFIRM_RECOVERIES = 50;
+// Um candle recém-fechado pode demorar a aparecer no REST: antes desta idade nenhuma contagem confirma o buraco.
+export const LIVE_GAP_MINIMUM_AGE_MILLISECONDS = 600_000;
 // Alerta de sinal só de candle fechado há no máximo isto: replay depois de parada longa não vira notícia velha.
 export const LIVE_ALERT_MAX_AGE_CANDLES = 2;
 // O ao vivo não tem fim: o progresso fica em zero e o painel mostra o último candle.

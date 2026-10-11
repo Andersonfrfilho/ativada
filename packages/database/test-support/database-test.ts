@@ -24,6 +24,7 @@ import {
   seedPersistenceOwners,
 } from './persistence-lgpd-checks.js';
 import { checkRunEvents } from './run-event-checks.js';
+import { checkRunDataWait } from './run-data-wait-checks.js';
 import { checkRunLog } from './run-log-checks.js';
 import { checkRunRepository } from './run-checks.js';
 import {
@@ -182,6 +183,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkSentimentObservations(lifecycle);
     await checkPersistence(lifecycle);
     await checkRunEvents(lifecycle, databaseUrl);
+    await checkRunDataWait(lifecycle, databaseUrl);
   } finally {
     await client.close();
     await closeDatabase(handle);

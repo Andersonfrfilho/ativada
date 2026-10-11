@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { CandleRecord } from '../../packages/database/src/index.js';
 import { createWorker, type Worker } from '../../apps/worker-cryptoada/src/stream/create-worker.js';
+import type { RecoveryClock } from '../../apps/worker-cryptoada/src/stream/recovery-clock.js';
 import { createWorkerLogger } from '../../apps/worker-cryptoada/src/logging/worker-logger.js';
 import { WORKER_LOG } from '../../apps/worker-cryptoada/src/worker.constant.js';
 import { createMarketDataClient } from '../../packages/market-data/src/index.js';
@@ -39,6 +40,8 @@ export type PipelineOptions = {
   // Preenche a janela de retrocesso antes da semente: o histórico anterior não é o assunto do teste.
   readonly shouldPrefillWindow?: boolean;
   readonly wrapRepository?: (repository: InMemoryCandleRepository) => PipelineRepository;
+  // Anotado a cada recuperação de lacunas que termina sem erro.
+  readonly recoveryClock?: Pick<RecoveryClock, 'markCleanRound'>;
 };
 
 export type Pipeline = {
@@ -120,6 +123,7 @@ export function startPipeline(options: PipelineOptions = {}): Pipeline {
     staleAfterMilliseconds: 5_000,
     gapLookbackHours: options.gapLookbackHours ?? DEFAULT_LOOKBACK_HOURS,
     serverClock,
+    recoveryClock: options.recoveryClock,
     timing: {
       gapCheckIntervalMilliseconds: options.gapCheckIntervalMilliseconds,
       now: clock.now,

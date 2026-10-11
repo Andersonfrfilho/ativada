@@ -29,6 +29,9 @@ export type RunRecord = {
   readonly goalId: string | undefined;
   readonly goalOutcome: GoalRunOutcome | undefined;
   readonly goalOutcomeCandleTime: number | undefined;
+  // A simulação ao vivo está parada à espera de um buraco de candles: desde quando (ms) e a primeira abertura que falta.
+  readonly waitingSince: number | undefined;
+  readonly waitingOpenTime: number | undefined;
   readonly createdAt: Date;
   readonly startedAt: Date | undefined;
   readonly finishedAt: Date | undefined;

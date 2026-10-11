@@ -13,6 +13,7 @@ import { createAlertWiring } from './alerts/create-alert-wiring.js';
 import { loadEnvironment, type Environment } from './environment.js';
 import { createLiveRunDatabase } from './live/create-live-run-database.js';
 import { createGapConfirmation } from './live/gap-confirmation.js';
+import { createGapPolicy } from './live/create-gap-policy.js';
 import { createLiveEvaluator } from './live/live-evaluator.js';
 import type { LiveAlertingSettings } from './live/live-run.types.js';
 import { createLiveScheduler, type LiveScheduler } from './live/live-scheduler.js';
@@ -20,6 +21,7 @@ import { WORKSPACE_NAME } from './index.js';
 import { createWorkerLogger, type WorkerLogger } from './logging/worker-logger.js';
 import { createShutdownHandler, registerShutdownSignals } from './shutdown.js';
 import { createWorker, type Worker } from './stream/create-worker.js';
+import { createRecoveryClock, type RecoveryClock } from './stream/recovery-clock.js';
 import { SHUTDOWN_TIMEOUT_MILLISECONDS, WORKER_LOG } from './worker.constant.js';
 
 type WorkerWiringParams = {
@@ -29,6 +31,7 @@ type WorkerWiringParams = {
   readonly abortController: AbortController;
   readonly unfillable: Set<string>;
   readonly onCandleStored: () => void;
+  readonly recoveryClock: RecoveryClock;
 };
 
 function createConfiguredWorker(params: WorkerWiringParams): Worker {
@@ -57,6 +60,7 @@ function createConfiguredWorker(params: WorkerWiringParams): Worker {
     gapCheckMinutes: environment.STREAM_GAP_CHECK_MINUTES,
     unfillable: params.unfillable,
     onCandleStored: params.onCandleStored,
+    recoveryClock: params.recoveryClock,
   });
 }
 
@@ -66,6 +70,7 @@ function createConfiguredLiveScheduler(params: {
   readonly database: ReturnType<typeof openDatabase>;
   readonly logger: WorkerLogger;
   readonly unfillable: Set<string>;
+  readonly recoveryClock: RecoveryClock;
   readonly alerting: LiveAlertingSettings | undefined;
 }): LiveScheduler {
   const { environment, database, logger } = params;
@@ -78,6 +83,7 @@ function createConfiguredLiveScheduler(params: {
       instanceId: `worker-${Bun.randomUUIDv7()}`,
       heartbeatTimeoutSeconds: environment.LIVE_HEARTBEAT_TIMEOUT_SECONDS,
       isGapConfirmed: createGapConfirmation(params.unfillable),
+      gapPolicy: createGapPolicy({ environment, recoveryClock: params.recoveryClock }),
       logger,
       ...(params.alerting === undefined ? {} : { alerting: params.alerting }),
     }),
@@ -99,6 +105,27 @@ function reportStarted(params: {
   });
 }
 
+type Stoppable = { readonly stop: () => Promise<void> };
+
+// Para na ordem recebida (a simulação ao vivo, os alertas e por último o fluxo de candles) e fecha o banco no fim.
+function registerWorkerShutdown(params: {
+  readonly logger: WorkerLogger;
+  readonly database: ReturnType<typeof openDatabase>;
+  readonly stoppables: readonly (Stoppable | undefined)[];
+}): void {
+  registerShutdownSignals(
+    createShutdownHandler({
+      stopWork: async () => {
+        for (const stoppable of params.stoppables) await stoppable?.stop();
+      },
+      closeResources: () => closeDatabase(params.database),
+      logger: params.logger,
+      timeoutMilliseconds: SHUTDOWN_TIMEOUT_MILLISECONDS,
+      exit: (code) => process.exit(code),
+    }),
+  );
+}
+
 function startWorker(environment: Environment): void {
   const logger = createWorkerLogger({
     appName: WORKSPACE_NAME,
@@ -106,12 +133,14 @@ function startWorker(environment: Environment): void {
   });
   const database = openDatabase(environment.DATABASE_URL);
   const unfillable = new Set<string>();
+  const recoveryClock = createRecoveryClock(() => Date.now());
   const alerts = createAlertWiring({ environment, database, logger });
   const live = createConfiguredLiveScheduler({
     environment,
     database,
     logger,
     unfillable,
+    recoveryClock,
     alerting: alerts.alerting,
   });
   const worker = createConfiguredWorker({
@@ -121,23 +150,12 @@ function startWorker(environment: Environment): void {
     abortController: new AbortController(),
     unfillable,
     onCandleStored: live.trigger,
+    recoveryClock,
   });
   live.start();
   alerts.scheduler?.start();
   reportStarted({ logger, environment, isAlertingEnabled: alerts.scheduler !== undefined });
-  registerShutdownSignals(
-    createShutdownHandler({
-      stopWork: async () => {
-        await live.stop();
-        await alerts.scheduler?.stop();
-        await worker.stop();
-      },
-      closeResources: () => closeDatabase(database),
-      logger,
-      timeoutMilliseconds: SHUTDOWN_TIMEOUT_MILLISECONDS,
-      exit: (code) => process.exit(code),
-    }),
-  );
+  registerWorkerShutdown({ logger, database, stoppables: [live, alerts.scheduler, worker] });
 }
 
 runWithEnvironment({ appName: WORKSPACE_NAME, load: loadEnvironment, run: startWorker });

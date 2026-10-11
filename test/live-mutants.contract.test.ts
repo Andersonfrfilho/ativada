@@ -32,7 +32,93 @@ function edit(file: string, find: string, replace: string, occurrences = 1): Liv
   return [{ file, find, replace, occurrences }];
 }
 
+const GAP_POLICY = 'gap-policy.ts';
+
+const GAP_WAIT_MUTANTS: readonly LiveSourceMutant[] = [
+  {
+    name: 'GAP_WAIT_NEVER_RECORDED',
+    edits: edit(
+      PASS,
+      'if (gapPolicy === undefined || first === undefined || last === undefined) return false;',
+      'return false;',
+    ),
+  },
+  {
+    name: 'MEMORY_CONFIRMATION_OF_THE_STREAM_RECOVERY_IGNORED',
+    edits: edit(
+      PASS,
+      '  if (run.isGapConfirmed({ symbol, timeframe, openTimes })) return [];\n',
+      '',
+    ),
+  },
+  {
+    name: 'GAP_NEVER_CONFIRMED_BY_EVIDENCE',
+    edits: edit(
+      PASS,
+      'return (await isGapConfirmedByRecord(run, openTimes)) ? [] : openTimes;',
+      'return openTimes;',
+    ),
+  },
+  {
+    name: 'GAP_CONFIRMED_WITHOUT_ANY_EVIDENCE',
+    edits: edit(
+      PASS,
+      'return (await isGapConfirmedByRecord(run, openTimes)) ? [] : openTimes;',
+      'return [];',
+    ),
+  },
+  {
+    name: 'GAP_CONFIRMED_BY_ONE_RECOVERY_TOO_EARLY',
+    edits: edit(
+      GAP_POLICY,
+      'state.failedRecoveries >= policy.confirmAfterFailedRecoveries',
+      'state.failedRecoveries >= policy.confirmAfterFailedRecoveries - 1',
+    ),
+  },
+  {
+    name: 'GAP_CONFIRMED_BY_ONE_RECOVERY_TOO_LATE',
+    edits: edit(
+      GAP_POLICY,
+      'state.failedRecoveries >= policy.confirmAfterFailedRecoveries',
+      'state.failedRecoveries > policy.confirmAfterFailedRecoveries',
+    ),
+  },
+  {
+    name: 'FRESH_GAP_CONFIRMED_BY_COUNT',
+    edits: edit(GAP_POLICY, '    age >= policy.minimumGapAgeMilliseconds &&\n', ''),
+  },
+  {
+    name: 'GAP_BEYOND_RECOVERY_REACH_KEEPS_WAITING',
+    edits: edit(GAP_POLICY, 'if (age > policy.recoveryLookbackMilliseconds) return true;', ''),
+  },
+  {
+    name: 'GAP_AGE_MEASURED_FROM_THE_OPEN_NOT_THE_CLOSE',
+    edits: edit(
+      GAP_POLICY,
+      'params.lastMissingOpenTime + params.durationMilliseconds',
+      'params.lastMissingOpenTime',
+    ),
+  },
+  {
+    name: 'WAIT_NOT_CLEARED_WHEN_THE_GAP_IS_CROSSED',
+    edits: edit(
+      'live-step.ts',
+      '    ...(run.waiting.isPending ? { shouldClearWait: true } : {}),\n',
+      '',
+    ),
+  },
+  {
+    name: 'WAIT_FLAG_NEVER_RESET_AFTER_THE_STEP',
+    edits: edit(
+      'live-step.ts',
+      "  if (commit === 'committed') run.waiting.isPending = false;\n",
+      '',
+    ),
+  },
+];
+
 const MUTANTS: readonly LiveSourceMutant[] = [
+  ...GAP_WAIT_MUTANTS,
   {
     name: 'LOST_RUN_KEEPS_BEING_EVALUATED',
     edits: edit(
@@ -89,8 +175,8 @@ const MUTANTS: readonly LiveSourceMutant[] = [
     name: 'GAP_DECLARED_WITHOUT_ASKING_THE_RECOVERY',
     edits: edit(
       PASS,
-      'return run.isGapConfirmed({ symbol, timeframe, openTimes }) ? [] : openTimes;',
-      'return [];',
+      '  if (run.isGapConfirmed({ symbol, timeframe, openTimes })) return [];\n',
+      '  return [];\n',
     ),
   },
   {

@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import type { GapPolicy } from '../../../apps/worker-cryptoada/src/live/gap-policy.js';
 import type {
   GapConfirmation,
   LiveAlertingSettings,
@@ -89,6 +90,7 @@ export type TestEvaluatorOptions = {
   readonly maxStepsPerPass?: number;
   readonly logger?: TestLogger;
   readonly alerting?: LiveAlertingSettings;
+  readonly gapPolicy?: GapPolicy;
 };
 
 export async function createTestEvaluator(
@@ -106,6 +108,7 @@ export async function createTestEvaluator(
     logger,
     ...(options.maxStepsPerPass === undefined ? {} : { maxStepsPerPass: options.maxStepsPerPass }),
     ...(options.alerting === undefined ? {} : { alerting: options.alerting }),
+    ...(options.gapPolicy === undefined ? {} : { gapPolicy: options.gapPolicy }),
   });
   return { evaluator, logger };
 }

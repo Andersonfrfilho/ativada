@@ -123,6 +123,8 @@ function buildRecords(scenario: WalkForwardScenario): {
     goalId: undefined,
     goalOutcome: undefined,
     goalOutcomeCandleTime: undefined,
+    waitingSince: undefined,
+    waitingOpenTime: undefined,
     finishedAt: undefined,
   };
   const version: StrategyVersionRecord = {
@@ -159,6 +161,8 @@ function createWriter(
     publishStepEvents: (): Promise<number> => Promise.resolve(0),
     appendAlerts: (): Promise<AppendResult> => Promise.resolve({ written: 0 }),
     recordGoalOutcome: (): Promise<boolean> => Promise.resolve(false),
+    recordDataWait: (): Promise<undefined> => Promise.resolve(undefined),
+    clearDataWait: (): Promise<boolean> => Promise.resolve(false),
     completeRun: (): Promise<boolean> => Promise.resolve(false),
     readStatus: (): Promise<RunStatus> => {
       memory.calls.log.push('status');

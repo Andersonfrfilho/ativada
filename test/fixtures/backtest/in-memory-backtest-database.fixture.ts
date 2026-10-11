@@ -95,6 +95,8 @@ function buildBlueprint(params: BuildRunParams): RunBlueprint {
     goalId: undefined,
     goalOutcome: undefined,
     goalOutcomeCandleTime: undefined,
+    waitingSince: undefined,
+    waitingOpenTime: undefined,
     finishedAt: undefined,
   };
   const version: StrategyVersionRecord = {
@@ -140,6 +142,8 @@ function createWriter(context: Context, stage: StoredResults, batch: number): Ru
     publishStepEvents: (): Promise<number> => Promise.resolve(0),
     appendAlerts: (): Promise<AppendResult> => Promise.resolve({ written: 0 }),
     recordGoalOutcome: (): Promise<boolean> => Promise.resolve(false),
+    recordDataWait: (): Promise<undefined> => Promise.resolve(undefined),
+    clearDataWait: (): Promise<boolean> => Promise.resolve(false),
     completeRun: (): Promise<boolean> => Promise.resolve(false),
     readStatus: (): Promise<RunStatus> => {
       memory.log.push('status');

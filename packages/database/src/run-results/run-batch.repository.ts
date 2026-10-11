@@ -7,6 +7,7 @@ import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
 import { runs } from '../schema/runs.schema.js';
 import type { RunStatus } from '../runs/run.constant.js';
+import { clearDataWait, recordDataWait } from '../runs/run-data-wait.js';
 import { recordGoalOutcome } from '../runs/run-goal.js';
 import { saveCheckpoint } from '../runs/run.repository.js';
 import { transitionRun } from '../runs/run-transition.js';
@@ -46,6 +47,30 @@ async function appendResults(target: BatchTarget, rows: RunResultRows): Promise<
   return { written: counts.reduce((sum, count) => sum + count, 0) };
 }
 
+function createRunControlWriter(
+  target: BatchTarget,
+): Pick<RunBatchWriter, 'recordDataWait' | 'clearDataWait' | 'completeRun' | 'publishStepEvents'> {
+  return {
+    completeRun: async () =>
+      (
+        await transitionRun(target.executor, target.scope, {
+          runId: target.runId,
+          to: RUN_STATUS_VALUES.COMPLETED,
+        })
+      ).outcome === RUN_TRANSITION_OUTCOME.TRANSITIONED,
+    publishStepEvents: (candleTime) =>
+      publishStepEvents({
+        executor: target.executor,
+        ownerUserId: target.scope.ownerUserId,
+        runId: target.runId,
+        candleTime,
+      }),
+    recordDataWait: (params) =>
+      recordDataWait(target.executor, target.scope, { runId: target.runId, ...params }),
+    clearDataWait: () => clearDataWait(target.executor, target.scope, target.runId),
+  };
+}
+
 function createWriter(target: BatchTarget, status: RunStatus): RunBatchWriter {
   return {
     readStatus: () => Promise.resolve(status),
@@ -70,20 +95,7 @@ function createWriter(target: BatchTarget, status: RunStatus): RunBatchWriter {
       saveCheckpoint(target.executor, target.scope, { runId: target.runId, ...params }),
     recordGoalOutcome: (params) =>
       recordGoalOutcome(target.executor, target.scope, { runId: target.runId, ...params }),
-    completeRun: async () =>
-      (
-        await transitionRun(target.executor, target.scope, {
-          runId: target.runId,
-          to: RUN_STATUS_VALUES.COMPLETED,
-        })
-      ).outcome === RUN_TRANSITION_OUTCOME.TRANSITIONED,
-    publishStepEvents: (candleTime) =>
-      publishStepEvents({
-        executor: target.executor,
-        ownerUserId: target.scope.ownerUserId,
-        runId: target.runId,
-        candleTime,
-      }),
+    ...createRunControlWriter(target),
   };
 }
 

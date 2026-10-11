@@ -157,6 +157,8 @@ export function createInMemoryRuns(
       goalId: params.goalId,
       goalOutcome: undefined,
       goalOutcomeCandleTime: undefined,
+      waitingSince: undefined,
+      waitingOpenTime: undefined,
       createdAt: new Date(EPOCH_MILLISECONDS + sequence * MILLISECONDS_PER_ROW),
       startedAt: undefined,
       finishedAt: undefined,

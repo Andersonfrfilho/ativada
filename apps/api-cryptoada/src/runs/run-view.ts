@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { GoalRunOutcome, JsonValue, RunKind, RunRecord, RunStatus } from '@cryptoada/database';
 import type { BalanceSurvival } from '@cryptoada/strategy-engine';
-import { RUN_KIND } from '@cryptoada/database';
+import { RUN_KIND, RUN_STATUS } from '@cryptoada/database';
 
 export type RunWarning = { readonly code: string; readonly message: string };
 
@@ -34,12 +34,16 @@ export type RunView = {
 
 export type RunQueuePositionView = { readonly own: number; readonly overall: number };
 
+// A simulação ao vivo está parada à espera de candles que faltam: desde quando (ms) e a primeira abertura que falta.
+export type WaitingForDataView = { readonly since: number; readonly openTime: number };
+
 export type RunDetailView = RunView & {
   readonly warnings: readonly RunWarning[];
   // 1-based, só para `queued`: entre as execuções do dono e na fila inteira (só o número). `null` fora da fila.
   readonly queuePosition: RunQueuePositionView | null;
   // Piso e meta de dobro do saldo (RF09): só na simulação ao vivo.
   readonly survival: BalanceSurvival | null;
+  readonly waitingForData: WaitingForDataView | null;
 };
 
 function isJsonObject(
@@ -79,4 +83,11 @@ export function toRunView(record: RunRecord): RunView {
     goalId: record.goalId ?? null,
     goalOutcome: record.goalOutcome ?? null,
   };
+}
+
+// Só a execução que está rodando espera: a gravação que sobrou numa terminada não é mostrada.
+export function toWaitingForData(record: RunRecord): WaitingForDataView | null {
+  if (record.status !== RUN_STATUS.RUNNING) return null;
+  if (record.waitingSince === undefined || record.waitingOpenTime === undefined) return null;
+  return { since: record.waitingSince, openTime: record.waitingOpenTime };
 }

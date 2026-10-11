@@ -23,6 +23,7 @@ import {
   SIGNAL_ENGINE_VERSION,
   type EngineCandle,
 } from '../../packages/strategy-engine/src/index.js';
+import type { GapPolicy } from '../../apps/worker-cryptoada/src/live/gap-policy.js';
 import type {
   GapConfirmation,
   LiveAlertingSettings,
@@ -261,6 +262,7 @@ export type ProductionEvaluator = {
 export type EvaluatorOptions = {
   readonly instanceId: string;
   readonly isGapConfirmed?: GapConfirmation;
+  readonly gapPolicy?: GapPolicy;
   readonly heartbeatTimeoutSeconds?: number;
   readonly maxStepsPerPass?: number;
   readonly alerting?: LiveAlertingSettings;
@@ -311,6 +313,7 @@ export function createProductionEvaluator(
     logger,
     ...(options.maxStepsPerPass === undefined ? {} : { maxStepsPerPass: options.maxStepsPerPass }),
     ...(options.alerting === undefined ? {} : { alerting: options.alerting }),
+    ...(options.gapPolicy === undefined ? {} : { gapPolicy: options.gapPolicy }),
   });
   return { evaluator, entries, committed };
 }

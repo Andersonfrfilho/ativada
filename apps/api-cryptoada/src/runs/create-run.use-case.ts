@@ -192,6 +192,12 @@ export function createCreateRunUseCase(dependencies: CreateRunDependencies): Cre
         fallback: null,
       }),
     ]);
-    return { ...toRunView(run), warnings, queuePosition, survival: describeRunSurvival(run, []) };
+    return {
+      ...toRunView(run),
+      warnings,
+      queuePosition,
+      survival: describeRunSurvival(run, []),
+      waitingForData: null,
+    };
   };
 }

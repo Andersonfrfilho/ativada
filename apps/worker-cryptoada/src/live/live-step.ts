@@ -50,6 +50,8 @@ export type StepRun = {
   readonly pickSentiment: SentimentPicker;
   readonly tracker: PositionTracker;
   readonly goal: GoalProgress | undefined;
+  // A execução tem uma espera gravada: o primeiro passo que a atravessa a apaga, na mesma transação.
+  readonly waiting: { isPending: boolean };
 };
 
 export type PassRunStep = { readonly commit: LiveCommitOutcome; readonly next: LiveCursor };
@@ -157,7 +159,9 @@ export async function stepOnce(
       progress: LIVE_PROGRESS,
     },
     ...(goal === undefined ? {} : { goal }),
+    ...(run.waiting.isPending ? { shouldClearWait: true } : {}),
   });
+  if (commit === 'committed') run.waiting.isPending = false;
   if (run.goal !== undefined && settled.decision !== undefined && commit === 'committed') {
     run.goal.isOutcomeRecorded = true;
   }

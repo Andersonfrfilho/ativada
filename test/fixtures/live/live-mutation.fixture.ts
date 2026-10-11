@@ -17,6 +17,7 @@ export const LIVE_JUDGE_TEST_FILES: readonly string[] = [
   'test/live-evaluator.contract.test.ts',
   'test/live-evaluator-failures.contract.test.ts',
   'test/live-evaluator-recovery.contract.test.ts',
+  'test/live-gap-wait.contract.test.ts',
   'test/live-parity.contract.test.ts',
   'test/live-alerts.contract.test.ts',
   'test/live-alert-parts.contract.test.ts',

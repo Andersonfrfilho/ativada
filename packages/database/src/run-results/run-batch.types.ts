@@ -2,6 +2,7 @@
 import type { AlertInput } from '../alerts/alert.types.js';
 import type { JsonContainer } from '../json-value.types.js';
 import type { OwnerScope } from '../ownership/owner-scope.js';
+import type { DataWaitState, RecordDataWaitParams } from '../runs/run-data-wait.js';
 import type { RecordGoalOutcomeParams } from '../runs/run-goal.js';
 import type { RunStatus } from '../runs/run.constant.js';
 import type {
@@ -46,6 +47,13 @@ export type RunBatchWriter = {
   readonly recordGoalOutcome: (params: Omit<RecordGoalOutcomeParams, 'runId'>) => Promise<boolean>;
   // Encerra a execução ao vivo como concluída (a meta acabou e a posição já saiu), na MESMA transação do passo.
   readonly completeRun: () => Promise<boolean>;
+  // A simulação espera um buraco de candles: grava desde quando e conta as recuperações que não o preencheram (`undefined` se
+  // a execução não está `running`). O primeiro registro da espera avisa o dono por NOTIFY, na mesma transação.
+  readonly recordDataWait: (
+    params: Omit<RecordDataWaitParams, 'runId'>,
+  ) => Promise<DataWaitState | undefined>;
+  // O buraco foi atravessado: apaga a espera.
+  readonly clearDataWait: () => Promise<boolean>;
   // Avisa a API (NOTIFY na mesma transação) do que o passo do candle gravou; devolve quantos avisos saíram.
   readonly publishStepEvents: (candleTime: number) => Promise<number>;
 };

@@ -18,6 +18,7 @@ const WORKER_VARIABLES: readonly string[] = [
   'STREAM_GAP_CHECK_MINUTES',
   'LIVE_POLL_SECONDS',
   'LIVE_HEARTBEAT_TIMEOUT_SECONDS',
+  'LIVE_GAP_CONFIRM_RECOVERIES',
   'TELEGRAM_BOT_TOKEN',
   'TELEGRAM_API_BASE_URL',
   'ALERT_POLL_SECONDS',
@@ -76,6 +77,16 @@ describe('worker environment', () => {
     );
     expect(custom.LIVE_POLL_SECONDS).toBe(2);
     expect(custom.LIVE_HEARTBEAT_TIMEOUT_SECONDS).toBe(30);
+  });
+
+  test('buraco de candles: 3 recuperações limpas confirmam por padrão, configurável de 1 a 50', async () => {
+    const defaults = parseEnvironment(environmentSchema, await buildSource());
+    expect(defaults.LIVE_GAP_CONFIRM_RECOVERIES).toBe(3);
+    const custom = parseEnvironment(
+      environmentSchema,
+      await buildSource({ LIVE_GAP_CONFIRM_RECOVERIES: '10' }),
+    );
+    expect(custom.LIVE_GAP_CONFIRM_RECOVERIES).toBe(10);
   });
 
   test('alertas no Telegram: desligados sem token, API pública por padrão, despacho de 2 s configurável', async () => {
@@ -148,6 +159,9 @@ describe('worker environment', () => {
     ['LIVE_HEARTBEAT_TIMEOUT_SECONDS', '4'],
     ['LIVE_HEARTBEAT_TIMEOUT_SECONDS', '3601'],
     ['LIVE_HEARTBEAT_TIMEOUT_SECONDS', 'muito'],
+    ['LIVE_GAP_CONFIRM_RECOVERIES', '0'],
+    ['LIVE_GAP_CONFIRM_RECOVERIES', '51'],
+    ['LIVE_GAP_CONFIRM_RECOVERIES', 'muito'],
     ['ALERT_POLL_SECONDS', '0'],
     ['ALERT_POLL_SECONDS', '61'],
     ['ALERT_POLL_SECONDS', 'muito'],

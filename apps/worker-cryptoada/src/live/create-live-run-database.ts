@@ -59,6 +59,7 @@ async function commitStep(
         // A meta fecha no MESMO passo: o desfecho (uma vez) e a conclusão, quando a saída já se completou.
         if (commit.goal?.outcome !== undefined) await writer.recordGoalOutcome(commit.goal.outcome);
         if (commit.goal?.shouldComplete === true) await writer.completeRun();
+        if (commit.shouldClearWait === true) await writer.clearDataWait();
         // O aviso à API sai na MESMA transação: chega no COMMIT e some no ROLLBACK, então nunca precede nem sobrevive ao dado.
         await writer.publishStepEvents(commit.checkpoint.lastCandleTime);
         return LIVE_COMMIT_OUTCOME.COMMITTED;
@@ -113,6 +114,11 @@ function createSession(target: SessionTarget): LiveRunSession {
         }),
       ),
     commitStep: (commit) => commitStep(target, commit),
+    recordDataWait: (params) =>
+      createRunBatchRepository(handle).runInBatch(scope, runId, async (writer) => {
+        if ((await writer.readStatus()) !== RUN_STATUS.RUNNING) return undefined;
+        return writer.recordDataWait(params);
+      }),
     failRun: async (errorCode) =>
       (await runs.transitionRun(scope, { runId, to: RUN_STATUS.FAILED, errorCode })).outcome ===
       RUN_TRANSITION_OUTCOME.TRANSITIONED,

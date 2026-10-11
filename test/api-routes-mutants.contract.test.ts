@@ -444,6 +444,38 @@ const MUTANTS: readonly SourceMutant[] = [
     ),
   },
   {
+    name: 'WAITING_SHOWN_FOR_A_RUN_THAT_IS_NOT_RUNNING',
+    edits: edit(
+      'runs/run-view.ts',
+      '  if (record.status !== RUN_STATUS.RUNNING) return null;\n',
+      '',
+    ),
+  },
+  {
+    name: 'WAITING_NEVER_SHOWN',
+    edits: edit(
+      'runs/run-view.ts',
+      'return { since: record.waitingSince, openTime: record.waitingOpenTime };',
+      'return null;',
+    ),
+  },
+  {
+    name: 'WAITING_SINCE_AND_OPEN_TIME_SWAPPED',
+    edits: edit(
+      'runs/run-view.ts',
+      'return { since: record.waitingSince, openTime: record.waitingOpenTime };',
+      'return { since: record.waitingOpenTime, openTime: record.waitingSince };',
+    ),
+  },
+  {
+    name: 'WAITING_NOT_RETURNED_BY_THE_DETAIL',
+    edits: edit(
+      'runs/run.use-cases.ts',
+      '      waitingForData: toWaitingForData(run),',
+      '      waitingForData: null,',
+    ),
+  },
+  {
     name: 'WARNINGS_NOT_RETURNED_ON_CREATION',
     edits: edit(
       'runs/create-run.use-case.ts',

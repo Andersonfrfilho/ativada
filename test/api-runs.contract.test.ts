@@ -623,6 +623,43 @@ describe('POST /v1/runs', () => {
     expect((read.body as RunBody).data['survival']).toStrictEqual(expected);
   });
 
+  test('waitingForData: null andando; com a espera gravada pelo worker, mostra desde quando e qual candle falta', async () => {
+    const { body } = await post(SUBJECT_A, liveBody());
+    const created = (body as RunBody).data;
+    expect(created['waitingForData']).toBeNull();
+    const since = Date.UTC(2026, 9, 1, 12);
+    const openTime = Date.UTC(2026, 9, 1, 9);
+    harness.runs.updateRun(created.id, {
+      status: 'running',
+      waitingSince: since,
+      waitingOpenTime: openTime,
+    });
+    const waiting = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${created.id}` }),
+    );
+    expect((waiting.body as RunBody).data['waitingForData']).toStrictEqual({ since, openTime });
+    harness.runs.updateRun(created.id, { waitingSince: undefined, waitingOpenTime: undefined });
+    const resumed = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${created.id}` }),
+    );
+    expect((resumed.body as RunBody).data['waitingForData']).toBeNull();
+  });
+
+  test('uma espera que sobrou numa execução já terminada não aparece: só a que está rodando espera', async () => {
+    const { body } = await post(SUBJECT_A, liveBody());
+    const created = (body as RunBody).data;
+    harness.runs.updateRun(created.id, {
+      status: 'cancelled',
+      finishedAt: new Date(),
+      waitingSince: 1,
+      waitingOpenTime: 2,
+    });
+    const read = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${created.id}` }),
+    );
+    expect((read.body as RunBody).data['waitingForData']).toBeNull();
+  });
+
   test('backtest e walk-forward não trazem o campo (é do RF09, ao vivo), nem ao criar nem ao ler', async () => {
     const { body } = await post(SUBJECT_A, backtestBody());
     const created = (body as RunBody).data;

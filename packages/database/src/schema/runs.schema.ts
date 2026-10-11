@@ -25,6 +25,7 @@ import {
 import { literalList } from './check-literals.js';
 import { runGoalConstraints } from './runs-goal.schema.js';
 import { runQueueConstraints } from './runs-queue.schema.js';
+import { runWaitConstraints } from './runs-wait.schema.js';
 import { strategyVersions } from './strategies.schema.js';
 import { users } from './users.schema.js';
 
@@ -62,6 +63,12 @@ export const runs = pgTable(
     goalId: uuid('goal_id'),
     goalOutcome: varchar('goal_outcome', { length: 16 }),
     goalOutcomeCandleTime: bigint('goal_outcome_candle_time', { mode: 'number' }),
+    // Simulação ao vivo esperando um buraco de candles: desde quando (ms), qual abertura, e quantas recuperações limpas já
+    // deixaram o buraco como estava (a última, em ms, evita contar a mesma duas vezes).
+    waitingSince: bigint('waiting_since', { mode: 'number' }),
+    waitingOpenTime: bigint('waiting_open_time', { mode: 'number' }),
+    waitingFailedRecoveries: integer('waiting_failed_recoveries').notNull().default(0),
+    waitingLastRecoveryAt: bigint('waiting_last_recovery_at', { mode: 'number' }),
     claimedBy: varchar('claimed_by', { length: CLAIMED_BY_MAX_LENGTH }),
     heartbeatAt: timestamp('heartbeat_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -102,6 +109,7 @@ export const runs = pgTable(
     ),
     ...runQueueConstraints(table),
     ...runGoalConstraints(table),
+    ...runWaitConstraints(table),
     check(
       'runs_finished_matches_terminal_status_check',
       sql`(${table.status} in (${literalList(TERMINAL_RUN_STATUSES)})) = (${table.finishedAt} is not null)`,

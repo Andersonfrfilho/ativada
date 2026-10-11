@@ -64,9 +64,16 @@ export const BALANCE_SURVIVAL_SCHEMA = z.strictObject({
   observedMilliseconds: z.number().int().min(0),
 });
 
+export const WAITING_FOR_DATA_SCHEMA = z.strictObject({
+  since: epochMillisecondsSchema,
+  openTime: epochMillisecondsSchema,
+});
+
 export const RUN_DETAIL_SCHEMA = RUN_VIEW_SCHEMA.extend({
   warnings: z.array(RUN_WARNING_SCHEMA),
   queuePosition: RUN_QUEUE_POSITION_SCHEMA.nullable(),
   // Só na simulação ao vivo; `null` nos demais tipos.
   survival: BALANCE_SURVIVAL_SCHEMA.nullable(),
+  // Só enquanto a simulação ao vivo espera candles que faltam; `null` andando e nos demais tipos.
+  waitingForData: WAITING_FOR_DATA_SCHEMA.nullable(),
 });

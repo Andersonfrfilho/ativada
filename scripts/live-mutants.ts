@@ -30,8 +30,8 @@ const MUTANTS: readonly Mutant[] = [
     edits: [
       ...edit(
         DATABASE_FILE,
-        '        if (!(await writer.saveCheckpoint(commit.checkpoint))) throw new StepAlreadyRecordedError();\n        return LIVE_COMMIT_OUTCOME.COMMITTED;',
-        '        return LIVE_COMMIT_OUTCOME.COMMITTED;',
+        '        if (!(await writer.saveCheckpoint(commit.checkpoint))) throw new StepAlreadyRecordedError();\n',
+        '',
       ),
       ...edit(
         DATABASE_FILE,
@@ -70,6 +70,22 @@ const MUTANTS: readonly Mutant[] = [
       DATABASE_FILE,
       'insertedUntil: new Date(query.until),',
       'insertedUntil: new Date(8_640_000_000_000_000),',
+    ),
+  },
+  {
+    name: 'WAIT_CLEAR_SKIPPED_IN_THE_STEP',
+    edits: edit(
+      DATABASE_FILE,
+      '        if (commit.shouldClearWait === true) await writer.clearDataWait();\n',
+      '',
+    ),
+  },
+  {
+    name: 'WAIT_NOT_RECORDED_IN_THE_RUN_ROW',
+    edits: edit(
+      DATABASE_FILE,
+      'return writer.recordDataWait(params);',
+      'return { since: params.now, failedRecoveries: 0, isNew: true };',
     ),
   },
   {

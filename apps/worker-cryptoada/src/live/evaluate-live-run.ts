@@ -71,6 +71,7 @@ export async function evaluateLiveRun(params: EvaluateLiveRunParams): Promise<Li
       maxSteps,
       isGapConfirmed: dependencies.isGapConfirmed,
       alerting: dependencies.alerting,
+      gapPolicy: dependencies.gapPolicy,
     });
     if (outcome.kind === LIVE_PASS_KIND.WAITING) {
       dependencies.logger.info(LIVE_LOG.RUN_WAITING_FOR_GAP, { runId });

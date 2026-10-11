@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type {
   AlertInput,
+  DataWaitState,
   GoalRunOutcome,
   BatchCheckpointParams,
   EngineCheckpoint,
@@ -17,6 +18,7 @@ import type {
 } from '@cryptoada/strategy-engine';
 
 import type { LIVE_COMMIT_OUTCOME, LIVE_PASS_KIND } from './live.constant.js';
+import type { GapPolicy } from './gap-policy.js';
 import type { WorkerLogger } from '../logging/worker-logger.js';
 
 export type LiveCandleWindow = {
@@ -44,6 +46,8 @@ export type LiveStepCommit = {
   // Alertas de sinal do candle (RF10): entram na mesma transação, então reentrega do passo nunca os repete.
   readonly alerts: readonly AlertInput[];
   readonly goal?: LiveGoalCommit;
+  // O passo atravessa um buraco que a simulação esperava: a espera gravada some junto com o passo.
+  readonly shouldClearWait?: boolean;
 };
 
 // Taxa de acerto fora da amostra do último walk-forward concluído da versão (texto decimal exato) e as operações dela.
@@ -67,7 +71,15 @@ export type LiveRunSession = {
   ) => Promise<readonly StoredSentimentObservation[]>;
   readonly findHitRate: () => Promise<HistoricalHitRate | undefined>;
   readonly commitStep: (commit: LiveStepCommit) => Promise<LiveCommitOutcome>;
+  // Registra (e conta) a espera por um buraco de candles NA execução; `undefined` se ela não está mais `running`.
+  readonly recordDataWait: (params: RecordDataWaitInput) => Promise<DataWaitState | undefined>;
   readonly failRun: (errorCode: string) => Promise<boolean>;
+};
+
+export type RecordDataWaitInput = {
+  readonly openTime: number;
+  readonly now: number;
+  readonly lastCleanRecoveryAt: number;
 };
 
 export type LiveRunDatabase = {
@@ -95,6 +107,8 @@ export type LiveEvaluatorDependencies = {
   readonly instanceId: string;
   readonly heartbeatTimeoutSeconds: number;
   readonly isGapConfirmed: GapConfirmation;
+  // Ausente = só a recuperação em memória decide a lacuna (testes); a produção sempre a liga.
+  readonly gapPolicy?: GapPolicy;
   readonly logger: WorkerLogger;
   readonly engine?: Engine;
   readonly maxStepsPerPass?: number;

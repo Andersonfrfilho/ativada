@@ -7,10 +7,12 @@ import type {
   LiveRunClaims,
   LiveRunDatabase,
   LiveRunSession,
+  RecordDataWaitInput,
 } from '../../../apps/worker-cryptoada/src/live/live-run.types.js';
 import type {
   AlertInput,
   ClaimedLiveRun,
+  DataWaitState,
   EngineCheckpoint,
   GoalRunOutcome,
   RenewHeartbeatResult,
@@ -98,6 +100,18 @@ export type InMemoryLiveState = {
   // O desfecho da meta gravado pelo passo confirmado (uma vez só).
   goalOutcome: { outcome: GoalRunOutcome; candleTime: number } | undefined;
   goalOutcomeWrites: number;
+  // A espera por um buraco gravada NA execução, como as colunas `waiting_*`: sobrevive a um avaliador novo.
+  wait: StoredWait | undefined;
+  waitWarnings: number;
+  // Quantos passos pediram para apagar a espera: só o primeiro depois do buraco precisa.
+  waitClears: number;
+};
+
+export type StoredWait = {
+  since: number;
+  openTime: number;
+  failedRecoveries: number;
+  lastRecoveryAt: number | undefined;
 };
 
 export type InMemoryLive = {
@@ -144,6 +158,8 @@ function buildBlueprint(scenario: LiveScenario, runId: string): LiveBlueprint {
     goalId: scenario.goal?.goalId,
     goalOutcome: undefined,
     goalOutcomeCandleTime: undefined,
+    waitingSince: undefined,
+    waitingOpenTime: undefined,
     finishedAt: undefined,
   };
   const strategy = scenario.strategy ?? CLASSIC_STRATEGY;
@@ -194,6 +210,10 @@ function commitStep(
   };
   state.commits = attempt;
   applyGoalCommit(state, commit.goal);
+  if (commit.shouldClearWait === true) {
+    state.wait = undefined;
+    state.waitClears += 1;
+  }
   hooks?.afterCommit?.(attempt, live.controls);
   return 'committed';
 }
@@ -223,6 +243,33 @@ function readCheckpoint(state: InMemoryLiveState): EngineCheckpoint | undefined 
   ) as EngineCheckpoint;
 }
 
+// O mesmo que o UPDATE do banco: a mesma abertura acumula, uma abertura nova recomeça, e uma recuperação limpa conta uma vez.
+function recordDataWait(
+  state: InMemoryLiveState,
+  params: RecordDataWaitInput,
+): DataWaitState | undefined {
+  if (state.status !== 'running') return undefined;
+  const previous = state.wait;
+  if (previous === undefined || previous.openTime !== params.openTime) {
+    state.wait = {
+      since: params.now,
+      openTime: params.openTime,
+      failedRecoveries: 0,
+      lastRecoveryAt: undefined,
+    };
+    state.waitWarnings += 1;
+    return { since: params.now, failedRecoveries: 0, isNew: true };
+  }
+  const counts =
+    params.lastCleanRecoveryAt > previous.since &&
+    params.lastCleanRecoveryAt > (previous.lastRecoveryAt ?? 0);
+  if (counts) {
+    previous.failedRecoveries += 1;
+    previous.lastRecoveryAt = params.lastCleanRecoveryAt;
+  }
+  return { since: previous.since, failedRecoveries: previous.failedRecoveries, isNew: false };
+}
+
 function createSession(context: Context): LiveRunSession {
   const { live, blueprint, scenario } = context;
   const { state } = live;
@@ -235,6 +282,8 @@ function createSession(context: Context): LiveRunSession {
           status: state.status,
           goalOutcome: state.goalOutcome?.outcome,
           goalOutcomeCandleTime: state.goalOutcome?.candleTime,
+          waitingSince: state.wait?.since,
+          waitingOpenTime: state.wait?.openTime,
         },
       }),
     readCheckpoint: () => Promise.resolve(readCheckpoint(state)),
@@ -270,6 +319,7 @@ function createSession(context: Context): LiveRunSession {
         return Promise.reject(error instanceof Error ? error : new Error('falha injetada'));
       }
     },
+    recordDataWait: (params) => Promise.resolve(recordDataWait(state, params)),
     failRun: (errorCode): Promise<boolean> => {
       if (state.status !== 'running' && state.status !== 'queued') return Promise.resolve(false);
       state.status = 'failed';
@@ -332,6 +382,9 @@ export function createInMemoryLive(scenario: LiveScenario): InMemoryLive {
     candles: [...scenario.candles],
     goalOutcome: undefined,
     goalOutcomeWrites: 0,
+    wait: undefined,
+    waitWarnings: 0,
+    waitClears: 0,
   };
   const controls: LiveControls = {
     cancel: () => {

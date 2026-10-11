@@ -978,6 +978,14 @@ só `createBlockedAccountRepository` e `createAuditRetentionRepository`.
   conta fecha com `4403` (§n estendida) e a renovação reconfere a conta; sem pong no prazo `4408`; mensagem acima do teto fecha; limite de
   mensagens por minuto; `SIGTERM` fecha com `1001` (graça de 2 s e `stop(true)`, porque o `stop()` do Bun não resolve com socket aberto).
 - **Resync.** Quando a conexão do LISTEN cai, todo socket recebe `resync`, e de novo ao voltar: o painel rebusca, nada é reenviado.
+- **Cliente lento.** O retorno de `socket.send` é tratado (0 = descartado, -1 = na fila com pressão): a mensagem descartada vira `resync`
+  com motivo `backpressure` (o painel rebusca) e, se nem o aviso cabe, a conexão cai com `1013` e o cliente reconecta. O servidor também
+  limita a fila por cliente (`backpressureLimit` de 1 MiB com `closeOnBackpressureLimit`). Responder a um socket que acabou de fechar não
+  lança mais. Vale para o fan-out do hub, o pub/sub do ticker e as respostas a um socket só.
+- **Escutador do NOTIFY.** `AuthenticationOk` só vale depois do `SASLFinal` verificado quando há senha configurada (como o `require_auth`
+  do libpq): um servidor que responde `ok` sem provar quem é, ou sem SASL, é recusado (`authentication_failed`). Senha errada,
+  autenticação não suportada e TLS indisponível são falhas FATAIS: erro no log (só o código do motivo), espera no teto do backoff e estado
+  `listener: { state: "failed", reason }` em `GET /v1/admin/health`, que fica `degraded`.
 - **Pendência da §m cumprida:** `consumeTicket` está no handshake. Continua valendo: tickets, rate limit e sockets em memória exigem
   ADR para mais de uma instância.
 - **Medido** (`make stream-api-test`, API e worker reais, Postgres real): sinal do worker no dono em 6 ms (teto 10 s); nenhum aviso

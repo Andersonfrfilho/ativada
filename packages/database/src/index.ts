@@ -98,6 +98,7 @@ export type {
   TransitionRunParams,
   TransitionRunResult,
 } from './runs/run.types.js';
+export type { DataWaitState, RecordDataWaitParams } from './runs/run-data-wait.js';
 export { createRunResultRepository } from './run-results/run-result.repository.js';
 export type {
   AppendResult,
