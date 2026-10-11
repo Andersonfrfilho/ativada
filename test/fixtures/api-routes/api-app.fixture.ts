@@ -4,6 +4,8 @@ import type * as KeyResolverModule from '../../../apps/api-cryptoada/src/authent
 import type * as CreateRequestHandlerModule from '../../../apps/api-cryptoada/src/http/create-request-handler.js';
 import type * as LoggerModule from '../../../apps/api-cryptoada/src/logging/logger.js';
 import type * as CandlesUseCaseModule from '../../../apps/api-cryptoada/src/markets/list-candles.use-case.js';
+import type * as SentimentRoutesModule from '../../../apps/api-cryptoada/src/markets/sentiment.routes.js';
+import type * as SentimentUseCaseModule from '../../../apps/api-cryptoada/src/markets/sentiment.use-case.js';
 import type * as MarketRoutesModule from '../../../apps/api-cryptoada/src/markets/markets.routes.js';
 import type * as PolicyModule from '../../../apps/api-cryptoada/src/rate-limit/rate-limit-policy.constant.js';
 import type * as RateLimiterModule from '../../../apps/api-cryptoada/src/rate-limit/rate-limiter.js';
@@ -61,6 +63,8 @@ export type ApiApp = {
   readonly logger: typeof LoggerModule;
   readonly candlesUseCase: typeof CandlesUseCaseModule;
   readonly marketRoutes: typeof MarketRoutesModule;
+  readonly sentimentRoutes: typeof SentimentRoutesModule;
+  readonly sentimentUseCase: typeof SentimentUseCaseModule;
   readonly policies: typeof PolicyModule;
   readonly rateLimiter: typeof RateLimiterModule;
   readonly router: typeof CreateRouterModule;
@@ -122,6 +126,8 @@ export async function loadApiApp(): Promise<ApiApp> {
     logger: await load('logging/logger'),
     candlesUseCase: await load('markets/list-candles.use-case'),
     marketRoutes: await load('markets/markets.routes'),
+    sentimentRoutes: await load('markets/sentiment.routes'),
+    sentimentUseCase: await load('markets/sentiment.use-case'),
     policies: await load('rate-limit/rate-limit-policy.constant'),
     rateLimiter: await load('rate-limit/rate-limiter'),
     router: await load('router/create-router'),

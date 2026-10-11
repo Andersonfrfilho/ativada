@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, asc, gte, lt, max, sql } from 'drizzle-orm';
+import { and, asc, desc, gte, lt, max, sql } from 'drizzle-orm';
 
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import { sentimentDaily } from '../schema/sentiment-daily.schema.js';
@@ -55,11 +55,26 @@ async function findLatestDate(database: SentimentDatabase): Promise<string | und
   return row?.latest ?? undefined;
 }
 
+async function findLatest(database: SentimentDatabase): Promise<FearGreedEntry | undefined> {
+  const [row] = await database
+    .select()
+    .from(sentimentDaily)
+    .orderBy(desc(sentimentDaily.date))
+    .limit(1);
+  if (row === undefined) return undefined;
+  return {
+    date: row.date,
+    fearGreed: row.fearGreed,
+    classification: row.classification ?? undefined,
+  };
+}
+
 export function createSentimentRepository(handle: DatabaseHandle): SentimentRepository {
   const { database } = readOpenDatabase(handle);
   return {
     upsertFearGreed: (entries) => upsertFearGreed(database, entries),
     findFearGreed: (params) => findFearGreed(database, params),
     findLatestDate: () => findLatestDate(database),
+    findLatest: () => findLatest(database),
   };
 }

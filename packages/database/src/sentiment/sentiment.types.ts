@@ -17,4 +17,6 @@ export type SentimentRepository = {
   readonly findFearGreed: (params: FindFearGreedParams) => Promise<readonly FearGreedEntry[]>;
   // Data mais recente já gravada; `undefined` quando a tabela está vazia.
   readonly findLatestDate: () => Promise<string | undefined>;
+  // O valor do dia mais recente (com a classificação, se a fonte a trouxe); `undefined` quando a tabela está vazia.
+  readonly findLatest: () => Promise<FearGreedEntry | undefined>;
 };

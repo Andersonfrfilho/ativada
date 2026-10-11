@@ -15,7 +15,8 @@ export async function checkSentimentRepository(context: SentimentCheckContext): 
   const { handle, assertCondition, reportCheck } = context;
   const repository = createSentimentRepository(handle);
   assertCondition(
-    (await repository.findLatestDate()) === undefined,
+    (await repository.findLatestDate()) === undefined &&
+      (await repository.findLatest()) === undefined,
     'tabela vazia deveria devolver undefined',
   );
   await repository.upsertFearGreed([
@@ -40,6 +41,13 @@ export async function checkSentimentRepository(context: SentimentCheckContext): 
   assertCondition(
     (await repository.findLatestDate()) === '2026-01-03',
     'findLatestDate não devolveu a data mais recente',
+  );
+  const latest = await repository.findLatest();
+  assertCondition(
+    latest?.date === '2026-01-03' &&
+      latest.fearGreed === 75 &&
+      latest.classification === 'Extreme Greed',
+    `findLatest devolve o dia mais recente com a classificação: ${JSON.stringify(latest)}`,
   );
   reportCheck('Fear & Greed: upsert repetido atualiza o dia; leitura semi-aberta e ordenada');
 

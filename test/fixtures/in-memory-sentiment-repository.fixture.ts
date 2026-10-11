@@ -30,5 +30,6 @@ export function createInMemorySentimentRepository(
         sortedRows().filter((entry) => entry.date >= params.from && entry.date < params.to),
       ),
     findLatestDate: (): Promise<string | undefined> => Promise.resolve(sortedRows().at(-1)?.date),
+    findLatest: (): Promise<FearGreedEntry | undefined> => Promise.resolve(sortedRows().at(-1)),
   };
 }

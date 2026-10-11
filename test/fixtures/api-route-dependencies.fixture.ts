@@ -49,6 +49,7 @@ export function buildApiRouteDependencies(
     },
     streamTicketStore: createStreamTicketStore({ now: () => Date.now() }),
     markets: { enabled: ENABLED_MARKETS, listCandles: notUsed },
+    sentiment: { getSentiment: notUsed },
     strategies: {
       createStrategy: notUsed,
       listStrategies: notUsed,

@@ -9,6 +9,10 @@ import {
   type PriceAlertRouteDependencies,
 } from '../price-alerts/price-alerts.routes.js';
 import { createMarketRoutes, type MarketRouteDependencies } from '../markets/markets.routes.js';
+import {
+  createSentimentRoutes,
+  type SentimentRouteDependencies,
+} from '../markets/sentiment.routes.js';
 import { createProfileRoutes, type ProfileRouteDependencies } from '../profile/profile.routes.js';
 import type { Route } from '../router/route.types.js';
 import type { ExportRunCsvUseCase } from '../runs/export-run-csv.use-case.js';
@@ -43,6 +47,7 @@ export type ApiRouteDependencies = HealthRouteDependencies & {
   readonly admin: AdminRouteDependencies;
   readonly streamTicketStore: StreamTicketStore;
   readonly markets: MarketRouteDependencies;
+  readonly sentiment: SentimentRouteDependencies;
   readonly strategies: StrategyRouteDependencies;
   readonly goals: GoalRouteDependencies;
   readonly priceAlerts: PriceAlertRouteDependencies;
@@ -62,6 +67,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     ...createAdminRoutes(dependencies.admin),
     ...createStreamTicketRoutes(dependencies.streamTicketStore),
     ...createMarketRoutes(dependencies.markets),
+    ...createSentimentRoutes(dependencies.sentiment),
     ...createStrategyRoutes(dependencies.strategies),
     ...createGoalRoutes(dependencies.goals),
     ...createPriceAlertRoutes(dependencies.priceAlerts),

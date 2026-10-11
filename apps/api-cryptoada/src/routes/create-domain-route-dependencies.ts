@@ -6,6 +6,7 @@ import {
   createRunQueueRepository,
   createRunResultRepository,
   createSentimentObservationRepository,
+  createSentimentRepository,
   createStrategyRepository,
   type DatabaseHandle,
 } from '@cryptoada/database';
@@ -53,10 +54,13 @@ import {
   createListStrategiesUseCase,
   createListVersionsUseCase,
 } from '../strategies/strategy.use-cases.js';
+import { createGetSentimentUseCase } from '../markets/sentiment.use-case.js';
+import type { SentimentRouteDependencies } from '../markets/sentiment.routes.js';
 import type { StrategyRouteDependencies } from '../strategies/strategies.routes.js';
 
 export type DomainRouteDependencies = {
   readonly markets: MarketRouteDependencies;
+  readonly sentiment: SentimentRouteDependencies;
   readonly strategies: StrategyRouteDependencies;
   readonly goals: GoalRouteDependencies;
   readonly priceAlerts: PriceAlertRouteDependencies;
@@ -169,6 +173,9 @@ export function createDomainRouteDependencies(params: DomainRouteParams): Domain
         candles: createCandleRepository(database),
         exchange: environment.MARKET_EXCHANGE,
       }),
+    },
+    sentiment: {
+      getSentiment: createGetSentimentUseCase({ sentiments: createSentimentRepository(database) }),
     },
     strategies: createStrategyDependencies(database),
     goals: createGoalDependencies(params),

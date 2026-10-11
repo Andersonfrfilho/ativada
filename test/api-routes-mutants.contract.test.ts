@@ -128,6 +128,26 @@ const MUTANTS: readonly SourceMutant[] = [
     ),
   },
   {
+    name: 'SENTIMENT_CLASSIFICATION_IS_INVENTED',
+    edits: edit(
+      'markets/sentiment.use-case.ts',
+      'classification: latest.classification ?? null,',
+      "classification: latest.classification ?? 'Neutral',",
+    ),
+  },
+  {
+    name: 'SENTIMENT_WITHOUT_A_VALUE_ANSWERS_ZERO',
+    edits: edit(
+      'markets/sentiment.use-case.ts',
+      'if (latest === undefined) throw new SentimentUnavailableError();',
+      '',
+    ),
+  },
+  {
+    name: 'SENTIMENT_ROUTE_WITHOUT_ACCESS',
+    edits: edit('markets/sentiment.routes.ts', '      access: ROUTE_ACCESS.USER,\n', ''),
+  },
+  {
     name: 'USER_ID_ACCEPTED_IN_THE_RUN_BODY',
     edits: edit(
       'runs/create-run-request.schema.ts',
