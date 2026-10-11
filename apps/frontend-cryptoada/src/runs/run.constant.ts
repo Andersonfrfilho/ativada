@@ -23,13 +23,18 @@ export const RUN_POLL_MILLISECONDS = 2_000;
 export const LIST_PAGE_SIZE = 20;
 export const CURVE_MAX_POINTS = 240;
 
-export const STATUS_LABEL: Readonly<Record<RunStatus, string>> = {
+const STATUS_LABEL: Readonly<Record<string, string>> = {
   [RUN_STATUS.QUEUED]: 'Na fila',
   [RUN_STATUS.RUNNING]: 'Rodando',
   [RUN_STATUS.COMPLETED]: 'Concluída',
   [RUN_STATUS.FAILED]: 'Falhou',
   [RUN_STATUS.CANCELLED]: 'Cancelada',
 };
+
+// Status que este painel não conhece aparece como veio, sem derrubar a tela.
+export function statusLabel(status: string): string {
+  return STATUS_LABEL[status] ?? status;
+}
 
 export const FAILURE_TEXT: Readonly<Record<string, string>> = {
   NO_CANDLES: 'Não há candles gravados para esse par, timeframe e período.',

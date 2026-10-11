@@ -40,8 +40,8 @@ describe('backtest form', () => {
     expect(fields).toEqual(['Versão', 'Capital inicial', 'Taxa por ordem', 'Slippage', 'Fim']);
   });
 
-  test('accepts decimals but not exponents, signs or commas', () => {
-    for (const bad of ['1e3', '+5', '1,5', ' 10', '']) {
+  test('accepts decimals (dot or comma) but not exponents or signs', () => {
+    for (const bad of ['1e3', '+5', '1,5,2', '']) {
       expect(validateBacktestForm({ ...valid(), initialBalance: bad })).not.toEqual([]);
     }
     expect(validateBacktestForm({ ...valid(), initialBalance: '250.75' })).toEqual([]);
@@ -56,6 +56,21 @@ describe('backtest form', () => {
       periodStart: Date.parse('2026-04-13T00:00:00.000Z'),
       periodEnd: Date.parse('2026-10-10T00:00:00.000Z'),
       runParameters: { initialBalance: '10000', feeRate: '0.001', slippageRate: '0.0005' },
+    });
+  });
+
+  test('accepts the Brazilian comma in the numbers and sends them with a dot', () => {
+    const values = {
+      ...valid(),
+      initialBalance: '10000,50',
+      feeRate: '0,001',
+      slippageRate: '0,0005',
+    };
+    expect(validateBacktestForm(values)).toEqual([]);
+    expect(buildBacktestRequest(values)['runParameters']).toEqual({
+      initialBalance: '10000.50',
+      feeRate: '0.001',
+      slippageRate: '0.0005',
     });
   });
 });

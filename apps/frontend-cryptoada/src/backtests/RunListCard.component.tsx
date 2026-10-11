@@ -6,7 +6,7 @@ import { formatDate, formatSymbol } from '../format/format.js';
 import { Card } from '../layout/Card.component.js';
 import { ListStatus } from '../layout/ListStatus.component.js';
 import { signedRatioText } from '../runs/metric-text.js';
-import { RUN_STATUS, STATUS_LABEL, type RunKind } from '../runs/run.constant.js';
+import { RUN_STATUS, statusLabel, type RunKind } from '../runs/run.constant.js';
 import runStyles from '../runs/Runs.module.css';
 import { parseMetrics, type Run } from '../runs/run.validation.js';
 import { useRunListQuery } from '../runs/runs.query.js';
@@ -56,7 +56,7 @@ function RunRow({ run, selection }: RunRowProps): ReactElement {
           {describeLookup(lookupVersion(index, run.strategyVersionId))}
         </span>
       </Link>
-      <span className={runStyles.sub}>{STATUS_LABEL[run.status]}</span>
+      <span className={runStyles.sub}>{statusLabel(run.status)}</span>
       <span className={runStyles.num}>
         {isCompleted && totalReturn !== undefined ? signedRatioText(totalReturn).text : ''}
       </span>

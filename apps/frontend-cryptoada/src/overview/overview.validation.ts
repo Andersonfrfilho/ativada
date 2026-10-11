@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@cryptoada/environment';
 
-import { RUN_STATUS, SIGNAL_ACTION } from './overview.constant.js';
+import { SIGNAL_ACTION } from './overview.constant.js';
 import { decimalText } from '../http/decimal.validation.js';
 
 export const runSchema = z.object({
   id: z.string(),
-  status: z.enum(RUN_STATUS),
+  status: z.string(),
   symbol: z.string(),
   timeframe: z.string(),
   periodStart: z.number().optional(),

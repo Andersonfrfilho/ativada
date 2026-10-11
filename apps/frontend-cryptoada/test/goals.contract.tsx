@@ -28,8 +28,13 @@ describe('percent to fraction', () => {
     expect(percentToFraction(' 3 ')).toBe('0.03');
   });
 
+  test('accepts the Brazilian comma like the dot', () => {
+    expect(percentToFraction('2,5')).toBe('0.025');
+    expect(percentToFraction(' 12,5 ')).toBe('0.125');
+  });
+
   test('refuses anything that is not a plain positive decimal', () => {
-    for (const bad of ['', 'abc', '-3', '3,5', '1e2', '3.']) {
+    for (const bad of ['', 'abc', '-3', '1e2', '3.', '3,5,1']) {
       expect(percentToFraction(bad)).toBeUndefined();
     }
   });

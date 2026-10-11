@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@cryptoada/environment';
 
+import { normalizeDecimalInput } from '../forms/decimal-input.js';
 import { ApiError } from '../http/api.error.js';
 import type { FormProblem } from '../forms/ProblemList.component.js';
 
@@ -79,16 +80,16 @@ export function validateBacktestForm(values: BacktestFormValues): FormProblem[] 
   const problems: (FormProblem | undefined)[] = [];
   if (values.versionId === '')
     problems.push({ field: 'Versão', message: 'escolha uma estratégia.' });
-  const hasBalance =
-    DECIMAL_PATTERN.test(values.initialBalance) && Number(values.initialBalance) > 0;
+  const balance = normalizeDecimalInput(values.initialBalance);
+  const hasBalance = DECIMAL_PATTERN.test(balance) && Number(balance) > 0;
   if (!hasBalance) {
     problems.push({
       field: 'Capital inicial',
       message: 'informe um número maior que zero (ex.: 10000).',
     });
   }
-  problems.push(rateProblem('Taxa por ordem', values.feeRate));
-  problems.push(rateProblem('Slippage', values.slippageRate));
+  problems.push(rateProblem('Taxa por ordem', normalizeDecimalInput(values.feeRate)));
+  problems.push(rateProblem('Slippage', normalizeDecimalInput(values.slippageRate)));
   const hasDates = DATE_PATTERN.test(values.start) && DATE_PATTERN.test(values.end);
   if (!hasDates) problems.push({ field: 'Início', message: 'informe as duas datas.' });
   else if (toUtcMilliseconds(values.end) <= toUtcMilliseconds(values.start)) {
@@ -106,9 +107,9 @@ export function buildBacktestRequest(values: BacktestFormValues): Record<string,
     periodStart: toUtcMilliseconds(values.start),
     periodEnd: toUtcMilliseconds(values.end),
     runParameters: {
-      initialBalance: values.initialBalance,
-      feeRate: values.feeRate,
-      slippageRate: values.slippageRate,
+      initialBalance: normalizeDecimalInput(values.initialBalance),
+      feeRate: normalizeDecimalInput(values.feeRate),
+      slippageRate: normalizeDecimalInput(values.slippageRate),
     },
   };
 }

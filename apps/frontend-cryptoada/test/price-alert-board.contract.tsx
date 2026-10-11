@@ -182,7 +182,7 @@ describe('price alert board', () => {
     );
   });
 
-  test('deletes an alert', async () => {
+  test('deleting an alert asks first, then calls the API', async () => {
     const world: World = { alerts: [alert({ id: 'a' })] };
     const { fake } = await openBoard(world, [
       {
@@ -196,6 +196,10 @@ describe('price alert board', () => {
     ]);
     fireEvent.click(
       screen.getByRole('button', { name: 'Apagar alerta BTC/USDT acima de 70.000,00' }),
+    );
+    expect(fake.callsTo('DELETE', '/v1/price-alerts/a')).toHaveLength(0);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Confirmar: apagar alerta BTC/USDT acima de 70.000,00' }),
     );
     await waitFor(() => expect(fake.callsTo('DELETE', '/v1/price-alerts/a')).toHaveLength(1));
     await waitFor(() =>

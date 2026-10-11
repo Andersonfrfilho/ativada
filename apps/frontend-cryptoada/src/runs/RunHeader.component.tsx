@@ -5,7 +5,7 @@ import { formatDate, formatSymbol } from '../format/format.js';
 import { shortHash } from '../strategies/strategy.validation.js';
 import { describeLookup, lookupVersion } from '../strategies/version-index.js';
 import { useVersionIndexQuery } from '../strategies/strategy.query.js';
-import { RUN_KIND, STATUS_LABEL } from './run.constant.js';
+import { RUN_KIND, statusLabel } from './run.constant.js';
 import styles from './Runs.module.css';
 import type { Run } from './run.validation.js';
 
@@ -29,7 +29,7 @@ export function RunHeader({ run }: RunHeaderProps): ReactElement {
         {run.periodEnd === null
           ? `desde ${formatDate(run.periodStart)}`
           : `${formatDate(run.periodStart)} a ${formatDate(run.periodEnd)}`}{' '}
-        · {STATUS_LABEL[run.status]}
+        · {statusLabel(run.status)}
       </p>
       <p className={styles.sub}>
         {describeLookup(lookup)}

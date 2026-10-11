@@ -84,6 +84,21 @@ describe('backtest list', () => {
     expect(await within(walkForwards).findByText('ETH/USDT')).toBeDefined();
   });
 
+  test('a run with a status or kind this panel does not know does not take the whole list down', async () => {
+    const routes = [
+      ...STRATEGY_ROUTES,
+      ...runRoutes([
+        buildRun({ id: 'run-1' }),
+        buildRun({ id: 'run-new', status: 'paused', symbol: 'ETHUSDT' }),
+      ]),
+    ];
+    renderApp({ path: '/backtests', isAuthenticated: true, routes });
+    const backtests = await screen.findByRole('region', { name: 'Backtests' });
+    expect(await within(backtests).findByText('BTC/USDT')).toBeDefined();
+    expect(await within(backtests).findByText('ETH/USDT')).toBeDefined();
+    expect(backtests.textContent).toContain('paused');
+  });
+
   test('loads the next page by cursor on demand', async () => {
     let calls = 0;
     const routes: readonly FakeRoute[] = [

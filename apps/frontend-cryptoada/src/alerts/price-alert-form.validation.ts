@@ -9,13 +9,11 @@ export type PriceAlertFormValues = {
 
 const VALUE_PATTERN = /^\d{1,10}(\.\d{1,8})?$/;
 
-// Aceita a vírgula do teclado brasileiro; o texto que vai à API tem ponto.
-export function normalizeDecimalText(text: string): string {
-  return text.trim().replace(',', '.');
-}
+export { normalizeDecimalInput as normalizeDecimalText } from '../forms/decimal-input.js';
+import { normalizeDecimalInput } from '../forms/decimal-input.js';
 
 export function validatePriceAlertForm(values: PriceAlertFormValues): FormProblem[] {
-  const value = normalizeDecimalText(values.value);
+  const value = normalizeDecimalInput(values.value);
   const isValid = VALUE_PATTERN.test(value) && Number(value) > 0;
   return isValid
     ? []

@@ -1,10 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { normalizeDecimalInput } from '../forms/decimal-input.js';
+
 const PERCENT_PATTERN = /^\d+(\.\d+)?$/;
 const PERCENT_SHIFT_DIGITS = 2;
 
 // "2.5" (%) vira "0.025" (fração) movendo a vírgula no texto: nunca passa por número de ponto flutuante.
 export function percentToFraction(percentText: string): string | undefined {
-  const trimmed = percentText.trim();
+  const trimmed = normalizeDecimalInput(percentText);
   if (!PERCENT_PATTERN.test(trimmed)) return undefined;
   const [whole = '', decimals = ''] = trimmed.split('.');
   const padded = whole.padStart(PERCENT_SHIFT_DIGITS + 1, '0');

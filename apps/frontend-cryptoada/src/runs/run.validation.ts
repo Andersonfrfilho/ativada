@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@cryptoada/environment';
 
-import { RUN_KIND, RUN_STATUS } from './run.constant.js';
+import { RUN_STATUS } from './run.constant.js';
 import { decimalText } from '../http/decimal.validation.js';
 
 export const metricValueSchema = z.object({
@@ -51,8 +51,9 @@ const runParametersSchema = z.object({
 export const runSchema = z.object({
   id: z.string(),
   strategyVersionId: z.string(),
-  kind: z.enum(RUN_KIND),
-  status: z.enum(RUN_STATUS),
+  // Texto aberto: um valor que este painel não conhece não derruba a lista inteira (a tela cai num rótulo neutro).
+  kind: z.string(),
+  status: z.string(),
   symbol: z.string(),
   timeframe: z.string(),
   runParameters: runParametersSchema,

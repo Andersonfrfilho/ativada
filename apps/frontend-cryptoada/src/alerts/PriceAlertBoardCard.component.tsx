@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 
 import { Card } from '../layout/Card.component.js';
 import controls from '../styles/Controls.module.css';
@@ -31,6 +31,7 @@ function toggleLabel(alert: PriceAlert): string {
 
 function AlertRow({ alert, onToggle, onDelete }: RowProps): ReactElement {
   const name = nameAlert(alert);
+  const [isConfirming, setIsConfirming] = useState(false);
   const isArmed = alert.triggeredAt === null && alert.isEnabled;
   return (
     <li className={styles.boardItem}>
@@ -48,10 +49,10 @@ function AlertRow({ alert, onToggle, onDelete }: RowProps): ReactElement {
         <button
           type="button"
           className={controls.button}
-          aria-label={`Apagar alerta ${name}`}
-          onClick={() => onDelete(alert.id)}
+          aria-label={`${isConfirming ? 'Confirmar: apagar' : 'Apagar'} alerta ${name}`}
+          onClick={() => (isConfirming ? onDelete(alert.id) : setIsConfirming(true))}
         >
-          Apagar
+          {isConfirming ? 'Confirmar' : 'Apagar'}
         </button>
       </span>
     </li>
