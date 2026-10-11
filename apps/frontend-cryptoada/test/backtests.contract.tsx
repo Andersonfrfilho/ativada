@@ -400,6 +400,17 @@ describe('backtest detail', () => {
     expect(screen.getByRole('region', { name: 'Custos incluídos' }).textContent).toContain('0,10%');
   });
 
+  test('a finished backtest carries the "history is not a promise" notice', async () => {
+    renderApp({
+      path: '/backtests/run-1',
+      isAuthenticated: true,
+      routes: [...STRATEGY_ROUTES, ...runRoutes([buildRun({ id: 'run-1' })])],
+    });
+    const note = await screen.findByRole('note', { name: 'Leia com cuidado' });
+    expect(note.textContent).toContain('histórico');
+    expect(note.textContent).toContain('não promete');
+  });
+
   test('names the strategy and version that produced the run, with the short hash', async () => {
     renderApp({
       path: '/backtests/run-1',
@@ -496,6 +507,25 @@ describe('walk-forward detail', () => {
     expect(alert.textContent).toContain('Alerta de sobreajuste');
     expect(alert.textContent).toContain('metade');
     expect((await screen.findByRole('region', { name: 'Janelas' })).textContent).toContain('12');
+  });
+
+  test('a finished walk-forward carries the same "history is not a promise" notice', async () => {
+    const run = buildRun({ id: 'run-wf', kind: 'walk_forward', overfitting });
+    renderApp({
+      path: '/backtests/run-wf',
+      isAuthenticated: true,
+      routes: [
+        ...STRATEGY_ROUTES,
+        ...runRoutes([run]),
+        {
+          method: 'GET',
+          path: '/v1/runs/run-wf/windows',
+          respond: (): Response => pageResponse([]),
+        },
+      ],
+    });
+    const note = await screen.findByRole('note', { name: 'Leia com cuidado' });
+    expect(note.textContent).toContain('não promete');
   });
 
   test('without alert it says the out-of-sample result held up', async () => {

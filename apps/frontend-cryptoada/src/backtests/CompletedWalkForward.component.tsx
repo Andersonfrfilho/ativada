@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import { HistoryNote } from '../layout/HistoryNote.component.js';
 import { CostsCard } from '../runs/CostsCard.component.js';
 import { MetricsCard } from '../runs/MetricsCard.component.js';
 import { OverfittingCard } from '../runs/OverfittingCard.component.js';
@@ -13,6 +14,7 @@ export function CompletedWalkForward({ run }: { readonly run: RunDetail }): Reac
   const metrics = parseMetrics(run.metrics);
   return (
     <>
+      <HistoryNote />
       <MetricsCard title="Resultado fora da amostra" metrics={metrics} />
       <OverfittingCard overfitting={parseOverfitting(run.overfitting)} />
       <WindowsCard runId={run.id} />

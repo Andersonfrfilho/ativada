@@ -5,20 +5,10 @@ import { useParams } from 'react-router';
 import { formatChangePercent, formatPercent, formatSymbol } from '../format/format.js';
 import runStyles from '../runs/Runs.module.css';
 import controls from '../styles/Controls.module.css';
+import { HistoryNote } from '../layout/HistoryNote.component.js';
 import { CoinsSituationCard } from './CoinsSituationCard.component.js';
 import { useGoalEvaluationQuery, useGoalQuery } from './goal.query.js';
-import styles from './Goals.module.css';
 import { RankingCard } from './RankingCard.component.js';
-
-function HistoryNote(): ReactElement {
-  return (
-    <div role="note" aria-label="Leia com cuidado" className={styles.notice}>
-      Isto é o histórico: o que cada estratégia teria feito, em janelas de candles diários que já
-      aconteceram. O passado não promete o futuro, e COMPRAR, SEGURAR e EVITAR descrevem o que o
-      histórico mostrou, não uma recomendação de investimento.
-    </div>
-  );
-}
 
 export function GoalDetailPage(): ReactElement {
   const { goalId = '' } = useParams();
@@ -37,7 +27,7 @@ export function GoalDetailPage(): ReactElement {
           Perda máxima aceita: {formatPercent(Number(data.maxLossRate))}.
         </p>
       )}
-      <HistoryNote />
+      <HistoryNote extra="COMPRAR, SEGURAR e EVITAR descrevem o que o histórico mostrou." />
       {goal.isError || evaluation.isError ? (
         <p role="alert" className={controls.error}>
           Não foi possível carregar a meta. Tente novamente em instantes.

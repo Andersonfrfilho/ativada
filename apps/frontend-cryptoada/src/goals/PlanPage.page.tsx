@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 
 import { ApiError } from '../http/api.error.js';
+import { HistoryNote } from '../layout/HistoryNote.component.js';
 import { Card } from '../layout/Card.component.js';
 import runStyles from '../runs/Runs.module.css';
 import controls from '../styles/Controls.module.css';
@@ -24,6 +25,7 @@ export function PlanPage(): ReactElement {
     <div className={runStyles.page}>
       <h1 className={runStyles.title}>Plano de operação</h1>
       <Link to={`/metas/${goalId}`}>Voltar à meta</Link>
+      <HistoryNote />
       {strategyId === '' ? (
         <Card title="Sem estratégia">
           <p>Escolha uma estratégia no ranking da meta para ver o plano dela.</p>

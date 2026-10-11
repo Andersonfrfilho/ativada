@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import { HistoryNote } from '../layout/HistoryNote.component.js';
 import { CostsCard } from '../runs/CostsCard.component.js';
 import { MetricsCard } from '../runs/MetricsCard.component.js';
 import { RunCurve } from '../runs/RunCurve.component.js';
@@ -11,6 +12,7 @@ export function CompletedBacktest({ run }: { readonly run: RunDetail }): ReactEl
   const metrics = parseMetrics(run.metrics);
   return (
     <>
+      <HistoryNote />
       <MetricsCard title="Resultado" metrics={metrics} />
       <RunCurve runId={run.id} />
       <TradesCard runId={run.id} />

@@ -80,6 +80,12 @@ describe('operation plan', () => {
     expect(card.textContent).toContain('Exato');
   });
 
+  test('the plan page carries the "history is not a promise" notice', async () => {
+    renderApp({ path: PATH, isAuthenticated: true, routes: planRoutes(buildPlanView()) });
+    const note = await screen.findByRole('note', { name: 'Leia com cuidado' });
+    expect(note.textContent).toContain('não promete');
+  });
+
   test('an indicative plan says it depends on the next candle', async () => {
     renderApp({
       path: PATH,
