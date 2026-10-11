@@ -54,6 +54,8 @@ export type RunQueueRepository = {
   // As `running` de conta bloqueada ou apagada são canceladas (as `queued` ficam, sem ser reivindicadas).
   readonly cancelRunsOfInactiveOwners: () => Promise<number>;
   readonly countQueuedRuns: (scope: OwnerScope) => Promise<number>;
+  // Execuções guardadas do dono (não apagadas, de qualquer tipo e estado): a cota de armazenamento.
+  readonly countStoredRuns: (scope: OwnerScope) => Promise<number>;
   readonly countActiveRuns: (scope: OwnerScope, kind: RunKind) => Promise<number>;
   readonly readUserRunLimits: (scope: OwnerScope) => Promise<UserRunLimits>;
   readonly findQueuePosition: (

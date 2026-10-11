@@ -16,7 +16,12 @@ import { createRunRequestSchema } from './create-run-request.schema.js';
 import type { CreateRunUseCase } from './create-run.use-case.js';
 import { decodeRunCursor } from './run-cursor.js';
 import { readRunId } from './run-id.js';
-import type { GetRunUseCase, ListRunsUseCase, StopRunUseCase } from './run.use-cases.js';
+import type {
+  DeleteRunUseCase,
+  GetRunUseCase,
+  ListRunsUseCase,
+  StopRunUseCase,
+} from './run.use-cases.js';
 import { RUN_PATH, RUN_STOP_PATH, RUNS_PATH } from './runs.constant.js';
 import { RUN_DOCUMENTATION } from './runs.docs.js';
 
@@ -26,6 +31,7 @@ export type RunRouteDependencies = {
   readonly listRuns: ListRunsUseCase;
   readonly getRun: GetRunUseCase;
   readonly stopRun: StopRunUseCase;
+  readonly deleteRun: DeleteRunUseCase;
 };
 
 const listQuerySchema = z.strictObject({
@@ -95,11 +101,25 @@ function createStopRoute(dependencies: RunRouteDependencies): Route {
   };
 }
 
+function createDeleteRoute(dependencies: RunRouteDependencies): Route {
+  return {
+    method: HTTP_METHOD.DELETE,
+    path: RUN_PATH,
+    access: ROUTE_ACCESS.USER,
+    documentation: RUN_DOCUMENTATION.delete,
+    handler: async (context): Promise<RouteResult> => {
+      await dependencies.deleteRun(context.scope, readRunId(context));
+      return { status: HTTP_STATUS.NO_CONTENT };
+    },
+  };
+}
+
 export function createRunRoutes(dependencies: RunRouteDependencies): readonly Route[] {
   return [
     createCreateRoute(dependencies),
     createListRoute(dependencies),
     createGetRoute(dependencies),
     createStopRoute(dependencies),
+    createDeleteRoute(dependencies),
   ];
 }

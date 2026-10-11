@@ -25,7 +25,7 @@ import {
 import { literalList } from './check-literals.js';
 import { runGoalConstraints } from './runs-goal.schema.js';
 import { runQueueConstraints } from './runs-queue.schema.js';
-import { runWaitConstraints } from './runs-wait.schema.js';
+import { runLifecycleConstraints } from './runs-storage.schema.js';
 import { strategyVersions } from './strategies.schema.js';
 import { users } from './users.schema.js';
 
@@ -74,6 +74,8 @@ export const runs = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     startedAt: timestamp('started_at', { withTimezone: true }),
     finishedAt: timestamp('finished_at', { withTimezone: true }),
+    // Exclusão lógica (só de execução terminada): some das leituras do dono e libera a cota de execuções guardadas.
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (table) => [
     foreignKey({
@@ -109,7 +111,7 @@ export const runs = pgTable(
     ),
     ...runQueueConstraints(table),
     ...runGoalConstraints(table),
-    ...runWaitConstraints(table),
+    ...runLifecycleConstraints(table),
     check(
       'runs_finished_matches_terminal_status_check',
       sql`(${table.status} in (${literalList(TERMINAL_RUN_STATUSES)})) = (${table.finishedAt} is not null)`,

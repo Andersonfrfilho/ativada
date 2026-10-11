@@ -15,6 +15,7 @@ type LimitCase = {
 const LIMITS: readonly LimitCase[] = [
   { variable: 'PRICE_ALERT_MIN_REFIRE_SECONDS', fallback: 300, minimum: 0, maximum: 86_400 },
   { variable: 'PRICE_ALERT_MAX_DISABLED_PER_USER', fallback: 100, minimum: 1, maximum: 500 },
+  { variable: 'RUN_STORAGE_MAX_PER_USER', fallback: 200, minimum: 1, maximum: 10_000 },
   { variable: 'STRATEGY_MAX_PER_USER', fallback: 100, minimum: 1, maximum: 1_000 },
   { variable: 'STRATEGY_MAX_VERSIONS_PER_STRATEGY', fallback: 200, minimum: 1, maximum: 2_000 },
   { variable: 'GOAL_EVALUATION_THREADS', fallback: 2, minimum: 1, maximum: 4 },

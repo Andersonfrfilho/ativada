@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { RUN_DELETE_OUTCOME } from '../../../packages/database/src/runs/run.types.js';
 import type {
   CandleRecord,
   CandleRepository,
@@ -34,7 +35,13 @@ const EPOCH_MILLISECONDS = 1_700_000_000_000;
 const MILLISECONDS_PER_ROW = 1_000;
 const REPOSITORY_PAGE_MAXIMUM = 5_000;
 
-export type StoredRun = { readonly userId: UserId; record: RunRecord; sequence: number };
+export type StoredRun = {
+  readonly userId: UserId;
+  record: RunRecord;
+  sequence: number;
+  // Exclusão lógica: a execução some das leituras do dono, mas a linha continua guardada.
+  deletedAt?: number;
+};
 
 export type ResultKind = 'signals' | 'orders' | 'fills' | 'positions' | 'equity' | 'windows';
 
@@ -72,6 +79,8 @@ export type InMemoryRuns = {
   readonly updateRun: (runId: string, changes: Partial<RunRecord>) => void;
   readonly all: () => readonly RunRecord[];
   readonly owned: () => readonly StoredRun[];
+  // Tira tudo da memória (o que um teste guardou não pode contar na cota do seguinte).
+  readonly purgeAll: () => void;
 };
 
 function isFinal(status: RunStatus): boolean {
@@ -115,7 +124,12 @@ export function createInMemoryRuns(
   let sequence = 0;
 
   const ownedRun = (scope: OwnerScope, runId: string): StoredRun | undefined =>
-    runs.find((stored) => stored.userId === scope.ownerUserId && stored.record.id === runId);
+    runs.find(
+      (stored) =>
+        stored.userId === scope.ownerUserId &&
+        stored.record.id === runId &&
+        stored.deletedAt === undefined,
+    );
 
   function storeOf(runId: string): ResultStore {
     const existing = stores.get(runId);
@@ -178,7 +192,7 @@ export function createInMemoryRuns(
     findRun: (scope, runId) => Promise.resolve(ownedRun(scope, runId)?.record),
     listRuns: (scope, params) => {
       const owned = runs
-        .filter((stored) => stored.userId === scope.ownerUserId)
+        .filter((stored) => stored.userId === scope.ownerUserId && stored.deletedAt === undefined)
         .filter((stored) => params.kind === undefined || stored.record.kind === params.kind)
         .sort((first, second) => second.sequence - first.sequence);
       const start =
@@ -194,6 +208,13 @@ export function createInMemoryRuns(
             ? { createdAt: last.record.createdAt.toISOString(), id: last.record.id }
             : undefined,
       });
+    },
+    deleteRun: (scope, runId) => {
+      const stored = ownedRun(scope, runId);
+      if (stored === undefined) return Promise.resolve(RUN_DELETE_OUTCOME.NOT_FOUND);
+      if (!isFinal(stored.record.status)) return Promise.resolve(RUN_DELETE_OUTCOME.NOT_FINISHED);
+      stored.deletedAt = Date.now();
+      return Promise.resolve(RUN_DELETE_OUTCOME.DELETED);
     },
     transitionRun: (scope, params) => {
       const stored = ownedRun(scope, params.runId);
@@ -425,6 +446,10 @@ export function createInMemoryRuns(
     },
     all: () => runs.map((stored) => stored.record),
     owned: () => runs,
+    purgeAll: (): void => {
+      runs.length = 0;
+      stores.clear();
+    },
   };
 }
 

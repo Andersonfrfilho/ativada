@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, desc, eq, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql, type SQL } from 'drizzle-orm';
 
 import type { DatabaseExecutor } from '../database-executor.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
@@ -30,6 +30,7 @@ export async function listRuns(
     .where(
       and(
         ownerCondition(scope, runs.userId),
+        isNull(runs.deletedAt),
         params.kind === undefined ? undefined : eq(runs.kind, params.kind),
         isAfterCursor(params.after),
       ),

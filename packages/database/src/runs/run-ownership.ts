@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import type { DatabaseExecutor } from '../database-executor.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
@@ -13,7 +13,7 @@ export async function isOwnedRun(
   const rows = await executor
     .select({ id: runs.id })
     .from(runs)
-    .where(and(ownerCondition(scope, runs.userId), eq(runs.id, runId)))
+    .where(and(ownerCondition(scope, runs.userId), eq(runs.id, runId), isNull(runs.deletedAt)))
     .limit(1);
   return rows.length > 0;
 }

@@ -26,6 +26,7 @@ import {
 import { checkRunEvents } from './run-event-checks.js';
 import { checkRunDataWait } from './run-data-wait-checks.js';
 import { checkRunLog } from './run-log-checks.js';
+import { checkRunDeletion } from './run-delete-checks.js';
 import { checkRunRepository } from './run-checks.js';
 import {
   checkBatchIsAtomic,
@@ -129,6 +130,7 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkStrategyPages(context);
   await checkExampleStrategySeeding(context);
   await checkRunRepository(context);
+  await checkRunDeletion(context);
   const batch = await checkLargeBatch(context);
   await checkResultPagination(context, batch);
   await checkSurvivalPoints(context);

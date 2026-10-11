@@ -93,6 +93,7 @@ export function buildApiRouteDependencies(
         listRuns: notUsed,
         getRun: notUsed,
         stopRun: notUsed,
+        deleteRun: notUsed,
       },
       series: {
         equity: notUsed,

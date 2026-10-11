@@ -6,14 +6,20 @@ import {
   type RunQueueRepository,
 } from '@cryptoada/database';
 
-import { LiveRunLimitReachedError, RunQueueFullError } from './run.error.js';
+import {
+  LiveRunLimitReachedError,
+  RunQueueFullError,
+  RunStorageQuotaReachedError,
+} from './run.error.js';
 
 export type RunAdmissionDependencies = {
   readonly queue: Pick<
     RunQueueRepository,
-    'countQueuedRuns' | 'countActiveRuns' | 'readUserRunLimits'
+    'countQueuedRuns' | 'countActiveRuns' | 'countStoredRuns' | 'readUserRunLimits'
   >;
   readonly queuePerUserLimit: number;
+  // Teto de execuções guardadas por usuário (qualquer tipo e estado, menos as apagadas).
+  readonly runStorageLimit: number;
 };
 
 export type AdmitRunParams = {
@@ -28,6 +34,9 @@ export async function admitRun(
   params: AdmitRunParams,
 ): Promise<void> {
   const { queue } = dependencies;
+  if ((await queue.countStoredRuns(params.scope)) >= dependencies.runStorageLimit) {
+    throw new RunStorageQuotaReachedError();
+  }
   if (params.kind === RUN_KIND.LIVE_PAPER) {
     const [active, limits] = await Promise.all([
       queue.countActiveRuns(params.scope, RUN_KIND.LIVE_PAPER),

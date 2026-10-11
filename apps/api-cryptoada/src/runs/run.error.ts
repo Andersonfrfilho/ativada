@@ -24,6 +24,26 @@ export class RunAlreadyFinishedError extends DomainError {
   }
 }
 
+export class RunNotFinishedError extends DomainError {
+  constructor() {
+    super({
+      code: RUN_ERROR_CODE.RUN_NOT_FINISHED,
+      message: 'A execução ainda não terminou: pare-a antes de apagá-la.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}
+
+export class RunStorageQuotaReachedError extends DomainError {
+  constructor() {
+    super({
+      code: RUN_ERROR_CODE.RUN_STORAGE_QUOTA_REACHED,
+      message: 'Você atingiu o limite de execuções guardadas. Apague uma antiga para criar outra.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}
+
 // Pedido de walk-forward recusado ANTES de aceitar (grade grande, período curto, grade inválida): o código vem do
 // motor e a mensagem só carrega contagens, nunca texto enviado pelo cliente.
 export class WalkForwardRequestRejectedError extends DomainError {

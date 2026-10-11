@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 
 import type { DatabaseExecutor } from '../database-executor.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
@@ -30,6 +30,11 @@ export function countQueuedRuns(reader: Reader, scope: OwnerScope): Promise<numb
       inArray(runs.kind, [...CLAIMABLE_RUN_KINDS]),
     ),
   );
+}
+
+// Execuções GUARDADAS do dono (qualquer tipo e estado, menos as apagadas): é o que conta para a cota de armazenamento.
+export function countStoredRuns(reader: Reader, scope: OwnerScope): Promise<number> {
+  return countRows(reader, and(ownerCondition(scope, runs.userId), isNull(runs.deletedAt)));
 }
 
 // Fila ou rodando: é o que conta para o teto de simulações ao vivo ativas.

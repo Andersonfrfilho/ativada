@@ -69,6 +69,7 @@ export type {
 } from './sentiment/sentiment-observation.types.js';
 export type { JsonContainer, JsonValue } from './json-value.types.js';
 export { RUN_KIND, RUN_STATUS, RUN_TRANSITION_OUTCOME } from './runs/run.constant.js';
+export { RUN_DELETE_OUTCOME, type RunDeleteOutcome } from './runs/run.types.js';
 export type { RunKind, RunStatus } from './runs/run.constant.js';
 export { createRunRepository } from './runs/run.repository.js';
 export { createGoalRepository } from './goals/goal.repository.js';

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
   RUN_STATUS,
+  RUN_DELETE_OUTCOME,
   RUN_TRANSITION_OUTCOME,
   type OwnerScope,
   type RunCursor,
@@ -9,7 +10,7 @@ import {
 } from '@cryptoada/database';
 
 import type { PageOutput } from '../strategies/strategy.use-cases.js';
-import { RunAlreadyFinishedError, RunNotFoundError } from './run.error.js';
+import { RunAlreadyFinishedError, RunNotFinishedError, RunNotFoundError } from './run.error.js';
 import { readQueuePosition, type RunQueuePositionDependencies } from './run-queue-position.js';
 import { encodeRunCursor } from './run-cursor.js';
 import { toRunView, toWaitingForData, type RunDetailView, type RunView } from './run-view.js';
@@ -36,6 +37,7 @@ export type ListRunsUseCase = (
   input: ListRunsInput,
 ) => Promise<PageOutput<RunView>>;
 export type StopRunUseCase = (scope: OwnerScope, runId: string) => Promise<StoppedRun>;
+export type DeleteRunUseCase = (scope: OwnerScope, runId: string) => Promise<void>;
 
 export function createGetRunUseCase(dependencies: RunUseCaseDependencies): GetRunUseCase {
   return async (scope, runId) => {
@@ -76,5 +78,17 @@ export function createStopRunUseCase(dependencies: RunUseCaseDependencies): Stop
     if (result.outcome === RUN_TRANSITION_OUTCOME.NOT_FOUND) throw new RunNotFoundError();
     if (result.currentStatus !== RUN_STATUS.CANCELLED) throw new RunAlreadyFinishedError();
     return { id: runId, status: RUN_STATUS.CANCELLED };
+  };
+}
+
+// Exclusão lógica da execução TERMINADA do dono: some das leituras e libera a cota. A que ainda corre pede `stop` antes;
+// a alheia, a inexistente e a já apagada são o mesmo `RUN_NOT_FOUND`.
+export function createDeleteRunUseCase(dependencies: {
+  readonly runs: Pick<RunRepository, 'deleteRun'>;
+}): DeleteRunUseCase {
+  return async (scope, runId) => {
+    const outcome = await dependencies.runs.deleteRun(scope, runId);
+    if (outcome === RUN_DELETE_OUTCOME.NOT_FOUND) throw new RunNotFoundError();
+    if (outcome === RUN_DELETE_OUTCOME.NOT_FINISHED) throw new RunNotFinishedError();
   };
 }

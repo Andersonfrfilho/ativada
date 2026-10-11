@@ -4,6 +4,7 @@ import { claimNextRun } from './run-claim.js';
 import {
   countActiveRuns,
   countQueuedRuns,
+  countStoredRuns,
   findQueuePosition,
   readOwnerRunLimits,
   readQueueSummary,
@@ -27,6 +28,7 @@ export function createRunQueueRepository(handle: DatabaseHandle): RunQueueReposi
     releaseClaimedRuns: (params) => releaseClaimedRuns(database, params),
     cancelRunsOfInactiveOwners: () => cancelRunsOfInactiveOwners(database),
     countQueuedRuns: (scope) => countQueuedRuns(database, scope),
+    countStoredRuns: (scope) => countStoredRuns(database, scope),
     countActiveRuns: (scope, kind) => countActiveRuns(database, scope, kind),
     readUserRunLimits: (scope) => readOwnerRunLimits(database, scope),
     findQueuePosition: (scope, runId) => findQueuePosition(database, scope, runId),

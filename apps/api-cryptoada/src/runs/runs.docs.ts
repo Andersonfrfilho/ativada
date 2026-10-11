@@ -96,6 +96,17 @@ export const RUN_DOCUMENTATION = {
       { status: HTTP_STATUS.CONFLICT, code: RUN_ERROR_CODE.RUN_ALREADY_FINISHED },
     ],
   },
+  delete: {
+    summary:
+      'Apaga (exclusão lógica) uma execução terminada: ela some da lista, do detalhe, das séries e da exportação e libera a cota de execuções guardadas. A que ainda está na fila ou rodando pede `stop` antes.',
+    tag: TAG,
+    params: RUN_PARAMS,
+    successes: [{ status: HTTP_STATUS.NO_CONTENT, description: 'Apagada.' }],
+    errors: [
+      RUN_NOT_FOUND,
+      { status: HTTP_STATUS.CONFLICT, code: RUN_ERROR_CODE.RUN_NOT_FINISHED },
+    ],
+  },
   exportCsv: {
     summary:
       'Exporta uma tabela do registro da execução em CSV (UTF-8, em fluxo por páginas, com proteção contra injeção de fórmula).',

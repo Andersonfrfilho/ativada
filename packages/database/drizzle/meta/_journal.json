@@ -148,6 +148,13 @@
       "when": 1791753813862,
       "tag": "0020_price_alert_last_fired_at",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791756876509,
+      "tag": "0021_run_soft_delete",
+      "breakpoints": true
     }
   ]
 }

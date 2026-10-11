@@ -336,11 +336,11 @@ async function checkSentCount(context: LifecycleCheckContext): Promise<void> {
   const { assertCondition, reportCheck } = context;
   const owner = await seedAlertOwner(context, {
     subject: 'subject-alert-count',
-    chat: '730000006',
+    chat: '730000008',
   });
   const stranger = await seedAlertOwner(context, {
     subject: 'subject-alert-count-other',
-    chat: '730000007',
+    chat: '730000009',
   });
   await enqueue(context, owner, [draftOf(1), draftOf(2), draftOf(3), draftOf(4)]);
   await enqueue(context, stranger, [draftOf(1)]);

@@ -45,6 +45,7 @@ import {
   createGetRunUseCase,
   createListRunsUseCase,
   createStopRunUseCase,
+  createDeleteRunUseCase,
 } from '../runs/run.use-cases.js';
 import type { RunRouteDependencies } from '../runs/runs.routes.js';
 import type { RunRoutesBundle } from './create-api-routes.js';
@@ -163,12 +164,14 @@ function createRunDependencies(
       goals: createGoalRepository(database),
       dispatcher: params.dispatcher,
       queuePerUserLimit: environment.RUN_QUEUE_PER_USER_LIMIT,
+      runStorageLimit: environment.RUN_STORAGE_MAX_PER_USER,
       now: params.now,
       reportUnexpectedError: params.reportUnexpectedError,
     }),
     listRuns: createListRunsUseCase(shared),
     getRun: createGetRunUseCase(shared),
     stopRun: createStopRunUseCase(shared),
+    deleteRun: createDeleteRunUseCase(shared),
   };
   return {
     routes,

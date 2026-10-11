@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import type { DatabaseExecutor } from '../database-executor.js';
@@ -12,6 +12,7 @@ import { RUN_STATUS } from './run.constant.js';
 import { listRuns } from './run-list.js';
 import { isOwnedRun } from './run-ownership.js';
 import { RUN_COLUMNS, toRunRecord } from './run-record.mapper.js';
+import { deleteRun } from './run-delete.js';
 import { transitionRun } from './run-transition.js';
 import type {
   CreateRunParams,
@@ -91,7 +92,7 @@ async function findRun(
   const rows = await executor
     .select(RUN_COLUMNS)
     .from(runs)
-    .where(and(ownerCondition(scope, runs.userId), eq(runs.id, runId)))
+    .where(and(ownerCondition(scope, runs.userId), eq(runs.id, runId), isNull(runs.deletedAt)))
     .limit(1);
   const row = rows[0];
   return row === undefined ? undefined : toRunRecord(row);
@@ -150,6 +151,7 @@ export function createRunRepository(handle: DatabaseHandle): RunRepository {
   return {
     createRun: (scope, params) => createRun(database, scope, params),
     findRun: (scope, runId) => findRun(database, scope, runId),
+    deleteRun: (scope, runId) => deleteRun(database, scope, runId),
     listRuns: (scope, params) => listRuns(database, scope, params),
     transitionRun: (scope, params) => transitionRun(database, scope, params),
     saveCheckpoint: (scope, params) => saveCheckpoint(database, scope, params),

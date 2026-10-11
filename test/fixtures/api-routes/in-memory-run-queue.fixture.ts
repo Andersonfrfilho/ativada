@@ -8,7 +8,11 @@ import type { InMemoryRuns } from './in-memory-runs.fixture.js';
 export type InMemoryRunQueue = {
   readonly port: Pick<
     RunQueueRepository,
-    'countQueuedRuns' | 'countActiveRuns' | 'readUserRunLimits' | 'findQueuePosition'
+    | 'countQueuedRuns'
+    | 'countActiveRuns'
+    | 'countStoredRuns'
+    | 'readUserRunLimits'
+    | 'findQueuePosition'
   >;
   // `users.limits` bruto de cada dono, como o banco o devolve.
   readonly limits: Map<string, unknown>;
@@ -37,6 +41,13 @@ export function createInMemoryRunQueue(runs: Pick<InMemoryRuns, 'owned'>): InMem
               stored.record.status === RUN_STATUS.QUEUED &&
               CLAIMABLE_RUN_KINDS.includes(stored.record.kind),
           ).length,
+      ),
+    countStoredRuns: (scope) =>
+      Promise.resolve(
+        runs
+          .owned()
+          .filter((stored) => stored.userId === scope.ownerUserId && stored.deletedAt === undefined)
+          .length,
       ),
     countActiveRuns: (scope, kind) =>
       Promise.resolve(

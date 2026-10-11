@@ -6,6 +6,9 @@ const ASSETS_EXPECTATION = 'inteiro entre 1 e 200';
 const MAX_ENABLED_PRICE_ALERTS = 500;
 const DEFAULT_ENABLED_PRICE_ALERTS = 50;
 const MAX_USER_ASSETS = 200;
+const RUN_STORAGE_EXPECTATION = 'inteiro entre 1 e 10000';
+const MAX_RUN_STORAGE = 10_000;
+const DEFAULT_RUN_STORAGE = 200;
 const DISABLED_ALERTS_EXPECTATION = 'inteiro entre 1 e 500';
 const DEFAULT_DISABLED_PRICE_ALERTS = 100;
 const STRATEGIES_EXPECTATION = 'inteiro entre 1 e 1000';
@@ -45,6 +48,12 @@ export const userLimitsEnvironmentShape = {
     expectation: DISABLED_ALERTS_EXPECTATION,
     maximum: MAX_ENABLED_PRICE_ALERTS,
     fallback: DEFAULT_DISABLED_PRICE_ALERTS,
+  }),
+  // Execuções guardadas por usuário (qualquer tipo e estado): apagar uma antiga libera a vaga.
+  RUN_STORAGE_MAX_PER_USER: boundedInteger({
+    expectation: RUN_STORAGE_EXPECTATION,
+    maximum: MAX_RUN_STORAGE,
+    fallback: DEFAULT_RUN_STORAGE,
   }),
   STRATEGY_MAX_PER_USER: boundedInteger({
     expectation: STRATEGIES_EXPECTATION,

@@ -97,6 +97,14 @@ export type RunsPage = {
   readonly nextCursor: RunCursor | undefined;
 };
 
+export const RUN_DELETE_OUTCOME = {
+  DELETED: 'deleted',
+  NOT_FOUND: 'not_found',
+  NOT_FINISHED: 'not_finished',
+} as const;
+
+export type RunDeleteOutcome = (typeof RUN_DELETE_OUTCOME)[keyof typeof RUN_DELETE_OUTCOME];
+
 export type RunRepository = {
   readonly createRun: (
     scope: OwnerScope,
@@ -104,6 +112,9 @@ export type RunRepository = {
   ) => Promise<RunRecord | undefined>;
   readonly findRun: (scope: OwnerScope, runId: string) => Promise<RunRecord | undefined>;
   readonly listRuns: (scope: OwnerScope, params: ListRunsParams) => Promise<RunsPage>;
+  // Exclusão lógica da execução TERMINADA do dono: some das leituras e libera a cota de execuções guardadas. A que ainda
+  // está na fila ou rodando é `not_finished` (pare-a antes); a alheia ou inexistente é `not_found`, sem distinção.
+  readonly deleteRun: (scope: OwnerScope, runId: string) => Promise<RunDeleteOutcome>;
   readonly transitionRun: (
     scope: OwnerScope,
     params: TransitionRunParams,

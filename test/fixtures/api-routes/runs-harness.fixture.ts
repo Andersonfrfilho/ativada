@@ -44,6 +44,7 @@ export const EXCHANGE = 'binance';
 export const NOW = Date.UTC(2026, 9, 1);
 export const HOUR = 3_600_000;
 const DEFAULT_QUEUE_PER_USER_LIMIT = 20;
+const DEFAULT_RUN_STORAGE_LIMIT = 100_000;
 const UNAVAILABLE_DATABASE = 'banco indisponível';
 export const CLASSIC_CONFIG: unknown = classicStrategy;
 
@@ -71,6 +72,8 @@ export type RunsHarnessOptions = {
   readonly csvLimits?: { maxRows?: number; maxDurationMilliseconds?: number };
   readonly extraRoutes?: (app: ApiApp, parts: HarnessParts) => readonly Route[];
   readonly symbols?: readonly string[];
+  // Teto de execuções guardadas por usuário (padrão alto: só os testes da cota o baixam).
+  readonly runStorageLimit?: number;
   readonly strategyLimits?: {
     readonly maxStrategies: number;
     readonly maxVersionsPerStrategy: number;
@@ -203,11 +206,13 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
         goals: goals.repository,
         dispatcher,
         queuePerUserLimit: options.queuePerUserLimit ?? DEFAULT_QUEUE_PER_USER_LIMIT,
+        runStorageLimit: options.runStorageLimit ?? DEFAULT_RUN_STORAGE_LIMIT,
         now: () => clock.now,
       }),
       listRuns: app.runUseCases.createListRunsUseCase(runDeps),
       getRun: app.runUseCases.createGetRunUseCase(runDeps),
       stopRun: app.runUseCases.createStopRunUseCase(runDeps),
+      deleteRun: app.runUseCases.createDeleteRunUseCase(runDeps),
     }),
     ...app.runSeriesRoutes.createRunSeriesRoutes(series),
     ...app.runExportRoutes.createRunExportRoutes(

@@ -73,6 +73,7 @@ export const OWNED_TABLE_EXPORTS: readonly OwnedTableExportStep[] = [
     'createdAt',
     'startedAt',
     'finishedAt',
+    'deletedAt',
   ]),
   exportColumns(signals, [
     'runId',
