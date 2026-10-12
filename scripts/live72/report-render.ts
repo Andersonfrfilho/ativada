@@ -36,7 +36,7 @@ function renderDuration(data: ReportData): string[] {
     `- Execução ${run.runId} (${run.symbol} ${run.timeframe}), estratégia ${run.strategyName} v${run.strategyVersion} (hash ${run.configHash}).`,
     `- Início ${run.startedAt}; término previsto ${run.plannedEndAt}; janela analisada até ${data.windowEndAt} (${data.elapsedHours} h, ${data.isWindowComplete ? 'completa' : 'INCOMPLETA'}).`,
     `- Status no banco: ${data.database.runStatus}; esperando dados: ${data.database.isWaitingForData ? 'sim' : 'não'}.`,
-    `- Supervisor iniciado ${events.supervisorStarts} vez(es), parado ${events.supervisorStops}; saídas de processo: ${JSON.stringify(events.childExits)}.`,
+    `- Reinícios do supervisor depois do início: ${events.supervisorStarts} (paradas limpas: ${events.supervisorStops}); saídas de processo: ${JSON.stringify(events.childExits)}.`,
     `- Rotinas do cron: ${events.cronRuns} (${events.cronFailures} com falha).`,
     '',
   ];
@@ -96,7 +96,8 @@ function renderAlerts(data: ReportData): string[] {
   const { database } = data;
   const lines = [
     '## Alertas',
-    `- Sinais BUY/SELL: ${database.actionableSignals}; alertas gerados: ${database.counts.alerts}; por situação: ${JSON.stringify(database.alertsByStatus)}.`,
+    `- Sinais BUY/SELL: ${database.actionableSignals} no total, ${database.windowActionableSignals} de candles fechados dentro da janela (o resto veio do aquecimento, avaliado na partida).`,
+    `- Alertas gerados: ${database.counts.alerts} no total, ${database.windowAlerts} dentro da janela; por situação: ${JSON.stringify(database.alertsByStatus)}.`,
     '- Entrega: sumidouro local do Telegram (o Telegram real nunca foi chamado).',
   ];
   for (const sample of database.alertSample) {

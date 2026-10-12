@@ -76,7 +76,9 @@ const FACTS: DatabaseFacts = {
   finishedAt: null,
   isWaitingForData: false,
   counts: COUNTS,
-  actionableSignals: 3,
+  actionableSignals: 4,
+  windowActionableSignals: 3,
+  windowAlerts: 3,
   duplicates: { signals: 0, orders: 0, fills: 0, equityPoints: 0, alerts: 0 },
   series: buildSeries(72),
   evaluatedAfterKill: 36,
@@ -289,6 +291,19 @@ describe('live72: relatório completo', () => {
   test('erros dos logs aparecem agregados por código, do maior para o menor', () => {
     const text = renderReport(buildReport(input({ logErrors: { A_RARE: 1, B_COMMON: 7 } })));
     expect(text.indexOf('B_COMMON: 7')).toBeLessThan(text.indexOf('A_RARE: 1'));
+  });
+
+  test('só o alerta do aquecimento (candle antes da janela) não prova a geração de alertas', () => {
+    const data = buildReport(
+      input({}, { actionableSignals: 1, windowActionableSignals: 0, windowAlerts: 0 }),
+    );
+    expect(data.verdict).toBe('INCONCLUSIVO');
+    expect(data.reasons.join(' ')).toContain('dentro da janela');
+  });
+
+  test('sinal de candle da janela sem alerta reprova mesmo havendo alerta do aquecimento', () => {
+    const data = buildReport(input({}, { windowActionableSignals: 2, windowAlerts: 0 }));
+    expect(data.verdict).toBe('REPROVADO');
   });
 
   test('execução encerrada antes do término previsto é INCONCLUSIVO', () => {

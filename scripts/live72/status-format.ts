@@ -81,7 +81,7 @@ function formatEvents(events: EventSummary | null): string {
   const exits = Object.entries(events.childExits).map(([name, total]) => `${name} ${total}`);
   const kill =
     events.controlledKill === undefined ? 'ainda não' : `feito em ${events.controlledKill.at}`;
-  return `supervisor iniciado ${events.supervisorStarts}x; saídas de processo: ${exits.join(', ') || 'nenhuma'}; reinício controlado do worker: ${kill}; comandos humanos: ${events.interventions.length}`;
+  return `reinícios do supervisor ${events.supervisorStarts}; saídas de processo: ${exits.join(', ') || 'nenhuma'}; reinício controlado do worker: ${kill}; comandos humanos: ${events.interventions.length}`;
 }
 
 function formatDisk(facts: StatusFacts): string {

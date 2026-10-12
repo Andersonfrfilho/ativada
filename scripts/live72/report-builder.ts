@@ -57,8 +57,8 @@ function toVerdictInput(params: {
     evaluatedAfterKill: restart.evaluatedAfterKill,
     isKillResumeDue: isResumeDue(restart, params.window.end),
     shrunkAfterKill: restart.shrunkFields,
-    actionableSignals: input.database.actionableSignals,
-    alertsGenerated: input.database.counts.alerts,
+    actionableSignals: input.database.windowActionableSignals,
+    alertsGenerated: input.database.windowAlerts,
   };
 }
 

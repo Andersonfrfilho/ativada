@@ -32,6 +32,8 @@ export type DatabaseFacts = {
   readonly isWaitingForData: boolean;
   readonly counts: RunCounts;
   readonly actionableSignals: number;
+  readonly windowActionableSignals: number;
+  readonly windowAlerts: number;
   readonly duplicates: DuplicateCounts;
   readonly series: readonly SeriesPoint[];
   readonly evaluatedAfterKill: number | null;

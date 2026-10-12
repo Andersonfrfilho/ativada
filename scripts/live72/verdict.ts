@@ -40,7 +40,9 @@ function findFailures(input: VerdictInput): string[] {
     failures.push('o worker não retomou a avaliação depois do reinício controlado');
   }
   if (input.actionableSignals > 0 && input.alertsGenerated === 0) {
-    failures.push(`${input.actionableSignals} sinal(is) BUY/SELL sem nenhum alerta gerado`);
+    failures.push(
+      `${input.actionableSignals} sinal(is) BUY/SELL de candles da janela sem nenhum alerta gerado`,
+    );
   }
   return failures;
 }
@@ -56,7 +58,9 @@ function findGaps(input: VerdictInput): string[] {
   }
   if (!input.isKillFired) gaps.push('o reinício controlado do worker não aconteceu');
   if (input.actionableSignals === 0) {
-    gaps.push('nenhum sinal BUY/SELL no período: a geração de alertas não foi exercitada');
+    gaps.push(
+      'nenhum sinal BUY/SELL em candle fechado dentro da janela: a geração de alertas não foi exercitada',
+    );
   }
   return gaps;
 }

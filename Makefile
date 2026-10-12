@@ -5,8 +5,9 @@ export
 
 COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
+LIVE72 := env -i PATH="$$PATH" HOME="$$HOME" bun --env-file=envs/env.live72 run scripts/live72/cli.ts
 
-.PHONY: help bootstrap config up down ps check panel-e2e contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants price-alert-mutants user-asset-mutants alert-mutants runlog-mutants telegram-test goals-test price-alerts-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants identity-logs
+.PHONY: help bootstrap config up down ps check panel-e2e contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants price-alert-mutants user-asset-mutants alert-mutants runlog-mutants telegram-test goals-test price-alerts-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants identity-logs live72-up live72-start live72-status live72-report live72-stop live72-down
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -238,3 +239,22 @@ panel-e2e: ## Prova o painel no navegador (Playwright) contra a API real, Postgr
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test && bun --env-file=envs/env.test run scripts/panel-e2e.ts
+
+live72-up: ## T6.3: sobe a infra dedicada da simulação de 72 h, carrega o LaunchAgent e prepara usuário e candles (idempotente)
+	$(LIVE72) up
+
+live72-start: ## T6.3: cria a meta e UMA simulação live_paper do Placar clássico (BTCUSDT 1h, 10 000 USDT fictícios) e grava ~/.cryptoada-live72/run.json
+	$(LIVE72) start
+
+live72-status: ## T6.3: andamento em texto curto (tempo, candles, sinais, ordens, patrimônio, alertas, processos, ticker, disco)
+	$(LIVE72) status
+
+live72-report: ## T6.3: gera ~/.cryptoada-live72/report.md com o veredito do critério 4 (APROVADO, REPROVADO ou INCONCLUSIVO)
+	$(LIVE72) report
+
+live72-stop: ## T6.3: descarrega o LaunchAgent e para tudo sem apagar dados (containers e volumes ficam)
+	$(LIVE72) stop
+
+live72-down: ## T6.3: remove agente, containers, volumes e ~/.cryptoada-live72 (exige CONFIRM=1)
+	@test "$(CONFIRM)" = "1" || { echo "live72-down apaga containers, volumes e dados da simulação: rode make live72-down CONFIRM=1"; exit 1; }
+	$(LIVE72) down --confirm
