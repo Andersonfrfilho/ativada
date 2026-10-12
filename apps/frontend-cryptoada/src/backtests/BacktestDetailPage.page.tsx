@@ -52,7 +52,9 @@ export function BacktestDetailPage(): ReactElement {
             ? 'Execução não encontrada.'
             : 'Não foi possível carregar a execução.'}
         </p>
-        <Link to={ROUTE_PATH.BACKTESTS}>Voltar aos backtests</Link>
+        <Link to={ROUTE_PATH.BACKTESTS} className={controls.textLink}>
+          Voltar aos backtests
+        </Link>
       </div>
     );
   }

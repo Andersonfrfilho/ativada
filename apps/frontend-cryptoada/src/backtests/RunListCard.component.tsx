@@ -38,13 +38,15 @@ function RunRow({ run, selection }: RunRowProps): ReactElement {
   return (
     <li className={styles.row}>
       {isCompleted && selection !== undefined ? (
-        <input
-          type="checkbox"
-          aria-label={`Comparar ${formatSymbol(run.symbol)} de ${formatDate(run.periodStart)}`}
-          checked={isPicked}
-          disabled={isBlocked}
-          onChange={() => selection.onToggle(run.id)}
-        />
+        <label className={styles.pick}>
+          <input
+            type="checkbox"
+            aria-label={`Comparar ${formatSymbol(run.symbol)} de ${formatDate(run.periodStart)}`}
+            checked={isPicked}
+            disabled={isBlocked}
+            onChange={() => selection.onToggle(run.id)}
+          />
+        </label>
       ) : (
         <span aria-hidden="true" className={styles.spacer} />
       )}

@@ -117,7 +117,9 @@ function GoalRunBody({
   return (
     <>
       <GoalProgressView goal={goal.data} outcome={readOutcomeText(run)} progress={progress} />
-      <Link to={`/metas/${goalId}`}>Ver a meta</Link>
+      <Link to={`/metas/${goalId}`} className={controls.textLink}>
+        Ver a meta
+      </Link>
     </>
   );
 }

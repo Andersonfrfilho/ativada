@@ -59,7 +59,12 @@ export function SentimentCard(): ReactElement {
         </p>
       )}
       <p className={controls.muted}>
-        <a href={data?.source.url ?? FEAR_GREED_CREDIT_URL} target="_blank" rel={EXTERNAL_LINK_REL}>
+        <a
+          href={data?.source.url ?? FEAR_GREED_CREDIT_URL}
+          target="_blank"
+          rel={EXTERNAL_LINK_REL}
+          className={controls.textLink}
+        >
           {data?.source.creditText ?? FEAR_GREED_CREDIT_TEXT}
         </a>
       </p>

@@ -24,7 +24,9 @@ export function PlanPage(): ReactElement {
   return (
     <div className={runStyles.page}>
       <h1 className={runStyles.title}>Plano de operação</h1>
-      <Link to={`/metas/${goalId}`}>Voltar à meta</Link>
+      <Link to={`/metas/${goalId}`} className={controls.textLink}>
+        Voltar à meta
+      </Link>
       <HistoryNote />
       {strategyId === '' ? (
         <Card title="Sem estratégia">

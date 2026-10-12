@@ -16,11 +16,13 @@
 }
 
 .spacer {
-  width: 20px;
+  width: 44px;
 }
 
 .link {
   display: grid;
+  min-height: 44px;
+  align-content: center;
   text-decoration: none;
   color: inherit;
   min-width: 0;
@@ -41,4 +43,12 @@
 .compareTable th,
 .compareTable td {
   white-space: normal;
+}
+
+.pick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
 }

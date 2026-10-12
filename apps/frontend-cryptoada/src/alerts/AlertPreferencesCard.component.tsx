@@ -38,7 +38,9 @@ export function AlertPreferencesCard(): ReactElement {
             {profile.data.telegramLinked ? 'Telegram vinculado' : 'Telegram não vinculado'}
           </p>
           {profile.data.telegramLinked ? null : (
-            <Link to={ROUTE_PATH.ACCOUNT}>Vincular na conta</Link>
+            <Link to={ROUTE_PATH.ACCOUNT} className={controls.textLink}>
+              Vincular na conta
+            </Link>
           )}
         </>
       )}

@@ -1,5 +1,5 @@
 .button {
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 18px;
   border-radius: 8px;
   border: 1px solid var(--line);
@@ -40,7 +40,7 @@
 }
 
 .input {
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -56,4 +56,10 @@
 .muted {
   color: var(--ink-3);
   font-size: 13.5px;
+}
+
+.textLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }

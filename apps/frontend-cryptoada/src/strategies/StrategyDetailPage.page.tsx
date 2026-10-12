@@ -22,7 +22,9 @@ function LoadFailure({ error }: { readonly error: Error | null }): ReactElement 
       <p role="alert" className={controls.error}>
         {isMissing ? 'Estratégia não encontrada.' : 'Não foi possível carregar a estratégia.'}
       </p>
-      <Link to={ROUTE_PATH.STRATEGIES}>Voltar às estratégias</Link>
+      <Link to={ROUTE_PATH.STRATEGIES} className={controls.textLink}>
+        Voltar às estratégias
+      </Link>
     </div>
   );
 }

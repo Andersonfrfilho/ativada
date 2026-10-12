@@ -35,6 +35,7 @@ function RankingActions({
   return (
     <div className={styles.rowActions}>
       <Link
+        className={controls.textLink}
         to={`/metas/${goalId}/plano?strategyId=${strategy.id}`}
         aria-label={`Ver o plano com ${strategy.name}`}
       >
