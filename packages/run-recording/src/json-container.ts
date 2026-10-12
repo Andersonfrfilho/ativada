@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { JsonContainer, JsonValue } from '@cryptoada/database';
+import type { JsonContainer, JsonValue } from '@ativada/database';
 
 function isJsonValue(value: unknown): value is JsonValue {
   if (value === null) return true;

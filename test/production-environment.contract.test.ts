@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { environmentSchema as apiEnvironmentSchema } from '../apps/api-cryptoada/src/environment.js';
-import { environmentSchema as cronEnvironmentSchema } from '../apps/cron-cryptoada/src/environment.js';
+import { environmentSchema as apiEnvironmentSchema } from '../apps/api-ativada/src/environment.js';
+import { environmentSchema as cronEnvironmentSchema } from '../apps/cron-ativada/src/environment.js';
 import { EnvironmentError, parseEnvironment } from '../packages/environment/src/index.js';
 import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
 
@@ -14,17 +14,17 @@ type EnvironmentSource = Record<string, string>;
 async function buildProductionEnvironment(): Promise<EnvironmentSource> {
   const base = await readEnvironmentFile('env.test');
   const origin = 'https://auth.crypto.example.com';
-  const realm = `${origin}/realms/cryptoada`;
+  const realm = `${origin}/realms/ativada`;
   return {
     ...base,
     ENV: 'production',
     DATABASE_URL:
-      'postgres://cryptoada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?sslmode=verify-full',
+      'postgres://ativada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?sslmode=verify-full',
     KEYCLOAK_ISSUER: realm,
     KEYCLOAK_JWKS_URL: `${realm}/protocol/openid-connect/certs`,
     KEYCLOAK_TOKEN_URL: `${realm}/protocol/openid-connect/token`,
     KEYCLOAK_LOGOUT_URL: `${realm}/protocol/openid-connect/logout`,
-    KEYCLOAK_ADMIN_API_URL: `${origin}/admin/realms/cryptoada`,
+    KEYCLOAK_ADMIN_API_URL: `${origin}/admin/realms/ativada`,
     KEYCLOAK_SESSION_CLIENT_SECRET: STRONG_SECRET,
     KEYCLOAK_SERVICE_CLIENT_SECRET: STRONG_SECRET,
     SESSION_ALLOWED_REDIRECT_URIS: 'https://app.crypto.example.com/auth/callback',
@@ -51,7 +51,7 @@ function issuesOf(
   return '';
 }
 
-describe('api-cryptoada in production', () => {
+describe('api-ativada in production', () => {
   test('accepts a fully explicit production configuration', async () => {
     const environment = parseEnvironment(apiEnvironmentSchema, await buildProductionEnvironment());
     expect(environment.TRUSTED_PROXY_HOPS).toBe(1);
@@ -95,11 +95,11 @@ describe('api-cryptoada in production', () => {
   test.each([
     [
       'without sslmode',
-      'postgres://cryptoada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto',
+      'postgres://ativada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto',
     ],
     [
       'with sslmode=disable',
-      'postgres://cryptoada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?sslmode=disable',
+      'postgres://ativada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?sslmode=disable',
     ],
   ])('rejects DATABASE_URL %s', async (_name, value) => {
     const source = await buildProductionEnvironment();
@@ -118,7 +118,7 @@ describe('api-cryptoada in production', () => {
     async (_name, query) => {
       const source = await buildProductionEnvironment();
       source['DATABASE_URL'] =
-        `postgres://cryptoada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?${query}`;
+        `postgres://ativada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?${query}`;
       const message = issuesOf(apiEnvironmentSchema, source);
       expect(message).toContain('DATABASE_URL');
       expect(message).toContain('verify-full');
@@ -127,11 +127,11 @@ describe('api-cryptoada in production', () => {
   );
 
   test.each([
-    ['short', 'postgres://cryptoada:curta_0123456789@db.internal:5432/crypto?sslmode=verify-full'],
-    ['empty', 'postgres://cryptoada@db.internal:5432/crypto?sslmode=verify-full'],
+    ['short', 'postgres://ativada:curta_0123456789@db.internal:5432/crypto?sslmode=verify-full'],
+    ['empty', 'postgres://ativada@db.internal:5432/crypto?sslmode=verify-full'],
     [
       '31 characters',
-      `postgres://cryptoada:${'p'.repeat(31)}@db.internal:5432/crypto?sslmode=verify-full`,
+      `postgres://ativada:${'p'.repeat(31)}@db.internal:5432/crypto?sslmode=verify-full`,
     ],
   ])(
     'rejects a DATABASE_URL password that is %s (the 32-character rule applies to it too)',
@@ -147,10 +147,10 @@ describe('api-cryptoada in production', () => {
   test('accepts a DATABASE_URL password of exactly 32 characters, percent-decoded', async () => {
     const source = await buildProductionEnvironment();
     source['DATABASE_URL'] =
-      `postgres://cryptoada:${'p'.repeat(30)}%40%21@db.internal:5432/crypto?sslmode=verify-full`;
+      `postgres://ativada:${'p'.repeat(30)}%40%21@db.internal:5432/crypto?sslmode=verify-full`;
     expect(issuesOf(apiEnvironmentSchema, source)).toBe('');
     source['DATABASE_URL'] =
-      `postgres://cryptoada:${'p'.repeat(28)}%40%21@db.internal:5432/crypto?sslmode=verify-full`;
+      `postgres://ativada:${'p'.repeat(28)}%40%21@db.internal:5432/crypto?sslmode=verify-full`;
     expect(issuesOf(apiEnvironmentSchema, source)).toContain('DATABASE_URL');
   });
 
@@ -194,7 +194,7 @@ describe('api-cryptoada in production', () => {
   );
 });
 
-describe('cron-cryptoada in production', () => {
+describe('cron-ativada in production', () => {
   async function buildCronProductionEnvironment(): Promise<EnvironmentSource> {
     return buildProductionEnvironment();
   }

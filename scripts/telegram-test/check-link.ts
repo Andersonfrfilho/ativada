@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { generateLinkCode, hashLinkCode } from '../../apps/api-cryptoada/src/telegram/link-code.js';
+import { generateLinkCode, hashLinkCode } from '../../apps/api-ativada/src/telegram/link-code.js';
 import {
   createTelegramLinkConsumer,
   createTelegramLinkRepository,

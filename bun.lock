@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "cryptoada",
+      "name": "ativada",
       "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@types/bun": "^1.4.2",
@@ -13,34 +13,34 @@
         "typescript-eslint": "^8.71.1",
       },
     },
-    "apps/api-cryptoada": {
-      "name": "@cryptoada/api-cryptoada",
+    "apps/api-ativada": {
+      "name": "@ativada/api-ativada",
       "version": "0.0.0",
       "dependencies": {
-        "@cryptoada/database": "workspace:*",
-        "@cryptoada/environment": "workspace:*",
-        "@cryptoada/identity-admin": "workspace:*",
-        "@cryptoada/market-data": "workspace:*",
-        "@cryptoada/run-recording": "workspace:*",
-        "@cryptoada/strategy-engine": "workspace:*",
+        "@ativada/database": "workspace:*",
+        "@ativada/environment": "workspace:*",
+        "@ativada/identity-admin": "workspace:*",
+        "@ativada/market-data-crypto": "workspace:*",
+        "@ativada/run-recording": "workspace:*",
+        "@ativada/strategy-engine": "workspace:*",
         "jose": "6.2.12",
       },
     },
-    "apps/cron-cryptoada": {
-      "name": "@cryptoada/cron-cryptoada",
+    "apps/cron-ativada": {
+      "name": "@ativada/cron-ativada",
       "version": "0.0.0",
       "dependencies": {
-        "@cryptoada/database": "workspace:*",
-        "@cryptoada/environment": "workspace:*",
-        "@cryptoada/identity-admin": "workspace:*",
-        "@cryptoada/market-data": "workspace:*",
+        "@ativada/database": "workspace:*",
+        "@ativada/environment": "workspace:*",
+        "@ativada/identity-admin": "workspace:*",
+        "@ativada/market-data-crypto": "workspace:*",
       },
     },
-    "apps/frontend-cryptoada": {
-      "name": "@cryptoada/frontend-cryptoada",
+    "apps/frontend-ativada": {
+      "name": "@ativada/frontend-ativada",
       "version": "0.0.0",
       "dependencies": {
-        "@cryptoada/environment": "workspace:*",
+        "@ativada/environment": "workspace:*",
         "@tanstack/react-query": "5.104.0",
         "react": "19.3.0",
         "react-dom": "19.3.0",
@@ -58,22 +58,22 @@
         "vite": "8.3.1",
       },
     },
-    "apps/worker-cryptoada": {
-      "name": "@cryptoada/worker-cryptoada",
+    "apps/worker-ativada": {
+      "name": "@ativada/worker-ativada",
       "version": "0.0.0",
       "dependencies": {
-        "@cryptoada/database": "workspace:*",
-        "@cryptoada/environment": "workspace:*",
-        "@cryptoada/market-data": "workspace:*",
-        "@cryptoada/run-recording": "workspace:*",
-        "@cryptoada/strategy-engine": "workspace:*",
+        "@ativada/database": "workspace:*",
+        "@ativada/environment": "workspace:*",
+        "@ativada/market-data-crypto": "workspace:*",
+        "@ativada/run-recording": "workspace:*",
+        "@ativada/strategy-engine": "workspace:*",
       },
     },
     "packages/database": {
-      "name": "@cryptoada/database",
+      "name": "@ativada/database",
       "version": "0.0.0",
       "dependencies": {
-        "@cryptoada/environment": "workspace:*",
+        "@ativada/environment": "workspace:*",
         "drizzle-orm": "^0.45.4",
       },
       "devDependencies": {
@@ -81,36 +81,36 @@
       },
     },
     "packages/environment": {
-      "name": "@cryptoada/environment",
+      "name": "@ativada/environment",
       "version": "0.0.0",
       "dependencies": {
         "zod": "^4.6.5",
       },
     },
     "packages/identity-admin": {
-      "name": "@cryptoada/identity-admin",
+      "name": "@ativada/identity-admin",
       "version": "0.0.0",
       "dependencies": {
-        "@cryptoada/environment": "workspace:*",
+        "@ativada/environment": "workspace:*",
       },
     },
-    "packages/market-data": {
-      "name": "@cryptoada/market-data",
+    "packages/market-data-crypto": {
+      "name": "@ativada/market-data-crypto",
       "version": "0.0.0",
       "dependencies": {
-        "@cryptoada/environment": "workspace:*",
+        "@ativada/environment": "workspace:*",
       },
     },
     "packages/run-recording": {
-      "name": "@cryptoada/run-recording",
+      "name": "@ativada/run-recording",
       "version": "0.0.0",
       "dependencies": {
-        "@cryptoada/database": "workspace:*",
-        "@cryptoada/strategy-engine": "workspace:*",
+        "@ativada/database": "workspace:*",
+        "@ativada/strategy-engine": "workspace:*",
       },
     },
     "packages/strategy-engine": {
-      "name": "@cryptoada/strategy-engine",
+      "name": "@ativada/strategy-engine",
       "version": "0.0.0",
       "dependencies": {
         "decimal.js": "10.6.0",
@@ -132,25 +132,25 @@
 
     "@cacheable/utils": ["@cacheable/utils@2.5.0", "", { "dependencies": { "hashery": "^1.5.1", "keyv": "^5.6.0" } }, "sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA=="],
 
-    "@cryptoada/api-cryptoada": ["@cryptoada/api-cryptoada@workspace:apps/api-cryptoada"],
+    "@ativada/api-ativada": ["@ativada/api-ativada@workspace:apps/api-ativada"],
 
-    "@cryptoada/cron-cryptoada": ["@cryptoada/cron-cryptoada@workspace:apps/cron-cryptoada"],
+    "@ativada/cron-ativada": ["@ativada/cron-ativada@workspace:apps/cron-ativada"],
 
-    "@cryptoada/database": ["@cryptoada/database@workspace:packages/database"],
+    "@ativada/database": ["@ativada/database@workspace:packages/database"],
 
-    "@cryptoada/environment": ["@cryptoada/environment@workspace:packages/environment"],
+    "@ativada/environment": ["@ativada/environment@workspace:packages/environment"],
 
-    "@cryptoada/frontend-cryptoada": ["@cryptoada/frontend-cryptoada@workspace:apps/frontend-cryptoada"],
+    "@ativada/frontend-ativada": ["@ativada/frontend-ativada@workspace:apps/frontend-ativada"],
 
-    "@cryptoada/identity-admin": ["@cryptoada/identity-admin@workspace:packages/identity-admin"],
+    "@ativada/identity-admin": ["@ativada/identity-admin@workspace:packages/identity-admin"],
 
-    "@cryptoada/market-data": ["@cryptoada/market-data@workspace:packages/market-data"],
+    "@ativada/market-data-crypto": ["@ativada/market-data-crypto@workspace:packages/market-data-crypto"],
 
-    "@cryptoada/run-recording": ["@cryptoada/run-recording@workspace:packages/run-recording"],
+    "@ativada/run-recording": ["@ativada/run-recording@workspace:packages/run-recording"],
 
-    "@cryptoada/strategy-engine": ["@cryptoada/strategy-engine@workspace:packages/strategy-engine"],
+    "@ativada/strategy-engine": ["@ativada/strategy-engine@workspace:packages/strategy-engine"],
 
-    "@cryptoada/worker-cryptoada": ["@cryptoada/worker-cryptoada@workspace:apps/worker-cryptoada"],
+    "@ativada/worker-ativada": ["@ativada/worker-ativada@workspace:apps/worker-ativada"],
 
     "@drizzle-team/brocli": ["@drizzle-team/brocli@0.10.2", "", {}, "sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w=="],
 

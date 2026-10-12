@@ -4,15 +4,15 @@ import { describe, expect, test } from 'bun:test';
 const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
 const COPYRIGHT_LINE = '// Copyright (c) 2026 Ada Technology. All rights reserved.';
 const WORKSPACE_DIRECTORIES: readonly string[] = [
-  'apps/api-cryptoada',
-  'apps/worker-cryptoada',
-  'apps/cron-cryptoada',
-  'apps/frontend-cryptoada',
+  'apps/api-ativada',
+  'apps/worker-ativada',
+  'apps/cron-ativada',
+  'apps/frontend-ativada',
   'packages/strategy-engine',
   'packages/database',
   'packages/environment',
   'packages/identity-admin',
-  'packages/market-data',
+  'packages/market-data-crypto',
 ];
 const REQUIRED_COMPILER_OPTIONS: Readonly<Record<string, boolean>> = {
   strict: true,
@@ -79,7 +79,7 @@ describe('workspace contract', () => {
     for (const workspaceDirectory of WORKSPACE_DIRECTORIES) {
       const workspaceName = workspaceDirectory.split('/').at(-1) ?? '';
       const manifest = await readJsonFile<PackageManifest>(`${workspaceDirectory}/package.json`);
-      expect(manifest.name).toBe(`@cryptoada/${workspaceName}`);
+      expect(manifest.name).toBe(`@ativada/${workspaceName}`);
       expect(manifest.private).toBe(true);
       expect(manifest.type).toBe('module');
       expect(await Bun.file(`${REPOSITORY_ROOT}${workspaceDirectory}/src/index.ts`).exists()).toBe(

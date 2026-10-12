@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { createAlertDispatcher } from '../../../apps/worker-cryptoada/src/alerts/alert-dispatcher.js';
-import type { createAlertScheduler } from '../../../apps/worker-cryptoada/src/alerts/alert-scheduler.js';
-import type { formatAlertMessage } from '../../../apps/worker-cryptoada/src/alerts/format-alert-message.js';
-import type { formatGoalAlertMessage } from '../../../apps/worker-cryptoada/src/alerts/format-goal-alert-message.js';
-import type { formatPriceAlertMessage } from '../../../apps/worker-cryptoada/src/alerts/format-price-alert-message.js';
-import type { createTelegramClient } from '../../../apps/worker-cryptoada/src/alerts/telegram-client.js';
+import type { createAlertDispatcher } from '../../../apps/worker-ativada/src/alerts/alert-dispatcher.js';
+import type { createAlertScheduler } from '../../../apps/worker-ativada/src/alerts/alert-scheduler.js';
+import type { formatAlertMessage } from '../../../apps/worker-ativada/src/alerts/format-alert-message.js';
+import type { formatGoalAlertMessage } from '../../../apps/worker-ativada/src/alerts/format-goal-alert-message.js';
+import type { formatPriceAlertMessage } from '../../../apps/worker-ativada/src/alerts/format-price-alert-message.js';
+import type { createTelegramClient } from '../../../apps/worker-ativada/src/alerts/telegram-client.js';
 
-const PRODUCTION_SOURCE = new URL('../../../apps/worker-cryptoada/src/alerts', import.meta.url)
+const PRODUCTION_SOURCE = new URL('../../../apps/worker-ativada/src/alerts', import.meta.url)
   .pathname;
 
 // Os testes do despachante rodam contra a produção; o teste de mutantes os relança num processo à parte apontando esta

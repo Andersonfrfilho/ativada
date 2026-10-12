@@ -7,8 +7,8 @@ import type {
   PositionInput,
   RunResultRows,
   SignalInput,
-} from '@cryptoada/database';
-import type { StepDecisions } from '@cryptoada/strategy-engine';
+} from '@ativada/database';
+import type { StepDecisions } from '@ativada/strategy-engine';
 
 import { mapCommand, mapEquityPoint, mapFill, mapOrderEvent, mapSignal } from './map-decisions.js';
 import type { PositionTracker } from './position-tracker.js';

@@ -6,14 +6,14 @@ import {
   createAccessTokenVerifier,
   type AccessTokenVerifier,
   type TokenVerification,
-} from '../apps/api-cryptoada/src/authentication/access-token-verifier.js';
+} from '../apps/api-ativada/src/authentication/access-token-verifier.js';
 import {
   AUTHENTICATION_LEVEL,
   REJECTION_REASON,
   TOKEN_VERIFICATION_STATUS,
   type RejectionReason,
-} from '../apps/api-cryptoada/src/authentication/authentication.constant.js';
-import { createRemoteKeyResolver } from '../apps/api-cryptoada/src/authentication/remote-key-resolver.js';
+} from '../apps/api-ativada/src/authentication/authentication.constant.js';
+import { createRemoteKeyResolver } from '../apps/api-ativada/src/authentication/remote-key-resolver.js';
 import {
   JWKS_SERVER_MODE,
   startJwksTestServer,

@@ -5,14 +5,14 @@ import type {
   FillInput,
   OrderInput,
   SignalInput,
-} from '@cryptoada/database';
+} from '@ativada/database';
 import type {
   AppliedCommandDecision,
   EquityPointDecision,
   FillDecision,
   OrderEvent,
   SignalDecision,
-} from '@cryptoada/strategy-engine';
+} from '@ativada/strategy-engine';
 
 // Tradução 1:1 do que o motor decide para as linhas dos repositórios (ADR 0002 §a, tabela de `decisions`).
 export function mapSignal(signal: SignalDecision): SignalInput {

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { environmentSchema } from '../apps/worker-cryptoada/src/environment.js';
+import { environmentSchema } from '../apps/worker-ativada/src/environment.js';
 import { EnvironmentError, parseEnvironment } from '../packages/environment/src/index.js';
 import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
 
@@ -26,7 +26,7 @@ const WORKER_VARIABLES: readonly string[] = [
 ];
 const SECRET_FRAGMENT = 'ValorQueNaoPodeVazar';
 const PRODUCTION_DATABASE_URL =
-  'postgres://cryptoada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?sslmode=verify-full';
+  'postgres://ativada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?sslmode=verify-full';
 
 async function buildSource(overrides: Source = {}): Promise<Source> {
   const base = await readEnvironmentFile('env.test');

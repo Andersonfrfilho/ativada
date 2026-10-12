@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { EXIT_CODE } from '../apps/cron-cryptoada/src/cron.constant.js';
-import { createCronLogger } from '../apps/cron-cryptoada/src/logging/cron-logger.js';
-import { computeBackfillWindow } from '../apps/cron-cryptoada/src/market/backfill-window.js';
-import { runCronTasks } from '../apps/cron-cryptoada/src/run-cron-tasks.js';
+import { EXIT_CODE } from '../apps/cron-ativada/src/cron.constant.js';
+import { createCronLogger } from '../apps/cron-ativada/src/logging/cron-logger.js';
+import { computeBackfillWindow } from '../apps/cron-ativada/src/market/backfill-window.js';
+import { runCronTasks } from '../apps/cron-ativada/src/run-cron-tasks.js';
 import type { CandleRecord, CandleTimeframe } from '../packages/database/src/index.js';
-import { TIMEFRAME_DURATION_MILLISECONDS } from '../packages/market-data/src/index.js';
+import { TIMEFRAME_DURATION_MILLISECONDS } from '../packages/market-data-crypto/src/index.js';
 import {
   BACKFILL_NOW,
   buildGridCandle,
@@ -141,7 +141,7 @@ describe('backfill-candles: an IP ban (418) aborts the whole run', () => {
     const exitCode = await runCronTasks(
       [{ name: 'backfill-candles', run: harness.run }],
       createCronLogger({
-        appName: 'cron-cryptoada',
+        appName: 'cron-ativada',
         write: (line) => void harness.lines.push(line),
       }),
     );
@@ -188,7 +188,7 @@ describe('backfill-candles: pairs are isolated and sequential', () => {
     const logLines: string[] = [];
     const exitCode = await runCronTasks(
       [{ name: 'backfill-candles', run: harness.run }],
-      createCronLogger({ appName: 'cron-cryptoada', write: (line) => void logLines.push(line) }),
+      createCronLogger({ appName: 'cron-ativada', write: (line) => void logLines.push(line) }),
     );
     expect(exitCode).toBe(EXIT_CODE.FAILURE);
     expect(harness.repository.stored().filter((c) => c.symbol === 'BBBUSDT')).toHaveLength(

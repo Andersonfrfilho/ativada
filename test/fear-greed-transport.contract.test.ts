@@ -7,7 +7,7 @@ import {
   MarketDataNetworkError,
   MarketDataTimeoutError,
   type FetchImplementation,
-} from '../packages/market-data/src/index.js';
+} from '../packages/market-data-crypto/src/index.js';
 import { createFakeClock } from './fixtures/fake-binance.fixture.js';
 import { buildClient, failureOf } from './fixtures/fear-greed-client.fixture.js';
 import { buildFearGreedBody, FEAR_GREED_BASE_URL } from './fixtures/fear-greed.fixture.js';

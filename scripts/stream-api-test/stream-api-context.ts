@@ -7,7 +7,7 @@ import { startFakeKeycloak, type FakeKeycloak } from '../../test/fixtures/fake-k
 import {
   startFakeBinanceStreamServer,
   type FakeBinanceStreamServer,
-} from '../../packages/market-data/test-support/fake-binance-stream-server.js';
+} from '../../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 import {
   createApiRunsContext,
   type ApiRunsContext,

@@ -2,7 +2,7 @@
 import {
   TELEGRAM_LINK_PATH,
   TELEGRAM_WEBHOOK_PATH,
-} from '../../apps/api-cryptoada/src/telegram/telegram.constant.js';
+} from '../../apps/api-ativada/src/telegram/telegram.constant.js';
 import { userIdFromDatabase } from '../../packages/database/src/ownership/user-id.js';
 import { FAKE_WEBHOOK_SECRET } from './fake-telegram.fixture.js';
 import type { TelegramHarness } from './telegram-harness.fixture.js';

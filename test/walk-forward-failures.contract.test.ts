@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import type { WalkForwardOutcome } from '../apps/api-cryptoada/src/walk-forward/walk-forward.types.js';
+import type { WalkForwardOutcome } from '../apps/api-ativada/src/walk-forward/walk-forward.types.js';
 import { createEngine } from '../packages/strategy-engine/src/index.js';
 import { DAY_MILLISECONDS } from './fixtures/walk-forward/daily-candles.fixture.js';
 import { loadWalkForwardApp } from './fixtures/walk-forward/walk-forward-app.fixture.js';

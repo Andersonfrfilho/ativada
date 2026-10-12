@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
-import { createApiRoutes } from '../apps/api-cryptoada/src/routes/create-api-routes.js';
-import { createRouter } from '../apps/api-cryptoada/src/router/create-router.js';
-import { createRateLimiter } from '../apps/api-cryptoada/src/rate-limit/rate-limiter.js';
-import { ROUTE_ACCESS } from '../apps/api-cryptoada/src/router/route-access.constant.js';
+import { createApiRoutes } from '../apps/api-ativada/src/routes/create-api-routes.js';
+import { createRouter } from '../apps/api-ativada/src/router/create-router.js';
+import { createRateLimiter } from '../apps/api-ativada/src/rate-limit/rate-limiter.js';
+import { ROUTE_ACCESS } from '../apps/api-ativada/src/router/route-access.constant.js';
 import {
   buildApiRouteDependencies,
   EMPTY_QUEUE_SUMMARY,
@@ -12,7 +12,7 @@ import {
 } from './fixtures/api-route-dependencies.fixture.js';
 import { createApiHarness, type ApiHarness } from './fixtures/api-harness.fixture.js';
 import { sweepProtectedRoutesWithoutToken } from './fixtures/route-sweep.fixture.js';
-import type { ListenerHealth } from '../apps/api-cryptoada/src/stream/listener-health.js';
+import type { ListenerHealth } from '../apps/api-ativada/src/stream/listener-health.js';
 import { signTestToken } from './fixtures/token-signing.fixture.js';
 
 const HEALTH_PATH = '/v1/health';

@@ -4,7 +4,7 @@ import {
   type EngineCandle,
   type SentimentObservation,
   type StoredSentimentObservation,
-} from '@cryptoada/strategy-engine';
+} from '@ativada/strategy-engine';
 
 export type SentimentPicker = (candle: EngineCandle) => SentimentObservation | undefined;
 

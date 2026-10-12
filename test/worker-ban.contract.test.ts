@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { createWorkerLogger } from '../apps/worker-cryptoada/src/logging/worker-logger.js';
-import { recoverGaps } from '../apps/worker-cryptoada/src/stream/gap-recovery.js';
-import { WORKER_LOG } from '../apps/worker-cryptoada/src/worker.constant.js';
-import { MarketDataBannedError } from '../packages/market-data/src/index.js';
+import { createWorkerLogger } from '../apps/worker-ativada/src/logging/worker-logger.js';
+import { recoverGaps } from '../apps/worker-ativada/src/stream/gap-recovery.js';
+import { WORKER_LOG } from '../apps/worker-ativada/src/worker.constant.js';
+import { MarketDataBannedError } from '../packages/market-data-crypto/src/index.js';
 import { buildGridCandle } from './fixtures/backfill-harness.fixture.js';
 import { createInMemoryCandleRepository } from './fixtures/in-memory-candle-repository.fixture.js';
 import {
@@ -98,7 +98,7 @@ describe('worker: the ban sleep has a ceiling', () => {
         fetchKlinesRange: () =>
           Promise.reject(new MarketDataBannedError(retryAfterSeconds, 'Binance')),
       },
-      logger: createWorkerLogger({ appName: 'worker-cryptoada', write: () => undefined }),
+      logger: createWorkerLogger({ appName: 'worker-ativada', write: () => undefined }),
       now: () => now,
       refreshClock: () => Promise.resolve(),
       exchange: 'binance',

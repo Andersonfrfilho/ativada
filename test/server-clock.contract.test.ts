@@ -6,8 +6,8 @@ import {
   createServerClock,
   type FetchImplementation,
   type ServerClockWarning,
-} from '../packages/market-data/src/index.js';
-import { startFakeBinanceStreamServer } from '../packages/market-data/test-support/fake-binance-stream-server.js';
+} from '../packages/market-data-crypto/src/index.js';
+import { startFakeBinanceStreamServer } from '../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 import { buildRawKline } from './fixtures/fake-binance.fixture.js';
 import { createManualClock } from './fixtures/wait-for.fixture.js';
 

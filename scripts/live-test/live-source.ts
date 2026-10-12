@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { createLiveRunDatabase } from '../../apps/worker-cryptoada/src/live/create-live-run-database.js';
-import type { createLiveEvaluator } from '../../apps/worker-cryptoada/src/live/live-evaluator.js';
+import type { createLiveRunDatabase } from '../../apps/worker-ativada/src/live/create-live-run-database.js';
+import type { createLiveEvaluator } from '../../apps/worker-ativada/src/live/live-evaluator.js';
 
-const PRODUCTION_SOURCE = new URL('../../apps/worker-cryptoada/src/live', import.meta.url).pathname;
+const PRODUCTION_SOURCE = new URL('../../apps/worker-ativada/src/live', import.meta.url).pathname;
 
 // O `make live-test` roda contra a produção; o `make live-mutants` o relança apontando esta variável para uma cópia mutada.
 export const LIVE_SOURCE_VARIABLE = 'LIVE_MUTANT_SOURCE';

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import type { GapPolicy } from '../apps/worker-cryptoada/src/live/gap-policy.js';
+import type { GapPolicy } from '../apps/worker-ativada/src/live/gap-policy.js';
 import {
   buildLive,
   classicSetup,

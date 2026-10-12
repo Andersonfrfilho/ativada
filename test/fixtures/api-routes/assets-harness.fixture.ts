@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { Route } from '../../../apps/api-cryptoada/src/router/route.types.js';
+import type { Route } from '../../../apps/api-ativada/src/router/route.types.js';
 import type { CandleRecord } from '../../../packages/database/src/index.js';
 import {
   createInMemoryUserAssets,

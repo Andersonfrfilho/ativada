@@ -158,10 +158,7 @@ describe('live72: pid reaproveitado pelo sistema', () => {
 
   test('só é nosso o processo bun que roda arquivo deste repositório', () => {
     expect(
-      isOwnedCommand(
-        '/Users/x/.bun/bin/bun run /Users/x/repo/apps/api-cryptoada/src/main.ts',
-        root,
-      ),
+      isOwnedCommand('/Users/x/.bun/bin/bun run /Users/x/repo/apps/api-ativada/src/main.ts', root),
     ).toBe(true);
     expect(
       isOwnedCommand(

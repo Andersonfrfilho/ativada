@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { FetchImplementation } from '../../packages/market-data/src/market-data.types.js';
+import type { FetchImplementation } from '../../packages/market-data-crypto/src/market-data.types.js';
 
 const RUNAWAY_SLEEP_LIMIT = 100;
 

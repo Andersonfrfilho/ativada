@@ -12,7 +12,7 @@ export type IdentityEnvironment = {
   readonly panelOrigin: string;
 };
 
-export const REALM_NAME = 'cryptoada';
+export const REALM_NAME = 'ativada';
 
 function readRequired(name: string): string {
   const value = Bun.env[name];

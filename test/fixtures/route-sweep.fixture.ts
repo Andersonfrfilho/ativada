@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { ROUTE_ACCESS } from '../../apps/api-cryptoada/src/router/route-access.constant.js';
-import type { Route } from '../../apps/api-cryptoada/src/router/route.types.js';
+import { ROUTE_ACCESS } from '../../apps/api-ativada/src/router/route-access.constant.js';
+import type { Route } from '../../apps/api-ativada/src/router/route.types.js';
 import type { SendParams } from './api-harness.fixture.js';
 
 export type SweepOutcome = {

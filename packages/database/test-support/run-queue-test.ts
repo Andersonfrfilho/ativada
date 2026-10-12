@@ -11,7 +11,7 @@ import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-data
 
 // Só a fila de execuções (T3.6), num banco descartável: é o que o `make queue-mutants` roda contra cada cópia do
 // pacote com uma regra da fila quebrada.
-const TEMPORARY_DATABASE_PREFIX = 'crypto_run_queue_';
+const TEMPORARY_DATABASE_PREFIX = 'ativada_run_queue_';
 
 function assertCondition(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);

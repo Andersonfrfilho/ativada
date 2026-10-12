@@ -4,7 +4,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   environmentSchema,
   walkForwardWorkerEnvironmentSchema,
-} from '../apps/api-cryptoada/src/environment.js';
+} from '../apps/api-ativada/src/environment.js';
 import { EnvironmentError, parseEnvironment } from '../packages/environment/src/index.js';
 import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
 

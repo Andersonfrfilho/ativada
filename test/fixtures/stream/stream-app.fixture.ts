@@ -1,27 +1,27 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type * as StreamConstantModule from '../../../apps/api-cryptoada/src/stream/stream.constant.js';
-import type * as StreamHubModule from '../../../apps/api-cryptoada/src/stream/stream-hub.js';
-import type * as StreamSweepModule from '../../../apps/api-cryptoada/src/stream/stream-sweep.js';
-import type * as StreamEndpointModule from '../../../apps/api-cryptoada/src/stream/create-stream-endpoint.js';
-import type * as RunEventDispatcherModule from '../../../apps/api-cryptoada/src/stream/run-event-dispatcher.js';
-import type * as StreamTicketStoreModule from '../../../apps/api-cryptoada/src/stream/stream-ticket-store.js';
-import type * as StreamEnvironmentModule from '../../../apps/api-cryptoada/src/stream/stream-environment.js';
-import type * as BlockAccountModule from '../../../apps/api-cryptoada/src/admin/block-account.use-case.js';
-import type * as DeleteAccountModule from '../../../apps/api-cryptoada/src/account/delete-account.use-case.js';
-import type * as ApiEnvironmentModule from '../../../apps/api-cryptoada/src/environment.js';
-import type * as TicketRoutesModule from '../../../apps/api-cryptoada/src/stream/stream-ticket.routes.js';
-import type * as WebSocketHandlerModule from '../../../apps/api-cryptoada/src/stream/stream-websocket-handler.js';
-import type * as StreamMessageModule from '../../../apps/api-cryptoada/src/stream/handle-stream-message.js';
-import type * as ServerModule from '../../../apps/api-cryptoada/src/server.js';
-import type * as MarketPublisherModule from '../../../apps/api-cryptoada/src/market-stream/create-market-publisher.js';
-import type * as MarketPubSubModule from '../../../apps/api-cryptoada/src/market-stream/market-pubsub.js';
-import type * as MarketErrorModule from '../../../apps/api-cryptoada/src/market-stream/market-stream.error.js';
-import type * as MarketConstantModule from '../../../apps/api-cryptoada/src/market-stream/market-stream.constant.js';
-import type * as ApplicationMarketModule from '../../../apps/api-cryptoada/src/market-stream/create-application-market-stream.js';
-import type * as RateLimiterModule from '../../../apps/api-cryptoada/src/rate-limit/rate-limiter.js';
-import type * as PolicyModule from '../../../apps/api-cryptoada/src/rate-limit/rate-limit-policy.constant.js';
+import type * as StreamConstantModule from '../../../apps/api-ativada/src/stream/stream.constant.js';
+import type * as StreamHubModule from '../../../apps/api-ativada/src/stream/stream-hub.js';
+import type * as StreamSweepModule from '../../../apps/api-ativada/src/stream/stream-sweep.js';
+import type * as StreamEndpointModule from '../../../apps/api-ativada/src/stream/create-stream-endpoint.js';
+import type * as RunEventDispatcherModule from '../../../apps/api-ativada/src/stream/run-event-dispatcher.js';
+import type * as StreamTicketStoreModule from '../../../apps/api-ativada/src/stream/stream-ticket-store.js';
+import type * as StreamEnvironmentModule from '../../../apps/api-ativada/src/stream/stream-environment.js';
+import type * as BlockAccountModule from '../../../apps/api-ativada/src/admin/block-account.use-case.js';
+import type * as DeleteAccountModule from '../../../apps/api-ativada/src/account/delete-account.use-case.js';
+import type * as ApiEnvironmentModule from '../../../apps/api-ativada/src/environment.js';
+import type * as TicketRoutesModule from '../../../apps/api-ativada/src/stream/stream-ticket.routes.js';
+import type * as WebSocketHandlerModule from '../../../apps/api-ativada/src/stream/stream-websocket-handler.js';
+import type * as StreamMessageModule from '../../../apps/api-ativada/src/stream/handle-stream-message.js';
+import type * as ServerModule from '../../../apps/api-ativada/src/server.js';
+import type * as MarketPublisherModule from '../../../apps/api-ativada/src/market-stream/create-market-publisher.js';
+import type * as MarketPubSubModule from '../../../apps/api-ativada/src/market-stream/market-pubsub.js';
+import type * as MarketErrorModule from '../../../apps/api-ativada/src/market-stream/market-stream.error.js';
+import type * as MarketConstantModule from '../../../apps/api-ativada/src/market-stream/market-stream.constant.js';
+import type * as ApplicationMarketModule from '../../../apps/api-ativada/src/market-stream/create-application-market-stream.js';
+import type * as RateLimiterModule from '../../../apps/api-ativada/src/rate-limit/rate-limiter.js';
+import type * as PolicyModule from '../../../apps/api-ativada/src/rate-limit/rate-limit-policy.constant.js';
 
-const PRODUCTION_APP_SOURCE = new URL('../../../apps/api-cryptoada/src', import.meta.url).pathname;
+const PRODUCTION_APP_SOURCE = new URL('../../../apps/api-ativada/src', import.meta.url).pathname;
 
 // Os contratos do stream rodam contra a produção; o teste de mutantes os relança num processo à parte apontando esta
 // variável para uma cópia mutada do `src` INTEIRO da API (o roteador, os erros e o stream vêm da mesma raiz).

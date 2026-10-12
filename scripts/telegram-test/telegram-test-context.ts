@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createAlertDispatcher } from '../../apps/worker-cryptoada/src/alerts/alert-dispatcher.js';
-import { createTelegramClient } from '../../apps/worker-cryptoada/src/alerts/telegram-client.js';
-import { createWorkerLogger } from '../../apps/worker-cryptoada/src/logging/worker-logger.js';
-import { generateLinkCode, hashLinkCode } from '../../apps/api-cryptoada/src/telegram/link-code.js';
+import { createAlertDispatcher } from '../../apps/worker-ativada/src/alerts/alert-dispatcher.js';
+import { createTelegramClient } from '../../apps/worker-ativada/src/alerts/telegram-client.js';
+import { createWorkerLogger } from '../../apps/worker-ativada/src/logging/worker-logger.js';
+import { generateLinkCode, hashLinkCode } from '../../apps/api-ativada/src/telegram/link-code.js';
 import {
   createAlertRepository,
   createTelegramLinkConsumer,

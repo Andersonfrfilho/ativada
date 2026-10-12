@@ -12,7 +12,7 @@ import {
   MarketDataRateLimitError,
   MarketDataTimeoutError,
   TIMEFRAME,
-} from '../packages/market-data/src/index.js';
+} from '../packages/market-data-crypto/src/index.js';
 import {
   createFakeClock,
   createScriptedFetch,

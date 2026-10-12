@@ -1,0 +1,13 @@
+{
+  "name": "@ativada/worker-ativada",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ativada/database": "workspace:*",
+    "@ativada/environment": "workspace:*",
+    "@ativada/market-data-crypto": "workspace:*",
+    "@ativada/run-recording": "workspace:*",
+    "@ativada/strategy-engine": "workspace:*"
+  }
+}

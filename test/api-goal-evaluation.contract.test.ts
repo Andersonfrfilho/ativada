@@ -9,7 +9,7 @@ import {
   test,
 } from 'bun:test';
 
-import type { GoalCacheKeyParams } from '../apps/api-cryptoada/src/goals/goal-evaluation-cache.js';
+import type { GoalCacheKeyParams } from '../apps/api-ativada/src/goals/goal-evaluation-cache.js';
 import {
   createGoalsHarness,
   GOAL_SYMBOLS,

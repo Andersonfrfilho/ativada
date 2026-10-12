@@ -7,7 +7,7 @@ import {
 import type {
   BacktestOptions,
   BacktestOutcome,
-} from '../../../apps/api-cryptoada/src/backtest/backtest.types.js';
+} from '../../../apps/api-ativada/src/backtest/backtest.types.js';
 import { buildClassicScenario } from '../strategy-engine/production/engine-golden.fixture.js';
 import {
   CLASSIC_STRATEGY,

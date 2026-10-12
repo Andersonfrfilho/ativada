@@ -83,13 +83,13 @@ describe('live72: LaunchAgent', () => {
     envFile: '/repo/envs/env.live72',
     supervisorScript: '/repo/scripts/live72/supervisor.ts',
     workingDirectory: '/repo & co',
-    logsDirectory: '/home/x/.cryptoada-live72/logs',
+    logsDirectory: '/home/x/.ativada-live72/logs',
     home: '/home/x',
   };
 
   test('tem o rótulo autorizado, KeepAlive, RunAtLoad e o caffeinate -dimsu antes do bun', () => {
     const plist = buildLaunchAgentPlist(params);
-    expect(plist).toContain('<string>com.adatechnology.cryptoada-live72</string>');
+    expect(plist).toContain('<string>com.adatechnology.ativada-live72</string>');
     expect(plist).toContain('<key>KeepAlive</key>\n  <true/>');
     expect(plist).toContain('<key>RunAtLoad</key>\n  <true/>');
     const caffeinate = plist.indexOf('<string>/usr/bin/caffeinate</string>');

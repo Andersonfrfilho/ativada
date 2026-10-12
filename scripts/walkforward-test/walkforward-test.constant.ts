@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const TEMPORARY_DATABASE_PREFIX = 'crypto_walkforward_';
+export const TEMPORARY_DATABASE_PREFIX = 'ativada_walkforward_';
 export const EXCHANGE = 'binance';
 export const SENTIMENT_SOURCE = 'alternative.me';
 export const HOUR_MILLISECONDS = 3_600_000;

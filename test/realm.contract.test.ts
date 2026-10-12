@@ -2,9 +2,9 @@
 import { describe, expect, test } from 'bun:test';
 
 const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
-const REALM_FILE = 'realm/cryptoada-realm.json';
-const REALM_NAME = 'cryptoada';
-const SERVICE_CLIENT_ID = 'cryptoada-api-service';
+const REALM_FILE = 'realm/ativada-realm.json';
+const REALM_NAME = 'ativada';
+const SERVICE_CLIENT_ID = 'ativada-api-service';
 const PLACEHOLDER_PATTERN = /\$\{([A-Z0-9_]+)\}/g;
 const REQUIRED_EVENT_TYPES: readonly string[] = [
   'LOGIN',
@@ -187,7 +187,7 @@ function parseEnvironmentFile(content: string): Readonly<Record<string, string>>
 }
 
 describe('realm: conta e sessão', () => {
-  test('is the cryptoada realm, enabled, with TLS required off loopback', async () => {
+  test('is the ativada realm, enabled, with TLS required off loopback', async () => {
     const realm = await readRealm();
     expect(realm.realm).toBe(REALM_NAME);
     expect(realm.enabled).toBe(true);
@@ -261,7 +261,7 @@ describe('realm: papéis e segundo fator', () => {
 
   test('gives only user by default, never admin or offline_access', async () => {
     const realm = await readRealm();
-    const defaultRole = realm.roles.realm.find((role) => role.name === 'default-roles-cryptoada');
+    const defaultRole = realm.roles.realm.find((role) => role.name === 'default-roles-ativada');
     expect(defaultRole?.composites?.realm).toEqual(['user']);
   });
 
@@ -325,7 +325,7 @@ describe('realm: papéis e segundo fator', () => {
 });
 
 describe('realm: clientes', () => {
-  test('crypto-panel does not exist: the token handler uses cryptoada-session', async () => {
+  test('crypto-panel does not exist: the token handler uses ativada-session', async () => {
     const realm = await readRealm();
     expect(realm.clients.map((client) => client.clientId)).not.toContain('crypto-panel');
     expect(realm.scopeMappings?.map((mapping) => mapping.client)).not.toContain('crypto-panel');
@@ -344,8 +344,8 @@ describe('realm: clientes', () => {
     }
   });
 
-  test('cryptoada-api only serves as audience, with every flow off', async () => {
-    const client = findClient(await readRealm(), 'cryptoada-api');
+  test('ativada-api only serves as audience, with every flow off', async () => {
+    const client = findClient(await readRealm(), 'ativada-api');
     expect(client.bearerOnly).toBe(true);
     expect(client.standardFlowEnabled).toBe(false);
     expect(client.implicitFlowEnabled).toBe(false);
@@ -353,8 +353,8 @@ describe('realm: clientes', () => {
     expect(client.serviceAccountsEnabled).toBe(false);
   });
 
-  test('cryptoada-session is confidential, standard flow with PKCE S256 and a secret', async () => {
-    const client = findClient(await readRealm(), 'cryptoada-session');
+  test('ativada-session is confidential, standard flow with PKCE S256 and a secret', async () => {
+    const client = findClient(await readRealm(), 'ativada-session');
     expect(client.publicClient).toBe(false);
     expect(client.standardFlowEnabled).toBe(true);
     expect(client.implicitFlowEnabled).toBe(false);
@@ -364,7 +364,7 @@ describe('realm: clientes', () => {
     expect(client.secret).toBe('${KEYCLOAK_SESSION_CLIENT_SECRET}');
   });
 
-  test('cryptoada-api-service is confidential and only a service account', async () => {
+  test('ativada-api-service is confidential and only a service account', async () => {
     const client = findClient(await readRealm(), SERVICE_CLIENT_ID);
     expect(client.publicClient).toBe(false);
     expect(client.serviceAccountsEnabled).toBe(true);
@@ -374,14 +374,14 @@ describe('realm: clientes', () => {
     expect(client.secret).toBe('${KEYCLOAK_SERVICE_CLIENT_SECRET}');
   });
 
-  test.each(['cryptoada-session'])(
-    '%s adds cryptoada-api to the access token audience',
+  test.each(['ativada-session'])(
+    '%s adds ativada-api to the access token audience',
     async (clientId) => {
       const client = findClient(await readRealm(), clientId);
       const audienceMapper = client.protocolMappers?.find(
         (mapper) => mapper.protocolMapper === 'oidc-audience-mapper',
       );
-      expect(audienceMapper?.config?.['included.client.audience']).toBe('cryptoada-api');
+      expect(audienceMapper?.config?.['included.client.audience']).toBe('ativada-api');
       expect(audienceMapper?.config?.['access.token.claim']).toBe('true');
     },
   );
@@ -442,7 +442,7 @@ describe('realm: permissões finas da service account', () => {
     expect((await readRealm()).adminPermissionsEnabled).toBe(true);
   });
 
-  test('grants cryptoada-api-service only manage and view on Users, never map-roles', async () => {
+  test('grants ativada-api-service only manage and view on Users, never map-roles', async () => {
     const realm = await readRealm();
     const settings = findClient(realm, 'admin-permissions').authorizationSettings;
     const permission = settings?.policies?.find((policy) => policy.type === 'scope');
@@ -458,15 +458,15 @@ describe('realm: permissões finas da service account', () => {
     expect(group?.id).toBeDefined();
   });
 
-  test('denies cryptoada-api-service manage on the admins group members (FGAP v2, unanimous)', async () => {
+  test('denies ativada-api-service manage on the admins group members (FGAP v2, unanimous)', async () => {
     const realm = await readRealm();
     const groupId = realm.groups?.find((candidate) => candidate.name === 'admins')?.id;
     const settings = findClient(realm, 'admin-permissions').authorizationSettings;
     const denial = settings?.policies?.find(
-      (policy) => policy.name === 'cryptoada-api-service-cannot-manage-admins',
+      (policy) => policy.name === 'ativada-api-service-cannot-manage-admins',
     );
     const negation = settings?.policies?.find(
-      (policy) => policy.name === 'not-cryptoada-api-service-policy',
+      (policy) => policy.name === 'not-ativada-api-service-policy',
     );
     expect(negation?.logic).toBe('NEGATIVE');
     expect(JSON.parse(negation?.config?.['clients'] ?? '[]')).toEqual([SERVICE_CLIENT_ID]);

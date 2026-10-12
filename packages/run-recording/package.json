@@ -1,5 +1,5 @@
 {
-  "name": "@cryptoada/run-recording",
+  "name": "@ativada/run-recording",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,7 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@cryptoada/database": "workspace:*",
-    "@cryptoada/strategy-engine": "workspace:*"
+    "@ativada/database": "workspace:*",
+    "@ativada/strategy-engine": "workspace:*"
   }
 }

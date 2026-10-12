@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
   startFakeBinanceStreamServer,
   type FakeBinanceStreamServer,
-} from '../packages/market-data/test-support/fake-binance-stream-server.js';
-import type { Logger } from '../apps/api-cryptoada/src/logging/logger.js';
+} from '../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
+import type { Logger } from '../apps/api-ativada/src/logging/logger.js';
 import {
   createFakeSocket,
   type FakeStreamSocket,

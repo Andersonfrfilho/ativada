@@ -1,22 +1,22 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { createLiveEvaluator } from '../../../apps/worker-cryptoada/src/live/live-evaluator.js';
+import type { createLiveEvaluator } from '../../../apps/worker-ativada/src/live/live-evaluator.js';
 import type {
   buildStepAlert,
   isAlertableSignal,
-} from '../../../apps/worker-cryptoada/src/live/build-step-alert.js';
-import type { alertPayloadSchema } from '../../../apps/worker-cryptoada/src/live/alert-payload.schema.js';
-import type { parseHitRate } from '../../../apps/worker-cryptoada/src/live/hit-rate.js';
+} from '../../../apps/worker-ativada/src/live/build-step-alert.js';
+import type { alertPayloadSchema } from '../../../apps/worker-ativada/src/live/alert-payload.schema.js';
+import type { parseHitRate } from '../../../apps/worker-ativada/src/live/hit-rate.js';
 import type {
   buildGoalCommands,
   decideGoalStep,
   isWalletSettled,
   loadGoalTracking,
-} from '../../../apps/worker-cryptoada/src/live/goal-step.js';
-import type { buildGoalAlert } from '../../../apps/worker-cryptoada/src/live/goal-alert.js';
-import type { goalAlertPayloadSchema } from '../../../apps/worker-cryptoada/src/live/alert-payload.schema.js';
-import type { createLiveScheduler } from '../../../apps/worker-cryptoada/src/live/live-scheduler.js';
+} from '../../../apps/worker-ativada/src/live/goal-step.js';
+import type { buildGoalAlert } from '../../../apps/worker-ativada/src/live/goal-alert.js';
+import type { goalAlertPayloadSchema } from '../../../apps/worker-ativada/src/live/alert-payload.schema.js';
+import type { createLiveScheduler } from '../../../apps/worker-ativada/src/live/live-scheduler.js';
 
-const PRODUCTION_SOURCE = new URL('../../../apps/worker-cryptoada/src/live', import.meta.url)
+const PRODUCTION_SOURCE = new URL('../../../apps/worker-ativada/src/live', import.meta.url)
   .pathname;
 
 // Os testes da simulação ao vivo rodam contra a produção; o teste de mutantes os relança num processo à parte

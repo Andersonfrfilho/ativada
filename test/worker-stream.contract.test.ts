@@ -2,8 +2,8 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import type { UpsertCandlesResult } from '../packages/database/src/index.js';
-import { WORKER_LOG } from '../apps/worker-cryptoada/src/worker.constant.js';
-import { buildFakePrice } from '../packages/market-data/test-support/fake-binance-stream-server.js';
+import { WORKER_LOG } from '../apps/worker-ativada/src/worker.constant.js';
+import { buildFakePrice } from '../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 import {
   PIPELINE_EXCHANGE,
   PIPELINE_HOUR,

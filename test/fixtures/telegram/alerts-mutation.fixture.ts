@@ -4,10 +4,10 @@ import { cp, rm } from 'node:fs/promises';
 import { ALERTS_MUTANT_VARIABLE } from './alerts-api.fixture.js';
 
 const REPOSITORY_ROOT = new URL('../../../', import.meta.url).pathname;
-const SOURCE_DIRECTORY = `${REPOSITORY_ROOT}apps/worker-cryptoada/src/alerts`;
-const PAYLOAD_SCHEMA = `${REPOSITORY_ROOT}apps/worker-cryptoada/src/live/alert-payload.schema.ts`;
-// Dentro da app: é de lá que `@cryptoada/*` e `zod` se resolvem, como no módulo de produção.
-export const ALERTS_MUTANT_ROOT = `${REPOSITORY_ROOT}apps/worker-cryptoada/.alert-mutants`;
+const SOURCE_DIRECTORY = `${REPOSITORY_ROOT}apps/worker-ativada/src/alerts`;
+const PAYLOAD_SCHEMA = `${REPOSITORY_ROOT}apps/worker-ativada/src/live/alert-payload.schema.ts`;
+// Dentro da app: é de lá que `@ativada/*` e `zod` se resolvem, como no módulo de produção.
+export const ALERTS_MUTANT_ROOT = `${REPOSITORY_ROOT}apps/worker-ativada/.alert-mutants`;
 const PAYLOAD_IMPORT = "'../live/alert-payload.schema.js'";
 const PAYLOAD_COPY_IMPORT = "'./alert-payload.schema.js'";
 

@@ -1,16 +1,16 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { EXIT_CODE, TASK_NAME } from '../apps/cron-cryptoada/src/cron.constant.js';
-import { createCronLogger } from '../apps/cron-cryptoada/src/logging/cron-logger.js';
+import { EXIT_CODE, TASK_NAME } from '../apps/cron-ativada/src/cron.constant.js';
+import { createCronLogger } from '../apps/cron-ativada/src/logging/cron-logger.js';
 import {
   createSyncFearGreedTask,
   type SyncFearGreedSummary,
-} from '../apps/cron-cryptoada/src/market/sync-fear-greed.task.js';
-import { runCronTasks, type CronTask } from '../apps/cron-cryptoada/src/run-cron-tasks.js';
-import { selectCronTasks } from '../apps/cron-cryptoada/src/select-cron-tasks.js';
+} from '../apps/cron-ativada/src/market/sync-fear-greed.task.js';
+import { runCronTasks, type CronTask } from '../apps/cron-ativada/src/run-cron-tasks.js';
+import { selectCronTasks } from '../apps/cron-ativada/src/select-cron-tasks.js';
 import type { FearGreedEntry } from '../packages/database/src/index.js';
-import { createFearGreedClient } from '../packages/market-data/src/index.js';
+import { createFearGreedClient } from '../packages/market-data-crypto/src/index.js';
 import { createFakeClock } from './fixtures/fake-binance.fixture.js';
 import { createInMemorySentimentRepository } from './fixtures/in-memory-sentiment-repository.fixture.js';
 import {
@@ -52,7 +52,7 @@ async function buildHarness(params: {
       sleep: createFakeClock(0).sleep,
       maxAttempts: 2,
     }),
-    logger: createCronLogger({ appName: 'cron-cryptoada', write: (line) => void lines.push(line) }),
+    logger: createCronLogger({ appName: 'cron-ativada', write: (line) => void lines.push(line) }),
     refreshDays: REFRESH_DAYS,
     now: () => params.now ?? NOW,
   });
@@ -103,7 +103,7 @@ describe('sync-fear-greed: how much history is requested', () => {
     expect(
       await runCronTasks(
         [harness.task],
-        createCronLogger({ appName: 'cron-cryptoada', write: () => undefined }),
+        createCronLogger({ appName: 'cron-ativada', write: () => undefined }),
       ),
     ).toBe(EXIT_CODE.SUCCESS);
   });
@@ -149,7 +149,7 @@ describe('sync-fear-greed: a failing source never touches stored data', () => {
     const harness = await buildHarness({ script: [SOURCE_FAILURE] });
     const lines: string[] = [];
     const logger = createCronLogger({
-      appName: 'cron-cryptoada',
+      appName: 'cron-ativada',
       write: (l) => void lines.push(l),
     });
     expect(await runCronTasks([harness.task], logger)).toBe(EXIT_CODE.FAILURE);

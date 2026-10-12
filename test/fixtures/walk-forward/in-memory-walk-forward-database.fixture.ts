@@ -2,7 +2,7 @@
 import type {
   WalkForwardDatabase,
   WalkForwardRunSession,
-} from '../../../apps/api-cryptoada/src/walk-forward/walk-forward-database.types.js';
+} from '../../../apps/api-ativada/src/walk-forward/walk-forward-database.types.js';
 import type {
   AppendResult,
   EngineCheckpoint,

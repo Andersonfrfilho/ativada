@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import {
   ACCOUNT_ERROR_CODE,
   AUTHENTICATION_ERROR_CODE,
-} from '../apps/api-cryptoada/src/shared/errors/error-code.constant.js';
+} from '../apps/api-ativada/src/shared/errors/error-code.constant.js';
 import {
   ADMIN_PATH,
   USER_PATH,

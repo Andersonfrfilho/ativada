@@ -508,8 +508,8 @@ que rodam (a primeira que falha nomeia o defeito):
 
 ### h) Fronteira de domínio, comandos e execução real
 
-- `strategy-engine` **não depende** de `@cryptoada/market-data`, `@cryptoada/database` nem
-  `@cryptoada/environment`. `EngineCandle` é estruturalmente compatível com o `Candle` do market-data
+- `strategy-engine` **não depende** de `@ativada/market-data-crypto`, `@ativada/database` nem
+  `@ativada/environment`. `EngineCandle` é estruturalmente compatível com o `Candle` do market-data
   (provado em teste) e a tabela de timeframes é igual (contrato).
 - **Decimal.** `decimal.js` 10.6.0, num clone isolado (`EngineDecimal`: precisão 40, sem notação
   exponencial). **Nunca aparece no estado nem nas decisões**: tudo cruza a borda como texto canônico.
@@ -1074,7 +1074,7 @@ ordem de exclusão `equity_points`, `run_commands`, `fills`, `positions`, `order
 
 ## Backtest em `worker_thread` (T3.2)
 
-Entregue em `apps/api-cryptoada/src/backtest/` (caso de uso e thread) e em `packages/database` (`resolveRunOwnerScope`,
+Entregue em `apps/api-ativada/src/backtest/` (caso de uso e thread) e em `packages/database` (`resolveRunOwnerScope`,
 `createRunBatchRepository`). O backtest é UM laço sobre o `Engine.step` de produção, o mesmo do ao vivo; não existe
 `runBacktest` com outra lógica (§a). O que a implementação fixou:
 
@@ -1132,7 +1132,7 @@ buraco no aquecimento é `INSUFFICIENT_HISTORY` e não lacuna.
 
 ## Walk-forward (T3.3)
 
-Entregue em `packages/strategy-engine/src/walk-forward/` (domínio puro), `apps/api-cryptoada/src/walk-forward/` (execução e
+Entregue em `packages/strategy-engine/src/walk-forward/` (domínio puro), `apps/api-ativada/src/walk-forward/` (execução e
 threads) e `packages/database` (migration 0009, `walk_forward_windows`). O walk-forward reaproveita as metades do motor
 (§a): o sinal sai UMA vez por combinação da série contínua e a carteira roda por janela com o `walletStep` avulso.
 
@@ -1210,7 +1210,7 @@ régua.
 
 ## Rotas REST de mercado, estratégias e execuções (T3.4)
 
-Entregue em `apps/api-cryptoada/src/{markets,strategies,runs,openapi,docs}/` e `packages/database` (migration 0010,
+Entregue em `apps/api-ativada/src/{markets,strategies,runs,openapi,docs}/` e `packages/database` (migration 0010,
 `listStrategiesPage`, `listVersionsPage`, `createStrategyWithFirstVersion`, `limit` na leitura de candles). Todas as rotas são
 `access: 'user'` (as de documentação, públicas e só fora de produção), com o envelope de sempre e `Cache-Control: no-store`.
 
@@ -1278,7 +1278,7 @@ API (os mesmos do cron e do worker). (4) O período do pedido é em milissegundo
 ## Estratégia de exemplo (T3.5)
 
 Entregue em `packages/strategy-engine/src/classic-scoreboard.strategy.ts`, `packages/database/src/strategies/example-strategy-seed.ts`
-(migration 0011 com `.rollback.sql`) e `apps/api-cryptoada/src/strategies/{seed-example-strategy.use-case,example-seeding-user-resolver}.ts`.
+(migration 0011 com `.rollback.sql`) e `apps/api-ativada/src/strategies/{seed-example-strategy.use-case,example-seeding-user-resolver}.ts`.
 
 | Decisão | Valor | Motivo |
 |---|---|---|
@@ -1301,8 +1301,8 @@ estratégia e 1 versão.
 
 ## Fila de execuções (T3.6)
 
-Entregue em `packages/database/src/run-queue/` (migration 0012 com `.rollback.sql`), `apps/api-cryptoada/src/runs/queue/` e
-`apps/api-cryptoada/src/runs/{run-admission,run-queue-position}.ts`. **O despachante sem tetos da T3.4 foi substituído**: a troca é
+Entregue em `packages/database/src/run-queue/` (migration 0012 com `.rollback.sql`), `apps/api-ativada/src/runs/queue/` e
+`apps/api-ativada/src/runs/{run-admission,run-queue-position}.ts`. **O despachante sem tetos da T3.4 foi substituído**: a troca é
 explícita em `create-application.ts` (`createApplicationDispatcher`), e `create-direct-run-dispatcher.ts` deixou de existir.
 
 **A fila é o banco.** `POST /v1/runs` continua gravando a execução `queued` e chamando `RunDispatcher.dispatch` (resolve na hora, `202`);
@@ -1347,11 +1347,11 @@ contínua, reinício sem perder a fila e isolamento pela API (posição, 404, sa
 
 ## Simulação ao vivo (T4.1 e T4.2)
 
-Entregue em `apps/worker-cryptoada/src/live/`, `packages/database/src/live-runs/` (sem migration) e `packages/run-recording/` (novo), com
+Entregue em `apps/worker-ativada/src/live/`, `packages/database/src/live-runs/` (sem migration) e `packages/run-recording/` (novo), com
 `POST /v1/runs` ligando `live_paper`. **Só o worker avalia**; a API cria a execução e a encerra, nunca calcula um candle. O passo é o
-mesmo do backtest: `advanceCandle` (em `@cryptoada/run-recording`) chama o `Engine.step` de produção, e o backtest da API passou a
+mesmo do backtest: `advanceCandle` (em `@ativada/run-recording`) chama o `Engine.step` de produção, e o backtest da API passou a
 usá-lo também (as peças que os dois compartilham — passo de candle, mapeamento decisões → linhas, rastreio de posição, escolha do
-sentimento, mapeamento registro → candle e parse de JSON canônico — saíram de `apps/api-cryptoada/src/backtest/` para o pacote, porque
+sentimento, mapeamento registro → candle e parse de JSON canônico — saíram de `apps/api-ativada/src/backtest/` para o pacote, porque
 uma app não importa código de outra).
 
 | Decisão | Valor | Motivo |
@@ -1462,7 +1462,7 @@ em teste automático. Mensagem acima do teto fecha com 1006 no cliente do Bun (o
 
 ## Alerta de sinal no Telegram (T4.5)
 
-O alerta tem duas metades que só se encontram no banco: o **passo ao vivo** (`apps/worker-cryptoada/src/live/`) o enfileira e o **despachante** (`src/alerts/`) o entrega.
+O alerta tem duas metades que só se encontram no banco: o **passo ao vivo** (`apps/worker-ativada/src/live/`) o enfileira e o **despachante** (`src/alerts/`) o entrega.
 
 | Peça | Decisão | Motivo |
 |---|---|---|
@@ -1577,7 +1577,7 @@ O motor é síncrono: `evaluateGoal` + `computeLatestTriggers` de 5 estratégias
 | Alvo e stop | `computePlanLevels`: preço de VENDA em que uma unidade comprada em `entrada` rende o ganho alvo (ou a perda máxima), com o que o motor cobra (compra a `entrada × (1 + slippage)` no tick, taxa nas duas pontas, venda a `preço × (1 − slippage)`), ambos **para cima** no tick (alvo mais difícil, stop mais cedo). A entrada é o preço de compra do plano (ou o último fechamento se o sinal já está ativo). Se a perda máxima for menor que o custo de entrar, o stop sai acima da entrada e o fato não é escondido | Contra o usuário, como o resto do motor |
 | Data limite | `startsAt = fechamento do último candle + 1 ms`; `deadlineAt = startsAt + prazo × 86.400.000 ms` | Sem relógio no motor |
 
-Rota `GET /v1/goals/:goalId/plan?strategyId=` (`apps/api-cryptoada/src/goals/goal-plan.*`): meta e estratégia do dono (alheia ou inexistente = o MESMO 404; `strategyId` ausente ou malformado = 400 de validação), candles diários do par da meta, cache em memória por (meta, taxas, prazo, versão, par, último candle), cota `GOAL_EVALUATION`, `409 GOAL_PLAN_UNAVAILABLE` sem candles para o aquecimento.
+Rota `GET /v1/goals/:goalId/plan?strategyId=` (`apps/api-ativada/src/goals/goal-plan.*`): meta e estratégia do dono (alheia ou inexistente = o MESMO 404; `strategyId` ausente ou malformado = 400 de validação), candles diários do par da meta, cache em memória por (meta, taxas, prazo, versão, par, último candle), cota `GOAL_EVALUATION`, `409 GOAL_PLAN_UNAVAILABLE` sem candles para o aquecimento.
 
 **Prova.** 67 contratos (contas à mão contra um oráculo `Decimal` em Python; para cada família e para o Placar clássico, o preço calculado aplicado ao `signalStep` de produção sinaliza e o vizinho de um tick do outro lado não, em compra e em saída, em três ticks; busca com 500 predicados aleatórios; sentimento; determinismo), 50 mutantes do plano (`operation-plan-mutants`) e 11 mutantes da rota (`api-goals-mutants`), todos reprovados.
 
@@ -1663,7 +1663,7 @@ Migration `0019_user_assets`: `user_assets` (`id`, `user_id`, `symbol`, `quantit
   compara as duas execuções com os mesmos `leadInCandles` e as mesmas lacunas declaradas.
 - T3.3 (walk-forward, entregue: seção "Walk-forward (T3.3)") usa as metades do motor: sinal por combinação, carteira por janela.
 - Mudar a semântica do motor exige nova `engineVersion` e novo golden; execuções em curso migram (§b).
-- `@cryptoada/strategy-engine` depende só de `decimal.js@10.6.0` e `zod@4.6.5`.
+- `@ativada/strategy-engine` depende só de `decimal.js@10.6.0` e `zod@4.6.5`.
 
 ## Espera por dado (correção H1 da revisão da Fase 4)
 

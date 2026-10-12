@@ -4,8 +4,8 @@ import { describe, expect, test } from 'bun:test';
 import {
   PANEL_CONTENT_SECURITY_POLICY_DIRECTIVES,
   PANEL_SECURITY_HEADERS,
-} from '../apps/frontend-cryptoada/panel-security-headers.constant.js';
-import viteConfigFactory from '../apps/frontend-cryptoada/vite.config.js';
+} from '../apps/frontend-ativada/panel-security-headers.constant.js';
+import viteConfigFactory from '../apps/frontend-ativada/vite.config.js';
 
 const CONFIG_API_URL = 'http://127.0.0.1:1';
 

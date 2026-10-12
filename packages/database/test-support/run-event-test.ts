@@ -8,7 +8,7 @@ import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-data
 
 // Só o NOTIFY do passo ao vivo e o escutador (T4.4), num banco descartável: é o que o `make stream-mutants` roda contra
 // cada cópia do pacote com a regra do aviso quebrada.
-const TEMPORARY_DATABASE_PREFIX = 'crypto_run_event_';
+const TEMPORARY_DATABASE_PREFIX = 'ativada_run_event_';
 
 function assertCondition(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);

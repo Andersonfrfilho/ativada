@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { environmentSchema } from '../apps/cron-cryptoada/src/environment.js';
+import { environmentSchema } from '../apps/cron-ativada/src/environment.js';
 import { EnvironmentError, parseEnvironment } from '../packages/environment/src/index.js';
 import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
 
@@ -11,7 +11,7 @@ const FEAR_GREED_VARIABLES: readonly string[] = ['FEAR_GREED_API_URL', 'FEAR_GRE
 const PRODUCTION: Source = {
   ENV: 'production',
   DATABASE_URL:
-    'postgres://cryptoada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?sslmode=verify-full',
+    'postgres://ativada:prod-password-0123456789-abcdefghijkl@db.internal:5432/crypto?sslmode=verify-full',
   KEYCLOAK_TOKEN_URL: 'https://auth.crypto.example.com/token',
   KEYCLOAK_ADMIN_API_URL: 'https://auth.crypto.example.com/admin',
   KEYCLOAK_SERVICE_CLIENT_SECRET: 'S'.repeat(40),

@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { CandleRecord, CandleRepository } from '../../packages/database/src/index.js';
-import type { FakeBinanceStreamServer } from '../../packages/market-data/test-support/fake-binance-stream-server.js';
+import type { FakeBinanceStreamServer } from '../../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 import { waitForSafeClock } from '../backfill-test/grid-oracle.js';
 import { assertCondition } from '../identity-test/identity-test.error.js';
 import {

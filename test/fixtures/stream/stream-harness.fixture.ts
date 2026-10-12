@@ -5,7 +5,7 @@ import {
   type UserResolution,
 } from '../../../packages/database/src/index.js';
 import { createOwnerScope } from '../../../packages/database/src/ownership/owner-scope.js';
-import type { StreamSocketData } from '../../../apps/api-cryptoada/src/stream/stream-socket.types.js';
+import type { StreamSocketData } from '../../../apps/api-ativada/src/stream/stream-socket.types.js';
 import { userIdFromDatabase } from '../../../packages/database/src/ownership/user-id.js';
 import { createManualClock, waitFor, type ManualClock } from '../wait-for.fixture.js';
 import { createManualTimers } from '../ticker/manual-timers.fixture.js';

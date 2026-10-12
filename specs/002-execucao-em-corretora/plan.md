@@ -3,7 +3,7 @@
 ## 1. Arquitetura
 
 ```
-worker-cryptoada (candle fechado gravado)
+worker-ativada (candle fechado gravado)
         │  NOTIFY candle_closed
         ▼
 apps/executor-crypto ──► step do strategy-engine (instância do usuário)

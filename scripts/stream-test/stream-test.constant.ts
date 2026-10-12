@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const TEMPORARY_DATABASE_PREFIX = 'crypto_stream_';
-export const WORKER_ENTRYPOINT = 'apps/worker-cryptoada/src/main.ts';
+export const TEMPORARY_DATABASE_PREFIX = 'ativada_stream_';
+export const WORKER_ENTRYPOINT = 'apps/worker-ativada/src/main.ts';
 export const EXCHANGE = 'binance';
 export const SYMBOL = 'BTCUSDT';
 export const TIMEFRAME = '1h';

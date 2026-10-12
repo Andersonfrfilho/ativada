@@ -2,8 +2,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import type { AccountExportChunk } from '../packages/database/src/index.js';
-import { ME_EXPORT_PATH } from '../apps/api-cryptoada/src/account/account.constant.js';
-import { RATE_LIMIT_ERROR_CODE } from '../apps/api-cryptoada/src/shared/errors/error-code.constant.js';
+import { ME_EXPORT_PATH } from '../apps/api-ativada/src/account/account.constant.js';
+import { RATE_LIMIT_ERROR_CODE } from '../apps/api-ativada/src/shared/errors/error-code.constant.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
 import {
   ADMIN_ACTOR_ID,
@@ -85,7 +85,7 @@ describe('GET /v1/me/export', () => {
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(response.headers.get('Content-Type')).toStartWith('application/x-ndjson');
     expect(response.headers.get('Content-Disposition')).toMatch(
-      /^attachment; filename="cryptoada-export-\d{4}-\d{2}-\d{2}\.ndjson"$/,
+      /^attachment; filename="ativada-export-\d{4}-\d{2}-\d{2}\.ndjson"$/,
     );
     const text = await response.text();
     expect(text.endsWith('\n')).toBe(true);

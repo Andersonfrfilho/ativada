@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const TEMPORARY_DATABASE_PREFIX = 'crypto_queue_';
+export const TEMPORARY_DATABASE_PREFIX = 'ativada_queue_';
 export const SYMBOL = 'BTCUSDT';
 export const HOUR_MILLISECONDS = 3_600_000;
 export const DAY_MILLISECONDS = 86_400_000;

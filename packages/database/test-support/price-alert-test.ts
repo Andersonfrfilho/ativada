@@ -8,7 +8,7 @@ import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-data
 
 // Só os alertas de preço (T4b.6), num banco descartável: é o que o `make price-alert-mutants` roda contra
 // cada cópia do pacote com uma regra do alerta de preço quebrada.
-const TEMPORARY_DATABASE_PREFIX = 'crypto_price_alerts_';
+const TEMPORARY_DATABASE_PREFIX = 'ativada_price_alerts_';
 
 function assertCondition(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);

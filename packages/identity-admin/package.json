@@ -1,5 +1,5 @@
 {
-  "name": "@cryptoada/identity-admin",
+  "name": "@ativada/identity-admin",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,6 +8,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@cryptoada/environment": "workspace:*"
+    "@ativada/environment": "workspace:*"
   }
 }

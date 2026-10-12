@@ -6,8 +6,8 @@ import {
 } from '../../../packages/database/src/ownership/owner-scope.js';
 import { userIdFromDatabase } from '../../../packages/database/src/ownership/user-id.js';
 import { USER_RESOLUTION_STATUS } from '../../../packages/database/src/users/user-resolution.constant.js';
-import type { Route } from '../../../apps/api-cryptoada/src/router/route.types.js';
-import type { RunDispatchRequest } from '../../../apps/api-cryptoada/src/runs/run-dispatcher.js';
+import type { Route } from '../../../apps/api-ativada/src/router/route.types.js';
+import type { RunDispatchRequest } from '../../../apps/api-ativada/src/runs/run-dispatcher.js';
 import classicStrategy from '../strategy-engine/classic-scoreboard.strategy.json';
 import { startJwksTestServer, type JwksTestServer } from '../jwks-test-server.fixture.js';
 import {
@@ -254,7 +254,7 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
   const handler = app.requestHandler.createRequestHandler({
     router,
     corsAllowedOrigins: [],
-    logger: app.logger.createLogger({ appName: 'api-cryptoada', write: () => undefined }),
+    logger: app.logger.createLogger({ appName: 'api-ativada', write: () => undefined }),
   });
   return {
     app,

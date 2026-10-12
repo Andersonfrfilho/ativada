@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { createLiveRunRepository, openDatabase } from '../../packages/database/src/index.js';
-import type { LiveCommitOutcome } from '../../apps/worker-cryptoada/src/live/live-run.types.js';
+import type { LiveCommitOutcome } from '../../apps/worker-ativada/src/live/live-run.types.js';
 import {
   CHILD_INSTANCE_VARIABLE,
   CHILD_KILL_VARIABLE,

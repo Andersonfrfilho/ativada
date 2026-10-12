@@ -5,7 +5,7 @@ import {
   MarketDataInvalidRequestError,
   MarketDataResponseError,
   MarketDataSourceError,
-} from '../packages/market-data/src/index.js';
+} from '../packages/market-data-crypto/src/index.js';
 import { buildClient, failureOf } from './fixtures/fear-greed-client.fixture.js';
 import {
   buildFearGreedBody,

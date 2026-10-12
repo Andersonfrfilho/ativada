@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
-import { ME_PATH } from '../apps/api-cryptoada/src/profile/profile.constant.js';
+import { ME_PATH } from '../apps/api-ativada/src/profile/profile.constant.js';
 import {
   SUBJECT_A,
   SUBJECT_B,

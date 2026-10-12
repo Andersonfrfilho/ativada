@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const TEMPORARY_DATABASE_PREFIX = 'crypto_telegram_';
+export const TEMPORARY_DATABASE_PREFIX = 'ativada_telegram_';
 export const SUBJECT_PREFIX = 'subject-telegram-test';
 export const CHAT_OF_A = '740000001';
 export const CHAT_OF_B = '740000002';

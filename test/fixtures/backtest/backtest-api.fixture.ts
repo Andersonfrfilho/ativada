@@ -1,11 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { createBacktestThreadRunner } from '../../../apps/api-cryptoada/src/backtest/backtest-thread-runner.js';
+import type { createBacktestThreadRunner } from '../../../apps/api-ativada/src/backtest/backtest-thread-runner.js';
 import type {
   failBacktestRun,
   runBacktest,
-} from '../../../apps/api-cryptoada/src/backtest/run-backtest.js';
+} from '../../../apps/api-ativada/src/backtest/run-backtest.js';
 
-const PRODUCTION_SOURCE = new URL('../../../apps/api-cryptoada/src/backtest', import.meta.url)
+const PRODUCTION_SOURCE = new URL('../../../apps/api-ativada/src/backtest', import.meta.url)
   .pathname;
 
 // Os testes do backtest rodam contra a produção; o teste de mutantes os relança num processo à parte apontando esta

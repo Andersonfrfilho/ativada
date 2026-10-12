@@ -6,18 +6,18 @@ import {
   type OwnerScope,
 } from '../packages/database/src/ownership/owner-scope.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
-import { createColdEvaluationGate } from '../apps/api-cryptoada/src/goals/goal-cold-gate.js';
-import { createGoalColdBudget } from '../apps/api-cryptoada/src/goals/goal-cold-budget.js';
+import { createColdEvaluationGate } from '../apps/api-ativada/src/goals/goal-cold-gate.js';
+import { createGoalColdBudget } from '../apps/api-ativada/src/goals/goal-cold-budget.js';
 import {
   GoalEvaluationBusyError,
   GoalEvaluationTimeoutError,
-} from '../apps/api-cryptoada/src/goals/goal.error.js';
+} from '../apps/api-ativada/src/goals/goal.error.js';
 import {
   RATE_LIMIT_POLICY,
   type RateLimitPolicy,
-} from '../apps/api-cryptoada/src/rate-limit/rate-limit-policy.constant.js';
-import { RateLimitedError } from '../apps/api-cryptoada/src/rate-limit/rate-limited.error.js';
-import { createRateLimiter } from '../apps/api-cryptoada/src/rate-limit/rate-limiter.js';
+} from '../apps/api-ativada/src/rate-limit/rate-limit-policy.constant.js';
+import { RateLimitedError } from '../apps/api-ativada/src/rate-limit/rate-limited.error.js';
+import { createRateLimiter } from '../apps/api-ativada/src/rate-limit/rate-limiter.js';
 
 const scopeOf = (id: string): OwnerScope => createOwnerScope(userIdFromDatabase(id));
 const USER_A = scopeOf('0192f3a1-7c4e-7b2a-9d3f-5e6a7b8c9d11');

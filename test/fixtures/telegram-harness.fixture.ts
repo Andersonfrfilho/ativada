@@ -1,15 +1,15 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createChatAttemptLimiter } from '../../apps/api-cryptoada/src/telegram/chat-attempt-limiter.js';
-import { createHandleStartCommandUseCase } from '../../apps/api-cryptoada/src/telegram/handle-start-command.use-case.js';
+import { createChatAttemptLimiter } from '../../apps/api-ativada/src/telegram/chat-attempt-limiter.js';
+import { createHandleStartCommandUseCase } from '../../apps/api-ativada/src/telegram/handle-start-command.use-case.js';
 import {
   createTelegramRoutes,
   type TelegramRouteDependencies,
-} from '../../apps/api-cryptoada/src/telegram/telegram.routes.js';
-import { createTelegramBotClient } from '../../apps/api-cryptoada/src/telegram/telegram-bot-client.js';
+} from '../../apps/api-ativada/src/telegram/telegram.routes.js';
+import { createTelegramBotClient } from '../../apps/api-ativada/src/telegram/telegram-bot-client.js';
 import {
   createIssueLinkCodeUseCase,
   createUnlinkTelegramUseCase,
-} from '../../apps/api-cryptoada/src/telegram/telegram-link.use-case.js';
+} from '../../apps/api-ativada/src/telegram/telegram-link.use-case.js';
 import { createApiHarness, type ApiHarness } from './api-harness.fixture.js';
 import {
   createInMemoryTelegramStore,

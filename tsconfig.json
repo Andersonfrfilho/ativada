@@ -8,5 +8,5 @@
     "test",
     "scripts"
   ],
-  "exclude": ["apps/frontend-cryptoada"]
+  "exclude": ["apps/frontend-ativada"]
 }

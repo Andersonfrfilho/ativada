@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import { EnvironmentError, parseEnvironment } from '../packages/environment/src/index.js';
-import { environmentSchema } from '../apps/api-cryptoada/src/environment.js';
+import { environmentSchema } from '../apps/api-ativada/src/environment.js';
 import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
 
 type LimitCase = {

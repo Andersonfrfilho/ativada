@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { serveWalkForwardWorker } from '../../../apps/api-cryptoada/src/walk-forward/serve-walk-forward-worker.js';
+import { serveWalkForwardWorker } from '../../../apps/api-ativada/src/walk-forward/serve-walk-forward-worker.js';
 import { buildWalkForwardScenario, SCENARIO_OPTIONS } from './walk-forward-scenarios.fixture.js';
 
 // A thread de produção (`serveWalkForwardWorker`) sobre um banco em memória: o resultado do caso de uso volta pelos

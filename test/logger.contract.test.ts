@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { createLogger } from '../apps/api-cryptoada/src/logging/logger.js';
-import { RunNotFoundError } from '../apps/api-cryptoada/src/runs/run.error.js';
-import { RUN_ERROR_CODE } from '../apps/api-cryptoada/src/shared/errors/error-code.constant.js';
+import { createLogger } from '../apps/api-ativada/src/logging/logger.js';
+import { RunNotFoundError } from '../apps/api-ativada/src/runs/run.error.js';
+import { RUN_ERROR_CODE } from '../apps/api-ativada/src/shared/errors/error-code.constant.js';
 
 const REDACTED = '[REDACTED]';
 const SENSITIVE_VALUES: Readonly<Record<string, string>> = {
@@ -13,8 +13,8 @@ const SENSITIVE_VALUES: Readonly<Record<string, string>> = {
   code: 'codigo-de-autorizacao-456',
   codeVerifier: 'verifier-pkce-789',
   authorization: 'Bearer eyJ.token.secreto',
-  cookie: '__Host-cryptoada_refresh=refresh-secreto',
-  'set-cookie': '__Host-cryptoada_refresh=outro-refresh',
+  cookie: '__Host-ativada_refresh=refresh-secreto',
+  'set-cookie': '__Host-ativada_refresh=outro-refresh',
   secret: 'segredo-do-cliente',
   chatId: '555000111',
   chat_id: '555000222',
@@ -32,7 +32,7 @@ function createCapturedLogger(): {
   readonly logger: ReturnType<typeof createLogger>;
 } {
   const { lines, write } = captureLines();
-  return { lines, logger: createLogger({ appName: 'api-cryptoada', write }) };
+  return { lines, logger: createLogger({ appName: 'api-ativada', write }) };
 }
 
 describe('structured logger', () => {
@@ -44,7 +44,7 @@ describe('structured logger', () => {
     const entry = JSON.parse(lines[0] ?? '') as Record<string, unknown>;
     expect(entry).toMatchObject({
       level: 'info',
-      app: 'api-cryptoada',
+      app: 'api-ativada',
       message: 'listening',
       port: 56101,
     });
@@ -56,7 +56,7 @@ describe('structured logger', () => {
     logger.warn('real message', { level: 'debug', app: 'other', message: 'fake' });
     expect(JSON.parse(lines[0] ?? '')).toMatchObject({
       level: 'warn',
-      app: 'api-cryptoada',
+      app: 'api-ativada',
       message: 'real message',
     });
   });

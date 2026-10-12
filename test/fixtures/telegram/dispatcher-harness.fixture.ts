@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createWorkerLogger } from '../../../apps/worker-cryptoada/src/logging/worker-logger.js';
+import { createWorkerLogger } from '../../../apps/worker-ativada/src/logging/worker-logger.js';
 import { loadAlertsApi } from './alerts-api.fixture.js';
 import { alertPayload } from './alert-payload.fixture.js';
 import {

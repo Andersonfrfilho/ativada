@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { RunQueueSummary } from '../../packages/database/src/run-queue/run-queue.types.js';
-import type { ListenerHealth } from '../../apps/api-cryptoada/src/stream/listener-health.js';
-import type { ApiRouteDependencies } from '../../apps/api-cryptoada/src/routes/create-api-routes.js';
-import { createStreamTicketStore } from '../../apps/api-cryptoada/src/stream/stream-ticket-store.js';
+import type { ListenerHealth } from '../../apps/api-ativada/src/stream/listener-health.js';
+import type { ApiRouteDependencies } from '../../apps/api-ativada/src/routes/create-api-routes.js';
+import { createStreamTicketStore } from '../../apps/api-ativada/src/stream/stream-ticket-store.js';
 
 const ENABLED_MARKETS = {
   symbols: ['BTCUSDT', 'ETHUSDT'],

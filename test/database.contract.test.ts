@@ -106,12 +106,12 @@ function buildRollbackFileName(migrationFileName: string): string {
   return `${migrationFileName.slice(0, -'.sql'.length)}${ROLLBACK_SUFFIX}`;
 }
 
-describe('@cryptoada/database package', () => {
-  test('package.json is private, ESM and named @cryptoada/database', async () => {
+describe('@ativada/database package', () => {
+  test('package.json is private, ESM and named @ativada/database', async () => {
     const manifest = JSON.parse(
       await readRepositoryText(`${DATABASE_PACKAGE_DIRECTORY}/package.json`),
     ) as PackageManifest;
-    expect(manifest.name).toBe('@cryptoada/database');
+    expect(manifest.name).toBe('@ativada/database');
     expect(manifest.private).toBe(true);
     expect(manifest.type).toBe('module');
   });
@@ -143,10 +143,8 @@ describe('@cryptoada/database package', () => {
     expect(Object.isFrozen(handle)).toBe(true);
   });
 
-  test('the frontend does not depend on @cryptoada/database', async () => {
-    const manifest = JSON.parse(
-      await readRepositoryText('apps/frontend-cryptoada/package.json'),
-    ) as {
+  test('the frontend does not depend on @ativada/database', async () => {
+    const manifest = JSON.parse(await readRepositoryText('apps/frontend-ativada/package.json')) as {
       readonly dependencies?: Readonly<Record<string, string>>;
       readonly devDependencies?: Readonly<Record<string, string>>;
     };
@@ -154,7 +152,7 @@ describe('@cryptoada/database package', () => {
       ...Object.keys(manifest.dependencies ?? {}),
       ...Object.keys(manifest.devDependencies ?? {}),
     ];
-    expect(dependencyNames).not.toContain('@cryptoada/database');
+    expect(dependencyNames).not.toContain('@ativada/database');
   });
 
   test('the public entry point has no wildcard re-export', async () => {

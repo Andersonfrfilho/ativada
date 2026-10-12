@@ -1,5 +1,5 @@
 {
-  "name": "@cryptoada/database",
+  "name": "@ativada/database",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,7 +16,7 @@
     "db:run-queue-test": "bun run test-support/run-queue-test.ts"
   },
   "dependencies": {
-    "@cryptoada/environment": "workspace:*",
+    "@ativada/environment": "workspace:*",
     "drizzle-orm": "^0.45.4"
   },
   "devDependencies": {

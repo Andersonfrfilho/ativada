@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { CandleRecord, SentimentObservationRecord } from '@cryptoada/database';
+import type { CandleRecord, SentimentObservationRecord } from '@ativada/database';
 import {
   ENGINE_TIMEFRAME,
   type EngineCandle,
   type StoredSentimentObservation,
-} from '@cryptoada/strategy-engine';
+} from '@ativada/strategy-engine';
 
 const TIMEFRAMES: readonly string[] = Object.values(ENGINE_TIMEFRAME);
 

@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { createWorkerLogger } from '../apps/worker-cryptoada/src/logging/worker-logger.js';
-import { createShutdownHandler } from '../apps/worker-cryptoada/src/shutdown.js';
+import { createWorkerLogger } from '../apps/worker-ativada/src/logging/worker-logger.js';
+import { createShutdownHandler } from '../apps/worker-ativada/src/shutdown.js';
 
 const TIMEOUT_MILLISECONDS = 60;
 
@@ -25,7 +25,7 @@ function buildHandler(overrides: {
       steps.push('closeResources');
       await overrides.closeResources?.();
     },
-    logger: createWorkerLogger({ appName: 'worker-cryptoada', write: () => undefined }),
+    logger: createWorkerLogger({ appName: 'worker-ativada', write: () => undefined }),
     timeoutMilliseconds: TIMEOUT_MILLISECONDS,
     exit: (code) => void exits.push(code),
   });

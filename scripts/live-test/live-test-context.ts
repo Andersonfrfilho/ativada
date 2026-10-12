@@ -23,7 +23,7 @@ import {
   SIGNAL_ENGINE_VERSION,
   type EngineCandle,
 } from '../../packages/strategy-engine/src/index.js';
-import type { GapPolicy } from '../../apps/worker-cryptoada/src/live/gap-policy.js';
+import type { GapPolicy } from '../../apps/worker-ativada/src/live/gap-policy.js';
 import type {
   GapConfirmation,
   LiveAlertingSettings,
@@ -32,8 +32,8 @@ import type {
   LiveRunDatabase,
   LiveRunSession,
   LiveTickSummary,
-} from '../../apps/worker-cryptoada/src/live/live-run.types.js';
-import type { WorkerLogger } from '../../apps/worker-cryptoada/src/logging/worker-logger.js';
+} from '../../apps/worker-ativada/src/live/live-run.types.js';
+import type { WorkerLogger } from '../../apps/worker-ativada/src/logging/worker-logger.js';
 import {
   loadClassicRunParameters,
   loadClassicScoreboard,

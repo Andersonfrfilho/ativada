@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { beforeAll, describe, expect, test } from 'bun:test';
 
-import type { Route } from '../apps/api-cryptoada/src/router/route.types.js';
+import type { Route } from '../apps/api-ativada/src/router/route.types.js';
 import { loadApiApp, type ApiApp } from './fixtures/api-routes/api-app.fixture.js';
 import { buildApiRouteDependencies } from './fixtures/api-route-dependencies.fixture.js';
 

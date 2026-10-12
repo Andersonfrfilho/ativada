@@ -8,7 +8,7 @@ import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-data
 
 // Só o registro cronológico da execução (T4.6), num banco descartável: é o que o `make runlog-mutants` roda contra cada
 // cópia do pacote com uma regra do registro quebrada.
-const TEMPORARY_DATABASE_PREFIX = 'crypto_run_log_';
+const TEMPORARY_DATABASE_PREFIX = 'ativada_run_log_';
 
 function assertCondition(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);

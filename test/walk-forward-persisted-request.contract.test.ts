@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import type { RunWalkForwardParams } from '../apps/api-cryptoada/src/walk-forward/walk-forward.types.js';
+import type { RunWalkForwardParams } from '../apps/api-ativada/src/walk-forward/walk-forward.types.js';
 import { loadWalkForwardApp } from './fixtures/walk-forward/walk-forward-app.fixture.js';
 import {
   buildWalkForwardScenario,

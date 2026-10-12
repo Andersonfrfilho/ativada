@@ -7,8 +7,8 @@ const REPOSITORY_ROOT = new URL('../../../', import.meta.url).pathname;
 // O WebSocket de tempo real (T4.4): a cópia leva o `src` INTEIRO da API, porque o endpoint importa o roteador, os erros e o
 // limitador; é julgada só pelos contratos do stream, do ticket e do fechamento dos sockets ao bloquear ou apagar a conta.
 export const STREAM_MUTANT_TARGET: MutantTarget = {
-  sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
-  mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-ativada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-ativada/.mutants`,
   directoryPrefix: 'stream-',
   judgeTestFiles: [
     'test/stream-hub.contract.test.ts',
@@ -29,8 +29,8 @@ export const STREAM_MUTANT_TARGET: MutantTarget = {
 // O ticker público no WebSocket (T4.7): o mesmo `src` da API, julgado pelos contratos do publicador, da assinatura pelo
 // socket, do ambiente e do pipeline de ponta a ponta contra uma Binance falsa (o mais lento fica por último).
 export const MARKET_MUTANT_TARGET: MutantTarget = {
-  sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
-  mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-ativada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-ativada/.mutants`,
   directoryPrefix: 'market-',
   judgeTestFiles: [
     'test/market-stream.contract.test.ts',

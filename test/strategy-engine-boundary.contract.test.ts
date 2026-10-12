@@ -7,7 +7,7 @@ import {
   TIMEFRAME,
   TIMEFRAME_DURATION_MILLISECONDS,
   type Candle,
-} from '../packages/market-data/src/index.js';
+} from '../packages/market-data-crypto/src/index.js';
 import {
   ENGINE_TIMEFRAME,
   ENGINE_TIMEFRAME_DURATION_MILLISECONDS,

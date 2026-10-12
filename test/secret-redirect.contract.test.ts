@@ -2,8 +2,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 
 import { createKeycloakIdentityAdmin } from '../packages/identity-admin/src/create-keycloak-identity-admin.js';
-import { createKeycloakTokenClient } from '../apps/api-cryptoada/src/session/keycloak-token-client.js';
-import { createTelegramBotClient } from '../apps/api-cryptoada/src/telegram/telegram-bot-client.js';
+import { createKeycloakTokenClient } from '../apps/api-ativada/src/session/keycloak-token-client.js';
+import { createTelegramBotClient } from '../apps/api-ativada/src/telegram/telegram-bot-client.js';
 
 const SECRET = 'segredo-que-nao-pode-sair';
 const REDIRECT_STATUS = 307;

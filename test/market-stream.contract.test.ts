@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import type { AggregatedTick } from '../packages/market-data/src/ticker/price-tick-listener.js';
+import type { AggregatedTick } from '../packages/market-data-crypto/src/ticker/price-tick-listener.js';
 import {
   createFakeSocket,
   USER_A,

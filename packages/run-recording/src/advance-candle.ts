@@ -7,7 +7,7 @@ import type {
   RunSetup,
   StepResult,
   StrategyVersion,
-} from '@cryptoada/strategy-engine';
+} from '@ativada/strategy-engine';
 
 import type { SentimentPicker } from './sentiment-picker.js';
 

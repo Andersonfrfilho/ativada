@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { RawTick } from '../../../packages/market-data/src/ticker/ticker.types.js';
+import type { RawTick } from '../../../packages/market-data-crypto/src/ticker/ticker.types.js';
 
 export type ManualTimers = {
   readonly setTimer: (callback: () => void, milliseconds: number) => number;

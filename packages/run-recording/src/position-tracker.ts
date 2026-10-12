@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { PositionInput } from '@cryptoada/database';
+import type { PositionInput } from '@ativada/database';
 import type {
   ClosedPositionDecision,
   OpenedPositionDecision,
   OpenPositionState,
-} from '@cryptoada/strategy-engine';
+} from '@ativada/strategy-engine';
 
 import { PositionUntrackedError } from './run-recording.error.js';
 

@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const TEMPORARY_DATABASE_PREFIX = 'crypto_panel_';
+export const TEMPORARY_DATABASE_PREFIX = 'ativada_panel_';
 export const EXCHANGE = 'binance';
 export const SYMBOLS = ['BTCUSDT', 'ETHUSDT'] as const;
 export const HOUR_MILLISECONDS = 3_600_000;
@@ -10,7 +10,7 @@ export const FINAL_EQUITY = '10420.00';
 export const FINAL_BENCHMARK = '10100.00';
 export const STARTUP_TIMEOUT_MILLISECONDS = 30_000;
 export const STARTUP_POLL_MILLISECONDS = 250;
-export const PANEL_PATH = 'apps/frontend-cryptoada';
+export const PANEL_PATH = 'apps/frontend-ativada';
 export const PLAYWRIGHT_BIN = `${PANEL_PATH}/node_modules/.bin/playwright`;
 export const PLAYWRIGHT_CONFIG = `${PANEL_PATH}/playwright.config.ts`;
 export const BASE_PRICE: Readonly<Record<string, number>> = { BTCUSDT: 61_000, ETHUSDT: 3_000 };

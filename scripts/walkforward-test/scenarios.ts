@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { WalkForwardRequest } from '../../apps/api-cryptoada/src/walk-forward/walk-forward.types.js';
+import type { WalkForwardRequest } from '../../apps/api-ativada/src/walk-forward/walk-forward.types.js';
 import type { EngineCandle } from '../../packages/strategy-engine/src/index.js';
 import { buildDailyCandles } from '../../test/fixtures/walk-forward/daily-candles.fixture.js';
 import { SHORT_STRATEGY } from '../../test/fixtures/walk-forward/walk-forward-scenarios.fixture.js';

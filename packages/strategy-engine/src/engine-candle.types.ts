@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { EngineTimeframe } from './engine.constant.js';
 
-// Estruturalmente compatível com o `Candle` de @cryptoada/market-data, sem depender dele: o motor não
+// Estruturalmente compatível com o `Candle` de @ativada/market-data-crypto, sem depender dele: o motor não
 // conhece banco nem rede. Preços e volume em texto decimal exato; o tempo de identidade é `openTime`.
 export type EngineCandle = {
   readonly symbol: string;

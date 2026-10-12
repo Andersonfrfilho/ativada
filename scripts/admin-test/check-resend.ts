@@ -33,7 +33,7 @@ export async function measureDirectResend(context: AdminTestContext): Promise<vo
   const redirect = encodeURIComponent(`${environment.panelOrigin}/auth/callback`);
   const send = (): Promise<unknown> =>
     sendRequest({
-      url: `${adminUrl}/users/${userId}/execute-actions-email?lifespan=${ACTION_LIFESPAN_SECONDS}&client_id=cryptoada-session&redirect_uri=${redirect}`,
+      url: `${adminUrl}/users/${userId}/execute-actions-email?lifespan=${ACTION_LIFESPAN_SECONDS}&client_id=ativada-session&redirect_uri=${redirect}`,
       method: 'PUT',
       token,
       json: ['VERIFY_EMAIL', 'UPDATE_PASSWORD'],

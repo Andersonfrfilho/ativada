@@ -2,8 +2,8 @@
 import {
   createGetProfileUseCase,
   createUpdateProfileUseCase,
-} from '../../apps/api-cryptoada/src/profile/profile.use-case.js';
-import { createProfileRoutes } from '../../apps/api-cryptoada/src/profile/profile.routes.js';
+} from '../../apps/api-ativada/src/profile/profile.use-case.js';
+import { createProfileRoutes } from '../../apps/api-ativada/src/profile/profile.routes.js';
 import { createApiHarness, type ApiHarness } from './api-harness.fixture.js';
 import { createInMemoryUserStore, type InMemoryUserStore } from './in-memory-user-store.fixture.js';
 import { signTestToken } from './token-signing.fixture.js';

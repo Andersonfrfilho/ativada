@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import { INVITATIONS_PATH } from '../apps/api-cryptoada/src/admin/admin.constant.js';
+import { INVITATIONS_PATH } from '../apps/api-ativada/src/admin/admin.constant.js';
 import { callAdmin, readError } from './fixtures/admin-calls.fixture.js';
 import {
   ADMIN_ID,

@@ -224,7 +224,7 @@ async function checkListenerRecovery(
 ): Promise<void> {
   const { client, assertCondition, reportCheck } = context;
   const listeningBefore = collected.listening.length;
-  await client`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE application_name = 'cryptoada-listener'`;
+  await client`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE application_name = 'ativada-listener'`;
   await waitUntil(
     () => collected.listening.length > listeningBefore,
     'LISTEN refeito depois de matar a conexão',
@@ -251,7 +251,7 @@ async function checkAuthentication(
   const { client, assertCondition, reportCheck } = context;
   const rows: unknown = await client`
     SELECT count(*)::int AS total FROM pg_stat_activity
-    WHERE application_name = 'cryptoada-listener' AND state IS NOT NULL`;
+    WHERE application_name = 'ativada-listener' AND state IS NOT NULL`;
   const total = (rows as readonly CountRow[])[0]?.total ?? 0;
   assertCondition(total === 1, `conexões de escuta: ${total}, esperado 1`);
   assertCondition(collected.listener.isListening(), 'o escutador não está escutando');

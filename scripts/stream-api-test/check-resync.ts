@@ -29,7 +29,7 @@ export async function checkResync(
   const { a, b } = delivery.sockets;
   const before = a.received.length;
   await context.api.client.unsafe(
-    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE application_name = 'cryptoada-listener'",
+    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE application_name = 'ativada-listener'",
   );
   for (const socket of [a, b]) {
     await waitForMessage(socket, 'resync na perda', isResync('listener_lost'));

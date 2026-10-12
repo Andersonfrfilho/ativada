@@ -4,8 +4,11 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
   startFakeBinanceStreamServer,
   type FakeBinanceStreamServer,
-} from '../packages/market-data/test-support/fake-binance-stream-server.js';
-import type { RawTick, TickerStream } from '../packages/market-data/src/ticker/ticker.types.js';
+} from '../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
+import type {
+  RawTick,
+  TickerStream,
+} from '../packages/market-data-crypto/src/ticker/ticker.types.js';
 import { loadTickerApi } from './fixtures/ticker/ticker-source.fixture.js';
 import { waitFor } from './fixtures/wait-for.fixture.js';
 

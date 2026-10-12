@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const TEMPORARY_DATABASE_PREFIX = 'crypto_api_runs_';
+export const TEMPORARY_DATABASE_PREFIX = 'ativada_api_runs_';
 export const EXCHANGE = 'binance';
 export const SYMBOL = 'BTCUSDT';
 export const SUBJECT_A = 'subject-api-runs-a';

@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
   createKlineStream,
   MarketDataInvalidRequestError,
-} from '../packages/market-data/src/index.js';
-import { buildFakePrice } from '../packages/market-data/test-support/fake-binance-stream-server.js';
+} from '../packages/market-data-crypto/src/index.js';
+import { buildFakePrice } from '../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 import {
   createStreamHarness,
   FIRST_OPEN_TIME,

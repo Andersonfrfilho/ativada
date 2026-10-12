@@ -1,0 +1,196 @@
+// Copyright (c) 2026 Ada Technology. All rights reserved.
+import {
+  STORAGE_QUOTA_RESOURCE,
+  StorageQuotaReachedError,
+  type OwnerScope,
+  type StrategyCursor,
+  type StrategyRepository,
+} from '@ativada/database';
+import type { StrategyVersion } from '@ativada/strategy-engine';
+
+import { parseJsonContainer } from '@ativada/run-recording';
+import { encodeStrategyCursor, encodeVersionCursor } from './strategy-cursor.js';
+import {
+  StrategyIsExampleError,
+  StrategyLimitReachedError,
+  StrategyNotFoundError,
+  StrategyVersionLimitReachedError,
+} from './strategy.error.js';
+import {
+  toStrategyVersionView,
+  toStrategyView,
+  type StrategyVersionView,
+  type StrategyView,
+} from './strategy-views.js';
+
+export type StrategyUseCaseDependencies = {
+  readonly strategies: Pick<
+    StrategyRepository,
+    | 'createStrategyWithFirstVersion'
+    | 'listStrategiesPage'
+    | 'listVersionsPage'
+    | 'addVersion'
+    | 'findStrategy'
+    | 'softDeleteStrategy'
+  >;
+  // Tetos de armazenamento por usuário (RF00b): estratégias não apagadas e versões de cada estratégia.
+  readonly limits: {
+    readonly maxStrategies: number;
+    readonly maxVersionsPerStrategy: number;
+  };
+};
+
+export type PageInput<TCursor> = { readonly limit: number; readonly after: TCursor | undefined };
+
+export type PageOutput<TItem> = {
+  readonly items: readonly TItem[];
+  readonly nextCursor: string | null;
+  readonly perPage: number;
+};
+
+export type CreatedStrategy = {
+  readonly strategy: StrategyView;
+  readonly version: StrategyVersionView;
+};
+
+export type StrategyDetail = StrategyView & { readonly latestVersion: StrategyVersionView | null };
+
+export type AddedVersion = { readonly version: StrategyVersionView; readonly isNew: boolean };
+
+export type CreateStrategyUseCase = (
+  scope: OwnerScope,
+  input: { readonly name: string; readonly version: StrategyVersion },
+) => Promise<CreatedStrategy>;
+
+export type ListStrategiesUseCase = (
+  scope: OwnerScope,
+  input: PageInput<StrategyCursor>,
+) => Promise<PageOutput<StrategyView>>;
+
+export type GetStrategyUseCase = (scope: OwnerScope, strategyId: string) => Promise<StrategyDetail>;
+
+export type ListVersionsUseCase = (
+  scope: OwnerScope,
+  input: PageInput<number> & { readonly strategyId: string },
+) => Promise<PageOutput<StrategyVersionView>>;
+
+export type DeleteStrategyUseCase = (scope: OwnerScope, strategyId: string) => Promise<void>;
+
+export type AddVersionUseCase = (
+  scope: OwnerScope,
+  input: { readonly strategyId: string; readonly version: StrategyVersion },
+) => Promise<AddedVersion>;
+
+function toConfigJson(version: StrategyVersion): ReturnType<typeof parseJsonContainer> {
+  return parseJsonContainer(JSON.stringify(version.config));
+}
+
+// O teto vem do banco como erro tipado (conferido sob trava na transação); aqui vira o 409 da rota.
+async function translateQuota<TResult>(work: Promise<TResult>): Promise<TResult> {
+  try {
+    return await work;
+  } catch (error: unknown) {
+    if (!(error instanceof StorageQuotaReachedError)) throw error;
+    throw error.resource === STORAGE_QUOTA_RESOURCE.STRATEGIES
+      ? new StrategyLimitReachedError()
+      : new StrategyVersionLimitReachedError();
+  }
+}
+
+export function createCreateStrategyUseCase(
+  dependencies: StrategyUseCaseDependencies,
+): CreateStrategyUseCase {
+  return async (scope, input) => {
+    const created = await translateQuota(
+      dependencies.strategies.createStrategyWithFirstVersion(scope, {
+        name: input.name,
+        isExample: false,
+        config: toConfigJson(input.version),
+        configHash: input.version.configHash,
+        maxStrategies: dependencies.limits.maxStrategies,
+      }),
+    );
+    return {
+      strategy: toStrategyView(created.strategy),
+      version: toStrategyVersionView(created.version),
+    };
+  };
+}
+
+export function createListStrategiesUseCase(
+  dependencies: StrategyUseCaseDependencies,
+): ListStrategiesUseCase {
+  return async (scope, input) => {
+    const page = await dependencies.strategies.listStrategiesPage(scope, input);
+    return {
+      items: page.strategies.map(toStrategyView),
+      nextCursor: page.nextCursor === undefined ? null : encodeStrategyCursor(page.nextCursor),
+      perPage: input.limit,
+    };
+  };
+}
+
+export function createGetStrategyUseCase(
+  dependencies: StrategyUseCaseDependencies,
+): GetStrategyUseCase {
+  return async (scope, strategyId) => {
+    const strategy = await dependencies.strategies.findStrategy(scope, strategyId);
+    if (strategy === undefined) throw new StrategyNotFoundError();
+    const newest = await dependencies.strategies.listVersionsPage(scope, {
+      strategyId,
+      limit: 1,
+      after: undefined,
+    });
+    const latest = newest?.versions[0];
+    return {
+      ...toStrategyView(strategy),
+      latestVersion: latest === undefined ? null : toStrategyVersionView(latest),
+    };
+  };
+}
+
+export function createListVersionsUseCase(
+  dependencies: StrategyUseCaseDependencies,
+): ListVersionsUseCase {
+  return async (scope, input) => {
+    const page = await dependencies.strategies.listVersionsPage(scope, input);
+    if (page === undefined) throw new StrategyNotFoundError();
+    return {
+      items: page.versions.map(toStrategyVersionView),
+      nextCursor: page.nextCursor === undefined ? null : encodeVersionCursor(page.nextCursor),
+      perPage: input.limit,
+    };
+  };
+}
+
+// Configuração igual (mesmo hash) devolve a MESMA versão, sem criar outra (RF03).
+export function createAddVersionUseCase(
+  dependencies: StrategyUseCaseDependencies,
+): AddVersionUseCase {
+  return async (scope, input) => {
+    const added = await translateQuota(
+      dependencies.strategies.addVersion(scope, {
+        strategyId: input.strategyId,
+        config: toConfigJson(input.version),
+        configHash: input.version.configHash,
+        maxVersions: dependencies.limits.maxVersionsPerStrategy,
+      }),
+    );
+    if (added === undefined) throw new StrategyNotFoundError();
+    return { version: toStrategyVersionView(added.version), isNew: added.isNew };
+  };
+}
+
+// A estratégia some da lista e do detalhe (exclusão lógica); execuções e resultados já gravados continuam do dono.
+export function createDeleteStrategyUseCase(
+  dependencies: StrategyUseCaseDependencies,
+): DeleteStrategyUseCase {
+  return async (scope, strategyId) => {
+    const strategy = await dependencies.strategies.findStrategy(scope, strategyId);
+    if (strategy?.isExample === true) throw new StrategyIsExampleError();
+    const isDeleted =
+      strategy !== undefined &&
+      (await dependencies.strategies.softDeleteStrategy(scope, strategyId));
+    if (!isDeleted) throw new StrategyNotFoundError();
+  };
+}

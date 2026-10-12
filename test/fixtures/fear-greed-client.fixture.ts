@@ -2,7 +2,7 @@
 import {
   createFearGreedClient,
   type FearGreedClient,
-} from '../../packages/market-data/src/index.js';
+} from '../../packages/market-data-crypto/src/index.js';
 import { createFakeClock, type FakeClock } from './fake-binance.fixture.js';
 import {
   createFearGreedFetch,

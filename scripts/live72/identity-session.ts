@@ -11,7 +11,7 @@ import { buildAdminUrl, fetchMasterAdminToken } from '../identity-test/keycloak-
 import { readData, requestApi } from '../admin-test/api-request.js';
 import { HTTP_CREATED } from './live72.constant.js';
 
-const SESSION_CLIENT_ID = 'cryptoada-session';
+const SESSION_CLIENT_ID = 'ativada-session';
 const SESSION_PATH = '/v1/session';
 const ME_PATH = '/v1/me';
 const TELEGRAM_LINK_PATH = '/v1/me/telegram-link';

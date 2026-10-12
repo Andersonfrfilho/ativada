@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createDeleteAccountUseCase } from '../../apps/api-cryptoada/src/account/delete-account.use-case.js';
-import { createAccountRoutes } from '../../apps/api-cryptoada/src/account/account.routes.js';
-import { createExportAccountUseCase } from '../../apps/api-cryptoada/src/account/export-account.use-case.js';
-import { createProfileRoutes } from '../../apps/api-cryptoada/src/profile/profile.routes.js';
+import { createDeleteAccountUseCase } from '../../apps/api-ativada/src/account/delete-account.use-case.js';
+import { createAccountRoutes } from '../../apps/api-ativada/src/account/account.routes.js';
+import { createExportAccountUseCase } from '../../apps/api-ativada/src/account/export-account.use-case.js';
+import { createProfileRoutes } from '../../apps/api-ativada/src/profile/profile.routes.js';
 import {
   createGetProfileUseCase,
   createUpdateProfileUseCase,
-} from '../../apps/api-cryptoada/src/profile/profile.use-case.js';
+} from '../../apps/api-ativada/src/profile/profile.use-case.js';
 import { createKeycloakIdentityAdmin } from '../../packages/identity-admin/src/create-keycloak-identity-admin.js';
 import { createOwnerScope } from '../../packages/database/src/ownership/owner-scope.js';
 import { userIdFromDatabase } from '../../packages/database/src/ownership/user-id.js';

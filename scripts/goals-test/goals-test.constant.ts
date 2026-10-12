@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const TEMPORARY_DATABASE_PREFIX = 'crypto_goals_';
+export const TEMPORARY_DATABASE_PREFIX = 'ativada_goals_';
 export const DAY_MILLISECONDS = 86_400_000;
 export const EVALUATION_PAIRS = 'BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT';
 export const EVALUATION_BUDGET_MILLISECONDS = 1_000;

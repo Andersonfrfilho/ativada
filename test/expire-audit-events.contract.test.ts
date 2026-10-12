@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { createExpireAuditEventsTask } from '../apps/cron-cryptoada/src/audit/expire-audit-events.task.js';
-import { AUDIT_EVENT_RETENTION_MILLISECONDS } from '../apps/cron-cryptoada/src/cron.constant.js';
+import { createExpireAuditEventsTask } from '../apps/cron-ativada/src/audit/expire-audit-events.task.js';
+import { AUDIT_EVENT_RETENTION_MILLISECONDS } from '../apps/cron-ativada/src/cron.constant.js';
 import type { AuditRetentionRepository } from '../packages/database/src/index.js';
 
 const NOW = Date.parse('2026-10-09T12:00:00.000Z');

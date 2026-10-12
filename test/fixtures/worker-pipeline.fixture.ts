@@ -1,14 +1,14 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { CandleRecord } from '../../packages/database/src/index.js';
-import { createWorker, type Worker } from '../../apps/worker-cryptoada/src/stream/create-worker.js';
-import type { RecoveryClock } from '../../apps/worker-cryptoada/src/stream/recovery-clock.js';
-import { createWorkerLogger } from '../../apps/worker-cryptoada/src/logging/worker-logger.js';
-import { WORKER_LOG } from '../../apps/worker-cryptoada/src/worker.constant.js';
-import { createMarketDataClient } from '../../packages/market-data/src/index.js';
+import { createWorker, type Worker } from '../../apps/worker-ativada/src/stream/create-worker.js';
+import type { RecoveryClock } from '../../apps/worker-ativada/src/stream/recovery-clock.js';
+import { createWorkerLogger } from '../../apps/worker-ativada/src/logging/worker-logger.js';
+import { WORKER_LOG } from '../../apps/worker-ativada/src/worker.constant.js';
+import { createMarketDataClient } from '../../packages/market-data-crypto/src/index.js';
 import {
   startFakeBinanceStreamServer,
   type FakeBinanceStreamServer,
-} from '../../packages/market-data/test-support/fake-binance-stream-server.js';
+} from '../../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 import { buildGridCandle } from './backfill-harness.fixture.js';
 import {
   createInMemoryCandleRepository,
@@ -116,7 +116,7 @@ export function startPipeline(options: PipelineOptions = {}): Pipeline {
     }),
     abortController,
     logger: createWorkerLogger({
-      appName: 'worker-cryptoada',
+      appName: 'worker-ativada',
       write: (line) => void entries.push(JSON.parse(line) as LogEntry),
     }),
     streamBaseUrl: server.streamUrl,

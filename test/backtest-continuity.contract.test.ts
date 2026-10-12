@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { BACKTEST_ERROR_CODE } from '../apps/api-cryptoada/src/backtest/backtest.constant.js';
+import { BACKTEST_ERROR_CODE } from '../apps/api-ativada/src/backtest/backtest.constant.js';
 import {
   createEngine,
   createStrategyVersion,

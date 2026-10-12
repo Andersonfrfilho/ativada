@@ -2,9 +2,9 @@
 import { parentPort } from 'node:worker_threads';
 
 import { closeDatabase, openDatabase } from '../../packages/database/src/index.js';
-import { createBacktestDatabase } from '../../apps/api-cryptoada/src/backtest/create-backtest-database.js';
-import { runBacktest } from '../../apps/api-cryptoada/src/backtest/run-backtest.js';
-import { BACKTEST_REQUEST_SCHEMA } from '../../apps/api-cryptoada/src/backtest/backtest-messages.js';
+import { createBacktestDatabase } from '../../apps/api-ativada/src/backtest/create-backtest-database.js';
+import { runBacktest } from '../../apps/api-ativada/src/backtest/run-backtest.js';
+import { BACKTEST_REQUEST_SCHEMA } from '../../apps/api-ativada/src/backtest/backtest-messages.js';
 
 // A thread de produção com um defeito no meio da execução, escolhido por `CRASH_MODE`: morre (exit), lança fora
 // de qualquer captura (throw) ou trava de vez (hang) DEPOIS de o primeiro lote já ter sido gravado.

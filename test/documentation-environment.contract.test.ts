@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { isDocumentationEnvironment } from '../apps/api-cryptoada/src/docs/documentation-environment.js';
+import { isDocumentationEnvironment } from '../apps/api-ativada/src/docs/documentation-environment.js';
 
 describe('a documentação da API só liga em ENV=dev ou ENV=test, por lista explícita', () => {
   test.each(['dev', 'test'])('%s liga', (name) => {

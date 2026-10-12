@@ -10,7 +10,7 @@ import { readDatabaseUrl } from '../packages/database/src/read-database-url.js';
 import {
   startFakeBinanceStreamServer,
   type FakeBinanceStreamServer,
-} from '../packages/market-data/test-support/fake-binance-stream-server.js';
+} from '../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 import {
   createTemporaryDatabase,
   dropTemporaryDatabase,

@@ -30,18 +30,18 @@ restritivo.
 
 ### a) Realm Keycloak
 
-**Realm:** `cryptoada`, versionado em `realm/cryptoada-realm.json` (T0.6; o sufixo `-realm.json` é o que o `--import-realm` do Keycloak reconhece), import
+**Realm:** `ativada`, versionado em `realm/ativada-realm.json` (T0.6; o sufixo `-realm.json` é o que o `--import-realm` do Keycloak reconhece), import
 idempotente. `KC_HOSTNAME` fixo por ambiente, para que o `iss` não varie com o host de quem chama.
 
 **Clientes**
 
 | `clientId` | Tipo | Configuração |
 |---|---|---|
-| `cryptoada-session` | **confidencial**, usado só pelo *token handler* da API | só `standardFlowEnabled`; `pkce.code.challenge.method = S256` obrigatório **e** segredo do cliente (`KEYCLOAK_SESSION_CLIENT_SECRET`, só na API, validado no boot); `implicitFlowEnabled`, `directAccessGrantsEnabled` e `serviceAccountsEnabled` desligados; `redirectUris` e `webOrigins` enumerados por ambiente (nunca `*`); `fullScopeAllowed = false`, com escopo restrito aos papéis `user` e `admin`; mapper *Audience* que inclui `cryptoada-api` no `aud` do access token. O navegador inicia o login com este `client_id`, mas quem troca o código é a API |
-| `cryptoada-api` | resource server | não inicia login (todos os fluxos desligados, sem segredo usado); existe só para ser o `aud` esperado pela API |
-| `cryptoada-api-service` | confidencial, só *service account* | usado pela API para o Admin API do Keycloak (convite, bloqueio, exclusão de conta). Permissões finas do Keycloak 26 (*fine-grained admin permissions* v2) restritas a **criar, desabilitar e apagar usuário e disparar `execute-actions-email`**; sem `map-roles`, sem `manage-realm`, sem `impersonation`. Segredo em env validado no boot (`KEYCLOAK_SERVICE_CLIENT_SECRET`), nunca em log. **Verificação obrigatória na T0.6:** a service account tenta mapear o papel de realm `admin` a um usuário e recebe `403`. **T0.9c:** os membros do grupo `admins` ficam fora do alcance dela (permissão negativa, §q) |
+| `ativada-session` | **confidencial**, usado só pelo *token handler* da API | só `standardFlowEnabled`; `pkce.code.challenge.method = S256` obrigatório **e** segredo do cliente (`KEYCLOAK_SESSION_CLIENT_SECRET`, só na API, validado no boot); `implicitFlowEnabled`, `directAccessGrantsEnabled` e `serviceAccountsEnabled` desligados; `redirectUris` e `webOrigins` enumerados por ambiente (nunca `*`); `fullScopeAllowed = false`, com escopo restrito aos papéis `user` e `admin`; mapper *Audience* que inclui `ativada-api` no `aud` do access token. O navegador inicia o login com este `client_id`, mas quem troca o código é a API |
+| `ativada-api` | resource server | não inicia login (todos os fluxos desligados, sem segredo usado); existe só para ser o `aud` esperado pela API |
+| `ativada-api-service` | confidencial, só *service account* | usado pela API para o Admin API do Keycloak (convite, bloqueio, exclusão de conta). Permissões finas do Keycloak 26 (*fine-grained admin permissions* v2) restritas a **criar, desabilitar e apagar usuário e disparar `execute-actions-email`**; sem `map-roles`, sem `manage-realm`, sem `impersonation`. Segredo em env validado no boot (`KEYCLOAK_SERVICE_CLIENT_SECRET`), nunca em log. **Verificação obrigatória na T0.6:** a service account tenta mapear o papel de realm `admin` a um usuário e recebe `403`. **T0.9c:** os membros do grupo `admins` ficam fora do alcance dela (permissão negativa, §q) |
 
-**Papéis de realm:** `user` e `admin`. O papel padrão do realm (`default-roles-cryptoada`)
+**Papéis de realm:** `user` e `admin`. O papel padrão do realm (`default-roles-ativada`)
 contém `user`; `admin` é atribuído só à mão no Keycloak (nunca pela API). Os papéis somam: uma conta com
 `admin` e `user` usa o produto como qualquer usuário e, além disso, acessa `/v1/admin/*`.
 
@@ -81,13 +81,13 @@ temporário (não permanente, para não virar negação de serviço contra a ví
 | `offline_access` | removido do papel padrão; ninguém recebe refresh offline |
 
 **Claims usadas pela API:** `sub` (identidade estável), `email_verified` (precisa ser `true`),
-`realm_access.roles`, `iss`, `aud`, `azp` (precisa ser **`cryptoada-session`**), `exp`, `iat`, `typ`
+`realm_access.roles`, `iss`, `aud`, `azp` (precisa ser **`ativada-session`**), `exp`, `iat`, `typ`
 (precisa ser `Bearer` — ID token e refresh token apresentados como bearer são recusados), `acr` (rotas
 admin e de chave de corretora) e `auth_time` (`DELETE /v1/me`, §h, e chave de corretora). O `email` não
 entra no contexto autenticado (§c); a exportação e a listagem admin o leem na própria rota.
 
-**`issuer`:** `${KEYCLOAK_PUBLIC_URL}/realms/cryptoada`. **`audience`:** `cryptoada-api`. Os dois
-e a URL da JWKS (`${KEYCLOAK_INTERNAL_URL}/realms/cryptoada/protocol/openid-connect/certs`)
+**`issuer`:** `${KEYCLOAK_PUBLIC_URL}/realms/ativada`. **`audience`:** `ativada-api`. Os dois
+e a URL da JWKS (`${KEYCLOAK_INTERNAL_URL}/realms/ativada/protocol/openid-connect/certs`)
 vêm do env validado no boot; a API **não** usa descoberta (`.well-known`) em tempo de execução, para que
 um issuer trocado não seja aceito por engano.
 
@@ -95,12 +95,12 @@ um issuer trocado não seja aceito por engano.
 refresh token nem o segredo do cliente.
 
 1. O painel gera `code_verifier`/`code_challenge` (S256) e `state`, guarda o verifier em
-   `sessionStorage` só até o retorno, e redireciona ao Keycloak com `client_id=cryptoada-session`.
+   `sessionStorage` só até o retorno, e redireciona ao Keycloak com `client_id=ativada-session`.
 2. No retorno, o painel envia `{ code, codeVerifier, redirectUri }` para `POST /v1/session`. A API
    confere `redirectUri` contra a **lista configurada** (igualdade exata; fora dela, `400`), troca o
    código no endpoint de token do Keycloak com PKCE **e** o segredo do cliente, devolve **só o access
    token** no corpo e grava o refresh em cookie
-   `__Host-cryptoada_refresh; HttpOnly; Secure; SameSite=Strict; Path=/` com validade igual à da sessão.
+   `__Host-ativada_refresh; HttpOnly; Secure; SameSite=Strict; Path=/` com validade igual à da sessão.
 3. O access token vive só em memória no painel. Expirado (ou ao recarregar a página), o painel chama
    `POST /v1/session/refresh`; a API lê o cookie, renova no Keycloak, regrava o cookie com o refresh
    novo (rotação) e devolve o access token novo. O painel faz **uma renovação por vez** (as demais
@@ -135,7 +135,7 @@ novo previsto para a Fase 0b.
   registrada e as armadilhas conhecidas (confusão de algoritmo, `crit`, `b64`). O ganho seria remover
   uma dependência pequena e auditada; o custo, um caminho de bypass de autenticação mantido por nós.
 
-**Configuração (fixa, num único módulo `apps/api-cryptoada/src/authentication/`):**
+**Configuração (fixa, num único módulo `apps/api-ativada/src/authentication/`):**
 
 | Item | Valor |
 |---|---|
@@ -144,7 +144,7 @@ novo previsto para a Fase 0b.
 | `issuer` / `audience` | exatos, do env (§a) |
 | `clockTolerance` | 10 s |
 | `maxTokenAge` | `'15m'` (defesa contra token com `exp` longo emitido por configuração errada) |
-| `requiredClaims` | `['sub', 'exp', 'iat', 'iss', 'aud']`; depois do `jwtVerify`, um schema Zod valida `typ = 'Bearer'`, `azp = 'cryptoada-session'`, `sub` (até 255 caracteres), `email_verified = true`, `realm_access.roles` (array de strings) e, quando presentes, `acr` e `auth_time` |
+| `requiredClaims` | `['sub', 'exp', 'iat', 'iss', 'aud']`; depois do `jwtVerify`, um schema Zod valida `typ = 'Bearer'`, `azp = 'ativada-session'`, `sub` (até 255 caracteres), `email_verified = true`, `realm_access.roles` (array de strings) e, quando presentes, `acr` e `auth_time` |
 
 **Classificação dos erros — nenhum `catch` cai em "autenticado".** O resultado da verificação é uma
 união fechada (`authenticated | rejected(code) | unavailable`); o único caminho para `authenticated` é o
@@ -187,9 +187,9 @@ O token, o cabeçalho `authorization` e a causa detalhada da falha nunca vão pa
 ### c) Contexto autenticado
 
 ```ts
-// apps/api-cryptoada/src/authentication/authenticated-user.ts
+// apps/api-ativada/src/authentication/authenticated-user.ts
 type AuthenticatedUser = {
-  readonly userId: UserId;             // uuid interno de users.id, tipo nominal de @cryptoada/database
+  readonly userId: UserId;             // uuid interno de users.id, tipo nominal de @ativada/database
   readonly keycloakSubject: string;    // sub
   readonly roles: readonly UserRole[]; // 'user' | 'admin'
 };
@@ -200,13 +200,13 @@ type AuthenticatedUser = {
   WebSocket nem a payload de `NOTIFY`, e não é coluna de `users`.
 - **Onde nasce:** no middleware de autenticação da API (T0.7), depois do `jwtVerify`, do rate limit por
   `sub` e da resolução do usuário (§d). Objeto congelado (`createAuthenticatedUser`), inclusive o array
-  de papéis. Tipo, fábrica e `USER_ROLE` moram em `apps/api-cryptoada/src/authentication/`.
+  de papéis. Tipo, fábrica e `USER_ROLE` moram em `apps/api-ativada/src/authentication/`.
 - **Como chega ao use case:** parâmetro explícito. A rota recebe `authenticatedUser` do middleware e
   chama o use case com o `scope` que a resolução do usuário devolveu (`resolveUserBySubject` →
   `{ userId, scope }`, recurso de usuário) ou com o próprio `authenticatedUser` (perfil, sessão). **Proibido** global, singleton por requisição,
   `AsyncLocalStorage` ou leitura implícita de contexto.
 - **`userId` vem só do token — defesa em camadas, sem afirmar impossibilidade.** `UserId` é tipo nominal
-  e o escopo de dono (`OwnerScope`) só nasce dentro de `@cryptoada/database`. Nada abaixo é uma prova de
+  e o escopo de dono (`OwnerScope`) só nasce dentro de `@ativada/database`. Nada abaixo é uma prova de
   que nenhuma app, jamais, alcance o banco ou fabrique um `UserId`: são três camadas, cada uma com o
   que ela cobre e o que não cobre.
   1. **Tipo e runtime (a camada que não depende de lint).** O `package.json` do pacote declara
@@ -224,10 +224,10 @@ type AuthenticatedUser = {
   2. **Lint de `apps/*/src` como lista de bloqueio** (`noInlineConfig` ligado, então `eslint-disable`
      não desliga nada). É lista de bloqueio, não de permissão: cada brecha conhecida foi fechada por
      uma sonda em `test/app-import-boundary.contract.test.ts`, que grava arquivos em
-     `apps/api-cryptoada/src` e confere que o ESLint os reprova. Fechadas: importar `drizzle-orm`,
-     `drizzle-orm/*`, `drizzle-kit`, `@cryptoada/database/*` e qualquer caminho para `packages/`;
+     `apps/api-ativada/src` e confere que o ESLint os reprova. Fechadas: importar `drizzle-orm`,
+     `drizzle-orm/*`, `drizzle-kit`, `@ativada/database/*` e qualquer caminho para `packages/`;
      `import()` dinâmico nas apps de backend (`api`, `worker`, `cron`; o frontend o usa em
-     `React.lazy` e não depende de `@cryptoada/database`, o que um contrato lê no `package.json`);
+     `React.lazy` e não depende de `@ativada/database`, o que um contrato lê no `package.json`);
      `Bun.SQL`/`Bun.sql` por membro, por índice (`Bun['SQL']`), por `globalThis.Bun`, por
      desestruturação (`const { SQL } = Bun`) e por apelido (`const runtime = Bun`); `import` default
      ou namespace de `bun` e os nomes `SQL`/`sql`; asserção de tipo
@@ -250,7 +250,7 @@ type AuthenticatedUser = {
 - **Por que o tipo fica em `packages/database` e não num `packages/auth`:** a garantia depende de que só
   a camada de persistência cunhe `UserId`; um pacote de autenticação teria de reexportar a cunhagem para
   o `database`, abrindo exatamente a porta que o tipo fecha. A verificação do JWT (com `jose`) e o
-  contexto autenticado ficam em `apps/api-cryptoada`, porque só a API recebe token.
+  contexto autenticado ficam em `apps/api-ativada`, porque só a API recebe token.
 
 ### d) Tabela `users` e resolução no acesso
 
@@ -271,7 +271,7 @@ type AuthenticatedUser = {
 | `example_strategy_seeded_at` | `timestamptz` nulo | (T3.5, migration 0011) a MARCA de que o usuário já recebeu a estratégia de exemplo; preenchida na mesma transação que a cria e nunca zerada (apagar, renomear ou editar o exemplo não o traz de volta). Dado técnico: não entra na exportação |
 
 E-mail não é coluna. **Resolução por requisição — leitura primeiro, escrita só na primeira vez**
-(`resolveUserBySubject(subject)` em `@cryptoada/database`, T0.7, única função pública que devolve
+(`resolveUserBySubject(subject)` em `@ativada/database`, T0.7, única função pública que devolve
 `UserId`; **recomendação:** devolve `{ userId, scope }`, com o `OwnerScope` construído dentro do pacote):
 
 ```sql
@@ -337,7 +337,7 @@ métodos recebem `OwnerScope`. Qualquer nova exportação pública passa pelo co
    worker, que devolve `(runId, userId)` e filtra conta apagada ou bloqueada (`deleted_at IS NULL`,
    `blocked_at IS NULL`).
 8. **Dono da execução para workers (T3.2).** O `worker_thread` de backtest recebe só um `runId` e não pode
-   cunhar `UserId`. `resolveRunOwnerScope(handle, runId)` (`@cryptoada/database`) devolve o `OwnerScope` do dono da
+   cunhar `UserId`. `resolveRunOwnerScope(handle, runId)` (`@ativada/database`) devolve o `OwnerScope` do dono da
    execução — construído dentro do pacote, a partir de `runs.user_id` — ou `undefined` quando o `runId` é
    malformado, inexistente, ou a conta do dono está apagada ou bloqueada. **Só vale para `runId` enfileirado pela
    própria API depois de autorizar o usuário** (T3.4 e T3.6): um `runId` vindo de cliente, de payload ou de URL nunca
@@ -491,7 +491,7 @@ exportação por hora por usuário.
 1. `users.deleted_at = now()` e para as simulações ativas do dono. **A rota responde `202` aqui**; a
    partir deste ponto o middleware devolve `401 ACCOUNT_DELETED` para o usuário. Os passos 2 e 3 rodam
    em seguida, fora da requisição.
-2. Apaga o usuário no Keycloak pelo `cryptoada-api-service` (derruba sessões e refresh) e grava
+2. Apaga o usuário no Keycloak pelo `ativada-api-service` (derruba sessões e refresh) e grava
    `identity_deleted_at = now()`.
 3. Numa transação: `DELETE` em cada tabela de `OWNED_TABLES`, das filhas para os pais (da spec 002:
    `exchange_fills`, `exchange_orders`, `reconciliations`, `execution_sessions`, `exchange_credentials`,
@@ -554,8 +554,8 @@ Cada task abaixo só fecha com estes itens atendidos e provados (contrato ou ver
 
 - Clientes, papéis e LoA de §a: TOTP `HmacSHA1`; fluxo de navegador com subfluxos *Condition – Level Of
   Authentication* (LoA 1 = senha, LoA 2 = OTP, o OTP do admin dentro dele); cliente confidencial
-  `cryptoada-session`.
-- `cryptoada-api-service` com permissões finas do Keycloak 26 restritas a criar, desabilitar, apagar e
+  `ativada-session`.
+- `ativada-api-service` com permissões finas do Keycloak 26 restritas a criar, desabilitar, apagar e
   `execute-actions-email`; **verificação:** mapear o papel de realm `admin` com essa service account
   responde `403`.
 - Medir se o reuso de um refresh antigo derruba a sessão inteira ou só recusa a chamada; registrar.
@@ -566,8 +566,8 @@ Cada task abaixo só fecha com estes itens atendidos e provados (contrato ou ver
 
 **T0.7 — middleware e sessão**
 
-- *Token handler* com o cliente confidencial `cryptoada-session` (PKCE + segredo na API); `azp` esperado
-  `cryptoada-session`.
+- *Token handler* com o cliente confidencial `ativada-session` (PKCE + segredo na API); `azp` esperado
+  `ativada-session`.
 - Classificação de §b: `401` só para a lista fechada de erros de JWT do `jose`; JWKS, rede ou erro
   desconhecido → `503`; nenhum `catch` cai em "autenticado" (contrato).
 - Roteador que nega por padrão: toda rota declara `access`; contrato varre a tabela (rota não pública
@@ -581,7 +581,7 @@ Cada task abaixo só fecha com estes itens atendidos e provados (contrato ou ver
   `Referrer-Policy`; `X-Forwarded-For` só de proxy confiável.
 - `users.keycloak_sub varchar(255)`; resolução de §d (leitura, inserção só na primeira vez, contrato de
   `count = 1`); rate limit por `sub` antes do banco.
-- Índice público de `@cryptoada/database` ganha `openDatabase`, `resolveUserBySubject` e as fábricas de
+- Índice público de `@ativada/database` ganha `openDatabase`, `resolveUserBySubject` e as fábricas de
   repositório (§e), atualizando o contrato da lista de exportações.
 
 **T0.8 — `/v1/me`, Telegram e convite**
@@ -637,7 +637,7 @@ Code + PKCE (silencioso enquanto a sessão SSO viver, com senha se ela tiver aca
 por hash de ~10 s de §a continua obrigatória, porque duas abas ou uma corrida legítima do próprio painel
 cairiam exatamente neste caso.
 
-**Service account `cryptoada-api-service`** (permissões finas v2 do Keycloak 26.8: policy de cliente +
+**Service account `ativada-api-service`** (permissões finas v2 do Keycloak 26.8: policy de cliente +
 permissão de escopo `manage` e `view` no tipo `Users`, definidas no cliente `admin-permissions` do
 realm; **nenhum** papel de `realm-management`, nem `manage-users`):
 
@@ -651,9 +651,9 @@ realm; **nenhum** papel de `realm-management`, nem `manage-users`):
 Por que `manage` não basta para mapear papel: no modelo v2 o mapeamento exige o escopo `map-roles` no
 usuário e `map-role` no papel, e nenhum dos dois foi concedido.
 
-**Segundo fator e `acr` (para T0.7).** Medido pelo fluxo de navegador real (Code + PKCE, `crypto-panel`; o cliente foi removido na T0.9c e hoje o mesmo fluxo usa `cryptoada-session`, §q):
+**Segundo fator e `acr` (para T0.7).** Medido pelo fluxo de navegador real (Code + PKCE, `crypto-panel`; o cliente foi removido na T0.9c e hoje o mesmo fluxo usa `ativada-session`, §q):
 
-- Usuário comum: entra só com senha, sem OTP, e o token traz `aud` com `cryptoada-api`, `azp = crypto-panel`,
+- Usuário comum: entra só com senha, sem OTP, e o token traz `aud` com `ativada-api`, `azp = crypto-panel`,
   papéis `user` (sem `admin`, sem `offline_access`) e `acr = "password"`.
 - Admin **sem** credencial TOTP, com a ação `CONFIGURE_TOTP` pendente: o login para na tela de
   configuração do TOTP. É assim que o convite do admin (T0.8) obriga o cadastro do segundo fator.
@@ -675,12 +675,12 @@ JSON não altera um realm já importado**; para reimportar, apague o volume
 compose falha (`:?`) se a variável faltar.
 
 **Detalhes do realm que a importação ensinou.** O papel padrão só recebe `user` se
-`default-roles-cryptoada` estiver em `roles.realm` com `composites` (o campo `defaultRole`
+`default-roles-ativada` estiver em `roles.realm` com `composites` (o campo `defaultRole`
 sozinho deixa os padrões do Keycloak, inclusive `offline_access`); o contrato prende isso.
 O realm precisa listar **todos** os fluxos de autenticação (os nativos mais `browser-loa`), porque uma
 lista parcial impede o Keycloak de criar os nativos.
 
-**Safari e topologia (obrigação §k).** O cookie `__Host-cryptoada_refresh` com `Secure` em
+**Safari e topologia (obrigação §k).** O cookie `__Host-ativada_refresh` com `Secure` em
 `http://localhost` funciona em Chromium e Firefox e **não no Safari**: em desenvolvimento com Safari, use
 HTTPS local. Painel e API ficam na **mesma origem** (proxy `/v1`), por causa de `SameSite=Strict`;
 senão, CORS com `credentials` e origem exata.
@@ -691,8 +691,8 @@ Mailpit SMTP 56127 e UI 56128. Console do Keycloak: `http://127.0.0.1:<porta>/ad
 
 ### m) Resultados e desvios da T0.7b
 
-Implementação em `apps/api-cryptoada/src/session/` (rotas, cliente do endpoint de token do Keycloak,
-deduplicação) e `apps/api-cryptoada/src/stream/` (ticket). Provas: contratos contra um Keycloak falso
+Implementação em `apps/api-ativada/src/session/` (rotas, cliente do endpoint de token do Keycloak,
+deduplicação) e `apps/api-ativada/src/stream/` (ticket). Provas: contratos contra um Keycloak falso
 (`test/session-*.contract.test.ts`, `test/stream-ticket.contract.test.ts`) e `make session-test`
 contra o Keycloak 26.8.0 de teste.
 
@@ -725,7 +725,7 @@ tickets) valem para uma instância da API (§g).
 
 ### n) Resultados e desvios da T0.8
 
-Implementação em `apps/api-cryptoada/src/{profile,telegram,identity-admin,admin}/` e, no pacote,
+Implementação em `apps/api-ativada/src/{profile,telegram,identity-admin,admin}/` e, no pacote,
 `users/profile.repository.ts`, `telegram/*`, `admin/admin-account.repository.ts` e
 `audit/audit-event.repository.ts`. Migrations `0002` (preferência `alert_telegram_enabled`), `0003`
 (`telegram_link_codes` e índice único parcial do `telegram_chat_id`) e `0004` (`audit_events`, esquema único
@@ -777,16 +777,16 @@ microssegundos do `created_at` (repetia a última linha de cada página); a orde
 `date_trunc('milliseconds', created_at)`.
 
 **Ponto de extensão (T4.4/T4.7, não implementado).** Fechar com `4403` os sockets abertos de uma conta
-bloqueada entra em `apps/api-cryptoada/src/admin/block-account.use-case.ts`, logo depois de `markBlocked`
+bloqueada entra em `apps/api-ativada/src/admin/block-account.use-case.ts`, logo depois de `markBlocked`
 (antes de sincronizar o Keycloak): um `AccountBlockedListener` injetado em `AccountStateDependencies` recebe o
 `AccountId` e o registro `userId → sockets` fecha as conexões. A conversão `AccountId → UserId` do registro
 fica no módulo de stream, nunca no repositório admin.
 
 ### o) Resultados e desvios da T0.9
 
-Implementação: `packages/identity-admin` (cliente do Keycloak, antes em `apps/api-cryptoada`),
-`apps/api-cryptoada/src/account/` (`GET /v1/me/export`, `DELETE /v1/me`), `packages/database/src/account/`
-(exportação, marca de exclusão e purga) e `apps/cron-cryptoada/src/accounts/` (tarefa `purge-deleted-accounts`).
+Implementação: `packages/identity-admin` (cliente do Keycloak, antes em `apps/api-ativada`),
+`apps/api-ativada/src/account/` (`GET /v1/me/export`, `DELETE /v1/me`), `packages/database/src/account/`
+(exportação, marca de exclusão e purga) e `apps/cron-ativada/src/accounts/` (tarefa `purge-deleted-accounts`).
 Provas: contratos com Keycloak falso e repositório em memória (`account-export`, `account-delete`,
 `purge-deleted-accounts`, `ownership-registry`), `make database-test` (repositórios no Postgres real) e
 `make lgpd-test` (API, cron, Postgres, Keycloak 26.8.0 e Mailpit descartáveis).
@@ -795,7 +795,7 @@ Provas: contratos com Keycloak falso e repositório em memória (`account-export
 
 | Pergunta | Resultado |
 |---|---|
-| A service account encerra as sessões de um usuário? | **Sim.** `POST /users/{id}/logout` com `cryptoada-api-service` encerra a sessão: **1 → 0** sessões de A logo depois do `202` |
+| A service account encerra as sessões de um usuário? | **Sim.** `POST /users/{id}/logout` com `ativada-api-service` encerra a sessão: **1 → 0** sessões de A logo depois do `202` |
 | Os passos 2 e 3 rodam na requisição? | Não: depois do `202`, `deleted_at` está preenchido e `identity_deleted_at` e `data_purged_at` seguem nulos |
 | O cron na carência de 24 h | Apaga A no Keycloak (404 ao ler), purga os dados, anula `display_name`/`telegram_chat_id`, preenche as duas colunas e **mantém a linha** de `users` |
 | Segunda execução do cron | Idempotente: nada a refazer, saída `0` |
@@ -811,7 +811,7 @@ virar. Aceito: o `401` é só mais tardio e a exportação não vaza nada.
 
 | Ponto | Decisão |
 |---|---|
-| Pacote do cliente do Keycloak | `@cryptoada/identity-admin` (o cron refaz os passos 2 e 3 e uma app não importa código de outra). Ganha `logoutUser` e a fábrica `createKeycloakIdentityAdmin`; `invitationClientId`/`invitationRedirectUri` viraram opcionais (o cron não convida) |
+| Pacote do cliente do Keycloak | `@ativada/identity-admin` (o cron refaz os passos 2 e 3 e uma app não importa código de outra). Ganha `logoutUser` e a fábrica `createKeycloakIdentityAdmin`; `invitationClientId`/`invitationRedirectUri` viraram opcionais (o cron não convida) |
 | Código de reautenticação | `403 REAUTH_REQUIRED`, como pediu a task; §b chama o mesmo caso de `REAUTHENTICATION_REQUIRED`. **Pendente de decisão**: unificar o nome antes da spec 002 (chave de corretora) |
 | Janela de `auth_time` | Idade máxima de 5 min mais a tolerância de 10 s do `jose`; `auth_time` até 10 s no futuro é aceito, além disso e ausente são recusados. A rota recebe `authenticationTime` no contexto |
 | Passo 1 | Grava a auditoria (`account.deletion_requested`, ator e alvo = a conta, IP) **antes** de `deleted_at`: se a marca falhar a pessoa repete; depois dela não há como repetir. O logout no Keycloak é melhor esforço (o passo 2 apaga o usuário de qualquer forma). Não há execuções ao vivo nem WebSocket ainda: o ponto de extensão (parar simulações, fechar `4403`) fica no `delete-account.use-case.ts` |
@@ -823,7 +823,7 @@ virar. Aceito: o `401` é só mais tardio e a exportação não vaza nada.
 | `audit_events` | Pseudonimizada na purga (`actor_user_id`, `target_id` do usuário e o IP quando ele é o ator); o IP de **qualquer** linha com mais de 90 dias é anulado pelo cron. A exclusão da linha após 2 anos (§i) foi implementada na T0.9c (§q) |
 | Logs do cron | `createCronLogger` próprio e mínimo: só texto, número e booleano (o tipo impede objeto de erro, e-mail ou segredo); falha de passo registra o nome da etapa e o nome do erro |
 | Env do cron | Ganha `KEYCLOAK_TOKEN_URL`, `KEYCLOAK_ADMIN_API_URL`, `KEYCLOAK_SERVICE_CLIENT_ID` e `KEYCLOAK_SERVICE_CLIENT_SECRET` (Zod). O contrato "o cron sobe e sai 0 com env válido" deixou de valer: ele agora fala com o banco e sai `1` se não o alcança |
-| Cookie de refresh | `DELETE /v1/me` não apaga o cookie `__Host-cryptoada_refresh` (a rota é autenticada por Bearer, sem o cabeçalho CSRF das rotas de sessão); o painel chama `DELETE /v1/session` em seguida, e o Keycloak já encerrou a sessão |
+| Cookie de refresh | `DELETE /v1/me` não apaga o cookie `__Host-ativada_refresh` (a rota é autenticada por Bearer, sem o cabeçalho CSRF das rotas de sessão); o painel chama `DELETE /v1/session` em seguida, e o Keycloak já encerrou a sessão |
 | Reautenticação no teste real | O `lgpd-test` faz login novo e por isso nunca exercita `auth_time` antigo (esperar 5 min por execução é caro); a recusa por `auth_time` ausente, velho e futuro está nos contratos |
 
 ### p) Ajustes da T0.9b (revisão de código e de segurança da Fase 0b)
@@ -886,7 +886,7 @@ cliente padrão com password grant ligado; a lista medida foi `account`, `accoun
 `admin-permissions`, `broker`, `realm-management`, `security-admin-console`). O contrato exige que nenhum
 cliente do realm ligue o password grant, e o `identity-test` prova a recusa (`unauthorized_client`). O
 administrador **mestre** (realm `master`) continua usando o `admin-cli` do realm dele só no teste e no
-console. O cliente `crypto-panel` foi **removido**: o token handler usa `cryptoada-session`, e o
+console. O cliente `crypto-panel` foi **removido**: o token handler usa `ativada-session`, e o
 `identity-test` (Code + PKCE, `azp`, convite) passou a usá-lo, com o segredo do cliente na troca do código.
 
 **Service account contra contas admin (M5).** Medição **antes** da correção, com um usuário de papel `admin`
@@ -904,7 +904,7 @@ Ou seja, **antes** a service account tomava uma conta admin (trocava a senha e r
 da API deixava de proteger). **Correção (FGAP v2, medida):** criar usuário exige `manage` no tipo `Users`,
 que vale para todos os usuários e não aceita exceção por condição. A saída foi a **negação**: o grupo
 `admins` (id fixo no JSON; carrega o papel `admin`) tem uma permissão de escopo `manage` e `manage-members`
-com uma política de cliente **NEGATIVE** para `cryptoada-api-service`. Com a estratégia de decisão
+com uma política de cliente **NEGATIVE** para `ativada-api-service`. Com a estratégia de decisão
 `UNANIMOUS` do servidor de recursos, a negação vence a permissão de tipo. A service account continua
 criando, convidando, desabilitando e apagando usuários comuns e **lendo** todos (`view`). Tentativa de
 limitar o `manage` a um grupo `app-users` não serve: sem `manage` no tipo, `POST /users` responde `403`.
@@ -957,7 +957,7 @@ Keycloak, porque o import não altera um realm existente; aplicar é `make down 
 **Código de integração fora de `src`.** `*-checks`, `database-test`, `migration-test`,
 `temporary-database` e `rollback` moveram-se para `packages/database/test-support/` (scripts de integração
 podem imprimir). `no-console` passou a valer em `apps/*/src` e `packages/*/src`; um contrato prende que
-`src` não tem esses arquivos nem chamada a `console`. A superfície pública de `@cryptoada/database` ganhou
+`src` não tem esses arquivos nem chamada a `console`. A superfície pública de `@ativada/database` ganhou
 só `createBlockedAccountRepository` e `createAuditRetentionRepository`.
 
 ### r) Resultados e desvios da T4.4 e da T4.7 (`/v1/stream`)
@@ -994,7 +994,7 @@ só `createBlockedAccountRepository` e `createAuditRetentionRepository`.
 
 ### s) Resultados e desvios da T4.5 (alerta no Telegram) e da T4.6 (registro em CSV)
 
-Implementação em `apps/worker-cryptoada/src/{live,alerts}/` e, no pacote, `alerts/*` e a migration `0013_alerts` (com rollback).
+Implementação em `apps/worker-ativada/src/{live,alerts}/` e, no pacote, `alerts/*` e a migration `0013_alerts` (com rollback).
 
 | Ponto | Decisão |
 |---|---|
@@ -1038,11 +1038,11 @@ Corrigido em código (A1, A2, M1, M3, M4 parcial, M5 e baixos); o que depende de
 |---|---|
 | A2 cotas de armazenamento | Por usuário, todas por variável validada no boot e conferidas **sob trava na transação** (a linha do dono travada, como as metas): `STRATEGY_MAX_PER_USER` (100, `409 STRATEGY_LIMIT_REACHED`), `STRATEGY_MAX_VERSIONS_PER_STRATEGY` (200, `409 STRATEGY_VERSION_LIMIT_REACHED`; a MESMA configuração devolve a versão existente mesmo no teto), `PRICE_ALERT_MAX_DISABLED_PER_USER` (100, desligados à mão: sem disparo, que tem a limpeza própria; `409 PRICE_ALERT_DISABLED_LIMIT_REACHED`) e `RUN_STORAGE_MAX_PER_USER` (200 execuções guardadas de qualquer tipo e estado, `409 RUN_STORAGE_QUOTA_REACHED` na admissão). A cota de execuções é conferida na admissão, antes de criar a linha (sem trava: a corrida passa do teto no máximo pelo que o limite de 20 criações por minuto deixa em voo; a cota é de armazenamento, não de segurança). O banco sinaliza o teto com `StorageQuotaReachedError`, e a rota o traduz |
 | `DELETE /v1/runs/:id` | Exclusão **lógica** (migration 0021, `runs.deleted_at`, CHECK de que só a execução TERMINADA se apaga, com rollback): `204`; ainda na fila ou rodando é `409 RUN_NOT_FINISHED`; a alheia, a inexistente, a malformada e a já apagada são o MESMO `404 RUN_NOT_FOUND`. Some da lista, do detalhe, das séries e do CSV (a posse não a reconhece) e libera a cota. A linha continua guardada e entra na exportação (`deletedAt`) até a purga proposta abaixo. Uma meta com simulação apagada segue `GOAL_IN_USE` (a FK RESTRICT olha a linha): vale até a purga |
-| A2 exportação LGPD | `GET /v1/me/export` passou a **NDJSON em fluxo** (`application/x-ndjson`, `cryptoada-export-AAAA-MM-DD.ndjson`): `header` (data e perfil, com o e-mail do Keycloak lido ANTES de abrir o fluxo, então a falha do provedor ainda é `503` sem gastar a cota), uma linha `row` por registro de cada tabela de `OWNED_TABLE_EXPORTS`, `audit` (como ator e como alvo, este sem ator nem IP) e `end` com as contagens. Cada tabela é lida em páginas de 500 por **cursor pela chave primária** (a composta de `equity_points`; a chave de uma tabela cuja PK a exportação exclui entra no SELECT só para o cursor) e a auditoria por `(created_at, id)` em texto; a memória é uma página, a leitura é puxada pelo consumidor, falha no meio ABORTA o fluxo e o cliente que desiste cancela a consulta. Sem transação longa: cada página é uma consulta com `statement_timeout`, então o conjunto não é um retrato atômico (aceitável para acesso do titular). Mantidos o conteúdo, o limite de 1/h e o registro; o painel não muda (baixa o arquivo pelo `Content-Disposition`) |
+| A2 exportação LGPD | `GET /v1/me/export` passou a **NDJSON em fluxo** (`application/x-ndjson`, `ativada-export-AAAA-MM-DD.ndjson`): `header` (data e perfil, com o e-mail do Keycloak lido ANTES de abrir o fluxo, então a falha do provedor ainda é `503` sem gastar a cota), uma linha `row` por registro de cada tabela de `OWNED_TABLE_EXPORTS`, `audit` (como ator e como alvo, este sem ator nem IP) e `end` com as contagens. Cada tabela é lida em páginas de 500 por **cursor pela chave primária** (a composta de `equity_points`; a chave de uma tabela cuja PK a exportação exclui entra no SELECT só para o cursor) e a auditoria por `(created_at, id)` em texto; a memória é uma página, a leitura é puxada pelo consumidor, falha no meio ABORTA o fluxo e o cliente que desiste cancela a consulta. Sem transação longa: cada página é uma consulta com `statement_timeout`, então o conjunto não é um retrato atômico (aceitável para acesso do titular). Mantidos o conteúdo, o limite de 1/h e o registro; o painel não muda (baixa o arquivo pelo `Content-Disposition`) |
 | M1 transporte do banco | Produção exige `sslmode=verify-full` (validador de ambiente; `require` e `verify-ca` caem) e a senha da `DATABASE_URL` entra na regra dos 32 caracteres (B6). `DATABASE_SSL_ROOT_CERT` (PEM, também numa linha com `\n` literal) carrega a CA própria, para o Postgres do Railway, em `Bun.SQL`, no escutador e nas threads de backtest e walk-forward; medido com TLS real: **com `sslmode=verify-full` + `tls.ca` o Bun valida cadeia E nome; só com `tls.ca` sem o `sslmode` ele NÃO valida o nome**, e o escutador (transporte próprio) também não validava: agora confere o nome pelo `checkHost`/`checkIP` do certificado |
 | M1 SCRAM | Piso de 4096 iterações (RFC 7677 §4) e teto de 262.144 (antes 1.000.000: menos CPU a um servidor hostil e ainda 64× o padrão do Postgres). **SCRAM-SHA-256-PLUS** com `tls-server-end-point` (RFC 5929: hash do certificado DER com o hash da própria assinatura; MD5 e SHA-1 viram SHA-256; só o OID do `signatureAlgorithm` é lido, sem dependência): com TLS e `-PLUS` oferecido, a prova fica presa ao canal; com TLS e sem `-PLUS`, o cabeçalho é `y,,` (um servidor que SUPORTA e não anuncia recusa, o que denuncia o rebaixamento); sem TLS ou com assinatura que não sabemos mapear, `n,,`. Provado contra o servidor falso (intermediário, rebaixamento, assinatura desconhecida) e contra certificados reais do `openssl` (SHA-256, 384 e 512) |
 | M3 redirecionamento | `redirect: 'error'` em toda chamada com segredo: troca, refresh e revogação no Keycloak, token e Admin API do `identity-admin`, bot do Telegram da API (o do worker já tinha). Servidor falso que responde `307` prova que o segredo não é reenviado |
-| M4 cabeçalhos do painel | `PUT` entra no CORS (as rotas de ativos o usam). A borda (CDN/proxy) que serve o painel **DEVE** responder em todo documento: `Content-Security-Policy` completa **com `frame-ancestors 'none'`** (a `<meta>` não a impõe), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Strict-Transport-Security` e `Permissions-Policy` restritiva; o conjunto exato está em `apps/frontend-cryptoada/panel-security-headers.constant.ts` e o `vite preview` já o serve (o e2e confere). O painel e a API precisam ser de **mesma origem** (o proxy `/v1`): o cookie do refresh é `__Host-` e o `connect-src` é `'self'` |
+| M4 cabeçalhos do painel | `PUT` entra no CORS (as rotas de ativos o usam). A borda (CDN/proxy) que serve o painel **DEVE** responder em todo documento: `Content-Security-Policy` completa **com `frame-ancestors 'none'`** (a `<meta>` não a impõe), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Strict-Transport-Security` e `Permissions-Policy` restritiva; o conjunto exato está em `apps/frontend-ativada/panel-security-headers.constant.ts` e o `vite preview` já o serve (o e2e confere). O painel e a API precisam ser de **mesma origem** (o proxy `/v1`): o cookie do refresh é `__Host-` e o `connect-src` é `'self'` |
 | M5 alerta de preço | Rearmar em laço gerava um aviso por ciclo. `PRICE_ALERT_MUTATION` (10/min por usuário) em POST/PATCH/DELETE e na limpeza; intervalo mínimo entre dois disparos do MESMO alerta (`PRICE_ALERT_MIN_REFIRE_SECONDS`, 300; `last_fired_at`, migration 0020, que religar NÃO apaga: o alerta segue armado e dispara quando o intervalo passa); teto de mensagens do Telegram por usuário numa janela móvel de 24 h no despachante (`ALERT_TELEGRAM_DAILY_LIMIT_PER_USER`, 100; só `sent` conta; acima disso o alerta é dispensado com `daily_limit`) |
 | B1 log de erro | Erro que não é do banco sai no log **só com `name` e `code`**; mensagem, stack e causa só para os erros próprios (`AppError` e derivados), cuja mensagem é texto nosso |
 | Documentação | `/v1/docs` e `/v1/openapi.json` só em `ENV=dev` ou `ENV=test`, por lista explícita (antes, qualquer ambiente diferente de production) |
@@ -1087,7 +1087,7 @@ Corrigido em código (A1, A2, M1, M3, M4 parcial, M5 e baixos); o que depende de
 - O env da API ganha `KEYCLOAK_PUBLIC_URL`, `KEYCLOAK_INTERNAL_URL`, `KEYCLOAK_REALM`,
   `KEYCLOAK_AUDIENCE`, `KEYCLOAK_SESSION_CLIENT_ID`, `KEYCLOAK_SESSION_CLIENT_SECRET`,
   `KEYCLOAK_SERVICE_CLIENT_ID`, `KEYCLOAK_SERVICE_CLIENT_SECRET` e a lista de `redirectUri` (T0.6/T0.7).
-- Mudar a superfície pública de `@cryptoada/database`, afrouxar `OwnerScope`/`UserId` ou desligar uma regra
+- Mudar a superfície pública de `@ativada/database`, afrouxar `OwnerScope`/`UserId` ou desligar uma regra
   do bloco `apps/*/src` do ESLint reprova `typecheck`, `lint` ou os contratos de §c.
 
 ## Riscos e o que ficou para depois
@@ -1100,7 +1100,7 @@ Corrigido em código (A1, A2, M1, M3, M4 parcial, M5 e baixos); o que depende de
 | `telegram_chat_id` em texto no banco (§s) | Lacuna registrada; HMAC cego + cifra de campo antes de abrir a clientes externos |
 | Access token roubado por XSS vale até 5 min | CSP sem `unsafe-inline`, token só em memória, vida curta; BFF reavaliado antes de abrir a clientes |
 | Keycloak fora do ar | Rotas respondem `503` quando a JWKS em cache expirar; login indisponível |
-| `cryptoada-api-service` comprometido gerencia usuários | Permissões finas mínimas, sem mapear papel (verificado na T0.6), **membros do grupo `admins` fora do alcance (T0.9c, §q)**, segredo só em env, rotação documentada em §q, eventos administrativos auditáveis |
+| `ativada-api-service` comprometido gerencia usuários | Permissões finas mínimas, sem mapear papel (verificado na T0.6), **membros do grupo `admins` fora do alcance (T0.9c, §q)**, segredo só em env, rotação documentada em §q, eventos administrativos auditáveis |
 | Rotação de chave do Keycloak | Coberta pelo cooldown da JWKS; testar na T0.7 com JWKS falso servindo duas chaves |
 | Comportamento do Keycloak 26 ao reusar refresh | Medido na T0.6 (§k) |
 | `Bun.SQL` sem `LISTEN` | Conferido na Fase 3; ADR antes de dependência |

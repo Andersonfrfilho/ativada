@@ -7,8 +7,8 @@ const REPOSITORY_ROOT = new URL('../../../', import.meta.url).pathname;
 // O ticker público (T4.7): a cópia leva o `src` INTEIRO do pacote de mercado, julgada só pelos contratos do ticker, da
 // agregação e da variação de 24 h.
 export const TICKER_MUTANT_TARGET: MutantTarget = {
-  sourceDirectory: `${REPOSITORY_ROOT}packages/market-data/src`,
-  mutantRoot: `${REPOSITORY_ROOT}packages/market-data/.mutants`,
+  sourceDirectory: `${REPOSITORY_ROOT}packages/market-data-crypto/src`,
+  mutantRoot: `${REPOSITORY_ROOT}packages/market-data-crypto/.mutants`,
   directoryPrefix: 'ticker-',
   judgeTestFiles: [
     'test/percent-change.contract.test.ts',

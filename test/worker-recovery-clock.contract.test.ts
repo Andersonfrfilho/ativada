@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { createRecoveryClock } from '../apps/worker-cryptoada/src/stream/recovery-clock.js';
+import { createRecoveryClock } from '../apps/worker-ativada/src/stream/recovery-clock.js';
 import {
   PIPELINE_BASE,
   PIPELINE_HOUR,

@@ -1,15 +1,15 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type * as CandleSeriesModule from '../../../apps/api-cryptoada/src/walk-forward/candle-series.js';
-import type * as CreateSearcherModule from '../../../apps/api-cryptoada/src/walk-forward/create-searcher.js';
-import type * as ErrorModule from '../../../apps/api-cryptoada/src/walk-forward/walk-forward.error.js';
-import type * as RunModule from '../../../apps/api-cryptoada/src/walk-forward/run-walk-forward.js';
-import type * as MessagesModule from '../../../apps/api-cryptoada/src/walk-forward/walk-forward-messages.js';
-import type * as SignalSeriesModule from '../../../apps/api-cryptoada/src/walk-forward/signal-series.js';
-import type * as ThreadPoolModule from '../../../apps/api-cryptoada/src/walk-forward/search-thread-pool.js';
-import type * as WalletModule from '../../../apps/api-cryptoada/src/walk-forward/run-window-wallet.js';
-import type * as WindowSpansModule from '../../../apps/api-cryptoada/src/walk-forward/window-spans.js';
+import type * as CandleSeriesModule from '../../../apps/api-ativada/src/walk-forward/candle-series.js';
+import type * as CreateSearcherModule from '../../../apps/api-ativada/src/walk-forward/create-searcher.js';
+import type * as ErrorModule from '../../../apps/api-ativada/src/walk-forward/walk-forward.error.js';
+import type * as RunModule from '../../../apps/api-ativada/src/walk-forward/run-walk-forward.js';
+import type * as MessagesModule from '../../../apps/api-ativada/src/walk-forward/walk-forward-messages.js';
+import type * as SignalSeriesModule from '../../../apps/api-ativada/src/walk-forward/signal-series.js';
+import type * as ThreadPoolModule from '../../../apps/api-ativada/src/walk-forward/search-thread-pool.js';
+import type * as WalletModule from '../../../apps/api-ativada/src/walk-forward/run-window-wallet.js';
+import type * as WindowSpansModule from '../../../apps/api-ativada/src/walk-forward/window-spans.js';
 
-const PRODUCTION_APP_SOURCE = new URL('../../../apps/api-cryptoada/src', import.meta.url).pathname;
+const PRODUCTION_APP_SOURCE = new URL('../../../apps/api-ativada/src', import.meta.url).pathname;
 
 // Os testes do walk-forward rodam contra a produção; o teste de mutantes os relança num processo à parte apontando
 // esta variável para uma cópia mutada do `src` da API.

@@ -6,8 +6,8 @@ const REPOSITORY_ROOT = new URL('../../../', import.meta.url).pathname;
 // As rotas REST (T3.4): a cópia leva o `src` INTEIRO da API, porque o roteador, os erros e o envelope têm de vir da
 // mesma raiz que as rotas; os contratos de rota a carregam por `API_ROUTES_APP_SOURCE`.
 export const API_ROUTES_MUTANT_TARGET: MutantTarget = {
-  sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
-  mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-ativada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-ativada/.mutants`,
   directoryPrefix: 'api-routes-',
   judgeTestFiles: [
     'test/api-markets.contract.test.ts',
@@ -32,8 +32,8 @@ export const API_ROUTES_MUTANT_TARGET: MutantTarget = {
 
 // A semeadura da estratégia de exemplo (T3.5): o mesmo `src` da API, julgado só pelo contrato dela.
 export const EXAMPLE_STRATEGY_MUTANT_TARGET: MutantTarget = {
-  sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
-  mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-ativada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-ativada/.mutants`,
   directoryPrefix: 'example-',
   judgeTestFiles: ['test/example-strategy.contract.test.ts'],
   sourceVariable: 'API_ROUTES_APP_SOURCE',
@@ -41,8 +41,8 @@ export const EXAMPLE_STRATEGY_MUTANT_TARGET: MutantTarget = {
 
 // A fila durável de execuções (T3.6): o despachante e os tetos de criação, julgados só pelos contratos deles.
 export const RUN_QUEUE_MUTANT_TARGET: MutantTarget = {
-  sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
-  mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-ativada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-ativada/.mutants`,
   directoryPrefix: 'run-queue-',
   judgeTestFiles: [
     'test/api-run-queue-dispatcher.contract.test.ts',
@@ -53,8 +53,8 @@ export const RUN_QUEUE_MUTANT_TARGET: MutantTarget = {
 };
 
 export const GOALS_MUTANT_TARGET: MutantTarget = {
-  sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
-  mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-ativada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-ativada/.mutants`,
   directoryPrefix: 'goals-',
   judgeTestFiles: [
     'test/api-goals.contract.test.ts',
@@ -68,8 +68,8 @@ export const GOALS_MUTANT_TARGET: MutantTarget = {
 
 // Os alertas de preço (T4b.6, RF14): as rotas, a validação e os casos de uso, julgados só pelo contrato deles.
 export const PRICE_ALERTS_MUTANT_TARGET: MutantTarget = {
-  sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
-  mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-ativada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-ativada/.mutants`,
   directoryPrefix: 'price-alerts-',
   judgeTestFiles: [
     'test/api-price-alerts.contract.test.ts',
@@ -81,8 +81,8 @@ export const PRICE_ALERTS_MUTANT_TARGET: MutantTarget = {
 
 // Os ativos do usuário (T4b.8, RF15): posição, rotas, resumo e regra do dia, julgados só pelos contratos deles.
 export const ASSETS_MUTANT_TARGET: MutantTarget = {
-  sourceDirectory: `${REPOSITORY_ROOT}apps/api-cryptoada/src`,
-  mutantRoot: `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`,
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-ativada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-ativada/.mutants`,
   directoryPrefix: 'assets-',
   judgeTestFiles: [
     'test/asset-position.contract.test.ts',

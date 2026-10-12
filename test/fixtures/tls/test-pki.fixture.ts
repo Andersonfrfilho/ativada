@@ -110,7 +110,7 @@ async function createServerCertificate(
 }
 
 export async function createTestPki(): Promise<TestPki> {
-  const directory = await mkdtemp(join(tmpdir(), 'cryptoada-pki-'));
+  const directory = await mkdtemp(join(tmpdir(), 'ativada-pki-'));
   await createCa(directory, 'trusted');
   await createCa(directory, 'untrusted');
   const host = 'IP:127.0.0.1,DNS:localhost';

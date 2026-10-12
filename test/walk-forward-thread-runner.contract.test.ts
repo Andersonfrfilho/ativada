@@ -4,7 +4,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   createWalkForwardThreadRunner,
   type WalkForwardThreadRunner,
-} from '../apps/api-cryptoada/src/walk-forward/walk-forward-thread-runner.js';
+} from '../apps/api-ativada/src/walk-forward/walk-forward-thread-runner.js';
 
 const RUN_ID = '018f0000-0000-7000-8000-0000000000f1';
 const TIMEOUT_MILLISECONDS = 60_000;

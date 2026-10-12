@@ -9,7 +9,7 @@ export const SCRIPTED_GOAL_BEHAVIOR = {
 
 export const SCRIPTED_WORKER_URL = new URL('./scripted-goal.worker.ts', import.meta.url).href;
 export const REAL_WORKER_URL = new URL(
-  '../../../apps/api-cryptoada/src/goals/goal-evaluation.worker.ts',
+  '../../../apps/api-ativada/src/goals/goal-evaluation.worker.ts',
   import.meta.url,
 ).href;
 export const STALE_WORKER_URL = new URL('./stale-result-goal.worker.ts', import.meta.url).href;

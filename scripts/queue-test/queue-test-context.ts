@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createIntervalTimers } from '../../apps/api-cryptoada/src/runs/queue/interval-timers.js';
-import { createRunQueueDispatcher } from '../../apps/api-cryptoada/src/runs/queue/run-queue-dispatcher.js';
-import type { RunQueueDispatcher } from '../../apps/api-cryptoada/src/runs/queue/run-queue-dispatcher.types.js';
+import { createIntervalTimers } from '../../apps/api-ativada/src/runs/queue/interval-timers.js';
+import { createRunQueueDispatcher } from '../../apps/api-ativada/src/runs/queue/run-queue-dispatcher.js';
+import type { RunQueueDispatcher } from '../../apps/api-ativada/src/runs/queue/run-queue-dispatcher.types.js';
 import { parseJsonContainer } from '../../packages/run-recording/src/index.js';
 import {
   createRunQueueRepository,

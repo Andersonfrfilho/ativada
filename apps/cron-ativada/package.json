@@ -1,0 +1,12 @@
+{
+  "name": "@ativada/cron-ativada",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ativada/database": "workspace:*",
+    "@ativada/environment": "workspace:*",
+    "@ativada/identity-admin": "workspace:*",
+    "@ativada/market-data-crypto": "workspace:*"
+  }
+}

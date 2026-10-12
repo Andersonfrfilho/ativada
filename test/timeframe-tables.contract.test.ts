@@ -5,7 +5,10 @@ import {
   CANDLE_TIMEFRAME_DURATION_MILLISECONDS,
   CANDLE_TIMEFRAMES,
 } from '../packages/database/src/candles/candle.constant.js';
-import { TIMEFRAME, TIMEFRAME_DURATION_MILLISECONDS } from '../packages/market-data/src/index.js';
+import {
+  TIMEFRAME,
+  TIMEFRAME_DURATION_MILLISECONDS,
+} from '../packages/market-data-crypto/src/index.js';
 
 // O pacote database não depende de market-data; este contrato é o que impede as duas tabelas de divergir.
 describe('timeframe tables stay identical across database and market-data', () => {

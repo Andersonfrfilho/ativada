@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { z } from '@cryptoada/environment';
+import { z } from '@ativada/environment';
 
 import { DEFAULT_RUN_LIMITS, MAXIMUM_RUN_LIMIT } from './run-queue.constant.js';
 

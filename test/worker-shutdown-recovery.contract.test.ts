@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { createWorkerLogger } from '../apps/worker-cryptoada/src/logging/worker-logger.js';
-import { createCandleWriter } from '../apps/worker-cryptoada/src/stream/candle-writer.js';
-import { recoverGaps } from '../apps/worker-cryptoada/src/stream/gap-recovery.js';
+import { createWorkerLogger } from '../apps/worker-ativada/src/logging/worker-logger.js';
+import { createCandleWriter } from '../apps/worker-ativada/src/stream/candle-writer.js';
+import { recoverGaps } from '../apps/worker-ativada/src/stream/gap-recovery.js';
 import { buildGridCandle } from './fixtures/backfill-harness.fixture.js';
 import { createInMemoryCandleRepository } from './fixtures/in-memory-candle-repository.fixture.js';
 import {
@@ -25,7 +25,7 @@ afterEach(async () => {
   pipeline = undefined;
 });
 
-const quietLogger = createWorkerLogger({ appName: 'worker-cryptoada', write: () => undefined });
+const quietLogger = createWorkerLogger({ appName: 'worker-ativada', write: () => undefined });
 
 describe('worker: shutdown while the gap recovery is running', () => {
   test('stop() with a REST call stuck in flight ends in under 3 s', async () => {

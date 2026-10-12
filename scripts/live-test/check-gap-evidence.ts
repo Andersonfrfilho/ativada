@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { GapPolicy } from '../../apps/worker-cryptoada/src/live/gap-policy.js';
+import type { GapPolicy } from '../../apps/worker-ativada/src/live/gap-policy.js';
 import type { EngineCandle } from '../../packages/strategy-engine/src/index.js';
 import {
   REAL_DATASETS,

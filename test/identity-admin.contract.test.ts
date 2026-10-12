@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import { createAdminAuditRecorder } from '../apps/api-cryptoada/src/admin/admin-audit-recorder.js';
+import { createAdminAuditRecorder } from '../apps/api-ativada/src/admin/admin-audit-recorder.js';
 import { IDENTITY_OUTCOME } from '../packages/identity-admin/src/identity-admin.constant.js';
 import { createIdentityHttp } from '../packages/identity-admin/src/identity-http.js';
 import { createKeycloakAdminClient } from '../packages/identity-admin/src/keycloak-admin-client.js';
@@ -87,7 +87,7 @@ describe('Keycloak admin client', () => {
         adminApiUrl: keycloak.adminApiUrl,
         tokens: createTokens(clientSecret),
       }),
-      invitationClientId: 'cryptoada-session',
+      invitationClientId: 'ativada-session',
       invitationRedirectUri: 'http://panel.test/auth/callback',
     });
   }

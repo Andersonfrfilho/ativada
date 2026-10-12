@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createAccessTokenVerifier } from '../apps/api-cryptoada/src/authentication/access-token-verifier.js';
-import { createRemoteKeyResolver } from '../apps/api-cryptoada/src/authentication/remote-key-resolver.js';
+import { createAccessTokenVerifier } from '../apps/api-ativada/src/authentication/access-token-verifier.js';
+import { createRemoteKeyResolver } from '../apps/api-ativada/src/authentication/remote-key-resolver.js';
 import { checkDiscovery, waitForRealm } from './identity-test/check-discovery.js';
 import { createCleanupStack, runCleanupReporting } from './identity-test/cleanup-stack.js';
 import type { IdentityContext } from './identity-test/identity-context.js';

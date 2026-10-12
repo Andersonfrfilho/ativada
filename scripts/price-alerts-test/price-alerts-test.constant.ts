@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const TEMPORARY_DATABASE_PREFIX = 'crypto_price_alerts_it_';
+export const TEMPORARY_DATABASE_PREFIX = 'ativada_price_alerts_it_';
 export const SUBJECT_PREFIX = 'subject-price-alerts-test';
 export const SYMBOL = 'BTCUSDT';
 export const OTHER_SYMBOL = 'ETHUSDT';

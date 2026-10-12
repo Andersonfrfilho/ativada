@@ -55,7 +55,7 @@ describe('POST /v1/session', () => {
   test('sends the confidential client credentials and the PKCE verifier to Keycloak', async () => {
     await signIn(harness);
     const [request] = harness.keycloak.requests();
-    expect(request?.form['client_id']).toBe('cryptoada-session');
+    expect(request?.form['client_id']).toBe('ativada-session');
     expect(request?.form['client_secret']).toBeDefined();
     expect(request?.form['redirect_uri']).toBe(ALLOWED_REDIRECT_URI);
     expect(request?.form['code_verifier']).toBeDefined();

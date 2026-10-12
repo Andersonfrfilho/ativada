@@ -36,7 +36,7 @@ check: ## Gate completo: formato, lint, tipos e testes (API, worker, cron, pacot
 	bun run lint
 	bun run typecheck
 	env -i PATH="$$PATH" HOME="$$HOME" bun test --timeout 60000
-	env -i PATH="$$PATH" HOME="$$HOME" bun run --cwd apps/frontend-cryptoada test
+	env -i PATH="$$PATH" HOME="$$HOME" bun run --cwd apps/frontend-ativada test
 
 contract-full: ## Bateria completa do motor: todo corte nos checks de lookahead e retomada (FULL_CONTRACT=1)
 	env -i PATH="$$PATH" HOME="$$HOME" FULL_CONTRACT=1 bun test --timeout 60000
@@ -243,18 +243,18 @@ panel-e2e: ## Prova o painel no navegador (Playwright) contra a API real, Postgr
 live72-up: ## T6.3: sobe a infra dedicada da simulação de 72 h, carrega o LaunchAgent e prepara usuário e candles (idempotente)
 	$(LIVE72) up
 
-live72-start: ## T6.3: cria a meta e UMA simulação live_paper do Placar clássico (BTCUSDT 1h, 10 000 USDT fictícios) e grava ~/.cryptoada-live72/run.json
+live72-start: ## T6.3: cria a meta e UMA simulação live_paper do Placar clássico (BTCUSDT 1h, 10 000 USDT fictícios) e grava ~/.ativada-live72/run.json
 	$(LIVE72) start
 
 live72-status: ## T6.3: andamento em texto curto (tempo, candles, sinais, ordens, patrimônio, alertas, processos, ticker, disco)
 	$(LIVE72) status
 
-live72-report: ## T6.3: gera ~/.cryptoada-live72/report.md com o veredito do critério 4 (APROVADO, REPROVADO ou INCONCLUSIVO)
+live72-report: ## T6.3: gera ~/.ativada-live72/report.md com o veredito do critério 4 (APROVADO, REPROVADO ou INCONCLUSIVO)
 	$(LIVE72) report
 
 live72-stop: ## T6.3: descarrega o LaunchAgent e para tudo sem apagar dados (containers e volumes ficam)
 	$(LIVE72) stop
 
-live72-down: ## T6.3: remove agente, containers, volumes e ~/.cryptoada-live72 (exige CONFIRM=1)
+live72-down: ## T6.3: remove agente, containers, volumes e ~/.ativada-live72 (exige CONFIRM=1)
 	@test "$(CONFIRM)" = "1" || { echo "live72-down apaga containers, volumes e dados da simulação: rode make live72-down CONFIRM=1"; exit 1; }
 	$(LIVE72) down --confirm

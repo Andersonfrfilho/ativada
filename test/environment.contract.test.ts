@@ -7,20 +7,16 @@ import {
   z,
 } from '../packages/environment/src/index.js';
 import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
-import { loadEnvironment as loadFrontendEnvironment } from '../apps/frontend-cryptoada/src/environment.js';
+import { loadEnvironment as loadFrontendEnvironment } from '../apps/frontend-ativada/src/environment.js';
 
 const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
 const LONG_RUNNING_READY_MESSAGES: Readonly<Record<string, string>> = {
-  'api-cryptoada': '"message":"listening"',
-  'worker-cryptoada': '"message":"worker started"',
+  'api-ativada': '"message":"listening"',
+  'worker-ativada': '"message":"worker started"',
 };
 const ENVIRONMENT_ERROR_PREFIX = 'Variáveis de ambiente inválidas';
-const CRON_APPLICATION = 'cron-cryptoada';
-const SERVER_APPLICATIONS: readonly string[] = [
-  'api-cryptoada',
-  'worker-cryptoada',
-  CRON_APPLICATION,
-];
+const CRON_APPLICATION = 'cron-ativada';
+const SERVER_APPLICATIONS: readonly string[] = ['api-ativada', 'worker-ativada', CRON_APPLICATION];
 const IDLE_APPLICATIONS: readonly string[] = SERVER_APPLICATIONS.filter(
   (applicationName) => applicationName !== CRON_APPLICATION,
 );
@@ -108,7 +104,7 @@ describe('parseEnvironment', () => {
   test('returns the coerced and typed object when every variable is valid', () => {
     const values = parseEnvironment(TEST_SCHEMA, {
       ENV: 'test',
-      DATABASE_URL: 'postgres://cryptoada:cryptoada_test_only@127.0.0.1:56433/cryptoada_test',
+      DATABASE_URL: 'postgres://ativada:ativada_test_only@127.0.0.1:56433/ativada_test',
       API_PORT: '53101',
     });
     expect(values.API_PORT).toBe(53101);
@@ -178,7 +174,7 @@ describe('cron application', () => {
     const testEnvironment = await readEnvironmentFile('env.test');
     const result = await runServerApplication(CRON_APPLICATION, {
       ...testEnvironment,
-      DATABASE_URL: `postgres://cryptoada:${UNREACHABLE_DATABASE_PASSWORD}@127.0.0.1:1/unreachable`,
+      DATABASE_URL: `postgres://ativada:${UNREACHABLE_DATABASE_PASSWORD}@127.0.0.1:1/unreachable`,
     });
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toContain('"level":"error"');
@@ -203,13 +199,13 @@ describe('frontend environment', () => {
   const REQUIRED = {
     VITE_API_URL: 'http://127.0.0.1:56001',
     VITE_KEYCLOAK_AUTHORIZE_URL:
-      'http://127.0.0.1:56081/realms/cryptoada/protocol/openid-connect/auth',
+      'http://127.0.0.1:56081/realms/ativada/protocol/openid-connect/auth',
   };
 
   test('loadEnvironment returns the public settings, with defaults for the optional ones', () => {
     const environment = loadFrontendEnvironment(REQUIRED);
     expect(environment.VITE_API_URL).toBe('http://127.0.0.1:56001');
-    expect(environment.VITE_KEYCLOAK_CLIENT_ID).toBe('cryptoada-session');
+    expect(environment.VITE_KEYCLOAK_CLIENT_ID).toBe('ativada-session');
     expect(environment.VITE_MARKET_SYMBOLS).toBe('BTCUSDT,ETHUSDT');
   });
 

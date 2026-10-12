@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { WORKER_LOG } from '../apps/worker-cryptoada/src/worker.constant.js';
+import { WORKER_LOG } from '../apps/worker-ativada/src/worker.constant.js';
 import {
   PIPELINE_BASE,
   PIPELINE_EXCHANGE,

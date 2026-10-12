@@ -7,7 +7,7 @@ import { encodeStartup } from './postgres-wire-encode.js';
 import { computeServerEndPointHash } from './tls-server-end-point.js';
 import { SESSION_END_REASON } from './session-end.js';
 
-const APPLICATION_NAME = 'cryptoada-listener';
+const APPLICATION_NAME = 'ativada-listener';
 
 export function sendStartup(ctx: SessionContext): void {
   if (isEnded(ctx)) return;

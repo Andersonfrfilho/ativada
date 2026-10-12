@@ -31,7 +31,7 @@ export async function checkClientFlows(context: IdentityContext): Promise<void> 
   });
   assertCondition(
     passwordGrant.error === 'unauthorized_client',
-    `direct grant em cryptoada-session: ${passwordGrant.error}`,
+    `direct grant em ativada-session: ${passwordGrant.error}`,
   );
 
   const adminCliGrant = await readTokenError(context, {
@@ -52,17 +52,17 @@ export async function checkClientFlows(context: IdentityContext): Promise<void> 
   });
   assertCondition(
     sessionCredentials.error === 'unauthorized_client',
-    `client_credentials em cryptoada-session: ${sessionCredentials.error}`,
+    `client_credentials em ativada-session: ${sessionCredentials.error}`,
   );
 
   const implicitRefused = await isAuthorizationRefused(
     context,
     buildAuthorizationUrl(environment, { response_type: 'token' }),
   );
-  assertCondition(implicitRefused, 'cryptoada-session aceitou o fluxo implícito');
+  assertCondition(implicitRefused, 'ativada-session aceitou o fluxo implícito');
 
   const withoutPkce = await isAuthorizationRefused(context, buildAuthorizationUrl(environment, {}));
-  assertCondition(withoutPkce, 'cryptoada-session aceitou Code sem PKCE');
+  assertCondition(withoutPkce, 'ativada-session aceitou Code sem PKCE');
 
   const plainPkce = await isAuthorizationRefused(
     context,
@@ -71,7 +71,7 @@ export async function checkClientFlows(context: IdentityContext): Promise<void> 
       code_challenge_method: 'plain',
     }),
   );
-  assertCondition(plainPkce, 'cryptoada-session aceitou PKCE plain');
+  assertCondition(plainPkce, 'ativada-session aceitou PKCE plain');
 
   const withPkce = createPkcePair();
   const accepted = await sendRequest({
@@ -86,6 +86,6 @@ export async function checkClientFlows(context: IdentityContext): Promise<void> 
   );
   reportStep(
     'clientes',
-    'direct grant (cryptoada-session e admin-cli), implicit, Code sem PKCE e PKCE plain recusados; Code + S256 abre o login',
+    'direct grant (ativada-session e admin-cli), implicit, Code sem PKCE e PKCE plain recusados; Code + S256 abre o login',
   );
 }

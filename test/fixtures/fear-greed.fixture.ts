@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { FetchImplementation } from '../../packages/market-data/src/index.js';
+import type { FetchImplementation } from '../../packages/market-data-crypto/src/index.js';
 
 const FIXTURE_PATH = new URL('./alternative-me/fng-limit-5.json', import.meta.url);
 

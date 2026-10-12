@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { WalkForwardThreadOutcome } from '../../apps/api-cryptoada/src/walk-forward/walk-forward-thread-outcome.js';
+import type { WalkForwardThreadOutcome } from '../../apps/api-ativada/src/walk-forward/walk-forward-thread-outcome.js';
 import { readPersisted, type PersistedWalkForward } from './read-persisted.js';
 import {
   assertCondition,

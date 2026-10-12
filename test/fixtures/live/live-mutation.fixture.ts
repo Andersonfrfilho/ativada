@@ -4,13 +4,13 @@ import { cp, rm } from 'node:fs/promises';
 import { LIVE_MUTANT_VARIABLE } from './live-api.fixture.js';
 
 const REPOSITORY_ROOT = new URL('../../../', import.meta.url).pathname;
-const SOURCE_DIRECTORY = `${REPOSITORY_ROOT}apps/worker-cryptoada/src/live`;
+const SOURCE_DIRECTORY = `${REPOSITORY_ROOT}apps/worker-ativada/src/live`;
 const RECORDING_DIRECTORY = `${REPOSITORY_ROOT}packages/run-recording/src`;
-// Dentro da app: é de lá que `@cryptoada/*` e `zod` se resolvem, como no módulo de produção.
-export const LIVE_MUTANT_ROOT = `${REPOSITORY_ROOT}apps/worker-cryptoada/.mutants`;
+// Dentro da app: é de lá que `@ativada/*` e `zod` se resolvem, como no módulo de produção.
+export const LIVE_MUTANT_ROOT = `${REPOSITORY_ROOT}apps/worker-ativada/.mutants`;
 // O passo de candle e o mapeamento das decisões moram no pacote de gravação; a cópia dele fica ao lado da cópia ao vivo.
 export const LIVE_RECORDING_COPY = 'run-recording-src';
-const RECORDING_IMPORT = "from '@cryptoada/run-recording'";
+const RECORDING_IMPORT = "from '@ativada/run-recording'";
 
 // Os testes que reprovam o mutante: avaliador, falhas, retomada, paridade com o backtest e agendador.
 export const LIVE_JUDGE_TEST_FILES: readonly string[] = [

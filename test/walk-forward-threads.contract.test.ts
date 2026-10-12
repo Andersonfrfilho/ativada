@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import type { SearchInput } from '../apps/api-cryptoada/src/walk-forward/search-input.js';
+import type { SearchInput } from '../apps/api-ativada/src/walk-forward/search-input.js';
 import { loadWalkForwardApp } from './fixtures/walk-forward/walk-forward-app.fixture.js';
 import { buildWalkForwardScenario } from './fixtures/walk-forward/walk-forward-scenarios.fixture.js';
 import {

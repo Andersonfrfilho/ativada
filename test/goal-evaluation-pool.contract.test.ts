@@ -12,12 +12,12 @@ import {
   computeGoalCombination,
   GOAL_COMPUTATION_KIND,
   type GoalComputation,
-} from '../apps/api-cryptoada/src/goals/goal-computation.js';
+} from '../apps/api-ativada/src/goals/goal-computation.js';
 import {
   createGoalEvaluationPool,
   type GoalEvaluationPool,
-} from '../apps/api-cryptoada/src/goals/goal-evaluation-pool.js';
-import { GoalEvaluationTimeoutError } from '../apps/api-cryptoada/src/goals/goal.error.js';
+} from '../apps/api-ativada/src/goals/goal-evaluation-pool.js';
+import { GoalEvaluationTimeoutError } from '../apps/api-ativada/src/goals/goal.error.js';
 import { buildDailyCandles } from './fixtures/api-routes/goals-harness.fixture.js';
 import {
   REAL_WORKER_URL,

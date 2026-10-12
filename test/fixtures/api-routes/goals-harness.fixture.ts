@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { CandleRecord } from '../../../packages/database/src/index.js';
 import type { SentimentObservationRepository } from '../../../packages/database/src/sentiment/sentiment-observation.types.js';
-import type { EvaluateGoalUseCase } from '../../../apps/api-cryptoada/src/goals/goal-evaluation.use-case.js';
-import type { Route } from '../../../apps/api-cryptoada/src/router/route.types.js';
+import type { EvaluateGoalUseCase } from '../../../apps/api-ativada/src/goals/goal-evaluation.use-case.js';
+import type { Route } from '../../../apps/api-ativada/src/router/route.types.js';
 import ethDaily from '../strategy-engine/market/ethusdt-1d-400.json' with { type: 'json' };
 import {
   createRunsHarness,

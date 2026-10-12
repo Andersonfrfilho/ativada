@@ -3,7 +3,7 @@ import type {
   BacktestDatabase,
   BacktestRunSession,
   RunBlueprint,
-} from '../../../apps/api-cryptoada/src/backtest/backtest-database.types.js';
+} from '../../../apps/api-ativada/src/backtest/backtest-database.types.js';
 import type {
   AppendResult,
   EngineCheckpoint,

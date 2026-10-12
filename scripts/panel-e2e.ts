@@ -29,7 +29,7 @@ import { startControlServer } from './panel-e2e/control-server.js';
 import { runPlaywright } from './panel-e2e/run-playwright.js';
 import { seedPanelData } from './panel-e2e/seed-panel-data.js';
 import { startPanel } from './panel-e2e/start-panel.js';
-import { startFakeBinanceStreamServer } from '../packages/market-data/test-support/fake-binance-stream-server.js';
+import { startFakeBinanceStreamServer } from '../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 import { startApi } from './session-test/start-api.js';
 
 const HOLD_POLL_MILLISECONDS = 1000;

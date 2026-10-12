@@ -6,7 +6,7 @@ import {
   type CandleRepository,
   type UpsertCandlesResult,
 } from '../../packages/database/src/index.js';
-import { TIMEFRAME_DURATION_MILLISECONDS } from '../../packages/market-data/src/index.js';
+import { TIMEFRAME_DURATION_MILLISECONDS } from '../../packages/market-data-crypto/src/index.js';
 
 export type InMemoryCandleRepository = Pick<
   CandleRepository,

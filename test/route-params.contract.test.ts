@@ -1,14 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { RouteDeclarationError } from '../apps/api-cryptoada/src/router/route-declaration.error.js';
-import { ROUTE_ACCESS } from '../apps/api-cryptoada/src/router/route-access.constant.js';
-import {
-  ROUTE_LOOKUP_KIND,
-  createRouteTable,
-} from '../apps/api-cryptoada/src/router/route-table.js';
-import type { Route } from '../apps/api-cryptoada/src/router/route.types.js';
-import { HTTP_METHOD } from '../apps/api-cryptoada/src/shared/http/http.constant.js';
+import { RouteDeclarationError } from '../apps/api-ativada/src/router/route-declaration.error.js';
+import { ROUTE_ACCESS } from '../apps/api-ativada/src/router/route-access.constant.js';
+import { ROUTE_LOOKUP_KIND, createRouteTable } from '../apps/api-ativada/src/router/route-table.js';
+import type { Route } from '../apps/api-ativada/src/router/route.types.js';
+import { HTTP_METHOD } from '../apps/api-ativada/src/shared/http/http.constant.js';
 
 const handler = (): Promise<{ status: number }> => Promise.resolve({ status: 200 });
 

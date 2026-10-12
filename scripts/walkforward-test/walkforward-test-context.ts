@@ -13,14 +13,14 @@ import {
   type RunRecord,
 } from '../../packages/database/src/index.js';
 import { parseJsonContainer } from '../../packages/run-recording/src/index.js';
-import { createWalkForwardDatabase } from '../../apps/api-cryptoada/src/walk-forward/create-walk-forward-database.js';
-import { failWalkForwardRun } from '../../apps/api-cryptoada/src/walk-forward/run-walk-forward.js';
-import type { WalkForwardRequest } from '../../apps/api-cryptoada/src/walk-forward/walk-forward.types.js';
-import type { WalkForwardDatabase } from '../../apps/api-cryptoada/src/walk-forward/walk-forward-database.types.js';
+import { createWalkForwardDatabase } from '../../apps/api-ativada/src/walk-forward/create-walk-forward-database.js';
+import { failWalkForwardRun } from '../../apps/api-ativada/src/walk-forward/run-walk-forward.js';
+import type { WalkForwardRequest } from '../../apps/api-ativada/src/walk-forward/walk-forward.types.js';
+import type { WalkForwardDatabase } from '../../apps/api-ativada/src/walk-forward/walk-forward-database.types.js';
 import {
   createWalkForwardThreadRunner,
   type WalkForwardThreadRunner,
-} from '../../apps/api-cryptoada/src/walk-forward/walk-forward-thread-runner.js';
+} from '../../apps/api-ativada/src/walk-forward/walk-forward-thread-runner.js';
 import {
   createRunSetup,
   createStrategyVersion,
@@ -48,7 +48,7 @@ export type WalkForwardTestContext = {
 };
 
 const WORKER_URL = new URL(
-  '../../apps/api-cryptoada/src/walk-forward/walk-forward.worker.ts',
+  '../../apps/api-ativada/src/walk-forward/walk-forward.worker.ts',
   import.meta.url,
 ).href;
 

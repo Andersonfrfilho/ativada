@@ -14,13 +14,13 @@ import {
   type RunRecord,
 } from '../../packages/database/src/index.js';
 import { parseJsonContainer } from '../../packages/run-recording/src/index.js';
-import { createBacktestDatabase } from '../../apps/api-cryptoada/src/backtest/create-backtest-database.js';
-import type { BacktestDatabase } from '../../apps/api-cryptoada/src/backtest/backtest-database.types.js';
-import { failBacktestRun } from '../../apps/api-cryptoada/src/backtest/run-backtest.js';
+import { createBacktestDatabase } from '../../apps/api-ativada/src/backtest/create-backtest-database.js';
+import type { BacktestDatabase } from '../../apps/api-ativada/src/backtest/backtest-database.types.js';
+import { failBacktestRun } from '../../apps/api-ativada/src/backtest/run-backtest.js';
 import {
   createBacktestThreadRunner,
   type BacktestThreadRunner,
-} from '../../apps/api-cryptoada/src/backtest/backtest-thread-runner.js';
+} from '../../apps/api-ativada/src/backtest/backtest-thread-runner.js';
 import {
   createRunSetup,
   createStrategyVersion,
@@ -54,7 +54,7 @@ export type BacktestTestContext = {
 };
 
 const WORKER_URL = new URL(
-  '../../apps/api-cryptoada/src/backtest/backtest.worker.ts',
+  '../../apps/api-ativada/src/backtest/backtest.worker.ts',
   import.meta.url,
 ).href;
 

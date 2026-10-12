@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { WalkForwardRequest } from '../../apps/api-cryptoada/src/walk-forward/walk-forward.types.js';
+import type { WalkForwardRequest } from '../../apps/api-ativada/src/walk-forward/walk-forward.types.js';
 import { readPersisted, type PersistedWalkForward } from '../walkforward-test/read-persisted.js';
 import {
   createTestRunner,

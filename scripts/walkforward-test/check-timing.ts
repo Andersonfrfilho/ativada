@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createApiRoutes } from '../../apps/api-cryptoada/src/routes/create-api-routes.js';
-import { createRateLimiter } from '../../apps/api-cryptoada/src/rate-limit/rate-limiter.js';
-import { createRouter } from '../../apps/api-cryptoada/src/router/create-router.js';
+import { createApiRoutes } from '../../apps/api-ativada/src/routes/create-api-routes.js';
+import { createRateLimiter } from '../../apps/api-ativada/src/rate-limit/rate-limiter.js';
+import { createRouter } from '../../apps/api-ativada/src/router/create-router.js';
 import { buildApiRouteDependencies } from '../../test/fixtures/api-route-dependencies.fixture.js';
 import {
   buildHourlySeries,

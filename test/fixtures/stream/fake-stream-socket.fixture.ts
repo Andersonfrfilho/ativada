@@ -2,7 +2,7 @@
 import type {
   StreamSocket,
   StreamSocketData,
-} from '../../../apps/api-cryptoada/src/stream/stream-socket.types.js';
+} from '../../../apps/api-ativada/src/stream/stream-socket.types.js';
 import { userIdFromDatabase } from '../../../packages/database/src/ownership/user-id.js';
 
 export const USER_A = userIdFromDatabase('0192f3a1-7c4e-7b2a-9d3f-5e6a7b8c9d0e');

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const AGENT_LABEL = 'com.adatechnology.cryptoada-live72';
-export const COMPOSE_PROJECT = 'cryptoada-live72';
-export const HOME_DIRECTORY_NAME = '.cryptoada-live72';
+export const AGENT_LABEL = 'com.adatechnology.ativada-live72';
+export const COMPOSE_PROJECT = 'ativada-live72';
+export const HOME_DIRECTORY_NAME = '.ativada-live72';
 
 export const MILLISECONDS_PER_SECOND = 1_000;
 export const MILLISECONDS_PER_MINUTE = 60 * MILLISECONDS_PER_SECOND;

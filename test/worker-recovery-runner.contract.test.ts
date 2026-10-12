@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { createWorkerLogger } from '../apps/worker-cryptoada/src/logging/worker-logger.js';
+import { createWorkerLogger } from '../apps/worker-ativada/src/logging/worker-logger.js';
 import {
   createRecoveryRunner,
   type RecoveryOutcome,
-} from '../apps/worker-cryptoada/src/stream/recovery-runner.js';
-import { WORKER_LOG } from '../apps/worker-cryptoada/src/worker.constant.js';
+} from '../apps/worker-ativada/src/stream/recovery-runner.js';
+import { WORKER_LOG } from '../apps/worker-ativada/src/worker.constant.js';
 import { waitFor } from './fixtures/wait-for.fixture.js';
 
 const BAN_SLICE_MILLISECONDS = 30_000;
@@ -35,7 +35,7 @@ function buildHarness(params: {
       return Promise.resolve(outcome ?? { failures: 0 });
     },
     logger: createWorkerLogger({
-      appName: 'worker-cryptoada',
+      appName: 'worker-ativada',
       write: (line) => void logs.push(JSON.parse(line) as Record<string, unknown>),
     }),
     sleep: (milliseconds) => {

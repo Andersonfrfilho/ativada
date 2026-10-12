@@ -13,9 +13,9 @@ const IMPORT_META_ENV_RESTRICTION = {
   selector: "MemberExpression[object.type='MetaProperty'][property.name='env']",
   message: 'Leia o ambiente só pelo schema em environment.ts de cada app ou pacote.',
 };
-// Fronteira das apps com o banco (ADR 0001 §e): só a superfície pública de @cryptoada/database.
+// Fronteira das apps com o banco (ADR 0001 §e): só a superfície pública de @ativada/database.
 const DATABASE_BOUNDARY_MESSAGE =
-  'Apps acessam o banco só pela superfície pública de @cryptoada/database (ADR 0001 §e).';
+  'Apps acessam o banco só pela superfície pública de @ativada/database (ADR 0001 §e).';
 const BUN_SQL_PROPERTY = '/^(SQL|sql)$/';
 const BUN_GLOBAL_SELECTORS = [
   "[object.name='Bun']",
@@ -56,7 +56,7 @@ const OWNERSHIP_RETURN_TYPE_RESTRICTION = {
 };
 const OWNERSHIP_TYPE_GUARD_RESTRICTION = {
   selector: 'TSTypePredicate TSTypeReference[typeName.name=/^(UserId|OwnerScope|AccountId)$/]',
-  message: 'UserId, OwnerScope e AccountId só nascem dentro de @cryptoada/database (ADR 0001 §c).',
+  message: 'UserId, OwnerScope e AccountId só nascem dentro de @ativada/database (ADR 0001 §c).',
 };
 const APP_DATABASE_IMPORT_RESTRICTION = {
   paths: [
@@ -71,7 +71,7 @@ const APP_DATABASE_IMPORT_RESTRICTION = {
       group: ['drizzle-orm', 'drizzle-orm/*', 'drizzle-kit', 'drizzle-kit/*'],
       message: DATABASE_BOUNDARY_MESSAGE,
     },
-    { group: ['@cryptoada/database/*'], message: DATABASE_BOUNDARY_MESSAGE },
+    { group: ['@ativada/database/*'], message: DATABASE_BOUNDARY_MESSAGE },
     { group: ['**/packages/**'], message: 'Importe pacotes pelo nome público, nunca por caminho.' },
   ],
 };
@@ -80,9 +80,9 @@ const APP_SYNTAX_RESTRICTIONS = [
   OWNERSHIP_TYPE_GUARD_RESTRICTION,
   OWNERSHIP_RETURN_TYPE_RESTRICTION,
 ];
-// O frontend não depende de @cryptoada/database; só ele usa import dinâmico (React.lazy).
+// O frontend não depende de @ativada/database; só ele usa import dinâmico (React.lazy).
 const BACKEND_SYNTAX_RESTRICTIONS = [...APP_SYNTAX_RESTRICTIONS, DYNAMIC_IMPORT_RESTRICTION];
-const BACKEND_APP_SOURCES = 'apps/{api,worker,cron}-cryptoada/src';
+const BACKEND_APP_SOURCES = 'apps/{api,worker,cron}-ativada/src';
 const TYPESCRIPT_FILES = '**/*.{ts,tsx,mts,cts}';
 const APP_SOURCE_FILES = 'apps/*/src/**/*.{ts,tsx,mts,cts,js,mjs}';
 
@@ -94,8 +94,8 @@ export default tseslint.config(
       'node_modules',
       'docs',
       'specs',
-      'apps/frontend-cryptoada/public',
-      'apps/frontend-cryptoada/test-results',
+      'apps/frontend-ativada/public',
+      'apps/frontend-ativada/test-results',
     ],
   },
   {
@@ -199,9 +199,9 @@ export default tseslint.config(
   {
     // Vite e Playwright exigem `export default`; o leitor de variáveis do E2E é a fronteira que lê process.env.
     files: [
-      'apps/frontend-cryptoada/vite.config.ts',
-      'apps/frontend-cryptoada/playwright.config.ts',
-      'apps/frontend-cryptoada/e2e/e2e-environment.ts',
+      'apps/frontend-ativada/vite.config.ts',
+      'apps/frontend-ativada/playwright.config.ts',
+      'apps/frontend-ativada/e2e/e2e-environment.ts',
     ],
     rules: {
       'no-restricted-exports': 'off',

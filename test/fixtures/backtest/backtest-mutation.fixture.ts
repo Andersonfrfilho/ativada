@@ -4,13 +4,13 @@ import { cp, rm } from 'node:fs/promises';
 import { BACKTEST_MUTANT_VARIABLE } from './backtest-api.fixture.js';
 
 const REPOSITORY_ROOT = new URL('../../../', import.meta.url).pathname;
-const SOURCE_DIRECTORY = `${REPOSITORY_ROOT}apps/api-cryptoada/src/backtest`;
+const SOURCE_DIRECTORY = `${REPOSITORY_ROOT}apps/api-ativada/src/backtest`;
 const RECORDING_DIRECTORY = `${REPOSITORY_ROOT}packages/run-recording/src`;
 // A cópia do pacote de gravação (o passo de candle e o mapeamento das decisões) mora ao lado da cópia do backtest.
 export const RECORDING_COPY = 'run-recording-src';
-const RECORDING_IMPORT = "from '@cryptoada/run-recording'";
-// Dentro da app: é de lá que `@cryptoada/*` e `zod` se resolvem, como no módulo de produção.
-export const BACKTEST_MUTANT_ROOT = `${REPOSITORY_ROOT}apps/api-cryptoada/.mutants`;
+const RECORDING_IMPORT = "from '@ativada/run-recording'";
+// Dentro da app: é de lá que `@ativada/*` e `zod` se resolvem, como no módulo de produção.
+export const BACKTEST_MUTANT_ROOT = `${REPOSITORY_ROOT}apps/api-ativada/.mutants`;
 
 // Os testes que reprovam o mutante: caso de uso, falhas, continuidade e a thread.
 export const BACKTEST_JUDGE_TEST_FILES: readonly string[] = [

@@ -8,7 +8,7 @@ import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-data
 
 // Só a semeadura da estratégia de exemplo (T3.5), num banco descartável: é o que o `make example-mutants` roda contra
 // cada cópia do pacote com a regra da semeadura quebrada.
-const TEMPORARY_DATABASE_PREFIX = 'crypto_example_seed_';
+const TEMPORARY_DATABASE_PREFIX = 'ativada_example_seed_';
 
 function assertCondition(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);

@@ -7,7 +7,7 @@ import {
   MarketDataResponseError,
   TIMEFRAME,
   TIMEFRAME_DURATION_MILLISECONDS,
-} from '../packages/market-data/src/index.js';
+} from '../packages/market-data-crypto/src/index.js';
 import { buildRawKline, createScriptedFetch } from './fixtures/fake-binance.fixture.js';
 
 const BASE_URL = 'https://market-data.test';

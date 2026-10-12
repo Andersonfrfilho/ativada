@@ -4,18 +4,18 @@ import { tmpdir } from 'node:os';
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
-import { BACKTEST_ERROR_CODE } from '../apps/api-cryptoada/src/backtest/backtest.constant.js';
+import { BACKTEST_ERROR_CODE } from '../apps/api-ativada/src/backtest/backtest.constant.js';
 import {
   BACKTEST_EVENT_SCHEMA,
   BACKTEST_REQUEST_SCHEMA,
-} from '../apps/api-cryptoada/src/backtest/backtest-messages.js';
+} from '../apps/api-ativada/src/backtest/backtest-messages.js';
 import type {
   BacktestThreadOutcome,
   RecordFailure,
-} from '../apps/api-cryptoada/src/backtest/thread-outcome.js';
-import { createApiRoutes } from '../apps/api-cryptoada/src/routes/create-api-routes.js';
-import { createRateLimiter } from '../apps/api-cryptoada/src/rate-limit/rate-limiter.js';
-import { createRouter } from '../apps/api-cryptoada/src/router/create-router.js';
+} from '../apps/api-ativada/src/backtest/thread-outcome.js';
+import { createApiRoutes } from '../apps/api-ativada/src/routes/create-api-routes.js';
+import { createRateLimiter } from '../apps/api-ativada/src/rate-limit/rate-limiter.js';
+import { createRouter } from '../apps/api-ativada/src/router/create-router.js';
 import {
   BACKTEST_MUTANT_VARIABLE,
   loadThreadApi,

@@ -1,11 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { parentPort } from 'node:worker_threads';
 
-import { GOAL_COMPUTATION_KIND } from '../../../apps/api-cryptoada/src/goals/goal-computation.js';
+import { GOAL_COMPUTATION_KIND } from '../../../apps/api-ativada/src/goals/goal-computation.js';
 import {
   GOAL_COMPUTE_REQUEST_SCHEMA,
   GOAL_WORKER_MESSAGE,
-} from '../../../apps/api-cryptoada/src/goals/goal-evaluation-messages.js';
+} from '../../../apps/api-ativada/src/goals/goal-evaluation-messages.js';
 
 const FIRST_ID = 1;
 

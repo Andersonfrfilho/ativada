@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { createListAccountsUseCase } from '../apps/api-cryptoada/src/admin/list-accounts.use-case.js';
+import { createListAccountsUseCase } from '../apps/api-ativada/src/admin/list-accounts.use-case.js';
 import { IDENTITY_OUTCOME } from '../packages/identity-admin/src/identity-admin.constant.js';
 import { parseAccountId } from '../packages/database/src/admin/admin-account-id.js';
 import type { AdminAccountRecord } from '../packages/database/src/index.js';

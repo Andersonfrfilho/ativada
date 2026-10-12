@@ -8,7 +8,7 @@ import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-data
 
 // Só os ativos do usuário (T4b.8), num banco descartável: é o que o `make user-asset-mutants` roda contra
 // cada cópia do pacote com uma regra do ativo quebrada.
-const TEMPORARY_DATABASE_PREFIX = 'crypto_user_assets_';
+const TEMPORARY_DATABASE_PREFIX = 'ativada_user_assets_';
 
 function assertCondition(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);

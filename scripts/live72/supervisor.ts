@@ -24,10 +24,10 @@ const LOG_KEPT_FILES = 5;
 const SECRET_PREFIX = 'LIVE72_USER_';
 
 const ENTRY_POINTS = {
-  [CHILD_NAME.API]: 'apps/api-cryptoada/src/main.ts',
-  [CHILD_NAME.WORKER]: 'apps/worker-cryptoada/src/main.ts',
+  [CHILD_NAME.API]: 'apps/api-ativada/src/main.ts',
+  [CHILD_NAME.WORKER]: 'apps/worker-ativada/src/main.ts',
   [CHILD_NAME.TELEGRAM_SINK]: 'scripts/live72/telegram-sink.ts',
-  [CHILD_NAME.CRON]: 'apps/cron-cryptoada/src/main.ts',
+  [CHILD_NAME.CRON]: 'apps/cron-ativada/src/main.ts',
 } as const;
 
 // Os filhos herdam o ambiente da simulação, menos a credencial do usuário de teste.

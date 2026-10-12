@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const TEMPORARY_DATABASE_PREFIX = 'crypto_live_';
+export const TEMPORARY_DATABASE_PREFIX = 'ativada_live_';
 export const EXCHANGE = 'binance';
 export const HOUR_MILLISECONDS = 3_600_000;
 // Batimento curto: a instância que morre deixa de bater e a outra a assume em poucos segundos.

@@ -2,13 +2,13 @@
 import {
   createBackfillCandlesTask,
   type BackfillCandlesSummary,
-} from '../../apps/cron-cryptoada/src/market/backfill-candles.task.js';
-import { createCronLogger } from '../../apps/cron-cryptoada/src/logging/cron-logger.js';
+} from '../../apps/cron-ativada/src/market/backfill-candles.task.js';
+import { createCronLogger } from '../../apps/cron-ativada/src/logging/cron-logger.js';
 import type { CandleRecord, CandleTimeframe } from '../../packages/database/src/index.js';
 import {
   createMarketDataClient,
   TIMEFRAME_DURATION_MILLISECONDS,
-} from '../../packages/market-data/src/index.js';
+} from '../../packages/market-data-crypto/src/index.js';
 import { createFakeClock } from './fake-binance.fixture.js';
 import {
   createFakeBinanceGrid,
@@ -84,7 +84,7 @@ export function createBackfillHarness(options: BackfillHarnessOptions = {}): Bac
       now: clock.now,
       sleep: clock.sleep,
     }),
-    logger: createCronLogger({ appName: 'cron-cryptoada', write: (line) => void lines.push(line) }),
+    logger: createCronLogger({ appName: 'cron-ativada', write: (line) => void lines.push(line) }),
     now: () => BACKFILL_NOW,
     refreshClock: () => {
       events.push(`clock-refresh:${grid.calls.length}`);

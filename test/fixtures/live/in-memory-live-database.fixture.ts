@@ -8,7 +8,7 @@ import type {
   LiveRunDatabase,
   LiveRunSession,
   RecordDataWaitInput,
-} from '../../../apps/worker-cryptoada/src/live/live-run.types.js';
+} from '../../../apps/worker-ativada/src/live/live-run.types.js';
 import type {
   AlertInput,
   ClaimedLiveRun,

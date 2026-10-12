@@ -2,20 +2,20 @@
 import {
   createAccessTokenVerifier,
   type AccessTokenVerifier,
-} from '../../apps/api-cryptoada/src/authentication/access-token-verifier.js';
-import { createRemoteKeyResolver } from '../../apps/api-cryptoada/src/authentication/remote-key-resolver.js';
-import type { UserResolver } from '../../apps/api-cryptoada/src/authentication/resolve-authenticated-user.js';
-import { RATE_LIMIT_POLICY } from '../../apps/api-cryptoada/src/rate-limit/rate-limit-policy.constant.js';
-import { createRateLimiter } from '../../apps/api-cryptoada/src/rate-limit/rate-limiter.js';
-import { createLogger } from '../../apps/api-cryptoada/src/logging/logger.js';
+} from '../../apps/api-ativada/src/authentication/access-token-verifier.js';
+import { createRemoteKeyResolver } from '../../apps/api-ativada/src/authentication/remote-key-resolver.js';
+import type { UserResolver } from '../../apps/api-ativada/src/authentication/resolve-authenticated-user.js';
+import { RATE_LIMIT_POLICY } from '../../apps/api-ativada/src/rate-limit/rate-limit-policy.constant.js';
+import { createRateLimiter } from '../../apps/api-ativada/src/rate-limit/rate-limiter.js';
+import { createLogger } from '../../apps/api-ativada/src/logging/logger.js';
 import {
   createRequestHandler,
   type RequestHandler,
-} from '../../apps/api-cryptoada/src/http/create-request-handler.js';
-import { createRouter, type Router } from '../../apps/api-cryptoada/src/router/create-router.js';
-import { ROUTE_ACCESS } from '../../apps/api-cryptoada/src/router/route-access.constant.js';
-import type { Route } from '../../apps/api-cryptoada/src/router/route.types.js';
-import { HTTP_METHOD } from '../../apps/api-cryptoada/src/shared/http/http.constant.js';
+} from '../../apps/api-ativada/src/http/create-request-handler.js';
+import { createRouter, type Router } from '../../apps/api-ativada/src/router/create-router.js';
+import { ROUTE_ACCESS } from '../../apps/api-ativada/src/router/route-access.constant.js';
+import type { Route } from '../../apps/api-ativada/src/router/route.types.js';
+import { HTTP_METHOD } from '../../apps/api-ativada/src/shared/http/http.constant.js';
 import { createOwnerScope } from '../../packages/database/src/ownership/owner-scope.js';
 import { userIdFromDatabase } from '../../packages/database/src/ownership/user-id.js';
 import { USER_RESOLUTION_STATUS } from '../../packages/database/src/users/user-resolution.constant.js';
@@ -164,7 +164,7 @@ export async function createApiHarness(options: HarnessOptions = {}): Promise<Ap
     router,
     corsAllowedOrigins: [ALLOWED_ORIGIN],
     logger: createLogger({
-      appName: 'api-cryptoada',
+      appName: 'api-ativada',
       write: (line: string): void => void logLines.push(line),
     }),
   });

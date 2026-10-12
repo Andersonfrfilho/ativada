@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { threadId } from 'node:worker_threads';
 
-import { GOAL_COMPUTATION_KIND } from '../../../apps/api-cryptoada/src/goals/goal-computation.js';
-import { serveGoalEvaluationWorker } from '../../../apps/api-cryptoada/src/goals/serve-goal-evaluation-worker.js';
+import { GOAL_COMPUTATION_KIND } from '../../../apps/api-ativada/src/goals/goal-computation.js';
+import { serveGoalEvaluationWorker } from '../../../apps/api-ativada/src/goals/serve-goal-evaluation-worker.js';
 import { SCRIPTED_GOAL_BEHAVIOR } from './scripted-goal.constant.js';
 
 function spinFor(milliseconds: number): void {

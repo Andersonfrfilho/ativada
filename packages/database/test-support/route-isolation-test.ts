@@ -10,7 +10,7 @@ import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-data
 
 // Só o isolamento entre donos dos repositórios que as rotas REST usam (estratégias, execuções e resultados), num
 // banco descartável: é o que o `make api-runs-mutants` roda contra cada cópia do pacote com um filtro de dono removido.
-const TEMPORARY_DATABASE_PREFIX = 'crypto_route_isolation_';
+const TEMPORARY_DATABASE_PREFIX = 'ativada_route_isolation_';
 
 function assertCondition(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);

@@ -5,7 +5,7 @@ import {
   type DatabaseHandle,
   type OwnerScope,
 } from '../../packages/database/src/index.js';
-import type { FakeBinanceStreamServer } from '../../packages/market-data/test-support/fake-binance-stream-server.js';
+import type { FakeBinanceStreamServer } from '../../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 import { parseJsonContainer } from '../../packages/run-recording/src/index.js';
 import { HOUR_MILLISECONDS } from './panel-e2e.constant.js';
 

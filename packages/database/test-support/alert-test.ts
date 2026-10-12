@@ -8,7 +8,7 @@ import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-data
 
 // Só a caixa de saída dos alertas (T4.5), num banco descartável: é o que o `make alert-mutants` roda contra cada cópia do
 // pacote com uma regra da caixa de saída quebrada.
-const TEMPORARY_DATABASE_PREFIX = 'crypto_alert_';
+const TEMPORARY_DATABASE_PREFIX = 'ativada_alert_';
 
 function assertCondition(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);

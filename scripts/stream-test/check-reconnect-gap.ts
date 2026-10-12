@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { buildFakePrice } from '../../packages/market-data/test-support/fake-binance-stream-server.js';
+import { buildFakePrice } from '../../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 import { assertCondition } from '../identity-test/identity-test.error.js';
 import {
   hoursFrom,

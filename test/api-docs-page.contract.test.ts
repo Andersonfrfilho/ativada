@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import type { Route } from '../apps/api-cryptoada/src/router/route.types.js';
+import type { Route } from '../apps/api-ativada/src/router/route.types.js';
 import { loadApiApp, type ApiApp } from './fixtures/api-routes/api-app.fixture.js';
 import { buildApiRouteDependencies } from './fixtures/api-route-dependencies.fixture.js';
 
@@ -29,7 +29,7 @@ function createHandler(isDocumentationEnabled: boolean): {
   const handler = app.requestHandler.createRequestHandler({
     router,
     corsAllowedOrigins: [],
-    logger: app.logger.createLogger({ appName: 'api-cryptoada', write: () => undefined }),
+    logger: app.logger.createLogger({ appName: 'api-ativada', write: () => undefined }),
   });
   return {
     routes,

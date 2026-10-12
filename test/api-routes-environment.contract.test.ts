@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { environmentSchema } from '../apps/api-cryptoada/src/environment.js';
+import { environmentSchema } from '../apps/api-ativada/src/environment.js';
 import { EnvironmentError, parseEnvironment } from '../packages/environment/src/index.js';
 import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
 

@@ -2,10 +2,10 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { UserAssetRecord } from '../packages/database/src/index.js';
-import { buildSummaryItem } from '../apps/api-cryptoada/src/assets/asset-summary-item.js';
-import { computeAssetNumbers } from '../apps/frontend-cryptoada/src/assets/asset-math.js';
-import { parseScaled } from '../apps/frontend-cryptoada/src/format/decimal.js';
-import type { AssetItem } from '../apps/frontend-cryptoada/src/assets/asset.validation.js';
+import { buildSummaryItem } from '../apps/api-ativada/src/assets/asset-summary-item.js';
+import { computeAssetNumbers } from '../apps/frontend-ativada/src/assets/asset-math.js';
+import { parseScaled } from '../apps/frontend-ativada/src/format/decimal.js';
+import type { AssetItem } from '../apps/frontend-ativada/src/assets/asset.validation.js';
 
 // Uma tabela contra o servidor: o painel refaz a conta de "Seus ativos" com o preço do tick, e tem de dar o MESMO número
 // que a API daria com esse preço (valor para baixo, custo para cima, taxa para o lado de menos).

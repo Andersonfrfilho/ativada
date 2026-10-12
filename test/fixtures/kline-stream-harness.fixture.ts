@@ -4,11 +4,11 @@ import {
   type Candle,
   type KlineStream,
   type KlineStreamSettings,
-} from '../../packages/market-data/src/index.js';
+} from '../../packages/market-data-crypto/src/index.js';
 import {
   startFakeBinanceStreamServer,
   type FakeBinanceStreamServer,
-} from '../../packages/market-data/test-support/fake-binance-stream-server.js';
+} from '../../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 
 export const HOUR = 3_600_000;
 export const FIRST_OPEN_TIME = Date.parse('2026-10-01T00:00:00.000Z');

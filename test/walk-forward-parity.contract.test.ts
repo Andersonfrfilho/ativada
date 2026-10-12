@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import type { WalletSpan } from '../apps/api-cryptoada/src/walk-forward/window-spans.js';
+import type { WalletSpan } from '../apps/api-ativada/src/walk-forward/window-spans.js';
 import {
   computeStrategyLeadInCandles,
   createStrategyVersion,

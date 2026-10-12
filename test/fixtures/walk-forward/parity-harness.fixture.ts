@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { CandleSeries } from '../../../apps/api-cryptoada/src/walk-forward/candle-series.js';
-import type { SignalSeries } from '../../../apps/api-cryptoada/src/walk-forward/signal-series.js';
-import type { WalletSpan } from '../../../apps/api-cryptoada/src/walk-forward/window-spans.js';
+import type { CandleSeries } from '../../../apps/api-ativada/src/walk-forward/candle-series.js';
+import type { SignalSeries } from '../../../apps/api-ativada/src/walk-forward/signal-series.js';
+import type { WalletSpan } from '../../../apps/api-ativada/src/walk-forward/window-spans.js';
 import {
   COMMAND_KIND,
   COMMAND_REASON,

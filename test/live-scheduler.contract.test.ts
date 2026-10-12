@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import type { LiveEvaluator } from '../apps/worker-cryptoada/src/live/live-run.types.js';
-import { buildUnfillableKey } from '../apps/worker-cryptoada/src/stream/gap-recovery.js';
-import { createGapConfirmation } from '../apps/worker-cryptoada/src/live/gap-confirmation.js';
+import type { LiveEvaluator } from '../apps/worker-ativada/src/live/live-run.types.js';
+import { buildUnfillableKey } from '../apps/worker-ativada/src/stream/gap-recovery.js';
+import { createGapConfirmation } from '../apps/worker-ativada/src/live/gap-confirmation.js';
 import { loadLiveApi } from './fixtures/live/live-api.fixture.js';
 import { createTestLogger } from './fixtures/live/live-scenarios.fixture.js';
 

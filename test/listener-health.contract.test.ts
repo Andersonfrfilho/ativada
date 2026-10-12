@@ -2,11 +2,11 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { SessionEnd } from '../packages/database/src/notifications/session-end.js';
-import type { Logger } from '../apps/api-cryptoada/src/logging/logger.js';
+import type { Logger } from '../apps/api-ativada/src/logging/logger.js';
 import {
   logListenerLoss,
   toListenerHealth,
-} from '../apps/api-cryptoada/src/stream/listener-health.js';
+} from '../apps/api-ativada/src/stream/listener-health.js';
 
 describe('toListenerHealth', () => {
   test('a listening listener is up, with no reason', () => {

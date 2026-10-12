@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { RunRecord } from '../packages/database/src/index.js';
-import type { GoalDecision, GoalTracking } from '../apps/worker-cryptoada/src/live/goal-step.js';
+import type { GoalDecision, GoalTracking } from '../apps/worker-ativada/src/live/goal-step.js';
 import {
   createEngine,
   type EngineCandle,

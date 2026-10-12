@@ -1,11 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { createMarketPublisher } from '../../apps/api-cryptoada/src/market-stream/create-market-publisher.js';
-import type { MarketPublisher } from '../../apps/api-cryptoada/src/market-stream/market-context.js';
-import { createPriceAlertEvaluator } from '../../apps/api-cryptoada/src/price-alerts/price-alert-evaluator.js';
-import { generateLinkCode, hashLinkCode } from '../../apps/api-cryptoada/src/telegram/link-code.js';
-import { createAlertDispatcher } from '../../apps/worker-cryptoada/src/alerts/alert-dispatcher.js';
-import { createTelegramClient } from '../../apps/worker-cryptoada/src/alerts/telegram-client.js';
-import { createWorkerLogger } from '../../apps/worker-cryptoada/src/logging/worker-logger.js';
+import { createMarketPublisher } from '../../apps/api-ativada/src/market-stream/create-market-publisher.js';
+import type { MarketPublisher } from '../../apps/api-ativada/src/market-stream/market-context.js';
+import { createPriceAlertEvaluator } from '../../apps/api-ativada/src/price-alerts/price-alert-evaluator.js';
+import { generateLinkCode, hashLinkCode } from '../../apps/api-ativada/src/telegram/link-code.js';
+import { createAlertDispatcher } from '../../apps/worker-ativada/src/alerts/alert-dispatcher.js';
+import { createTelegramClient } from '../../apps/worker-ativada/src/alerts/telegram-client.js';
+import { createWorkerLogger } from '../../apps/worker-ativada/src/logging/worker-logger.js';
 import {
   closeDatabase,
   createAlertRepository,

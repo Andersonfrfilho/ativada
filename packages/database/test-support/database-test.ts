@@ -68,7 +68,7 @@ import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-data
 import { resolveUserBySubject } from '../src/users/resolve-user-by-subject.js';
 import { USER_RESOLUTION_STATUS } from '../src/users/user-resolution.constant.js';
 
-const TEMPORARY_DATABASE_PREFIX = 'crypto_database_';
+const TEMPORARY_DATABASE_PREFIX = 'ativada_database_';
 const CONCURRENT_CALLS = 20;
 const CONCURRENT_SUBJECT = 'subject-concurrent';
 const DELETED_SUBJECT = 'subject-deleted';

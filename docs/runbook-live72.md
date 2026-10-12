@@ -12,17 +12,17 @@ sem monitor externo suspende o Mac mesmo assim.
 
 | Peça | Onde |
 |---|---|
-| Infra (Postgres, Keycloak, Mailpit) | compose `cryptoada-live72`, volumes nomeados persistentes, `envs/env.live72`, portas 565xx (banco 56532, Keycloak 56580, API 56501, sumidouro do Telegram 56504) |
-| Processos `api`, `worker`, sumidouro do Telegram e o `cron` periódico | `scripts/live72/supervisor.ts`, mantido por um LaunchAgent (`com.adatechnology.cryptoada-live72`, KeepAlive, volta no login) |
-| Logs JSON com rotação (20 MB x 5) | `~/.cryptoada-live72/logs/` |
-| Pids | `~/.cryptoada-live72/run/` |
-| Eventos do supervisor e dos comandos | `~/.cryptoada-live72/events.jsonl` |
-| Dados da simulação (sem segredo) | `~/.cryptoada-live72/run.json` |
-| Relatório | `~/.cryptoada-live72/report.md` |
+| Infra (Postgres, Keycloak, Mailpit) | compose `ativada-live72`, volumes nomeados persistentes, `envs/env.live72`, portas 565xx (banco 56532, Keycloak 56580, API 56501, sumidouro do Telegram 56504) |
+| Processos `api`, `worker`, sumidouro do Telegram e o `cron` periódico | `scripts/live72/supervisor.ts`, mantido por um LaunchAgent (`com.adatechnology.ativada-live72`, KeepAlive, volta no login) |
+| Logs JSON com rotação (20 MB x 5) | `~/.ativada-live72/logs/` |
+| Pids | `~/.ativada-live72/run/` |
+| Eventos do supervisor e dos comandos | `~/.ativada-live72/events.jsonl` |
+| Dados da simulação (sem segredo) | `~/.ativada-live72/run.json` |
+| Relatório | `~/.ativada-live72/report.md` |
 
 O usuário de teste e a credencial de DESENVOLVIMENTO estão em `envs/env.live72`
 (`LIVE72_USERNAME`, `LIVE72_USER_EMAIL`, `LIVE72_USER_PASSWORD`); a senha nunca é impressa nem entra em
-log. Keycloak local: `http://127.0.0.1:56580`, realm `cryptoada`.
+log. Keycloak local: `http://127.0.0.1:56580`, realm `ativada`.
 
 ## Iniciar
 
@@ -45,13 +45,13 @@ make live72-status   # texto curto: tempo, candles, sinais, ordens, posição, p
 
 Painel opcional (não faz parte do aceite e não foi verificado nesta execução): o login do Keycloak desta
 infra aceita `http://127.0.0.1:56500` como origem, então `bun --env-file=envs/env.live72 run --cwd
-apps/frontend-cryptoada dev` serve o painel nessa porta.
+apps/frontend-ativada dev` serve o painel nessa porta.
 
 ## Parar
 
 ```bash
 make live72-stop                 # descarrega o agente e para tudo; containers e dados ficam
-make live72-down CONFIRM=1       # remove agente, containers, volumes e ~/.cryptoada-live72
+make live72-down CONFIRM=1       # remove agente, containers, volumes e ~/.ativada-live72
 ```
 
 `stop` e `down` contam como intervenção humana no relatório (assim como um `up` ou `start` depois do
@@ -63,7 +63,7 @@ início): o veredito fica INCONCLUSIVO, porque o critério exige zero intervenç
   o worker recupera os candles perdidos pelo REST (janela de retrocesso de 168 h) e a simulação
   continua; o `status` mostra `waitingForData` enquanto houver buraco.
 - **Reiniciar ou novo login**: o LaunchAgent (`RunAtLoad`) sobe o supervisor sozinho. Ele espera o
-  Postgres responder (tenta `docker compose up -d` do projeto `cryptoada-live72` de tempos em tempos,
+  Postgres responder (tenta `docker compose up -d` do projeto `ativada-live72` de tempos em tempos,
   então o Docker Desktop precisa abrir no login) e reinicia os processos. Cada partida fica como
   `supervisor_start` em `events.jsonl` e aparece no relatório como reinício do supervisor.
 - **Queda de um processo**: reinício com espera crescente (2 s a 1 min), registrado como `child_exit`.
@@ -76,7 +76,7 @@ Quando passar o término previsto (início + 72 h, ver `run.json`), peça à ses
 rode:
 
 ```bash
-make live72-report   # grava ~/.cryptoada-live72/report.md e imprime o texto para o evidence.md
+make live72-report   # grava ~/.ativada-live72/report.md e imprime o texto para o evidence.md
 ```
 
 O relatório traz: duração real, intervenção humana, reinício controlado (contagens antes e depois,

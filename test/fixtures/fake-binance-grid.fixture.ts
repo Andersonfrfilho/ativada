@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { FetchImplementation } from '../../packages/market-data/src/market-data.types.js';
+import type { FetchImplementation } from '../../packages/market-data-crypto/src/market-data.types.js';
 import { buildRawKline } from './fake-binance.fixture.js';
 
 const DURATION_BY_INTERVAL: Readonly<Record<string, number>> = {

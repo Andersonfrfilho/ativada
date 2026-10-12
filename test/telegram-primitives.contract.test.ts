@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { generateLinkCode, hashLinkCode } from '../apps/api-cryptoada/src/telegram/link-code.js';
-import { LINK_CODE_ALPHABET } from '../apps/api-cryptoada/src/telegram/telegram.constant.js';
-import { isWebhookSecretValid } from '../apps/api-cryptoada/src/telegram/webhook-secret.js';
+import { generateLinkCode, hashLinkCode } from '../apps/api-ativada/src/telegram/link-code.js';
+import { LINK_CODE_ALPHABET } from '../apps/api-ativada/src/telegram/telegram.constant.js';
+import { isWebhookSecretValid } from '../apps/api-ativada/src/telegram/webhook-secret.js';
 
 const REPOSITORY_ROOT: string = new URL('../', import.meta.url).pathname;
 const SAMPLE_SIZE = 2_000;
@@ -32,7 +32,7 @@ describe('link code generation', () => {
 
   test('does not use a non cryptographic generator', async () => {
     const source = await Bun.file(
-      `${REPOSITORY_ROOT}apps/api-cryptoada/src/telegram/link-code.ts`,
+      `${REPOSITORY_ROOT}apps/api-ativada/src/telegram/link-code.ts`,
     ).text();
     expect(source).not.toMatch(/Math\.random/);
     expect(source).toMatch(/getRandomValues|randomBytes|randomInt/);
@@ -58,7 +58,7 @@ describe('webhook secret comparison', () => {
 
   test('compares fixed-size digests with timingSafeEqual', async () => {
     const source = await Bun.file(
-      `${REPOSITORY_ROOT}apps/api-cryptoada/src/telegram/webhook-secret.ts`,
+      `${REPOSITORY_ROOT}apps/api-ativada/src/telegram/webhook-secret.ts`,
     ).text();
     expect(source).toMatch(/timingSafeEqual\(/);
     expect(source).not.toMatch(/(presented|expected)\w*\s*[!=]==?\s*(presented|expected)/);

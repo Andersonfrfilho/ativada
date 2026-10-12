@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { GapPolicy } from '../../../apps/worker-cryptoada/src/live/gap-policy.js';
+import type { GapPolicy } from '../../../apps/worker-ativada/src/live/gap-policy.js';
 import type {
   GapConfirmation,
   LiveAlertingSettings,
@@ -7,8 +7,8 @@ import type {
   LiveRunClaims,
   LiveRunDatabase,
   LiveTickSummary,
-} from '../../../apps/worker-cryptoada/src/live/live-run.types.js';
-import type { WorkerLogger } from '../../../apps/worker-cryptoada/src/logging/worker-logger.js';
+} from '../../../apps/worker-ativada/src/live/live-run.types.js';
+import type { WorkerLogger } from '../../../apps/worker-ativada/src/logging/worker-logger.js';
 import {
   advanceCandle,
   appendDecisions,

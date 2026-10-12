@@ -1,3 +1,5 @@
+Renomeado de CryptoAdA para AtivAdA em 2026-10-12; as entradas abaixo usam o nome antigo.
+
 # Evidências — Spec 001
 
 Uma entrada por task fechada: comando rodado, resultado (contagem de testes, tempo), commit.

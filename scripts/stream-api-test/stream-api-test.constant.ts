@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const TEMPORARY_DATABASE_PREFIX = 'crypto_stream_api_';
+export const TEMPORARY_DATABASE_PREFIX = 'ativada_stream_api_';
 export const SYMBOL = 'ETHUSDT';
 export const ALLOWED_ORIGIN = 'http://127.0.0.1:56103';
 export const FOREIGN_ORIGIN = 'http://evil.example';

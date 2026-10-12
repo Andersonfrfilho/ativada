@@ -4,11 +4,11 @@ import { cp, rm } from 'node:fs/promises';
 import { LIVE_SOURCE_VARIABLE } from '../live-test/live-source.js';
 
 const REPOSITORY_ROOT = new URL('../../', import.meta.url).pathname;
-const SOURCE_DIRECTORY = `${REPOSITORY_ROOT}apps/worker-cryptoada/src/live`;
+const SOURCE_DIRECTORY = `${REPOSITORY_ROOT}apps/worker-ativada/src/live`;
 const RECORDING_DIRECTORY = `${REPOSITORY_ROOT}packages/run-recording/src`;
-const MUTANT_ROOT = `${REPOSITORY_ROOT}apps/worker-cryptoada/.mutants`;
+const MUTANT_ROOT = `${REPOSITORY_ROOT}apps/worker-ativada/.mutants`;
 const RECORDING_COPY = 'run-recording-src';
-const RECORDING_IMPORT = "from '@cryptoada/run-recording'";
+const RECORDING_IMPORT = "from '@ativada/run-recording'";
 const OUTPUT_EXCERPT_LENGTH = 160;
 const JUDGE_TIMEOUT_MILLISECONDS = 280_000;
 const TIMEOUT_EXIT_CODE = 124;
