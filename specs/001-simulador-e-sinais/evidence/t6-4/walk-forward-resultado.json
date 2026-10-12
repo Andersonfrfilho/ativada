@@ -1,0 +1,4104 @@
+{
+  "generatedAt": "2026-10-12T04:15:54.726Z",
+  "dataUntil": "2026-10-12T04:00:00.000Z",
+  "commit": "9edadbffcfe89cceb36262768bb0312ebf443f5f",
+  "isTreeClean": true,
+  "engineVersions": "engine-2 / signal-2 / metrics-1",
+  "scenarios": [
+    {
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "candleCount": 17520,
+      "firstOpenTime": 1728705600000,
+      "lastCloseTime": 1791777599999,
+      "digest": "7c4eb19c27c2b1c6b9e252f94fe89e0a5e6103e501672bed3a302483acb982eb",
+      "buyAndHoldWholePeriod": "0.211221752231",
+      "periodStart": 1729468800000,
+      "periodEnd": 1791777600000,
+      "leadInCandles": 194,
+      "combinations": 162,
+      "minTradesPerWindow": 10,
+      "withCosts": {
+        "windows": [
+          {
+            "index": 0,
+            "trainStart": 1729468800000,
+            "testStart": 1745193600000,
+            "testEnd": 1750464000000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 9,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "2.5",
+              "risk.stopAtrMultiple": "3",
+              "risk.targetAtrMultiple": "4"
+            },
+            "inSampleSharpe": "-0.392496561656",
+            "inSampleTrades": 61,
+            "trades": 24,
+            "totalReturn": "-0.009625036076",
+            "benchmarkReturn": "0.20907408233",
+            "maxDrawdown": "0.051143003029",
+            "winRate": "0.375"
+          },
+          {
+            "index": 1,
+            "trainStart": 1734739200000,
+            "testStart": 1750464000000,
+            "testEnd": 1755734400000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 9,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "2.5",
+              "risk.stopAtrMultiple": "3",
+              "risk.targetAtrMultiple": "4"
+            },
+            "inSampleSharpe": "-2.06924678422",
+            "inSampleTrades": 59,
+            "trades": 19,
+            "totalReturn": "-0.009827210138",
+            "benchmarkReturn": "0.102912996005",
+            "maxDrawdown": "0.032246788274",
+            "winRate": "0.473684210526"
+          },
+          {
+            "index": 2,
+            "trainStart": 1740096000000,
+            "testStart": 1755734400000,
+            "testEnd": 1761004800000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 9,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "2.5",
+              "risk.stopAtrMultiple": "3",
+              "risk.targetAtrMultiple": "4"
+            },
+            "inSampleSharpe": "-0.84526291102",
+            "inSampleTrades": 59,
+            "trades": 20,
+            "totalReturn": "-0.00300371472",
+            "benchmarkReturn": "-0.035615115296",
+            "maxDrawdown": "0.035875535394",
+            "winRate": "0.45"
+          },
+          {
+            "index": 3,
+            "trainStart": 1745193600000,
+            "testStart": 1761004800000,
+            "testEnd": 1766275200000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 9,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "2.5",
+              "risk.stopAtrMultiple": "3",
+              "risk.targetAtrMultiple": "4"
+            },
+            "inSampleSharpe": "-0.368769638125",
+            "inSampleTrades": 63,
+            "trades": 21,
+            "totalReturn": "-0.073339397473",
+            "benchmarkReturn": "-0.202967481915",
+            "maxDrawdown": "0.093711398683",
+            "winRate": "0.285714285714"
+          },
+          {
+            "index": 4,
+            "trainStart": 1750464000000,
+            "testStart": 1766275200000,
+            "testEnd": 1771632000000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 6,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "2.5",
+              "risk.stopAtrMultiple": "2",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "-1.107312417215",
+            "inSampleTrades": 82,
+            "trades": 23,
+            "totalReturn": "-0.068517281202",
+            "benchmarkReturn": "-0.232503162317",
+            "maxDrawdown": "0.070687747999",
+            "winRate": "0.304347826087"
+          },
+          {
+            "index": 5,
+            "trainStart": 1755734400000,
+            "testStart": 1771632000000,
+            "testEnd": 1776729600000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 9,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "2.5",
+              "risk.stopAtrMultiple": "2",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "-1.71319110104",
+            "inSampleTrades": 73,
+            "trades": 28,
+            "totalReturn": "-0.054827687137",
+            "benchmarkReturn": "0.111636333732",
+            "maxDrawdown": "0.075261257343",
+            "winRate": "0.357142857143"
+          },
+          {
+            "index": 6,
+            "trainStart": 1761004800000,
+            "testStart": 1776729600000,
+            "testEnd": 1782000000000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 12,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "2.5",
+              "risk.stopAtrMultiple": "2",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "-1.767259391119",
+            "inSampleTrades": 73,
+            "trades": 26,
+            "totalReturn": "-0.072113315836",
+            "benchmarkReturn": "-0.154730677366",
+            "maxDrawdown": "0.089140174817",
+            "winRate": "0.307692307692"
+          },
+          {
+            "index": 7,
+            "trainStart": 1766275200000,
+            "testStart": 1782000000000,
+            "testEnd": 1787270400000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 9,
+              "rules.ema-9-21.slowPeriod": 18,
+              "thresholds.buy": "2",
+              "risk.stopAtrMultiple": "3",
+              "risk.targetAtrMultiple": "4"
+            },
+            "inSampleSharpe": "-2.262381675547",
+            "inSampleTrades": 114,
+            "trades": 39,
+            "totalReturn": "-0.05969616578",
+            "benchmarkReturn": "0.132324957139",
+            "maxDrawdown": "0.101915644177",
+            "winRate": "0.282051282051"
+          }
+        ],
+        "totalReturn": "-0.304056756598",
+        "benchmarkReturn": "-0.14510381051",
+        "excessReturn": "-0.158952946088",
+        "annualizedReturn": "-0.238060893189",
+        "sharpe": "-2.320406868611",
+        "sortino": "-3.279465456114",
+        "winRate": "0.344660194175",
+        "profitFactor": "0.658449547919",
+        "exposure": "0.310403832991",
+        "maxDrawdownDepth": "0.363577463196",
+        "maxDrawdownDays": 467,
+        "trades": 206,
+        "feesPaid": "2181.456279738978",
+        "netProfit": "-3040.567565978959",
+        "testCandles": 11688,
+        "liquidatedAtWindowEnd": 6,
+        "overfitting": {
+          "isAlert": false,
+          "reasons": [],
+          "inSampleSharpe": "-1.315815423972",
+          "outOfSampleSharpe": "-2.320406868611",
+          "degradation": null,
+          "eligibleWindows": 8,
+          "totalWindows": 8
+        }
+      },
+      "withoutCosts": {
+        "windows": [
+          {
+            "index": 0,
+            "trainStart": 1729468800000,
+            "testStart": 1745193600000,
+            "testEnd": 1750464000000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 12,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "3",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "1.608127018638",
+            "inSampleTrades": 125,
+            "trades": 45,
+            "totalReturn": "0.01198611762",
+            "benchmarkReturn": "0.21269600625",
+            "maxDrawdown": "0.058307908493",
+            "winRate": "0.422222222222"
+          },
+          {
+            "index": 1,
+            "trainStart": 1734739200000,
+            "testStart": 1750464000000,
+            "testEnd": 1755734400000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 6,
+              "rules.ema-9-21.slowPeriod": 21,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "1.5",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "0.678408838517",
+            "inSampleTrades": 175,
+            "trades": 69,
+            "totalReturn": "0.06393955399",
+            "benchmarkReturn": "0.1062211568",
+            "maxDrawdown": "0.065366011001",
+            "winRate": "0.391304347826"
+          },
+          {
+            "index": 2,
+            "trainStart": 1740096000000,
+            "testStart": 1755734400000,
+            "testEnd": 1761004800000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 6,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "1.5",
+              "risk.targetAtrMultiple": "4"
+            },
+            "inSampleSharpe": "2.118130012975",
+            "inSampleTrades": 153,
+            "trades": 48,
+            "totalReturn": "0.00195475549",
+            "benchmarkReturn": "-0.03272121414",
+            "maxDrawdown": "0.054257104638",
+            "winRate": "0.3125"
+          },
+          {
+            "index": 3,
+            "trainStart": 1745193600000,
+            "testStart": 1761004800000,
+            "testEnd": 1766275200000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 9,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "2",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "2.239322695253",
+            "inSampleTrades": 156,
+            "trades": 43,
+            "totalReturn": "-0.09530610755",
+            "benchmarkReturn": "-0.20058275593",
+            "maxDrawdown": "0.129914092592",
+            "winRate": "0.302325581395"
+          },
+          {
+            "index": 4,
+            "trainStart": 1750464000000,
+            "testStart": 1766275200000,
+            "testEnd": 1771632000000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 9,
+              "rules.ema-9-21.slowPeriod": 21,
+              "thresholds.buy": "2.5",
+              "risk.stopAtrMultiple": "2",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "2.108427966783",
+            "inSampleTrades": 83,
+            "trades": 24,
+            "totalReturn": "-0.04863389273",
+            "benchmarkReturn": "-0.2301979653",
+            "maxDrawdown": "0.073911927869",
+            "winRate": "0.291666666667"
+          },
+          {
+            "index": 5,
+            "trainStart": 1755734400000,
+            "testStart": 1771632000000,
+            "testEnd": 1776729600000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 9,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "2.5",
+              "risk.stopAtrMultiple": "2",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "0.78019874669",
+            "inSampleTrades": 71,
+            "trades": 29,
+            "totalReturn": "0.00031477319",
+            "benchmarkReturn": "0.11497607997",
+            "maxDrawdown": "0.056126974781",
+            "winRate": "0.379310344828"
+          },
+          {
+            "index": 6,
+            "trainStart": 1761004800000,
+            "testStart": 1776729600000,
+            "testEnd": 1782000000000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 6,
+              "rules.ema-9-21.slowPeriod": 18,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "3",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "0.761478385005",
+            "inSampleTrades": 156,
+            "trades": 41,
+            "totalReturn": "-0.02531770719",
+            "benchmarkReturn": "-0.1521939276",
+            "maxDrawdown": "0.072387248528",
+            "winRate": "0.365853658537"
+          },
+          {
+            "index": 7,
+            "trainStart": 1766275200000,
+            "testStart": 1782000000000,
+            "testEnd": 1787270400000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 9,
+              "rules.ema-9-21.slowPeriod": 18,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "2",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "0.958143003389",
+            "inSampleTrades": 152,
+            "trades": 53,
+            "totalReturn": "0.06511470405",
+            "benchmarkReturn": "0.13572448128",
+            "maxDrawdown": "0.049045077753",
+            "winRate": "0.396226415094"
+          }
+        ],
+        "totalReturn": "-0.035760110433",
+        "benchmarkReturn": "-0.142566712319",
+        "excessReturn": "0.106806601886",
+        "annualizedReturn": "-0.026944066002",
+        "sharpe": "-0.08616600858",
+        "sortino": "-0.126215236068",
+        "winRate": "0.371508379888",
+        "profitFactor": "0.976484077752",
+        "exposure": "0.395362765229",
+        "maxDrawdownDepth": "0.241594800618",
+        "maxDrawdownDays": 403,
+        "trades": 358,
+        "feesPaid": "0",
+        "netProfit": "-357.601104332601",
+        "testCandles": 11688,
+        "liquidatedAtWindowEnd": 6,
+        "overfitting": {
+          "isAlert": true,
+          "reasons": [
+            "sharpe_below_half_of_in_sample",
+            "negative_out_of_sample_with_positive_in_sample"
+          ],
+          "inSampleSharpe": "1.406235222551",
+          "outOfSampleSharpe": "-0.08616600858",
+          "degradation": "-0.061274249996",
+          "eligibleWindows": 8,
+          "totalWindows": 8
+        }
+      },
+      "neighbors": [
+        {
+          "label": "parâmetros de fábrica",
+          "changedPath": null,
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1729468800000,
+                "testStart": 1745193600000,
+                "testEnd": 1750464000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.066374879358",
+                "inSampleTrades": 154,
+                "trades": 57,
+                "totalReturn": "-0.074059304619",
+                "benchmarkReturn": "0.20907408233",
+                "maxDrawdown": "0.12485121531",
+                "winRate": "0.385964912281"
+              },
+              {
+                "index": 1,
+                "trainStart": 1734739200000,
+                "testStart": 1750464000000,
+                "testEnd": 1755734400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.270382553246",
+                "inSampleTrades": 152,
+                "trades": 58,
+                "totalReturn": "-0.071299098378",
+                "benchmarkReturn": "0.102912996005",
+                "maxDrawdown": "0.110857498714",
+                "winRate": "0.379310344828"
+              },
+              {
+                "index": 2,
+                "trainStart": 1740096000000,
+                "testStart": 1755734400000,
+                "testEnd": 1761004800000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.720022155223",
+                "inSampleTrades": 159,
+                "trades": 54,
+                "totalReturn": "-0.110469426325",
+                "benchmarkReturn": "-0.035615115296",
+                "maxDrawdown": "0.130619563993",
+                "winRate": "0.351851851852"
+              },
+              {
+                "index": 3,
+                "trainStart": 1745193600000,
+                "testStart": 1761004800000,
+                "testEnd": 1766275200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.096685372878",
+                "inSampleTrades": 169,
+                "trades": 44,
+                "totalReturn": "-0.161158966782",
+                "benchmarkReturn": "-0.202967481915",
+                "maxDrawdown": "0.175376652764",
+                "winRate": "0.25"
+              },
+              {
+                "index": 4,
+                "trainStart": 1750464000000,
+                "testStart": 1766275200000,
+                "testEnd": 1771632000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-4.619840929228",
+                "inSampleTrades": 157,
+                "trades": 52,
+                "totalReturn": "-0.125310172723",
+                "benchmarkReturn": "-0.232503162317",
+                "maxDrawdown": "0.14266347014",
+                "winRate": "0.307692307692"
+              },
+              {
+                "index": 5,
+                "trainStart": 1755734400000,
+                "testStart": 1771632000000,
+                "testEnd": 1776729600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-5.476745790623",
+                "inSampleTrades": 152,
+                "trades": 50,
+                "totalReturn": "-0.027191320608",
+                "benchmarkReturn": "0.111636333732",
+                "maxDrawdown": "0.088630117286",
+                "winRate": "0.38"
+              },
+              {
+                "index": 6,
+                "trainStart": 1761004800000,
+                "testStart": 1776729600000,
+                "testEnd": 1782000000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-4.119656120256",
+                "inSampleTrades": 147,
+                "trades": 42,
+                "totalReturn": "-0.083409656957",
+                "benchmarkReturn": "-0.154730677366",
+                "maxDrawdown": "0.122254414668",
+                "winRate": "0.333333333333"
+              },
+              {
+                "index": 7,
+                "trainStart": 1766275200000,
+                "testStart": 1782000000000,
+                "testEnd": 1787270400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.928058410091",
+                "inSampleTrades": 145,
+                "trades": 54,
+                "totalReturn": "-0.098145055924",
+                "benchmarkReturn": "0.132324957139",
+                "maxDrawdown": "0.136280239974",
+                "winRate": "0.333333333333"
+              }
+            ],
+            "totalReturn": "-0.548671181324",
+            "benchmarkReturn": "-0.14510381051",
+            "excessReturn": "-0.403567370814",
+            "annualizedReturn": "-0.44938552217",
+            "sharpe": "-3.624592976765",
+            "sortino": "-5.104600356148",
+            "winRate": "0.349282296651",
+            "profitFactor": "0.643569671941",
+            "exposure": "0.431040383299",
+            "maxDrawdownDepth": "0.588893921987",
+            "maxDrawdownDays": 467,
+            "trades": 418,
+            "feesPaid": "4478.726437744708",
+            "netProfit": "-5486.711813239093",
+            "testCandles": 11688,
+            "liquidatedAtWindowEnd": 7,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-3.54087883945",
+              "outOfSampleSharpe": "-3.624592976765",
+              "degradation": null,
+              "eligibleWindows": 8,
+              "totalWindows": 8
+            }
+          }
+        },
+        {
+          "label": "fastPeriod=6",
+          "changedPath": "rules.ema-9-21.fastPeriod",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1729468800000,
+                "testStart": 1745193600000,
+                "testEnd": 1750464000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 6,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.0984120713",
+                "inSampleTrades": 160,
+                "trades": 61,
+                "totalReturn": "-0.086243110095",
+                "benchmarkReturn": "0.20907408233",
+                "maxDrawdown": "0.131142983082",
+                "winRate": "0.377049180328"
+              },
+              {
+                "index": 1,
+                "trainStart": 1734739200000,
+                "testStart": 1750464000000,
+                "testEnd": 1755734400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 6,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.253838847622",
+                "inSampleTrades": 161,
+                "trades": 60,
+                "totalReturn": "-0.068917761764",
+                "benchmarkReturn": "0.102912996005",
+                "maxDrawdown": "0.115645082456",
+                "winRate": "0.366666666667"
+              },
+              {
+                "index": 2,
+                "trainStart": 1740096000000,
+                "testStart": 1755734400000,
+                "testEnd": 1761004800000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 6,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.437107450015",
+                "inSampleTrades": 165,
+                "trades": 61,
+                "totalReturn": "-0.137340925531",
+                "benchmarkReturn": "-0.035615115296",
+                "maxDrawdown": "0.14313870026",
+                "winRate": "0.311475409836"
+              },
+              {
+                "index": 3,
+                "trainStart": 1745193600000,
+                "testStart": 1761004800000,
+                "testEnd": 1766275200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 6,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.546347281391",
+                "inSampleTrades": 182,
+                "trades": 44,
+                "totalReturn": "-0.09925526096",
+                "benchmarkReturn": "-0.202967481915",
+                "maxDrawdown": "0.123618785615",
+                "winRate": "0.295454545455"
+              },
+              {
+                "index": 4,
+                "trainStart": 1750464000000,
+                "testStart": 1766275200000,
+                "testEnd": 1771632000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 6,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.916758006688",
+                "inSampleTrades": 166,
+                "trades": 56,
+                "totalReturn": "-0.12459082878",
+                "benchmarkReturn": "-0.232503162317",
+                "maxDrawdown": "0.133587142789",
+                "winRate": "0.303571428571"
+              },
+              {
+                "index": 5,
+                "trainStart": 1755734400000,
+                "testStart": 1771632000000,
+                "testEnd": 1776729600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 6,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-4.830755387296",
+                "inSampleTrades": 163,
+                "trades": 50,
+                "totalReturn": "-0.01653379934",
+                "benchmarkReturn": "0.111636333732",
+                "maxDrawdown": "0.070716962472",
+                "winRate": "0.38"
+              },
+              {
+                "index": 6,
+                "trainStart": 1761004800000,
+                "testStart": 1776729600000,
+                "testEnd": 1782000000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 6,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.024073213012",
+                "inSampleTrades": 151,
+                "trades": 46,
+                "totalReturn": "-0.102908492222",
+                "benchmarkReturn": "-0.154730677366",
+                "maxDrawdown": "0.135903153368",
+                "winRate": "0.326086956522"
+              },
+              {
+                "index": 7,
+                "trainStart": 1766275200000,
+                "testStart": 1782000000000,
+                "testEnd": 1787270400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 6,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.100147849152",
+                "inSampleTrades": 153,
+                "trades": 58,
+                "totalReturn": "-0.127254468568",
+                "benchmarkReturn": "0.132324957139",
+                "maxDrawdown": "0.165569735858",
+                "winRate": "0.327586206897"
+              }
+            ],
+            "totalReturn": "-0.55439039201",
+            "benchmarkReturn": "-0.14510381051",
+            "excessReturn": "-0.409286581499",
+            "annualizedReturn": "-0.454627315922",
+            "sharpe": "-3.650081458801",
+            "sortino": "-5.117541911876",
+            "winRate": "0.343115124153",
+            "profitFactor": "0.648898486026",
+            "exposure": "0.44515742642",
+            "maxDrawdownDepth": "0.591811343578",
+            "maxDrawdownDays": 468,
+            "trades": 443,
+            "feesPaid": "4743.814987491554",
+            "netProfit": "-5543.903920096927",
+            "testCandles": 11688,
+            "liquidatedAtWindowEnd": 7,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-3.279260108266",
+              "outOfSampleSharpe": "-3.650081458801",
+              "degradation": null,
+              "eligibleWindows": 8,
+              "totalWindows": 8
+            }
+          }
+        },
+        {
+          "label": "fastPeriod=12",
+          "changedPath": "rules.ema-9-21.fastPeriod",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1729468800000,
+                "testStart": 1745193600000,
+                "testEnd": 1750464000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 12,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-1.884176941991",
+                "inSampleTrades": 145,
+                "trades": 54,
+                "totalReturn": "-0.07124480964",
+                "benchmarkReturn": "0.20907408233",
+                "maxDrawdown": "0.129232507807",
+                "winRate": "0.388888888889"
+              },
+              {
+                "index": 1,
+                "trainStart": 1734739200000,
+                "testStart": 1750464000000,
+                "testEnd": 1755734400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 12,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.467189198684",
+                "inSampleTrades": 142,
+                "trades": 56,
+                "totalReturn": "-0.044830163792",
+                "benchmarkReturn": "0.102912996005",
+                "maxDrawdown": "0.099318507684",
+                "winRate": "0.410714285714"
+              },
+              {
+                "index": 2,
+                "trainStart": 1740096000000,
+                "testStart": 1755734400000,
+                "testEnd": 1761004800000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 12,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.285835498106",
+                "inSampleTrades": 150,
+                "trades": 50,
+                "totalReturn": "-0.103458833815",
+                "benchmarkReturn": "-0.035615115296",
+                "maxDrawdown": "0.142029493963",
+                "winRate": "0.34"
+              },
+              {
+                "index": 3,
+                "trainStart": 1745193600000,
+                "testStart": 1761004800000,
+                "testEnd": 1766275200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 12,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.617822385619",
+                "inSampleTrades": 160,
+                "trades": 45,
+                "totalReturn": "-0.156997982356",
+                "benchmarkReturn": "-0.202967481915",
+                "maxDrawdown": "0.171286224401",
+                "winRate": "0.288888888889"
+              },
+              {
+                "index": 4,
+                "trainStart": 1750464000000,
+                "testStart": 1766275200000,
+                "testEnd": 1771632000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 12,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-4.152100605599",
+                "inSampleTrades": 152,
+                "trades": 49,
+                "totalReturn": "-0.108509383965",
+                "benchmarkReturn": "-0.232503162317",
+                "maxDrawdown": "0.127320003621",
+                "winRate": "0.326530612245"
+              },
+              {
+                "index": 5,
+                "trainStart": 1755734400000,
+                "testStart": 1771632000000,
+                "testEnd": 1776729600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 12,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-5.13103040128",
+                "inSampleTrades": 146,
+                "trades": 46,
+                "totalReturn": "-0.058162522206",
+                "benchmarkReturn": "0.111636333732",
+                "maxDrawdown": "0.099013463123",
+                "winRate": "0.369565217391"
+              },
+              {
+                "index": 6,
+                "trainStart": 1761004800000,
+                "testStart": 1776729600000,
+                "testEnd": 1782000000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 12,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-4.303774161003",
+                "inSampleTrades": 142,
+                "trades": 38,
+                "totalReturn": "-0.069585447259",
+                "benchmarkReturn": "-0.154730677366",
+                "maxDrawdown": "0.102610336048",
+                "winRate": "0.342105263158"
+              },
+              {
+                "index": 7,
+                "trainStart": 1766275200000,
+                "testStart": 1782000000000,
+                "testEnd": 1787270400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 12,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.977109015258",
+                "inSampleTrades": 134,
+                "trades": 51,
+                "totalReturn": "-0.106013240701",
+                "benchmarkReturn": "0.132324957139",
+                "maxDrawdown": "0.143816982188",
+                "winRate": "0.352941176471"
+              }
+            ],
+            "totalReturn": "-0.53174650446",
+            "benchmarkReturn": "-0.14510381051",
+            "excessReturn": "-0.38664269395",
+            "annualizedReturn": "-0.433969772122",
+            "sharpe": "-3.465422609616",
+            "sortino": "-4.855698911703",
+            "winRate": "0.361111111111",
+            "profitFactor": "0.652649685003",
+            "exposure": "0.426762491444",
+            "maxDrawdownDepth": "0.579921389897",
+            "maxDrawdownDays": 466,
+            "trades": 396,
+            "feesPaid": "4390.606798026164",
+            "netProfit": "-5317.465044601248",
+            "testCandles": 11688,
+            "liquidatedAtWindowEnd": 7,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-3.355592893097",
+              "outOfSampleSharpe": "-3.465422609616",
+              "degradation": null,
+              "eligibleWindows": 8,
+              "totalWindows": 8
+            }
+          }
+        },
+        {
+          "label": "slowPeriod=18",
+          "changedPath": "rules.ema-9-21.slowPeriod",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1729468800000,
+                "testStart": 1745193600000,
+                "testEnd": 1750464000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 18,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.1806507132",
+                "inSampleTrades": 157,
+                "trades": 59,
+                "totalReturn": "-0.08706324487",
+                "benchmarkReturn": "0.20907408233",
+                "maxDrawdown": "0.134333576051",
+                "winRate": "0.372881355932"
+              },
+              {
+                "index": 1,
+                "trainStart": 1734739200000,
+                "testStart": 1750464000000,
+                "testEnd": 1755734400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 18,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.294428528098",
+                "inSampleTrades": 157,
+                "trades": 60,
+                "totalReturn": "-0.071372327345",
+                "benchmarkReturn": "0.102912996005",
+                "maxDrawdown": "0.116199310795",
+                "winRate": "0.366666666667"
+              },
+              {
+                "index": 2,
+                "trainStart": 1740096000000,
+                "testStart": 1755734400000,
+                "testEnd": 1761004800000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 18,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.39129516517",
+                "inSampleTrades": 163,
+                "trades": 60,
+                "totalReturn": "-0.123269955604",
+                "benchmarkReturn": "-0.035615115296",
+                "maxDrawdown": "0.129160210025",
+                "winRate": "0.333333333333"
+              },
+              {
+                "index": 3,
+                "trainStart": 1745193600000,
+                "testStart": 1761004800000,
+                "testEnd": 1766275200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 18,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.407338681562",
+                "inSampleTrades": 179,
+                "trades": 44,
+                "totalReturn": "-0.149141970274",
+                "benchmarkReturn": "-0.202967481915",
+                "maxDrawdown": "0.163564952323",
+                "winRate": "0.25"
+              },
+              {
+                "index": 4,
+                "trainStart": 1750464000000,
+                "testStart": 1766275200000,
+                "testEnd": 1771632000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 18,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-4.561895234736",
+                "inSampleTrades": 165,
+                "trades": 51,
+                "totalReturn": "-0.107294846477",
+                "benchmarkReturn": "-0.232503162317",
+                "maxDrawdown": "0.125006039097",
+                "winRate": "0.333333333333"
+              },
+              {
+                "index": 5,
+                "trainStart": 1755734400000,
+                "testStart": 1771632000000,
+                "testEnd": 1776729600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 18,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-5.162622032194",
+                "inSampleTrades": 157,
+                "trades": 47,
+                "totalReturn": "-0.008088674523",
+                "benchmarkReturn": "0.111636333732",
+                "maxDrawdown": "0.073650381905",
+                "winRate": "0.382978723404"
+              },
+              {
+                "index": 6,
+                "trainStart": 1761004800000,
+                "testStart": 1776729600000,
+                "testEnd": 1782000000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 18,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.459852072358",
+                "inSampleTrades": 143,
+                "trades": 45,
+                "totalReturn": "-0.101798712313",
+                "benchmarkReturn": "-0.154730677366",
+                "maxDrawdown": "0.133453876185",
+                "winRate": "0.311111111111"
+              },
+              {
+                "index": 7,
+                "trainStart": 1766275200000,
+                "testStart": 1782000000000,
+                "testEnd": 1787270400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 18,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.721460151637",
+                "inSampleTrades": 144,
+                "trades": 58,
+                "totalReturn": "-0.124503721791",
+                "benchmarkReturn": "0.132324957139",
+                "maxDrawdown": "0.161525048123",
+                "winRate": "0.310344827586"
+              }
+            ],
+            "totalReturn": "-0.559633601585",
+            "benchmarkReturn": "-0.14510381051",
+            "excessReturn": "-0.414529791075",
+            "annualizedReturn": "-0.459447634564",
+            "sharpe": "-3.724221388832",
+            "sortino": "-5.193765497877",
+            "winRate": "0.343387470998",
+            "profitFactor": "0.639257610207",
+            "exposure": "0.439596167009",
+            "maxDrawdownDepth": "0.597574534045",
+            "maxDrawdownDays": 468,
+            "trades": 431,
+            "feesPaid": "4598.757623067418",
+            "netProfit": "-5596.336015850152",
+            "testCandles": 11688,
+            "liquidatedAtWindowEnd": 7,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-3.401356153353",
+              "outOfSampleSharpe": "-3.724221388832",
+              "degradation": null,
+              "eligibleWindows": 8,
+              "totalWindows": 8
+            }
+          }
+        },
+        {
+          "label": "slowPeriod=26",
+          "changedPath": "rules.ema-9-21.slowPeriod",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1729468800000,
+                "testStart": 1745193600000,
+                "testEnd": 1750464000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 26,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-1.57626935652",
+                "inSampleTrades": 144,
+                "trades": 55,
+                "totalReturn": "-0.080001514058",
+                "benchmarkReturn": "0.20907408233",
+                "maxDrawdown": "0.13573109449",
+                "winRate": "0.4"
+              },
+              {
+                "index": 1,
+                "trainStart": 1734739200000,
+                "testStart": 1750464000000,
+                "testEnd": 1755734400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 26,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.267956067741",
+                "inSampleTrades": 142,
+                "trades": 56,
+                "totalReturn": "-0.048904526381",
+                "benchmarkReturn": "0.102912996005",
+                "maxDrawdown": "0.098947859481",
+                "winRate": "0.410714285714"
+              },
+              {
+                "index": 2,
+                "trainStart": 1740096000000,
+                "testStart": 1755734400000,
+                "testEnd": 1761004800000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 26,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.449166623395",
+                "inSampleTrades": 151,
+                "trades": 49,
+                "totalReturn": "-0.091421975652",
+                "benchmarkReturn": "-0.035615115296",
+                "maxDrawdown": "0.138030855232",
+                "winRate": "0.367346938776"
+              },
+              {
+                "index": 3,
+                "trainStart": 1745193600000,
+                "testStart": 1761004800000,
+                "testEnd": 1766275200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 26,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.62062104686",
+                "inSampleTrades": 160,
+                "trades": 44,
+                "totalReturn": "-0.145753289016",
+                "benchmarkReturn": "-0.202967481915",
+                "maxDrawdown": "0.160231523549",
+                "winRate": "0.295454545455"
+              },
+              {
+                "index": 4,
+                "trainStart": 1750464000000,
+                "testStart": 1766275200000,
+                "testEnd": 1771632000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 26,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.878187114887",
+                "inSampleTrades": 150,
+                "trades": 48,
+                "totalReturn": "-0.099669485623",
+                "benchmarkReturn": "-0.232503162317",
+                "maxDrawdown": "0.118666668785",
+                "winRate": "0.333333333333"
+              },
+              {
+                "index": 5,
+                "trainStart": 1755734400000,
+                "testStart": 1771632000000,
+                "testEnd": 1776729600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 26,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-4.708393424261",
+                "inSampleTrades": 142,
+                "trades": 46,
+                "totalReturn": "-0.057654925711",
+                "benchmarkReturn": "0.111636333732",
+                "maxDrawdown": "0.099979697116",
+                "winRate": "0.369565217391"
+              },
+              {
+                "index": 6,
+                "trainStart": 1761004800000,
+                "testStart": 1776729600000,
+                "testEnd": 1782000000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 26,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-4.02829501443",
+                "inSampleTrades": 139,
+                "trades": 37,
+                "totalReturn": "-0.057538810669",
+                "benchmarkReturn": "-0.154730677366",
+                "maxDrawdown": "0.096564363172",
+                "winRate": "0.351351351351"
+              },
+              {
+                "index": 7,
+                "trainStart": 1766275200000,
+                "testStart": 1782000000000,
+                "testEnd": 1787270400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 26,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.708919692761",
+                "inSampleTrades": 132,
+                "trades": 52,
+                "totalReturn": "-0.092386768041",
+                "benchmarkReturn": "0.132324957139",
+                "maxDrawdown": "0.133730870522",
+                "winRate": "0.365384615385"
+              }
+            ],
+            "totalReturn": "-0.507129301988",
+            "benchmarkReturn": "-0.14510381051",
+            "excessReturn": "-0.362025491478",
+            "annualizedReturn": "-0.411793213352",
+            "sharpe": "-3.221795475219",
+            "sortino": "-4.541240754303",
+            "winRate": "0.370558375635",
+            "profitFactor": "0.667638125239",
+            "exposure": "0.425906913073",
+            "maxDrawdownDepth": "0.556959894263",
+            "maxDrawdownDays": 466,
+            "trades": 394,
+            "feesPaid": "4402.166182965283",
+            "netProfit": "-5071.293019880463",
+            "testCandles": 11688,
+            "liquidatedAtWindowEnd": 7,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-3.1574685622",
+              "outOfSampleSharpe": "-3.221795475219",
+              "degradation": null,
+              "eligibleWindows": 8,
+              "totalWindows": 8
+            }
+          }
+        },
+        {
+          "label": "buy=1.5",
+          "changedPath": "thresholds.buy",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1729468800000,
+                "testStart": 1745193600000,
+                "testEnd": 1750464000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "1.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.066374879358",
+                "inSampleTrades": 154,
+                "trades": 57,
+                "totalReturn": "-0.074059304619",
+                "benchmarkReturn": "0.20907408233",
+                "maxDrawdown": "0.12485121531",
+                "winRate": "0.385964912281"
+              },
+              {
+                "index": 1,
+                "trainStart": 1734739200000,
+                "testStart": 1750464000000,
+                "testEnd": 1755734400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "1.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.270382553246",
+                "inSampleTrades": 152,
+                "trades": 58,
+                "totalReturn": "-0.071299098378",
+                "benchmarkReturn": "0.102912996005",
+                "maxDrawdown": "0.110857498714",
+                "winRate": "0.379310344828"
+              },
+              {
+                "index": 2,
+                "trainStart": 1740096000000,
+                "testStart": 1755734400000,
+                "testEnd": 1761004800000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "1.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.720022155223",
+                "inSampleTrades": 159,
+                "trades": 54,
+                "totalReturn": "-0.110469426325",
+                "benchmarkReturn": "-0.035615115296",
+                "maxDrawdown": "0.130619563993",
+                "winRate": "0.351851851852"
+              },
+              {
+                "index": 3,
+                "trainStart": 1745193600000,
+                "testStart": 1761004800000,
+                "testEnd": 1766275200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "1.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.096685372878",
+                "inSampleTrades": 169,
+                "trades": 44,
+                "totalReturn": "-0.161158966782",
+                "benchmarkReturn": "-0.202967481915",
+                "maxDrawdown": "0.175376652764",
+                "winRate": "0.25"
+              },
+              {
+                "index": 4,
+                "trainStart": 1750464000000,
+                "testStart": 1766275200000,
+                "testEnd": 1771632000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "1.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-4.619840929228",
+                "inSampleTrades": 157,
+                "trades": 52,
+                "totalReturn": "-0.125310172723",
+                "benchmarkReturn": "-0.232503162317",
+                "maxDrawdown": "0.14266347014",
+                "winRate": "0.307692307692"
+              },
+              {
+                "index": 5,
+                "trainStart": 1755734400000,
+                "testStart": 1771632000000,
+                "testEnd": 1776729600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "1.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-5.476745790623",
+                "inSampleTrades": 152,
+                "trades": 51,
+                "totalReturn": "-0.02724527673",
+                "benchmarkReturn": "0.111636333732",
+                "maxDrawdown": "0.088681163858",
+                "winRate": "0.372549019608"
+              },
+              {
+                "index": 6,
+                "trainStart": 1761004800000,
+                "testStart": 1776729600000,
+                "testEnd": 1782000000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "1.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-4.119376526604",
+                "inSampleTrades": 148,
+                "trades": 42,
+                "totalReturn": "-0.083409656957",
+                "benchmarkReturn": "-0.154730677366",
+                "maxDrawdown": "0.122254414668",
+                "winRate": "0.333333333333"
+              },
+              {
+                "index": 7,
+                "trainStart": 1766275200000,
+                "testStart": 1782000000000,
+                "testEnd": 1787270400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "1.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.928013801327",
+                "inSampleTrades": 146,
+                "trades": 55,
+                "totalReturn": "-0.088044114467",
+                "benchmarkReturn": "0.132324957139",
+                "maxDrawdown": "0.131089978273",
+                "winRate": "0.345454545455"
+              }
+            ],
+            "totalReturn": "-0.543641528432",
+            "benchmarkReturn": "-0.14510381051",
+            "excessReturn": "-0.398537717922",
+            "annualizedReturn": "-0.444789431913",
+            "sharpe": "-3.566993838174",
+            "sortino": "-5.030946818765",
+            "winRate": "0.35",
+            "profitFactor": "0.647085769187",
+            "exposure": "0.431553730322",
+            "maxDrawdownDepth": "0.584312837193",
+            "maxDrawdownDays": 467,
+            "trades": 420,
+            "feesPaid": "4497.016069786894",
+            "netProfit": "-5436.415284320148",
+            "testCandles": 11688,
+            "liquidatedAtWindowEnd": 7,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-3.540838397458",
+              "outOfSampleSharpe": "-3.566993838174",
+              "degradation": null,
+              "eligibleWindows": 8,
+              "totalWindows": 8
+            }
+          }
+        },
+        {
+          "label": "buy=2.5",
+          "changedPath": "thresholds.buy",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1729468800000,
+                "testStart": 1745193600000,
+                "testEnd": 1750464000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-1.931425897454",
+                "inSampleTrades": 77,
+                "trades": 32,
+                "totalReturn": "-0.0914883124",
+                "benchmarkReturn": "0.20907408233",
+                "maxDrawdown": "0.116502843903",
+                "winRate": "0.3125"
+              },
+              {
+                "index": 1,
+                "trainStart": 1734739200000,
+                "testStart": 1750464000000,
+                "testEnd": 1755734400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.772631058493",
+                "inSampleTrades": 73,
+                "trades": 27,
+                "totalReturn": "-0.000909303132",
+                "benchmarkReturn": "0.102912996005",
+                "maxDrawdown": "0.030727514588",
+                "winRate": "0.481481481481"
+              },
+              {
+                "index": 2,
+                "trainStart": 1740096000000,
+                "testStart": 1755734400000,
+                "testEnd": 1761004800000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.266058704823",
+                "inSampleTrades": 80,
+                "trades": 28,
+                "totalReturn": "-0.041370956037",
+                "benchmarkReturn": "-0.035615115296",
+                "maxDrawdown": "0.051306400926",
+                "winRate": "0.428571428571"
+              },
+              {
+                "index": 3,
+                "trainStart": 1745193600000,
+                "testStart": 1761004800000,
+                "testEnd": 1766275200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.228297450157",
+                "inSampleTrades": 87,
+                "trades": 27,
+                "totalReturn": "-0.024088315592",
+                "benchmarkReturn": "-0.202967481915",
+                "maxDrawdown": "0.073249559912",
+                "winRate": "0.407407407407"
+              },
+              {
+                "index": 4,
+                "trainStart": 1750464000000,
+                "testStart": 1766275200000,
+                "testEnd": 1771632000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-1.133936691502",
+                "inSampleTrades": 83,
+                "trades": 24,
+                "totalReturn": "-0.078289214503",
+                "benchmarkReturn": "-0.232503162317",
+                "maxDrawdown": "0.08043691152",
+                "winRate": "0.291666666667"
+              },
+              {
+                "index": 5,
+                "trainStart": 1755734400000,
+                "testStart": 1771632000000,
+                "testEnd": 1776729600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.530672807735",
+                "inSampleTrades": 81,
+                "trades": 28,
+                "totalReturn": "-0.043650266879",
+                "benchmarkReturn": "0.111636333732",
+                "maxDrawdown": "0.066219566586",
+                "winRate": "0.357142857143"
+              },
+              {
+                "index": 6,
+                "trainStart": 1761004800000,
+                "testStart": 1776729600000,
+                "testEnd": 1782000000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.342381679965",
+                "inSampleTrades": 80,
+                "trades": 30,
+                "totalReturn": "-0.107006452629",
+                "benchmarkReturn": "-0.154730677366",
+                "maxDrawdown": "0.122190112568",
+                "winRate": "0.266666666667"
+              },
+              {
+                "index": 7,
+                "trainStart": 1766275200000,
+                "testStart": 1782000000000,
+                "testEnd": 1787270400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.541884355162",
+                "inSampleTrades": 82,
+                "trades": 28,
+                "totalReturn": "-0.020369872546",
+                "benchmarkReturn": "0.132324957139",
+                "maxDrawdown": "0.078741582688",
+                "winRate": "0.392857142857"
+              }
+            ],
+            "totalReturn": "-0.345185333056",
+            "benchmarkReturn": "-0.14510381051",
+            "excessReturn": "-0.200081522545",
+            "annualizedReturn": "-0.272091151968",
+            "sharpe": "-2.484780212219",
+            "sortino": "-3.504288935549",
+            "winRate": "0.365217391304",
+            "profitFactor": "0.665286737294",
+            "exposure": "0.261721423682",
+            "maxDrawdownDepth": "0.391890183138",
+            "maxDrawdownDays": 485,
+            "trades": 230,
+            "feesPaid": "2802.373288032555",
+            "netProfit": "-3451.853330557266",
+            "testCandles": 11688,
+            "liquidatedAtWindowEnd": 6,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-2.467556092866",
+              "outOfSampleSharpe": "-2.484780212219",
+              "degradation": null,
+              "eligibleWindows": 8,
+              "totalWindows": 8
+            }
+          }
+        },
+        {
+          "label": "stopAtrMultiple=1.5",
+          "changedPath": "risk.stopAtrMultiple",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1729468800000,
+                "testStart": 1745193600000,
+                "testEnd": 1750464000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "1.5",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.369853070295",
+                "inSampleTrades": 185,
+                "trades": 63,
+                "totalReturn": "-0.096759064368",
+                "benchmarkReturn": "0.20907408233",
+                "maxDrawdown": "0.175050824951",
+                "winRate": "0.349206349206"
+              },
+              {
+                "index": 1,
+                "trainStart": 1734739200000,
+                "testStart": 1750464000000,
+                "testEnd": 1755734400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "1.5",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.692775674571",
+                "inSampleTrades": 174,
+                "trades": 67,
+                "totalReturn": "-0.104346385171",
+                "benchmarkReturn": "0.102912996005",
+                "maxDrawdown": "0.150278172495",
+                "winRate": "0.328358208955"
+              },
+              {
+                "index": 2,
+                "trainStart": 1740096000000,
+                "testStart": 1755734400000,
+                "testEnd": 1761004800000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "1.5",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.279541776073",
+                "inSampleTrades": 181,
+                "trades": 62,
+                "totalReturn": "-0.151057472777",
+                "benchmarkReturn": "-0.035615115296",
+                "maxDrawdown": "0.169629397207",
+                "winRate": "0.290322580645"
+              },
+              {
+                "index": 3,
+                "trainStart": 1745193600000,
+                "testStart": 1761004800000,
+                "testEnd": 1766275200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "1.5",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.814599673765",
+                "inSampleTrades": 192,
+                "trades": 47,
+                "totalReturn": "-0.171116116156",
+                "benchmarkReturn": "-0.202967481915",
+                "maxDrawdown": "0.183604803669",
+                "winRate": "0.234042553191"
+              },
+              {
+                "index": 4,
+                "trainStart": 1750464000000,
+                "testStart": 1766275200000,
+                "testEnd": 1771632000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "1.5",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-5.129536733233",
+                "inSampleTrades": 177,
+                "trades": 68,
+                "totalReturn": "-0.23867428434",
+                "benchmarkReturn": "-0.232503162317",
+                "maxDrawdown": "0.239502302343",
+                "winRate": "0.235294117647"
+              },
+              {
+                "index": 5,
+                "trainStart": 1755734400000,
+                "testStart": 1771632000000,
+                "testEnd": 1776729600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "1.5",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-6.923591941019",
+                "inSampleTrades": 179,
+                "trades": 58,
+                "totalReturn": "-0.017994770109",
+                "benchmarkReturn": "0.111636333732",
+                "maxDrawdown": "0.102855751962",
+                "winRate": "0.362068965517"
+              },
+              {
+                "index": 6,
+                "trainStart": 1761004800000,
+                "testStart": 1776729600000,
+                "testEnd": 1782000000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "1.5",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-4.815783987206",
+                "inSampleTrades": 174,
+                "trades": 48,
+                "totalReturn": "-0.114774223878",
+                "benchmarkReturn": "-0.154730677366",
+                "maxDrawdown": "0.151612698803",
+                "winRate": "0.291666666667"
+              },
+              {
+                "index": 7,
+                "trainStart": 1766275200000,
+                "testStart": 1782000000000,
+                "testEnd": 1787270400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "1.5",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-4.101843548388",
+                "inSampleTrades": 176,
+                "trades": 59,
+                "totalReturn": "-0.113787465991",
+                "benchmarkReturn": "0.132324957139",
+                "maxDrawdown": "0.162074726835",
+                "winRate": "0.28813559322"
+              }
+            ],
+            "totalReturn": "-0.666118835156",
+            "benchmarkReturn": "-0.14510381051",
+            "excessReturn": "-0.521015024646",
+            "annualizedReturn": "-0.560798952695",
+            "sharpe": "-4.256071404405",
+            "sortino": "-5.960194179136",
+            "winRate": "0.302713987474",
+            "profitFactor": "0.61022462917",
+            "exposure": "0.401180698152",
+            "maxDrawdownDepth": "0.709235532681",
+            "maxDrawdownDays": 467,
+            "trades": 479,
+            "feesPaid": "5292.122818965433",
+            "netProfit": "-6661.188351561165",
+            "testCandles": 11688,
+            "liquidatedAtWindowEnd": 7,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-4.39528453477",
+              "outOfSampleSharpe": "-4.256071404405",
+              "degradation": null,
+              "eligibleWindows": 8,
+              "totalWindows": 8
+            }
+          }
+        },
+        {
+          "label": "stopAtrMultiple=3",
+          "changedPath": "risk.stopAtrMultiple",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1729468800000,
+                "testStart": 1745193600000,
+                "testEnd": 1750464000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "3",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-1.855193832706",
+                "inSampleTrades": 140,
+                "trades": 51,
+                "totalReturn": "-0.043152861654",
+                "benchmarkReturn": "0.20907408233",
+                "maxDrawdown": "0.079513838639",
+                "winRate": "0.411764705882"
+              },
+              {
+                "index": 1,
+                "trainStart": 1734739200000,
+                "testStart": 1750464000000,
+                "testEnd": 1755734400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "3",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.088793648633",
+                "inSampleTrades": 138,
+                "trades": 49,
+                "totalReturn": "-0.044600851137",
+                "benchmarkReturn": "0.102912996005",
+                "maxDrawdown": "0.078796681294",
+                "winRate": "0.428571428571"
+              },
+              {
+                "index": 2,
+                "trainStart": 1740096000000,
+                "testStart": 1755734400000,
+                "testEnd": 1761004800000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "3",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.113793141606",
+                "inSampleTrades": 140,
+                "trades": 49,
+                "totalReturn": "-0.071139580044",
+                "benchmarkReturn": "-0.035615115296",
+                "maxDrawdown": "0.099388055959",
+                "winRate": "0.408163265306"
+              },
+              {
+                "index": 3,
+                "trainStart": 1745193600000,
+                "testStart": 1761004800000,
+                "testEnd": 1766275200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "3",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.482107139892",
+                "inSampleTrades": 149,
+                "trades": 40,
+                "totalReturn": "-0.113178204948",
+                "benchmarkReturn": "-0.202967481915",
+                "maxDrawdown": "0.125380733751",
+                "winRate": "0.3"
+              },
+              {
+                "index": 4,
+                "trainStart": 1750464000000,
+                "testStart": 1766275200000,
+                "testEnd": 1771632000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "3",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.928533846675",
+                "inSampleTrades": 139,
+                "trades": 48,
+                "totalReturn": "-0.086265948866",
+                "benchmarkReturn": "-0.232503162317",
+                "maxDrawdown": "0.095849197488",
+                "winRate": "0.354166666667"
+              },
+              {
+                "index": 5,
+                "trainStart": 1755734400000,
+                "testStart": 1771632000000,
+                "testEnd": 1776729600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "3",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-4.753733884166",
+                "inSampleTrades": 139,
+                "trades": 48,
+                "totalReturn": "-0.005358587118",
+                "benchmarkReturn": "0.111636333732",
+                "maxDrawdown": "0.057861650728",
+                "winRate": "0.416666666667"
+              },
+              {
+                "index": 6,
+                "trainStart": 1761004800000,
+                "testStart": 1776729600000,
+                "testEnd": 1782000000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "3",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.508602422712",
+                "inSampleTrades": 137,
+                "trades": 37,
+                "totalReturn": "-0.064042418682",
+                "benchmarkReturn": "-0.154730677366",
+                "maxDrawdown": "0.097941559416",
+                "winRate": "0.351351351351"
+              },
+              {
+                "index": 7,
+                "trainStart": 1766275200000,
+                "testStart": 1782000000000,
+                "testEnd": 1787270400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "3",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.615933547016",
+                "inSampleTrades": 134,
+                "trades": 46,
+                "totalReturn": "-0.074669145396",
+                "benchmarkReturn": "0.132324957139",
+                "maxDrawdown": "0.105090987151",
+                "winRate": "0.369565217391"
+              }
+            ],
+            "totalReturn": "-0.407274263277",
+            "benchmarkReturn": "-0.14510381051",
+            "excessReturn": "-0.262170452767",
+            "annualizedReturn": "-0.324499364401",
+            "sharpe": "-3.164216442935",
+            "sortino": "-4.438441530014",
+            "winRate": "0.389333333333",
+            "profitFactor": "0.667728447045",
+            "exposure": "0.468600273785",
+            "maxDrawdownDepth": "0.447574825147",
+            "maxDrawdownDays": 467,
+            "trades": 375,
+            "feesPaid": "3357.913994649354",
+            "netProfit": "-4072.742632771874",
+            "testCandles": 11688,
+            "liquidatedAtWindowEnd": 7,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-3.04653947517",
+              "outOfSampleSharpe": "-3.164216442935",
+              "degradation": null,
+              "eligibleWindows": 8,
+              "totalWindows": 8
+            }
+          }
+        },
+        {
+          "label": "targetAtrMultiple=4",
+          "changedPath": "risk.targetAtrMultiple",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1729468800000,
+                "testStart": 1745193600000,
+                "testEnd": 1750464000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "4"
+                },
+                "inSampleSharpe": "-1.741407408343",
+                "inSampleTrades": 125,
+                "trades": 51,
+                "totalReturn": "-0.074376453152",
+                "benchmarkReturn": "0.20907408233",
+                "maxDrawdown": "0.139850897126",
+                "winRate": "0.313725490196"
+              },
+              {
+                "index": 1,
+                "trainStart": 1734739200000,
+                "testStart": 1750464000000,
+                "testEnd": 1755734400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "4"
+                },
+                "inSampleSharpe": "-3.073624009002",
+                "inSampleTrades": 130,
+                "trades": 46,
+                "totalReturn": "-0.061099095",
+                "benchmarkReturn": "0.102912996005",
+                "maxDrawdown": "0.111576598467",
+                "winRate": "0.326086956522"
+              },
+              {
+                "index": 2,
+                "trainStart": 1740096000000,
+                "testStart": 1755734400000,
+                "testEnd": 1761004800000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "4"
+                },
+                "inSampleSharpe": "-2.514414619119",
+                "inSampleTrades": 135,
+                "trades": 43,
+                "totalReturn": "-0.102251241688",
+                "benchmarkReturn": "-0.035615115296",
+                "maxDrawdown": "0.126891523659",
+                "winRate": "0.279069767442"
+              },
+              {
+                "index": 3,
+                "trainStart": 1745193600000,
+                "testStart": 1761004800000,
+                "testEnd": 1766275200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "4"
+                },
+                "inSampleSharpe": "-2.709258961323",
+                "inSampleTrades": 140,
+                "trades": 42,
+                "totalReturn": "-0.158690861923",
+                "benchmarkReturn": "-0.202967481915",
+                "maxDrawdown": "0.169545417002",
+                "winRate": "0.214285714286"
+              },
+              {
+                "index": 4,
+                "trainStart": 1750464000000,
+                "testStart": 1766275200000,
+                "testEnd": 1771632000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "4"
+                },
+                "inSampleSharpe": "-4.138870945106",
+                "inSampleTrades": 132,
+                "trades": 49,
+                "totalReturn": "-0.136927696342",
+                "benchmarkReturn": "-0.232503162317",
+                "maxDrawdown": "0.152736589876",
+                "winRate": "0.224489795918"
+              },
+              {
+                "index": 5,
+                "trainStart": 1755734400000,
+                "testStart": 1771632000000,
+                "testEnd": 1776729600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "4"
+                },
+                "inSampleSharpe": "-5.230456344169",
+                "inSampleTrades": 136,
+                "trades": 42,
+                "totalReturn": "-0.071985486068",
+                "benchmarkReturn": "0.111636333732",
+                "maxDrawdown": "0.102599902076",
+                "winRate": "0.238095238095"
+              },
+              {
+                "index": 6,
+                "trainStart": 1761004800000,
+                "testStart": 1776729600000,
+                "testEnd": 1782000000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "4"
+                },
+                "inSampleSharpe": "-4.659635132853",
+                "inSampleTrades": 134,
+                "trades": 37,
+                "totalReturn": "-0.06739499026",
+                "benchmarkReturn": "-0.154730677366",
+                "maxDrawdown": "0.111415460689",
+                "winRate": "0.27027027027"
+              },
+              {
+                "index": 7,
+                "trainStart": 1766275200000,
+                "testStart": 1782000000000,
+                "testEnd": 1787270400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "4"
+                },
+                "inSampleSharpe": "-3.382772205603",
+                "inSampleTrades": 128,
+                "trades": 44,
+                "totalReturn": "-0.086976303934",
+                "benchmarkReturn": "0.132324957139",
+                "maxDrawdown": "0.136741149437",
+                "winRate": "0.25"
+              }
+            ],
+            "totalReturn": "-0.552342038406",
+            "benchmarkReturn": "-0.14510381051",
+            "excessReturn": "-0.407238227896",
+            "annualizedReturn": "-0.4527480289",
+            "sharpe": "-3.519355102263",
+            "sortino": "-4.952746722924",
+            "winRate": "0.277008310249",
+            "profitFactor": "0.612489836274",
+            "exposure": "0.449264202601",
+            "maxDrawdownDepth": "0.607031522904",
+            "maxDrawdownDays": 467,
+            "trades": 361,
+            "feesPaid": "3846.669162880111",
+            "netProfit": "-5523.420384062052",
+            "testCandles": 11688,
+            "liquidatedAtWindowEnd": 7,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-3.434389041666",
+              "outOfSampleSharpe": "-3.519355102263",
+              "degradation": null,
+              "eligibleWindows": 8,
+              "totalWindows": 8
+            }
+          }
+        }
+      ],
+      "elapsedSeconds": 187.00643525
+    },
+    {
+      "symbol": "ETHUSDT",
+      "timeframe": "1d",
+      "candleCount": 729,
+      "firstOpenTime": 1728777600000,
+      "lastCloseTime": 1791763199999,
+      "digest": "4698707c36bc1087db29a0d57b2984abc96b0b58e108e8877c2669c9e67f2a78",
+      "buyAndHoldWholePeriod": "0.421573461840",
+      "periodStart": 1745625600000,
+      "periodEnd": 1791763200000,
+      "leadInCandles": 194,
+      "combinations": 162,
+      "minTradesPerWindow": 3,
+      "withCosts": {
+        "windows": [
+          {
+            "index": 0,
+            "trainStart": 1745625600000,
+            "testStart": 1761436800000,
+            "testEnd": 1766707200000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 9,
+              "rules.ema-9-21.slowPeriod": 18,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "2",
+              "risk.targetAtrMultiple": "4"
+            },
+            "inSampleSharpe": "1.956749521361",
+            "inSampleTrades": 7,
+            "trades": 1,
+            "totalReturn": "-0.009999670644",
+            "benchmarkReturn": "-0.267733432191",
+            "maxDrawdown": "0.009999670644",
+            "winRate": "0"
+          },
+          {
+            "index": 1,
+            "trainStart": 1750896000000,
+            "testStart": 1766707200000,
+            "testEnd": 1772064000000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 12,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "1.5",
+              "risk.targetAtrMultiple": "4"
+            },
+            "inSampleSharpe": "1.786351779299",
+            "inSampleTrades": 5,
+            "trades": 1,
+            "totalReturn": "-0.009999999168",
+            "benchmarkReturn": "-0.293601260254",
+            "maxDrawdown": "0.021014063876",
+            "winRate": "0"
+          },
+          {
+            "index": 2,
+            "trainStart": 1756166400000,
+            "testStart": 1772064000000,
+            "testEnd": 1777161600000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 12,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "2",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "-1.980798574467",
+            "inSampleTrades": 3,
+            "trades": 1,
+            "totalReturn": "-0.003335783608",
+            "benchmarkReturn": "0.1239719246",
+            "maxDrawdown": "0.017811113968",
+            "winRate": "0"
+          },
+          {
+            "index": 3,
+            "trainStart": 1761436800000,
+            "testStart": 1777161600000,
+            "testEnd": 1782432000000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 6,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "1.5",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "-0.325518580097",
+            "inSampleTrades": 4,
+            "trades": 0,
+            "totalReturn": "0",
+            "benchmarkReturn": "-0.32608557756",
+            "maxDrawdown": "0",
+            "winRate": null
+          },
+          {
+            "index": 4,
+            "trainStart": 1766707200000,
+            "testStart": 1782432000000,
+            "testEnd": 1787702400000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 6,
+              "rules.ema-9-21.slowPeriod": 21,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "3",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "0.070085864321",
+            "inSampleTrades": 3,
+            "trades": 1,
+            "totalReturn": "0.006664980909",
+            "benchmarkReturn": "0.553266005538",
+            "maxDrawdown": "0.006194553761",
+            "winRate": "1"
+          }
+        ],
+        "totalReturn": "-0.016658516257",
+        "benchmarkReturn": "-0.397368959269",
+        "excessReturn": "0.380710443012",
+        "annualizedReturn": "-0.020046418773",
+        "sharpe": "-0.616004980197",
+        "sortino": "-0.854267512451",
+        "winRate": "0.333333333333",
+        "profitFactor": "0.489818400287",
+        "exposure": "0.348684210526",
+        "maxDrawdownDepth": "0.038450893957",
+        "maxDrawdownDays": 223,
+        "trades": 6,
+        "feesPaid": "9.898340732723",
+        "netProfit": "-166.585162568449",
+        "testCandles": 304,
+        "liquidatedAtWindowEnd": 2,
+        "overfitting": {
+          "isAlert": true,
+          "reasons": [
+            "sharpe_below_half_of_in_sample",
+            "negative_out_of_sample_with_positive_in_sample"
+          ],
+          "inSampleSharpe": "0.299824500607",
+          "outOfSampleSharpe": "-0.616004980197",
+          "degradation": "-2.054551842661",
+          "eligibleWindows": 5,
+          "totalWindows": 5
+        }
+      },
+      "withoutCosts": {
+        "windows": [
+          {
+            "index": 0,
+            "trainStart": 1745625600000,
+            "testStart": 1761436800000,
+            "testEnd": 1766707200000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 9,
+              "rules.ema-9-21.slowPeriod": 18,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "2",
+              "risk.targetAtrMultiple": "4"
+            },
+            "inSampleSharpe": "2.008992927038",
+            "inSampleTrades": 7,
+            "trades": 1,
+            "totalReturn": "-0.00999986274",
+            "benchmarkReturn": "-0.2655305912",
+            "maxDrawdown": "0.010156501712",
+            "winRate": "0"
+          },
+          {
+            "index": 1,
+            "trainStart": 1750896000000,
+            "testStart": 1766707200000,
+            "testEnd": 1772064000000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 12,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "1.5",
+              "risk.targetAtrMultiple": "4"
+            },
+            "inSampleSharpe": "1.831018739636",
+            "inSampleTrades": 5,
+            "trades": 1,
+            "totalReturn": "-0.0099999328",
+            "benchmarkReturn": "-0.29147657688",
+            "maxDrawdown": "0.022052753463",
+            "winRate": "0"
+          },
+          {
+            "index": 2,
+            "trainStart": 1756166400000,
+            "testStart": 1772064000000,
+            "testEnd": 1777161600000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 12,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "1.5",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "-1.534261107902",
+            "inSampleTrades": 3,
+            "trades": 2,
+            "totalReturn": "-0.01509165269",
+            "benchmarkReturn": "0.12734984262",
+            "maxDrawdown": "0.02490220141",
+            "winRate": "0"
+          },
+          {
+            "index": 3,
+            "trainStart": 1761436800000,
+            "testStart": 1777161600000,
+            "testEnd": 1782432000000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 6,
+              "rules.ema-9-21.slowPeriod": 26,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "1.5",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "-0.234517570823",
+            "inSampleTrades": 3,
+            "trades": 0,
+            "totalReturn": "0",
+            "benchmarkReturn": "-0.32405811285",
+            "maxDrawdown": "0",
+            "winRate": null
+          },
+          {
+            "index": 4,
+            "trainStart": 1766707200000,
+            "testStart": 1782432000000,
+            "testEnd": 1787702400000,
+            "isEligible": true,
+            "assignment": {
+              "rules.ema-9-21.fastPeriod": 6,
+              "rules.ema-9-21.slowPeriod": 21,
+              "thresholds.buy": "1.5",
+              "risk.stopAtrMultiple": "3",
+              "risk.targetAtrMultiple": "3"
+            },
+            "inSampleSharpe": "0.114136018292",
+            "inSampleTrades": 3,
+            "trades": 1,
+            "totalReturn": "0.0071938502",
+            "benchmarkReturn": "0.55794518136",
+            "maxDrawdown": "0.006056687486",
+            "winRate": "1"
+          }
+        ],
+        "totalReturn": "-0.027746842029",
+        "benchmarkReturn": "-0.395555536794",
+        "excessReturn": "0.367808694764",
+        "annualizedReturn": "-0.033351265059",
+        "sharpe": "-0.911480830333",
+        "sortino": "-1.249150033469",
+        "winRate": "0.285714285714",
+        "profitFactor": "0.341123905719",
+        "exposure": "0.309210526316",
+        "maxDrawdownDepth": "0.046405792765",
+        "maxDrawdownDays": 223,
+        "trades": 7,
+        "feesPaid": "0",
+        "netProfit": "-277.468420293091",
+        "testCandles": 304,
+        "liquidatedAtWindowEnd": 2,
+        "overfitting": {
+          "isAlert": true,
+          "reasons": [
+            "sharpe_below_half_of_in_sample",
+            "negative_out_of_sample_with_positive_in_sample"
+          ],
+          "inSampleSharpe": "0.436010900536",
+          "outOfSampleSharpe": "-0.911480830333",
+          "degradation": "-2.090500098077",
+          "eligibleWindows": 5,
+          "totalWindows": 5
+        }
+      },
+      "neighbors": [
+        {
+          "label": "parâmetros de fábrica",
+          "changedPath": null,
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1745625600000,
+                "testStart": 1761436800000,
+                "testEnd": 1766707200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "1.348367276966",
+                "inSampleTrades": 9,
+                "trades": 1,
+                "totalReturn": "-0.009999670644",
+                "benchmarkReturn": "-0.267733432191",
+                "maxDrawdown": "0.009999670644",
+                "winRate": "0"
+              },
+              {
+                "index": 1,
+                "trainStart": 1750896000000,
+                "testStart": 1766707200000,
+                "testEnd": 1772064000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "0.700089755291",
+                "inSampleTrades": 8,
+                "trades": 1,
+                "totalReturn": "-0.009999992378",
+                "benchmarkReturn": "-0.293601260254",
+                "maxDrawdown": "0.018496565476",
+                "winRate": "0"
+              },
+              {
+                "index": 2,
+                "trainStart": 1756166400000,
+                "testStart": 1772064000000,
+                "testEnd": 1777161600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.698274181036",
+                "inSampleTrades": 4,
+                "trades": 1,
+                "totalReturn": "0.009774811528",
+                "benchmarkReturn": "0.1239719246",
+                "maxDrawdown": "0.01637502586",
+                "winRate": "1"
+              },
+              {
+                "index": 3,
+                "trainStart": 1761436800000,
+                "testStart": 1777161600000,
+                "testEnd": 1782432000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-0.568677770445",
+                "inSampleTrades": 3,
+                "trades": 0,
+                "totalReturn": "0",
+                "benchmarkReturn": "-0.32608557756",
+                "maxDrawdown": "0",
+                "winRate": null
+              },
+              {
+                "index": 4,
+                "trainStart": 1766707200000,
+                "testStart": 1782432000000,
+                "testEnd": 1787702400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-0.233195621641",
+                "inSampleTrades": 3,
+                "trades": 1,
+                "totalReturn": "0.009886834534",
+                "benchmarkReturn": "0.553266005538",
+                "maxDrawdown": "0.009185118612",
+                "winRate": "1"
+              }
+            ],
+            "totalReturn": "-0.000534561725",
+            "benchmarkReturn": "-0.397368959269",
+            "excessReturn": "0.396834397543",
+            "annualizedReturn": "-0.000644349661",
+            "sharpe": "-0.003242310088",
+            "sortino": "-0.004780483505",
+            "winRate": "0.333333333333",
+            "profitFactor": "0.981573493712",
+            "exposure": "0.365131578947",
+            "maxDrawdownDepth": "0.026150554065",
+            "maxDrawdownDays": 253,
+            "trades": 6,
+            "feesPaid": "10.431261298784",
+            "netProfit": "-5.345617253947",
+            "testCandles": 304,
+            "liquidatedAtWindowEnd": 2,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-0.292717584666",
+              "outOfSampleSharpe": "-0.003242310088",
+              "degradation": null,
+              "eligibleWindows": 5,
+              "totalWindows": 5
+            }
+          }
+        },
+        {
+          "label": "fastPeriod=6",
+          "changedPath": "rules.ema-9-21.fastPeriod",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1745625600000,
+                "testStart": 1761436800000,
+                "testEnd": 1766707200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 6,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "1.334399199649",
+                "inSampleTrades": 9,
+                "trades": 1,
+                "totalReturn": "-0.009999670644",
+                "benchmarkReturn": "-0.267733432191",
+                "maxDrawdown": "0.009999670644",
+                "winRate": "0"
+              },
+              {
+                "index": 1,
+                "trainStart": 1750896000000,
+                "testStart": 1766707200000,
+                "testEnd": 1772064000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 6,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "0.700089755291",
+                "inSampleTrades": 8,
+                "trades": 1,
+                "totalReturn": "-0.009999992378",
+                "benchmarkReturn": "-0.293601260254",
+                "maxDrawdown": "0.018496565476",
+                "winRate": "0"
+              },
+              {
+                "index": 2,
+                "trainStart": 1756166400000,
+                "testStart": 1772064000000,
+                "testEnd": 1777161600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 6,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.698274181036",
+                "inSampleTrades": 4,
+                "trades": 1,
+                "totalReturn": "0.009774086356",
+                "benchmarkReturn": "0.1239719246",
+                "maxDrawdown": "0.016529990918",
+                "winRate": "1"
+              },
+              {
+                "index": 3,
+                "trainStart": 1761436800000,
+                "testStart": 1777161600000,
+                "testEnd": 1782432000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 6,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-0.569400858177",
+                "inSampleTrades": 3,
+                "trades": 0,
+                "totalReturn": "0",
+                "benchmarkReturn": "-0.32608557756",
+                "maxDrawdown": "0",
+                "winRate": null
+              },
+              {
+                "index": 4,
+                "trainStart": 1766707200000,
+                "testStart": 1782432000000,
+                "testEnd": 1787702400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 6,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-0.150856617515",
+                "inSampleTrades": 3,
+                "trades": 1,
+                "totalReturn": "0.009901202528",
+                "benchmarkReturn": "0.553266005538",
+                "maxDrawdown": "0.009185153308",
+                "winRate": "1"
+              }
+            ],
+            "totalReturn": "-0.000521059779",
+            "benchmarkReturn": "-0.397368959269",
+            "excessReturn": "0.39684789949",
+            "annualizedReturn": "-0.000628075565",
+            "sharpe": "-0.002943366237",
+            "sortino": "-0.004319949125",
+            "winRate": "0.333333333333",
+            "profitFactor": "0.982038957676",
+            "exposure": "0.371710526316",
+            "maxDrawdownDepth": "0.025473252879",
+            "maxDrawdownDays": 253,
+            "trades": 6,
+            "feesPaid": "10.385988773802",
+            "netProfit": "-5.210597785589",
+            "testCandles": 304,
+            "liquidatedAtWindowEnd": 2,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-0.279262104281",
+              "outOfSampleSharpe": "-0.002943366237",
+              "degradation": null,
+              "eligibleWindows": 5,
+              "totalWindows": 5
+            }
+          }
+        },
+        {
+          "label": "fastPeriod=12",
+          "changedPath": "rules.ema-9-21.fastPeriod",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1745625600000,
+                "testStart": 1761436800000,
+                "testEnd": 1766707200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 12,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "1.178045210376",
+                "inSampleTrades": 9,
+                "trades": 1,
+                "totalReturn": "-0.009999853935",
+                "benchmarkReturn": "-0.267733432191",
+                "maxDrawdown": "0.009999853935",
+                "winRate": "0"
+              },
+              {
+                "index": 1,
+                "trainStart": 1750896000000,
+                "testStart": 1766707200000,
+                "testEnd": 1772064000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 12,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "0.69692107077",
+                "inSampleTrades": 8,
+                "trades": 1,
+                "totalReturn": "-0.009999775804",
+                "benchmarkReturn": "-0.293601260254",
+                "maxDrawdown": "0.018736854467",
+                "winRate": "0"
+              },
+              {
+                "index": 2,
+                "trainStart": 1756166400000,
+                "testStart": 1772064000000,
+                "testEnd": 1777161600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 12,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.61178824301",
+                "inSampleTrades": 4,
+                "trades": 1,
+                "totalReturn": "-0.006750727582",
+                "benchmarkReturn": "0.1239719246",
+                "maxDrawdown": "0.020859857989",
+                "winRate": "0"
+              },
+              {
+                "index": 3,
+                "trainStart": 1761436800000,
+                "testStart": 1777161600000,
+                "testEnd": 1782432000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 12,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-1.536498030931",
+                "inSampleTrades": 3,
+                "trades": 0,
+                "totalReturn": "0",
+                "benchmarkReturn": "-0.32608557756",
+                "maxDrawdown": "0",
+                "winRate": null
+              },
+              {
+                "index": 4,
+                "trainStart": 1766707200000,
+                "testStart": 1782432000000,
+                "testEnd": 1787702400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 12,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-1.179863630738",
+                "inSampleTrades": 3,
+                "trades": 1,
+                "totalReturn": "0.009894373484",
+                "benchmarkReturn": "0.553266005538",
+                "maxDrawdown": "0.009185050349",
+                "winRate": "1"
+              }
+            ],
+            "totalReturn": "-0.01688400998",
+            "benchmarkReturn": "-0.397368959269",
+            "excessReturn": "0.380484949288",
+            "annualizedReturn": "-0.020317296294",
+            "sharpe": "-0.614394696005",
+            "sortino": "-0.882214294932",
+            "winRate": "0.333333333333",
+            "profitFactor": "0.504612541575",
+            "exposure": "0.319078947368",
+            "maxDrawdownDepth": "0.033615801604",
+            "maxDrawdownDays": 258,
+            "trades": 6,
+            "feesPaid": "10.287468140256",
+            "netProfit": "-168.840099801885",
+            "testCandles": 304,
+            "liquidatedAtWindowEnd": 2,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-0.691274443212",
+              "outOfSampleSharpe": "-0.614394696005",
+              "degradation": null,
+              "eligibleWindows": 5,
+              "totalWindows": 5
+            }
+          }
+        },
+        {
+          "label": "slowPeriod=18",
+          "changedPath": "rules.ema-9-21.slowPeriod",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1745625600000,
+                "testStart": 1761436800000,
+                "testEnd": 1766707200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 18,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "1.353266084406",
+                "inSampleTrades": 9,
+                "trades": 1,
+                "totalReturn": "-0.009999670644",
+                "benchmarkReturn": "-0.267733432191",
+                "maxDrawdown": "0.009999670644",
+                "winRate": "0"
+              },
+              {
+                "index": 1,
+                "trainStart": 1750896000000,
+                "testStart": 1766707200000,
+                "testEnd": 1772064000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 18,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "0.700089755291",
+                "inSampleTrades": 8,
+                "trades": 1,
+                "totalReturn": "-0.009999992378",
+                "benchmarkReturn": "-0.293601260254",
+                "maxDrawdown": "0.018496565476",
+                "winRate": "0"
+              },
+              {
+                "index": 2,
+                "trainStart": 1756166400000,
+                "testStart": 1772064000000,
+                "testEnd": 1777161600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 18,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.698274181036",
+                "inSampleTrades": 4,
+                "trades": 1,
+                "totalReturn": "0.009774086356",
+                "benchmarkReturn": "0.1239719246",
+                "maxDrawdown": "0.016529990918",
+                "winRate": "1"
+              },
+              {
+                "index": 3,
+                "trainStart": 1761436800000,
+                "testStart": 1777161600000,
+                "testEnd": 1782432000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 18,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-0.569400858177",
+                "inSampleTrades": 3,
+                "trades": 0,
+                "totalReturn": "0",
+                "benchmarkReturn": "-0.32608557756",
+                "maxDrawdown": "0",
+                "winRate": null
+              },
+              {
+                "index": 4,
+                "trainStart": 1766707200000,
+                "testStart": 1782432000000,
+                "testEnd": 1787702400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 18,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-0.150856617515",
+                "inSampleTrades": 3,
+                "trades": 1,
+                "totalReturn": "0.009886834534",
+                "benchmarkReturn": "0.553266005538",
+                "maxDrawdown": "0.009185118612",
+                "winRate": "1"
+              }
+            ],
+            "totalReturn": "-0.000535279494",
+            "benchmarkReturn": "-0.397368959269",
+            "excessReturn": "0.396833679775",
+            "annualizedReturn": "-0.000645214796",
+            "sharpe": "-0.003297077881",
+            "sortino": "-0.004846720961",
+            "winRate": "0.333333333333",
+            "profitFactor": "0.981548749984",
+            "exposure": "0.368421052632",
+            "maxDrawdownDepth": "0.025473252879",
+            "maxDrawdownDays": 253,
+            "trades": 6,
+            "feesPaid": "10.433377963748",
+            "netProfit": "-5.352794936957",
+            "testCandles": 304,
+            "liquidatedAtWindowEnd": 2,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-0.27548462137",
+              "outOfSampleSharpe": "-0.003297077881",
+              "degradation": null,
+              "eligibleWindows": 5,
+              "totalWindows": 5
+            }
+          }
+        },
+        {
+          "label": "slowPeriod=26",
+          "changedPath": "rules.ema-9-21.slowPeriod",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1745625600000,
+                "testStart": 1761436800000,
+                "testEnd": 1766707200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 26,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "1.178045210376",
+                "inSampleTrades": 9,
+                "trades": 1,
+                "totalReturn": "-0.009999853935",
+                "benchmarkReturn": "-0.267733432191",
+                "maxDrawdown": "0.009999853935",
+                "winRate": "0"
+              },
+              {
+                "index": 1,
+                "trainStart": 1750896000000,
+                "testStart": 1766707200000,
+                "testEnd": 1772064000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 26,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "0.69692107077",
+                "inSampleTrades": 8,
+                "trades": 1,
+                "totalReturn": "-0.009999775804",
+                "benchmarkReturn": "-0.293601260254",
+                "maxDrawdown": "0.018736854467",
+                "winRate": "0"
+              },
+              {
+                "index": 2,
+                "trainStart": 1756166400000,
+                "testStart": 1772064000000,
+                "testEnd": 1777161600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 26,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.61178824301",
+                "inSampleTrades": 4,
+                "trades": 1,
+                "totalReturn": "-0.006750727582",
+                "benchmarkReturn": "0.1239719246",
+                "maxDrawdown": "0.020859857989",
+                "winRate": "0"
+              },
+              {
+                "index": 3,
+                "trainStart": 1761436800000,
+                "testStart": 1777161600000,
+                "testEnd": 1782432000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 26,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-1.536498030931",
+                "inSampleTrades": 3,
+                "trades": 0,
+                "totalReturn": "0",
+                "benchmarkReturn": "-0.32608557756",
+                "maxDrawdown": "0",
+                "winRate": null
+              },
+              {
+                "index": 4,
+                "trainStart": 1766707200000,
+                "testStart": 1782432000000,
+                "testEnd": 1787702400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 26,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-1.179863630738",
+                "inSampleTrades": 3,
+                "trades": 1,
+                "totalReturn": "0.009894373484",
+                "benchmarkReturn": "0.553266005538",
+                "maxDrawdown": "0.009185050349",
+                "winRate": "1"
+              }
+            ],
+            "totalReturn": "-0.01688400998",
+            "benchmarkReturn": "-0.397368959269",
+            "excessReturn": "0.380484949288",
+            "annualizedReturn": "-0.020317296294",
+            "sharpe": "-0.614394696005",
+            "sortino": "-0.882214294932",
+            "winRate": "0.333333333333",
+            "profitFactor": "0.504612541575",
+            "exposure": "0.319078947368",
+            "maxDrawdownDepth": "0.033615801604",
+            "maxDrawdownDays": 258,
+            "trades": 6,
+            "feesPaid": "10.287468140256",
+            "netProfit": "-168.840099801885",
+            "testCandles": 304,
+            "liquidatedAtWindowEnd": 2,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-0.691274443212",
+              "outOfSampleSharpe": "-0.614394696005",
+              "degradation": null,
+              "eligibleWindows": 5,
+              "totalWindows": 5
+            }
+          }
+        },
+        {
+          "label": "buy=1.5",
+          "changedPath": "thresholds.buy",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1745625600000,
+                "testStart": 1761436800000,
+                "testEnd": 1766707200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "1.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "1.348367276966",
+                "inSampleTrades": 9,
+                "trades": 1,
+                "totalReturn": "-0.009999670644",
+                "benchmarkReturn": "-0.267733432191",
+                "maxDrawdown": "0.009999670644",
+                "winRate": "0"
+              },
+              {
+                "index": 1,
+                "trainStart": 1750896000000,
+                "testStart": 1766707200000,
+                "testEnd": 1772064000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "1.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "0.700089755291",
+                "inSampleTrades": 8,
+                "trades": 1,
+                "totalReturn": "-0.009999992378",
+                "benchmarkReturn": "-0.293601260254",
+                "maxDrawdown": "0.018496565476",
+                "winRate": "0"
+              },
+              {
+                "index": 2,
+                "trainStart": 1756166400000,
+                "testStart": 1772064000000,
+                "testEnd": 1777161600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "1.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.698274181036",
+                "inSampleTrades": 4,
+                "trades": 1,
+                "totalReturn": "0.009774811528",
+                "benchmarkReturn": "0.1239719246",
+                "maxDrawdown": "0.01637502586",
+                "winRate": "1"
+              },
+              {
+                "index": 3,
+                "trainStart": 1761436800000,
+                "testStart": 1777161600000,
+                "testEnd": 1782432000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "1.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-0.568677770445",
+                "inSampleTrades": 3,
+                "trades": 0,
+                "totalReturn": "0",
+                "benchmarkReturn": "-0.32608557756",
+                "maxDrawdown": "0",
+                "winRate": null
+              },
+              {
+                "index": 4,
+                "trainStart": 1766707200000,
+                "testStart": 1782432000000,
+                "testEnd": 1787702400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "1.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-0.233195621641",
+                "inSampleTrades": 3,
+                "trades": 1,
+                "totalReturn": "0.009886834534",
+                "benchmarkReturn": "0.553266005538",
+                "maxDrawdown": "0.009185118612",
+                "winRate": "1"
+              }
+            ],
+            "totalReturn": "-0.000534561725",
+            "benchmarkReturn": "-0.397368959269",
+            "excessReturn": "0.396834397543",
+            "annualizedReturn": "-0.000644349661",
+            "sharpe": "-0.003242310088",
+            "sortino": "-0.004780483505",
+            "winRate": "0.333333333333",
+            "profitFactor": "0.981573493712",
+            "exposure": "0.365131578947",
+            "maxDrawdownDepth": "0.026150554065",
+            "maxDrawdownDays": 253,
+            "trades": 6,
+            "feesPaid": "10.431261298784",
+            "netProfit": "-5.345617253947",
+            "testCandles": 304,
+            "liquidatedAtWindowEnd": 2,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-0.292717584666",
+              "outOfSampleSharpe": "-0.003242310088",
+              "degradation": null,
+              "eligibleWindows": 5,
+              "totalWindows": 5
+            }
+          }
+        },
+        {
+          "label": "buy=2.5",
+          "changedPath": "thresholds.buy",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1745625600000,
+                "testStart": 1761436800000,
+                "testEnd": 1766707200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "1.677688245782",
+                "inSampleTrades": 6,
+                "trades": 1,
+                "totalReturn": "-0.009999670644",
+                "benchmarkReturn": "-0.267733432191",
+                "maxDrawdown": "0.009999670644",
+                "winRate": "0"
+              },
+              {
+                "index": 1,
+                "trainStart": 1750896000000,
+                "testStart": 1766707200000,
+                "testEnd": 1772064000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "1.044141325795",
+                "inSampleTrades": 5,
+                "trades": 1,
+                "totalReturn": "-0.009999995091",
+                "benchmarkReturn": "-0.293601260254",
+                "maxDrawdown": "0.009999995091",
+                "winRate": "0"
+              },
+              {
+                "index": 2,
+                "trainStart": 1756166400000,
+                "testStart": 1772064000000,
+                "testEnd": 1777161600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.639475517356",
+                "inSampleTrades": 2,
+                "trades": 1,
+                "totalReturn": "-0.009999859651",
+                "benchmarkReturn": "0.1239719246",
+                "maxDrawdown": "0.009999859651",
+                "winRate": "0"
+              },
+              {
+                "index": 3,
+                "trainStart": 1761436800000,
+                "testStart": 1777161600000,
+                "testEnd": 1782432000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-4.335988669107",
+                "inSampleTrades": 3,
+                "trades": 0,
+                "totalReturn": "0",
+                "benchmarkReturn": "-0.32608557756",
+                "maxDrawdown": "0",
+                "winRate": null
+              },
+              {
+                "index": 4,
+                "trainStart": 1766707200000,
+                "testStart": 1782432000000,
+                "testEnd": 1787702400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2.5",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.494722039912",
+                "inSampleTrades": 2,
+                "trades": 1,
+                "totalReturn": "0.009886834534",
+                "benchmarkReturn": "0.553266005538",
+                "maxDrawdown": "0.009185118612",
+                "winRate": "1"
+              }
+            ],
+            "totalReturn": "-0.02010734457",
+            "benchmarkReturn": "-0.397368959269",
+            "excessReturn": "0.377261614698",
+            "annualizedReturn": "-0.024187976085",
+            "sharpe": "-1.150556416447",
+            "sortino": "-1.552107507429",
+            "winRate": "0.2",
+            "profitFactor": "0.409788933554",
+            "exposure": "0.197368421053",
+            "maxDrawdownDepth": "0.034225663806",
+            "maxDrawdownDays": 259,
+            "trades": 5,
+            "feesPaid": "9.486339446489",
+            "netProfit": "-201.073445702137",
+            "testCandles": 304,
+            "liquidatedAtWindowEnd": 1,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-1.747014569414",
+              "outOfSampleSharpe": "-1.150556416447",
+              "degradation": null,
+              "eligibleWindows": 5,
+              "totalWindows": 5
+            }
+          }
+        },
+        {
+          "label": "stopAtrMultiple=1.5",
+          "changedPath": "risk.stopAtrMultiple",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1745625600000,
+                "testStart": 1761436800000,
+                "testEnd": 1766707200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "1.5",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "1.235374210908",
+                "inSampleTrades": 11,
+                "trades": 2,
+                "totalReturn": "-0.019899608464",
+                "benchmarkReturn": "-0.267733432191",
+                "maxDrawdown": "0.019899608464",
+                "winRate": "0"
+              },
+              {
+                "index": 1,
+                "trainStart": 1750896000000,
+                "testStart": 1766707200000,
+                "testEnd": 1772064000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "1.5",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "0.495120884003",
+                "inSampleTrades": 10,
+                "trades": 1,
+                "totalReturn": "-0.009999891634",
+                "benchmarkReturn": "-0.293601260254",
+                "maxDrawdown": "0.021182516849",
+                "winRate": "0"
+              },
+              {
+                "index": 2,
+                "trainStart": 1756166400000,
+                "testStart": 1772064000000,
+                "testEnd": 1777161600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "1.5",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-3.090068738231",
+                "inSampleTrades": 6,
+                "trades": 2,
+                "totalReturn": "0.011992086165",
+                "benchmarkReturn": "0.1239719246",
+                "maxDrawdown": "0.021611567731",
+                "winRate": "0.5"
+              },
+              {
+                "index": 3,
+                "trainStart": 1761436800000,
+                "testStart": 1777161600000,
+                "testEnd": 1782432000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "1.5",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-0.746359777245",
+                "inSampleTrades": 5,
+                "trades": 0,
+                "totalReturn": "0",
+                "benchmarkReturn": "-0.32608557756",
+                "maxDrawdown": "0",
+                "winRate": null
+              },
+              {
+                "index": 4,
+                "trainStart": 1766707200000,
+                "testStart": 1782432000000,
+                "testEnd": 1787702400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "1.5",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-0.134540350913",
+                "inSampleTrades": 4,
+                "trades": 2,
+                "totalReturn": "0.006910905236",
+                "benchmarkReturn": "0.553266005538",
+                "maxDrawdown": "0.013740037121",
+                "winRate": "0.5"
+              }
+            ],
+            "totalReturn": "-0.011278528475",
+            "benchmarkReturn": "-0.397368959269",
+            "excessReturn": "0.386090430794",
+            "annualizedReturn": "-0.013579853206",
+            "sharpe": "-0.290725688241",
+            "sortino": "-0.421548282596",
+            "winRate": "0.333333333333",
+            "profitFactor": "0.780888927373",
+            "exposure": "0.358552631579",
+            "maxDrawdownDepth": "0.037894489775",
+            "maxDrawdownDays": 253,
+            "trades": 9,
+            "feesPaid": "21.859193429532",
+            "netProfit": "-112.78528474696",
+            "testCandles": 304,
+            "liquidatedAtWindowEnd": 2,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-0.450986226945",
+              "outOfSampleSharpe": "-0.290725688241",
+              "degradation": null,
+              "eligibleWindows": 5,
+              "totalWindows": 5
+            }
+          }
+        },
+        {
+          "label": "stopAtrMultiple=3",
+          "changedPath": "risk.stopAtrMultiple",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1745625600000,
+                "testStart": 1761436800000,
+                "testEnd": 1766707200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "3",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "1.419091731388",
+                "inSampleTrades": 8,
+                "trades": 1,
+                "totalReturn": "-0.008431153144",
+                "benchmarkReturn": "-0.267733432191",
+                "maxDrawdown": "0.00915543264",
+                "winRate": "0"
+              },
+              {
+                "index": 1,
+                "trainStart": 1750896000000,
+                "testStart": 1766707200000,
+                "testEnd": 1772064000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "3",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "0.706152228424",
+                "inSampleTrades": 7,
+                "trades": 1,
+                "totalReturn": "-0.004043119205",
+                "benchmarkReturn": "-0.293601260254",
+                "maxDrawdown": "0.012877130773",
+                "winRate": "0"
+              },
+              {
+                "index": 2,
+                "trainStart": 1756166400000,
+                "testStart": 1772064000000,
+                "testEnd": 1777161600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "3",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-2.846955134499",
+                "inSampleTrades": 4,
+                "trades": 1,
+                "totalReturn": "0.006571397094",
+                "benchmarkReturn": "0.1239719246",
+                "maxDrawdown": "0.011029979811",
+                "winRate": "1"
+              },
+              {
+                "index": 3,
+                "trainStart": 1761436800000,
+                "testStart": 1777161600000,
+                "testEnd": 1782432000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "3",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-0.48806708583",
+                "inSampleTrades": 3,
+                "trades": 0,
+                "totalReturn": "0",
+                "benchmarkReturn": "-0.32608557756",
+                "maxDrawdown": "0",
+                "winRate": null
+              },
+              {
+                "index": 4,
+                "trainStart": 1766707200000,
+                "testStart": 1782432000000,
+                "testEnd": 1787702400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "3",
+                  "risk.targetAtrMultiple": "3"
+                },
+                "inSampleSharpe": "-0.013875124441",
+                "inSampleTrades": 3,
+                "trades": 1,
+                "totalReturn": "0.00665734734",
+                "benchmarkReturn": "0.553266005538",
+                "maxDrawdown": "0.006194600595",
+                "winRate": "1"
+              }
+            ],
+            "totalReturn": "0.000667196064",
+            "benchmarkReturn": "-0.397368959269",
+            "excessReturn": "0.398036155332",
+            "annualizedReturn": "0.000804323634",
+            "sharpe": "0.047316784737",
+            "sortino": "0.069803856764",
+            "winRate": "0.333333333333",
+            "profitFactor": "1.035900505079",
+            "exposure": "0.378289473684",
+            "maxDrawdownDepth": "0.016668708933",
+            "maxDrawdownDays": 229,
+            "trades": 6,
+            "feesPaid": "7.046738484161",
+            "netProfit": "6.671960636897",
+            "testCandles": 304,
+            "liquidatedAtWindowEnd": 2,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-0.247548678734",
+              "outOfSampleSharpe": "0.047316784737",
+              "degradation": null,
+              "eligibleWindows": 5,
+              "totalWindows": 5
+            }
+          }
+        },
+        {
+          "label": "targetAtrMultiple=4",
+          "changedPath": "risk.targetAtrMultiple",
+          "summary": {
+            "windows": [
+              {
+                "index": 0,
+                "trainStart": 1745625600000,
+                "testStart": 1761436800000,
+                "testEnd": 1766707200000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "4"
+                },
+                "inSampleSharpe": "1.952279973227",
+                "inSampleTrades": 7,
+                "trades": 1,
+                "totalReturn": "-0.009999670644",
+                "benchmarkReturn": "-0.267733432191",
+                "maxDrawdown": "0.009999670644",
+                "winRate": "0"
+              },
+              {
+                "index": 1,
+                "trainStart": 1750896000000,
+                "testStart": 1766707200000,
+                "testEnd": 1772064000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "4"
+                },
+                "inSampleSharpe": "1.332525957753",
+                "inSampleTrades": 6,
+                "trades": 1,
+                "totalReturn": "-0.009999992378",
+                "benchmarkReturn": "-0.293601260254",
+                "maxDrawdown": "0.018496565476",
+                "winRate": "0"
+              },
+              {
+                "index": 2,
+                "trainStart": 1756166400000,
+                "testStart": 1772064000000,
+                "testEnd": 1777161600000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "4"
+                },
+                "inSampleSharpe": "-2.698274181036",
+                "inSampleTrades": 4,
+                "trades": 0,
+                "totalReturn": "0.008826956667",
+                "benchmarkReturn": "0.1239719246",
+                "maxDrawdown": "0.01637502586",
+                "winRate": null
+              },
+              {
+                "index": 3,
+                "trainStart": 1761436800000,
+                "testStart": 1777161600000,
+                "testEnd": 1782432000000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "4"
+                },
+                "inSampleSharpe": "-0.633549088489",
+                "inSampleTrades": 2,
+                "trades": 0,
+                "totalReturn": "0",
+                "benchmarkReturn": "-0.32608557756",
+                "maxDrawdown": "0",
+                "winRate": null
+              },
+              {
+                "index": 4,
+                "trainStart": 1766707200000,
+                "testStart": 1782432000000,
+                "testEnd": 1787702400000,
+                "isEligible": true,
+                "assignment": {
+                  "rules.ema-9-21.fastPeriod": 9,
+                  "rules.ema-9-21.slowPeriod": 21,
+                  "thresholds.buy": "2",
+                  "risk.stopAtrMultiple": "2",
+                  "risk.targetAtrMultiple": "4"
+                },
+                "inSampleSharpe": "-0.269377094082",
+                "inSampleTrades": 2,
+                "trades": 1,
+                "totalReturn": "0.014732370899",
+                "benchmarkReturn": "0.553266005538",
+                "maxDrawdown": "0.012111094294",
+                "winRate": "1"
+              }
+            ],
+            "totalReturn": "0.003318292622",
+            "benchmarkReturn": "-0.397368959269",
+            "excessReturn": "0.400687251891",
+            "annualizedReturn": "0.004001383325",
+            "sharpe": "0.134183674587",
+            "sortino": "0.206927634636",
+            "winRate": "0.4",
+            "profitFactor": "1.136154178985",
+            "exposure": "0.368421052632",
+            "maxDrawdownDepth": "0.026150554065",
+            "maxDrawdownDays": 253,
+            "trades": 5,
+            "feesPaid": "8.460802748642",
+            "netProfit": "33.182926223646",
+            "testCandles": 304,
+            "liquidatedAtWindowEnd": 2,
+            "overfitting": {
+              "isAlert": false,
+              "reasons": [],
+              "inSampleSharpe": "-0.065301331449",
+              "outOfSampleSharpe": "0.134183674587",
+              "degradation": null,
+              "eligibleWindows": 5,
+              "totalWindows": 5
+            }
+          }
+        }
+      ],
+      "elapsedSeconds": 8.13542624999999
+    }
+  ]
+}
