@@ -75,6 +75,94 @@
   color: var(--ink-2);
 }
 
+.rank {
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.plainVerdict {
+  font-weight: 500;
+}
+
+.outcomeBar {
+  width: 100%;
+  height: 14px;
+  display: block;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.barReached {
+  fill: var(--buy);
+}
+
+.barStopped {
+  fill: var(--sell);
+}
+
+.barNeither {
+  fill: var(--bench);
+}
+
+.barLegend {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.barLegend li::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 3px;
+  background: var(--bench);
+}
+
+.barLegend .legendReached::before {
+  background: var(--buy);
+}
+
+.barLegend .legendStopped::before {
+  background: var(--sell);
+}
+
+.explainer {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+}
+
+.explainer summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.explainer ul {
+  margin: 4px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+
 .situations {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

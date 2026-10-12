@@ -52,6 +52,13 @@ export const GOAL_OUTCOME_TEXT: Readonly<Record<string, string>> = {
   goal_expired: 'Prazo encerrado sem atingir a meta',
 };
 
+export const VERDICT_PLAIN: Readonly<Record<string, string>> = {
+  COMPRAR: 'Boa opção no passado: chegou ao alvo na maior parte das tentativas.',
+  SEGURAR: 'Resultado no meio do caminho: não dá para dizer que foi bom nem ruim.',
+  EVITAR:
+    'Opção fraca no passado: quase nunca chegou ao alvo ou bateu a perda máxima com frequência.',
+};
+
 export const VERDICT_HINT: Readonly<Record<string, string>> = {
   COMPRAR:
     'No histórico, esta combinação chegou ao alvo na maior parte das janelas e raramente tocou a perda máxima.',

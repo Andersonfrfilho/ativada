@@ -12,6 +12,7 @@ import { messageFromGoalError } from './goal-form.validation.js';
 import { GOAL_TIMEFRAME, UNAVAILABLE_REASON_TEXT } from './goal.constant.js';
 import type { Combination, GoalEvaluation } from './goal.validation.js';
 import styles from './Goals.module.css';
+import { RankingExplainer } from './RankingExplainer.component.js';
 import { RankingItem } from './RankingItem.component.js';
 
 export type RankingCardProps = { readonly goalId: string; readonly evaluation: GoalEvaluation };
@@ -71,6 +72,7 @@ export function RankingCard({ goalId, evaluation }: RankingCardProps): ReactElem
     .sort((first, second) => first.rank - second.rank);
   return (
     <Card title="Estratégia × moeda">
+      <RankingExplainer />
       <label className={styles.checkbox}>
         <input
           type="checkbox"
