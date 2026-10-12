@@ -43,6 +43,14 @@ corretora próprios. Candles e sentimento são compartilhados. Preview da tela e
 - **O import do realm não altera um realm existente.** Mudou `realm/*.json`? Aplique com
   `make down DOWN_FLAGS=--volumes` e `make up` (apaga os dados do Keycloak daquele ambiente). `make up`
   avisa quando o JSON é mais novo que o volume.
+- **Simulação ao vivo de 72 h (T6.3, `docs/runbook-live72.md`).** Alvos `make live72-up` (idempotente: infra dedicada `cryptoada-live72`
+  em `envs/env.live72`, portas 565xx, migrations, LaunchAgent `com.adatechnology.cryptoada-live72`, usuário de teste, backfill),
+  `live72-start` (meta e UMA simulação `live_paper` pela API autenticada; grava `~/.cryptoada-live72/run.json`),
+  `live72-status`, `live72-report` (grava `report.md` com o veredito do critério 4), `live72-stop` (descarrega o agente, mantém os dados) e
+  `live72-down CONFIRM=1` (apaga agente, containers, volumes e `~/.cryptoada-live72`). Código em `scripts/live72/` (o supervisor, o
+  sumidouro do Telegram e a parte pura do relatório, com contrato em `test/live72-*.contract.test.ts`). Estes alvos NÃO sobem uma infra
+  descartável: os dados persistem até o `down`. O notebook precisa ficar ligado e na tomada; sem `TELEGRAM_BOT_TOKEN` o worker não
+  enfileira alerta, então a infra usa token e chat falsos com um sumidouro local (o Telegram real nunca é chamado).
 - Alvos `*-test` (`migration-test`, `database-test`, `identity-test`, `session-test`, `admin-test`,
   `lgpd-test`, `backfill-test`, `stream-test`, `backtest-test`, `walkforward-test`, `api-runs-test`, `api-runs-mutants`, `example-mutants`, `queue-test`, `queue-mutants`, `live-test`, `live-mutants`, `stream-api-test`, `stream-mutants`, `alert-mutants`, `runlog-mutants`, `telegram-test`, `telegram-mutants`, `goals-test`, `price-alerts-test`, `price-alert-mutants`, `user-asset-mutants`, `panel-e2e`) sobem uma infra descartável em `ENV=test` e a derrubam com `--volumes` em `EXIT`, `INT` e
   `TERM`: Ctrl-C não deixa container vivo. Dois deles ao mesmo tempo disputam o mesmo projeto; rode um por vez.

@@ -375,3 +375,19 @@ opaco, `limit` 1 a 100). O OpenAPI 3.1 é GERADO da tabela de rotas e servido co
 
 A auditoria de segurança da T6.2 (`evidence.md`) aprovou com ressalvas para uso interno fechado e listou A1–A3, M1–M5 e baixos. Corrigidos em código: A1 (avaliação de metas em pool de threads com portão e orçamento a frio), A2 (tetos de estratégias, versões, alertas desligados e execuções guardadas; `DELETE /v1/runs/:id` lógico; exportação LGPD em NDJSON paginado), M1 (`verify-full`, CA própria, SCRAM com piso/teto e `-PLUS`), M3, M4 (parte de código), M5 e os baixos B1, B6 e documentação por lista. Decisões e provas em ADR 0001 §v e ADR 0002 "Metas: CPU fora da thread da API". Ficam com o responsável: M2 (cifra do `telegram_chat_id`), A3 (CI, deploy, réplica única, `TRUSTED_PROXY_HOPS`), cabeçalhos HTTP da borda do painel (M4, plataforma) e a purga de retenção proposta no ADR.
 
+## 10. Simulação ao vivo de 72 h (T6.3)
+
+Infra de desenvolvimento dedicada (`envs/env.live72`, compose `cryptoada-live72`, portas 565xx, volumes
+nomeados persistentes) e um supervisor (`scripts/live72/`) mantido por UM LaunchAgent de usuário
+(`com.adatechnology.cryptoada-live72`, KeepAlive, `caffeinate -dimsu`). Ele roda `api`, `worker`, um
+sumidouro local do Telegram e o `cron` (backfill de candles e Fear & Greed a cada 6 h), com logs JSON
+rotacionados e `events.jsonl`. `make live72-start` cria, pela API autenticada, uma meta (+50% / -50% em 90
+dias, escolhida para não encerrar a simulação antes de 72 h) e UMA `live_paper` do Placar clássico em
+BTCUSDT 1h com 10 000 USDT fictícios; o supervisor mata o worker por SIGKILL a início + 36 h. O
+`make live72-report` aplica o veredito do critério 4: REPROVADO por duplicidade, buraco de candle,
+contagem que encolhe depois do reinício, worker que não retoma ou sinal da janela sem alerta;
+INCONCLUSIVO por janela incompleta, intervenção humana, execução encerrada antes, reinício que não
+aconteceu ou nenhum sinal na janela; APROVADO nos demais casos. Alertas: sem `TELEGRAM_BOT_TOKEN` o
+worker não enfileira nada, então a infra usa token e chat falsos e um sumidouro em loopback; o Telegram
+real não é exercitado. Detalhes de operação em `docs/runbook-live72.md`.
+
