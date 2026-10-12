@@ -14,7 +14,7 @@ import {
 } from './fixtures/api-routes/runs-harness.fixture.js';
 
 const SUMMARY = '/v1/assets/summary';
-const WITHOUT_CANDLES = 'ADAUSDT';
+const WITHOUT_CANDLES = 'LINKUSDT';
 
 type Item = {
   symbol: string;

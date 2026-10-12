@@ -8,11 +8,27 @@ import {
   DEFAULT_MARKET_TIMEFRAMES,
   SUPPORTED_MARKET_EXCHANGES,
 } from './market-data.constant.js';
+import { hasKnownSymbolFilters } from './symbol-filters.constant.js';
 import { TIMEFRAME } from './timeframe.constant.js';
 
 const EXCHANGE_EXPECTATION = `uma das corretoras suportadas: ${SUPPORTED_MARKET_EXCHANGES.join(', ')}`;
 const SYMBOL_EXPECTATION = 'símbolos em maiúsculas separados por vírgula (ex.: BTCUSDT,ETHUSDT)';
 const TIMEFRAME_EXPECTATION = 'timeframes separados por vírgula dentre 15m, 1h, 4h e 1d';
+
+// O erro de ambiente só cita a variável: o par sem filtro precisa constar na própria mensagem. Texto fora do formato
+// não é citado (o regex já o reprova).
+function isMissingFilters(symbol: unknown): symbol is string {
+  return (
+    typeof symbol === 'string' &&
+    CONFIGURED_SYMBOL_PATTERN.test(symbol) &&
+    !hasKnownSymbolFilters(symbol)
+  );
+}
+
+function describeMissingFilters(input: unknown): string {
+  const missing = Array.isArray(input) ? input.filter(isMissingFilters) : [];
+  return `pares com filtros conhecidos em BINANCE_SYMBOL_FILTERS; sem filtros: ${missing.join(', ')}`;
+}
 
 export const marketEnvironmentShape = {
   MARKET_EXCHANGE: z
@@ -20,7 +36,12 @@ export const marketEnvironmentShape = {
     .default(DEFAULT_MARKET_EXCHANGE),
   MARKET_SYMBOLS: commaSeparatedTextSchema
     .pipe(
-      z.array(z.string().regex(CONFIGURED_SYMBOL_PATTERN), { error: SYMBOL_EXPECTATION }).min(1),
+      z
+        .array(z.string().regex(CONFIGURED_SYMBOL_PATTERN), { error: SYMBOL_EXPECTATION })
+        .min(1)
+        .refine((symbols) => !symbols.some(isMissingFilters), {
+          error: (issue) => describeMissingFilters(issue.input),
+        }),
     )
     .prefault(DEFAULT_MARKET_SYMBOLS),
   MARKET_TIMEFRAMES: commaSeparatedTextSchema

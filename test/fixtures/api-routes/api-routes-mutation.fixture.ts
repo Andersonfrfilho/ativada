@@ -93,3 +93,24 @@ export const ASSETS_MUTANT_TARGET: MutantTarget = {
   ],
   sourceVariable: 'API_ROUTES_APP_SOURCE',
 };
+
+// Os filtros de preço e quantidade por par (T0.2 da spec 003): a API que os aplica, julgada só pelos contratos deles.
+export const SYMBOL_FILTERS_API_MUTANT_TARGET: MutantTarget = {
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-ativada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-ativada/.mutants`,
+  directoryPrefix: 'symbol-filters-',
+  judgeTestFiles: [
+    'test/api-run-symbol-filters.contract.test.ts',
+    'test/goal-evaluation-series-filters.contract.test.ts',
+  ],
+  sourceVariable: 'API_ROUTES_APP_SOURCE',
+};
+
+// A tabela e a checagem do boot moram no pacote de dados de mercado: a cópia leva o `src` dele.
+export const SYMBOL_FILTERS_PACKAGE_MUTANT_TARGET: MutantTarget = {
+  sourceDirectory: `${REPOSITORY_ROOT}packages/market-data-crypto/src`,
+  mutantRoot: `${REPOSITORY_ROOT}packages/market-data-crypto/.mutants`,
+  directoryPrefix: 'symbol-filters-',
+  judgeTestFiles: ['test/symbol-filters.contract.test.ts'],
+  sourceVariable: 'SYMBOL_FILTERS_SOURCE',
+};

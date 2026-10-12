@@ -58,3 +58,13 @@ export class MarketDataBannedError extends MarketDataError {
     this.retryAfterSeconds = retryAfterSeconds;
   }
 }
+
+// O par não tem filtros conhecidos: o chamador nunca cai nos padrões do motor em silêncio.
+export class SymbolFiltersNotFoundError extends MarketDataError {
+  readonly symbol: string;
+
+  constructor(symbol: string) {
+    super(`O par ${symbol} não tem filtros de preço e quantidade conhecidos.`);
+    this.symbol = symbol;
+  }
+}

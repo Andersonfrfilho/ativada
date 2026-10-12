@@ -48,6 +48,7 @@ export {
   MarketDataResponseError,
   MarketDataSourceError,
   MarketDataTimeoutError,
+  SymbolFiltersNotFoundError,
 } from './market-data.error.js';
 export type {
   FetchImplementation,
@@ -72,6 +73,13 @@ export type {
   KlineStreamStats,
   MalformedReason,
 } from './kline-stream.types.js';
+export {
+  BINANCE_SYMBOL_FILTERS,
+  ENGINE_DEFAULT_FILTER_SYMBOLS,
+  hasKnownSymbolFilters,
+  resolveSymbolFilters,
+  type SymbolFilters,
+} from './symbol-filters.constant.js';
 export { computeBackoffDelay, type BackoffParams } from './reconnect-backoff.js';
 export { createTickerStream } from './ticker/create-ticker-stream.js';
 export { createTickAggregator } from './ticker/tick-aggregator.js';

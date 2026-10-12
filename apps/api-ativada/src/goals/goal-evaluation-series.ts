@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { SentimentObservationRepository } from '@ativada/database';
+import { resolveSymbolFilters } from '@ativada/market-data-crypto';
 import {
   createRunSetup,
   RUN_PARAMETERS_SCHEMA_VERSION,
@@ -28,13 +29,14 @@ export type SeriesReader = GoalSeriesReader & {
   readonly sentiments: Pick<SentimentObservationRepository, 'listAvailable'>;
 };
 
-function setupFor(symbol: string): RunSetup {
+export function setupFor(symbol: string): RunSetup {
   return createRunSetup({
     schemaVersion: RUN_PARAMETERS_SCHEMA_VERSION,
     symbol,
     timeframe: GOAL_EVALUATION_TIMEFRAME,
     sentimentSource: DEFAULT_SENTIMENT_SOURCE,
     initialBalance: GOAL_INITIAL_BALANCE,
+    ...resolveSymbolFilters(symbol),
   });
 }
 

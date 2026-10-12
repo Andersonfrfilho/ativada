@@ -36,6 +36,7 @@ import type * as GoalEvaluationModule from '../../../apps/api-ativada/src/goals/
 import type * as GoalColdBudgetModule from '../../../apps/api-ativada/src/goals/goal-cold-budget.js';
 import type * as GoalColdGateModule from '../../../apps/api-ativada/src/goals/goal-cold-gate.js';
 import type * as GoalComputationModule from '../../../apps/api-ativada/src/goals/goal-computation.js';
+import type * as GoalSeriesModule from '../../../apps/api-ativada/src/goals/goal-evaluation-series.js';
 import type * as GoalPlanCacheModule from '../../../apps/api-ativada/src/goals/goal-plan-cache.js';
 import type * as GoalPlanModule from '../../../apps/api-ativada/src/goals/goal-plan.use-case.js';
 import type * as AssetPositionModule from '../../../apps/api-ativada/src/assets/asset-position.js';
@@ -105,6 +106,7 @@ export type ApiApp = {
   readonly goalPlan: typeof GoalPlanModule;
   readonly goalPlanCache: typeof GoalPlanCacheModule;
   readonly goalCandles: typeof GoalCandlesModule;
+  readonly goalSeries: typeof GoalSeriesModule;
   readonly seedExample: typeof SeedExampleModule;
   readonly seedingResolver: typeof SeedingResolverModule;
   readonly openApi: typeof BuildOpenApiModule;
@@ -171,6 +173,7 @@ export async function loadApiApp(): Promise<ApiApp> {
     goalPlan: await load('goals/goal-plan.use-case'),
     goalPlanCache: await load('goals/goal-plan-cache'),
     goalCandles: await load('goals/goal-evaluation-candles'),
+    goalSeries: await load('goals/goal-evaluation-series'),
     seedExample: await load('strategies/seed-example-strategy.use-case'),
     seedingResolver: await load('strategies/example-seeding-user-resolver'),
     openApi: await load('openapi/build-openapi-document'),

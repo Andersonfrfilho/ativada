@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { RUN_KIND, type RunKind } from '@ativada/database';
+import { hasKnownSymbolFilters, resolveSymbolFilters } from '@ativada/market-data-crypto';
 import { z } from '@ativada/environment';
 import {
   createRunSetup,
@@ -135,6 +136,7 @@ function runSetupInput(symbol: string, timeframe: string, parameters: Parameters
     symbol,
     timeframe,
     sentimentSource: DEFAULT_SENTIMENT_SOURCE,
+    ...resolveSymbolFilters(symbol),
     ...parameters,
   };
 }
@@ -181,12 +183,18 @@ function enabledOnly(values: readonly string[]): (value: string) => boolean {
   return (value: string): boolean => values.includes(value);
 }
 
+function enabledWithFilters(values: readonly string[]): (value: string) => boolean {
+  return (value: string): boolean => values.includes(value) && hasKnownSymbolFilters(value);
+}
+
 export function createRunRequestSchema(enabled: EnabledMarkets): z.ZodType<CreateRunBody> {
   return z
     .strictObject({
       strategyVersionId: resourceIdSchema,
       kind: z.enum(RUN_KIND),
-      symbol: z.string().refine(enabledOnly(enabled.symbols), { error: RUN_REASON.NOT_ENABLED }),
+      symbol: z
+        .string()
+        .refine(enabledWithFilters(enabled.symbols), { error: RUN_REASON.NOT_ENABLED }),
       timeframe: z
         .enum(ENGINE_TIMEFRAME)
         .refine(enabledOnly(enabled.timeframes), { error: RUN_REASON.NOT_ENABLED }),

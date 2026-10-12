@@ -79,6 +79,20 @@ describe('cron market environment', () => {
     expect(failureOf(await buildSource({ [variable]: value }))).toContain(variable);
   });
 
+  test('a symbol without known price filters fails at boot, naming the symbol', async () => {
+    const message = failureOf(await buildSource({ MARKET_SYMBOLS: 'BTCUSDT,FOOUSDT' }));
+    expect(message).toContain('MARKET_SYMBOLS');
+    expect(message).toContain('FOOUSDT');
+  });
+
+  test('symbols with known price filters boot', async () => {
+    const environment = parseEnvironment(
+      environmentSchema,
+      await buildSource({ MARKET_SYMBOLS: 'PEPEUSDT,SHIBUSDT' }),
+    );
+    expect(environment.MARKET_SYMBOLS).toStrictEqual(['PEPEUSDT', 'SHIBUSDT']);
+  });
+
   test('production refuses a plain http Binance base URL', async () => {
     const production: Source = {
       ENV: 'production',

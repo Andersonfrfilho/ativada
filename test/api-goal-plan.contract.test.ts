@@ -14,7 +14,7 @@ import {
 import { expectIndistinguishableNotFound } from './fixtures/not-found-response.fixture.js';
 
 const GOALS = '/v1/goals';
-const WITHOUT_CANDLES = 'ADAUSDT';
+const WITHOUT_CANDLES = 'LINKUSDT';
 const BASE_GOAL = { symbol: 'BTCUSDT', targetRate: '0.03', horizonDays: 30, maxLossRate: '0.05' };
 
 type PlanBody = {

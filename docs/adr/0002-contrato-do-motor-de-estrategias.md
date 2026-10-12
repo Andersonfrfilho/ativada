@@ -1700,3 +1700,7 @@ além da janela confirmado por idade).
 | Saída sem teto de participação no volume; EMA/RSI do mesmo candle variam ~0,1% com a janela do backtest (ε = 1e-3) | Riscos aceitos na T2.6 (seção "Revisão da Fase 2") |
 | Semântica de `executionReports` sem implementação | Tipos fixados; a spec 002 implementa e acrescenta cenários ao harness |
 | Formato exato do texto de motivo | Fixado em §f; a T2.3 implementa e prende por tabela |
+
+## Filtros de preço e quantidade por par (T0.1 da spec 003)
+
+O tick 0,01 e o passo 0,00001 do motor são os do BTCUSDT; em PEPE/SHIB (~0,000004) o tick zera o preço e o backtest perde tudo sem aviso. A tabela `BINANCE_SYMBOL_FILTERS` mora em `packages/market-data-crypto` (dado de mercado compartilhado por API e worker), não na API nem no banco. BTCUSDT e ETHUSDT ficam FORA dela e usam o padrão do motor, para que os RunParameters e o runHash das execuções antigas não mudem (contrato dourado). Par em MARKET_SYMBOLS sem filtro conhecido reprova o boot; pedido com par sem filtro responde 400, nunca se cai no padrão em silêncio. Valor enviado no pedido vence a tabela. Os filtros entram no runHash como antes: mudar a tabela de um par é execução nova. Ler o exchangeInfo fica para a spec 002, que confere os filtros antes de operar; até lá, par novo exige uma linha na tabela, conferida contra a Binance no PR. Rejeitado: tabela na API (acopla goals a runs) e exchangeInfo no backfill (I/O e migration para dado quase estático, com hash dependente da data da leitura).
