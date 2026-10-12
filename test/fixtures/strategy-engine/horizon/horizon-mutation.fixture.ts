@@ -11,6 +11,7 @@ import { HORIZON_MUTANT_VARIABLE } from './horizon-api.fixture.js';
 export const HORIZON_FAST_JUDGE_TEST_FILES: readonly string[] = [
   'test/horizon-hand-values.contract.test.ts',
   'test/horizon-recommendation.contract.test.ts',
+  'test/horizon-intraday.contract.test.ts',
 ];
 
 // Quem reprova o mutante das janelas: também as propriedades e o diferencial contra o oráculo.

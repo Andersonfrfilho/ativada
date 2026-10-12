@@ -89,3 +89,25 @@ taxas (líquido + taxas pagas), não do `grossProfit` das métricas, que já vem
 
 **Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos. Testes: horizon-recommendation, horizon-hand-values, strategy-engine-boundary,
 code-size-limits: 46 pass, 0 fail. `horizon-mutants` (com controle): 28 pass, 0 fail (335 s).
+
+## T1.4 — Veredito de 15 minutos (2026-10-12)
+
+**O que há.** `summarizeIntraday(metrics)` em `horizon/summarize-intraday.ts` devolve `{ netReturn, tradeCount, feesPaid, feeShareOfGross, verdict }`
+a partir do que o veredito lê de `RunMetrics` (`initialBalance`, `finalEquity`, `feesPaid`, `trades`; `RunMetrics` serve). **Armadilha corrigida:** o
+`grossProfit` das métricas já vem DEPOIS das taxas (`trade-totals.ts`), então o bruto é `líquido + feesPaid`, com líquido = `finalEquity − initialBalance`
+(inclui a posição aberta). `NAO_COMPENSA` quando líquido ≤ 0 OU `feesPaid > 0.5 × bruto`; 50% exatos ainda compensam. `netReturn` (fração do saldo) é
+arredondado para baixo e `feeShareOfGross` para CIMA (nunca esconde taxa); a fatia é `null` com bruto ≤ 0. O slippage está embutido no preço da ordem e NÃO
+aparece em `feesPaid` (comentário e frase não dizem "taxa + slippage"). `horizon/index.ts` e `src/index.ts` exportam o módulo.
+
+**Métricas reais gravadas** (banco de desenvolvimento, `kind='backtest'`, 15 min, 01/04 a 01/10/2026) em `test/fixtures/strategy-engine/horizon/intraday-metrics-{bnbusdt,linkusdt}-15m.json`:
+BNBUSDT 10 operações, final 9712.12930111, taxas 151.89196889 → líquido −287.87069889 (`-0.02878707`), bruto −135.97873 → `NAO_COMPENSA`;
+LINKUSDT 371 operações, final 7115.51208745, taxas 2310.68264255 → líquido −2884.48791255 (`-0.2884488`), bruto −573.80527 → `NAO_COMPENSA`.
+
+| Arquivo | Prova |
+|---|---|
+| `test/horizon-intraday.contract.test.ts` | os dois contratos reais (veredito e números, conferidos à mão no comentário); regras à mão: compensa (300 de líquido, 100 de taxa, fatia 25%), 50% exatos compensam, 0.50000001 não, taxa comendo o ganho, líquido zero, líquido negativo com bruto positivo (fatia 150%), sem taxa, arredondamentos (1 ÷ 3 para cima, líquido para baixo), sem operar, sem patrimônio final |
+| `test/horizon-mutants.contract.test.ts` | +10 mutantes do veredito (líquido zero compensa, taxa no limite reprova, bruto sem taxa, bruto subtraindo taxa, arredondamentos trocados, limite 0.6 e 0.4, sem patrimônio compensa, fatia mostrada sem bruto positivo): controle + 37 mutantes dos prazos, todos reprovados. Um mutante sobreviveu na primeira rodada (líquido 0 com taxa 0 = estratégia que não operou); virou o teste "sem operar" |
+
+**Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos. Testes: horizon-intraday, horizon-mutants (controle + 37), strategy-engine-boundary,
+code-size-limits: 71 pass, 0 fail; depois da última edição do loader, horizon-intraday, hand-values, recommendation, properties, goal-characterization e
+goal-hand-values: 126 pass, 0 fail.

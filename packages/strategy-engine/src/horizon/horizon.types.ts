@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { EngineDecimalValue } from '../engine-decimal.js';
 import type { GoalTrajectoryContext } from '../goal/goal-trajectory.js';
+import type { RunMetrics } from '../metrics/metrics.types.js';
+import type { IntradayVerdict } from './horizon.constant.js';
 
 // `signals` já calculados (uma vez por série, reaproveitados nos três prazos) e `horizonCandles` do prazo em análise.
 export type ComputeHorizonWindowsParams = GoalTrajectoryContext & {
@@ -34,4 +36,20 @@ export type HorizonSummary = {
   readonly worstDecile: string | null;
   readonly isShortHistory: boolean;
   readonly benchmark: HorizonDistribution;
+};
+
+// Só o que o veredito de 15 minutos lê das métricas do backtest (`RunMetrics` serve).
+export type IntradayMetricsInput = Pick<
+  RunMetrics,
+  'initialBalance' | 'finalEquity' | 'feesPaid' | 'trades'
+>;
+
+// `netReturn` e `feeShareOfGross` são frações (0.1 = 10%): o líquido arredondado para BAIXO, a fatia das taxas para
+// CIMA (nunca esconde taxa). `feeShareOfGross` é `null` quando o ganho bruto antes das taxas não é positivo.
+export type IntradaySummary = {
+  readonly netReturn: string | null;
+  readonly tradeCount: number;
+  readonly feesPaid: string;
+  readonly feeShareOfGross: string | null;
+  readonly verdict: IntradayVerdict;
 };

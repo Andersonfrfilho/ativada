@@ -16,6 +16,7 @@ const CONTROL: HorizonSourceMutant = { name: 'CONTROL', edits: [] };
 const RECOMMEND = 'horizon/recommend-horizon.ts';
 const SUMMARY = 'horizon/summarize-horizon.ts';
 const WINDOWS = 'horizon/compute-horizon-windows.ts';
+const INTRADAY = 'horizon/summarize-intraday.ts';
 const CONSTANT = 'horizon/horizon.constant.ts';
 
 function edit(file: string, find: string, replace: string, occurrences = 1): HorizonSourceEdit[] {
@@ -166,6 +167,54 @@ const MUTANTS: readonly HorizonSourceMutant[] = [
       'toReturn(benchmark(finalOffset).equity, initial)',
       'toReturn(pathAt(start)(finalOffset).equity, initial)',
     ),
+  },
+  {
+    name: 'INTRADAY_NET_AT_ZERO_IS_WORTH',
+    edits: edit(INTRADAY, 'net.greaterThan(ZERO) &&', 'net.greaterThanOrEqualTo(ZERO) &&'),
+  },
+  {
+    name: 'INTRADAY_FEES_AT_THE_LIMIT_ARE_NOT_WORTH',
+    edits: edit(
+      INTRADAY,
+      'feesPaid.greaterThan(gross.times(',
+      'feesPaid.greaterThanOrEqualTo(gross.times(',
+    ),
+  },
+  {
+    name: 'INTRADAY_GROSS_IGNORES_THE_FEES',
+    edits: edit(INTRADAY, 'const gross = net.plus(feesPaid);', 'const gross = net;'),
+  },
+  {
+    name: 'INTRADAY_GROSS_SUBTRACTS_THE_FEES',
+    edits: edit(INTRADAY, 'net.plus(feesPaid)', 'net.minus(feesPaid)'),
+  },
+  {
+    name: 'INTRADAY_FEE_SHARE_ROUNDED_DOWN',
+    edits: edit(INTRADAY, 'EngineDecimal.ROUND_CEIL', 'EngineDecimal.ROUND_FLOOR'),
+  },
+  {
+    name: 'INTRADAY_NET_RETURN_ROUNDED_UP',
+    edits: edit(INTRADAY, 'EngineDecimal.ROUND_FLOOR', 'EngineDecimal.ROUND_CEIL'),
+  },
+  {
+    name: 'INTRADAY_MAXIMUM_FEE_SHARE_RAISED',
+    edits: edit(CONSTANT, "maximumFeeShare: '0.5'", "maximumFeeShare: '0.6'"),
+  },
+  {
+    name: 'INTRADAY_MAXIMUM_FEE_SHARE_LOWERED',
+    edits: edit(CONSTANT, "maximumFeeShare: '0.5'", "maximumFeeShare: '0.4'"),
+  },
+  {
+    name: 'INTRADAY_WITHOUT_EQUITY_IS_WORTH',
+    edits: edit(
+      INTRADAY,
+      'verdict: INTRADAY_VERDICT.NOT_WORTH,\n    };',
+      'verdict: INTRADAY_VERDICT.WORTH,\n    };',
+    ),
+  },
+  {
+    name: 'INTRADAY_FEE_SHARE_SHOWN_WITHOUT_POSITIVE_GROSS',
+    edits: edit(INTRADAY, 'feeShareOfGross: isGrossPositive', 'feeShareOfGross: true'),
   },
 ];
 

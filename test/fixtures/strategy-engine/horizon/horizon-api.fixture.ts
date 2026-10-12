@@ -14,6 +14,7 @@ const HORIZON_API_MEMBERS: readonly string[] = [
   'computeHorizonWindows',
   'recommendHorizon',
   'summarizeHorizon',
+  'summarizeIntraday',
 ];
 
 function isHorizonApi(candidate: unknown): candidate is HorizonApi {
