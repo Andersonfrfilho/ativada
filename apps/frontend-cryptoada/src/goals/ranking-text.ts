@@ -29,5 +29,8 @@ export function describeOutcomes(combination: Combination): string {
 
 export function describeBenchmark(combination: Combination): string {
   const { benchmark } = combination.evaluation;
+  if (benchmark.reachRate === null && benchmark.stopRate === null) {
+    return 'comprar e segurar: indisponível, sem janelas no histórico';
+  }
   return `comprar e segurar: ${formatRate(benchmark.reachRate)} chegaram ao alvo e ${formatRate(benchmark.stopRate)} pararam na perda máxima`;
 }

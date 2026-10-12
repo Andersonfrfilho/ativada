@@ -66,7 +66,7 @@ export function PriceAlertBoardCard(): ReactElement {
   const all = alerts.data?.pages.flatMap((page) => page.items) ?? [];
   const message = messageFromAlertError(toggle.error ?? remove.error);
   return (
-    <Card title="Seus alertas de preço">
+    <Card title="Novo alerta de preço">
       <p className={controls.muted}>
         O alerta dispara uma vez, quando o preço cruza o valor; depois você pode religá-lo.
       </p>

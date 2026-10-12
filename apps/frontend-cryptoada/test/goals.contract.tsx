@@ -411,6 +411,8 @@ describe('what the engine leaves empty', () => {
     });
     const list = await screen.findByRole('list', { name: 'Ranking de estratégias por moeda' });
     expect(list.textContent).toContain('histórico curto demais');
+    expect(list.textContent).toContain('comprar e segurar: indisponível');
+    expect(list.textContent).not.toContain('— chegaram ao alvo');
     expect(list.textContent).toContain('SEGURAR');
   });
 

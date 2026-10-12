@@ -41,7 +41,7 @@ export function PriceAlertsCard(): ReactElement {
   const fired = all.filter((alert) => alert.triggeredAt !== null).sort(byTriggerDesc);
   const armedCount = all.filter((alert) => alert.isEnabled).length;
   return (
-    <Card title="Alertas de preço">
+    <Card title="Alertas armados e disparados">
       <p className={controls.muted}>{plural(armedCount, 'alerta armado', 'alertas armados')}.</p>
       {fired.length === 0 ? null : <FiredList fired={fired} />}
       <button
