@@ -117,10 +117,16 @@ function GoalRunBody({
   return (
     <>
       <GoalProgressView goal={goal.data} outcome={readOutcomeText(run)} progress={progress} />
-      <Link to={`/metas/${goalId}`} className={controls.textLink}>
-        Ver a meta
-      </Link>
+      <GoalLink goalId={goalId} />
     </>
+  );
+}
+
+function GoalLink({ goalId }: { readonly goalId: string }): ReactElement {
+  return (
+    <Link to={`/metas/${goalId}`} className={controls.textLink}>
+      Ver a meta
+    </Link>
   );
 }
 
