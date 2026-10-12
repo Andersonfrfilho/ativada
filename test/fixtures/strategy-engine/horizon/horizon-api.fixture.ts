@@ -10,7 +10,11 @@ export const HORIZON_MUTANT_VARIABLE = 'HORIZON_MUTANT_SOURCE';
 
 export type HorizonApi = typeof HorizonModule;
 
-const HORIZON_API_MEMBERS: readonly string[] = ['computeHorizonWindows', 'summarizeHorizon'];
+const HORIZON_API_MEMBERS: readonly string[] = [
+  'computeHorizonWindows',
+  'recommendHorizon',
+  'summarizeHorizon',
+];
 
 function isHorizonApi(candidate: unknown): candidate is HorizonApi {
   if (typeof candidate !== 'object' || candidate === null) return false;

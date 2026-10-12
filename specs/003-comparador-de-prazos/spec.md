@@ -27,7 +27,8 @@ Uma tela que, para uma moeda, responde em linguagem simples:
   Os prazos são uma constante; 60 e 90 dias ficam fora para não poluir a tela (podem entrar depois).
 - **RF03** — Linha de **15 minutos**: resultado líquido da estratégia em velas de 15 min nos últimos 90 dias,
   número de operações, total de taxas pagas e quanto as taxas representam do ganho bruto. Veredito
-  `NAO_COMPENSA` quando o líquido é ≤ 0 **ou** as taxas passam de 50% do ganho bruto.
+  `NAO_COMPENSA` quando o líquido é ≤ 0 **ou** as taxas passam de 50% do ganho BRUTO antes das taxas
+  (líquido + taxas pagas). O slippage já está no preço de cada ordem e não entra nas taxas pagas.
 - **RF04** — Linhas de **N dias**: para cada janela de N dias do histórico diário (passo de 1 dia), a carteira
   nasce livre no início da janela e segue a estratégia até o fim **sem alvo nem perda máxima de meta**. De cada
   janela sai o retorno líquido. A linha mostra: retorno **mediano**, **% de janelas positivas**, **pior 10%**

@@ -66,8 +66,26 @@ meio no par; pior 10%: posto `ceil(n ÷ 10)`; mediana, pior 10% e fração posit
 |---|---|
 | `test/horizon-hand-values.contract.test.ts` | contas à mão em quatro séries de retornos (5 ímpar, 4 par, 11 para o posto do pior 10%, 3 com arredondamento de negativos), 59 x 60 janelas, série vazia; estratégia que nunca compra (janelas = candles − prazo − primeiro decidido + 1, todas 0); prazo maior que a série |
 | `test/horizon-properties.contract.test.ts` | 300 séries sorteadas: mín ≤ p10 ≤ mediana ≤ máx; 0 ≤ positivas ≤ janelas; permutar não muda a saída; estratégia que nunca compra dá 0 e 0% positivas (BTC 1h, ETH 1d, sintética); sem lookahead (série cortada = prefixo das janelas; cauda trocada não muda as janelas já existentes) |
-| `test/horizon-differential.contract.test.ts` + `fixtures/strategy-engine/horizon/horizon-oracle.fixture.ts` | oráculo que NÃO importa `src/goal` nem `src/horizon`: refaz cada janela do zero com `createEngine`/`step`/`walletStep` e BigInt; 17 casos (reais, gaps, sentimento, sintéticas, 7/15/30 dias), janela a janela, estratégia e comprar e segurar |
+| `test/horizon-differential.contract.test.ts` + `fixtures/strategy-engine/horizon/horizon-oracle.fixture.ts` | oráculo que NÃO importa `src/goal` nem `src/horizon`: refaz cada janela do zero com `createEngine`/`step`/`walletStep` e BigInt; 12 casos (reais, gaps, sentimento, sintéticas, 7/15/30 dias), janela a janela, estratégia e comprar e segurar |
 
 **Gates (WSL, espelho próprio `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos. Testes: horizon-hand-values, horizon-properties,
 horizon-differential, strategy-engine-boundary, code-size-limits, goal-differential, goal-characterization, goal-evaluation, goal-hand-values:
 173 pass, 0 fail.
+
+## T1.3 — Recomendação do prazo (2026-10-12)
+
+**O que há.** `recommendHorizon(rows): number | undefined` em `horizon/recommend-horizon.ts`, com os limiares do spec §5 em `horizon.constant.ts` (60 janelas,
+55% de positivas, pior 10% ≥ −0.1; não alterados). Elegível: sem histórico curto, mediana > 0, `positiveCount × 100 ≥ 55 × windowCount` (contagens
+exatas) e pior 10% ≥ −0.1. Ordem: mediana ÷ N arredondada para BAIXO a 8 casas; empate vence o MAIOR N.
+
+**Decisão de arredondamento (registrada no ADR 0002, "Prazos (spec 003, Fase 1)").** Mediana e pior 10% são comparados pelo TEXTO PUBLICADO (a mediana
+que aparece como `0` não é elegível); positivas pelas contagens exatas. **Correção do spec RF03:** as taxas passam de 50% do ganho BRUTO antes das
+taxas (líquido + taxas pagas), não do `grossProfit` das métricas, que já vem depois das taxas.
+
+| Arquivo | Prova |
+|---|---|
+| `test/horizon-recommendation.contract.test.ts` | um teste por regra: mediana > 0 (zero e negativa), 55% exatos x 54 de 100, a fração publicada `0.55` com 32 de 60 não passa, pior 10% em −0.1 / −0.10000001 / −0.09999999, histórico curto, linha vazia, nenhuma elegível, a inelegível não vence; ordem por mediana POR DIA, empate vence o mais longo (nas duas ordens de entrada), arredondamento da mediana por dia para baixo (exata, para cima e meio-arredondada dariam outro vencedor) |
+| `test/horizon-mutants.contract.test.ts` | controle + 27 mutantes, todos reprovados: `>` ↔ `≥` (mediana, positivas, pior 10%), histórico curto elegível, desempate invertido, ordem crescente, sem ÷ N, mediana por dia sem arredondar / meio-arredondada / para cima, constantes 60→59/61, 55→54/56, −0.1→−0.11/−0.09, pior 10% com `floor` e com `round` no lugar de `ceil`, mediana par pegando o do meio de cima, zero contado como positivo, resumo meio-arredondado, janelas (última descartada, primeira pulada, retorno sem `− 1`, prazo terminando um candle antes, comprar e segurar um candle atrasado ou igual à estratégia) |
+
+**Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos. Testes: horizon-recommendation, horizon-hand-values, strategy-engine-boundary,
+code-size-limits: 46 pass, 0 fail. `horizon-mutants` (com controle): 28 pass, 0 fail (335 s).
