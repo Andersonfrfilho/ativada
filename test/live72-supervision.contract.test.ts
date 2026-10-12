@@ -274,6 +274,44 @@ describe('live72: processo supervisionado', () => {
     ).toBe(true);
   });
 
+  test('o reinício controlado agendado mata o processo real, registra a hora e ele volta sozinho', async () => {
+    const { process: supervised, events } = supervise(['/bin/sleep', '30']);
+    await waitFor(() => events().some((event) => event.type === 'child_start'), 3_000);
+    const directory = temporaryDirectory();
+    const runFile = join(directory, 'run.json');
+    const start = Date.now() - 37 * HOUR;
+    writeRunFile(runFile, runFileAt(start));
+    const eventsFile = join(directory, 'events.jsonl');
+    const fired = await fireControlledKillIfDue({
+      runFile,
+      eventsFile,
+      worker: supervised,
+      readCounts: (): Promise<RunCounts> =>
+        Promise.resolve({
+          signals: 1,
+          orders: 0,
+          fills: 0,
+          positions: 0,
+          equityPoints: 1,
+          alerts: 0,
+          lastCandleTime: 1,
+        }),
+    });
+    expect(fired).toBe(true);
+    await waitFor(
+      () => events().filter((event) => event.type === 'child_start').length === 2,
+      3_000,
+    );
+    await supervised.stop();
+    expect(events().find((event) => event.type === 'child_exit')).toMatchObject({
+      signal: 'SIGKILL',
+      controlled: true,
+    });
+    expect(parseEvents(readFileSync(eventsFile, 'utf8')).events[0]?.type).toBe(
+      'controlled_worker_kill',
+    );
+  });
+
   test('killControlled sem processo vivo devolve falso', async () => {
     const { process: supervised } = supervise(['/bin/sh', '-c', 'exit 0']);
     await Bun.sleep(300);
