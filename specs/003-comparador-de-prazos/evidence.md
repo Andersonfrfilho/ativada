@@ -51,3 +51,23 @@ manteve o laço `for (let start = first; start <= last; start += 1)` e troca as 
 goal-differential, goal-evaluation, goal-hand-values, goal-ranking, api-goal-evaluation, strategy-engine-boundary, code-size-limits,
 live-goal-step, goal-evaluation-pool, goal-cold-gate: 227 pass, 0 fail; `goal-mutants` (com controle): 273 pass, 0 fail na rodada
 conjunta de 10 arquivos (906 s).
+
+## T1.2 — Janelas e resumo por prazo (2026-10-12)
+
+**O que há.** `packages/strategy-engine/src/horizon/`: `horizon.constant.ts` (`HORIZON_DAYS`, `HORIZON_RECOMMENDATION_RULES`,
+`HORIZON_RATE_DECIMAL_PLACES`, `INTRADAY_VERDICT`), `horizon.types.ts`, `computeHorizonWindows` (janelas exatas: retorno = patrimônio no último
+candle do prazo ÷ saldo inicial − 1; a estratégia lê `createGoalWindowPath(params)(start)(H − 1)` e o comprar e segurar
+`createBenchmarkReader`; janela sem compra vale exatamente 0, que não conta como positiva) e `summarizeHorizon` (mediana: média dos dois do
+meio no par; pior 10%: posto `ceil(n ÷ 10)`; mediana, pior 10% e fração positiva arredondados para BAIXO a 8 casas só no fim;
+`isShortHistory = windowCount < 60`). Os sinais entram prontos (`computeGoalSignals` uma vez, reaproveitados nos três prazos).
+`positiveRate` é fração (0.4 = 40%), como as taxas das metas.
+
+| Arquivo | Prova |
+|---|---|
+| `test/horizon-hand-values.contract.test.ts` | contas à mão em quatro séries de retornos (5 ímpar, 4 par, 11 para o posto do pior 10%, 3 com arredondamento de negativos), 59 x 60 janelas, série vazia; estratégia que nunca compra (janelas = candles − prazo − primeiro decidido + 1, todas 0); prazo maior que a série |
+| `test/horizon-properties.contract.test.ts` | 300 séries sorteadas: mín ≤ p10 ≤ mediana ≤ máx; 0 ≤ positivas ≤ janelas; permutar não muda a saída; estratégia que nunca compra dá 0 e 0% positivas (BTC 1h, ETH 1d, sintética); sem lookahead (série cortada = prefixo das janelas; cauda trocada não muda as janelas já existentes) |
+| `test/horizon-differential.contract.test.ts` + `fixtures/strategy-engine/horizon/horizon-oracle.fixture.ts` | oráculo que NÃO importa `src/goal` nem `src/horizon`: refaz cada janela do zero com `createEngine`/`step`/`walletStep` e BigInt; 17 casos (reais, gaps, sentimento, sintéticas, 7/15/30 dias), janela a janela, estratégia e comprar e segurar |
+
+**Gates (WSL, espelho próprio `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos. Testes: horizon-hand-values, horizon-properties,
+horizon-differential, strategy-engine-boundary, code-size-limits, goal-differential, goal-characterization, goal-evaluation, goal-hand-values:
+173 pass, 0 fail.
