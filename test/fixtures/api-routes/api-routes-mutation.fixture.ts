@@ -114,3 +114,16 @@ export const SYMBOL_FILTERS_PACKAGE_MUTANT_TARGET: MutantTarget = {
   judgeTestFiles: ['test/symbol-filters.contract.test.ts'],
   sourceVariable: 'SYMBOL_FILTERS_SOURCE',
 };
+
+// O comparador de prazos (spec 003, Fase 2): o cache, o portão a frio, a escolha da melhor estratégia por linha e, nas tasks
+// seguintes, a rota e a linha de 15 minutos, julgados só pelos contratos deles.
+export const HORIZONS_MUTANT_TARGET: MutantTarget = {
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-ativada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-ativada/.mutants`,
+  directoryPrefix: 'horizons-',
+  judgeTestFiles: [
+    'test/horizon-evaluation.contract.test.ts',
+    'test/horizon-best.contract.test.ts',
+  ],
+  sourceVariable: 'API_ROUTES_APP_SOURCE',
+};

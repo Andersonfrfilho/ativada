@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
-  ENGINE_TIMEFRAME_DURATION_MILLISECONDS,
+  horizonCandlesOf as engineHorizonCandlesOf,
   type EngineCandle,
 } from '../../../../packages/strategy-engine/src/index.js';
 import { toEngineDecimal } from '../../../../packages/strategy-engine/src/engine-decimal.js';
@@ -8,8 +8,6 @@ import { computeGoalSignals } from '../../../../packages/strategy-engine/src/goa
 import type { HorizonWindows } from '../../../../packages/strategy-engine/src/horizon/horizon.types.js';
 import type { GoalScenario } from '../goal/goal-scenarios.fixture.js';
 import type { HorizonApi } from './horizon-api.fixture.js';
-
-const MILLISECONDS_PER_DAY = 86_400_000;
 
 export type RunHorizonParams = {
   readonly api: HorizonApi;
@@ -20,8 +18,7 @@ export type RunHorizonParams = {
 };
 
 export function horizonCandlesOf(scenario: GoalScenario, horizonDays: number): number {
-  const duration = ENGINE_TIMEFRAME_DURATION_MILLISECONDS[scenario.run.parameters.timeframe];
-  return (horizonDays * MILLISECONDS_PER_DAY) / duration;
+  return engineHorizonCandlesOf(horizonDays, scenario.run.parameters.timeframe);
 }
 
 function signalsOf(

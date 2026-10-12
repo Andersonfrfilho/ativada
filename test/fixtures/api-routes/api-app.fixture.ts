@@ -48,6 +48,10 @@ import type * as PriceAlertEvaluatorModule from '../../../apps/api-ativada/src/p
 import type * as PriceAlertEventDispatcherModule from '../../../apps/api-ativada/src/price-alerts/price-alert-event-dispatcher.js';
 import type * as PriceAlertRoutesModule from '../../../apps/api-ativada/src/price-alerts/price-alerts.routes.js';
 import type * as PriceAlertUseCasesModule from '../../../apps/api-ativada/src/price-alerts/price-alert.use-cases.js';
+import type * as HorizonBestModule from '../../../apps/api-ativada/src/horizons/horizon-best.js';
+import type * as HorizonCacheModule from '../../../apps/api-ativada/src/horizons/horizon-cache.js';
+import type * as HorizonComputationModule from '../../../apps/api-ativada/src/horizons/horizon-computation.js';
+import type * as HorizonEvaluationModule from '../../../apps/api-ativada/src/horizons/horizon-evaluation.use-case.js';
 import type * as GoalRoutesModule from '../../../apps/api-ativada/src/goals/goals.routes.js';
 import type * as GoalUseCasesModule from '../../../apps/api-ativada/src/goals/goal.use-cases.js';
 import type * as StrategyUseCasesModule from '../../../apps/api-ativada/src/strategies/strategy.use-cases.js';
@@ -103,6 +107,10 @@ export type ApiApp = {
   readonly priceAlertEventDispatcher: typeof PriceAlertEventDispatcherModule;
   readonly priceAlertRoutes: typeof PriceAlertRoutesModule;
   readonly priceAlertUseCases: typeof PriceAlertUseCasesModule;
+  readonly horizonBest: typeof HorizonBestModule;
+  readonly horizonCache: typeof HorizonCacheModule;
+  readonly horizonComputation: typeof HorizonComputationModule;
+  readonly horizonEvaluation: typeof HorizonEvaluationModule;
   readonly goalPlan: typeof GoalPlanModule;
   readonly goalPlanCache: typeof GoalPlanCacheModule;
   readonly goalCandles: typeof GoalCandlesModule;
@@ -170,6 +178,10 @@ export async function loadApiApp(): Promise<ApiApp> {
     priceAlertEventDispatcher: await load('price-alerts/price-alert-event-dispatcher'),
     priceAlertRoutes: await load('price-alerts/price-alerts.routes'),
     priceAlertUseCases: await load('price-alerts/price-alert.use-cases'),
+    horizonBest: await load('horizons/horizon-best'),
+    horizonCache: await load('horizons/horizon-cache'),
+    horizonComputation: await load('horizons/horizon-computation'),
+    horizonEvaluation: await load('horizons/horizon-evaluation.use-case'),
     goalPlan: await load('goals/goal-plan.use-case'),
     goalPlanCache: await load('goals/goal-plan-cache'),
     goalCandles: await load('goals/goal-evaluation-candles'),

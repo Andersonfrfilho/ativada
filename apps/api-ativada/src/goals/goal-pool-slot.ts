@@ -1,14 +1,26 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { EvaluateGoalParams } from '@ativada/strategy-engine';
 
+import type { HorizonComputation, HorizonComputeRequest } from '../horizons/horizon-computation.js';
 import type { GoalComputation } from './goal-computation.js';
 import { GOAL_WORKER_EVENT_SCHEMA, GOAL_WORKER_MESSAGE } from './goal-evaluation-messages.js';
 import { GoalEvaluationTimeoutError } from './goal.error.js';
 
+export const POOL_TASK_KIND = { GOAL: 'goal', HORIZON: 'horizon' } as const;
+
+// O que a thread calcula: uma combinação de meta ou a linha de prazos de uma estratégia.
+export type PoolRequest =
+  | { readonly kind: typeof POOL_TASK_KIND.GOAL; readonly params: EvaluateGoalParams }
+  | { readonly kind: typeof POOL_TASK_KIND.HORIZON; readonly params: HorizonComputeRequest };
+
+export type PoolResult =
+  | { readonly kind: typeof POOL_TASK_KIND.GOAL; readonly computation: GoalComputation }
+  | { readonly kind: typeof POOL_TASK_KIND.HORIZON; readonly computation: HorizonComputation };
+
 export type PoolTask = {
   readonly id: number;
-  readonly request: EvaluateGoalParams;
-  readonly resolve: (computation: GoalComputation) => void;
+  readonly request: PoolRequest;
+  readonly resolve: (result: PoolResult) => void;
   readonly reject: (reason: unknown) => void;
   // Solta o ouvinte de cancelamento da tarefa quando ela termina.
   detach: () => void;
@@ -68,11 +80,12 @@ export class PoolSlot {
   }
 
   private post(task: PoolTask): void {
-    this.worker?.postMessage({
-      type: GOAL_WORKER_MESSAGE.COMPUTE,
-      id: task.id,
-      request: task.request,
-    });
+    const { request } = task;
+    this.worker?.postMessage(
+      request.kind === POOL_TASK_KIND.GOAL
+        ? { type: GOAL_WORKER_MESSAGE.COMPUTE, id: task.id, request: request.params }
+        : { type: GOAL_WORKER_MESSAGE.COMPUTE_HORIZON, id: task.id, request: request.params },
+    );
   }
 
   private onMessage(from: Worker, data: unknown): void {
@@ -87,7 +100,17 @@ export class PoolSlot {
     }
     if (task === undefined || event.data.id !== task.id) return;
     if (event.data.type === GOAL_WORKER_MESSAGE.RESULT) {
-      this.finish(task, { kill: false, value: event.data.computation });
+      this.finish(task, {
+        kill: false,
+        value: { kind: POOL_TASK_KIND.GOAL, computation: event.data.computation },
+      });
+      return;
+    }
+    if (event.data.type === GOAL_WORKER_MESSAGE.HORIZON_RESULT) {
+      this.finish(task, {
+        kill: false,
+        value: { kind: POOL_TASK_KIND.HORIZON, computation: event.data.computation },
+      });
       return;
     }
     this.finish(task, { kill: false, fail: new Error(WORKER_FAILURE_MESSAGE) });
@@ -103,7 +126,7 @@ export class PoolSlot {
 
   private finish(
     task: PoolTask,
-    outcome: { readonly kill: boolean; readonly value?: GoalComputation; readonly fail?: unknown },
+    outcome: { readonly kill: boolean; readonly value?: PoolResult; readonly fail?: unknown },
   ): void {
     clearTimeout(this.timer);
     this.current = undefined;

@@ -111,3 +111,44 @@ LINKUSDT 371 operações, final 7115.51208745, taxas 2310.68264255 → líquido 
 **Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos. Testes: horizon-intraday, horizon-mutants (controle + 37), strategy-engine-boundary,
 code-size-limits: 71 pass, 0 fail; depois da última edição do loader, horizon-intraday, hand-values, recommendation, properties, goal-characterization e
 goal-hand-values: 126 pass, 0 fail.
+
+## T2.1 — Tarefa de prazos no pool, portão a frio e cache (2026-10-12)
+
+**O que há.**
+- Motor: `horizonCandlesOf(horizonDays, timeframe)` (`horizon/horizon-candles.ts`, pura, exportada) saiu dos testes para a produção, e os testes da Fase 1
+  (`horizon-run.fixture.ts`) agora a chamam; `computeGoalSignals` e `assertGoalSeries` passaram a ser exportados do pacote.
+- Pool: o mesmo `goal-evaluation-pool.ts` ganhou `computeHorizon(request, signal)` ao lado de `compute`. A tarefa vira `PoolRequest`
+  (`goal` | `horizon`) e o resultado `PoolResult`; as mensagens novas são `compute-horizon` e `horizon-result` (o `failed` é comum), e uma resposta de
+  tipo diferente do pedido é falha da thread. O worker (`goal-evaluation.worker.ts`) passa os dois cálculos a `serveGoalEvaluationWorker`; um worker
+  que só sabe metas (o roteirizado dos testes) responde `failed` ao pedido de prazos, e o formato das mensagens de meta não mudou.
+- `apps/api-ativada/src/horizons/`: `computeHorizonLine` (puro, o que a thread roda: sinais diários UMA vez, `computeHorizonWindows` +
+  `summarizeHorizon` para 7/15/30 dias, e a linha de 15 minutos por `runIntradayInMemory`), `horizon-series.ts` (730 dias diários, trecho contíguo mais
+  recente; 90 dias de 15 min como estão, porque `advanceCandle` declara a lacuna), `horizon-cache.ts` (chave `(versão da estratégia, par, último candle
+  diário, último candle de 15 min)`), `horizon-best.ts` (melhor estratégia por linha), `horizon-strategies.ts` e
+  `horizon-evaluation.use-case.ts`. Só a avaliação que erra o cache passa por `createColdEvaluationGate` (mesmo `createGoalColdBudget`, mesma política
+  `GOAL_EVALUATION_COLD`: 3 por minuto por usuário, uma em voo por usuário, teto global → 503).
+- Refatorações mínimas das metas: `loadStrategyEntry` extraído de `loadGoalStrategies`, `buildSymbolSeries` extraído de `loadSymbolSeries` e `setupFor`
+  com o timeframe como segundo parâmetro (padrão: o diário das metas). Resultado das metas inalterado.
+
+**Regra de "melhor por linha".** Na linha de N dias vence a estratégia que passa na regra de recomendação, depois a de maior mediana, depois o menor id; na de
+15 minutos vence a que compensa, depois o maior líquido, depois o menor id. O prazo recomendado sai de `recommendHorizon` sobre essas três linhas.
+
+| Arquivo | Prova |
+|---|---|
+| `test/horizon-candles.contract.test.ts` | contas à mão (7/15/30 dias em 1d, 15m, 1h, 4h) e número inteiro de candles em todo timeframe do motor |
+| `test/horizon-evaluation.contract.test.ts` | resultado por linha; as janelas conferem com a composição independente do motor; séries e `RunSetup` por timeframe; 5 mais novas x `strategyId`; estratégia alheia, inexistente e sem versão = mesmo erro 404; **segunda chamada não recalcula**; candle novo diário OU de 15 min recalcula; **a quarta avaliação a frio no minuto é 429** (a do cache não gasta) e o orçamento é por usuário; uma em voo por usuário (mesma moeda divide, outra é 429); teto global 503; falha de uma estratégia cancela as outras |
+| `test/horizon-best.contract.test.ts` | escolha da melhor por linha, em qualquer ordem de chegada |
+| `test/horizon-pool.contract.test.ts` | a thread real devolve EXATAMENTE o cálculo da thread principal; a mesma thread atende metas e prazos; indisponível com o código do motor; worker só de metas = falha; cancelamento |
+| `test/api-horizons-mutants.contract.test.ts` | controle + 20 mutantes (chave do cache sem par, versão, candle diário ou de 15 min; cache que nunca guarda; portão pulado; aviso pago a quente; assinatura do portão sem a moeda; falha que não cancela; `strategyId` ignorado; 404 virando outro erro; melhor invertida; regra de recomendação ignorada; desempates; ausente na frente), todos reprovados |
+
+**Desvios.**
+1. A spec dizia "quinta a frio no minuto → 429", mas o orçamento `GOAL_EVALUATION_COLD` é de 3 por minuto (RNF01 manda usar o mesmo): a **quarta** é a recusada. A política não mudou.
+2. Os prazos têm um segundo `ColdEvaluationGate` (o tipo do resultado é outro), mas dividem o orçamento por minuto com as metas (mesmo limitador e mesma política). O teto global
+   `GOAL_EVALUATION_MAX_CONCURRENT` vale por portão: no pior caso há o dobro dele em voo (metas + prazos), cada um com no máximo uma por usuário.
+3. As mensagens do canal do pool seguem `z.object` (como as de meta já eram), não `z.strictObject`.
+4. A série diária dos prazos tem 730 dias (a das metas, 1.100): uma avaliação a frio custa ~730 velas diárias + até 8.640 de 15 min por estratégia.
+5. Teste que compara classe de erro por `instanceof` não vale para o arnês dos mutantes (a cópia do `src` tem as suas classes): os contratos conferem `status` e `code`.
+
+**Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos. Testes: horizon-evaluation, horizon-best, horizon-pool, horizon-candles,
+api-horizons-mutants (controle + 20), goal-evaluation-pool, goal-cold-gate, api-goal-evaluation, api-goal-plan, api-goals, code-size-limits,
+strategy-engine-boundary, app-import-boundary, api-openapi, ownership-registry e os cinco contratos da Fase 1: 281 pass, 0 fail.
