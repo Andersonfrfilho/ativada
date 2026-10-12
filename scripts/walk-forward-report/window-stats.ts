@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { EngineCandle } from '../../packages/strategy-engine/src/index.js';
+import { REPORT_GRID } from './report.constant.js';
 import type { DecimalText, WindowStats, WindowSummary } from './report.types.js';
 
 const ZERO = 0;
@@ -55,4 +56,18 @@ export function computeBuyAndHoldReturn(
   const last = candles.at(-1);
   if (first === undefined || last === undefined) return null;
   return formatFraction(Number(last.close) / Number(first.open) - 1);
+}
+
+function isOnGridEdge(path: string, value: string | number | undefined): boolean {
+  const parameter = REPORT_GRID.parameters.find((item) => item.path === path);
+  if (parameter === undefined || value === undefined || parameter.values.length < 3) return false;
+  const numbers = parameter.values.map(Number).sort((first, second) => first - second);
+  return Number(value) === numbers[0] || Number(value) === numbers.at(-1);
+}
+
+// Janelas em que algum parâmetro vencedor ficou na borda da grade (a grade pode não conter o melhor valor).
+export function countEdgeWindows(windows: readonly WindowSummary[]): number {
+  return windows.filter((window) =>
+    Object.entries(window.assignment).some(([path, value]) => isOnGridEdge(path, value)),
+  ).length;
 }

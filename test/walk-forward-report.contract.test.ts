@@ -15,6 +15,7 @@ import type {
 import {
   computeBuyAndHoldReturn,
   computeWindowStats,
+  countEdgeWindows,
 } from '../scripts/walk-forward-report/window-stats.js';
 
 const CANDLE: EngineCandle = {
@@ -210,5 +211,41 @@ describe('renderReport', () => {
   });
   test('avisa quando a árvore de código não estava limpa', () => {
     expect(renderReport({ ...INPUT, isTreeClean: false })).toContain('NÃO estava limpa');
+  });
+});
+
+describe('leitura honesta dos casos difíceis', () => {
+  function withOverfitting(inSampleSharpe: string | null, isAlert: boolean): ReportInput {
+    const base = scenario();
+    const withCosts = {
+      ...base.withCosts,
+      overfitting: { ...base.withCosts.overfitting, inSampleSharpe, isAlert },
+    };
+    return { ...INPUT, scenarios: [{ ...base, withCosts }] };
+  }
+
+  test('alerta apagado com Sharpe de ajuste não positivo é explicado como ausência de vantagem', () => {
+    const text = renderReport(withOverfitting('-1.2', false));
+    expect(text).toContain('não indica robustez');
+    expect(renderReport(withOverfitting('1.2', false))).not.toContain('não indica robustez');
+  });
+
+  test('resultado de custo melhor que o sem custo não é atribuído aos custos', () => {
+    const base = scenario();
+    const input: ReportInput = {
+      ...INPUT,
+      scenarios: [{ ...base, withoutCosts: summary(base.withoutCosts.windows, '-0.20') }],
+    };
+    expect(renderReport(input)).toContain('_melhor_ que sem custos');
+  });
+
+  test('poucas operações geram aviso de pouca confiança estatística', () => {
+    expect(renderReport(INPUT)).toContain('Pouca confiança estatística');
+  });
+
+  test('conta janelas com parâmetro vencedor na borda da grade', () => {
+    const edge = window({ assignment: { 'thresholds.buy': '2.5' } });
+    const middle = window({ assignment: { 'thresholds.buy': '2' } });
+    expect(countEdgeWindows([edge, middle, edge])).toBe(2);
   });
 });

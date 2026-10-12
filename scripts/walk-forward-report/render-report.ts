@@ -51,7 +51,7 @@ function renderTraceability(input: ReportInput): string[] {
   return [
     '## Rastreabilidade',
     '',
-    '| Série | Candles | Período dos dados | SHA-256 dos candles | Mín. de operações no ajuste | Tempo de CPU |',
+    '| Série | Candles | Período dos dados | SHA-256 dos candles | Mín. de operações no ajuste | Tempo de execução |',
     '| --- | --- | --- | --- | --- | --- |',
     ...rows,
     '',

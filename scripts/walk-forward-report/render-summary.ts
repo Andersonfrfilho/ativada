@@ -4,6 +4,13 @@ import { scenarioTitle } from './render-sections.js';
 import type { ScenarioReport } from './report.types.js';
 import { computeWindowStats } from './window-stats.js';
 
+function silentAlertSuffix(scenario: ScenarioReport): string {
+  const { overfitting } = scenario.withCosts;
+  const inSample = overfitting.inSampleSharpe;
+  if (overfitting.isAlert || (inSample !== null && Number(inSample) > 0)) return '';
+  return ' (apagado porque o melhor parâmetro já não ganhava no ajuste: isso não indica robustez)';
+}
+
 function summarizeScenario(scenario: ScenarioReport): string[] {
   const { withCosts, withoutCosts } = scenario;
   const stats = computeWindowStats(withCosts.windows);
@@ -11,7 +18,7 @@ function summarizeScenario(scenario: ScenarioReport): string[] {
   return [
     `- **${scenarioTitle(scenario)}:** fora da amostra, a estratégia fez ${formatPercent(withCosts.totalReturn)} líquido de custos contra ${formatPercent(withCosts.benchmarkReturn)} de comprar e segurar nos mesmos meses; ${stats.positiveWindows} de ${stats.windows} janelas terminaram positivas.`,
     `- ${scenarioTitle(scenario)}: ${withCosts.trades} operações, taxa de acerto ${formatPercent(withCosts.winRate, 1)}, queda máxima ${formatPercent(withCosts.maxDrawdownDepth)}; Sharpe fora da amostra ${formatNumber(withCosts.sharpe, 2)}.`,
-    `- ${scenarioTitle(scenario)}: alerta de overfitting **${alert}**; em ${stats.lostOutOfSample} de ${stats.eligibleWindows} janelas elegíveis o parâmetro vencedor no ajuste perdeu dinheiro no teste. Sem custos o retorno seria ${formatPercent(withoutCosts.totalReturn)}.`,
+    `- ${scenarioTitle(scenario)}: alerta de overfitting **${alert}**${silentAlertSuffix(scenario)}; em ${stats.lostOutOfSample} de ${stats.eligibleWindows} janelas elegíveis o parâmetro vencedor no ajuste perdeu dinheiro no teste. Sem custos o retorno seria ${formatPercent(withoutCosts.totalReturn)}.`,
   ];
 }
 
