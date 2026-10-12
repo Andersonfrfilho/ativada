@@ -32,6 +32,8 @@ import { startPanel } from './panel-e2e/start-panel.js';
 import { startFakeBinanceStreamServer } from '../packages/market-data/test-support/fake-binance-stream-server.js';
 import { startApi } from './session-test/start-api.js';
 
+const HOLD_POLL_MILLISECONDS = 1000;
+
 const EXPECTED_DISPLAY = {
   equity: '10.420,00',
   initial: '10.000,00',
@@ -48,6 +50,22 @@ type SqlRow = { readonly deleted: boolean };
 async function readDeletionMark(sql: Bun.SQL): Promise<boolean> {
   const rows: unknown = await sql`SELECT (deleted_at IS NOT NULL) AS deleted FROM users`;
   return (rows as readonly SqlRow[]).some((row) => row.deleted);
+}
+
+type HoldParams = {
+  readonly keepFile: string;
+  readonly baseUrl: string;
+  readonly apiUrl: string;
+  readonly username: string;
+  readonly password: string;
+  readonly controlUrl: string;
+};
+
+// Modo opcional de revisão visual: mantém a pilha de pé até o arquivo de aviso ser apagado.
+async function holdForReview(params: HoldParams): Promise<void> {
+  const { keepFile, ...info } = params;
+  await Bun.write(keepFile, JSON.stringify(info));
+  while (await Bun.file(keepFile).exists()) await Bun.sleep(HOLD_POLL_MILLISECONDS);
 }
 
 async function main(): Promise<void> {
@@ -97,6 +115,18 @@ async function main(): Promise<void> {
     const baseUrl = identity.environment.panelOrigin;
     const panel = await startPanel(baseUrl);
     identity.cleanup.register('parar o painel', () => panel.stop());
+    const keepFile = Bun.env['PANEL_E2E_KEEP_FILE'];
+    if (keepFile !== undefined) {
+      await holdForReview({
+        keepFile,
+        baseUrl,
+        apiUrl: api.baseUrl,
+        username: actor.username,
+        password: TEST_USER_PASSWORD,
+        controlUrl: control.url,
+      });
+      return;
+    }
     const exitCode = await runPlaywright({
       [E2E_ENV.BASE_URL]: baseUrl,
       [E2E_ENV.API_URL]: api.baseUrl,
