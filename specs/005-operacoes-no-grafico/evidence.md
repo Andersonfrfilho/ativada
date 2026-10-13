@@ -488,3 +488,8 @@ Capturas (as duas únicas): `evidence/t61-cartao-375-claro.png` (375 px, tema cl
 10. **Aviso à parte:** "Taxas pagas: 5.251,65" no cartão "Custos incluídos" é maior que as "Taxas" do resumo (5.250,45) porque inclui a taxa de 1,21 da posição aberta; correto, mas confunde quem compara. Pendência de texto.
 
 Gates (WSL, espelho `ativada-spec5`): `tsc` limpo; `eslint .` limpo; `prettier --check .` limpo; painel 615 testes verdes em 49 arquivos (a primeira rodada teve 1 teste vermelho: o fixture do resumo ainda esperava o arredondamento antigo; corrigido na mesma task).
+
+## T6.2 — CLAUDE.md
+
+- Dois itens novos, em linhas curtas: na seção do painel ("Operações no gráfico", `src/runs/`: cartão, tabela virtual, `?de=&ate=&operacao=`, fuso do usuário, glossário e `Term`, ao vivo só com vela fechada) e junto das regras das rotas de execução (`/trades` ampliado, `/chart` com colunas mín-máx em SQL, até 500 marcadores ou clusters, faixa `[from, to)` em ms UTC e sem cache no servidor, `/trade-summary`).
+- Gates (WSL, espelho `ativada-spec5`): `tsc` limpo; `eslint .` limpo; `prettier --check .` limpo; painel 615 testes verdes em 49 arquivos (só mudou documentação).
