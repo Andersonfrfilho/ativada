@@ -451,3 +451,40 @@ Entregue (typecheck, lint e format limpos; nada do que está abaixo foi exercita
 - Servidor de controle (`scripts/panel-e2e/control-server.ts`): nova rota `POST /fill` com `{ side: 'buy' | 'sell' }`, no papel do worker: grava a posição (aberta na compra; fechada na venda, com saída, taxa, resultado e motivo `target`) e o preenchimento pelos repositórios reais (`appendPositions`, `appendFills`), avança `runs.last_candle_time` com `GREATEST` (o gráfico ao vivo para na última vela processada e o seed não a preenche) e dá o `pg_notify` do tipo `trade` na ordem dado → marcador → aviso, como o worker. Compra e venda caem duas e uma vela antes da última vela de 1 h semeada. Helper `sendFill` em `e2e/flows/control.ts`.
 - Não coberto no E2E (coberto por contrato na T5.1): faixa fixa e o aviso "ir para o fim", porque a simulação semeada tem menos de 1 dia e só o atalho "Tudo" existe.
 - Gates (WSL, espelho `ativada-spec5`): `tsc` limpo (raiz e painel, que inclui `e2e/`), `eslint .` limpo, `prettier --check .` limpo, painel 588 testes verdes em 49 arquivos (sem teste novo nesta task).
+
+## T6.1 — Revisão de design (web.md §15 e §16)
+
+Feita no app em execução (painel `127.0.0.1:56100`, API `56101` já com as rotas novas, usuário de teste local), pelo Edge com Playwright (texto, geometria e estilo computado; nenhuma captura além das duas abaixo). Execuções usadas: backtest LINKUSDT 15m com 1.229 operações, `live_paper` em execução sem operações e backtest sem operações (estado vazio). Nenhum erro de console nem resposta 4xx/5xx das rotas do cartão (só o 401 esperado de `/v1/session/refresh` antes do login).
+
+Capturas (as duas únicas): `evidence/t61-cartao-375-claro.png` (375 px, tema claro, faixa de 1 dia com a operação selecionada) e `evidence/t61-cartao-1280-claro.png` (1280 px, mesma execução). Tema escuro: conferido pelos tokens medidos abaixo, sem captura.
+
+1. **375 px sem rolagem horizontal:** `scrollWidth = innerWidth = 375` nas três execuções e a 1280 px. A tabela rola dentro do próprio quadro.
+2. **Contraste** (computado dos tokens; arrow = elemento gráfico, mínimo 3:1; texto, 4,5:1):
+
+   | Par | Claro | Escuro |
+   |---|---|---|
+   | seta de compra `--buy` / `--surface` | 5,36 | 8,49 |
+   | seta de venda `--sell` / `--surface` | 5,50 | 7,03 |
+   | linha de fechamento `--accent` / `--surface` | ≥ 4,5 (par já coberto) | ≥ 4,5 |
+   | contorno da seta (`--surface` sobre `--buy`/`--sell`) | 5,36 / 5,50 | 8,49 / 7,03 |
+   | halo da seta selecionada, `--ink` / `--accent-soft` | 14,55 | 11,84 |
+   | seta `--buy` / `--accent-soft` (dentro do halo) | 4,35 | 6,86 |
+   | seta `--sell` / `--accent-soft` (dentro do halo) | 4,46 | 5,67 |
+   | foco da seta, `--accent` / `--accent-soft` | 6,87 | 5,89 |
+   | dica e legenda `--ink-2` / `--surface-2` e `--surface` | ≥ 4,5 (cobertos) | ≥ 4,5 |
+   | selo de aviso `--warn` / `--warn-soft` | ≥ 4,5 (coberto) | ≥ 4,5 |
+   | cabeçalho da tabela `--ink-3` / `--surface-2` | 4,59 | 5,20 |
+   | linha selecionada `--ink` / `--accent-soft` | 14,55 | 11,84 |
+   | faixa mínima-máxima `--surface-2` / `--surface` | **1,16** | **1,10** |
+
+   Achados: (a) o texto do resultado (`--buy`/`--sell`) sobre o fundo da linha selecionada ficava em 4,35 e 4,46 no tema claro, abaixo de 4,5: na linha selecionada o resultado agora usa `--ink` (o sinal + ou − já diz ganho ou perda). (b) A faixa mínima-máxima tem 1,16:1 contra o cartão: é adorno redundante (a legenda e o texto alternativo do gráfico dão a mínima e a máxima), por isso não foi mudada; fica como pendência. Pares novos em `test/contrast.contract.ts`: texto (`ink`, `ink-2`, `accent` sobre `accent-soft`; `ink-3` sobre `surface-2`) e um grupo de elementos gráficos a 3:1 (setas, linha, halo e contorno), nos dois temas.
+3. **Foco e ordem de Tab:** contorno de 2 px `--accent` em botões, campos, setas e linhas, nos dois temas. Ordem: atalhos de período → datas → anterior/próximo → setas do gráfico (em ordem de tempo) → tabela. Pendência: cada seta é uma parada de Tab (98 a 500 paradas antes da tabela); o certo é uma parada só no gráfico com as setas do teclado andando entre as marcas (tabindex de passagem).
+4. **Vizinhos:** botões de 44 px, raio de 10 px e fonte de 16 px iguais aos dos outros cartões; o campo de data estava com 13 px e cor `--ink-2` (herdou o rótulo): agora 16 px e `--ink`, como os campos do resto do painel. A altura do campo (46 px) é a do primitivo `controls.input`.
+5. **Texto:** o "?" do glossário já cobre as métricas; os termos do cartão ("Taxas", "Saldo líquido", "UTC", "GMT−3") não têm entrada porque o glossário é fechado pelo RF13 (seis termos). Pendência de produto: avaliar entradas para "Saldo líquido" e "UTC". Linguagem conferida: "Total pago", "Total recebido", "Motivo da venda", "a estratégia mandou vender", "vendeu para limitar a perda (stop)" ficam em português simples. Pendência pequena: contagens sem separador de milhar ("1229 compras") ao lado de valores com separador.
+6. **Aviso duplicado:** medido no backtest, os dois avisos ("Leia com cuidado" no topo e "Leia com cuidado sobre as operações" no cartão) ficam a 900-1.260 px um do outro, com as métricas e a curva no meio, e o do topo é o que protege essas métricas. Não é repetição lado a lado, então **o do topo foi mantido** (nenhum teste mudou); decisão a confirmar com o responsável.
+7. **Fuso e dica de cada seta:** o cabeçalho da tabela diz "Compra (GMT−3)" e a dica e o rótulo acessível de cada seta trazem "Quando 30/09/2026 06:30 (GMT−3)", "Preço", "Quantidade", "Valor pago", "Taxa". Os campos de data dizem "(data em UTC)" e a tabela usa o fuso do usuário: a mistura é o desenho do RF (faixa em UTC) e está dita nos rótulos.
+8. **Vazio e carregando:** sem operações, "Nenhuma operação fechada ainda.", resumo zerado e "Nenhuma operação no período." na tabela; no ao vivo, "Acompanhando o fim da simulação · última vela fechada às 21:00". Carregando: "Carregando o gráfico…" e "Carregando…" em texto simples. Pendência: o carregando não reserva altura (o cartão "pula" quando o gráfico chega).
+9. **Divergência achada e corrigida (importante):** a frase do servidor arredonda contra o usuário (o que se paga e as taxas sobem; o que se recebe e o saldo descem) e os números por baixo arredondavam meio para cima. Com 1.229 operações o cartão mostrava na mesma tela "recebeu 2.620.829,25" na frase e "2.620.829,26" no número, e as taxas 5.250,45 contra 5.250,44. `TradeSummary` passou a arredondar na mesma direção (`roundScaledDirected` em `format/decimal.ts`); conferido no app: frase e números idênticos. Os testes (`trade-summary`, `decimal` e o fixture, cuja frase passou a 201,21 como o servidor daria) acompanharam.
+10. **Aviso à parte:** "Taxas pagas: 5.251,65" no cartão "Custos incluídos" é maior que as "Taxas" do resumo (5.250,45) porque inclui a taxa de 1,21 da posição aberta; correto, mas confunde quem compara. Pendência de texto.
+
+Gates (WSL, espelho `ativada-spec5`): `tsc` limpo; `eslint .` limpo; `prettier --check .` limpo; painel 615 testes verdes em 49 arquivos (a primeira rodada teve 1 teste vermelho: o fixture do resumo ainda esperava o arredondamento antigo; corrigido na mesma task).

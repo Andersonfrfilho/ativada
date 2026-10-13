@@ -60,6 +60,17 @@ export function roundScaledHalfUp(value: bigint, places: number): bigint {
   return value < ZERO ? -rounded : rounded;
 }
 
+// Arredonda para `places` casas na direção pedida (para cima: +infinito; para baixo: -infinito), na escala de 8.
+export function roundScaledDirected(
+  value: bigint,
+  places: number,
+  direction: 'up' | 'down',
+): bigint {
+  const unit = 10n ** BigInt(DECIMAL_SCALE - places);
+  const floor = floorDivide(value, unit) * unit;
+  return direction === 'down' || floor === value ? floor : floor + unit;
+}
+
 function groupThousands(whole: string): string {
   const groups: string[] = [];
   for (let end = whole.length; end > 0; end -= GROUP_SIZE) {

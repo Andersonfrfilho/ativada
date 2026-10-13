@@ -65,6 +65,24 @@ const PAIRS: readonly (readonly [string, string])[] = [
   ['buy', 'surface-2'],
   ['sell', 'surface-2'],
   ['surface', 'ink-2'],
+  ['ink', 'accent-soft'],
+  ['ink-2', 'accent-soft'],
+  ['accent', 'accent-soft'],
+  ['ink-3', 'surface-2'],
+];
+
+// Setas, linha, halo e contorno do gráfico são elementos gráficos (WCAG 1.4.11): 3:1.
+const GRAPHIC_MINIMUM_RATIO = 3;
+const GRAPHIC_PAIRS: readonly (readonly [string, string])[] = [
+  ['buy', 'surface'],
+  ['sell', 'surface'],
+  ['accent', 'surface'],
+  ['buy', 'accent-soft'],
+  ['sell', 'accent-soft'],
+  ['ink', 'accent-soft'],
+  ['surface', 'buy'],
+  ['surface', 'sell'],
+  ['bench', 'surface'],
 ];
 
 for (const [theme, read] of [
@@ -80,6 +98,13 @@ for (const [theme, read] of [
         expect(front, foreground).toBeDefined();
         expect(back, background).toBeDefined();
         expect(ratio(front ?? '#000000', back ?? '#ffffff')).toBeGreaterThanOrEqual(MINIMUM_RATIO);
+      });
+    }
+    for (const [foreground, background] of GRAPHIC_PAIRS) {
+      test(`graphic ${foreground} on ${background} is at least ${GRAPHIC_MINIMUM_RATIO}:1`, () => {
+        const front = tokens.get(foreground) ?? '#000000';
+        const back = tokens.get(background) ?? '#ffffff';
+        expect(ratio(front, back)).toBeGreaterThanOrEqual(GRAPHIC_MINIMUM_RATIO);
       });
     }
   });

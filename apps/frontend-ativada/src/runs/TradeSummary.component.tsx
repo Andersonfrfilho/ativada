@@ -1,8 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
-import { formatSignedScaled, parseScaled } from '../format/decimal.js';
-import { formatDecimal } from '../format/format.js';
+import {
+  formatScaled,
+  formatSignedScaled,
+  parseScaled,
+  roundScaledDirected,
+} from '../format/decimal.js';
 import { ListStatus } from '../layout/ListStatus.component.js';
 import styles from './Runs.module.css';
 import { useTradeSummaryQuery } from './trade-chart.query.js';
@@ -10,8 +14,13 @@ import type { TradeSummary as TradeSummaryData } from './trade-summary.validatio
 
 const QUOTE_ASSET = 'USDT';
 
-function money(text: string): string {
-  return `${formatDecimal(text)} ${QUOTE_ASSET}`;
+const CENTS = 2;
+
+// Sempre contra o usuário, como a frase do servidor: o que se paga sobe e o que se recebe desce.
+function money(text: string, direction: 'up' | 'down' = 'up'): string {
+  const value = parseScaled(text);
+  if (value === undefined) return '—';
+  return `${formatScaled(roundScaledDirected(value, CENTS, direction))} ${QUOTE_ASSET}`;
 }
 
 function netTone(net: string): string {
@@ -22,7 +31,8 @@ function netTone(net: string): string {
 
 function signedMoney(text: string): string {
   const value = parseScaled(text);
-  return value === undefined ? '—' : `${formatSignedScaled(value)} ${QUOTE_ASSET}`;
+  if (value === undefined) return '—';
+  return `${formatSignedScaled(roundScaledDirected(value, CENTS, 'down'))} ${QUOTE_ASSET}`;
 }
 
 function Fact({ label, value, className }: FactProps): ReactElement {
@@ -44,7 +54,7 @@ function SummaryNumbers({ summary }: { readonly summary: TradeSummaryData }): Re
   return (
     <dl className={styles.facts}>
       <Fact label="Total pago" value={money(summary.totalPaid)} />
-      <Fact label="Total recebido" value={money(summary.totalReceived)} />
+      <Fact label="Total recebido" value={money(summary.totalReceived, 'down')} />
       <Fact label="Taxas" value={money(summary.totalFees)} />
       <Fact
         label="Saldo líquido"

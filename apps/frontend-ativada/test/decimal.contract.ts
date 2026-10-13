@@ -7,6 +7,7 @@ import {
   multiplyDown,
   multiplyUp,
   parseScaled,
+  roundScaledDirected,
   roundScaledHalfUp,
   toPlainText,
 } from '../src/format/decimal.js';
@@ -51,6 +52,17 @@ describe('scaled arithmetic', () => {
     expect(toPlainText(divideFloor(100_000_000n, 300_000_000n) ?? 0n)).toBe('0.33333333');
     expect(toPlainText(divideFloor(-100_000_000n, 300_000_000n) ?? 0n)).toBe('-0.33333334');
     expect(divideFloor(1n, 0n)).toBeUndefined();
+  });
+
+  test('rounds toward plus or minus infinity to the cents, never moving an exact value', () => {
+    const round = (text: string, direction: 'up' | 'down'): string =>
+      toPlainText(roundScaledDirected(parseScaled(text) ?? 0n, 2, direction));
+    expect(round('202.2975', 'up')).toBe('202.30000000');
+    expect(round('202.2975', 'down')).toBe('202.29000000');
+    expect(round('-8789.251', 'down')).toBe('-8789.26000000');
+    expect(round('-8789.251', 'up')).toBe('-8789.25000000');
+    expect(round('1.10', 'up')).toBe('1.10000000');
+    expect(round('1.10', 'down')).toBe('1.10000000');
   });
 
   test('rounds half up to the cents', () => {

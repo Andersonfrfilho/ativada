@@ -300,7 +300,7 @@ describe('cartão montado: aviso fixo e resumo', () => {
     const note = await screen.findByRole('note', { name: 'Leia com cuidado sobre as operações' });
     expect(note.textContent).toContain('O passado não promete o futuro');
     expect(note.textContent).not.toContain('nenhum dinheiro real');
-    expect(await screen.findByText(/Você pagou 201,20 USDT/)).toBeDefined();
+    expect(await screen.findByText(/Você pagou 201,21 USDT/)).toBeDefined();
   });
 
   test('a live simulation shows the same notice and also says no real money was used', async () => {

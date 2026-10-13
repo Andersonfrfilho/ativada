@@ -145,7 +145,7 @@ describe('queries', () => {
       },
     ];
     renderApp({ path: '/', isAuthenticated: true, routes: good, probe: <SummaryProbe /> });
-    expect(await screen.findByText(/Você pagou 201,20 USDT/)).toBeDefined();
+    expect(await screen.findByText(/Você pagou 201,21 USDT/)).toBeDefined();
   });
 
   test('the summary query with a bad shape ends in error', async () => {

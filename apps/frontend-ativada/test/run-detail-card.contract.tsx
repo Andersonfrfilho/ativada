@@ -64,7 +64,7 @@ describe('rota do detalhe: cartão "Preço e operações"', () => {
   test('appears on a completed backtest, with summary, chart and table', async () => {
     const app = open(buildRun({ id: 'run-1', kind: 'backtest', status: 'completed' }));
     const card = await screen.findByRole('region', CARD);
-    expect(await screen.findByText(/Você pagou 201,20 USDT/)).toBeDefined();
+    expect(await screen.findByText(/Você pagou 201,21 USDT/)).toBeDefined();
     expect(card.querySelector('[data-chart-item]')).not.toBeNull();
     expect(screen.getByText('Nenhuma operação no período.')).toBeDefined();
     expect(app.fake.callsTo('GET', '/v1/runs/run-1/chart')).toHaveLength(1);

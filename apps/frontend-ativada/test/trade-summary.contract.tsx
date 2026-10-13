@@ -39,14 +39,14 @@ describe('TradeSummary', () => {
     show(<TradeSummary runId="run-1" />, [summaryRoute({})]);
     expect(
       await screen.findByText(
-        'Você pagou 201,20 USDT em 1 compra e recebeu 202,29 USDT nas vendas.',
+        'Você pagou 201,21 USDT em 1 compra e recebeu 202,29 USDT nas vendas.',
       ),
     ).toBeDefined();
     expect(facts()).toEqual({
-      'Total pago': '201,20 USDT',
-      'Total recebido': '202,30 USDT',
-      Taxas: '0,40 USDT',
-      'Saldo líquido': '+1,10 USDT',
+      'Total pago': '201,21 USDT',
+      'Total recebido': '202,29 USDT',
+      Taxas: '0,41 USDT',
+      'Saldo líquido': '+1,09 USDT',
       Compras: '1',
       Vendas: '1',
     });

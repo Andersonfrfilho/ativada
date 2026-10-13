@@ -47,3 +47,9 @@
   padding: 0;
   border: 0;
 }
+
+/* Sobre o fundo de destaque verde e vermelho caem abaixo de 4,5:1; o sinal (+/-) já diz ganho ou perda. */
+.selected .positive,
+.selected .negative {
+  color: var(--ink);
+}

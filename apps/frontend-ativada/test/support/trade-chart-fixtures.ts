@@ -57,7 +57,7 @@ export function buildSummaryResponse(
     net: '1.0965',
     openTrades: 0,
     openPaid: null,
-    message: 'Você pagou 201,20 USDT em 1 compra e recebeu 202,29 USDT nas vendas.',
+    message: 'Você pagou 201,21 USDT em 1 compra e recebeu 202,29 USDT nas vendas.',
     ...overrides,
   };
 }
