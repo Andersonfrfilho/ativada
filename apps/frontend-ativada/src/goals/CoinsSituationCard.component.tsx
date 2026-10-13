@@ -36,7 +36,7 @@ function SituationArticle({ coin }: { readonly coin: CoinSituation }): ReactElem
     <article className={styles.situation} aria-label={name}>
       <h3>{name}</h3>
       {triggers === undefined ? (
-        <p className={controls.muted}>Sem situação: ainda não há candles suficientes.</p>
+        <p className={controls.muted}>Sem situação: ainda não há velas suficientes.</p>
       ) : (
         <>
           <p>

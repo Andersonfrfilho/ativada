@@ -482,7 +482,7 @@ describe('backtest detail', () => {
       isAuthenticated: true,
       routes: [...STRATEGY_ROUTES, ...runRoutes([run])],
     });
-    expect((await screen.findByRole('alert')).textContent).toContain('Não há candles');
+    expect((await screen.findByRole('alert')).textContent).toContain('Não há velas');
   });
 
   test('a run of someone else (404) says so without a stack trace', async () => {

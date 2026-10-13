@@ -10,7 +10,7 @@ const STATIC_LABEL: Readonly<Record<string, string>> = {
   'regime.period': 'Período do ADX',
   'regime.trendThreshold': 'ADX mínimo para tendência',
   'entry.offsetRate': 'Afastamento da ordem limite',
-  'entry.expiryCandles': 'Validade da ordem (candles)',
+  'entry.expiryCandles': 'Validade da ordem (velas)',
 };
 
 const RULE_FIELD_LABEL: Readonly<Record<string, string>> = {

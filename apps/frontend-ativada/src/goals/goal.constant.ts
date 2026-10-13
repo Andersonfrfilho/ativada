@@ -37,11 +37,11 @@ export const GOAL_ERROR_TEXT: Readonly<Record<string, string>> = {
   GOAL_NOT_FOUND: 'Meta não encontrada.',
   LIVE_RUN_LIMIT_REACHED: LIVE_RUN_LIMIT_REACHED_TEXT,
   GOAL_PLAN_UNAVAILABLE:
-    'Ainda não há candles suficientes para montar o plano desta estratégia neste par.',
+    'Ainda não há velas suficientes para montar o plano desta estratégia neste par.',
 };
 
 export const UNAVAILABLE_REASON_TEXT: Readonly<Record<string, string>> = {
-  INVALID_CANDLES: 'série de candles inválida',
+  INVALID_CANDLES: 'série de velas inválida',
   CANDLES_NOT_CONTIGUOUS: 'histórico com lacunas',
   INVALID_SENTIMENTS: 'sem dados de sentimento',
   INVALID_STRATEGY_CONFIG: 'configuração da estratégia inválida',

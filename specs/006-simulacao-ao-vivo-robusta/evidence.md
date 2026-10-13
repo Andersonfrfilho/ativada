@@ -577,3 +577,13 @@ da correção e dos vizinhos no espelho do WSL (`gates6.sh`).
   completa em cada cartão; no detalhe da execução nada muda.
 - **Contratos** (`test/live-run-status.contract.tsx`): selo "Parada" sem "Rodando"; faixa uma única vez na Visão geral quando saldo e
   meta ativa são a mesma simulação, com a referência curta no cartão da meta.
+
+### Achado 15 — "candles" que sobrou na tela
+
+- **Textos trocados por "velas"** (só painel): `CoinsSituationCard` ("ainda não há velas suficientes"), `goal.constant.ts` (plano
+  indisponível e `INVALID_CANDLES`: "série de velas inválida"), `plan-text.ts` ("da próxima vela"), `run.constant.ts` (`NO_CANDLES`:
+  "Não há velas gravadas para esse par…"), `HistoryNote` ("o que teria acontecido com velas que já aconteceram", o resíduo que a T5.1
+  apontou) e o rótulo "Validade da ordem (velas)" do editor de estratégia. Identificadores, chaves de API e nomes de código
+  (`candleTime`, `NO_CANDLES`) não mudam.
+- **Testes ajustados porque citavam o texto:** `plan.contract.tsx` ("velas suficientes") e `backtests.contract.tsx` ("Não há velas").
+  O texto do Telegram (`test/alert-message.contract.test.ts`, "próximo candle") é da API, outra superfície, e ficou como está.

@@ -37,7 +37,7 @@ export function statusLabel(status: string): string {
 }
 
 export const FAILURE_TEXT: Readonly<Record<string, string>> = {
-  NO_CANDLES: 'Não há candles gravados para esse par, timeframe e período.',
+  NO_CANDLES: 'Não há velas gravadas para esse par, timeframe e período.',
   INSUFFICIENT_HISTORY:
     'O período começa cedo demais: falta histórico para aquecer os indicadores.',
   BACKTEST_TIMEOUT: 'A execução demorou mais que o limite e foi encerrada.',

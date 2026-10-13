@@ -9,12 +9,12 @@ export type HistoryNoteProps = {
   readonly label?: string;
 };
 
-// Todo número calculado sobre candles que já aconteceram leva este aviso: resultado histórico não é promessa.
+// Todo número calculado sobre velas que já aconteceram leva este aviso: resultado histórico não é promessa.
 export function HistoryNote({ extra, label = 'Leia com cuidado' }: HistoryNoteProps): ReactElement {
   return (
     <div role="note" aria-label={label} className={styles.notice}>
-      Isto é o histórico: o que teria acontecido com candles que já aconteceram. O passado não
-      promete o futuro, e nada aqui é recomendação de investimento.
+      Isto é o histórico: o que teria acontecido com velas que já aconteceram. O passado não promete
+      o futuro, e nada aqui é recomendação de investimento.
       {extra === undefined ? null : ` ${extra}`}
     </div>
   );

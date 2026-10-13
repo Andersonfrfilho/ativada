@@ -3,9 +3,9 @@ import { formatChangePercent, formatPrice, formatPercent } from '../format/forma
 import type { PlanLevel, PlanView } from './plan.validation.js';
 
 export const BASIS_TEXT = {
-  exact: 'Exato: o preço depende só do fechamento do próximo candle.',
+  exact: 'Exato: o preço depende só do fechamento da próxima vela.',
   indicative:
-    'Indicativo: depende também do volume ou da amplitude do próximo candle, que ainda não existem.',
+    'Indicativo: depende também do volume ou da amplitude da próxima vela, que ainda não existem.',
 } as const;
 
 export function describeBuy(level: PlanLevel, entryReference: string | null): string {
