@@ -6,7 +6,11 @@ import { formatChangePercent, formatPercent, formatSymbol } from '../format/form
 import { Card } from '../layout/Card.component.js';
 import { useEquitySeriesQuery } from '../overview/overview.query.js';
 import type { EquityPoint, Run } from '../overview/overview.validation.js';
-import { LiveRunStatus } from '../runs/LiveRunStatus.component.js';
+import {
+  LiveRunStatus,
+  STALLED_NOTICE,
+  type StalledNotice,
+} from '../runs/LiveRunStatus.component.js';
 import type { RunDetail } from '../runs/run.validation.js';
 import { useRunDetailQuery } from '../runs/runs.query.js';
 import controls from '../styles/Controls.module.css';
@@ -54,9 +58,16 @@ type ProgressViewProps = {
   readonly detail: RunDetail;
   readonly outcome: string | undefined;
   readonly progress: GoalProgress | undefined;
+  readonly stalledNotice: StalledNotice;
 };
 
-function GoalProgressView({ goal, detail, outcome, progress }: ProgressViewProps): ReactElement {
+function GoalProgressView({
+  goal,
+  detail,
+  outcome,
+  progress,
+  stalledNotice,
+}: ProgressViewProps): ReactElement {
   return (
     <>
       <p>
@@ -69,7 +80,7 @@ function GoalProgressView({ goal, detail, outcome, progress }: ProgressViewProps
           <strong>{outcome}</strong>
         </p>
       )}
-      <LiveRunStatus run={detail} />
+      <LiveRunStatus run={detail} stalledNotice={stalledNotice} />
       {progress === undefined ? null : (
         <PaceBars progress={progress} isFinished={outcome !== undefined} />
       )}
@@ -117,9 +128,11 @@ function GoalLoadFailure(): ReactElement {
 function GoalRunBody({
   run,
   goalId,
+  stalledNotice,
 }: {
   readonly run: Run;
   readonly goalId: string;
+  readonly stalledNotice: StalledNotice;
 }): ReactElement {
   const goal = useGoalQuery(goalId);
   const detail = useRunDetailQuery(run.id);
@@ -139,6 +152,7 @@ function GoalRunBody({
         detail={detail.data}
         outcome={readOutcomeText(run)}
         progress={progress}
+        stalledNotice={stalledNotice}
       />
       <GoalLink goalId={goalId} />
     </>
@@ -153,13 +167,22 @@ function GoalLink({ goalId }: { readonly goalId: string }): ReactElement {
   );
 }
 
-export function ActiveGoalCard(): ReactElement | null {
+export type ActiveGoalCardProps = {
+  // A simulação cujo cartão de saldo já mostra a faixa de parada na mesma tela.
+  readonly balanceRunId?: string | undefined;
+};
+
+export function ActiveGoalCard({ balanceRunId }: ActiveGoalCardProps): ReactElement | null {
   const run = useGoalRunQuery().data;
   if (run === null || run === undefined) return null;
   if (run.goalId === null || run.goalId === undefined) return null;
   return (
     <Card title="Meta ativa">
-      <GoalRunBody run={run} goalId={run.goalId} />
+      <GoalRunBody
+        run={run}
+        goalId={run.goalId}
+        stalledNotice={run.id === balanceRunId ? STALLED_NOTICE.REFERENCE : STALLED_NOTICE.FULL}
+      />
     </Card>
   );
 }

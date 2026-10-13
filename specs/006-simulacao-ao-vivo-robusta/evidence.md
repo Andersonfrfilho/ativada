@@ -565,3 +565,15 @@ da correção e dos vizinhos no espelho do WSL (`gates6.sh`).
   Contratos em `test/simulation-picker.contract.tsx`: execuções ativas só na 2ª página, teto 8 libera a sexta e bloqueia na oitava com
   o número certo. Os testes que citavam "limite de 5" no 409 passaram a "limite de simulações".
 - **Pendência registrada:** filtro `status=running|queued` em `GET /v1/runs` (hoje o painel pagina e filtra no cliente).
+
+### Achado 14 — P2 do painel: selo "Parada" e a faixa em UM cartão
+
+- **Causa.** O selo do cartão de saldo dizia "Rodando" logo acima da faixa "Parada.", e na Visão geral a mesma faixa saía duas vezes
+  (saldo e meta ativa) quando a simulação ativa é a da meta.
+- **Correção** (só painel): `describeState` do `BalanceCard` devolve "Parada" quando há `stalledSince`; `LiveRunStatus` ganhou
+  `stalledNotice` (`full`, padrão, ou `reference`); a Visão geral passa o id da simulação do cartão de saldo ao `ActiveGoalCard`
+  (`balanceRunId`) e, quando é a mesma execução, o cartão da meta mostra só "Esta simulação está parada: veja o aviso acima." (sem
+  `role="status"`, para o leitor de tela não anunciar duas vezes). Simulações diferentes (a da meta não é a do saldo) mantêm a faixa
+  completa em cada cartão; no detalhe da execução nada muda.
+- **Contratos** (`test/live-run-status.contract.tsx`): selo "Parada" sem "Rodando"; faixa uma única vez na Visão geral quando saldo e
+  meta ativa são a mesma simulação, com a referência curta no cartão da meta.

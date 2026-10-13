@@ -64,7 +64,7 @@ export function OverviewPage(): ReactElement {
       {activeRun.data === undefined || activeRun.data === null ? null : (
         <ActiveSimulation run={activeRun.data} />
       )}
-      <ActiveGoalCard />
+      <ActiveGoalCard balanceRunId={activeRun.data?.id} />
       <div className={styles.marketBar}>
         <MarketStatusBadge />
       </div>

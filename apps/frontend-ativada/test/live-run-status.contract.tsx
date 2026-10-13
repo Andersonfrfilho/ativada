@@ -16,6 +16,7 @@ const SAO_PAULO = { now: NOW, timeZone: 'America/Sao_Paulo' };
 const FIRST_CANDLE = 'Aguardando a primeira vela, que fecha às 15:00 de hoje.';
 const RUNNING =
   'Olha o mercado a cada 1 hora. Última decisão às 14:00 de hoje · próxima às 15:00 de hoje.';
+const STALLED_REFERENCE = 'Esta simulação está parada: veja o aviso acima.';
 const STALLED =
   'Sua simulação está parada desde 13:15. O sistema está tentando retomar; nenhuma operação foi perdida.';
 
@@ -220,6 +221,19 @@ describe('on the overview balance card', () => {
     expect(card.textContent).toContain('desde 13/10/2026 13:30');
   });
 
+  test('stalled: the badge says Parada, not Rodando, right above the banner', async () => {
+    const stalledSince = Date.parse('2026-10-13T16:15:00.000Z');
+    renderApp({
+      path: '/',
+      isAuthenticated: true,
+      routes: overviewRoutes(() => ({ stalledSince })),
+    });
+    const card = await screen.findByRole('region', { name: 'Saldo da simulação' });
+    await waitFor(() => expect(card.textContent).toContain(STALLED));
+    expect(card.querySelector('p')?.textContent).toBe('Parada');
+    expect(card.textContent).not.toContain('Rodando');
+  });
+
   test('stalled: a banner with shape and words, and it goes away when the field goes away', async () => {
     let stalledSince: number | undefined = Date.parse('2026-10-13T16:15:00.000Z');
     renderApp({
@@ -246,15 +260,19 @@ describe('on the active goal card', () => {
     expect(card.textContent).not.toMatch(/primeiro[ ]candle/);
   });
 
-  test('stalled shows the same banner', async () => {
+  test('the same stalled simulation shows the banner ONCE (balance card) and only a short reference here', async () => {
     const stalledSince = Date.parse('2026-10-13T16:15:00.000Z');
     renderApp({
       path: '/',
       isAuthenticated: true,
       routes: overviewRoutes(() => ({ stalledSince }), 'goal-1'),
     });
-    const card = await screen.findByRole('region', { name: 'Meta ativa' });
-    await waitFor(() => expect(within(card).getByText(STALLED)).toBeDefined());
+    const goalCard = await screen.findByRole('region', { name: 'Meta ativa' });
+    await waitFor(() => expect(goalCard.textContent).toContain(STALLED_REFERENCE));
+    expect(screen.getAllByText(STALLED)).toHaveLength(1);
+    const balance = screen.getByRole('region', { name: 'Saldo da simulação' });
+    expect(within(balance).getByText(STALLED)).toBeDefined();
+    expect(goalCard.textContent).not.toContain(STALLED);
   });
 });
 

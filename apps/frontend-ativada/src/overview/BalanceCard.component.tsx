@@ -19,7 +19,9 @@ export type BalanceCardProps = {
   readonly signals?: readonly Signal[];
 };
 
+// A parada vem do servidor e vale sobre o resto: o selo não diz "Rodando" logo acima da faixa "Parada.".
 function describeState(run: RunDetail): string {
+  if (run.stalledSince !== undefined) return 'Parada';
   return run.status === RUN_STATUS.RUNNING ? 'Rodando' : 'Na fila';
 }
 
