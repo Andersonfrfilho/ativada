@@ -17,6 +17,10 @@ const CACHE = 'horizons/horizon-cache.ts';
 const EVALUATION = 'horizons/horizon-evaluation.use-case.ts';
 const STRATEGIES = 'horizons/horizon-strategies.ts';
 const BEST = 'horizons/horizon-best.ts';
+const ROUTES = 'horizons/horizons.routes.ts';
+const REQUESTS = 'horizons/horizon-requests.ts';
+const MESSAGES = 'horizons/horizon-messages.ts';
+const VIEW = 'horizons/horizon-view.ts';
 
 function edit(file: string, find: string, replace: string): SourceEdit[] {
   return [{ file, find, replace, occurrences: 1 }];
@@ -137,6 +141,114 @@ const MUTANTS: readonly SourceMutant[] = [
       BEST,
       'return left === null ? ORDER_LAST : ORDER_FIRST;',
       'return left === null ? ORDER_FIRST : ORDER_LAST;',
+    ),
+  },
+  {
+    name: 'ROUTE_WITHOUT_ACCESS',
+    edits: edit(ROUTES, '      access: ROUTE_ACCESS.USER,\n', ''),
+  },
+  {
+    name: 'ROUTE_WITHOUT_ITS_RATE_LIMIT',
+    edits: edit(ROUTES, '      rateLimitPolicy: RATE_LIMIT_POLICY.GOAL_EVALUATION,\n', ''),
+  },
+  {
+    name: 'ROUTE_WITHOUT_DOCUMENTATION',
+    edits: edit(ROUTES, '      documentation: HORIZON_DOCUMENTATION.evaluation,\n', ''),
+  },
+  {
+    name: 'MALFORMED_STRATEGY_ID_IS_NOT_A_NOT_FOUND',
+    edits: edit(ROUTES, '  if (parsed === undefined) throw new StrategyNotFoundError();\n', ''),
+  },
+  {
+    name: 'ANY_SYMBOL_ACCEPTED',
+    edits: edit(
+      REQUESTS,
+      '.refine((symbol) => enabledSymbols.includes(symbol), { error: HORIZON_REASON.NOT_ENABLED })',
+      '.refine(() => true, { error: HORIZON_REASON.NOT_ENABLED })',
+    ),
+  },
+  {
+    name: 'QUERY_ACCEPTS_UNKNOWN_FIELDS',
+    edits: edit(REQUESTS, 'return z.strictObject({', 'return z.object({'),
+  },
+  {
+    name: 'MEDIAN_ROUNDED_IN_FAVOUR_OF_THE_USER',
+    edits: edit(
+      MESSAGES,
+      'formatPercent(summary.median, {\n    places: 1,\n    rounding: EngineDecimal.ROUND_FLOOR,',
+      'formatPercent(summary.median, {\n    places: 1,\n    rounding: EngineDecimal.ROUND_CEIL,',
+    ),
+  },
+  {
+    name: 'POSITIVE_RATE_ROUNDED_IN_FAVOUR_OF_THE_USER',
+    edits: edit(
+      MESSAGES,
+      'formatPercent(summary.positiveRate, {\n    places: 0,\n    rounding: EngineDecimal.ROUND_FLOOR,',
+      'formatPercent(summary.positiveRate, {\n    places: 0,\n    rounding: EngineDecimal.ROUND_CEIL,',
+    ),
+  },
+  {
+    name: 'FEE_SHARE_ROUNDED_IN_FAVOUR_OF_THE_USER',
+    edits: edit(
+      MESSAGES,
+      'places: 0, rounding: EngineDecimal.ROUND_CEIL, hasSign: false',
+      'places: 0, rounding: EngineDecimal.ROUND_FLOOR, hasSign: false',
+    ),
+  },
+  {
+    name: 'INTRADAY_NET_ROUNDED_IN_FAVOUR_OF_THE_USER',
+    edits: edit(
+      MESSAGES,
+      "formatPercent(summary.netReturn ?? '0', {\n    places: 1,\n    rounding: EngineDecimal.ROUND_FLOOR,",
+      "formatPercent(summary.netReturn ?? '0', {\n    places: 1,\n    rounding: EngineDecimal.ROUND_CEIL,",
+    ),
+  },
+  {
+    name: 'POSITIVE_SIGN_ON_EVERY_VALUE',
+    edits: edit(MESSAGES, 'params.hasSign && percent.greaterThan(0)', 'params.hasSign'),
+  },
+  {
+    name: 'DOT_AS_DECIMAL_SEPARATOR',
+    edits: edit(MESSAGES, "const DECIMAL_SEPARATOR = ',';", "const DECIMAL_SEPARATOR = '.';"),
+  },
+  {
+    name: 'RECOMMENDED_STAMP_NEVER_WRITTEN',
+    edits: edit(MESSAGES, 'params.isRecommended ? MESSAGE.RECOMMENDED : undefined', 'undefined'),
+  },
+  {
+    name: 'SHORT_HISTORY_NEVER_WARNED',
+    edits: edit(
+      MESSAGES,
+      'summary.isShortHistory ? MESSAGE.SHORT_HISTORY : undefined',
+      'undefined',
+    ),
+  },
+  {
+    name: 'FEES_REASON_IGNORED',
+    edits: edit(
+      MESSAGES,
+      "  if (summary.feeShareOfGross !== null) return 'as taxas comem o ganho';\n",
+      '',
+    ),
+  },
+  {
+    name: 'SINGULAR_OPERATION_IGNORED',
+    edits: edit(MESSAGES, 'summary.tradeCount === 1 ?', 'summary.tradeCount === -1 ?'),
+  },
+  {
+    name: 'EVERY_DAILY_ROW_STAMPED',
+    edits: edit(
+      VIEW,
+      'const isRecommended = summary.horizonDays === recommendedHorizonDays;',
+      'const isRecommended = recommendedHorizonDays !== undefined;',
+    ),
+  },
+  {
+    name: 'NO_RECOMMENDATION_SHOWN_AS_ZERO',
+    edits: edit(
+      VIEW,
+      'recommendedHorizonDays: recommendedHorizonDays ?? null,',
+      'recommendedHorizonDays: recommendedHorizonDays ?? 0,',
     ),
   },
 ];

@@ -116,6 +116,7 @@ export function createApplication(params: CreateApplicationParams): Application 
     closeUserSockets: (userId) => void stream.endpoint.closeUser(userId),
     readListenerHealth: stream.readListenerHealth,
     computeGoal: goalPool.compute,
+    computeHorizon: goalPool.computeHorizon,
   });
   return {
     handler: createRequestHandler({

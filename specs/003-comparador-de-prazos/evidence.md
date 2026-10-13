@@ -152,3 +152,40 @@ goal-hand-values: 126 pass, 0 fail.
 **Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos. Testes: horizon-evaluation, horizon-best, horizon-pool, horizon-candles,
 api-horizons-mutants (controle + 20), goal-evaluation-pool, goal-cold-gate, api-goal-evaluation, api-goal-plan, api-goals, code-size-limits,
 strategy-engine-boundary, app-import-boundary, api-openapi, ownership-registry e os cinco contratos da Fase 1: 281 pass, 0 fail.
+
+## T2.2 — `GET /v1/horizons` (2026-10-12)
+
+**O que há.** `apps/api-ativada/src/horizons/`: `horizons.routes.ts` (rota `GET /v1/horizons?symbol=&strategyId=`, `access: USER`, limite de taxa
+`RATE_LIMIT_POLICY.GOAL_EVALUATION`, como as rotas de meta), `horizons.docs.ts` + `horizon-view.schema.ts` (documentação e esquema da resposta no OpenAPI),
+`horizon-requests.ts` (esquema Zod da consulta: `symbol` obrigatório e habilitado em `MARKET_SYMBOLS` — senão 400 com `{ field: 'symbol', reason: 'not_enabled' }`
+e sem eco do valor —, `strategyId` opcional como texto cru), `horizon-messages.ts` (as frases, RF06) e `horizon-view.ts` (`toHorizonsView`). A fiação está em
+`routes/create-horizon-route-dependencies.ts` (o mesmo limitador e o mesmo `computeHorizon` do pool; `create-application.ts` passa `goalPool.computeHorizon`).
+
+**Resposta.** `rows` na ordem do spec (`intraday`, depois `daily` de 7, 15 e 30 dias), cada linha com `strategy` (a melhor da linha), os números do motor em texto
+decimal e `message`; `isRecommended` só nas linhas de dias e só no prazo de `recommendedHorizonDays`; `recommendationMessage` ("Nenhum prazo compensou no histórico desta
+moeda." quando nenhum passa); `unavailable` lista a estratégia cuja configuração o motor recusa. Percentuais saem do texto decimal com `EngineDecimal`, nunca `Number`:
+mediana e líquido para BAIXO a 1 casa (`-0.0041` vira `-0,5%`), acertos para BAIXO sem casa, fatia das taxas para CIMA; vírgula decimal; sinal `+` só no ganho.
+Exemplos reais do teste: "Por 7 dias: em geral +0,4%, positivo em 52% das vezes." e "Operar de 15 em 15 minutos: não compensa (as taxas comem o ganho).".
+
+| Contrato | Arquivo |
+|---|---|
+| 401 sem token; 400 par desabilitado, ausente, repetido ou vazio (sem eco, nada calculado); 400 parâmetro desconhecido | `test/api-horizons.contract.test.ts` |
+| estratégia de outro usuário, inexistente e id malformado (e UUID em maiúsculas) = o MESMO 404 (`expectIndistinguishableNotFound`) | idem |
+| ordem das linhas, frases, no máximo um selo e só em linha de dias; strategyId do dono; segunda chamada do cache; a 21ª chamada no minuto é 429; a quarta moeda a frio no minuto é 429 com `Retry-After` e `RATE_LIMITED` | idem |
+| frases: arredondamento contra o usuário, vírgula, sem `-0,0%`, selo e histórico curto, motivos da linha de 15 min | `test/horizon-messages.contract.test.ts` |
+| caso do spec §2 e §7.2: só o prazo de 30 dias recomendado, ou "nenhum prazo"; 15 min nunca com selo; sem estratégia e sem candles de 15 min | `test/horizon-view.contract.test.ts` |
+| `api-openapi` verde: a rota aparece no documento gerado e todo caminho do documento é rota real (`buildApiRouteDependencies` ganhou `horizons`) | `test/api-openapi.contract.test.ts` |
+| mutantes: +20 (sem `access`, sem limite de taxa, sem `documentation`, id malformado deixa de ser 404, qualquer par aceito, consulta aceita campo desconhecido, os 4 arredondamentos trocados, sinal `+` em tudo, vírgula virando ponto, selo nunca escrito, aviso de histórico curto, motivo das taxas, singular, todas as linhas com selo, "sem recomendação" virando `0`) | `test/api-horizons-mutants.contract.test.ts` (controle + 38) |
+
+Dois mutantes sobreviveram na primeira rodada e foram tratados: `EVERY_DAILY_ROW_STAMPED` (o harness real não tem prazo recomendado, então nenhuma linha leva o selo em nenhuma das duas
+versões: nasceu `horizon-view.contract.test.ts`, com a avaliação sintética do spec) e `NEGATIVE_ZERO_SHOWN` (o guarda de `-0` era código morto, `toFixed` já devolve `0,0`: o guarda saiu e o teste do `-0` ficou).
+
+**Desvios.**
+1. `symbol` aceita só par habilitado e `strategyId` malformado é 404 (não 400), por isso a consulta valida `strategyId` como texto e a rota o confere com `parseResourceId`; a documentação OpenAPI o descreve como UUID.
+2. A rota usa a política `GOAL_EVALUATION` (20/min) em vez de uma política nova: o limite é o mesmo e o balde também.
+3. `routes/create-domain-route-dependencies.ts` já estava no teto de 200 linhas; a fiação dos prazos mora em arquivo próprio (`create-horizon-route-dependencies.ts`).
+
+**Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos. Testes: horizon-view, horizon-messages, api-horizons, api-openapi, api-docs-page, health-routes,
+admin-boundary-routes, horizon-evaluation, horizon-best, horizon-pool, api-horizons-mutants (controle + 38), api-goal-evaluation, api-goals, api-goal-plan, goal-evaluation-pool,
+goal-cold-gate, code-size-limits, strategy-engine-boundary, app-import-boundary e ownership-registry: 282 pass numa rodada e 111 pass, 0 fail na rodada final
+(view, messages, api-horizons, api-openapi, horizon-evaluation, horizon-best, mutantes e code-size-limits) depois da correção dos dois mutantes.

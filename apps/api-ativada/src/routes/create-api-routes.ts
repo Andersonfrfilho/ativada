@@ -4,6 +4,7 @@ import { createAdminRoutes, type AdminRouteDependencies } from '../admin/admin.r
 import { createAssetRoutes, type AssetRouteDependencies } from '../assets/assets.routes.js';
 import { createDocsRoutes } from '../docs/docs.routes.js';
 import { createGoalRoutes, type GoalRouteDependencies } from '../goals/goals.routes.js';
+import { createHorizonRoutes, type HorizonRouteDependencies } from '../horizons/horizons.routes.js';
 import {
   createPriceAlertRoutes,
   type PriceAlertRouteDependencies,
@@ -50,6 +51,7 @@ export type ApiRouteDependencies = HealthRouteDependencies & {
   readonly sentiment: SentimentRouteDependencies;
   readonly strategies: StrategyRouteDependencies;
   readonly goals: GoalRouteDependencies;
+  readonly horizons: HorizonRouteDependencies;
   readonly priceAlerts: PriceAlertRouteDependencies;
   readonly assets: AssetRouteDependencies;
   readonly runs: RunRoutesBundle;
@@ -70,6 +72,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     ...createSentimentRoutes(dependencies.sentiment),
     ...createStrategyRoutes(dependencies.strategies),
     ...createGoalRoutes(dependencies.goals),
+    ...createHorizonRoutes(dependencies.horizons),
     ...createPriceAlertRoutes(dependencies.priceAlerts),
     ...createAssetRoutes(dependencies.assets),
     ...createRunRoutes(dependencies.runs.routes),

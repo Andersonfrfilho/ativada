@@ -49,6 +49,9 @@ import type * as PriceAlertEventDispatcherModule from '../../../apps/api-ativada
 import type * as PriceAlertRoutesModule from '../../../apps/api-ativada/src/price-alerts/price-alerts.routes.js';
 import type * as PriceAlertUseCasesModule from '../../../apps/api-ativada/src/price-alerts/price-alert.use-cases.js';
 import type * as HorizonBestModule from '../../../apps/api-ativada/src/horizons/horizon-best.js';
+import type * as HorizonMessagesModule from '../../../apps/api-ativada/src/horizons/horizon-messages.js';
+import type * as HorizonRoutesModule from '../../../apps/api-ativada/src/horizons/horizons.routes.js';
+import type * as HorizonViewModule from '../../../apps/api-ativada/src/horizons/horizon-view.js';
 import type * as HorizonCacheModule from '../../../apps/api-ativada/src/horizons/horizon-cache.js';
 import type * as HorizonComputationModule from '../../../apps/api-ativada/src/horizons/horizon-computation.js';
 import type * as HorizonEvaluationModule from '../../../apps/api-ativada/src/horizons/horizon-evaluation.use-case.js';
@@ -108,6 +111,9 @@ export type ApiApp = {
   readonly priceAlertRoutes: typeof PriceAlertRoutesModule;
   readonly priceAlertUseCases: typeof PriceAlertUseCasesModule;
   readonly horizonBest: typeof HorizonBestModule;
+  readonly horizonMessages: typeof HorizonMessagesModule;
+  readonly horizonRoutes: typeof HorizonRoutesModule;
+  readonly horizonView: typeof HorizonViewModule;
   readonly horizonCache: typeof HorizonCacheModule;
   readonly horizonComputation: typeof HorizonComputationModule;
   readonly horizonEvaluation: typeof HorizonEvaluationModule;
@@ -179,6 +185,9 @@ export async function loadApiApp(): Promise<ApiApp> {
     priceAlertRoutes: await load('price-alerts/price-alerts.routes'),
     priceAlertUseCases: await load('price-alerts/price-alert.use-cases'),
     horizonBest: await load('horizons/horizon-best'),
+    horizonMessages: await load('horizons/horizon-messages'),
+    horizonRoutes: await load('horizons/horizons.routes'),
+    horizonView: await load('horizons/horizon-view'),
     horizonCache: await load('horizons/horizon-cache'),
     horizonComputation: await load('horizons/horizon-computation'),
     horizonEvaluation: await load('horizons/horizon-evaluation.use-case'),

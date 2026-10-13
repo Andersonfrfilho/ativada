@@ -68,6 +68,7 @@ export function buildApiRouteDependencies(
       evaluateGoal: notUsed,
       getGoalPlan: notUsed,
     },
+    horizons: { enabledSymbols: ENABLED_MARKETS.symbols, evaluateHorizons: notUsed },
     assets: {
       enabledSymbols: ENABLED_MARKETS.symbols,
       listAssets: notUsed,

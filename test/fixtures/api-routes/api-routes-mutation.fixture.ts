@@ -124,6 +124,10 @@ export const HORIZONS_MUTANT_TARGET: MutantTarget = {
   judgeTestFiles: [
     'test/horizon-evaluation.contract.test.ts',
     'test/horizon-best.contract.test.ts',
+    'test/horizon-messages.contract.test.ts',
+    'test/horizon-view.contract.test.ts',
+    'test/api-horizons.contract.test.ts',
+    'test/api-openapi.contract.test.ts',
   ],
   sourceVariable: 'API_ROUTES_APP_SOURCE',
 };

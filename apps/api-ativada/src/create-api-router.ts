@@ -23,7 +23,7 @@ import {
 import { createGetProfileUseCase, createUpdateProfileUseCase } from './profile/profile.use-case.js';
 import { createTelegramRouteDependencies } from './telegram/create-telegram-route-dependencies.js';
 import { createRateLimiter } from './rate-limit/rate-limiter.js';
-import type { ComputeGoalCombination } from './goals/goal-evaluation-pool.js';
+import type { ComputeGoalCombination, ComputeHorizonLine } from './goals/goal-evaluation-pool.js';
 import type { RunDispatcher } from './runs/run-dispatcher.js';
 import { createSessionRouteDependencies } from './session/create-session-routes-dependencies.js';
 import { createExampleSeedingUserResolver } from './strategies/example-seeding-user-resolver.js';
@@ -47,6 +47,7 @@ export type ApiRouterParams = {
   readonly closeUserSockets: (userId: string) => void;
   readonly readListenerHealth: () => ListenerHealth;
   readonly computeGoal: ComputeGoalCombination;
+  readonly computeHorizon: ComputeHorizonLine;
 };
 
 function createSeedingUserResolver(params: {
@@ -131,6 +132,7 @@ export function createApiRouter(params: ApiRouterParams): Router {
     reportUnexpectedError: (error) => logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { error }),
     rateLimiter,
     computeGoal: params.computeGoal,
+    computeHorizon: params.computeHorizon,
   });
   return createRouter({
     routes: createApiRoutes(assembleRouteDependencies({ params, domain })),

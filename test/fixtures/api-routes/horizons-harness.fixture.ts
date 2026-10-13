@@ -129,7 +129,10 @@ export async function createHorizonsHarness(
           budget: coldBudget,
         }),
       });
-      return [];
+      return app.horizonRoutes.createHorizonRoutes({
+        enabledSymbols: symbols,
+        evaluateHorizons,
+      });
     },
   });
   if (evaluateHorizons === undefined) throw new Error('os prazos não foram montados');

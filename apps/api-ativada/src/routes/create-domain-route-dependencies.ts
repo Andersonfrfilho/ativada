@@ -16,7 +16,7 @@ import type { RateLimiter } from '../rate-limit/rate-limiter.js';
 import { createGoalColdBudget } from '../goals/goal-cold-budget.js';
 import { createColdEvaluationGate } from '../goals/goal-cold-gate.js';
 import { createGoalEvaluationCache } from '../goals/goal-evaluation-cache.js';
-import type { ComputeGoalCombination } from '../goals/goal-evaluation-pool.js';
+import type { ComputeGoalCombination, ComputeHorizonLine } from '../goals/goal-evaluation-pool.js';
 import { createGoalEvaluationUseCase } from '../goals/goal-evaluation.use-case.js';
 import { createGoalPlanCache } from '../goals/goal-plan-cache.js';
 import { createGoalPlanUseCase } from '../goals/goal-plan.use-case.js';
@@ -29,6 +29,7 @@ import {
   createUpdateGoalUseCase,
 } from '../goals/goal.use-cases.js';
 import type { GoalRouteDependencies } from '../goals/goals.routes.js';
+import { createHorizonRouteDependencies } from './create-horizon-route-dependencies.js';
 import type { AssetRouteDependencies } from '../assets/assets.routes.js';
 import type { PriceAlertRouteDependencies } from '../price-alerts/price-alerts.routes.js';
 import {
@@ -66,6 +67,7 @@ export type DomainRouteDependencies = {
   readonly sentiment: SentimentRouteDependencies;
   readonly strategies: StrategyRouteDependencies;
   readonly goals: GoalRouteDependencies;
+  readonly horizons: ReturnType<typeof createHorizonRouteDependencies>;
   readonly priceAlerts: PriceAlertRouteDependencies;
   readonly assets: AssetRouteDependencies;
   readonly runs: RunRoutesBundle;
@@ -81,6 +83,7 @@ export type DomainRouteParams = {
   readonly rateLimiter: RateLimiter;
   // O cálculo do motor roda no pool de threads (nunca na thread da API).
   readonly computeGoal: ComputeGoalCombination;
+  readonly computeHorizon: ComputeHorizonLine;
 };
 
 function createStrategyDependencies(
@@ -201,6 +204,7 @@ export function createDomainRouteDependencies(params: DomainRouteParams): Domain
     },
     strategies: createStrategyDependencies(params),
     goals: createGoalDependencies(params),
+    horizons: createHorizonRouteDependencies(params),
     priceAlerts: createPriceAlertDependencies(params),
     assets: createAssetDependencies(params),
     runs: createRunDependencies(params, enabled),
