@@ -143,12 +143,20 @@ describe('PriceChart: dica', () => {
 });
 
 describe('PriceChart: teclado', () => {
-  test('every marker is a tab stop, in TIME order even if the server sends another order', () => {
+  test('the markers are buttons in TIME order even if the server sends another order, with a single tab stop', () => {
     const chart = parseChart(buildFixtureChart());
     show({ ...chart, markers: [...(chart.markers ?? [])].reverse() });
     const stops = items();
     expect(stops).toHaveLength(6);
-    expect(stops.every((item) => item.getAttribute('tabindex') === '0')).toBe(true);
+    expect(stops.every((item) => item.getAttribute('role') === 'button')).toBe(true);
+    expect(stops.map((item) => item.getAttribute('tabindex'))).toEqual([
+      '0',
+      '-1',
+      '-1',
+      '-1',
+      '-1',
+      '-1',
+    ]);
     const labels = stops.map((item) => item.getAttribute('aria-label') ?? '');
     expect(labels.map((label) => label.slice(0, 6))).toEqual([
       'Compra',
@@ -176,6 +184,32 @@ describe('PriceChart: teclado', () => {
     expect(document.activeElement).toBe(itemAt(5));
     fireEvent.keyDown(itemAt(5), { key: 'ArrowLeft' });
     expect(document.activeElement).toBe(itemAt(4));
+  });
+
+  test('the single tab stop follows the arrows, Home and End', () => {
+    show(parseChart(buildFixtureChart()));
+    const stops = (): (string | null)[] => items().map((item) => item.getAttribute('tabindex'));
+    void act(() => {
+      itemAt(0).focus();
+    });
+    fireEvent.keyDown(itemAt(0), { key: 'ArrowRight' });
+    fireEvent.keyDown(itemAt(1), { key: 'ArrowRight' });
+    expect(stops()).toEqual(['-1', '-1', '0', '-1', '-1', '-1']);
+    fireEvent.keyDown(itemAt(2), { key: 'End' });
+    expect(document.activeElement).toBe(itemAt(5));
+    expect(stops()).toEqual(['-1', '-1', '-1', '-1', '-1', '0']);
+    fireEvent.keyDown(itemAt(5), { key: 'Home' });
+    expect(document.activeElement).toBe(itemAt(0));
+    expect(stops()).toEqual(['0', '-1', '-1', '-1', '-1', '-1']);
+    expect(document.querySelectorAll('[data-chart-item][tabindex="0"]')).toHaveLength(1);
+  });
+
+  test('Esc closes the tip of a marker reached by the keyboard', () => {
+    show(parseChart(buildFixtureChart()));
+    fireEvent.focus(itemAt(0));
+    expect(screen.getByRole('tooltip')).toBeDefined();
+    fireEvent.keyDown(itemAt(0), { key: 'Escape' });
+    expect(screen.queryByRole('tooltip')).toBeNull();
   });
 
   test('the times of the markers are the ones of the fixture', () => {

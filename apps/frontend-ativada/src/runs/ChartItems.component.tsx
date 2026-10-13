@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { KeyboardEvent, ReactElement } from 'react';
 
-import { arrowStep, moveChartFocus } from './chart-keyboard.js';
+import { chartMoveFor, moveChartFocus } from './chart-keyboard.js';
 import { describeClusterItem, describeMarker } from './chart-description.js';
 import type { ChartRange } from './chart-range.js';
 import { MarkerCluster } from './MarkerCluster.component.js';
@@ -29,11 +29,24 @@ export type ChartItemsProps = {
   readonly onSelectKey: (key: string) => void;
 };
 
+type LayerProps = ChartItemsProps & { readonly tabKey: string | undefined };
+
 function describedByFor(props: ChartItemsProps, key: string): string | undefined {
   return props.active.activeKey === key ? props.tooltipId : undefined;
 }
 
-function MarkerLayer(props: ChartItemsProps): ReactElement {
+function tabIndexFor(props: LayerProps, key: string): 0 | -1 {
+  return props.tabKey === key ? 0 : -1;
+}
+
+function itemKeys(chart: TradeChart): string[] {
+  return [
+    ...sortMarkers(chart.markers ?? []).map(markerKey),
+    ...sortClusters(chart.clusters ?? []).map(clusterKey),
+  ];
+}
+
+function MarkerLayer(props: LayerProps): ReactElement {
   const { chart, scale, timeZone, active } = props;
   return (
     <>
@@ -45,6 +58,7 @@ function MarkerLayer(props: ChartItemsProps): ReactElement {
           handlers={active.bind(markerKey(marker))}
           describedBy={describedByFor(props, markerKey(marker))}
           isSelected={marker.positionKey === props.selectedKey}
+          tabIndex={tabIndexFor(props, markerKey(marker))}
           onSelect={() => props.onSelectKey(marker.positionKey)}
         />
       ))}
@@ -52,7 +66,7 @@ function MarkerLayer(props: ChartItemsProps): ReactElement {
   );
 }
 
-function ClusterLayer(props: ChartItemsProps): ReactElement {
+function ClusterLayer(props: LayerProps): ReactElement {
   const { chart, scale, active, onRangeChange } = props;
   return (
     <>
@@ -63,6 +77,7 @@ function ClusterLayer(props: ChartItemsProps): ReactElement {
           label={describeClusterItem(cluster)}
           handlers={active.bind(clusterKey(cluster))}
           describedBy={describedByFor(props, clusterKey(cluster))}
+          tabIndex={tabIndexFor(props, clusterKey(cluster))}
           onZoom={() => onRangeChange({ from: cluster.startTime, to: cluster.endTime })}
         />
       ))}
@@ -70,19 +85,23 @@ function ClusterLayer(props: ChartItemsProps): ReactElement {
   );
 }
 
-// As setas ou os agrupamentos (a API manda um dos dois), em ordem de tempo: Tab e ←/→ andam por elas.
+// As setas ou os agrupamentos (a API manda um dos dois), em ordem de tempo: uma parada de Tab só (a última marca com foco,
+// ou a primeira) e ←/→/Home/End andam entre elas.
 export function ChartItems(props: ChartItemsProps): ReactElement {
   function handleKeyDown(event: KeyboardEvent<SVGGElement>): void {
     if (event.key === 'Escape') props.active.dismiss();
-    const step = arrowStep(event.key);
-    if (step === undefined) return;
+    const move = chartMoveFor(event.key);
+    if (move === undefined) return;
     event.preventDefault();
-    moveChartFocus(event.currentTarget, step);
+    moveChartFocus(event.currentTarget, move);
   }
+  const keys = itemKeys(props.chart);
+  const rovingKey = props.active.rovingKey;
+  const tabKey = rovingKey !== undefined && keys.includes(rovingKey) ? rovingKey : keys[0];
   return (
     <g role="group" aria-label="Operações no gráfico" onKeyDown={handleKeyDown}>
-      <MarkerLayer {...props} />
-      <ClusterLayer {...props} />
+      <MarkerLayer {...props} tabKey={tabKey} />
+      <ClusterLayer {...props} tabKey={tabKey} />
     </g>
   );
 }

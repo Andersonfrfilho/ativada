@@ -5,7 +5,7 @@ import type { TooltipContent } from './marker-facts.js';
 import styles from './PriceChart.module.css';
 
 export const TOOLTIP_HINT =
-  'Passe o mouse, toque ou use Tab sobre uma seta para ver a operação. Esc fecha.';
+  'Passe o mouse, toque ou use Tab e as setas ← → no gráfico para ver cada operação. Esc fecha.';
 
 const TONE_CLASS = {
   buy: styles.toneBuy,

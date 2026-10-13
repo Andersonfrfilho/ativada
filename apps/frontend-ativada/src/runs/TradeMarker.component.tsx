@@ -12,6 +12,7 @@ export type TradeMarkerProps = {
   readonly handlers: ItemHandlers;
   readonly describedBy: string | undefined;
   readonly isSelected: boolean;
+  readonly tabIndex: 0 | -1;
   readonly onSelect: () => void;
 };
 
@@ -23,6 +24,7 @@ export function TradeMarker({
   handlers,
   describedBy,
   isSelected,
+  tabIndex,
   onSelect,
 }: TradeMarkerProps): ReactElement {
   const dataAttribute = { [CHART_ITEM_ATTRIBUTE]: placement.side };
@@ -36,8 +38,8 @@ export function TradeMarker({
       {...handlers}
       {...dataAttribute}
       className={`${styles.item} ${isSelected ? styles.selectedItem : ''}`}
-      role="img"
-      tabIndex={0}
+      role="button"
+      tabIndex={tabIndex}
       aria-label={label}
       aria-describedby={describedBy}
       aria-current={isSelected ? 'true' : undefined}

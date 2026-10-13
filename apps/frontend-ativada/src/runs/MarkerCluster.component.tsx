@@ -11,6 +11,7 @@ export type MarkerClusterProps = {
   readonly label: string;
   readonly handlers: ItemHandlers;
   readonly describedBy: string | undefined;
+  readonly tabIndex: 0 | -1;
   readonly onZoom: () => void;
 };
 
@@ -20,6 +21,7 @@ export function MarkerCluster({
   label,
   handlers,
   describedBy,
+  tabIndex,
   onZoom,
 }: MarkerClusterProps): ReactElement {
   const dataAttribute = { [CHART_ITEM_ATTRIBUTE]: 'cluster' };
@@ -34,7 +36,7 @@ export function MarkerCluster({
       {...dataAttribute}
       className={styles.item}
       role="button"
-      tabIndex={0}
+      tabIndex={tabIndex}
       aria-label={label}
       aria-describedby={describedBy}
       onClick={onZoom}
