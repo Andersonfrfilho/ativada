@@ -456,3 +456,17 @@ Captura final (duas imagens, Playwright com o Edge do Windows, faixa de parada a
 ## T5.2 — CLAUDE.md (2026-10-13, `sonnet`)
 
 - `CLAUDE.md`: um bullet novo "Simulação ao vivo robusta (spec 006)" em "Regras que não se negociam" (reconexão e `ResilientDatabase`, `worker_heartbeats`, `/v1/health` e admin health, `stalled_since` com alertas `STALL`/`RESUME`, vela da simulação e `simulation-timeframe`, `dev-up`/`dev-down`, alvos `db-outage-test` e `stall-mutants`) e os dois alvos na lista de `*-test`. Variáveis com faixa e padrão conferidos no código: `DATABASE_QUERY_TIMEOUT_SECONDS` (5 a 300, 30), `WORKER_HEARTBEAT_SECONDS` (5 a 120, 15), `LIVE_STALL_GRACE_MINUTES` (5 a 240, 15), `LIVE_STALL_SWEEP_SECONDS` (5 a 3600, 60). Só documentação; diff revisado.
+
+## T5.3 — correções da revisão (2026-10-13, `sonnet`)
+
+Achados do revisor Opus, um commit por achado (ou grupo coeso). Gates por commit: prettier, typecheck, lint, format e os testes
+da correção e dos vizinhos no espelho do WSL (`gates6.sh`).
+
+### Achado 5 — o porteiro não reabre cliente depois do `close()`
+
+- `connection-gate.ts`: `Gate.isClosed`; `closeAllClients` o liga; `admit` lança `DatabaseUnavailableError` (`DATABASE_UNAVAILABLE`) e
+  `reopen` não faz nada com ele ligado. Antes, um laço atrasado do desligamento recebia `ERR_POSTGRES_CONNECTION_CLOSED`, reabria e
+  deixava um `Bun.SQL` novo que ninguém fechava.
+- Contrato novo em `test/database-resilient.contract.test.ts` (nada é admitido depois do `close`; unidade que estoura o teto depois do
+  `close` não abre cliente) e dois mutantes em `test/db-reconnect-mutants.contract.test.ts` (`ADMITS_UNITS_AFTER_CLOSE`,
+  `REOPENS_A_CLIENT_AFTER_CLOSE`).

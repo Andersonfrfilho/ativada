@@ -373,6 +373,20 @@ describe('ResilientDatabase: close', () => {
     expect(server.clients.every((client) => client.isClosed())).toBe(true);
     expectUnavailable(await transaction, 'DATABASE_QUERY_TIMEOUT');
   });
+
+  test('after close the gate admits nothing and never opens a client again, not even for a late unit that overruns the cap', async () => {
+    const { server, database } = createHarness({ timeoutMilliseconds: LONG_TIMEOUT_MILLISECONDS });
+    const late = capture(database.begin(() => new Promise<void>(() => undefined)));
+    await settle();
+    await database.close();
+    expectUnavailable(await capture(database.unsafe('after close')), 'DATABASE_UNAVAILABLE');
+    expectUnavailable(
+      await capture(database.begin(() => Promise.resolve())),
+      'DATABASE_UNAVAILABLE',
+    );
+    expectUnavailable(await late, 'DATABASE_QUERY_TIMEOUT');
+    expect(server.clients).toHaveLength(1);
+  });
 });
 
 describe('classification of connection failures (ADR 0002, R1)', () => {

@@ -105,6 +105,18 @@ const IN_FLIGHT_MUTANTS: readonly SourceMutant[] = [
   },
 ];
 
+const CLOSED_GATE_LINE =
+  '  if (gate.isClosed) throw new DatabaseUnavailableError(DATABASE_UNAVAILABLE_CODE.UNAVAILABLE);\n';
+const REOPEN_SIGNATURE = 'function reopen(gate: Gate): void {\n';
+
+const CLOSE_MUTANTS: readonly SourceMutant[] = [
+  { name: 'ADMITS_UNITS_AFTER_CLOSE', edits: edit(GATE, CLOSED_GATE_LINE, '') },
+  {
+    name: 'REOPENS_A_CLIENT_AFTER_CLOSE',
+    edits: edit(GATE, `${REOPEN_SIGNATURE}  if (gate.isClosed) return;\n`, REOPEN_SIGNATURE),
+  },
+];
+
 const GATE_MUTANTS: readonly SourceMutant[] = [
   { name: 'DOWN_DOES_NOT_FAIL_FAST', edits: edit(GATE, ADMIT_LINE, 'if (false as boolean) {') },
   { name: 'MANY_PROBES_AT_ONCE', edits: edit(GATE, ADMIT_LINE, 'if (isBeforeNextAttempt) {') },
@@ -288,6 +300,7 @@ const MUTANTS: readonly SourceMutant[] = [
   ...QUERY_CEILING_MUTANTS,
   ...REOPEN_MUTANTS,
   ...IN_FLIGHT_MUTANTS,
+  ...CLOSE_MUTANTS,
   ...GATE_MUTANTS,
   ...BACKOFF_MUTANTS,
   ...CLASSIFICATION_MUTANTS,

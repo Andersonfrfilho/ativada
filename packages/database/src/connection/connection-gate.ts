@@ -40,6 +40,8 @@ export type Gate = {
   readonly retired: Set<Slot>;
   readonly status: Status;
   current: Slot;
+  // Depois do close() o porteiro não admite unidade nem abre cliente: o laço atrasado do desligamento só leva a falha rápida.
+  isClosed: boolean;
 };
 
 function createSlot(client: SqlClient): Slot {
@@ -51,6 +53,7 @@ export function createGate(settings: ResilientDatabaseSettings): Gate {
     settings,
     retired: new Set(),
     current: createSlot(settings.openClient()),
+    isClosed: false,
     status: {
       state: DATABASE_CONNECTION_STATE.UP,
       failures: 0,
@@ -81,6 +84,7 @@ export function closeIfIdle(gate: Gate, slot: Slot): void {
 }
 
 function reopen(gate: Gate): void {
+  if (gate.isClosed) return;
   const previous = gate.current;
   gate.current = createSlot(gate.settings.openClient());
   gate.retired.add(previous);
@@ -90,6 +94,7 @@ function reopen(gate: Gate): void {
 // Devolve `true` quando esta unidade é a sonda da espera; as outras, enquanto `down`, falham na hora (R2).
 export function admit(gate: Gate): boolean {
   const { status, settings } = gate;
+  if (gate.isClosed) throw new DatabaseUnavailableError(DATABASE_UNAVAILABLE_CODE.UNAVAILABLE);
   if (status.state === DATABASE_CONNECTION_STATE.UP) return false;
   const isBeforeNextAttempt = settings.now() < (status.nextAttemptAt ?? 0);
   if (status.isProbing || isBeforeNextAttempt) {
@@ -149,6 +154,7 @@ export function readGateHealth(gate: Gate): DatabaseHealth {
 }
 
 export async function closeAllClients(gate: Gate): Promise<void> {
+  gate.isClosed = true;
   const slots = [gate.current, ...gate.retired];
   gate.retired.clear();
   await Promise.all(slots.map((slot) => closeClient(slot.client)));
