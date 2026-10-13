@@ -26,6 +26,7 @@ import {
   type ApiRunsContext,
 } from './api-runs-test/api-runs-test-context.js';
 import { checkBacktestFlow, type SeriesWindow } from './api-runs-test/check-backtest-flow.js';
+import { checkChartLoad } from './api-runs-test/check-chart-load.js';
 import { checkDocumentation } from './api-runs-test/check-docs.js';
 import { checkStrategyDelete } from './api-runs-test/check-strategy-delete.js';
 import { checkExampleStrategy } from './api-runs-test/check-example-strategy.js';
@@ -72,6 +73,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkWalkForwardAndStops(context, { classicVersionId: flow.versionId, window });
     await checkTamperedCursor(context);
     await checkDocumentation(context);
+    await checkChartLoad(context);
   } finally {
     await context.stop();
   }

@@ -155,3 +155,66 @@ vazia e dono alheio). `checkTradeTotals` entrou no `make database-test` (PENDENT
 
 Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `prettier --check .` limpo; 331 testes verdes
 em 20 arquivos (os anteriores mais os dois novos).
+
+## T1.5 — Mutantes do filtro de dono e carga medida (2026-10-13, `sonnet`)
+
+### Postgres real (atualiza os "PENDENTE" das T1.1, T1.2 e T1.4)
+
+O Docker Desktop continua sem subir, então a prova rodou num Postgres 18 de verdade em WSL: binários do pacote
+`embedded-postgres@18.3.0-beta.17`, instalados num diretório de rascunho FORA do repositório (`~/pg-scratch`), banco
+descartável na porta 56433, derrubado ao fim. Nada disso entra no repositório nem no `package.json`.
+
+- `database-test` (`packages/database/test-support/database-test.ts`): TODAS as checagens até o registro cronológico passaram,
+  inclusive as novas desta spec (preço reduzido contra o oráculo em 3 séries sintéticas e nos 2 conjuntos reais; 800
+  preenchimentos; faixa e status de operações; resumo de 400 fechadas + 1 aberta; isolamento do gráfico). As duas últimas
+  checagens do arquivo (`checkRunEvents` e `checkRunDataWait`, que usam o escutador próprio de NOTIFY com SCRAM) NÃO terminaram
+  neste Postgres de rascunho (travaram sem erro; o ambiente de autenticação do rascunho difere do Postgres do compose) e não
+  tocam esta spec. **PENDENTE:** `make database-test` completo quando o Docker voltar.
+- `scripts/api-runs-mutants.ts` (equivalente do `make api-runs-mutants`, mesmo script e mesmo juiz): CONTROLE passa e os
+  **21 mutantes de filtro de dono foram reprovados**. Os 11 de antes continuam mortos (dois estavam com o texto desatualizado,
+  porque `run.repository.ts` e `run-ownership.ts` ganharam `isNull(runs.deletedAt)`; o texto foi atualizado e o primeiro ganhou
+  uma segunda edição, `also`, para tirar o filtro também da leitura do checkpoint). Os 10 novos: filtro de dono removido de
+  `fillsInRange` (marcadores e contagem), do agrupamento, dos preenchimentos das posições, do resumo e da faixa de posições, e
+  a conferência `isOwnedRun` removida das cinco leituras do gráfico. O juiz (`route-isolation-test`) ganhou
+  `checkChartIsolation` (`run-chart-isolation-checks.ts`): o dono lê as seis consultas; outro usuário recebe zero linhas nas
+  funções internas (cada uma filtra o dono sozinha) e `undefined` nas sete do repositório.
+- `make api-runs-test` (equivalente, `scripts/api-runs-test.ts`, API real + Postgres real): `OK`, com o novo
+  `check-chart-load.ts` ao fim.
+
+### Mutantes da API (rotas, em memória)
+
+`test/api-run-chart-mutants.contract.test.ts` (alvo `RUN_CHART_MUTANT_TARGET`): CONTROLE sólido e **33 mutantes mortos** do
+código de produção das três rotas: dono (`/trades`, `/chart` e `/trade-summary` de execução alheia respondendo diferente ou
+com lista/resumo vazio; as três rotas públicas), validação (query aberta nas três; `columns` sem teto, sem piso e com padrão
+errado), faixa e marcadores (recorte do fim e do início, faixa fora da execução aceita, walk-forward usando o período inteiro,
+ao vivo passando da última vela, limite de 500 deslocado, fim do balde arredondado para baixo, compra e % do marcador) e
+contas e frase (pago para baixo, recebido para cima, % para zero, taxa de saída ignorada, saldo = recebido + pago, arredondamento
+da frase, menos tipográfico, milhar, singular). Dois sobreviveram na primeira rodada e foram corrigidos nos testes: a query
+aberta do `/chart` (faltava o parâmetro desconhecido sozinho) e a frase (o teste importava a produção em vez do módulo que os
+mutantes substituem; passou a usar `loadApiApp()`).
+
+### Carga medida (plan D9)
+
+Postgres 18 real (WSL, mesma máquina, sem tuning), API real de ponta a ponta (`createApplication`, token JWT assinado por
+chamada, JSON do envelope), 17.520 velas de 15 minutos de BNBUSDT (passeio aleatório determinístico, 6 meses) e 1.000 operações
+fechadas (2.000 preenchimentos) num backtest concluído. Chamadas sequenciais espaçadas de 550 ms (o limite geral de 120/min
+por usuário repõe 2 por segundo); 30 amostras por caso, 40 no de aceite; tamanho é o corpo em UTF-8, sem compressão.
+
+| Caso | p50 | p95 | máx | Corpo |
+|---|---|---|---|---|
+| `/chart` 800 colunas, período inteiro (aceite; 2.000 preenchimentos viram agrupamentos) | 23,8 ms | **31,4 ms** | 35,3 ms | **144,2 KB** |
+| `/chart` 2.000 colunas, período inteiro | 23,8 ms | 31,1 ms | 34,8 ms | 323,0 KB |
+| `/chart` 2.000 colunas, faixa com 499 marcadores (maior corpo possível) | 25,5 ms | 35,1 ms | 35,5 ms | 300,1 KB |
+| `/chart` de 1 dia (96 velas), 800 colunas | 7,3 ms | 10,3 ms | 13,9 ms | 12,8 KB |
+| `/trades?limit=100&from&to` (primeira página) | 9,4 ms | 18,5 ms | 18,9 ms | 38,9 KB |
+| `/trade-summary` | 5,8 ms | 6,6 ms | 7,1 ms | 0,3 KB |
+
+Veredito: o p95 do `/chart` é cerca de dez vezes menor que o alvo de 300 ms, então nenhum índice novo é necessário (ADR O8
+confirmado; nenhuma migration). O corpo do caso de aceite (800 colunas) ficou em 144 KB, dentro de 150 KB por pouco; os casos
+de 2.000 colunas passam de 150 KB, como o ADR já previa (cerca de 160 bytes por coluna). Só medido, sem corte: se isso virar
+problema no celular, as saídas são comprimir a resposta (gzip na borda) ou o painel pedir menos colunas.
+
+O check está em `scripts/api-runs-test/check-chart-load.ts` e falha se algum p95 passar de 300 ms.
+
+Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `prettier --check .` limpo; 367 testes verdes em
+21 arquivos (os anteriores mais `api-run-chart-mutants`).

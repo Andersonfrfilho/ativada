@@ -14,7 +14,8 @@ type Edit = {
   readonly replace: string;
   readonly occurrences?: number;
 };
-type Mutant = { readonly name: string; readonly edit: Edit | undefined };
+// `also` é a segunda edição de um mutante que tira o filtro de dono de dois pontos do mesmo repositório.
+type Mutant = { readonly name: string; readonly edit: Edit | undefined; readonly also?: Edit };
 
 const WITHOUT = (file: string, find: string, kept: string, occurrences = 1): Edit => ({
   file,
@@ -63,9 +64,13 @@ const MUTANTS: readonly Mutant[] = [
     name: 'RUN_READ_OF_ANY_OWNER',
     edit: WITHOUT(
       'src/runs/run.repository.ts',
+      '.where(and(ownerCondition(scope, runs.userId), eq(runs.id, runId), isNull(runs.deletedAt)))',
+      '.where(and(eq(runs.id, runId), isNull(runs.deletedAt)))',
+    ),
+    also: WITHOUT(
+      'src/runs/run.repository.ts',
       '.where(and(ownerCondition(scope, runs.userId), eq(runs.id, runId)))',
       '.where(eq(runs.id, runId))',
-      2,
     ),
   },
   {
@@ -108,8 +113,88 @@ const MUTANTS: readonly Mutant[] = [
     name: 'OWNED_RUN_CHECK_IGNORES_THE_OWNER',
     edit: WITHOUT(
       'src/runs/run-ownership.ts',
-      '.where(and(ownerCondition(scope, runs.userId), eq(runs.id, runId)))',
-      '.where(eq(runs.id, runId))',
+      '.where(and(ownerCondition(scope, runs.userId), eq(runs.id, runId), isNull(runs.deletedAt)))',
+      '.where(and(eq(runs.id, runId), isNull(runs.deletedAt)))',
+    ),
+  },
+  {
+    name: 'FILL_MARKERS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-fill-markers.ts',
+      '    ownerCondition(scope, fills.userId),\n    eq(fills.runId, runId),\n    gte(fills.candleTime, params.from),',
+      '    eq(fills.runId, runId),\n    gte(fills.candleTime, params.from),',
+    ),
+  },
+  {
+    name: 'FILL_CLUSTERS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-fill-markers.ts',
+      '      WHERE user_id = ${scope.ownerUserId} AND run_id = ${runId}\n',
+      '      WHERE run_id = ${runId}\n',
+    ),
+  },
+  {
+    name: 'FILLS_OF_POSITIONS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-fill-list.ts',
+      '        ownerCondition(scope, fills.userId),\n        eq(fills.runId, runId),\n        inArray',
+      '        eq(fills.runId, runId),\n        inArray',
+    ),
+  },
+  {
+    name: 'TRADE_TOTALS_SUM_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-trade-totals.ts',
+      '    WHERE p.user_id = ${scope.ownerUserId} AND p.run_id = ${runId}`',
+      '    WHERE p.run_id = ${runId}`',
+    ),
+  },
+  {
+    name: 'POSITION_RANGE_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-position-list.ts',
+      '        ownerCondition(scope, positions.userId),\n        eq(positions.runId, runId),\n        afterPosition',
+      '        eq(positions.runId, runId),\n        afterPosition',
+    ),
+  },
+  {
+    name: 'PRICE_COLUMNS_OF_FOREIGN_RUN_ARE_NOT_ABSENT',
+    edit: WITHOUT(
+      'src/run-results/run-result.repository.ts',
+      '      (await isOwnedRun(database, scope, runId))\n        ? listPriceColumns({ executor: database, params })\n        : undefined,',
+      '      listPriceColumns({ executor: database, params }),',
+    ),
+  },
+  {
+    name: 'FILL_MARKERS_OF_FOREIGN_RUN_ARE_NOT_ABSENT',
+    edit: WITHOUT(
+      'src/run-results/run-result.repository.ts',
+      '      (await isOwnedRun(database, scope, runId))\n        ? listFillMarkers({ executor: database, scope, runId, params })\n        : undefined,',
+      '      listFillMarkers({ executor: database, scope, runId, params }),',
+    ),
+  },
+  {
+    name: 'FILL_COUNT_OF_FOREIGN_RUN_IS_NOT_ABSENT',
+    edit: WITHOUT(
+      'src/run-results/run-result.repository.ts',
+      '      (await isOwnedRun(database, scope, runId))\n        ? countFillsInRange({ executor: database, scope, runId, params: range })\n        : undefined,',
+      '      countFillsInRange({ executor: database, scope, runId, params: range }),',
+    ),
+  },
+  {
+    name: 'FILL_CLUSTERS_OF_FOREIGN_RUN_ARE_NOT_ABSENT',
+    edit: WITHOUT(
+      'src/run-results/run-result.repository.ts',
+      '      (await isOwnedRun(database, scope, runId))\n        ? listFillClusters({ executor: database, scope, runId, params })\n        : undefined,',
+      '      listFillClusters({ executor: database, scope, runId, params }),',
+    ),
+  },
+  {
+    name: 'TRADE_TOTALS_OF_FOREIGN_RUN_ARE_NOT_ABSENT',
+    edit: WITHOUT(
+      'src/run-results/run-result.repository.ts',
+      '      (await isOwnedRun(database, scope, runId))\n        ? readTradeTotals({ executor: database, scope, runId })\n        : undefined,',
+      '      readTradeTotals({ executor: database, scope, runId }),',
     ),
   },
 ];
@@ -140,6 +225,7 @@ async function runMutant(mutant: Mutant): Promise<Verdict> {
   try {
     await symlink(`${SOURCE_PACKAGE}/node_modules`, `${directory}/node_modules`);
     if (mutant.edit !== undefined) await applyEdit(directory, mutant.name, mutant.edit);
+    if (mutant.also !== undefined) await applyEdit(directory, mutant.name, mutant.also);
     const child = Bun.spawn([process.execPath, 'run', `${directory}/${JUDGE}`], {
       cwd: REPOSITORY_ROOT,
       env: {

@@ -4,6 +4,7 @@ import { closeDatabase, openDatabase } from '../src/database-handle.js';
 import { applyMigrations } from '../src/migrate.js';
 import { readDatabaseUrl } from '../src/read-database-url.js';
 import { checkPersistenceIsolation } from './persistence-isolation-checks.js';
+import { checkChartIsolation } from './run-chart-isolation-checks.js';
 import { checkRunRepository } from './run-checks.js';
 import { checkStrategyPages } from './strategy-page-checks.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
@@ -29,6 +30,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkStrategyPages(context);
     await checkRunRepository(context);
     await checkPersistenceIsolation(context);
+    await checkChartIsolation(context);
   } finally {
     await client.close();
     await closeDatabase(handle);

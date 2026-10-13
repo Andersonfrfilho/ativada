@@ -274,6 +274,17 @@ describe('validação', () => {
     }
   });
 
+  test('parâmetro desconhecido sozinho é 400', async () => {
+    const runId = await createCompletedBacktest();
+    for (const query of ['?userId=x', '?foo=1', '?limit=10']) {
+      const response = await harness.call({
+        subject: SUBJECT_A,
+        path: `${RUNS}/${runId}/chart${query}`,
+      });
+      expect({ query, status: response.status }).toStrictEqual({ query, status: 400 });
+    }
+  });
+
   test('todos os erros de uma vez e nenhum eco de valor', async () => {
     const runId = await createCompletedBacktest();
     const response = await harness.call({

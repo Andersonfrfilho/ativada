@@ -1,10 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import {
-  buildTradeSummaryMessage,
-  type TradeSummaryNumbers,
-} from '../apps/api-ativada/src/runs/trade-summary/trade-summary-message.js';
+import type { TradeSummaryNumbers } from '../apps/api-ativada/src/runs/trade-summary/trade-summary-message.js';
+import { loadApiApp } from './fixtures/api-routes/api-app.fixture.js';
+
+// A frase vem do módulo carregado pela raiz da API (a de produção, ou a cópia mutada que o teste de mutantes aponta).
+const app = await loadApiApp();
+const buildTradeSummaryMessage = app.tradeSummaryMessage.buildTradeSummaryMessage;
 
 function numbers(overrides: Partial<TradeSummaryNumbers> = {}): TradeSummaryNumbers {
   return {

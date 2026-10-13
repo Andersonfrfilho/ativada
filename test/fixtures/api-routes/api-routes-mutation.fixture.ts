@@ -133,3 +133,20 @@ export const HORIZONS_MUTANT_TARGET: MutantTarget = {
   ],
   sourceVariable: 'API_ROUTES_APP_SOURCE',
 };
+
+// As três rotas das operações no gráfico (spec 005, T1.5): `/trades` aditivo, `/chart` e `/trade-summary`, julgadas só pelos
+// contratos delas (dono, acesso, validação, contas de pago e recebido, arredondamento e a frase).
+export const RUN_CHART_MUTANT_TARGET: MutantTarget = {
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-ativada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-ativada/.mutants`,
+  directoryPrefix: 'run-chart-',
+  judgeTestFiles: [
+    'test/api-run-trades.contract.test.ts',
+    'test/api-run-chart.contract.test.ts',
+    'test/api-run-trade-summary.contract.test.ts',
+    'test/trade-summary-message.contract.test.ts',
+    'test/api-run-series.contract.test.ts',
+    'test/api-openapi.contract.test.ts',
+  ],
+  sourceVariable: 'API_ROUTES_APP_SOURCE',
+};
