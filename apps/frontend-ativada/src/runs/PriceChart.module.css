@@ -1,0 +1,168 @@
+.figure {
+  margin: 0;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.axes text {
+  font: 11px var(--font-data);
+  fill: var(--ink-3);
+}
+
+.axisLine {
+  stroke: var(--line);
+}
+
+.band {
+  fill: var(--surface-2);
+}
+
+.line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.legendLine {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.item {
+  cursor: pointer;
+  outline: none;
+}
+
+.hit {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 2;
+}
+
+.item:hover .hit {
+  stroke: var(--ink-3);
+}
+
+.item:focus-visible .hit {
+  stroke: var(--accent);
+  fill: var(--accent-soft);
+  fill-opacity: 0.6;
+}
+
+.buyArrow {
+  fill: var(--buy);
+  stroke: var(--surface);
+  stroke-width: 1;
+}
+
+.sellArrow {
+  fill: var(--sell);
+  stroke: var(--surface);
+  stroke-width: 1;
+}
+
+.cluster {
+  fill: var(--ink-2);
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+.chart .clusterCount {
+  font: 700 11px var(--font-data);
+  fill: var(--surface);
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.glyph {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.legend {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tooltip,
+.tooltipHint {
+  min-height: 132px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.tooltipHint {
+  color: var(--ink-2);
+}
+
+.tooltip {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.toneBuy {
+  color: var(--buy);
+}
+
+.toneSell {
+  color: var(--sell);
+}
+
+.toneCluster {
+  color: var(--ink);
+}
+
+.facts {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.facts div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.facts dt {
+  color: var(--ink-2);
+}
+
+.facts dd {
+  margin: 0;
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  color: var(--ink-2);
+  font-weight: 600;
+}

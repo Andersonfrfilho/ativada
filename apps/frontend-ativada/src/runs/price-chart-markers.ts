@@ -14,7 +14,7 @@ const ARROW_HEIGHT = 18;
 const ARROW_HEAD = 9;
 const ARROW_SHAFT = 6;
 const ARROW_GAP = 5;
-const HIT_RADIUS = 16;
+export const HIT_RADIUS = 16;
 const CLUSTER_MIN_RADIUS = 9;
 const CLUSTER_MAX_RADIUS = 18;
 
@@ -26,7 +26,7 @@ export type MarkerPlacement = {
 };
 
 // Seta com haste: o desenho aponta para o lado da operação, a ponta fica do lado do preço.
-function arrowPath(side: ChartMarker['side'], x: number, centerY: number): string {
+export function arrowPath(side: ChartMarker['side'], x: number, centerY: number): string {
   const half = ARROW_WIDTH / 2;
   const shaft = ARROW_SHAFT / 2;
   const top = centerY - ARROW_HEIGHT / 2;

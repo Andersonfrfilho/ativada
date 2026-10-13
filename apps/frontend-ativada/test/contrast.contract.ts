@@ -61,6 +61,10 @@ const PAIRS: readonly (readonly [string, string])[] = [
   ['ink', 'surface-2'],
   ['ink-2', 'surface-2'],
   ['bench', 'surface'],
+  ['accent', 'surface-2'],
+  ['buy', 'surface-2'],
+  ['sell', 'surface-2'],
+  ['surface', 'ink-2'],
 ];
 
 for (const [theme, read] of [

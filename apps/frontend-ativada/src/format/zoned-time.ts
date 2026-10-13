@@ -5,6 +5,7 @@ export const UTC_TIME_ZONE = 'UTC';
 const LOCALE = 'pt-BR';
 const OFFSET_LOCALE = 'en-US';
 const MINUS = '−';
+const DAY_TEXT_LENGTH = 10;
 const OFFSET_PATTERN = /^GMT(?:([+-])(\d{2}):(\d{2}))?$/;
 
 type ZonedOptions = Intl.DateTimeFormatOptions & { readonly timeZone: string };
@@ -62,4 +63,9 @@ export function zoneLabel(timeZone: string, instant: number): string {
   const minutes = match[3] === undefined || match[3] === '00' ? '' : `:${match[3]}`;
   if (hours === 0 && minutes === '') return 'GMT';
   return `GMT${match[1] === '-' ? MINUS : '+'}${hours}${minutes}`;
+}
+
+// Só o dia ("15/01/2026") no fuso do usuário, para rótulos de eixo e descrições.
+export function formatDayInZone(milliseconds: number, timeZone: string): string {
+  return formatInZone(milliseconds, timeZone).slice(0, DAY_TEXT_LENGTH);
 }

@@ -298,3 +298,32 @@ Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `p
   (agrupamento no fim da faixa passava 1,4 px da borda direita); corrigido limitando o centro por `largura − raio`.
 - Gates (WSL, espelho `ativada-spec5`): `tsc` limpo; `eslint .` limpo (primeira rodada: arquivo com 210 linhas, daí a divisão);
   `prettier --check .` limpo; painel 459 testes verdes em 38 arquivos.
+
+## T3.2 — Gráfico de preço, setas, agrupamento e dica
+
+- Componentes em `src/runs/`: `PriceChart` (SVG: faixa mín–máx, linha do fechamento, eixos, setas ou agrupamentos, dica e legenda),
+  `TradeMarker` (seta com haste: compra para cima abaixo do preço, venda para baixo acima), `MarkerCluster` (círculo com a contagem;
+  Enter, espaço ou clique chamam `onRangeChange` com a faixa do agrupamento), `MarkerTooltip`, `ChartItems`, `PriceChartAxes`,
+  `PriceChartLegend`. Apoio: `marker-facts.ts` (campos da dica e frase do leitor de tela, só texto decimal: `formatDecimal`,
+  `formatPrice`, `formatQuantity` e `BigInt` de escala 8 para o resultado; nenhum `Number` em dinheiro), `chart-keyboard.ts` (←/→),
+  `useActiveChartItem.hook.ts` (foco, mouse e `Esc`), `chart-range.ts` (só o tipo `ChartRange`, a T3.3 o amplia) e
+  `formatDayInZone` em `format/zoned-time.ts`.
+- Dica (RF03): lado, data e hora no fuso do usuário COM o deslocamento ("04/04/2026 11:00 (GMT−3)"), preço, quantidade, valor pago
+  (compra) ou recebido (venda), taxa e, na venda, resultado em USDT e %. A dica ocupa um espaço fixo sob o gráfico, não flutua: em
+  375 px uma dica flutuante cortaria na borda. Sem item ativo, o espaço mostra o convite "Passe o mouse, toque ou use Tab…".
+- Teclado: TODA seta é parada do Tab (`tabindex=0`), no DOM em ordem de tempo (o componente reordena, não confia na ordem da API);
+  ←/→ andam entre elas; `Esc` fecha a dica. Papéis: seta é `role="img"` com `aria-label` (a frase da dica) e agrupamento é
+  `role="button"`. Desvio do enunciado: o `role="img"` do gráfico inteiro (T3.4) irá num `<g>` só da linha e da faixa, porque os
+  filhos de um `role="img"` são apresentacionais e as setas precisam ser focáveis.
+- Cores (`PriceChart.module.css`, só tokens): `--buy`/`--sell` nas setas, `--accent` na linha, `--surface-2` na faixa (a primeira
+  tentativa com `--accent-soft` reprovou o contraste de compra e venda sobre a faixa no tema claro; `surface-2` passa nos dois).
+  `test/contrast.contract.ts` ganhou accent, buy e sell sobre `surface-2` e `surface` sobre `ink-2` (número do agrupamento).
+- Fixture realista em `test/fixtures/trade-chart.fixture.ts`: BNBUSDT, 40 colunas de um dia (587,00 a 668,00), 6 marcadores (3
+  operações: +1,13925, +4,6944 e −2,1834 USDT, contas à mão com taxa de 0,1%) e uma variante com 1 agrupamento (12 compras, 11 vendas).
+- Contrato `test/trade-chart-markers.contract.tsx` (13 testes): formas diferentes e legenda; eixo no fuso (31/03/2026 a 10/05/2026
+  em São Paulo); dica de compra e de venda com os valores do fixture; prejuízo com sinal; `aria-describedby` só com a dica aberta;
+  mouse, foco e `Esc`; ordem de tempo com a resposta invertida; ←/→ percorrem e param nas pontas; agrupamento (rótulo,
+  "Aproxime para ver cada operação"; Enter, espaço e clique pedem a faixa dele; outra tecla não).
+- Gates (WSL, espelho `ativada-spec5`): `tsc` limpo; `eslint .` limpo (primeira rodada: tipos de retorno do hook e promessas
+  flutuantes de `act` nos testes); `prettier --check .` limpo; painel 480 testes verdes em 39 arquivos (uma rodada vermelha só
+  no contraste, descrita acima).
