@@ -246,3 +246,14 @@ Gates (WSL): `typecheck`, `lint`, `format` limpos; 343/343 nos contratos da task
 
 Pendências: `docker restart` real do Postgres NÃO foi rodado (sem Docker utilizável aqui; o `kill` é o `refuse` do proxy, que para os clientes é igual); `make db-outage-test` em si
 não rodou (depende de `make up`), só o comando equivalente acima; `resync` do LISTEN não é asserido.
+
+## T2.1 — `computeStalledSince` (2026-10-13, `sonnet`)
+
+- `apps/api-ativada/src/runs/stall/stall-policy.ts`: `computeStalledSince({ timeframe, lastCandleTime, startedAt, now, graceMinutes, waitingForData })` puro, sem relógio (`now` entra por parâmetro).
+  Vela devida = a seguinte à última passada (`lastCandleTime + d`) ou, sem passo, a que estava em curso na criação (`floor(startedAt ÷ d) × d`); `stalledSince` = fechamento dela + carência
+  (nunca o instante da varredura); `undefined` em dia ou em `waitingForData`. Usa `ENGINE_TIMEFRAME_DURATION_MILLISECONDS` do motor (só leitura).
+- Contrato `test/live-stall-policy.contract.test.ts` (16): contas à mão em 15m, 1h, 4h e 1d com passo e sem passo, no instante exato do limite e um milissegundo antes, início igual quando a varredura chega horas
+  depois, `waitingForData`, carência parametrizada e propriedade em 2.000 casos (nunca antes de `última + 2d + carência`, determinístico). A fixture `api-app.fixture.ts` ganhou `stallPolicy` (por onde os mutantes da T2.5 entram).
+- Estabilidade DURANTE o episódio (P3) não é da função pura (ela recalcula a partir do estado atual): o varredor da T2.3 mantém o `stalled_since` gravado enquanto a fórmula disser parada.
+
+Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; contrato novo 16/16; vizinhos (`code-size-limits`, `app-import-boundary`, `strategy-engine-boundary`, `ownership-registry`) 75/75.

@@ -69,6 +69,7 @@ import type * as GoalUseCasesModule from '../../../apps/api-ativada/src/goals/go
 import type * as StrategyUseCasesModule from '../../../apps/api-ativada/src/strategies/strategy.use-cases.js';
 import type * as SeedExampleModule from '../../../apps/api-ativada/src/strategies/seed-example-strategy.use-case.js';
 import type * as SeedingResolverModule from '../../../apps/api-ativada/src/strategies/example-seeding-user-resolver.js';
+import type * as StallPolicyModule from '../../../apps/api-ativada/src/runs/stall/stall-policy.js';
 
 const PRODUCTION_APP_SOURCE = new URL('../../../apps/api-ativada/src', import.meta.url).pathname;
 
@@ -139,6 +140,7 @@ export type ApiApp = {
   readonly goalSeries: typeof GoalSeriesModule;
   readonly seedExample: typeof SeedExampleModule;
   readonly seedingResolver: typeof SeedingResolverModule;
+  readonly stallPolicy: typeof StallPolicyModule;
   readonly openApi: typeof BuildOpenApiModule;
   readonly undocumentedError: typeof UndocumentedErrorModule;
   readonly apiRoutes: typeof CreateApiRoutesModule;
@@ -222,6 +224,7 @@ export async function loadApiApp(): Promise<ApiApp> {
     goalSeries: await load('goals/goal-evaluation-series'),
     seedExample: await load('strategies/seed-example-strategy.use-case'),
     seedingResolver: await load('strategies/example-seeding-user-resolver'),
+    stallPolicy: await load('runs/stall/stall-policy'),
     openApi: await load('openapi/build-openapi-document'),
     undocumentedError: await load('openapi/undocumented-route.error'),
     apiRoutes: await load('routes/create-api-routes'),
