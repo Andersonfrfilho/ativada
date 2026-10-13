@@ -5,7 +5,7 @@ import { HistoryNote } from '../layout/HistoryNote.component.js';
 import { CostsCard } from '../runs/CostsCard.component.js';
 import { MetricsCard } from '../runs/MetricsCard.component.js';
 import { RunCurve } from '../runs/RunCurve.component.js';
-import { TradesCard } from '../runs/TradesCard.component.js';
+import { TradeChartCard } from '../runs/TradeChartCard.component.js';
 import { parseMetrics, type RunDetail } from '../runs/run.validation.js';
 
 export function CompletedBacktest({ run }: { readonly run: RunDetail }): ReactElement {
@@ -15,7 +15,7 @@ export function CompletedBacktest({ run }: { readonly run: RunDetail }): ReactEl
       <HistoryNote />
       <MetricsCard title="Resultado" metrics={metrics} />
       <RunCurve runId={run.id} />
-      <TradesCard runId={run.id} />
+      <TradeChartCard runId={run.id} />
       <CostsCard run={run} metrics={metrics} />
     </>
   );

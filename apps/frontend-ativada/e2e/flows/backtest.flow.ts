@@ -25,7 +25,7 @@ export async function expectBacktestResult(page: Page): Promise<void> {
   await expect(
     page.getByRole('img', { name: /Retorno acumulado\. Estratégia: .*Comprar e segurar: / }),
   ).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Operações' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Preço e operações', exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Custos incluídos' })).toContainText('0,10%');
 }
 

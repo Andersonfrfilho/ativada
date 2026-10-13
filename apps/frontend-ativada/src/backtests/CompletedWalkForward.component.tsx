@@ -6,6 +6,7 @@ import { CostsCard } from '../runs/CostsCard.component.js';
 import { MetricsCard } from '../runs/MetricsCard.component.js';
 import { OverfittingCard } from '../runs/OverfittingCard.component.js';
 import { RunCurve } from '../runs/RunCurve.component.js';
+import { TradeChartCard } from '../runs/TradeChartCard.component.js';
 import { WindowsCard } from '../runs/WindowsCard.component.js';
 import { parseMetrics, parseOverfitting, type RunDetail } from '../runs/run.validation.js';
 
@@ -19,6 +20,7 @@ export function CompletedWalkForward({ run }: { readonly run: RunDetail }): Reac
       <OverfittingCard overfitting={parseOverfitting(run.overfitting)} />
       <WindowsCard runId={run.id} />
       <RunCurve runId={run.id} />
+      <TradeChartCard runId={run.id} />
       <CostsCard run={run} metrics={metrics} />
     </>
   );
