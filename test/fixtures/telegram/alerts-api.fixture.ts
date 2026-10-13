@@ -4,6 +4,10 @@ import type { createAlertScheduler } from '../../../apps/worker-ativada/src/aler
 import type { formatAlertMessage } from '../../../apps/worker-ativada/src/alerts/format-alert-message.js';
 import type { formatGoalAlertMessage } from '../../../apps/worker-ativada/src/alerts/format-goal-alert-message.js';
 import type { formatPriceAlertMessage } from '../../../apps/worker-ativada/src/alerts/format-price-alert-message.js';
+import type {
+  formatResumeAlertMessage,
+  formatStallAlertMessage,
+} from '../../../apps/worker-ativada/src/alerts/format-stall-alert-message.js';
 import type { createTelegramClient } from '../../../apps/worker-ativada/src/alerts/telegram-client.js';
 
 const PRODUCTION_SOURCE = new URL('../../../apps/worker-ativada/src/alerts', import.meta.url)
@@ -20,6 +24,8 @@ export type AlertsApi = {
   readonly formatAlertMessage: typeof formatAlertMessage;
   readonly formatGoalAlertMessage: typeof formatGoalAlertMessage;
   readonly formatPriceAlertMessage: typeof formatPriceAlertMessage;
+  readonly formatStallAlertMessage: typeof formatStallAlertMessage;
+  readonly formatResumeAlertMessage: typeof formatResumeAlertMessage;
 };
 
 export function resolveAlertsSource(): string {
@@ -63,6 +69,14 @@ export async function loadAlertsApi(): Promise<AlertsApi> {
       'format-price-alert-message.ts',
       'formatPriceAlertMessage',
     )) as AlertsApi['formatPriceAlertMessage'],
+    formatStallAlertMessage: (await loadMember(
+      'format-stall-alert-message.ts',
+      'formatStallAlertMessage',
+    )) as AlertsApi['formatStallAlertMessage'],
+    formatResumeAlertMessage: (await loadMember(
+      'format-stall-alert-message.ts',
+      'formatResumeAlertMessage',
+    )) as AlertsApi['formatResumeAlertMessage'],
   };
 }
 

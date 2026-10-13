@@ -298,3 +298,18 @@ Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; 207/207 (api-ru
 Comando (WSL, Postgres 18.3 embutido de `~/pg-scratch`, porta 56434, fora do repo): os checks da parada rodaram isolados do `database-test` (que segue sem terminar neste WSL pela medição de 17.520 pontos, pendência da T1.3): "stall-only OK" com os 5 checks.
 
 Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; 298/298 em 14 arquivos (varredura, política, ambientes, api-server, api-runs, api-openapi, ownership, code-size, boundaries, database, api-database-outage, api-application-dispatcher) e 121/121 em 5 (database, alert-dispatcher, live-alerts, worker-environment, worker-heartbeat).
+
+## T2.4 — Texto `STALL`/`RESUME` no despachante do worker (2026-10-13, `sonnet`)
+
+- `apps/worker-ativada/src/alerts/format-stall-alert-message.ts`: `formatStallAlertMessage` ("Simulação parada · BTCUSDT 1h / Está sem avançar desde 13/10 14:05 UTC...") e `formatResumeAlertMessage` ("Simulação voltou ... voltou a andar às ..."); horário em UTC com o rótulo
+  (o worker não conhece o fuso da pessoa). Só par, vela e horários, mais "Nenhuma operação foi perdida." e "Simulação: nenhum dinheiro real foi usado.".
+- `live/alert-payload.schema.ts`: `stallAlertPayloadSchema` e `resumeAlertPayloadSchema`, ESTRITOS: chave a mais (PII) ou faltando = `bad_payload`, nada sai. `alert-dispatcher.ts` ganhou as duas ramas em `renderAlertText`; o teto diário
+  (`ALERT_TELEGRAM_DAILY_LIMIT_PER_USER`), o vínculo por chat lido no envio, o retry e o `claimDue` seguem os mesmos do alerta de sinal (nada a repetir).
+- Worker morto: o `STALL` fica `pending` na caixa de saída (a API o grava) e só sai quando o despachante volta; a faixa do painel (T3.3) é o aviso imediato. Comportamento que já existia, agora provado no contrato.
+- Contrato `test/alert-stall.contract.test.ts` (9) com a Bot API falsa em HTTP de verdade (`test/fixtures/telegram/`, `alerts-api.fixture.ts` ganhou os dois formatadores): texto exato, envio ao chat do dono uma vez, pendente até o despachante voltar, teto diário
+  dispensa com `daily_limit`, conteúdo com e-mail a mais ou sem `resumedAt` falha como `bad_payload` sem enviar, log sem token, chat, par nem horário, e o conteúdo que a varredura da API monta passa no esquema estrito do worker.
+
+`make telegram-test` equivalente (WSL, Postgres 18.3 embutido, porta 56434, fora do repo; containers do projeto intocados):
+`DATABASE_URL=<postgres://probe:…@127.0.0.1:56434/postgres> bun --env-file=envs/env.test run scripts/telegram-test.ts` -> "telegram-test: OK" (297 mensagens entregues, retry, queda, LGPD e log limpos), EXIT 0.
+
+Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; 227/227 em 10 arquivos (alert-stall, alert-dispatcher/-scheduler/-message, telegram-alert-mutants, telegram-client, live-alerts, live-alert-parts, code-size-limits, app-import-boundary).

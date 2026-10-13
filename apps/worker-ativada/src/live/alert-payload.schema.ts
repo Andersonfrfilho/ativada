@@ -54,3 +54,23 @@ export const priceAlertPayloadSchema = z.strictObject({
 });
 
 export type PriceAlertPayload = z.infer<typeof priceAlertPayloadSchema>;
+
+// O aviso de simulação parada (spec 006): o par, a vela e o início do episódio (ms UTC), escritos pela varredura da API.
+// Nada da pessoa nem da estratégia; chave a mais é recusada e o alerta não sai.
+export const stallAlertPayloadSchema = z.strictObject({
+  symbol: z.string().min(1),
+  timeframe: z.string().min(1),
+  stalledSince: z.number().int().positive(),
+});
+
+export type StallAlertPayload = z.infer<typeof stallAlertPayloadSchema>;
+
+// O aviso de volta: o mesmo conteúdo mais o instante em que a simulação alcançou a vela devida.
+export const resumeAlertPayloadSchema = z.strictObject({
+  symbol: z.string().min(1),
+  timeframe: z.string().min(1),
+  stalledSince: z.number().int().positive(),
+  resumedAt: z.number().int().positive(),
+});
+
+export type ResumeAlertPayload = z.infer<typeof resumeAlertPayloadSchema>;
