@@ -9,6 +9,8 @@ import {
 } from '@ativada/database';
 
 import { createAccountRouteDependencies } from './account/create-account-route-dependencies.js';
+import { createApiOutageReporter } from './health/create-api-outage-reporter.js';
+import { createDatabaseHealthDependencies } from './health/create-health-dependencies.js';
 import { createAdminRouteDependencies } from './admin/create-admin-route-dependencies.js';
 import type { AccessTokenVerifier } from './authentication/access-token-verifier.js';
 import type { UserResolver } from './authentication/resolve-authenticated-user.js';
@@ -106,6 +108,7 @@ function assembleRouteDependencies(assembly: RouteAssemblyParams): ApiRouteDepen
     checkDatabase: () => pingDatabase(database),
     readRunQueueSummary: () => createRunQueueRepository(database).readQueueSummary(),
     readListenerHealth: params.readListenerHealth,
+    ...createDatabaseHealthDependencies(database, environment.WORKER_HEARTBEAT_SECONDS),
     session: createSessionRouteDependencies({ environment, verifyAccessToken }),
     ...createScopedDependencies({ database, identity, closeUserSockets: params.closeUserSockets }),
     profile: createProfileDependencies(database),
@@ -124,6 +127,7 @@ function assembleRouteDependencies(assembly: RouteAssemblyParams): ApiRouteDepen
 export function createApiRouter(params: ApiRouterParams): Router {
   const { environment, logger, database, verifyAccessToken } = params;
   const rateLimiter = createRateLimiter({ now: () => Date.now() });
+  const outage = createApiOutageReporter({ database, logger });
   const domain = createDomainRouteDependencies({
     environment,
     database,
@@ -142,5 +146,7 @@ export function createApiRouter(params: ApiRouterParams): Router {
     trustedProxyHops: environment.TRUSTED_PROXY_HOPS,
     reportUnexpectedError: (error, traceId) =>
       logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { traceId, error }),
+    reportDatabaseOutage: outage.reportOutage,
+    reportDatabaseRecovery: outage.reportRecovery,
   });
 }

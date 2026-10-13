@@ -10,6 +10,7 @@ import {
   postgresUrlSchema,
   PRODUCTION_ENVIRONMENT,
   webSocketUrlSchema,
+  workerHeartbeatSecondsSchema,
   z,
   type ProductionProfile,
 } from '@ativada/environment';
@@ -110,6 +111,7 @@ export const environmentSchema = z
     DATABASE_URL: postgresUrlSchema,
     DATABASE_SSL_ROOT_CERT: pemCertificateSchema.optional(),
     DATABASE_QUERY_TIMEOUT_SECONDS: databaseQueryTimeoutSecondsSchema,
+    WORKER_HEARTBEAT_SECONDS: workerHeartbeatSecondsSchema,
     API_HOST: nonEmptyTextSchema.default(DEFAULT_API_HOST),
     API_PORT: z.coerce
       .number({ error: API_PORT_EXPECTATION })

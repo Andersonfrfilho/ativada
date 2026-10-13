@@ -24,4 +24,6 @@ export {
   nonEmptyTextSchema,
   pemCertificateSchema,
   webSocketUrlSchema,
+  WORKER_HEARTBEAT_STALE_INTERVALS,
+  workerHeartbeatSecondsSchema,
 } from './common-schemas.js';

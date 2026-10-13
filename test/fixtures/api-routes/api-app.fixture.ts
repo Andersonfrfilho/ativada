@@ -30,6 +30,8 @@ import type * as RunUseCasesModule from '../../../apps/api-ativada/src/runs/run.
 import type * as RunRoutesModule from '../../../apps/api-ativada/src/runs/runs.routes.js';
 import type * as BuildOpenApiModule from '../../../apps/api-ativada/src/openapi/build-openapi-document.js';
 import type * as UndocumentedErrorModule from '../../../apps/api-ativada/src/openapi/undocumented-route.error.js';
+import type * as HealthDependenciesModule from '../../../apps/api-ativada/src/health/create-health-dependencies.js';
+import type * as HealthViewModule from '../../../apps/api-ativada/src/health/health-view.js';
 import type * as CreateApiRoutesModule from '../../../apps/api-ativada/src/routes/create-api-routes.js';
 import type * as DocsConstantModule from '../../../apps/api-ativada/src/docs/docs.constant.js';
 import type * as ErrorCatalogModule from '../../../apps/api-ativada/src/shared/errors/error-code-catalog.js';
@@ -140,6 +142,8 @@ export type ApiApp = {
   readonly openApi: typeof BuildOpenApiModule;
   readonly undocumentedError: typeof UndocumentedErrorModule;
   readonly apiRoutes: typeof CreateApiRoutesModule;
+  readonly healthDependencies: typeof HealthDependenciesModule;
+  readonly healthView: typeof HealthViewModule;
   readonly docsConstant: typeof DocsConstantModule;
   readonly errorCatalog: typeof ErrorCatalogModule;
   readonly securityConstant: typeof SecurityConstantModule;
@@ -221,6 +225,8 @@ export async function loadApiApp(): Promise<ApiApp> {
     openApi: await load('openapi/build-openapi-document'),
     undocumentedError: await load('openapi/undocumented-route.error'),
     apiRoutes: await load('routes/create-api-routes'),
+    healthDependencies: await load('health/create-health-dependencies'),
+    healthView: await load('health/health-view'),
     docsConstant: await load('docs/docs.constant'),
     errorCatalog: await load('shared/errors/error-code-catalog'),
     securityConstant: await load('http/http-security.constant'),

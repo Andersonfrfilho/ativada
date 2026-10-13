@@ -83,7 +83,10 @@ function collectErrorCodes(
       for (const [status, response] of Object.entries(asRecord(asRecord(operation)['responses']))) {
         if (Number(status) < 400) continue;
         const content = asRecord(asRecord(asRecord(response)['content'])['application/json']);
-        const error = asRecord(asRecord(asRecord(content['schema'])['properties'])['error']);
+        const properties = asRecord(asRecord(content['schema'])['properties']);
+        // O 503 de `/v1/health` é uma resposta `{ data: { status } }`, não o envelope de erro.
+        if (!('error' in properties)) continue;
+        const error = asRecord(properties['error']);
         const code = asRecord(asRecord(error['properties'])['code']);
         found.push({ operation: `${method} ${path}`, status, codes: code['enum'] as string[] });
       }
@@ -221,6 +224,23 @@ describe('OpenAPI gerado da tabela de rotas', () => {
         });
       }
     }
+  });
+
+  test('todo caminho documenta o 503 DATABASE_UNAVAILABLE, menos o /v1/health, que responde 503 { status: degraded }', () => {
+    const document = app.openApi.buildOpenApiDocument(DEVELOPMENT_ROUTES);
+    for (const { operation, status, codes } of collectErrorCodes(document)) {
+      if (status !== '503') continue;
+      expect(operation).not.toBe('get /v1/health');
+      expect(codes).toContain('DATABASE_UNAVAILABLE');
+    }
+    const operations = asRecord(asRecord(document['paths'])['/v1/health']);
+    const responses = asRecord(asRecord(operations['get'])['responses']);
+    const schema = asRecord(
+      asRecord(asRecord(asRecord(responses['503'])['content'])['application/json'])['schema'],
+    );
+    const data = asRecord(asRecord(schema['properties'])['data']);
+    expect(asRecord(asRecord(data['properties'])['status'])['const']).toBe('degraded');
+    expect(asRecord(data['properties'])).toStrictEqual({ status: expect.anything() });
   });
 
   test('as rotas novas declaram os erros próprios (404 do recurso, 400, 409, 501)', () => {

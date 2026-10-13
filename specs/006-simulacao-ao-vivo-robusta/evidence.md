@@ -203,3 +203,23 @@ Gates: `typecheck`, `lint` e `format` limpos (WSL, `gates6.sh`); 191/191 em `dat
 Banco real (Postgres 18.3 embutido, WSL, porta 56434, fora do repo; containers do projeto intocados), equivalentes de `make`:
 `DATABASE_URL=<postgres://…:56434/postgres> bun run --cwd packages/database db:migration-test` -> "OK (23 migrations aplicadas e desfeitas)" (rollback
 deixa `public` vazio) e `... db:database-test` -> "OK", incluindo os 3 casos novos de batimento (`worker-heartbeat-checks.ts`).
+
+## T1.6 — Saúde honesta e 503 com o banco fora (2026-10-13, `sonnet`)
+
+- `GET /v1/health` (público): `SELECT 1` pelo porteiro com teto PRÓPRIO de 1 s (`health/database-probe.ts`; estourar responde 503 e NÃO marca o porteiro `down`,
+  provado com o dublê em modo `hung`: 503 em ~1 s e `readHealth().state` segue `up`). `200 {data:{status:'ok'}}` ou `503 {data:{status:'degraded'}}`, só isso
+  (sem código de erro, versão nem host), `Cache-Control: no-store`.
+- `GET /v1/admin/health` ganha `database` (`state`, `consecutiveFailures`, `downSince`, `lastFailureCode`, `lastFailureAt`; só o código, nunca a mensagem) e
+  `worker` (`lastHeartbeatAt`, `ageSeconds`, `state`: `alive` até 3 x `WORKER_HEARTBEAT_SECONDS` de idade pelo relógio do banco, `stale` acima, `unknown` sem
+  linha ou sem conseguir ler). `checks.database`, `listener` e `runs` intactos. `WORKER_HEARTBEAT_SECONDS` virou `workerHeartbeatSecondsSchema` em
+  `@ativada/environment`, usado pelo worker e pela API.
+- R9: o filtro global (`exception-filter.ts`) devolve `503 DATABASE_UNAVAILABLE` (`Retry-After: 5`, mensagem fixa) para `DatabaseUnavailableError` E para qualquer
+  falha de conexão ainda embrulhada pelo Drizzle (R1, `isDatabaseConnectionFailure` agora pública); não vai a `reportUnexpectedError`. Erro de consulta (23505) segue 500.
+  Sem try/catch em use case. A API resume a queda pelo mesmo `createDatabaseOutageGuard` (uma linha por minuto, só `code`) e registra a volta quando o porteiro volta a `up`
+  (`reportDatabaseOutage`/`reportDatabaseRecovery` no roteador).
+- OpenAPI: 503 `DATABASE_UNAVAILABLE` em todas as rotas (`COMMON_ERRORS`); o `/v1/health` documenta o 503 como resposta `{status:'degraded'}` (sucesso declarado vence o erro comum no gerador).
+- Contratos: `test/api-database-outage.contract.test.ts` (12; `loadApiApp()`, porteiro real com o dublê: banco dentro, fora, volta, lento; admin; rotas 503; sem URL/consulta/parâmetro),
+  `health-routes`, `api-openapi` (+1), `admin-boundary-routes`, `api-server` (o processo sobe com 200 ou 503, conforme haja Postgres).
+- Desvio: R9 aplicada a qualquer falha de conexão (R1) e não só ao `DatabaseUnavailableError`, senão a primeira requisição depois da queda ainda dava 500.
+
+Gates (WSL): `typecheck`, `lint`, `format` limpos; 343/343 nos contratos da task e vizinhos; rodada completa de `test/*.contract.test.ts` sem mutantes: 0 falhas em todos os lotes.

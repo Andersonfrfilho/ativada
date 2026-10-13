@@ -48,7 +48,3 @@ export const WORKER_LOG = {
   SHUTDOWN_COMPLETE: 'shutdown complete',
   SHUTDOWN_FAILED: 'shutdown failed',
 } as const;
-
-export const WORKER_HEARTBEAT_DEFAULT_SECONDS = 15;
-export const WORKER_HEARTBEAT_MINIMUM_SECONDS = 5;
-export const WORKER_HEARTBEAT_MAXIMUM_SECONDS = 120;

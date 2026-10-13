@@ -31,6 +31,9 @@ export type RouterDependencies = AuthenticationPipelineDependencies & {
   readonly routes: readonly Route[];
   readonly trustedProxyHops: number;
   readonly reportUnexpectedError: (error: unknown, traceId: string) => void;
+  readonly reportDatabaseOutage?: ((error: unknown) => void) | undefined;
+  // Chamado depois de uma resposta bem-sucedida: quem tem a queda registrada decide se o banco já voltou.
+  readonly reportDatabaseRecovery?: (() => void) | undefined;
 };
 
 export type RouterRequest = {
@@ -126,12 +129,20 @@ export function createRouter(dependencies: RouterDependencies): Router {
   const inFlightChargeKeys = new Set<string>();
   return async (routerRequest) => {
     try {
-      return await dispatch({ inFlightChargeKeys, routeTable, dependencies, routerRequest });
+      const response = await dispatch({
+        inFlightChargeKeys,
+        routeTable,
+        dependencies,
+        routerRequest,
+      });
+      dependencies.reportDatabaseRecovery?.();
+      return response;
     } catch (error: unknown) {
       return toErrorResponse({
         error,
         traceId: routerRequest.traceId,
         reportUnexpectedError: dependencies.reportUnexpectedError,
+        reportDatabaseOutage: dependencies.reportDatabaseOutage,
       });
     }
   };

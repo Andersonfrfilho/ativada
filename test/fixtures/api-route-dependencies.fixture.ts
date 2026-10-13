@@ -2,6 +2,11 @@
 import type { RunQueueSummary } from '../../packages/database/src/run-queue/run-queue.types.js';
 import type { ListenerHealth } from '../../apps/api-ativada/src/stream/listener-health.js';
 import type { ApiRouteDependencies } from '../../apps/api-ativada/src/routes/create-api-routes.js';
+import type { HealthDependencies } from '../../apps/api-ativada/src/health/create-health-dependencies.js';
+import type {
+  DatabaseHealthView,
+  WorkerHealth,
+} from '../../apps/api-ativada/src/health/health-view.js';
 import { createStreamTicketStore } from '../../apps/api-ativada/src/stream/stream-ticket-store.js';
 
 const ENABLED_MARKETS = {
@@ -21,15 +26,34 @@ export const EMPTY_QUEUE_SUMMARY: RunQueueSummary = {
 
 export const HEALTHY_LISTENER: ListenerHealth = { state: 'up', reason: null };
 
+export const UP_DATABASE_HEALTH: DatabaseHealthView = {
+  state: 'up',
+  consecutiveFailures: 0,
+  downSince: null,
+  lastFailureCode: null,
+  lastFailureAt: null,
+};
+
+export const UNKNOWN_WORKER: WorkerHealth = {
+  lastHeartbeatAt: null,
+  ageSeconds: null,
+  state: 'unknown',
+};
+
 export function buildApiRouteDependencies(
   checkDatabase: () => Promise<boolean>,
   isDocumentationEnabled = false,
   queueSummary: RunQueueSummary = EMPTY_QUEUE_SUMMARY,
   listenerHealth: ListenerHealth = HEALTHY_LISTENER,
+  healthOverrides: Partial<HealthDependencies> = {},
 ): ApiRouteDependencies {
   const notUsed = (): Promise<never> => Promise.reject(new Error('not used'));
   return {
     checkDatabase,
+    probeDatabase: checkDatabase,
+    readDatabaseHealthView: () => UP_DATABASE_HEALTH,
+    readWorkerHealth: () => Promise.resolve(UNKNOWN_WORKER),
+    ...healthOverrides,
     readRunQueueSummary: () => Promise.resolve(queueSummary),
     readListenerHealth: () => listenerHealth,
     session: {

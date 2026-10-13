@@ -49,7 +49,11 @@ export {
   readDatabaseHealth,
   type DatabaseHandle,
 } from './database-handle.js';
-export { createDatabaseOutageGuard, DatabaseUnavailableError } from './connection/public.js';
+export {
+  createDatabaseOutageGuard,
+  DatabaseUnavailableError,
+  isDatabaseConnectionFailure,
+} from './connection/public.js';
 export { CLOCK_SKEW_TOLERANCE_MILLISECONDS } from './candles/candle.constant.js';
 export { createCandleRepository } from './candles/candle.repository.js';
 export type * from './candles/candle.types.js';

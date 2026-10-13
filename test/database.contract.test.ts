@@ -74,6 +74,7 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'createTelegramLinkRepository',
   'createUserAssetRepository',
   'createWorkerHeartbeatRepository',
+  'isDatabaseConnectionFailure',
   'isDatabaseError',
   'isFatalSessionEnd',
   'isForeignKeyViolation',

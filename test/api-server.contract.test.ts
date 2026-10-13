@@ -168,7 +168,11 @@ describe('main.ts as a real process', () => {
     const startupOutput = await readUntil(child.stdout, LISTENING_MESSAGE);
     expect(startupOutput).toContain(LISTENING_MESSAGE);
     const response = await fetch(`http://127.0.0.1:${environment['API_PORT']}/v1/health`);
-    expect(response.status).toBe(200);
+    // 200 com um Postgres no ar na porta do env.test, 503 sem ele (o `make check` não sobe infra): o processo serve nos dois casos.
+    expect([200, 503]).toContain(response.status);
+    expect(await response.json()).toStrictEqual({
+      data: { status: response.status === 200 ? 'ok' : 'degraded' },
+    });
     child.kill('SIGTERM');
     const exitCode = await child.exited;
     expect(exitCode).toBe(0);
