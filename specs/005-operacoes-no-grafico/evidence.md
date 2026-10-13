@@ -352,3 +352,29 @@ Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `p
   campos de data, dia fora da execução recusado, Enter no agrupamento escreve a faixa dele na URL, gráfico anterior fica na tela).
 - Gates (WSL, espelho `ativada-spec5`): `tsc` limpo; `eslint .` limpo (primeira rodada: um tipo de retorno no teste); `prettier
   --check .` limpo; painel 511 testes verdes em 41 arquivos.
+
+## T3.4 — Descrição textual para leitor de tela
+
+- `src/runs/chart-description.ts` (texto puro): `describeChart` monta "Preço de BNB/USDT de 01/04 a 10/05. Começou em 600,00 USDT e
+  terminou em 652,50 USDT, com mínima de 587,00 USDT e máxima de 668,00 USDT. 3 compras e 3 vendas." (dias no fuso do usuário, com
+  ano só quando a faixa atravessa o ano; singular e plural; "Nenhuma operação neste período."; com agrupamentos explica que as
+  setas viraram círculos; sem colunas diz que ainda não há preços). Preços saem do texto do servidor (`formatPrice` e a mínima e a
+  máxima comparadas em `BigInt`); as contagens são `totals`. `describeMarker` e `describeClusterItem` (frases por marcador) saíram
+  de `marker-facts.ts` para cá.
+- Ligação: o desenho da faixa e da linha é um `<g role="img" aria-label="Gráfico do preço de BNB/USDT">` com `aria-describedby`
+  apontando para a legenda visível (`<figcaption>`) com a descrição; as setas e agrupamentos ficam FORA dessa imagem (filho de
+  `role="img"` é apresentacional e a seta precisa de foco), cada uma com a própria frase em `aria-label`. É o mesmo desvio já
+  anotado na T3.2: o `role="img"` está no `<g>` e não no `<svg>`, que é `role="group"` "Preço e operações".
+- Contratos: `test/chart-description.contract.ts` (10 testes: texto exato com os números do fixture em UTC e em São Paulo, singular
+  e plural, zero operações, agrupamento, ano atravessado, sem preços, frases de compra, de venda e de agrupamento) e 2 testes novos
+  em `test/trade-chart-markers.contract.tsx` (imagem descrita pelo texto abaixo; setas fora da imagem, com frase própria).
+- Gates (WSL, espelho `ativada-spec5`): `tsc` limpo; `eslint .` limpo; `prettier --check .` limpo; painel 524 testes verdes em 42
+  arquivos, na primeira rodada.
+
+## Fase 3 — fechamento
+
+- Pendências para as próximas fases: `TradeChartCard` ainda não está em rota (T4.4); a seta não seleciona a linha da tabela (T4.3,
+  hoje Enter na seta não faz nada); aviso fixo do RF16 e resumo (T4.2); "acompanhando" e "ir para o fim" no ao vivo (T5.1).
+- Desvios registrados: `price-chart.ts` dividido em dois arquivos (200 linhas); `role="img"` no `<g>` e não no `<svg>`; campos de data
+  em UTC e rotulados; atalhos gravam `de` e `ate`; a dica ocupa um espaço fixo sob o gráfico em vez de flutuar; faixa clara em
+  `--surface-2` por contraste. Nenhuma captura de tela nesta fase (só na T6.1).

@@ -3,6 +3,7 @@ import { describe, expect, mock, test, type Mock } from 'bun:test';
 
 import { act, fireEvent, screen, within } from '@testing-library/react';
 
+import { describeChart } from '../src/runs/chart-description.js';
 import { PriceChart } from '../src/runs/PriceChart.component.js';
 import type { ChartRange } from '../src/runs/chart-range.js';
 import { tradeChartSchema, type TradeChart } from '../src/runs/trade-chart.validation.js';
@@ -206,5 +207,25 @@ describe('PriceChart: agrupamento', () => {
     const onRangeChange = show(parseChart(buildClusteredFixtureChart()));
     fireEvent.keyDown(itemAt(0), { key: 'a' });
     expect(onRangeChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('PriceChart: texto para leitor de tela', () => {
+  test('the drawing of the price is one image described by the text under it', () => {
+    const chart = parseChart(buildFixtureChart());
+    show(chart);
+    const picture = screen.getByRole('img', { name: 'Gráfico do preço de BNB/USDT' });
+    const description = document.getElementById(picture.getAttribute('aria-describedby') ?? '');
+    expect(description?.textContent).toBe(describeChart({ chart, timeZone: SAO_PAULO }));
+    expect(description?.textContent).toContain('3 compras e 3 vendas');
+  });
+
+  test('the arrows stay outside the image, so they keep the focus and their own sentence', () => {
+    show(parseChart(buildFixtureChart()));
+    const picture = screen.getByRole('img', { name: 'Gráfico do preço de BNB/USDT' });
+    for (const item of items()) {
+      expect(picture.contains(item)).toBe(false);
+      expect(item.getAttribute('aria-label')).toMatch(/^(Compra|Venda): Quando /);
+    }
   });
 });

@@ -11,6 +11,11 @@
   display: block;
 }
 
+.caption {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
 .axes text {
   font: 11px var(--font-data);
   fill: var(--ink-3);

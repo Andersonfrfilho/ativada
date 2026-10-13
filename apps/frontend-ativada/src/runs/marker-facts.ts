@@ -91,13 +91,3 @@ export function resolveTooltip(params: ResolveTooltipParams): TooltipContent | u
   const cluster = chart.clusters?.find((item) => clusterKey(item) === activeKey);
   return cluster === undefined ? undefined : buildClusterTooltip(cluster, timeZone);
 }
-
-// Frase para o leitor de tela: o título e cada campo da dica, na mesma ordem.
-export function describeMarker(params: MarkerFactsParams): string {
-  const { heading, rows } = buildMarkerTooltip(params);
-  return `${heading}: ${rows.map((row) => `${row.label} ${row.value}`).join('; ')}`;
-}
-
-export function describeClusterItem(cluster: ChartCluster): string {
-  return `${describeCluster(cluster)}. ${CLUSTER_ZOOM_HINT}`;
-}

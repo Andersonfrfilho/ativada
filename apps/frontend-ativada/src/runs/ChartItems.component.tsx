@@ -2,8 +2,8 @@
 import type { KeyboardEvent, ReactElement } from 'react';
 
 import { arrowStep, moveChartFocus } from './chart-keyboard.js';
+import { describeClusterItem, describeMarker } from './chart-description.js';
 import type { ChartRange } from './chart-range.js';
-import { describeClusterItem, describeMarker } from './marker-facts.js';
 import { MarkerCluster } from './MarkerCluster.component.js';
 import {
   clusterKey,
