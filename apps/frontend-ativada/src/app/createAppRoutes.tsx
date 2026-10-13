@@ -12,6 +12,7 @@ import { AssetsPage } from '../assets/AssetsPage.page.js';
 import { GoalDetailPage } from '../goals/GoalDetailPage.page.js';
 import { PlanPage } from '../goals/PlanPage.page.js';
 import { GoalsPage } from '../goals/GoalsPage.page.js';
+import { HorizonsPage } from '../horizons/HorizonsPage.page.js';
 import { AppShell } from '../layout/AppShell.component.js';
 import { NotFoundPage } from '../layout/NotFoundPage.page.js';
 import { RootLayout } from '../layout/RootLayout.component.js';
@@ -45,6 +46,7 @@ export function createAppRoutes(): RouteObject[] {
                 { path: ROUTE_PATH.GOALS, element: <GoalsPage /> },
                 { path: ROUTE_PATH.GOAL, element: <GoalDetailPage /> },
                 { path: ROUTE_PATH.GOAL_PLAN, element: <PlanPage /> },
+                { path: ROUTE_PATH.HORIZONS, element: <HorizonsPage /> },
                 { path: ROUTE_PATH.ASSETS, element: <AssetsPage /> },
                 { path: ROUTE_PATH.ACCOUNT, element: <AccountPage /> },
               ],

@@ -20,6 +20,7 @@ type NavLinkItem = {
 const LINKS: readonly NavLinkItem[] = [
   { to: ROUTE_PATH.OVERVIEW, label: 'Visão geral', isExact: true, icon: 'overview' },
   { to: ROUTE_PATH.GOALS, label: 'Metas', isExact: false, icon: 'goals' },
+  { to: ROUTE_PATH.HORIZONS, label: 'Prazos', isExact: false, icon: 'horizons' },
   { to: ROUTE_PATH.ASSETS, label: 'Ativos', isExact: false, icon: 'assets' },
   { to: ROUTE_PATH.BACKTESTS, label: 'Backtests', isExact: false, icon: 'backtests' },
   { to: ROUTE_PATH.STRATEGIES, label: 'Estratégias', isExact: false, icon: 'strategies' },

@@ -5,6 +5,7 @@ export const ICON_PATHS = {
   overview: 'M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10',
   goals:
     'M12 3a9 9 0 100 18 9 9 0 000-18zm0 5a4 4 0 100 8 4 4 0 000-8zm0 3a1 1 0 100 2 1 1 0 000-2z',
+  horizons: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2',
   assets: 'M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h2',
   backtests: 'M3 3v18h18M7 15l4-5 3 3 5-7',
   strategies: 'M4 6h16M4 12h10M4 18h6M18 14l2 2-2 2',

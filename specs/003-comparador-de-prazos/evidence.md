@@ -215,3 +215,17 @@ para decidir, e a janela efetiva tem então 89,5 dias.
 **Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos. Testes: horizon-intraday-run, api-horizons-mutants (controle + 47), horizon-evaluation, api-horizons, horizon-pool,
 horizon-intraday, backtest-use-case, backtest-continuity, api-openapi, code-size-limits, strategy-engine-boundary, app-import-boundary, ownership-registry e test-support-boundary:
 219 pass, 0 fail.
+
+## T3.1 — Rota `/prazos`, menu e consulta (2026-10-12)
+
+**O que há.** `ROUTE_PATH.HORIZONS` (`/prazos`) e `API_PATH.HORIZONS`; item "Prazos" no `MainNav` com o ícone novo `horizons` (relógio, em `ICON_PATHS`); `src/horizons/`: `horizon.constant.ts`, `horizon.validation.ts` (espelha `HORIZONS_VIEW_SCHEMA` da API: linha `intraday` e `daily` numa união discriminada, taxas em texto decimal), `horizon.query.ts` (`useHorizonsQuery`, chave por moeda e estratégia, `staleTime` de 60 s por causa do limite de 20/min), `useHorizonFilters.hook.ts` (moeda e estratégia moram em `?symbol=&strategyId=`; moeda desconhecida cai na primeira de `marketSymbols`), `HorizonFilters.component.tsx` ("Melhor por prazo" é o padrão, depois as estratégias do usuário) e `HorizonsPage.page.tsx` (por enquanto: aviso do histórico, filtros, carregando, erro e a frase da recomendação; as linhas vêm na T3.2).
+
+| Contrato | Arquivo |
+|---|---|
+| O menu traz "Prazos" apontando para `/prazos` e o clique abre a tela | `test/horizons.contract.tsx` |
+| Sem parâmetro: primeira moeda e sem `strategyId` na consulta; com `?symbol=ETHUSDT&strategyId=…`: a consulta e os seletores seguem a URL; moeda não habilitada cai na primeira | idem |
+| Trocar um seletor reescreve a URL e consulta de novo; voltar a "Melhor por prazo" tira o `strategyId` | idem |
+| Esquema: aceita os dois casos do spec §7.2; recusa `rows` que não é lista, frase ausente, `kind` desconhecido, `recommendedHorizonDays` texto e taxa `NaN` | idem |
+| Resposta inválida não renderiza (estado de erro padrão, sem a frase de recomendação); 500 mostra o mesmo erro | idem |
+
+**Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos; `panel-test`: 365 pass, 0 fail (31 arquivos).
