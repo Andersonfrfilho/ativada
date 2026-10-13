@@ -278,3 +278,23 @@ Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `p
 - Gates (WSL, espelho `ativada-spec5`): `tsc` limpo, `eslint .` limpo (primeira rodada: `CompareTable` com 41 linhas e retornos
   sem tipo no hook; corrigido), `prettier --check .` limpo.
 - Painel completo: 435 testes verdes em 37 arquivos.
+
+## T3.1 — Escala pura do gráfico de preço
+
+- `src/runs/price-chart.ts` (escala, linha, faixa, limites) e `src/runs/price-chart-markers.ts` (setas e agrupamentos): sem React,
+  sem DOM. Dividido em dois arquivos porque o limite de 200 linhas é imposto pelo lint (desvio do enunciado, que pedia um só).
+  `Number` só entra para coordenada de pixel; a mínima e a máxima do período são comparadas em `BigInt` de escala 8 e voltam como
+  o texto do servidor (`findPriceBounds`).
+- Escala: área de desenho 62/624 em x e 18/272 em y num desenho de 640×300, folga de 6% no preço (como `plan-chart.ts`); período
+  vazio ou preço achatado vai para o meio.
+- Linha: o fechamento (`last`) de cada coluna, no meio da coluna; coluna sem preço legível é pulada e a linha segue. Faixa: contorno
+  fechado da máxima (ida) e da mínima (volta). Teto de 2.000 pontos por caminho, com primeiro e último mantidos.
+- Marcador: compra abaixo do preço com seta PARA CIMA, venda acima com seta PARA BAIXO (forma e posição diferentes); encostado na
+  borda, a seta é empurrada para dentro. Agrupamento: senta na linha de preço da própria coluna, raio de 9 a 18 crescendo com o
+  log2 da quantidade, rótulo "12 compras, 11 vendas" (lado zerado some).
+- Contrato `test/price-chart.contract.ts` (21 testes): contas à mão (x, y, caminho exato das duas setas, raio), e propriedades com
+  gerador determinístico: toda seta (com a área de toque de 16 px) e todo agrupamento dentro do SVG, no máximo 2.000 pontos em
+  1 a 4.999 colunas, ordem de tempo preservada, primeiro e último mantidos. A propriedade achou um defeito na primeira rodada
+  (agrupamento no fim da faixa passava 1,4 px da borda direita); corrigido limitando o centro por `largura − raio`.
+- Gates (WSL, espelho `ativada-spec5`): `tsc` limpo; `eslint .` limpo (primeira rodada: arquivo com 210 linhas, daí a divisão);
+  `prettier --check .` limpo; painel 459 testes verdes em 38 arquivos.
