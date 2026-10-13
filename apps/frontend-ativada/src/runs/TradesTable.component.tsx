@@ -94,24 +94,27 @@ export function TradesTable(props: TradesTableProps): ReactElement {
     );
   }
   return (
-    <div
-      ref={virtual.containerRef}
-      className={tableStyles.scroller}
-      role="region"
-      aria-label="Tabela de operações"
-      tabIndex={0}
-      onScroll={virtual.handleScroll}
-    >
-      <table className={styles.table} aria-rowcount={rows.hasMore ? -1 : rows.items.length + 1}>
-        <TableHead zone={zoneLabel(timeZone, firstTrade.openedCandleTime)} />
-        <VirtualBody
-          items={rows.items}
-          visible={virtual.visible}
-          timeZone={timeZone}
-          selectedKey={selectedKey}
-          onSelectTrade={onSelectTrade}
-        />
-      </table>
-    </div>
+    <>
+      {rows.isError ? <ListStatus isPending={false} isError emptyText="" /> : null}
+      <div
+        ref={virtual.containerRef}
+        className={tableStyles.scroller}
+        role="region"
+        aria-label="Tabela de operações"
+        tabIndex={0}
+        onScroll={virtual.handleScroll}
+      >
+        <table className={styles.table} aria-rowcount={rows.hasMore ? -1 : rows.items.length + 1}>
+          <TableHead zone={zoneLabel(timeZone, firstTrade.openedCandleTime)} />
+          <VirtualBody
+            items={rows.items}
+            visible={virtual.visible}
+            timeZone={timeZone}
+            selectedKey={selectedKey}
+            onSelectTrade={onSelectTrade}
+          />
+        </table>
+      </div>
+    </>
   );
 }

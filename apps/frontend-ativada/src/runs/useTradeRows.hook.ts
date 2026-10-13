@@ -8,6 +8,8 @@ export type TradeRows = {
   readonly isPending: boolean;
   readonly isError: boolean;
   readonly hasMore: boolean;
+  // Páginas de fechadas já carregadas.
+  readonly pageCount: number;
   readonly fetchMore: () => void;
 };
 
@@ -22,7 +24,8 @@ export function useTradeRows(runId: string, range: TradeRangeFilter): TradeRows 
   return {
     items: [...openItems, ...closedItems],
     isPending: open.isPending || closed.isPending,
-    isError: closed.isError,
+    isError: open.isError || closed.isError,
+    pageCount: closed.data?.pages.length ?? 0,
     hasMore: closed.hasNextPage,
     fetchMore: (): void => {
       if (closed.hasNextPage && !closed.isFetchingNextPage) void closed.fetchNextPage();

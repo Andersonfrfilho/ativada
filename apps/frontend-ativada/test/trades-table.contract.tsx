@@ -234,6 +234,37 @@ describe('TradesTable: colunas do RF07', () => {
   });
 });
 
+describe('TradesTable: falha parcial', () => {
+  test('when only the open trades fail, the alert shows next to the closed ones', async () => {
+    renderApp({
+      path: '/',
+      isAuthenticated: true,
+      routes: [
+        {
+          method: 'GET',
+          path: TRADES_PATH,
+          respond: (call: RecordedCall): Response =>
+            call.query.get('status') === 'open'
+              ? jsonResponse({}, 500)
+              : pageResponse([closedTrade(0)]),
+        },
+      ],
+      probe: (
+        <TradesTable
+          runId="run-1"
+          range={{}}
+          timeZone="UTC"
+          selectedKey={undefined}
+          onSelectTrade={() => undefined}
+        />
+      ),
+    });
+    expect(await screen.findByRole('alert')).toBeDefined();
+    await waitForRows();
+    expect(dataRows()).toHaveLength(1);
+  });
+});
+
 describe('TradesTable: janela virtual', () => {
   const THOUSAND = Array.from({ length: 1_000 }, (_, index) => closedTrade(index));
 
@@ -284,6 +315,22 @@ describe('TradesTable: janela virtual', () => {
 });
 
 describe('TradesTable: seleção', () => {
+  test('a selected trade that is not in the list asks for at most 3 more pages and then gives up quietly', async () => {
+    const { calls } = showTable({
+      trades: Array.from({ length: 5_000 }, (_, index) => closedTrade(index)),
+      pageSize: 100,
+      selectedKey: 't4999',
+    });
+    await waitForRows();
+    await waitFor(() =>
+      expect(calls().filter((call) => call.query.get('status') === 'closed')).toHaveLength(4),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(calls().filter((call) => call.query.get('status') === 'closed')).toHaveLength(4);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryAllByRole('row', { selected: true })).toHaveLength(0);
+  });
+
   test('marks the selected row with aria-selected', async () => {
     showTable({ trades: [closedTrade(0), closedTrade(1)], selectedKey: 't1' });
     await screen.findAllByRole('row', { selected: true });

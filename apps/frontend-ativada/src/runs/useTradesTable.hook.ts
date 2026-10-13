@@ -6,6 +6,8 @@ import { useVirtualRows, type VirtualRows } from './useVirtualRows.hook.js';
 
 // Quantas linhas antes do fim da lista carregada a próxima página já é pedida.
 const PREFETCH_ROWS = 30;
+// Quantas páginas além da primeira a busca por uma operação selecionada (`?operacao=`) fora da lista pode pedir; depois disso a seleção é ignorada.
+const SELECTION_SEARCH_EXTRA_PAGES = 3;
 
 export type TradesTableParams = {
   readonly runId: string;
@@ -31,7 +33,8 @@ export function useTradesTable(params: TradesTableParams): TradesTableState {
       : rows.items.findIndex((trade) => trade.engineKey === selectedKey);
   const isNearEnd = virtual.visible.end >= rows.items.length - PREFETCH_ROWS;
   const isSelectionMissing = selectedKey !== undefined && selectedIndex === -1;
-  const needsMore = rows.hasMore && (isNearEnd || isSelectionMissing);
+  const isSelectionSearchable = rows.pageCount <= SELECTION_SEARCH_EXTRA_PAGES;
+  const needsMore = rows.hasMore && (isNearEnd || (isSelectionMissing && isSelectionSearchable));
   const loadMore = useEffectEvent(() => rows.fetchMore());
   const revealRow = useEffectEvent((index: number) => virtual.reveal(index));
   useEffect(() => {
