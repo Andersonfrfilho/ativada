@@ -231,3 +231,21 @@ Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `p
   decimal, lado desconhecido e campo ausente; resposta inválida vira erro de consulta e nada renderiza; query string com
   faixa/colunas/status; chave começa com `runs`). `test/support/render-app.tsx` ganhou a opção `probe` (renderiza um
   componente nos provedores, sem rotas) para testar hooks sozinhos.
+
+## T2.2 — Fuso do usuário
+
+- `src/format/zoned-time.ts`: `formatInZone(ms, fuso)` ("15/01/2026 12:30", `hourCycle: h23`), `zoneLabel(fuso, instante)`
+  ("GMT−3" com o menos tipográfico, "GMT+5:30", "GMT" para UTC; o deslocamento vigente no instante, então muda com o horário
+  de verão) e `resolveTimeZone` (nome IANA que o `Intl` não conhece cai em `America/Sao_Paulo`). Só `Intl.DateTimeFormat`
+  (formatadores em cache por fuso), sem biblioteca.
+- `src/account/useUserTimeZone.hook.ts`: lê `timezone` da consulta de perfil que o painel já tem (`useProfileQuery`).
+  Desvio consciente do enunciado: enquanto o perfil carrega devolve `UTC` (spec D10, nunca hora sem dizer o fuso, e o rótulo
+  sai "GMT"); depois, o fuso do usuário; perfil com erro ou fuso inválido, `America/Sao_Paulo`.
+- Contratos: `test/zoned-time.contract.ts` (São Paulo fixo em GMT−3 o ano todo; Nova York 08/03/2026 07:00 UTC, 01:59 → 03:00
+  e GMT−5 → GMT−4; 01/11/2026 06:00 UTC, 01:59 → 01:00 e GMT−4 → GMT−5; meia-noite 00:00; fuso inválido) e
+  `test/user-time-zone.contract.tsx` (UTC enquanto carrega, fuso do perfil, inválido e erro caem no padrão).
+- Achado nos gates: o `Intl` do Bun 1.4 escreve a data em pt-BR como "01/11/2026, 01:59" (vírgula) e o UTC como "GMT+0";
+  por isso `formatInZone` monta o texto de `formatToParts` e `zoneLabel` aceita "GMT-03:00", "GMT-3" e "GMT+0" (zero vira
+  "GMT"). Primeira rodada: 6 testes vermelhos por isso; segunda rodada verde.
+- Gates (WSL, espelho `ativada-spec5`): `tsc` limpo, `eslint .` limpo, `prettier --check .` limpo, painel 418 testes verdes
+  em 35 arquivos.
