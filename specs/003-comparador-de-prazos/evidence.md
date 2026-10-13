@@ -316,3 +316,13 @@ Feita no app em execução (painel `127.0.0.1:56100`, API reiniciada para servir
 **Mutantes.** `api-horizons-mutants` completo (incluindo o `HORIZON_GATE_SEPARATE_FROM_THE_GOAL_GATE` do achado 2): 53 pass, 0 fail. A primeira rodada reprovou só o controle: o contrato do achado 2 usava `toBeInstanceOf` com classes importadas do `src` de produção, e na cópia mutada as classes são outras; passou a comparar `status` e `code` (o commit deste achado leva essa correção).
 
 **Gates (WSL).** typecheck, lint e prettier limpos; contratos de prazos, portão, pool, OpenAPI, fronteiras e limites de tamanho verdes.
+
+### Achado 6 — "a estratégia não operou" com posição aberta
+
+`IntradaySummary.tradeCount` conta só operações FECHADAS; uma posição aberta no fim com prejuízo recebia "a estratégia não operou". Escolhida a opção mais simples e coerente com `summarizeIntraday` (que só enxerga `trades`): o texto passou a "a estratégia não fechou nenhuma operação nos últimos 90 dias", verdadeiro com ou sem posição aberta.
+
+| Contrato | Arquivo |
+|---|---|
+| Sem operação e resultado zero, e com prejuízo de posição aberta (`tradeCount: 0`, `netReturn: -0.03`): a mesma frase nova | `test/horizon-messages.contract.test.ts` |
+
+**Gates (WSL).** typecheck, lint e prettier limpos; `horizon-messages`, `api-horizons` e vizinhos verdes.

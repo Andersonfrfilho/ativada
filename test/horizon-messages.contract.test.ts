@@ -91,12 +91,16 @@ describe('frases da linha de 15 minutos', () => {
     );
   });
 
-  test('perdeu mesmo antes das taxas, não operou e sem resultado têm o seu motivo', () => {
+  test('perdeu mesmo antes das taxas, não fechou operação e sem resultado têm o seu motivo', () => {
     expect(describeIntradayRow(intraday())).toBe(
       'Operar de 15 em 15 minutos: não compensa (a estratégia perdeu dinheiro mesmo antes das taxas).',
     );
     expect(describeIntradayRow(intraday({ tradeCount: 0, netReturn: '0' }))).toBe(
-      'Operar de 15 em 15 minutos: não compensa (a estratégia não operou nos últimos 90 dias).',
+      'Operar de 15 em 15 minutos: não compensa (a estratégia não fechou nenhuma operação nos últimos 90 dias).',
+    );
+    // Posição aberta no fim com prejuízo: `trades` só conta as fechadas, então a frase não diz que ela "não operou".
+    expect(describeIntradayRow(intraday({ tradeCount: 0, netReturn: '-0.03' }))).toBe(
+      'Operar de 15 em 15 minutos: não compensa (a estratégia não fechou nenhuma operação nos últimos 90 dias).',
     );
     expect(describeIntradayRow(intraday({ netReturn: null }))).toBe(
       'Operar de 15 em 15 minutos: não compensa (sem resultado calculado).',

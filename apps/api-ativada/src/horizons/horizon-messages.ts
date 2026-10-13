@@ -54,7 +54,7 @@ function describeIntradayWorth(summary: IntradaySummary): string {
 function intradayReason(summary: IntradaySummary): string {
   if (summary.netReturn === null) return 'sem resultado calculado';
   if (summary.tradeCount === 0)
-    return `a estratégia não operou nos últimos ${HORIZON_INTRADAY_DAYS} dias`;
+    return `a estratégia não fechou nenhuma operação nos últimos ${HORIZON_INTRADAY_DAYS} dias`;
   if (summary.feeShareOfGross !== null) return 'as taxas comem o ganho';
   return 'a estratégia perdeu dinheiro mesmo antes das taxas';
 }
