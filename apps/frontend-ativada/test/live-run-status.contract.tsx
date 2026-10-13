@@ -27,8 +27,7 @@ function input(overrides: Partial<LiveRunStatusInput> = {}): LiveRunStatusInput 
     kind: 'live_paper',
     status: 'running',
     timeframe: '1h',
-    createdAt: '2026-10-13T17:05:00.000Z',
-    startedAt: '2026-10-13T17:05:01.000Z',
+    periodStart: Date.parse('2026-10-13T17:00:00.000Z'),
     lastCandleTime: null,
     waitingForData: null,
     stalledSince: undefined,
@@ -47,7 +46,7 @@ describe('the four states of a live simulation', () => {
       timeZone: 'America/Sao_Paulo',
     };
     const state = deriveLiveRunState(
-      input({ timeframe: '4h', startedAt: '2026-10-14T01:10:00.000Z' }),
+      input({ timeframe: '4h', periodStart: Date.parse('2026-10-14T00:00:00.000Z') }),
       lateNight,
     );
     expect(state).toEqual({
@@ -57,16 +56,40 @@ describe('the four states of a live simulation', () => {
   });
 
   test('once the close has passed without a step it says the candle closed', () => {
-    const state = deriveLiveRunState(input({ startedAt: '2026-10-13T15:05:00.000Z' }), SAO_PAULO);
+    const periodStart = Date.parse('2026-10-13T15:00:00.000Z');
+    const state = deriveLiveRunState(input({ periodStart }), SAO_PAULO);
     expect(state).toEqual({
       kind: 'waitingFirstCandle',
       text: 'Aguardando a primeira vela, que fechou às 13:00 de hoje.',
     });
   });
 
+  test('the warm-up candles recorded as steps (opened before periodStart) do not end the wait for the first candle', () => {
+    const warmUp = Date.parse('2026-10-13T16:00:00.000Z');
+    expect(deriveLiveRunState(input({ lastCandleTime: warmUp }), SAO_PAULO)).toEqual({
+      kind: 'waitingFirstCandle',
+      text: FIRST_CANDLE,
+    });
+    const periodStart = Date.parse('2026-10-13T16:00:00.000Z');
+    const decided = deriveLiveRunState(
+      input({ periodStart, lastCandleTime: periodStart }),
+      SAO_PAULO,
+    );
+    expect(decided).toEqual({ kind: 'running', text: RUNNING });
+  });
+
+  test('the first candle comes from periodStart, not from when the run was created or started (a run that sat in the queue)', () => {
+    const queued = input({ status: 'queued', periodStart: Date.parse('2026-10-13T17:00:00.000Z') });
+    expect(deriveLiveRunState(queued, SAO_PAULO)).toEqual({
+      kind: 'waitingFirstCandle',
+      text: FIRST_CANDLE,
+    });
+  });
+
   test('with a step done it shows the last and the next decision', () => {
     const lastCandleTime = Date.parse('2026-10-13T16:00:00.000Z');
-    expect(deriveLiveRunState(input({ lastCandleTime }), SAO_PAULO)).toEqual({
+    const periodStart = Date.parse('2026-10-13T15:00:00.000Z');
+    expect(deriveLiveRunState(input({ periodStart, lastCandleTime }), SAO_PAULO)).toEqual({
       kind: 'running',
       text: RUNNING,
     });
@@ -118,6 +141,7 @@ function detail(overrides: Record<string, unknown>): Record<string, unknown> {
     status: 'running',
     timeframe: '1h',
     periodEnd: null,
+    periodStart: Date.parse('2026-10-13T17:00:00.000Z'),
     createdAt: '2026-10-13T17:05:00.000Z',
     startedAt: '2026-10-13T17:05:01.000Z',
     survival: { initialBalance: '10000' },
@@ -163,10 +187,25 @@ describe('on the overview balance card', () => {
     renderApp({
       path: '/',
       isAuthenticated: true,
-      routes: overviewRoutes(() => ({ lastCandleTime })),
+      routes: overviewRoutes(() => ({
+        periodStart: Date.parse('2026-10-13T15:00:00.000Z'),
+        lastCandleTime,
+      })),
     });
     const card = await screen.findByRole('region', { name: 'Saldo da simulação' });
     await waitFor(() => expect(card.textContent).toContain(RUNNING));
+  });
+
+  test('a warm-up candle recorded by the worker (before the creation) keeps the wait for the first candle', async () => {
+    const lastCandleTime = Date.parse('2026-10-13T16:00:00.000Z');
+    renderApp({
+      path: '/',
+      isAuthenticated: true,
+      routes: overviewRoutes(() => ({ lastCandleTime })),
+    });
+    const card = await screen.findByRole('region', { name: 'Saldo da simulação' });
+    await waitFor(() => expect(card.textContent).toContain(FIRST_CANDLE));
+    expect(card.textContent).not.toContain('Última decisão');
   });
 
   test('waiting for data keeps its text', async () => {

@@ -535,3 +535,15 @@ da correção e dos vizinhos no espelho do WSL (`gates6.sh`).
   `checkDatabase` saiu do tipo `HealthRouteDependencies`, de `create-api-router.ts` e dos fixtures. Estourar o 1 s responde com
   `checks.database = down` e `status = degraded`, sem contar como falha de conexão (`database.state` segue `up`).
 - **Contrato** em `test/api-database-outage.contract.test.ts`: banco mudo (HUNG) → resposta do admin em 0,9 a 3 s com o banco `down`.
+
+### Achado 3 — P1 do painel: a primeira vela vem de `periodStart` (e o aquecimento não encerra a espera)
+
+- **Causa.** O worker grava como passos as velas do aquecimento (abertura anterior à criação), então `lastCandleTime < periodStart` e o
+  painel já mostrava "Última decisão" de uma vela que nasceu antes da simulação; o "Aguardando a primeira vela" sumia em segundos. A
+  primeira vela também era calculada por `startedAt`/`createdAt`, o que erra para execução que ficou na fila.
+- **Correção só no painel** (`src/runs/live-run-status.ts`): `LiveRunStatusInput` leva `periodStart` (já vem em `GET /v1/runs/:id`;
+  `createdAt` e `startedAt` saíram); `lastCandleTime < periodStart` conta como "ainda aguardando"; a primeira vela fecha em
+  `periodStart + duração da vela` ("fecha às"/"fechou às").
+- **Contratos** (`test/live-run-status.contract.tsx`): fixtures com e sem aquecimento gravado (vela de 16:00Z com `periodStart`
+  17:00Z continua aguardando; vela a partir de `periodStart` vira "Última decisão"), execução na fila com `periodStart` próprio, o
+  4h perto da meia-noite ("amanhã") e o cartão de saldo da Visão geral com aquecimento gravado.
