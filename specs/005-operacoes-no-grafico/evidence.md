@@ -258,3 +258,23 @@ Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `p
   120 caracteres), nenhuma frase nem rótulo repetido, e duas frases conferidas literalmente.
 - Gates (WSL, espelho `ativada-spec5`): `tsc` limpo (a primeira rodada acusou `string[]` contra o tipo literal no teste; corrigido),
   `eslint .` limpo, `prettier --check .` limpo, painel 422 testes verdes em 36 arquivos.
+
+## T2.4 — Dica "?" do glossário
+
+- `src/glossary/Term.component.tsx` + `useTermDisclosure.hook.ts` + `Term.module.css`: o rótulo que a tela já mostra seguido de
+  um botão "?" com `aria-label="O que é <termo>?"`, `aria-expanded` e `aria-describedby` apontando para a frase
+  (`role="tooltip"`, `hidden` enquanto fechada; o `[hidden]` do CSS vence o `display: block`). Abre por foco de teclado e por
+  clique ou toque (o foco que o ponteiro causa antes do clique NÃO abre, senão o clique fecharia na hora); `Esc` em qualquer
+  lugar e toque fora fecham; nenhum `focus()` é chamado, então o foco não se move. A frase aparece EM LINHA, abaixo do rótulo
+  (não flutuante): em 375 px não corta nem cria rolagem horizontal. Alvo de toque 44 px (margem negativa mantém a linha
+  compacta) e o `.trigger` entrou em `test/touch-targets.contract.ts`.
+- Aplicação: `MetricRow` ganhou `term` opcional (Maior queda, Sharpe, Sortino, Taxa de acerto, Fator de lucro) e
+  `MetricLabel` o desenha em `MetricsCard` e `CompareTable` (que usa as mesmas linhas); `CostsCard` envolve "slippage" no texto.
+  O texto visível de cada rótulo não mudou.
+- Contrato `test/term.contract.tsx` (12 testes): marcação e ligação por `aria-describedby`; foco abre e desfoca fecha;
+  `Esc`; Enter/Espaço (chegam como clique); sequência de ponteiro (pressionar, focar, clicar abre; segundo toque fecha; toque
+  fora fecha, toque na frase não); foco não é roubado; e nas três telas (cartão de resultado, comparação, custos) a frase aberta
+  é igual à do glossário. Os testes existentes de `backtests.contract.tsx` seguem verdes.
+- Gates (WSL, espelho `ativada-spec5`): `tsc` limpo, `eslint .` limpo (primeira rodada: `CompareTable` com 41 linhas e retornos
+  sem tipo no hook; corrigido), `prettier --check .` limpo.
+- Painel completo: 435 testes verdes em 37 arquivos.

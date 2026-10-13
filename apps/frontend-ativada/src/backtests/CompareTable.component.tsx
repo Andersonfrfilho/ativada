@@ -1,7 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
-import { buildMetricRows } from '../runs/MetricsCard.component.js';
+import { MetricLabel } from '../runs/MetricLabel.component.js';
+import { buildMetricRows, type MetricRow } from '../runs/MetricsCard.component.js';
 import { signedRatioText, UNAVAILABLE_DASH } from '../runs/metric-text.js';
 import runStyles from '../runs/Runs.module.css';
 import type { RunMetrics } from '../runs/run.validation.js';
@@ -20,6 +21,10 @@ export type CompareTableProps = {
 function holdCell(label: string, first: RunMetrics): string {
   // Comprar e segurar só tem retorno: as demais métricas são da operação, que ele não faz.
   return label === TOTAL_RETURN ? signedRatioText(first.benchmarkReturn).text : UNAVAILABLE_DASH;
+}
+
+function valueOf(rows: readonly MetricRow[], label: string): string {
+  return rows.find((candidate) => candidate.label === label)?.value.text ?? UNAVAILABLE_DASH;
 }
 
 // Linhas pelas MESMAS métricas do detalhe, para as duas colunas dizerem exatamente o mesmo.
@@ -48,13 +53,12 @@ export function CompareTable({
         <tbody>
           {firstRows.map((row) => (
             <tr key={row.label}>
-              <th scope="row">{row.label}</th>
+              <th scope="row">
+                <MetricLabel label={row.label} term={row.term} />
+              </th>
               <td className={runStyles.num}>{holdCell(row.label, first)}</td>
               <td className={runStyles.num}>{row.value.text}</td>
-              <td className={runStyles.num}>
-                {secondRows.find((candidate) => candidate.label === row.label)?.value.text ??
-                  UNAVAILABLE_DASH}
-              </td>
+              <td className={runStyles.num}>{valueOf(secondRows, row.label)}</td>
             </tr>
           ))}
         </tbody>

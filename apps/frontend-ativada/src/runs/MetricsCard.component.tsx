@@ -2,7 +2,9 @@
 import type { ReactElement } from 'react';
 
 import { formatDecimal, formatPercent } from '../format/format.js';
+import { GLOSSARY_TERM, type GlossaryTerm } from '../glossary/glossary.constant.js';
 import { Card } from '../layout/Card.component.js';
+import { MetricLabel } from './MetricLabel.component.js';
 import styles from './Runs.module.css';
 import {
   percentText,
@@ -13,7 +15,11 @@ import {
 } from './metric-text.js';
 import type { RunMetrics } from './run.validation.js';
 
-type MetricRow = { readonly label: string; readonly value: MetricText };
+export type MetricRow = {
+  readonly label: string;
+  readonly value: MetricText;
+  readonly term?: GlossaryTerm;
+};
 
 function plain(text: string): MetricText {
   return { text, hint: undefined };
@@ -25,15 +31,23 @@ export function buildMetricRows(metrics: RunMetrics): readonly MetricRow[] {
     { label: 'Comprar e segurar', value: signedRatioText(metrics.benchmarkReturn) },
     { label: 'Excesso sobre comprar e segurar', value: signedRatioText(metrics.excessReturn) },
     { label: 'Retorno anualizado', value: signedRatioText(metrics.annualizedReturn) },
-    { label: 'Maior queda', value: plain(formatPercent(Number(metrics.maxDrawdownAtClose.depth))) },
-    { label: 'Sharpe', value: plainText(metrics.sharpe) },
-    { label: 'Sortino', value: plainText(metrics.sortino) },
+    {
+      label: 'Maior queda',
+      value: plain(formatPercent(Number(metrics.maxDrawdownAtClose.depth))),
+      term: GLOSSARY_TERM.MAX_DRAWDOWN,
+    },
+    { label: 'Sharpe', value: plainText(metrics.sharpe), term: GLOSSARY_TERM.SHARPE },
+    { label: 'Sortino', value: plainText(metrics.sortino), term: GLOSSARY_TERM.SORTINO },
     {
       label: 'Operações',
       value: plain(`${metrics.trades} (${metrics.wins} ganhas, ${metrics.losses} perdidas)`),
     },
-    { label: 'Taxa de acerto', value: percentText(metrics.winRate) },
-    { label: 'Fator de lucro', value: plainText(metrics.profitFactor) },
+    { label: 'Taxa de acerto', value: percentText(metrics.winRate), term: GLOSSARY_TERM.WIN_RATE },
+    {
+      label: 'Fator de lucro',
+      value: plainText(metrics.profitFactor),
+      term: GLOSSARY_TERM.PROFIT_FACTOR,
+    },
     { label: 'Tempo exposto', value: percentText(metrics.exposure) },
     { label: 'Taxas pagas', value: plain(formatDecimal(metrics.feesPaid)) },
     {
@@ -56,7 +70,9 @@ export function MetricsCard({ title, metrics }: MetricsCardProps): ReactElement 
         <dl className={styles.facts}>
           {buildMetricRows(metrics).map((row) => (
             <div key={row.label} className={styles.fact}>
-              <dt>{row.label}</dt>
+              <dt>
+                <MetricLabel label={row.label} term={row.term} />
+              </dt>
               <dd>
                 {row.value.text}
                 {row.value.hint === undefined ? null : (
