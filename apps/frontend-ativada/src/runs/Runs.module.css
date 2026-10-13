@@ -103,3 +103,8 @@
   display: grid;
   gap: 16px;
 }
+
+.summary {
+  display: grid;
+  gap: 10px;
+}
