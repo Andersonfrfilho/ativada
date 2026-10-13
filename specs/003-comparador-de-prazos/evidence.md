@@ -326,3 +326,11 @@ Feita no app em execução (painel `127.0.0.1:56100`, API reiniciada para servir
 | Sem operação e resultado zero, e com prejuízo de posição aberta (`tradeCount: 0`, `netReturn: -0.03`): a mesma frase nova | `test/horizon-messages.contract.test.ts` |
 
 **Gates (WSL).** typecheck, lint e prettier limpos; `horizon-messages`, `api-horizons` e vizinhos verdes.
+
+### Achado 7 — o 429 no OpenAPI de `/v1/horizons`
+
+Conferido: o gerador acrescenta o 429 `RATE_LIMITED` a TODA rota por `COMMON_ERRORS` (`openapi/openapi.constant.ts`), então `GET /v1/horizons` já o documentava e não havia o que listar em `errors` (as metas também não o listam). Faltava só o contrato que o prenda.
+
+| Contrato | Arquivo |
+|---|---|
+| `GET /v1/horizons` e `GET /v1/goals/{goalId}/evaluation` têm a resposta `429` no documento gerado | `test/api-openapi.contract.test.ts` |

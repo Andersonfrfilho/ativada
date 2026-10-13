@@ -121,6 +121,14 @@ describe('OpenAPI gerado da tabela de rotas', () => {
     }
   });
 
+  test('as rotas com limite por minuto documentam o 429 (prazos e metas)', () => {
+    const paths = asRecord(app.openApi.buildOpenApiDocument(DEVELOPMENT_ROUTES)['paths']);
+    for (const path of ['/v1/horizons', '/v1/goals/{goalId}/evaluation']) {
+      const operation = asRecord(asRecord(paths[path])['get']);
+      expect(Object.keys(asRecord(operation['responses']))).toContain('429');
+    }
+  });
+
   test('o documento é OpenAPI 3.1 estruturalmente válido', () => {
     const document = app.openApi.buildOpenApiDocument(DEVELOPMENT_ROUTES);
     expect(document['openapi']).toBe('3.1.0');
