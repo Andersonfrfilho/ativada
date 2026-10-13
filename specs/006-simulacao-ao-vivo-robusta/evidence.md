@@ -275,3 +275,26 @@ O `run-stall-checks` rodou isolado ("stall-only OK"): o `database-test` inteiro 
 
 Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; 207/207 (api-runs, api-openapi, ownership-registry, database, strategy-persistence-schema, alert-dispatcher/-scheduler/-message, candle-schema, users-schema);
 236/236 (live-alerts, live-alert-parts, live-evaluator, live-gap-wait, telegram-alert-mutants, code-size-limits, boundaries, api-run-delete/-export, account-export/-delete); painel 624/624.
+
+## T2.3 — Varredura de parada na API (2026-10-13, `sonnet`)
+
+- Banco: `packages/database/src/run-stall/` (`createRunStallRepository(handle).inTransaction(work)`): UMA transação por ronda com a sessão `StallSession` (`tryAcquireLock` = `pg_try_advisory_xact_lock`,
+  `listCandidates`, `openEpisode`, `closeEpisode`, `clearInactiveEpisodes`). `openEpisode` faz o `UPDATE runs SET stalled_since` (guardado: `running`, `live_paper`, sem episódio aberto e MESMO `last_candle_time` lido, para o
+  worker que andou entre a leitura e a gravação não abrir episódio falso), o `INSERT` em `alerts` (`STALL`, `candle_time = stalled_since`, `ON CONFLICT DO NOTHING` na chave única que já existia) e o `pg_notify('run_events',
+  { runId, kind: 'warning', eventId: stalled_since })`, tudo na MESMA transação. `closeEpisode` apaga o `stalled_since` aberto (guardado por ele) e enfileira o `RESUME` só se o `STALL` do mesmo episódio existe na caixa de saída.
+  Dono sem Telegram vinculado e ligado não recebe alerta (a faixa do painel e o aviso ao painel saem igual). Execução que deixou de rodar com episódio aberto só perde a marca (`clearInactiveEpisodes`), sem `RESUME` (P6).
+- API: `apps/api-ativada/src/runs/stall/` — `stall-sweeper.ts` (`sweepStalls`: a máquina de estados; quem não pega a trava não faz nada; episódio aberto só fecha quando a regra diz "em dia"; `waitingForData` nem abre nem fecha),
+  `stall-alert-payload.ts` (`{ symbol, timeframe, stalledSince }` e `+ resumedAt`), `stall-sweep-loop.ts` (uma ronda por vez, guarda de queda do banco igual à do batimento do worker: resumo de uma linha por minuto, só `errorName` nos
+  outros erros, `stop()` espera a ronda no ar), `create-stall-sweeper-wiring.ts` e `stall-environment.ts` (`LIVE_STALL_GRACE_MINUTES` 5 a 240, padrão 15; `LIVE_STALL_SWEEP_SECONDS` 5 a 3600, padrão 60).
+  Ligada em `create-application.ts`: `start()` depois do despachante, `closeResources()` antes do stream, no encerramento gracioso.
+- Desvios do ADR: (1) a vela devida sem passo usa `runs.period_start` (a abertura da vela em curso na CRIAÇÃO, que é o que o worker avalia primeiro) e não `floor(started_at ÷ d) × d`: igual quando a reivindicação é na mesma vela, e nunca
+  adianta o alarme quando a fila demora. (2) O payload leva só par, vela e horários (nada de nome de estratégia): os alertas existentes tampouco levam, e o nome é texto livre do usuário.
+- Contratos em memória (`test/live-stall-sweeper.contract.test.ts`, 13; dublê `test/fixtures/stall/in-memory-stall-store.fixture.ts`): carência exata abre com início determinístico; ronda repetida, horas depois e recuperação parcial não mudam o
+  início nem duplicam; fecha com UM `RESUME` no início do episódio e episódio novo tem `STALL` novo; duas varreduras ao mesmo tempo (uma pega a trava); `waitingForData`; execução parada limpa a marca sem `RESUME`; dono sem Telegram; `RESUME` sem `STALL`;
+  conteúdo sem dono, execução nem estratégia; laço (só contagens no log, banco em espera, erro só pelo nome). `api-limits-environment` ganhou as duas variáveis.
+- Contra o Postgres real (`packages/database/test-support/run-stall-sweep-checks.ts`, ligado ao `database-test`): ciclo abre/fecha/reabre com UM `STALL` e UM `RESUME` pendentes no início do episódio, aviso ao painel só `{ runId, kind, eventId }` sem dono, leitura velha não abre,
+  sem Telegram sem alerta, `RESUME` só atrás de `STALL`, episódio órfão limpo, trava consultiva única entre duas transações simultâneas (a segunda recebe `false`, a terceira depois do fim da primeira recebe `true`) e rollback que leva `stalled_since`, alerta e aviso juntos.
+
+Comando (WSL, Postgres 18.3 embutido de `~/pg-scratch`, porta 56434, fora do repo): os checks da parada rodaram isolados do `database-test` (que segue sem terminar neste WSL pela medição de 17.520 pontos, pendência da T1.3): "stall-only OK" com os 5 checks.
+
+Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; 298/298 em 14 arquivos (varredura, política, ambientes, api-server, api-runs, api-openapi, ownership, code-size, boundaries, database, api-database-outage, api-application-dispatcher) e 121/121 em 5 (database, alert-dispatcher, live-alerts, worker-environment, worker-heartbeat).

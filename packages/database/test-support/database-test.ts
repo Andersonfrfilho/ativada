@@ -27,6 +27,7 @@ import { checkRunEvents } from './run-event-checks.js';
 import { checkRunDataWait } from './run-data-wait-checks.js';
 import { checkReconnection } from './reconnect-checks.js';
 import { checkRunStall } from './run-stall-checks.js';
+import { checkRunStallSweep } from './run-stall-sweep-checks.js';
 import { checkWorkerHeartbeats } from './worker-heartbeat-checks.js';
 import { checkRunLog } from './run-log-checks.js';
 import { checkRunDeletion } from './run-delete-checks.js';
@@ -209,6 +210,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkRunDataWait(lifecycle, databaseUrl);
     await checkWorkerHeartbeats(lifecycle);
     await checkRunStall(lifecycle);
+    await checkRunStallSweep(lifecycle, databaseUrl);
     await checkReconnection(lifecycle, databaseUrl);
   } finally {
     await client.close();

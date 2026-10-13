@@ -70,6 +70,9 @@ import type * as StrategyUseCasesModule from '../../../apps/api-ativada/src/stra
 import type * as SeedExampleModule from '../../../apps/api-ativada/src/strategies/seed-example-strategy.use-case.js';
 import type * as SeedingResolverModule from '../../../apps/api-ativada/src/strategies/example-seeding-user-resolver.js';
 import type * as StallPolicyModule from '../../../apps/api-ativada/src/runs/stall/stall-policy.js';
+import type * as StallSweeperModule from '../../../apps/api-ativada/src/runs/stall/stall-sweeper.js';
+import type * as StallSweepLoopModule from '../../../apps/api-ativada/src/runs/stall/stall-sweep-loop.js';
+import type * as StallAlertPayloadModule from '../../../apps/api-ativada/src/runs/stall/stall-alert-payload.js';
 
 const PRODUCTION_APP_SOURCE = new URL('../../../apps/api-ativada/src', import.meta.url).pathname;
 
@@ -141,6 +144,9 @@ export type ApiApp = {
   readonly seedExample: typeof SeedExampleModule;
   readonly seedingResolver: typeof SeedingResolverModule;
   readonly stallPolicy: typeof StallPolicyModule;
+  readonly stallSweeper: typeof StallSweeperModule;
+  readonly stallSweepLoop: typeof StallSweepLoopModule;
+  readonly stallAlertPayload: typeof StallAlertPayloadModule;
   readonly openApi: typeof BuildOpenApiModule;
   readonly undocumentedError: typeof UndocumentedErrorModule;
   readonly apiRoutes: typeof CreateApiRoutesModule;
@@ -225,6 +231,9 @@ export async function loadApiApp(): Promise<ApiApp> {
     seedExample: await load('strategies/seed-example-strategy.use-case'),
     seedingResolver: await load('strategies/example-seeding-user-resolver'),
     stallPolicy: await load('runs/stall/stall-policy'),
+    stallSweeper: await load('runs/stall/stall-sweeper'),
+    stallSweepLoop: await load('runs/stall/stall-sweep-loop'),
+    stallAlertPayload: await load('runs/stall/stall-alert-payload'),
     openApi: await load('openapi/build-openapi-document'),
     undocumentedError: await load('openapi/undocumented-route.error'),
     apiRoutes: await load('routes/create-api-routes'),

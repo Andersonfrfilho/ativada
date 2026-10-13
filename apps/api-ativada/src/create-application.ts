@@ -20,6 +20,7 @@ import { UNEXPECTED_ERROR_LOG_MESSAGE } from './logging/logging.constant.js';
 import { registerPriceAlertEvaluation } from './price-alerts/register-price-alert-evaluation.js';
 import { createApplicationRunners } from './runs/create-application-runners.js';
 import { createApplicationDispatcher } from './runs/queue/create-application-dispatcher.js';
+import { createStallSweeperWiring } from './runs/stall/create-stall-sweeper-wiring.js';
 import type { RunQueueDispatcher } from './runs/queue/run-queue-dispatcher.types.js';
 import {
   createApplicationStream,
@@ -62,6 +63,8 @@ function createVerifyAccessToken(environment: Environment): VerifyAccessToken {
 }
 
 type LifecycleParams = {
+  readonly environment: Environment;
+  readonly logger: Logger;
   readonly database: DatabaseHandle;
   readonly dispatcher: RunQueueDispatcher;
   readonly stream: ApplicationStream;
@@ -70,12 +73,15 @@ type LifecycleParams = {
 
 function createLifecycle(params: LifecycleParams): Pick<Application, 'start' | 'closeResources'> {
   const { database, dispatcher, stream, goalPool } = params;
+  const stallSweeper = createStallSweeperWiring(params);
   return {
     start: async (): Promise<void> => {
       stream.start();
       await dispatcher.start();
+      stallSweeper.start();
     },
     closeResources: async (): Promise<void> => {
+      await stallSweeper.stop();
       await stream.close();
       goalPool.close();
       await dispatcher.stop();
@@ -129,6 +135,6 @@ export function createApplication(params: CreateApplicationParams): Application 
     walkForwardRunner: runners.walkForwardRunner,
     dispatcher,
     stream: stream.endpoint,
-    ...createLifecycle({ database, dispatcher, stream, goalPool }),
+    ...createLifecycle({ environment, logger, database, dispatcher, stream, goalPool }),
   };
 }
