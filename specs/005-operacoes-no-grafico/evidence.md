@@ -527,3 +527,22 @@ Achados da revisão final (Opus), um commit por achado ou grupo coeso. Gates de 
 
 - **Aviso:** o botão aparecia como "Há operações novas" também quando só chegou vela nova. O painel só sabe que há vela depois da faixa fixa (`hasNewerCandles`), não se há operação; o texto mais simples e verdadeiro virou "Há velas novas — ir para o fim" (`LiveChartStatus`), sem consulta extra.
 - **Linha selecionada:** `aria-selected` num `<tr>` de `<table>` comum é ignorado pelos leitores de tela; a linha selecionada passa a usar `aria-current="true"` (a mesma marca das setas) e a tabela continua não sendo um grid. Testes (`trades-table`, `trade-selection`, `live-trade-chart`) acompanharam.
+
+### Achado 5 (médio) — limite próprio do `/chart` e carga de 5 anos
+
+- **Política:** `RATE_LIMIT_POLICY.RUN_CHART` (`run-chart`, 30 por minuto por usuário, balde de fichas como `RUN_EXPORT`) aplicada ao `GET /v1/runs/:runId/chart`; `RUN_TRADE_SUMMARY` (30 por minuto, nome `run-trade-summary`) ao `/trade-summary`. O `/trades` fica só com o limite geral de 120/min (leitura paginada barata). O painel pede no máximo uma sonda e uma faixa por gesto, então 30/min cobre o uso normal.
+- **OpenAPI:** o 429 (`RATE_LIMITED`) já entra em toda rota pela lista comum de erros; o contrato `api-openapi` agora confere o 429 também em `/v1/runs/{runId}/chart` e `/v1/runs/{runId}/trade-summary`.
+- **Testes:** `api-run-chart` e `api-run-trade-summary` (harness próprio): 30 respostas 200, a 31ª é 429 com `Retry-After` ≥ 1 (e outro usuário não é afetado no `/chart`). O relógio do harness é fixo, então `api-run-chart` abre uma janela nova a cada teste (`beforeEach`). Mutantes novos em `api-run-chart-mutants`: `CHART_WITHOUT_ITS_OWN_RATE_LIMIT` e `TRADE_SUMMARY_WITHOUT_ITS_OWN_RATE_LIMIT`.
+- **Check de carga** (`scripts/api-runs-test/check-chart-load.ts`): a pausa entre amostras de `/chart` e `/trade-summary` passou de 550 ms para 2.050 ms (uma ficha a cada 2 s), senão a própria amostra tomaria 429; as amostras caíram para 20 nos casos que não são o de aceite (40 nele).
+- **Carga com 5 anos de 15 min** (175.200 velas de BNBUSDT, passeio aleatório determinístico, e as mesmas 1.000 operações; Postgres 18 descartável e API real, mesma máquina do plan D9; a mesma rotina do check, só com `CANDLES = 175_200`, rodada num script fora do repositório):
+
+  | Caso | p50 | p95 | máx | Corpo |
+  |---|---|---|---|---|
+  | `/chart` 800 colunas, período inteiro (aceite) | 171,2 ms | **186,8 ms** | 190,5 ms | 145,5 KB |
+  | `/chart` 2.000 colunas, período inteiro | 178,8 ms | 191,8 ms | 212,5 ms | 297,7 KB |
+  | `/chart` 2.000 colunas, faixa com 499 marcadores | 66,6 ms | 72,0 ms | 75,1 ms | 300,2 KB |
+  | `/chart` de 1 dia, 800 colunas | 11,9 ms | 13,4 ms | 13,5 ms | 11,4 KB |
+  | `/trades?limit=100&from&to` | 15,3 ms | 20,5 ms | 20,5 ms | 38,9 KB |
+  | `/trade-summary` | 11,0 ms | 12,6 ms | 13,9 ms | 0,3 KB |
+
+  O p95 do período inteiro com 10 vezes mais velas (31 ms em 17.520) subiu para 187 ms: cresce com o número de velas lidas na faixa (varredura da chave primária), dentro do alvo de 300 ms, sem índice novo nem migration. A faixa de 1 dia continua em 13 ms.

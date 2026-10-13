@@ -391,3 +391,40 @@ describe('acesso e validação', () => {
     });
   });
 });
+
+describe('limite de requisições', () => {
+  test('30 resumos por minuto por usuário; o 31º é 429', async () => {
+    const limited = await createRunsHarness();
+    try {
+      const policy = limited.app.policies.RATE_LIMIT_POLICY.RUN_TRADE_SUMMARY;
+      expect(policy.limit).toBe(30);
+      const seeded = await limited.seedStrategy(SUBJECT_A, 'limite');
+      const created = await limited.runs.repository.createRun(limited.scopeOf(SUBJECT_A), {
+        strategyVersionId: seeded.versionId,
+        kind: 'backtest',
+        symbol: 'BTCUSDT',
+        timeframe: '1h',
+        runParameters: { symbol: 'BTCUSDT' },
+        runHash: 'h'.repeat(64),
+        engineVersion: 'engine-2',
+        signalEngineVersion: 'signal-2',
+        metricsVersion: 'metrics-1',
+        periodStart: at(0),
+        periodEnd: at(1_000),
+        migratedFromRunId: undefined,
+      });
+      const path = `${RUNS}/${created?.id ?? ''}/trade-summary`;
+      for (let attempt = 0; attempt < policy.limit; attempt += 1) {
+        const response = await limited.call({ subject: SUBJECT_A, path });
+        expect(response.status).toBe(200);
+        await response.text();
+      }
+      const blocked = await limited.call({ subject: SUBJECT_A, path });
+      expect(blocked.status).toBe(429);
+      expect(Number(blocked.headers.get('Retry-After'))).toBeGreaterThanOrEqual(1);
+      await blocked.text();
+    } finally {
+      await limited.stop();
+    }
+  });
+});

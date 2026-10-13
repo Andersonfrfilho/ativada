@@ -169,6 +169,14 @@ const RANGE_AND_MARKERS: readonly SourceMutant[] = [
     ),
   },
   {
+    name: 'CHART_WITHOUT_ITS_OWN_RATE_LIMIT',
+    edits: edit(CHART_ROUTE, '    rateLimitPolicy: RATE_LIMIT_POLICY.RUN_CHART,\n', ''),
+  },
+  {
+    name: 'TRADE_SUMMARY_WITHOUT_ITS_OWN_RATE_LIMIT',
+    edits: edit(SUMMARY_ROUTE, '    rateLimitPolicy: RATE_LIMIT_POLICY.RUN_TRADE_SUMMARY,\n', ''),
+  },
+  {
     name: 'CHART_RUN_RANGE_IS_THE_REQUESTED_RANGE',
     edits: edit(
       CHART_USE_CASE,

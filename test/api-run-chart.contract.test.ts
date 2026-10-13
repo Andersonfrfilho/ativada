@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 
 import type {
   CandleRecord,
@@ -24,6 +24,7 @@ const RUNS = '/v1/runs';
 const FIRST = Date.UTC(2025, 0, 1);
 const CANDLES = 400;
 const MARKER_LIMIT = 500;
+const RATE_LIMIT_WINDOW_MILLISECONDS = 61_000;
 
 type Column = {
   startTime: number;
@@ -127,6 +128,11 @@ function fillAt(params: { index: number; side: 'buy' | 'sell'; hours: number }):
 
 beforeAll(async () => {
   harness = await createRunsHarness({ candles: buildCandles() });
+});
+
+// O relógio do harness é fixo: cada teste abre uma janela nova do limite de 30 gráficos por minuto.
+beforeEach(() => {
+  harness.clock.now += RATE_LIMIT_WINDOW_MILLISECONDS;
 });
 
 afterAll(async () => {
@@ -544,5 +550,45 @@ describe('walk-forward e ao vivo', () => {
     const runId = await createRunFor(SUBJECT_A, { kind: 'live_paper', periodEnd: undefined });
     const result = await chart(runId);
     expect(result).toMatchObject({ columns: [], markers: [], lastClosedCandleTime: null });
+  });
+});
+
+describe('limite de requisições', () => {
+  test('30 gráficos por minuto por usuário; o 31º é 429 e outro usuário não é afetado', async () => {
+    const limited = await createRunsHarness({ candles: buildCandles() });
+    try {
+      const policy = limited.app.policies.RATE_LIMIT_POLICY.RUN_CHART;
+      expect(policy.limit).toBe(30);
+      const seeded = await limited.seedStrategy(SUBJECT_A, 'limite');
+      const created = await limited.runs.repository.createRun(limited.scopeOf(SUBJECT_A), {
+        strategyVersionId: seeded.versionId,
+        kind: 'backtest',
+        symbol: 'BTCUSDT',
+        timeframe: '1h',
+        runParameters: { symbol: 'BTCUSDT' },
+        runHash: 'h'.repeat(64),
+        engineVersion: 'engine-2',
+        signalEngineVersion: 'signal-2',
+        metricsVersion: 'metrics-1',
+        periodStart: at(0),
+        periodEnd: at(CANDLES),
+        migratedFromRunId: undefined,
+      });
+      const path = `${RUNS}/${created?.id ?? ''}/chart?columns=100`;
+      for (let attempt = 0; attempt < policy.limit; attempt += 1) {
+        const response = await limited.call({ subject: SUBJECT_A, path });
+        expect(response.status).toBe(200);
+        await response.text();
+      }
+      const blocked = await limited.call({ subject: SUBJECT_A, path });
+      expect(blocked.status).toBe(429);
+      expect(Number(blocked.headers.get('Retry-After'))).toBeGreaterThanOrEqual(1);
+      await blocked.text();
+      const other = await limited.call({ subject: SUBJECT_B, path });
+      expect(other.status).not.toBe(429);
+      await other.text();
+    } finally {
+      await limited.stop();
+    }
   });
 });

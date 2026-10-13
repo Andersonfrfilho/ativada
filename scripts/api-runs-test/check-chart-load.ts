@@ -27,7 +27,9 @@ const POSITIONS = 1_000;
 const ONE_DAY_CANDLES = 96;
 const FIRST_OPEN_TIME = Date.UTC(2025, 3, 1);
 const CENTS = 100;
+// O geral (120/min) repõe 2 fichas por segundo; `/chart` e `/trade-summary` têm política própria de 30/min (1 ficha a cada 2 s).
 const SAMPLE_PAUSE_MILLISECONDS = 550;
+const LIMITED_SAMPLE_PAUSE_MILLISECONDS = 2_050;
 const P95_BUDGET_MILLISECONDS = 300;
 const SIZE_REFERENCE_BYTES = 150 * 1024;
 const MARKER_LIMIT = 500;
@@ -133,10 +135,10 @@ function percentile(sorted: readonly number[], rate: number): number {
   return sorted[Math.max(0, Math.ceil(rate * sorted.length) - 1)] ?? 0;
 }
 
-// Sequencial e espaçado: o limite geral de 120/min por usuário repõe 2 por segundo e a amostra não pode esgotá-lo.
+// Sequencial e espaçado: o limite da rota repõe fichas devagar e a amostra não pode esgotá-lo.
 async function measure(
   context: ApiRunsContext,
-  params: { readonly path: string; readonly samples: number },
+  params: { readonly path: string; readonly samples: number; readonly pause: number },
 ): Promise<Measurement> {
   const durations: number[] = [];
   let bytes = 0;
@@ -146,7 +148,7 @@ async function measure(
     durations.push(performance.now() - started);
     assertCondition(response.status === 200, `${params.path}: status ${response.status}`);
     bytes = new TextEncoder().encode(response.text).byteLength;
-    await Bun.sleep(SAMPLE_PAUSE_MILLISECONDS);
+    await Bun.sleep(params.pause);
   }
   const sorted = [...durations].sort((left, right) => left - right);
   return {
@@ -212,28 +214,42 @@ export async function checkChartLoad(context: ApiRunsContext): Promise<void> {
   const markerEnd = sorted[MARKER_LIMIT - 1] ?? seeded.periodEnd;
   const oneDayEnd = seeded.periodStart + ONE_DAY_CANDLES * FIFTEEN_MINUTES;
   const cases = [
-    { name: 'chart 800 colunas, período inteiro (aceite)', path: `${base}/chart`, samples: 40 },
+    {
+      name: 'chart 800 colunas, período inteiro (aceite)',
+      path: `${base}/chart`,
+      samples: 40,
+      pause: LIMITED_SAMPLE_PAUSE_MILLISECONDS,
+    },
     {
       name: 'chart 2000 colunas, período inteiro',
       path: `${base}/chart?columns=2000`,
-      samples: 30,
+      samples: 20,
+      pause: LIMITED_SAMPLE_PAUSE_MILLISECONDS,
     },
     {
       name: 'chart 2000 colunas com 499 marcadores (maior corpo)',
       path: `${base}/chart?columns=2000&from=${seeded.periodStart}&to=${markerEnd}`,
-      samples: 30,
+      samples: 20,
+      pause: LIMITED_SAMPLE_PAUSE_MILLISECONDS,
     },
     {
       name: 'chart 1 dia, 800 colunas',
       path: `${base}/chart?from=${seeded.periodStart}&to=${oneDayEnd}`,
-      samples: 30,
+      samples: 20,
+      pause: LIMITED_SAMPLE_PAUSE_MILLISECONDS,
     },
     {
       name: 'trades 100 da faixa (from/to)',
       path: `${base}/trades?limit=100&from=${seeded.periodStart}&to=${markerEnd}`,
       samples: 30,
+      pause: SAMPLE_PAUSE_MILLISECONDS,
     },
-    { name: 'trade-summary', path: `${base}/trade-summary`, samples: 30 },
+    {
+      name: 'trade-summary',
+      path: `${base}/trade-summary`,
+      samples: 20,
+      pause: LIMITED_SAMPLE_PAUSE_MILLISECONDS,
+    },
   ];
   const whole = dataOf<ChartBody>(
     await context.call({ subject: SUBJECT_LOAD, path: `${base}/chart` }),

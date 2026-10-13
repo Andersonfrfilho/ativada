@@ -123,7 +123,12 @@ describe('OpenAPI gerado da tabela de rotas', () => {
 
   test('as rotas com limite por minuto documentam o 429 (prazos e metas)', () => {
     const paths = asRecord(app.openApi.buildOpenApiDocument(DEVELOPMENT_ROUTES)['paths']);
-    for (const path of ['/v1/horizons', '/v1/goals/{goalId}/evaluation']) {
+    for (const path of [
+      '/v1/horizons',
+      '/v1/goals/{goalId}/evaluation',
+      '/v1/runs/{runId}/chart',
+      '/v1/runs/{runId}/trade-summary',
+    ]) {
       const operation = asRecord(asRecord(paths[path])['get']);
       expect(Object.keys(asRecord(operation['responses']))).toContain('429');
     }

@@ -77,6 +77,21 @@ export const RATE_LIMIT_POLICY = {
     keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
     maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
+  // O gráfico lê preço e preenchimentos da execução em SQL (colunas mín-máx e agrupamentos): o painel pede no máximo uma sonda e uma faixa por gesto.
+  RUN_CHART: {
+    name: 'run-chart',
+    limit: 30,
+    windowMilliseconds: ONE_MINUTE_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
+  },
+  RUN_TRADE_SUMMARY: {
+    name: 'run-trade-summary',
+    limit: 30,
+    windowMilliseconds: ONE_MINUTE_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
+  },
   ADMIN_INVITATION: {
     name: 'admin-invitation',
     limit: 10,
