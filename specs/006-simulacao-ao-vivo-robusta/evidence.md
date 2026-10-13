@@ -105,3 +105,21 @@ parâmetro nunca sai).
 Gates (WSL, `gates6.sh`): contratos novos 25/25; `typecheck`, `lint` e `format` limpos; vizinhos (`database`,
 `code-size-limits`, `test-support-boundary`, `app-import-boundary`, `ownership-registry`, `strategy-engine-boundary`,
 `worker-environment`) 145/145.
+
+## T1.2 — Dublê `flaky-sql` (2026-10-13, `sonnet`)
+
+- `packages/database/src/connection/sql-client.types.ts`: o formato mínimo do cliente (`unsafe`, `begin`, `close`) que o Drizzle
+  pede ao `Bun.SQL`; o porteiro (T1.3) e o dublê falam esse formato.
+- `packages/database/test-support/flaky-sql.ts`: `createFlakyServer()` abre clientes que caem e voltam sob comando
+  (`setMode`), com os modos medidos na T0.1: `refused` (`ERR_POSTGRES_CONNECTION_REFUSED`), `closed`
+  (`ERR_POSTGRES_CONNECTION_CLOSED`, inclusive nas consultas em voo seguradas por `hold()`), `stopping` (`57P01` em `errno` com
+  `ERR_POSTGRES_SERVER_ERROR`; `ERR_POSTGRES_EXPECTED_REQUEST` no comando de uma transação), `frozen` (consultas penduram e
+  terminam no descongelamento; cliente novo dá `ERR_POSTGRES_CONNECTION_TIMEOUT`) e `hung` (meia conexão: as conexões abertas
+  ficam mudas para sempre, só `close()` as solta com `CLOSED`; um cliente novo funciona). Erros são `PostgresError` e
+  `wrapLikeDrizzle` reproduz o `DrizzleQueryError` (`name = "Error"`, consulta e parâmetros na mensagem, driver em `cause`). Toda
+  mensagem leva `FLAKY_SECRET_URL` para o teste de log procurar vazamento. O cliente registra o que executou, os `timeout` de
+  `close()` e as transações abertas.
+- Contrato do próprio dublê: `test/flaky-sql.contract.test.ts` (13 casos: preguiça da consulta, cada modo, cura do mesmo
+  cliente onde deve curar e não curar onde não deve, `close()` por cliente, formato dos erros).
+
+Gates (WSL, `gates6.sh`): contrato 13/13; `typecheck`, `lint` e `format` limpos; vizinhos 145/145.
