@@ -69,3 +69,8 @@ export function zoneLabel(timeZone: string, instant: number): string {
 export function formatDayInZone(milliseconds: number, timeZone: string): string {
   return formatInZone(milliseconds, timeZone).slice(0, DAY_TEXT_LENGTH);
 }
+
+// Só a hora ("14:30") no fuso do usuário.
+export function formatTimeInZone(milliseconds: number, timeZone: string): string {
+  return formatInZone(milliseconds, timeZone).slice(DAY_TEXT_LENGTH + 1);
+}

@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 import { useUserTimeZone } from '../account/useUserTimeZone.hook.js';
 import { Card } from '../layout/Card.component.js';
 import { ChartRangeControls } from './ChartRangeControls.component.js';
+import { LiveChartStatus } from './LiveChartStatus.component.js';
 import { planTradeSelection } from './trade-selection.js';
 import { TradeChartBody } from './TradeChartBody.component.js';
 import { TradeNotice } from './TradeNotice.component.js';
@@ -34,6 +35,7 @@ export function TradeChartCard({ runId }: TradeChartCardProps): ReactElement {
         shown={view.shown}
         onRangeChange={selection.setRange}
       />
+      <LiveChartStatus view={view} selection={selection} timeZone={timeZone} />
       <TradeChartBody
         chart={view.chart}
         timeZone={timeZone}
