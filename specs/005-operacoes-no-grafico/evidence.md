@@ -249,3 +249,12 @@ Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `p
   "GMT"). Primeira rodada: 6 testes vermelhos por isso; segunda rodada verde.
 - Gates (WSL, espelho `ativada-spec5`): `tsc` limpo, `eslint .` limpo, `prettier --check .` limpo, painel 418 testes verdes
   em 35 arquivos.
+
+## T2.3 — Glossário
+
+- `src/glossary/glossary.constant.ts`: as seis frases do RF13 (Sharpe, Sortino, Fator de lucro, Maior queda, Taxa de acerto,
+  Slippage) num só arquivo, com chave estável (`GLOSSARY_TERM`) e rótulo; texto idêntico ao da spec.
+- Contrato `test/glossary.contract.ts`: um termo por entrada da spec, frase de uma linha (sem quebra, termina em ponto, 20 a
+  120 caracteres), nenhuma frase nem rótulo repetido, e duas frases conferidas literalmente.
+- Gates (WSL, espelho `ativada-spec5`): `tsc` limpo (a primeira rodada acusou `string[]` contra o tipo literal no teste; corrigido),
+  `eslint .` limpo, `prettier --check .` limpo, painel 422 testes verdes em 36 arquivos.
