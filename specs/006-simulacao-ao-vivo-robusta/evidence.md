@@ -452,3 +452,7 @@ Pendências (não corrigidas, fora de CSS/texto):
 - **P4.** Por permissão, não consegui cancelar a simulação 1h de teste que criei (LINK/USDT, Rompimento Donchian, id `01a13733-0a5d-717d-ba48-0c32767df00e`): ela continua `running`; o responsável pode cancelar em `/backtests/<id>`.
 
 Captura final (duas imagens, Playwright com o Edge do Windows, faixa de parada ativa): `specs/006-simulacao-ao-vivo-robusta/evidence/simulacao-ao-vivo-375-escuro.png` (375 px, tema escuro) e `simulacao-ao-vivo-1280-claro.png` (1280 px, tema claro); `scrollWidth` 375 e 1280.
+
+## T5.2 — CLAUDE.md (2026-10-13, `sonnet`)
+
+- `CLAUDE.md`: um bullet novo "Simulação ao vivo robusta (spec 006)" em "Regras que não se negociam" (reconexão e `ResilientDatabase`, `worker_heartbeats`, `/v1/health` e admin health, `stalled_since` com alertas `STALL`/`RESUME`, vela da simulação e `simulation-timeframe`, `dev-up`/`dev-down`, alvos `db-outage-test` e `stall-mutants`) e os dois alvos na lista de `*-test`. Variáveis com faixa e padrão conferidos no código: `DATABASE_QUERY_TIMEOUT_SECONDS` (5 a 300, 30), `WORKER_HEARTBEAT_SECONDS` (5 a 120, 15), `LIVE_STALL_GRACE_MINUTES` (5 a 240, 15), `LIVE_STALL_SWEEP_SECONDS` (5 a 3600, 60). Só documentação; diff revisado.
