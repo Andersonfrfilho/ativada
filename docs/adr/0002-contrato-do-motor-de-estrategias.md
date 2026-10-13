@@ -1751,3 +1751,110 @@ Contrato da T0.1 da spec 005: três rotas de leitura sobre `candles`, `fills` e 
 - **O6, resposta do `/chart`:** ganhou `runRange: { from, to }` (ms UTC, aditivo), a faixa efetiva da execução (a de O1) à qual `from`/`to` pedidos são recortados. O painel limita atalhos, campos de data, anterior/próximo e a faixa da URL por ela; o período da execução não serve (no walk-forward só valem as janelas de teste e no ao vivo ou backtest em andamento a faixa termina na última vela processada, e fora dela a API responde `400 outside_run`). Execução sem faixa ainda (fila) devolve `runRange` vazio (`from = to`).
 - **O13, limite de requisições:** `/chart` e `/trade-summary` têm política própria por usuário, `RUN_CHART` e `RUN_TRADE_SUMMARY` (30 por minuto cada, balde de fichas como as demais); o 429 já vem na documentação comum das rotas.
 - **Nota, caso impossível no banco real:** se faltar o preenchimento de compra de uma posição, `total_paid` ignora a posição mas `total_fees` conta a taxa dela, e então `net` ≠ Σ `net_profit`. O motor sempre grava a compra antes da venda e a FK composta impede venda sem posição, então o caso não existe; fica registrado para quem for mexer na gravação de resultados.
+
+## Simulação ao vivo robusta (spec 006)
+
+Contrato da T0.1 da spec 006, fechado sobre uma reprodução real (2026-10-13, `specs/006-simulacao-ao-vivo-robusta/evidence.md`):
+Postgres 18.3 descartável no WSL, `new Bun.SQL(url)` sem opções (como `openDatabase`), Drizzle 0.45.4 por cima e o escutador
+próprio de `LISTEN`, nos Bun **1.4.3** (o desta máquina, no Windows e no WSL) e **1.3.14** (o citado na spec). O motor e o
+`run-recording` não mudam.
+
+**O que a reprodução mostrou.**
+
+| Situação | O que o `Bun.SQL` faz | Volta sozinho? |
+|---|---|---|
+| Banco morto por `SIGKILL` (como `docker kill`) | consulta e transação em voo: `ERR_POSTGRES_CONNECTION_CLOSED`; enquanto fora: `ERR_POSTGRES_CONNECTION_REFUSED` no 1.4.3 e `ERR_POSTGRES_CONNECTION_CLOSED` no 1.3.14 | **Sim**, na primeira consulta depois de o banco aceitar conexão, sem reabrir |
+| Parada limpa `fast` (como `docker stop`/`restart`) | consulta em voo: `code = ERR_POSTGRES_SERVER_ERROR`, `errno = 57P01`, `severity = FATAL`; transação parada entre comandos: `ERR_POSTGRES_EXPECTED_REQUEST`; depois, como acima | **Sim** |
+| Servidor congelado (`SIGSTOP`, como `docker pause`) | consulta fica pendurada sem erro; `query.cancel()` não a solta; cliente novo com `connectionTimeout: 2` falha com `ERR_POSTGRES_CONNECTION_TIMEOUT` | **Sim**, quando o servidor descongela a consulta termina |
+| Porta aceita e fecha (encaminhador sem banco atrás) | consulta espera em silêncio, sem erro | **Sim**, quando o encaminhador volta |
+| **Meia conexão** (encaminhador de porta que perde as conexões antigas sem fechá-las, o caso do computador que dorme) | toda consulta fica pendurada **para sempre**, mesmo com o banco e o encaminhador de volta (69 s observados) | **Não.** Só `close()` solta: as pendentes rejeitam na hora com `ERR_POSTGRES_CONNECTION_CLOSED`, o `close({ timeout: 1 })` resolve em ~1 s e um cliente novo funciona na primeira consulta |
+
+Em nenhum caso o Bun expôs `ECONNREFUSED`/`ECONNRESET` nem `errno` numérico: o código vem em `code` (`ERR_POSTGRES_*`) e o
+SQLSTATE do servidor vem em `errno`. O Drizzle embrulha tudo em `DrizzleQueryError` (`name = "Error"`, mensagem com a consulta
+**e os parâmetros**) e o erro do driver fica em `cause`. O escutador de `LISTEN` já se recupera em todos os casos com o
+próprio backoff; na meia conexão ele só percebe pelo `keepAlive` (30 s de intervalo: a perda saiu em ~59 s como
+`unresponsive`) e a notificação enviada nesse meio tempo se perde, o que o `resync` da API já cobre.
+
+**Causa provável do incidente de 2026-10-13.** As milhares de falhas são as rondas batendo no banco fora (recusa e conexão
+fechada); o "nunca voltou sozinho" é a meia conexão que o encaminhador de porta do Docker Desktop deixa quando o computador
+dorme: o mesmo `Bun.SQL` não se recupera dela e não há teto de tempo em lugar nenhum. A reprodução não usou o Docker Desktop
+(regra: não tocar nos containers do projeto); o encaminhador foi um proxy TCP de rascunho. Por isso o teto de tempo por
+unidade (abaixo) é a peça central, e reabrir o cliente é o conserto, não a simples repetição.
+
+| # | Decisão | Motivo |
+|---|---|---|
+| R1 | **Erro de conexão** (`isDatabaseConnectionFailure`, percorre o erro e a `cause` até 4 níveis, lendo `code` e `errno`): códigos do Bun `ERR_POSTGRES_CONNECTION_CLOSED`, `ERR_POSTGRES_CONNECTION_REFUSED`, `ERR_POSTGRES_CONNECTION_TIMEOUT`, `ERR_POSTGRES_EXPECTED_REQUEST`; SQLSTATE da classe `08` e `57P01`, `57P02`, `57P03`; o nosso `DATABASE_QUERY_TIMEOUT` (R4); e, por defesa (não observados no 1.4.3), `ECONNREFUSED`, `ECONNRESET`, `ETIMEDOUT`, `EPIPE`, `EHOSTUNREACH`, `ENOTFOUND`, `EAI_AGAIN`. Todo o resto (inclusive `ERR_POSTGRES_SERVER_ERROR` com outro SQLSTATE, `53300`, `23505`) é erro da consulta e segue o caminho de hoje | São os códigos medidos em cada fase; `ERR_POSTGRES_EXPECTED_REQUEST` só apareceu na transação cortada pela parada limpa, e reabrir por engano é inofensivo |
+| R2 | **Estado do porteiro** (`ResilientDatabase`, um por `DatabaseHandle`, compartilhado por todos os laços do processo): `up` → `down` na **primeira** falha de conexão. Enquanto `down`, unidade pedida antes de `nextAttemptAt` falha na hora com `DatabaseUnavailableError` (`code = DATABASE_UNAVAILABLE`, sem tocar a rede); a primeira depois do vencimento passa e é a sonda (uma por vez; as demais falham na hora). Sonda que dá certo → `up`, falhas zeradas | Um processo bate no banco uma vez por espera, não um laço por ronda; os laços não precisam de sonda própria |
+| R3 | **Backoff** `computeBackoff({ attempt, baseMs: 1000, maxMs: 30000, random })` = sorteio em `[c/2, c]`, `c = min(baseMs × 2^(attempt − 1), maxMs)`, a mesma conta do escutador (`notification-listener.ts`). **Nunca desiste** (spec D6) | A reprodução confirma o plano: com o banco de volta, a próxima sonda passa; o pior caso é 30 s de espera + a ronda seguinte (5 s no ao vivo), dentro dos 60 s do RNF01 |
+| R4 | **Teto de tempo por unidade** (consulta avulsa ou transação inteira): `DATABASE_QUERY_TIMEOUT_SECONDS` (5 a 300, padrão 30). Vencido, a unidade rejeita com `DatabaseUnavailableError` (`code = DATABASE_QUERY_TIMEOUT`), conta como falha de conexão e **pede a reabertura na hora** (limiar 1). O cliente também abre com `connectionTimeout: 10` (s) | A meia conexão nunca dá erro: sem teto, a ronda fica presa para sempre. `query.cancel()` não solta a consulta; só `close()` solta |
+| R5 | **Reabrir** = abrir um `Bun.SQL` novo com as MESMAS opções e trocar o `OpenDatabase` dentro do `WeakMap` (a forma do `DatabaseHandle` não muda). Gatilhos: teto vencido (R4) ou `RECONNECT_FAILURE_THRESHOLD` = 2 falhas de conexão seguidas por código (seguro barato: o 1.4.3 se recupera sozinho delas, uma versão futura pode não se recuperar) | Reabrir funciona em todos os casos medidos; esperar só funciona nos que não são meia conexão |
+| R6 | **Troca sem cortar transação viva.** Unidade nova vai sempre para o cliente novo; a que já está no velho termina nele (a transação é presa à conexão reservada). O velho é fechado com `close({ timeout: 1 })` quando não tem unidade em voo ou quando todas as que restam já venceram o teto (abandonadas: o chamador já recebeu a falha). Nenhuma transação ainda dentro do teto é fechada à força | Spec risco "transação em voo"; `close()` rejeita as pendentes com `ERR_POSTGRES_CONNECTION_CLOSED` e o servidor desfaz o que não foi confirmado |
+| R7 | **Desfecho desconhecido é seguro.** Unidade que venceu o teto (ou cujo `COMMIT` perdeu a resposta) pode ter sido confirmada no servidor. Quem chama trata como falha e a próxima ronda relê o checkpoint: passo repetido é pulado (`CANDLE_ALREADY_PROCESSED`), linhas e `alerts` têm `ON CONFLICT DO NOTHING` | É a mesma idempotência que já protege a queda do worker (T4.1, T4.5); nenhuma regra nova de deduplicação |
+| R8 | **Log sem PII** (`readSafeErrorFields`): `errorName`, `code` e `errno` lidos do erro mais interno que tem `code` (o `PostgresError`, não o `DrizzleQueryError`, cujo `name` é `"Error"`); nunca a mensagem, a consulta, os parâmetros, a URL nem o usuário. O **porteiro** é quem loga (um por processo): `database unavailable` (`error`) na primeira falha com `{ code, errno?, failures: 1, sinceMs: 0 }`, depois no máximo uma a cada 60 s com `{ code, errno?, failures, sinceMs }` (o último código), e `database recovered` (`info`) com `{ downtimeMs, failures }`. Laço que recebe `DatabaseUnavailableError` encerra a ronda sem logar | A mensagem do `DrizzleQueryError` carrega os parâmetros da consulta; o resumo dá ≤ 1 linha por 60 s por processo, logo por laço (RNF01) |
+| R9 | **Rotas com banco fora.** `DatabaseUnavailableError` vira `503` com `{ error: { code: "DATABASE_UNAVAILABLE", message } }` genérico e `Retry-After: 5` no filtro global, em vez do `500` de erro desconhecido; não vai ao Sentry como defeito | É indisponibilidade esperada e passageira, não bug; o cliente sabe tentar de novo |
+
+**Escutador de `LISTEN` (spec risco "ritmos diferentes").** Fica como está: tem backoff próprio (1 s a 30 s, sorteio) e o
+porteiro não o toca. Na meia conexão ele leva até 2 × `keepAlive` (60 s) para perceber; a perda vira `resync` para os
+sockets e o REST continua sendo a fonte da verdade. O teste da queda confere um `resync` por episódio de perda do `LISTEN`.
+
+**Parada da simulação (plan D3).** Quem detecta é a **API** (`stall-sweeper`, a cada `LIVE_STALL_SWEEP_SECONDS` = 60), porque
+o worker é justamente quem pode estar parado.
+
+| # | Decisão | Motivo |
+|---|---|---|
+| P1 | **Vela devida.** `d` = duração do timeframe. Próxima abertura a processar: `last_candle_time + d` ou, sem passo, `floor(started_at ÷ d) × d` (a vela em curso na criação, T4.1). `dueAt` = essa abertura + `d` (o fechamento dela) | Usa a vela esperada, não o relógio de parede: em `1d` não há alarme às 15:00, só depois de 00:00 UTC + carência |
+| P2 | **Parada** quando `status = running`, `kind = live_paper`, `deleted_at IS NULL`, sem `waitingForData` (que tem texto próprio) e `now ≥ dueAt + LIVE_STALL_GRACE_MINUTES` (padrão **15**, de 5 a 240; não muda). O episódio começa em `stalled_since = dueAt + carência` (determinístico, não o instante da varredura) | Duas instâncias ou duas rondas calculam o mesmo início; cobre worker caído, banco fora e stream mudo |
+| P3 | **`stalled_since` fica enquanto o episódio dura.** Gravado uma vez, não é recalculado quando o worker processa velas mas segue atrasado; só é apagado quando a fórmula diz que a execução está em dia (`now < dueAt + carência`) | Sem isso, cada vela de recuperação abriria um episódio novo e um `STALL` novo |
+| P4 | **Varredura numa transação** com `pg_try_advisory_xact_lock` (uma instância por vez): `UPDATE runs SET stalled_since` para os que entram e para os que saem, e na MESMA transação a linha de `alerts` e o `pg_notify('run_events', { runId, kind: "warning", eventId: stalled_since })` | O passo do alerta nasce com a mudança de estado ou não nasce (como o passo ao vivo) |
+| P5 | **Chave do alerta = a chave única que `alerts` já tem**, `(run_id, candle_time, side, channel)`, com `candle_time = stalled_since` e `side` ∈ `STALL`, `RESUME` (o CHECK de `alerts.side` ganha os dois na migration aditiva). `ON CONFLICT DO NOTHING` | "Execução + início do episódio + lado" sem índice novo: ronda repetida ou duas instâncias nunca duplicam; episódio novo tem `stalled_since` novo |
+| P6 | **`RESUME` só fecha um `STALL`.** Sai quando um episódio aberto termina com a execução em dia e ainda `running`. Execução que sai de `running` parada (parada pelo dono, falha, apagada) só tem `stalled_since` apagado, sem `RESUME` | Não há "voltou" para o que não volta; o dono já vê o estado final na tela |
+| P7 | **Quem recebe e quando sai.** Mesmas regras do alerta de sinal: dono ativo com Telegram vinculado e alertas ligados; o despachante respeita `ALERT_TELEGRAM_DAILY_LIMIT_PER_USER`. Texto sem dado pessoal (nome da estratégia, par, vela, hora). **Se o worker estiver morto, o `STALL` só sai quando ele voltar** (é ele quem despacha); a faixa do painel, lida da API, é o aviso imediato. Com o banco fora, nada é gravado: o `STALL` nasce na primeira varredura com o banco de volta e a parada ainda valendo | Sem mensageria nova (abaixo); o aviso que não depende do worker é a faixa |
+| P8 | **Na API:** `GET /v1/runs/:id` e a lista trazem `stalledSince` (ms UTC) só quando gravado e a execução `running`; ausente nos outros casos (aditivo) | RF13 |
+
+**Saúde (plan D5).**
+
+| # | Decisão | Motivo |
+|---|---|---|
+| H1 | `GET /v1/health` (público): `SELECT 1` pelo porteiro com teto **próprio** de 1 s → `200 { status: "ok" }` ou `503 { status: "degraded" }`, `Cache-Control: no-store`, nenhum outro campo. O teto de 1 s responde `503` mas **não** conta como falha de conexão (só o teto de R4 conta); com o porteiro `down`, responde `503` sem tocar a rede | Banco lento não é banco fora; o detalhe fica no admin (spec D7) |
+| H2 | `GET /v1/admin/health` ganha, sem mudar o que já existe (`checks.database`, `listener`, `runs`): `database: { state: "up" \| "down", consecutiveFailures, downSince, lastFailureCode, lastFailureAt }` (tempos em ms UTC ou `null`; o código é o de R8, nunca a mensagem) e `worker: { lastHeartbeatAt, ageSeconds, state }` | RF10 |
+| H3 | `worker.state`: `alive` quando o batimento mais novo de `worker_heartbeats` tem idade ≤ 3 × `WORKER_HEARTBEAT_SECONDS` (padrão 15, logo 45 s); `stale` acima disso; `unknown` sem nenhuma linha ou sem conseguir ler o banco. Com mais de uma instância vale a mais nova. A linha guarda id da instância (sorteado no boot), `started_at`, `last_beat_at` (`now()` do banco), versão e contadores agregados das rondas, nada de usuário | Relógio do banco, não da máquina; spec D8 e RF11 |
+
+**Sem mensageria nova: o banco é a fila (plan D4, spec RF15).** A queda de 2026-10-13 foi do **banco**. Uma mensageria nova
+(Redis, RabbitMQ, BullMQ) seria mais uma peça que dorme e cai junto com o computador, e mais uma conexão para reconectar.
+Com o banco como fila durável, o passo, o sinal, o alerta e o aviso de parada nascem na MESMA transação: ou tudo, ou nada.
+Quando o banco volta, nada se perdeu (a transação desfeita não deixou rastro) e nada se duplica (checkpoint e chaves únicas).
+`pg_notify` é só o empurrão para o painel e o despachante, que também leem por varredura. O conserto certo é o cliente
+reconectar com teto de tempo, não trocar a fila.
+
+**Ajuste ao plan D7.** `docker restart` e `docker pause` NÃO reproduzem o caso que não volta sozinho (os dois se recuperam
+sem reabrir). O `make db-outage-test` precisa de um proxy TCP de teste entre os processos e o Postgres
+(`packages/database/test-support/`) com os modos encaminhar, aceitar-e-fechar e **emudecer** (as conexões abertas param de
+receber e enviar sem fechar), além do `docker restart`.
+
+**Contratos de teste esperados.**
+
+- Classificação (R1): cada código medido, solto e embrulhado em `DrizzleQueryError` (com `name = "Error"` e a mensagem com
+  parâmetros), é conexão; `57P01` em `errno` com `code = ERR_POSTGRES_SERVER_ERROR` é conexão; `23505`, `53300`,
+  `ERR_POSTGRES_SERVER_ERROR` com outro SQLSTATE e erro sem `code` não são; `cause` além de 4 níveis não é lida.
+- Backoff (R3): contas à mão (`attempt` 1 a 7, `random` 0 e 1); propriedade: nunca acima de 30 s nem abaixo de metade do
+  degrau; nunca para de devolver espera.
+- Dublê `flaky-sql` (T1.2) com os modos medidos: recusa (`ERR_POSTGRES_CONNECTION_REFUSED`), fechada
+  (`ERR_POSTGRES_CONNECTION_CLOSED`), parada limpa (`57P01` em `errno`, `ERR_POSTGRES_EXPECTED_REQUEST` na transação) e
+  **emudecido**, em que a consulta pendura até o `close()` e então rejeita com `ERR_POSTGRES_CONNECTION_CLOSED`, e que **não
+  volta** quando o banco "volta": só um cliente novo funciona.
+- Porteiro (R2, R4 a R6): cai → `down` → falha rápida antes do vencimento → uma sonda por vencimento → `up`; emudecido →
+  teto vencido → reabre na hora → a próxima unidade vai ao cliente novo; transação dentro do teto nunca é fechada; a
+  vencida é abandonada e o velho fecha; o `DatabaseHandle` antigo continua valendo.
+- Log (R8): 1.000 rondas com o banco fora dão a linha da primeira falha, uma a cada 60 s de relógio falso e a da volta; toda
+  linha tem `code`; varredura sem URL, senha, usuário do banco, texto de consulta nem parâmetro.
+- Rotas (R9, H1, H2): banco fora → `/v1/health` `503 { status: "degraded" }` sem outro campo e rota de usuário `503
+  DATABASE_UNAVAILABLE`; banco lento além de 1 s → `503` no health sem `down` no porteiro; admin com `database` e `worker`.
+- Parada (P1 a P6): `computeStalledSince` à mão em 15m, 1h, 4h e 1d, com e sem passo, no limite exato da carência, com
+  `waitingForData` e com execução não `running`; varredura: um `STALL` e um `RESUME` por episódio, ronda repetida e duas
+  instâncias não duplicam, recuperação parcial não abre episódio novo, parada pelo dono não manda `RESUME`.
+- Integração `make db-outage-test`: `docker restart` (30 s fora) e proxy emudecido, com API e worker vivos; os dois voltam em
+  ≤ 60 s depois que o banco aceita conexão, `fills`/`signals` iguais aos de uma execução contínua, `/v1/health` `503` → `200`,
+  `worker.state` `stale` → `alive`, um `resync` por perda do `LISTEN`, log da queda com `code` e sem PII.
+- Mutantes: limiar, teto do backoff, sorteio, classificação (um código a menos), teto por unidade, troca só sem transação
+  viva, resumo de 60 s, carência, `waitingForData` excluído, `stalled_since` fixo no episódio, alerta único, `RESUME` só
+  depois de `STALL`.
