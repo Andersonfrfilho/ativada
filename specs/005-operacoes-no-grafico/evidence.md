@@ -327,3 +327,28 @@ Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `p
 - Gates (WSL, espelho `ativada-spec5`): `tsc` limpo; `eslint .` limpo (primeira rodada: tipos de retorno do hook e promessas
   flutuantes de `act` nos testes); `prettier --check .` limpo; painel 480 testes verdes em 39 arquivos (uma rodada vermelha só
   no contraste, descrita acima).
+
+## T3.3 — Controles de faixa, faixa na URL e cartão
+
+- `src/runs/chart-range.ts` (puro): atalhos "Tudo", "30 dias", "7 dias", "1 dia" (durações em milissegundos; o que passa do período
+  da execução some, o de tamanho igual fica), `rangeForShortcut` (os últimos N ms do período), `shiftRange`/`canShift` (anterior e
+  próximo deslocam pelo próprio tamanho e param na borda sem encolher), `clampRange`, `runExtent` (backtest: o período; ao vivo:
+  até a última vela fechada), leitura e escrita dos parâmetros (milissegundos ou ISO na leitura, ISO UTC na escrita) e os campos de
+  data ("De" é o começo do dia, "Até" inclui o dia inteiro).
+- `useTradeSelection.hook.ts`: `?de=&ate=` via `useSearchParams` (empurra no histórico, então o "voltar" restaura a faixa; só vale com
+  os dois presentes e `de < ate`). `queryRange` já vem pronto para espalhar na consulta. `useTradeChartQuery` ganhou
+  `placeholderData: keepPreviousData`: a faixa nova carrega com o gráfico anterior na tela.
+- `ChartRangeControls` (grupo "Período do gráfico"): atalhos com `aria-pressed`, dois campos de data (rotulados "(data em UTC)":
+  a conversão para o fuso do usuário só vale para hora, e o dia do campo é o dia UTC da URL; desvio consciente para não inventar
+  a conta inversa de fuso com horário de verão) e "◀ anterior" / "próximo ▶" (desligados sem faixa na URL e nas bordas). Botões e
+  campos usam `controls.button`/`controls.input` (44 px, já cobertos por `touch-targets.contract.ts`).
+- `TradeChartCard` (`runId`): fuso do usuário, faixa da URL, período da execução (`useRunDetailQuery`), gráfico e controles.
+  `columns` = largura do desenho (640, clamp 100 a 2.000 em `chartColumnsFor`). Ainda NÃO montado em rota (T4.4). Desvio: os
+  atalhos gravam `de` E `ate`; "acompanhar o fim" do ao vivo (só `de`) é da T5.1.
+- Contratos: `test/chart-range.contract.ts` (19 testes: atalhos que somem, deslocamento e bordas, parâmetros, campos de data,
+  extensão) e `test/trade-chart-card.contract.tsx` (14 testes, roteador em memória próprio dentro do `probe`: consulta com
+  `columns=640` e sem faixa, carregando e erro, atalho grava ISO e a consulta usa os mesmos milissegundos, "Tudo", "voltar" duas vezes
+  restaura 1 dia e depois Tudo, atalho maior que o período some, link com ISO e com milissegundos, anterior/próximo, bordas,
+  campos de data, dia fora da execução recusado, Enter no agrupamento escreve a faixa dele na URL, gráfico anterior fica na tela).
+- Gates (WSL, espelho `ativada-spec5`): `tsc` limpo; `eslint .` limpo (primeira rodada: um tipo de retorno no teste); `prettier
+  --check .` limpo; painel 511 testes verdes em 41 arquivos.

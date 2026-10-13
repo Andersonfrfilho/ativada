@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { API_PATH } from '../app/app.constant.js';
 import { useApiClient } from '../app/useAppContext.hook.js';
@@ -24,12 +24,13 @@ function chartPath(params: TradeChartParams): string {
   return `${API_PATH.RUNS}/${params.runId}/chart${text === '' ? '' : `?${text}`}`;
 }
 
-// Sob a raiz `runs`: o aviso do stream ao vivo invalida o gráfico junto com o resto da execução.
+// Sob a raiz `runs`: o aviso do stream ao vivo invalida o gráfico junto com a execução. O gráfico anterior fica na tela enquanto a nova faixa carrega.
 export function useTradeChartQuery(params: TradeChartParams): UseQueryResult<TradeChart> {
   const client = useApiClient();
   return useQuery({
     queryKey: [RUN_QUERY_ROOT, params.runId, 'chart', params.from, params.to, params.columns],
     enabled: params.isEnabled ?? true,
+    placeholderData: keepPreviousData,
     queryFn: () => client.request({ path: chartPath(params), schema: tradeChartSchema }),
   });
 }
