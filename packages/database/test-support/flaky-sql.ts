@@ -21,6 +21,9 @@ export const FLAKY_MODE = {
   FROZEN: 'frozen',
   // Meia conexão: as conexões abertas ficam mudas PARA SEMPRE (só close() as solta); as novas funcionam.
   HUNG: 'hung',
+  // Banco vivo, consulta lenta: tudo menos `SELECT 1` e `begin` demora além de qualquer teto do cliente. Com `statement_timeout`
+  // no servidor falso a consulta cai em 57014 (erro da consulta); sem ele ela pendura até o modo mudar.
+  SLOW: 'slow',
 } as const;
 export type FlakyMode = (typeof FLAKY_MODE)[keyof typeof FLAKY_MODE];
 
@@ -33,6 +36,9 @@ export const FLAKY_ERROR_CODE = {
 } as const;
 
 export const ADMIN_SHUTDOWN_SQLSTATE = '57P01';
+export const QUERY_CANCELED_SQLSTATE = '57014';
+const CONFIRMATION_QUERY = 'SELECT 1';
+const BEGIN_QUERY = 'begin';
 // Vai na mensagem de todo erro do dublê: o teste que olha o log procura isto e não pode achar.
 export const FLAKY_SECRET_URL = 'postgres://ativada:s3cret-pw@db.internal:5432/ativada';
 export const FLAKY_ROWS: readonly unknown[] = [{ ok: 1 }];
@@ -63,7 +69,7 @@ export function wrapLikeDrizzle(
 
 type Pending = {
   readonly client: FlakyClient;
-  readonly kind: 'held' | 'frozen' | 'mute';
+  readonly kind: 'held' | 'frozen' | 'mute' | 'slow';
   readonly settle: (outcome: { readonly error: Error } | { readonly value: unknown }) => void;
 };
 
@@ -83,6 +89,8 @@ export type FlakyServer = {
   // Consultas passam a ficar em voo até `release()` ou até o modo mudar.
   readonly hold: () => void;
   readonly release: () => void;
+  // `statement_timeout` do servidor falso: a consulta lenta rejeita com 57014 depois deste tempo (sem ele, nunca).
+  readonly setStatementTimeout: (milliseconds: number | undefined) => void;
   readonly clients: readonly FlakyClient[];
 };
 
@@ -98,12 +106,13 @@ function failure(code: string, errno?: string): Decision {
 export function createFlakyServer(): FlakyServer {
   let mode: FlakyMode = FLAKY_MODE.HEALTHY;
   let isHolding = false;
+  let statementTimeoutMilliseconds: number | undefined;
   const pendings = new Set<Pending>();
   const clients: FlakyClient[] = [];
   const mutedClients = new Set<FlakyClient>();
   const clientsOpenedWhileFrozen = new Set<FlakyClient>();
 
-  function decide(client: FlakyClient, isInTransaction: boolean): Decision {
+  function decide(client: FlakyClient, query: string, isInTransaction: boolean): Decision {
     if (client.isClosed()) return failure(FLAKY_ERROR_CODE.CLOSED);
     if (client.isMute()) return { kind: 'pend', pending: 'mute' };
     switch (mode) {
@@ -119,9 +128,23 @@ export function createFlakyServer(): FlakyServer {
         return clientsOpenedWhileFrozen.has(client)
           ? failure(FLAKY_ERROR_CODE.TIMEOUT)
           : { kind: 'pend', pending: 'frozen' };
+      case FLAKY_MODE.SLOW:
+        return query === CONFIRMATION_QUERY || query === BEGIN_QUERY
+          ? { kind: 'ok' }
+          : { kind: 'pend', pending: 'slow' };
       default:
         return isHolding ? { kind: 'pend', pending: 'held' } : { kind: 'ok' };
     }
+  }
+
+  function cancelOnStatementTimeout(pending: Pending): void {
+    if (statementTimeoutMilliseconds === undefined) return;
+    setTimeout(() => {
+      if (!pendings.delete(pending)) return;
+      pending.settle({
+        error: new FlakyPostgresError(FLAKY_ERROR_CODE.SERVER_ERROR, QUERY_CANCELED_SQLSTATE),
+      });
+    }, statementTimeoutMilliseconds);
   }
 
   function run(
@@ -131,15 +154,17 @@ export function createFlakyServer(): FlakyServer {
     rows: unknown,
   ): Promise<unknown> {
     client.executed.push(query);
-    const decision = decide(client, isInTransaction);
+    const decision = decide(client, query, isInTransaction);
     if (decision.kind === 'ok') return Promise.resolve(rows);
     if (decision.kind === 'reject') return Promise.reject(decision.error);
     return new Promise<unknown>((resolve, reject) => {
-      pendings.add({
+      const pending: Pending = {
         client,
         kind: decision.pending,
         settle: (outcome) => ('error' in outcome ? reject(outcome.error) : resolve(rows)),
-      });
+      };
+      pendings.add(pending);
+      if (decision.pending === 'slow') cancelOnStatementTimeout(pending);
     });
   }
 
@@ -178,6 +203,11 @@ export function createFlakyServer(): FlakyServer {
     }
     if (next === FLAKY_MODE.HUNG) {
       for (const client of clients) if (!client.isClosed()) mutedClients.add(client);
+    }
+    if (previous === FLAKY_MODE.SLOW && next === FLAKY_MODE.HEALTHY) {
+      settleWhere((pending) => pending.kind === 'slow' && !pending.client.isMute(), {
+        value: undefined,
+      });
     }
     if (previous === FLAKY_MODE.FROZEN && next === FLAKY_MODE.HEALTHY) {
       settleWhere((pending) => pending.kind === 'frozen' && !pending.client.isMute(), {
@@ -229,6 +259,9 @@ export function createFlakyServer(): FlakyServer {
     openClient,
     setMode: applyMode,
     mode: () => mode,
+    setStatementTimeout: (milliseconds): void => {
+      statementTimeoutMilliseconds = milliseconds;
+    },
     hold: (): void => {
       isHolding = true;
     },

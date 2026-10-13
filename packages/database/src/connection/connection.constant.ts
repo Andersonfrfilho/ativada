@@ -41,3 +41,8 @@ export const CONNECTION_TIMEOUT_SECONDS = 10;
 // Fecha o cliente aposentado sem esperar consulta pendurada (ADR 0002, R6).
 export const RETIRED_CLIENT_CLOSE_TIMEOUT_SECONDS = 1;
 export const MILLISECONDS_PER_SECOND = 1_000;
+// Quanto antes do teto do cliente o servidor aborta a consulta lenta (SQLSTATE 57014, erro da consulta, não do banco).
+export const STATEMENT_TIMEOUT_MARGIN_SECONDS = 5;
+export const MINIMUM_STATEMENT_TIMEOUT_SECONDS = 1;
+// Teto do `SELECT 1` em cliente novo que confirma se o banco responde depois de o teto do cliente estourar (ADR 0002, R4).
+export const QUERY_TIMEOUT_CONFIRM_SECONDS = 2;

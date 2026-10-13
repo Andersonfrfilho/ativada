@@ -41,6 +41,7 @@ function createRig(): Rig {
   const database = createResilientDatabase({
     openClient: () => server.openClient(),
     queryTimeoutMilliseconds: 30_000,
+    confirmTimeoutMilliseconds: 1_000,
     now: () => clock.now,
     random: () => 0.5,
     failureThreshold: 2,

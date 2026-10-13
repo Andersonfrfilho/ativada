@@ -470,3 +470,30 @@ da correção e dos vizinhos no espelho do WSL (`gates6.sh`).
 - Contrato novo em `test/database-resilient.contract.test.ts` (nada é admitido depois do `close`; unidade que estoura o teto depois do
   `close` não abre cliente) e dois mutantes em `test/db-reconnect-mutants.contract.test.ts` (`ADMITS_UNITS_AFTER_CLOSE`,
   `REOPENS_A_CLIENT_AFTER_CLOSE`).
+
+### Achado 1 — consulta lenta não derruba a API (teto do cliente confirmado, `statement_timeout`)
+
+- **Causa.** `DATABASE_QUERY_TIMEOUT` contava como banco fora, reabria o pool e punha o porteiro em `down`: uma rota pesada acima de
+  30 s sob carga fazia toda a API responder 503.
+- **Servidor primeiro.** `database-handle.ts` abre o `Bun.SQL` com `connection: { statement_timeout }` = teto − 5 s, piso de 1 s
+  (`connection/statement-timeout.ts`, puro). Medido no Postgres 18.3 descartável do WSL (porta 56434, `~/pg-scratch`) com o Bun 1.4.3:
+  `show statement_timeout` devolve `1s`, `pg_sleep(5)` falha em 1.003 ms com `PostgresError` / `ERR_POSTGRES_SERVER_ERROR` /
+  `errno 57014`, o MESMO cliente responde a consulta seguinte e uma transação com dois comandos de 0,6 s passa (o limite vale por
+  comando, não por transação: a transação inteira continua sob o teto do cliente). `57014` NÃO está em R1 (a lista é `08xxx` e
+  `57P01/02/03`; classificação com teste `ERR_POSTGRES_SERVER_ERROR 57014` = erro da consulta e mutante
+  `QUERY_CANCELED_IS_A_CONNECTION_FAILURE`).
+- **Cliente confirma.** Teto do cliente estourado (conexão muda): o porteiro reabre o cliente na hora e roda `SELECT 1` no cliente NOVO
+  (teto de 2 s, `QUERY_TIMEOUT_CONFIRM_SECONDS`). Respondeu: falha só a unidade e o porteiro segue `up` (0 falhas). Não respondeu: `down`
+  como antes. Código em `resilient-database.ts` (`confirmQueryTimeout`) e `connection-gate.ts` (`registerFailure`, `reopen`
+  exportados; `recordFailure` não trata mais o teto).
+- **Dublê `flaky-sql`:** modo novo `SLOW` (banco vivo, consulta lenta; `SELECT 1` e `begin` passam) e `setStatementTimeout` (a
+  consulta lenta cai em 57014). Contratos em `test/database-resilient.contract.test.ts`: lenta além do teto do cliente = falha só da
+  unidade, `up`; abortada pelo servidor = erro da consulta (`errno 57014`), 1 cliente, sem `down`; conexão muda com banco vivo (HUNG) =
+  `up`; banco que não responde nem ao cliente novo (FROZEN) = `down`. `test/database-statement-timeout.contract.test.ts` prende a conta
+  (30→25 s, 300→295 s, 600→595 s, 6/5/3/1→1 s).
+- **Mutantes:** 6 novos (`TIMEOUT_GOES_DOWN_WITHOUT_CONFIRMING`, `CONFIRMATION_ALWAYS_SAYS_ALIVE`, `CONFIRMATION_ON_THE_MUTE_CLIENT`,
+  `QUERY_CANCELED_IS_A_CONNECTION_FAILURE`, `STATEMENT_TIMEOUT_WITHOUT_MARGIN`, `STATEMENT_TIMEOUT_WITHOUT_FLOOR`); os de reabertura
+  (`NEVER_REOPENS_AFTER_THE_THRESHOLD`, `TIMEOUT_DOES_NOT_REOPEN`, `THRESHOLD_OFF_BY_ONE`) foram reescritos para o código novo. O
+  contrato de achado 5 ganhou o caso "unidades que falham com CLOSED por causa do próprio `close()`" (o `close` rejeita as pendentes e
+  duas falhas seguidas reabririam o cliente).
+- ADR 0002 (R1, R4, R5) e CLAUDE.md (item 1 da spec 006) atualizados.

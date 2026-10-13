@@ -5,10 +5,12 @@ import {
   CONNECTION_TIMEOUT_SECONDS,
   DEFAULT_QUERY_TIMEOUT_SECONDS,
   MILLISECONDS_PER_SECOND,
+  QUERY_TIMEOUT_CONFIRM_SECONDS,
   RECONNECT_BASE_MILLISECONDS,
   RECONNECT_FAILURE_THRESHOLD,
   RECONNECT_MAX_MILLISECONDS,
 } from './connection/connection.constant.js';
+import { computeStatementTimeoutMilliseconds } from './connection/statement-timeout.js';
 import { createResilientDatabase } from './connection/resilient-database.js';
 import type { DatabaseHealth, ResilientDatabase } from './connection/resilient-database.types.js';
 import type { SqlClient } from './connection/sql-client.types.js';
@@ -29,15 +31,26 @@ export type OpenDatabaseOptions = {
   // contra ela E contra o nome do servidor. Sem ela, vale a loja de CAs do sistema.
   readonly sslRootCertificate?: string | undefined;
   // Teto de tempo por unidade de trabalho (consulta avulsa ou transação inteira); vencido, a unidade falha e o cliente é reaberto.
+  // O `statement_timeout` do servidor usa este valor menos 5 s (piso de 1 s).
   readonly queryTimeoutSeconds?: number | undefined;
 };
 
-function openBunClient(databaseUrl: string, options: OpenDatabaseOptions): SqlClient {
-  const connectionTimeout = CONNECTION_TIMEOUT_SECONDS;
+function openBunClient(
+  databaseUrl: string,
+  options: OpenDatabaseOptions,
+  queryTimeoutSeconds: number,
+): SqlClient {
+  const common = {
+    connectionTimeout: CONNECTION_TIMEOUT_SECONDS,
+    // O servidor aborta a consulta lenta antes do teto do cliente: ela falha com 57014 e não passa por "banco fora".
+    connection: {
+      statement_timeout: String(computeStatementTimeoutMilliseconds(queryTimeoutSeconds)),
+    },
+  };
   return options.sslRootCertificate === undefined
-    ? new Bun.SQL(databaseUrl, { connectionTimeout })
+    ? new Bun.SQL(databaseUrl, common)
     : new Bun.SQL(databaseUrl, {
-        connectionTimeout,
+        ...common,
         tls: { ca: options.sslRootCertificate, rejectUnauthorized: true },
       });
 }
@@ -48,8 +61,9 @@ export function openDatabase(
 ): DatabaseHandle {
   const queryTimeoutSeconds = options.queryTimeoutSeconds ?? DEFAULT_QUERY_TIMEOUT_SECONDS;
   const connection = createResilientDatabase({
-    openClient: () => openBunClient(databaseUrl, options),
+    openClient: () => openBunClient(databaseUrl, options, queryTimeoutSeconds),
     queryTimeoutMilliseconds: queryTimeoutSeconds * MILLISECONDS_PER_SECOND,
+    confirmTimeoutMilliseconds: QUERY_TIMEOUT_CONFIRM_SECONDS * MILLISECONDS_PER_SECOND,
     now: () => Date.now(),
     random: () => Math.random(),
     failureThreshold: RECONNECT_FAILURE_THRESHOLD,

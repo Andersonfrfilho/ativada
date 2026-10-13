@@ -4,6 +4,7 @@ import type * as ConnectionErrorModule from '../../../packages/database/src/conn
 import type * as OutageLogModule from '../../../packages/database/src/connection/outage-log.js';
 import type * as ResilientModule from '../../../packages/database/src/connection/resilient-database.js';
 import type * as SafeFieldsModule from '../../../packages/database/src/connection/safe-error-fields.js';
+import type * as StatementTimeoutModule from '../../../packages/database/src/connection/statement-timeout.js';
 
 const PRODUCTION_SOURCE = new URL('../../../packages/database/src', import.meta.url).pathname;
 
@@ -17,6 +18,7 @@ export type DatabaseConnectionApi = {
   readonly outageLog: typeof OutageLogModule;
   readonly resilient: typeof ResilientModule;
   readonly safeFields: typeof SafeFieldsModule;
+  readonly statementTimeout: typeof StatementTimeoutModule;
 };
 
 export function resolveDatabaseConnectionSource(): string {
@@ -35,5 +37,6 @@ export async function loadDatabaseConnectionApi(): Promise<DatabaseConnectionApi
     outageLog: await load('connection/outage-log'),
     resilient: await load('connection/resilient-database'),
     safeFields: await load('connection/safe-error-fields'),
+    statementTimeout: await load('connection/statement-timeout'),
   };
 }

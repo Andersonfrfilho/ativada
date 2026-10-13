@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { DATABASE_UNAVAILABLE_CODE } from './connection.constant.js';
-import { DatabaseUnavailableError } from './connection-error.js';
+import { DatabaseUnavailableError, isQueryTimeout } from './connection-error.js';
 import {
   admit,
   closeAllClients,
@@ -8,8 +8,11 @@ import {
   createGate,
   readGateHealth,
   recordFailure,
+  registerFailure,
+  reopen,
   recordSuccess,
   type Gate,
+  type Slot,
   type Unit,
 } from './connection-gate.js';
 import type { ResilientDatabase, ResilientDatabaseSettings } from './resilient-database.types.js';
@@ -47,6 +50,40 @@ function raceWithTimeout<TResult>(params: TimeoutRaceParams<TResult>): Promise<T
   });
 }
 
+// A conexão do cliente não respondeu dentro do teto. Reabre e pergunta ao banco por um cliente novo: se ele responde, só a
+// unidade falha (conexão muda, banco vivo); se não, o banco está fora (R4).
+async function confirmQueryTimeout(gate: Gate, slot: Slot, error: unknown): Promise<void> {
+  if (gate.isClosed || slot !== gate.current) return;
+  reopen(gate);
+  const fresh = gate.current;
+  const isAlive = await pingClient(fresh.client, gate.settings.confirmTimeoutMilliseconds);
+  if (fresh !== gate.current) return;
+  if (isAlive) recordSuccess(gate, fresh);
+  else registerFailure(gate, error);
+}
+
+async function pingClient(client: SqlClient, milliseconds: number): Promise<boolean> {
+  try {
+    await raceWithTimeout({
+      start: () => client.unsafe('SELECT 1'),
+      milliseconds,
+      onTimeout: noop,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function noop(): void {
+  // O ping não tem unidade para abandonar.
+}
+
+async function settleFailure(gate: Gate, slot: Slot, error: unknown): Promise<void> {
+  if (isQueryTimeout(error)) await confirmQueryTimeout(gate, slot, error);
+  else recordFailure(gate, slot, error);
+}
+
 // Uma unidade = uma consulta avulsa ou uma transação inteira, sempre no cliente atual (a que já está no velho termina nele).
 async function runUnit<TResult>(
   gate: Gate,
@@ -67,7 +104,7 @@ async function runUnit<TResult>(
     recordSuccess(gate, slot);
     return result;
   } catch (error: unknown) {
-    recordFailure(gate, slot, error);
+    await settleFailure(gate, slot, error);
     throw error;
   } finally {
     slot.units.delete(unit);

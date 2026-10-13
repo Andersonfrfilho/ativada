@@ -20,6 +20,8 @@ const BACKOFF_BASE = 1_000;
 const BACKOFF_MAX = 30_000;
 const SETTLE_MILLISECONDS = 10;
 const LONG_TIMEOUT_MILLISECONDS = 100;
+const CONFIRM_MILLISECONDS = 25;
+const STATEMENT_TIMEOUT_MILLISECONDS = 10;
 
 type Harness = {
   readonly server: FlakyServer;
@@ -36,6 +38,7 @@ function createHarness(options: HarnessOptions = {}): Harness {
   const database = createResilientDatabase({
     openClient: () => server.openClient(),
     queryTimeoutMilliseconds: options.timeoutMilliseconds ?? TIMEOUT_MILLISECONDS,
+    confirmTimeoutMilliseconds: CONFIRM_MILLISECONDS,
     now: () => clock,
     random: () => options.random ?? 0,
     failureThreshold: 2,
@@ -216,6 +219,7 @@ describe('ResilientDatabase: down, fail fast, one probe, up', () => {
     server.setMode(FLAKY_MODE.HUNG);
     advance(500);
     expectUnavailable(await capture(database.unsafe('probe')), 'DATABASE_QUERY_TIMEOUT');
+    expect(database.readHealth().state).toBe('up');
     server.setMode(FLAKY_MODE.HEALTHY);
     advance(1_000);
     expect(await database.unsafe('next')).toStrictEqual(FLAKY_ROWS);
@@ -224,12 +228,22 @@ describe('ResilientDatabase: down, fail fast, one probe, up', () => {
 });
 
 describe('ResilientDatabase: the time cap per unit', () => {
-  test('a mute connection times out, reopens at once and the next unit goes to the new client', async () => {
-    const { server, database, advance } = createHarness();
+  test('a mute connection times out and reopens at once; the new client answers the check, so the database is NOT down', async () => {
+    const { server, database } = createHarness();
     server.setMode(FLAKY_MODE.HUNG);
     expectUnavailable(await capture(database.unsafe('stuck')), 'DATABASE_QUERY_TIMEOUT');
     expect(server.clients).toHaveLength(2);
     expect(server.clients[0]?.isClosed()).toBe(true);
+    expect(server.clients[1]?.executed).toStrictEqual(['SELECT 1']);
+    expect(database.readHealth()).toMatchObject({ state: 'up', consecutiveFailures: 0 });
+    expect(await database.unsafe('fresh')).toStrictEqual(FLAKY_ROWS);
+    expect(server.clients[1]?.executed).toStrictEqual(['SELECT 1', 'fresh']);
+  });
+
+  test('a database that answers nothing to the check either goes down with the timeout as the last failure', async () => {
+    const { server, database, advance } = createHarness();
+    server.setMode(FLAKY_MODE.FROZEN);
+    expectUnavailable(await capture(database.unsafe('stuck')), 'DATABASE_QUERY_TIMEOUT');
     expect(database.readHealth()).toMatchObject({
       state: 'down',
       consecutiveFailures: 1,
@@ -238,8 +252,33 @@ describe('ResilientDatabase: the time cap per unit', () => {
     server.setMode(FLAKY_MODE.HEALTHY);
     advance(500);
     expect(await database.unsafe('fresh')).toStrictEqual(FLAKY_ROWS);
-    expect(server.clients[1]?.executed).toStrictEqual(['fresh']);
     expect(database.readHealth().state).toBe('up');
+  });
+
+  test('a slow query over the client cap fails alone: the check passes, the database stays up and the next unit works', async () => {
+    const { server, database } = createHarness();
+    server.setMode(FLAKY_MODE.SLOW);
+    expectUnavailable(await capture(database.unsafe('heavy')), 'DATABASE_QUERY_TIMEOUT');
+    expect(database.readHealth()).toMatchObject({ state: 'up', consecutiveFailures: 0 });
+    server.setMode(FLAKY_MODE.HEALTHY);
+    expect(await database.unsafe('light')).toStrictEqual(FLAKY_ROWS);
+    expect(database.readHealth().state).toBe('up');
+  });
+
+  test('a slow query aborted by the server statement_timeout (57014) is a query error: no down, no reopen, no client timer', async () => {
+    const { server, database } = createHarness();
+    server.setStatementTimeout(STATEMENT_TIMEOUT_MILLISECONDS);
+    server.setMode(FLAKY_MODE.SLOW);
+    expectDriverCode(await capture(database.unsafe('heavy')), 'ERR_POSTGRES_SERVER_ERROR');
+    const thrown = await capture(
+      database.begin(async (transaction) => {
+        await transaction.unsafe('heavy');
+      }),
+    );
+    expect(thrown).toMatchObject({ errno: '57014' });
+    expect(thrown).not.toBeInstanceOf(DatabaseUnavailableError);
+    expect(server.clients).toHaveLength(1);
+    expect(database.readHealth()).toMatchObject({ state: 'up', consecutiveFailures: 0 });
   });
 
   test('a transaction that overruns the cap fails with the timeout and reopens at once', async () => {
@@ -252,6 +291,7 @@ describe('ResilientDatabase: the time cap per unit', () => {
     );
     expectUnavailable(failure, 'DATABASE_QUERY_TIMEOUT');
     expect(server.clients).toHaveLength(2);
+    expect(database.readHealth().state).toBe('down');
   });
 
   test('R7: a unit that overran the cap reports the failure even if the server applied it; what the old client says later is ignored', async () => {
@@ -374,6 +414,18 @@ describe('ResilientDatabase: close', () => {
     expectUnavailable(await transaction, 'DATABASE_QUERY_TIMEOUT');
   });
 
+  test('after close, units that fail with CLOSED because of the close itself never reopen a client', async () => {
+    const { server, database } = createHarness({ timeoutMilliseconds: LONG_TIMEOUT_MILLISECONDS });
+    server.hold();
+    const first = capture(database.unsafe('first'));
+    const second = capture(database.unsafe('second'));
+    await settle();
+    await database.close();
+    expectDriverCode(await first, 'ERR_POSTGRES_CONNECTION_CLOSED');
+    expectDriverCode(await second, 'ERR_POSTGRES_CONNECTION_CLOSED');
+    expect(server.clients).toHaveLength(1);
+  });
+
   test('after close the gate admits nothing and never opens a client again, not even for a late unit that overruns the cap', async () => {
     const { server, database } = createHarness({ timeoutMilliseconds: LONG_TIMEOUT_MILLISECONDS });
     const late = capture(database.begin(() => new Promise<void>(() => undefined)));
@@ -397,6 +449,7 @@ describe('classification of connection failures (ADR 0002, R1)', () => {
     ['ERR_POSTGRES_EXPECTED_REQUEST', undefined],
     ['ERR_POSTGRES_CONNECTION_CLOSED', undefined],
     ['ERR_POSTGRES_CONNECTION_REFUSED', undefined],
+    ['DATABASE_QUERY_TIMEOUT', undefined],
     ['ERR_POSTGRES_SERVER_ERROR', '08006'],
     ['ERR_POSTGRES_SERVER_ERROR', '08001'],
     ['ERR_POSTGRES_SERVER_ERROR', '57P01'],
@@ -410,6 +463,7 @@ describe('classification of connection failures (ADR 0002, R1)', () => {
   test.each([
     ['ERR_POSTGRES_SERVER_ERROR', '23505'],
     ['ERR_POSTGRES_SERVER_ERROR', '53300'],
+    ['ERR_POSTGRES_SERVER_ERROR', '57014'],
     ['ERR_POSTGRES_SERVER_ERROR', undefined],
   ])('%s %s is an error of the query, not of the connection', (code, errno) => {
     expect(isDatabaseConnectionFailure(new FlakyPostgresError(code, errno))).toBe(false);

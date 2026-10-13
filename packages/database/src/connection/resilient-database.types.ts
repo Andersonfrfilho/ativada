@@ -19,6 +19,8 @@ export type ResilientDatabaseSettings = {
   readonly openClient: () => SqlClient;
   // Teto por unidade de trabalho (consulta avulsa ou transação inteira).
   readonly queryTimeoutMilliseconds: number;
+  // Teto do `SELECT 1` em cliente novo que confirma se o banco responde quando o teto acima estoura.
+  readonly confirmTimeoutMilliseconds: number;
   readonly now: () => number;
   // Sorteio em [0, 1] do backoff; entra de fora para os testes não dependerem de `Math.random`.
   readonly random: () => number;

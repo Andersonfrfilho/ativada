@@ -9,7 +9,6 @@ import {
   DatabaseUnavailableError,
   isDatabaseConnectionFailure,
   isFailFastRejection,
-  isQueryTimeout,
 } from './connection-error.js';
 import { computeBackoff } from './reconnect-backoff.js';
 import type { DatabaseHealth, ResilientDatabaseSettings } from './resilient-database.types.js';
@@ -83,7 +82,7 @@ export function closeIfIdle(gate: Gate, slot: Slot): void {
   void closeClient(slot.client);
 }
 
-function reopen(gate: Gate): void {
+export function reopen(gate: Gate): void {
   if (gate.isClosed) return;
   const previous = gate.current;
   gate.current = createSlot(gate.settings.openClient());
@@ -113,11 +112,8 @@ export function recordSuccess(gate: Gate, slot: Slot): void {
   status.nextAttemptAt = undefined;
 }
 
-// Só conta a falha de conexão do cliente atual: erro de consulta, falha rápida do próprio porteiro e eco de um cliente
-// já aposentado não mexem no estado.
-export function recordFailure(gate: Gate, slot: Slot, error: unknown): void {
-  if (slot !== gate.current) return;
-  if (!isDatabaseConnectionFailure(error) || isFailFastRejection(error)) return;
+// Registra uma falha de conexão: vai a `down` na primeira e agenda a próxima tentativa com backoff.
+export function registerFailure(gate: Gate, error: unknown): void {
   const { status, settings } = gate;
   const now = settings.now();
   const fields = readSafeErrorFields(error);
@@ -137,7 +133,15 @@ export function recordFailure(gate: Gate, slot: Slot, error: unknown): void {
       maxMilliseconds: settings.reconnectMaxMilliseconds,
       random: settings.random(),
     });
-  if (isQueryTimeout(error) || status.failures >= settings.failureThreshold) reopen(gate);
+}
+
+// Só conta a falha de conexão do cliente atual: erro de consulta, falha rápida do próprio porteiro e eco de um cliente
+// já aposentado não mexem no estado. O estouro do teto do cliente não passa por aqui: ele pede confirmação antes (R4).
+export function recordFailure(gate: Gate, slot: Slot, error: unknown): void {
+  if (slot !== gate.current) return;
+  if (!isDatabaseConnectionFailure(error) || isFailFastRejection(error)) return;
+  registerFailure(gate, error);
+  if (gate.status.failures >= gate.settings.failureThreshold) reopen(gate);
 }
 
 export function readGateHealth(gate: Gate): DatabaseHealth {

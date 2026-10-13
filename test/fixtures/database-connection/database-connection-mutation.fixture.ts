@@ -14,6 +14,7 @@ export const DATABASE_CONNECTION_MUTANT_TARGET: MutantTarget = {
     'test/database-reconnect-backoff.contract.test.ts',
     'test/database-resilient.contract.test.ts',
     'test/database-outage-log.contract.test.ts',
+    'test/database-statement-timeout.contract.test.ts',
   ],
   sourceVariable: DATABASE_CONNECTION_SOURCE_VARIABLE,
   judgeTimeoutMilliseconds: 120_000,

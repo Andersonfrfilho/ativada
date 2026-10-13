@@ -21,8 +21,15 @@ const CONNECTION_ERROR = `${CONNECTION}/connection-error.ts`;
 const OUTAGE_LOG = `${CONNECTION}/outage-log.ts`;
 const SAFE_FIELDS = `${CONNECTION}/safe-error-fields.ts`;
 const CONSTANT = `${CONNECTION}/connection.constant.ts`;
-const REOPEN_LINE =
-  'if (isQueryTimeout(error) || status.failures >= settings.failureThreshold) reopen(gate);';
+const STATEMENT_TIMEOUT = `${CONNECTION}/statement-timeout.ts`;
+const TIMEOUT_CONFIRMATION =
+  '  if (isAlive) recordSuccess(gate, fresh);\n  else registerFailure(gate, error);\n';
+const TIMEOUT_REOPEN = '  reopen(gate);\n  const fresh = gate.current;\n';
+const CONFIRMATION_CLIENT = 'await pingClient(fresh.client,';
+const CONFIRMATION_FAILURE = '  } catch {\n    return false;\n  }\n';
+const CONNECTION_SQLSTATES = '57P0[123]';
+const THRESHOLD_REOPEN_LINE =
+  '  if (gate.status.failures >= gate.settings.failureThreshold) reopen(gate);\n';
 const ADMIT_LINE = 'if (status.isProbing || isBeforeNextAttempt) {';
 const CLASSIFY_LINE =
   'if (!isDatabaseConnectionFailure(error) || isFailFastRejection(error)) return;';
@@ -51,25 +58,56 @@ const QUERY_CEILING_MUTANTS: readonly SourceMutant[] = [
   },
 ];
 
+const CONFIRMATION_MUTANTS: readonly SourceMutant[] = [
+  {
+    name: 'TIMEOUT_GOES_DOWN_WITHOUT_CONFIRMING',
+    edits: edit(RESILIENT, TIMEOUT_CONFIRMATION, '  registerFailure(gate, error);\n'),
+  },
+  {
+    name: 'CONFIRMATION_ALWAYS_SAYS_ALIVE',
+    edits: edit(RESILIENT, CONFIRMATION_FAILURE, '  } catch {\n    return true;\n  }\n'),
+  },
+  {
+    name: 'CONFIRMATION_ON_THE_MUTE_CLIENT',
+    edits: edit(RESILIENT, CONFIRMATION_CLIENT, 'await pingClient(slot.client,'),
+  },
+  {
+    name: 'QUERY_CANCELED_IS_A_CONNECTION_FAILURE',
+    edits: edit(CONNECTION_ERROR, CONNECTION_SQLSTATES, '57(P0[123]|014)'),
+  },
+  {
+    name: 'STATEMENT_TIMEOUT_WITHOUT_MARGIN',
+    edits: edit(
+      CONSTANT,
+      'STATEMENT_TIMEOUT_MARGIN_SECONDS = 5',
+      'STATEMENT_TIMEOUT_MARGIN_SECONDS = 0',
+    ),
+  },
+  {
+    name: 'STATEMENT_TIMEOUT_WITHOUT_FLOOR',
+    edits: edit(
+      STATEMENT_TIMEOUT,
+      '    MINIMUM_STATEMENT_TIMEOUT_SECONDS,\n    queryTimeoutSeconds',
+      '    0,\n    queryTimeoutSeconds',
+    ),
+  },
+];
+
 const REOPEN_MUTANTS: readonly SourceMutant[] = [
   {
     name: 'NEVER_REOPENS_AFTER_THE_THRESHOLD',
-    edits: edit(GATE, REOPEN_LINE, 'if (isQueryTimeout(error)) reopen(gate);'),
+    edits: edit(GATE, THRESHOLD_REOPEN_LINE, ''),
   },
   {
     name: 'TIMEOUT_DOES_NOT_REOPEN',
-    edits: edit(
-      GATE,
-      REOPEN_LINE,
-      'if (status.failures >= settings.failureThreshold) reopen(gate);',
-    ),
+    edits: edit(RESILIENT, TIMEOUT_REOPEN, '  const fresh = gate.current;\n'),
   },
   {
     name: 'THRESHOLD_OFF_BY_ONE',
     edits: edit(
       GATE,
-      'status.failures >= settings.failureThreshold',
-      'status.failures > settings.failureThreshold',
+      'gate.status.failures >= gate.settings.failureThreshold',
+      'gate.status.failures > gate.settings.failureThreshold',
     ),
   },
   {
@@ -298,6 +336,7 @@ const LOG_MUTANTS: readonly SourceMutant[] = [
 
 const MUTANTS: readonly SourceMutant[] = [
   ...QUERY_CEILING_MUTANTS,
+  ...CONFIRMATION_MUTANTS,
   ...REOPEN_MUTANTS,
   ...IN_FLIGHT_MUTANTS,
   ...CLOSE_MUTANTS,

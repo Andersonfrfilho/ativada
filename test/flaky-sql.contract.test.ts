@@ -161,6 +161,18 @@ describe('flaky-sql: modes and the errors they imitate', () => {
     expect(await stuck).toBe(PENDING_MARK);
   });
 
+  test('slow: every query but SELECT 1 and begin hangs; with a statement timeout it fails with 57014 in errno, and SELECT 1 answers', async () => {
+    const { server, client } = openAgainst();
+    server.setMode(FLAKY_MODE.SLOW);
+    expect(await client.unsafe('SELECT 1')).toStrictEqual(FLAKY_ROWS);
+    expect(await settleOrPending(client.unsafe('select heavy'))).toBe(PENDING_MARK);
+    server.setStatementTimeout(5);
+    const error = await captureError(client.unsafe('select heavy'));
+    expectDriverError(error, 'ERR_POSTGRES_SERVER_ERROR', '57014');
+    server.setMode(FLAKY_MODE.HEALTHY);
+    expect(await client.unsafe('select heavy')).toStrictEqual(FLAKY_ROWS);
+  });
+
   test('close() rejects what is pending on that client with CLOSED and records the timeout', async () => {
     const { server, client } = openAgainst();
     server.setMode(FLAKY_MODE.HUNG);
