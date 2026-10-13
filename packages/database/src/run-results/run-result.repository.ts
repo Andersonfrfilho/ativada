@@ -13,6 +13,8 @@ import {
 import { listEquityPoints, listFills, listOrders, listSignals } from './run-result-list.js';
 import { listRunLog } from './run-log-list.js';
 import { listFillsOfPositions } from './run-fill-list.js';
+import { countFillsInRange, listFillClusters, listFillMarkers } from './run-fill-markers.js';
+import { listPriceColumns } from './run-price-columns.js';
 import { listPositions } from './run-position-list.js';
 import { listSurvivalPoints } from './run-survival-points.js';
 import { listWindows } from './run-window-list.js';
@@ -74,6 +76,33 @@ function lister<TItem, TCursor, TParams extends ListResultsParams<TCursor>>(
   };
 }
 
+type ChartReaders = Pick<
+  RunResultRepository,
+  'listPriceColumns' | 'listFillMarkers' | 'countFillsInRange' | 'listFillClusters'
+>;
+
+// As leituras do gráfico: cada uma confere o dono da execução antes de ler.
+function createChartReaders(database: Database): ChartReaders {
+  return {
+    listPriceColumns: async (scope, runId, params) =>
+      (await isOwnedRun(database, scope, runId))
+        ? listPriceColumns({ executor: database, params })
+        : undefined,
+    listFillMarkers: async (scope, runId, params) =>
+      (await isOwnedRun(database, scope, runId))
+        ? listFillMarkers({ executor: database, scope, runId, params })
+        : undefined,
+    countFillsInRange: async (scope, runId, range) =>
+      (await isOwnedRun(database, scope, runId))
+        ? countFillsInRange({ executor: database, scope, runId, params: range })
+        : undefined,
+    listFillClusters: async (scope, runId, params) =>
+      (await isOwnedRun(database, scope, runId))
+        ? listFillClusters({ executor: database, scope, runId, params })
+        : undefined,
+  };
+}
+
 export function createRunResultRepository(handle: DatabaseHandle): RunResultRepository {
   const { database } = readOpenDatabase(handle);
   return {
@@ -99,6 +128,7 @@ export function createRunResultRepository(handle: DatabaseHandle): RunResultRepo
       if (!(await isOwnedRun(database, scope, runId))) return undefined;
       return listFillsOfPositions({ executor: database, scope, runId, positionKeys });
     },
+    ...createChartReaders(database),
     listSurvivalPoints: async (
       scope,
       runId,

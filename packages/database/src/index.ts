@@ -114,6 +114,15 @@ export {
   type PositionStatus,
   type WalkForwardWindowStatus,
 } from './run-results/run-result.constant.js';
+export type {
+  FillClusterBucket,
+  FillClustersParams,
+  FillCounts,
+  FillMarkerInput,
+  FillMarkersParams,
+  PriceColumn,
+  PriceColumnsParams,
+} from './run-results/run-chart.types.js';
 export type { RunLogCursor, RunLogEntry } from './run-results/run-log.types.js';
 export { createRunBatchRepository } from './run-results/run-batch.repository.js';
 export type * from './run-results/run-batch.types.js';

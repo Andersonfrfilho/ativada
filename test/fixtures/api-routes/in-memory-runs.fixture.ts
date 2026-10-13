@@ -7,6 +7,7 @@ import type {
   EquityPointInput,
   FillCursor,
   FillInput,
+  FillMarkerInput,
   ListPositionsParams,
   ListResultsParams,
   OrderCursor,
@@ -25,6 +26,7 @@ import type {
   WalkForwardWindowInput,
 } from '../../../packages/database/src/index.js';
 import type { OwnerScope } from '../../../packages/database/src/ownership/owner-scope.js';
+import { referenceFillClusters, referencePriceColumns } from '../run-chart/chart-oracle.fixture.js';
 import type { UserId } from '../../../packages/database/src/ownership/user-id.js';
 import {
   RUN_STATUS,
@@ -64,6 +66,10 @@ export type InMemoryRuns = {
     | 'listFills'
     | 'listPositions'
     | 'listFillsOfPositions'
+    | 'listPriceColumns'
+    | 'listFillMarkers'
+    | 'countFillsInRange'
+    | 'listFillClusters'
     | 'listEquityPoints'
     | 'listWindows'
     | 'listLog'
@@ -73,6 +79,8 @@ export type InMemoryRuns = {
   readonly listCalls: Record<ResultKind | 'log', number[]>;
   // As chaves de posição de cada leitura de preenchimentos: prova que a página inteira vai numa consulta só.
   readonly fillLookups: (readonly string[])[];
+  // Quantas vezes cada leitura do gráfico rodou: prova que os marcadores só são lidos até o limite.
+  readonly chartCalls: { columns: number; markers: number; counts: number; clusters: number };
   // Quantas linhas cada leitura da sobrevivência devolveu: o custo não pode crescer com a série.
   readonly survivalRowsRead: number[];
   readonly seed: <TKind extends ResultKind>(
@@ -112,6 +120,8 @@ export function createInMemoryRuns(
   strategies: Pick<StrategyRepository, 'findVersion'>,
   // Chamado quando uma execução fica atrelada a uma meta: a FK RESTRICT do banco, que impede apagar a meta.
   onGoalLinked: (goalId: string) => void = () => undefined,
+  // As velas que o preço do gráfico lê (a mesma semente do repositório de velas do harness).
+  candleSeed: readonly CandleRecord[] = [],
 ): InMemoryRuns {
   const runs: StoredRun[] = [];
   const stores = new Map<string, ResultStore>();
@@ -126,6 +136,7 @@ export function createInMemoryRuns(
   };
   const survivalRowsRead: number[] = [];
   const fillLookups: (readonly string[])[] = [];
+  const chartCalls = { columns: 0, markers: 0, counts: 0, clusters: 0 };
   let sequence = 0;
 
   const ownedRun = (scope: OwnerScope, runId: string): StoredRun | undefined =>
@@ -437,7 +448,71 @@ export function createInMemoryRuns(
     );
   };
 
+  const isFillInRange = (fill: FillInput, range: { from: number; to: number }): boolean =>
+    fill.candleTime >= range.from && fill.candleTime < range.to;
+
+  const listPriceColumns: InMemoryRuns['results']['listPriceColumns'] = (scope, runId, params) => {
+    chartCalls.columns += 1;
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    const candles = candleSeed.filter(
+      (candle) =>
+        candle.exchange === params.exchange &&
+        candle.symbol === params.symbol &&
+        candle.timeframe === params.timeframe,
+    );
+    return Promise.resolve(
+      referencePriceColumns({ candles, range: params.range, columns: params.columns }),
+    );
+  };
+
+  const listFillMarkers: InMemoryRuns['results']['listFillMarkers'] = (scope, runId, params) => {
+    chartCalls.markers += 1;
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    const store = storeOf(runId);
+    const markers: FillMarkerInput[] = store.fills
+      .filter((fill) => isFillInRange(fill, params.range))
+      .sort(
+        (left, right) =>
+          left.candleTime - right.candleTime || (left.orderKey < right.orderKey ? -1 : 1),
+      )
+      .slice(0, params.limit)
+      .map((fill) => ({
+        ...fill,
+        netProfit:
+          fill.side === 'sell'
+            ? store.positions.find((position) => position.engineKey === fill.positionKey)?.netProfit
+            : undefined,
+      }));
+    return Promise.resolve(markers);
+  };
+
+  const countFillsInRange: InMemoryRuns['results']['countFillsInRange'] = (scope, runId, range) => {
+    chartCalls.counts += 1;
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    const inRange = storeOf(runId).fills.filter((fill) => isFillInRange(fill, range));
+    return Promise.resolve({
+      buys: inRange.filter((fill) => fill.side === 'buy').length,
+      sells: inRange.filter((fill) => fill.side === 'sell').length,
+    });
+  };
+
+  const listFillClusters: InMemoryRuns['results']['listFillClusters'] = (scope, runId, params) => {
+    chartCalls.clusters += 1;
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    return Promise.resolve(
+      referenceFillClusters({
+        fills: storeOf(runId).fills,
+        range: params.range,
+        columns: params.columns,
+      }),
+    );
+  };
+
   const results: InMemoryRuns['results'] = {
+    listPriceColumns,
+    listFillMarkers,
+    countFillsInRange,
+    listFillClusters,
     listLog,
     listSurvivalPoints,
     listSignals: lister<SignalInput, number>('signals', (store) => store.signals, {
@@ -475,6 +550,7 @@ export function createInMemoryRuns(
     results,
     listCalls,
     fillLookups,
+    chartCalls,
     survivalRowsRead,
     seed: (runId, kind, rows): void => {
       const store = storeOf(runId);

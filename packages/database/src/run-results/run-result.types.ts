@@ -1,6 +1,15 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { JsonContainer } from '../json-value.types.js';
 import type { OwnerScope } from '../ownership/owner-scope.js';
+import type {
+  FillClusterBucket,
+  FillClustersParams,
+  FillCounts,
+  FillMarkerInput,
+  FillMarkersParams,
+  PriceColumn,
+  PriceColumnsParams,
+} from './run-chart.types.js';
 import type { RunLogCursor, RunLogEntry } from './run-log.types.js';
 import type {
   CommandKind,
@@ -191,6 +200,27 @@ export type RunResultRepository = {
     runId: string,
     params: SurvivalPointsParams,
   ) => Promise<readonly SurvivalPointInput[] | undefined>;
+  // A leitura do gráfico de preço e operações (spec 005): sempre dentro do escopo do dono, `undefined` é execução alheia.
+  readonly listPriceColumns: (
+    scope: OwnerScope,
+    runId: string,
+    params: PriceColumnsParams,
+  ) => Promise<readonly PriceColumn[] | undefined>;
+  readonly listFillMarkers: (
+    scope: OwnerScope,
+    runId: string,
+    params: FillMarkersParams,
+  ) => Promise<readonly FillMarkerInput[] | undefined>;
+  readonly countFillsInRange: (
+    scope: OwnerScope,
+    runId: string,
+    range: TimeRange,
+  ) => Promise<FillCounts | undefined>;
+  readonly listFillClusters: (
+    scope: OwnerScope,
+    runId: string,
+    params: FillClustersParams,
+  ) => Promise<readonly FillClusterBucket[] | undefined>;
   // O registro cronológico (sinais, ordens e preenchimentos) por cursor, para o CSV do registro (RF12).
   readonly listLog: ListOf<RunLogEntry, RunLogCursor>;
 };

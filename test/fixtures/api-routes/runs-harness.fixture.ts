@@ -135,8 +135,12 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
   const jwks: JwksTestServer = startJwksTestServer([key]);
   const strategies = createInMemoryStrategies();
   const goals = createInMemoryGoals();
-  const runs = createInMemoryRuns(strategies.repository, (goalId) => goals.referenced.add(goalId));
   const candles = createInMemoryCandleSeries(options.candles ?? []);
+  const runs = createInMemoryRuns(
+    strategies.repository,
+    (goalId) => goals.referenced.add(goalId),
+    options.candles ?? [],
+  );
   const dispatched: RunDispatchRequest[] = [];
   const dispatch = { shouldFail: false };
   const failures = { candles: false, queuePosition: false };

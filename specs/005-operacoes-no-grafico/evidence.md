@@ -59,3 +59,37 @@ verdes em 16 arquivos (`api-run-trades`, `api-runs`, `api-run-series`, `api-run-
 
 Pendente: o filtro de faixa e `listFillsOfPositions` contra Postgres real entram na verificação do `make database-test`
 da T1.2 (Docker Desktop não sobe nesta máquina agora; ver evidência da T1.2).
+
+## T1.2 — Repositório do gráfico (2026-10-13, `sonnet`)
+
+Entrega (todas as leituras no escopo do dono: `isOwnedRun` antes de ler, `undefined` para execução alheia; sem migration):
+
+| Função (`RunResultRepository`) | Onde | O que faz |
+|---|---|---|
+| `listPriceColumns(scope, runId, params)` | `packages/database/src/run-results/run-price-columns.ts` | SQL do ADR O7: balde `((open_time - from) * columns) / (to - from)` em `bigint` parametrizado, `exchange` no WHERE, primeiro (abertura), último (fechamento), mínima e máxima por coluna, decimais com `trim_scale` (grafia canônica) |
+| `listFillMarkers(scope, runId, {range, limit})` | `run-fill-markers.ts` | preenchimentos da faixa em ordem `(candle_time, order_key)`, com o `net_profit` da posição só na venda |
+| `countFillsInRange(scope, runId, range)` | `run-fill-markers.ts` | `count(*) FILTER` de compras e vendas da faixa (dá o `totals` e decide marcadores ou agrupamentos) |
+| `listFillClusters(scope, runId, {range, columns})` | `run-fill-markers.ts` | o MESMO balde sobre `candle_time`, só os baldes com preenchimento |
+
+Oráculo puro (sem importar SQL nem produção, `bigint`): `test/fixtures/run-chart/chart-oracle.fixture.ts`, com contas à mão em
+`test/run-chart-oracle.contract.test.ts` (7 casos: balde com dízima, `to` excluído, coluna sem vela, grafia canônica).
+Os repositórios em memória do harness (`in-memory-runs.fixture.ts`) usam o oráculo e contam as chamadas (`chartCalls`).
+
+Verificação do SQL contra um Postgres de verdade, nesta máquina: o Docker Desktop não sobe agora ("Docker Desktop is unable to
+start"), então `make database-test` NÃO foi executado. No lugar, um script descartável (fora do repositório, em PGlite 0.5.9, o
+Postgres embutido) rodou as funções reais do repositório, via Drizzle, contra o oráculo:
+
+- preço: 3 séries sintéticas (dízima no balde, uma vela por coluna, faixa menor que as colunas) e 2 conjuntos reais
+  (`btcusdt-1h-500`, `ethusdt-1d-400`), 6 faixas/colunas cada (100, 800, 2.000, 137; faixa que começa 1 ms depois; metade da
+  série), 30 comparações: todas iguais;
+- agrupamento de preenchimentos (100 e 800 colunas), contagem, marcadores (ordem, limite, resultado só na venda), faixa de
+  posições e `status`, `listFillsOfPositions`: todos iguais, 0 falhas. O script achou um defeito real na primeira rodada:
+  `ORDER BY bucket` com o alias `::text` ordenava por texto (10 antes de 2); corrigido para `ORDER BY bucketed.bucket`.
+
+A mesma verificação ficou como checagens do `make database-test` (`packages/database/test-support/run-chart-checks.ts`:
+`checkPriceColumns`, `checkFillMarkers`, `checkTradeFilters`, registradas em `database-test.ts`), com dono alheio recebendo
+`undefined` em todas as leituras. **PENDENTE:** rodar `make database-test` num Postgres descartável assim que o Docker Desktop
+estiver de pé.
+
+Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `prettier --check .` limpo; 294 testes verdes
+em 17 arquivos (os da T1.1 mais `run-chart-oracle`).
