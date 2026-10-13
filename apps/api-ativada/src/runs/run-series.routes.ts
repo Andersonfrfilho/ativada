@@ -10,13 +10,9 @@ import { invalidCursorError } from '../shared/pagination/page-query.schema.js';
 import { DEFAULT_PAGE_SIZE } from '../shared/pagination/pagination.constant.js';
 import { readPage } from '../shared/pagination/read-page.js';
 import type { RouteDocumentation } from '../openapi/route-documentation.types.js';
-import {
-  decodeFillCursor,
-  decodeOrderCursor,
-  decodePositionCursor,
-  decodeTimeCursor,
-} from './run-cursor.js';
+import { decodeFillCursor, decodeOrderCursor, decodeTimeCursor } from './run-cursor.js';
 import { readRunId } from './run-id.js';
+import { createRunTradesRoute } from './trades/run-trades.route.js';
 import { ORDERABLE_QUERY_SHAPE, RUN_SERIES_DOCUMENTATION } from './run-series.docs.js';
 import type {
   RunSeriesUseCase,
@@ -28,7 +24,6 @@ import {
   RUN_FILLS_PATH,
   RUN_ORDERS_PATH,
   RUN_SIGNALS_PATH,
-  RUN_TRADES_PATH,
   RUN_WINDOWS_PATH,
 } from './runs.constant.js';
 
@@ -99,12 +94,7 @@ function createOrderableRoutes(series: RunSeriesUseCases): readonly Route[] {
 export function createRunSeriesRoutes(series: RunSeriesUseCases): readonly Route[] {
   return [
     ...createOrderableRoutes(series),
-    createSeriesRoute({
-      path: RUN_TRADES_PATH,
-      useCase: series.trades,
-      decode: decodePositionCursor,
-      documentation: RUN_SERIES_DOCUMENTATION.trades,
-    }),
+    createRunTradesRoute(series.trades),
     createSeriesRoute({
       path: RUN_ORDERS_PATH,
       useCase: series.orders,

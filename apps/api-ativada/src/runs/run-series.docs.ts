@@ -2,7 +2,6 @@
 import { RESULT_ORDER } from '@ativada/database';
 import { z } from '@ativada/environment';
 import {
-  EXIT_REASON,
   ORDER_EVENT_REASON,
   ORDER_PURPOSE,
   ORDER_SIDE,
@@ -32,22 +31,6 @@ const EQUITY_SCHEMA = z.strictObject({
   equity: decimalTextSchema,
   equityAtLow: decimalTextSchema,
   benchmark: decimalTextSchema,
-});
-
-const TRADE_SCHEMA = z.strictObject({
-  engineKey: z.string(),
-  status: z.enum(['open', 'closed']),
-  entryPrice: decimalTextSchema,
-  quantity: decimalTextSchema,
-  stopPrice: decimalTextSchema,
-  targetPrice: decimalTextSchema,
-  entryFee: decimalTextSchema,
-  exitPrice: optionalDecimal,
-  exitFee: optionalDecimal,
-  netProfit: optionalDecimal,
-  exitReason: z.enum(EXIT_REASON).optional(),
-  openedCandleTime: epochMillisecondsSchema,
-  closedCandleTime: epochMillisecondsSchema.optional(),
 });
 
 const SIGNAL_SCHEMA = z.strictObject({
@@ -140,7 +123,6 @@ export const RUN_SERIES_DOCUMENTATION = {
     EQUITY_SCHEMA,
     true,
   ),
-  trades: series('Operações (posições abertas e fechadas), em ordem de abertura.', TRADE_SCHEMA),
   signals: series(
     'Sinais (compra, venda ou neutro) com votos e motivo (`order=desc` começa pelo mais recente).',
     SIGNAL_SCHEMA,

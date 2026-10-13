@@ -94,6 +94,7 @@ export type {
   EquityPointInput,
   FillCursor,
   FillInput,
+  ListPositionsParams,
   ListResultsParams,
   OrderCursor,
   OrderInput,
@@ -105,10 +106,12 @@ export type {
   SignalInput,
   SurvivalPointInput,
   SurvivalPointsParams,
+  TimeRange,
   WalkForwardWindowInput,
 } from './run-results/run-result.types.js';
 export {
   WALK_FORWARD_WINDOW_STATUS,
+  type PositionStatus,
   type WalkForwardWindowStatus,
 } from './run-results/run-result.constant.js';
 export type { RunLogCursor, RunLogEntry } from './run-results/run-log.types.js';

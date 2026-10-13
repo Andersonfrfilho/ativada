@@ -7,6 +7,7 @@ import type {
   EquityPointInput,
   FillCursor,
   FillInput,
+  ListPositionsParams,
   ListResultsParams,
   OrderCursor,
   OrderInput,
@@ -62,6 +63,7 @@ export type InMemoryRuns = {
     | 'listOrders'
     | 'listFills'
     | 'listPositions'
+    | 'listFillsOfPositions'
     | 'listEquityPoints'
     | 'listWindows'
     | 'listLog'
@@ -69,6 +71,8 @@ export type InMemoryRuns = {
   >;
   // Cada leitura de resultado anota o `limit` pedido: provam que a rota lê por página, nunca a série inteira.
   readonly listCalls: Record<ResultKind | 'log', number[]>;
+  // As chaves de posição de cada leitura de preenchimentos: prova que a página inteira vai numa consulta só.
+  readonly fillLookups: (readonly string[])[];
   // Quantas linhas cada leitura da sobrevivência devolveu: o custo não pode crescer com a série.
   readonly survivalRowsRead: number[];
   readonly seed: <TKind extends ResultKind>(
@@ -121,6 +125,7 @@ export function createInMemoryRuns(
     windows: [],
   };
   const survivalRowsRead: number[] = [];
+  const fillLookups: (readonly string[])[] = [];
   let sequence = 0;
 
   const ownedRun = (scope: OwnerScope, runId: string): StoredRun | undefined =>
@@ -394,6 +399,44 @@ export function createInMemoryRuns(
     );
   };
 
+  const isInRange = (time: number | undefined, range: { from: number; to: number }): boolean =>
+    time !== undefined && time >= range.from && time < range.to;
+
+  // Compra OU venda dentro de [from, to): a posição que atravessa a faixa sem preenchimento nela fica fora.
+  const matchesPositionFilter = (row: PositionInput, params: ListPositionsParams): boolean =>
+    (params.status === undefined || row.status === params.status) &&
+    (params.range === undefined ||
+      isInRange(row.openedCandleTime, params.range) ||
+      isInRange(row.closedCandleTime, params.range));
+
+  const listPositions: InMemoryRuns['results']['listPositions'] = (scope, runId, params) => {
+    listCalls.positions.push(params.limit);
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    const rows = storeOf(runId).positions.filter((row) => matchesPositionFilter(row, params));
+    return Promise.resolve(
+      pageOf(
+        rows,
+        params,
+        (row, cursor: PositionCursor) =>
+          row.openedCandleTime > cursor.openedCandleTime ||
+          (row.openedCandleTime === cursor.openedCandleTime && row.engineKey > cursor.engineKey),
+        (row) => ({ openedCandleTime: row.openedCandleTime, engineKey: row.engineKey }),
+      ),
+    );
+  };
+
+  const listFillsOfPositions: InMemoryRuns['results']['listFillsOfPositions'] = (
+    scope,
+    runId,
+    positionKeys,
+  ) => {
+    fillLookups.push(positionKeys);
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    return Promise.resolve(
+      storeOf(runId).fills.filter((fill) => positionKeys.includes(fill.positionKey)),
+    );
+  };
+
   const results: InMemoryRuns['results'] = {
     listLog,
     listSurvivalPoints,
@@ -423,18 +466,15 @@ export function createInMemoryRuns(
         (row.candleTime === cursor.candleTime && row.orderKey > cursor.orderKey),
       of: (row) => ({ candleTime: row.candleTime, orderKey: row.orderKey }),
     }),
-    listPositions: lister<PositionInput, PositionCursor>('positions', (store) => store.positions, {
-      isAfter: (row, cursor) =>
-        row.openedCandleTime > cursor.openedCandleTime ||
-        (row.openedCandleTime === cursor.openedCandleTime && row.engineKey > cursor.engineKey),
-      of: (row) => ({ openedCandleTime: row.openedCandleTime, engineKey: row.engineKey }),
-    }),
+    listPositions,
+    listFillsOfPositions,
   };
 
   return {
     repository,
     results,
     listCalls,
+    fillLookups,
     survivalRowsRead,
     seed: (runId, kind, rows): void => {
       const store = storeOf(runId);

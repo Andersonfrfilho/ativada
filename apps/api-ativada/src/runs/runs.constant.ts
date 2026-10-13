@@ -42,3 +42,11 @@ export const RUN_REASON = {
 
 export const INVALID_GRID_MESSAGE =
   'A grade é inválida: confira os caminhos, o tipo dos valores e o limite de parâmetros.';
+
+// Faixa de tempo das rotas de operações e do gráfico (ADR 0002, spec 005, O2).
+export const RUN_RANGE_FIELD = { FROM: 'from', TO: 'to' } as const;
+export const RUN_RANGE_REASON = {
+  MUST_BE_AFTER_FROM: 'must_be_after_from',
+  OUTSIDE_RUN: 'outside_run',
+} as const;
+export const TRADE_STATUS_FILTER = ['open', 'closed'] as const;
