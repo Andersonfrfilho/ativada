@@ -30,3 +30,11 @@ export function formatRelativeMoment(at: number, context: MomentContext): string
 export function describeZone(timeZone: string, instant: number): string {
   return timeZone === DEFAULT_TIME_ZONE ? BRASILIA_TEXT : zoneLabel(timeZone, instant);
 }
+
+// "14:05" quando é hoje; fora disso, o instante relativo ("14:05 de ontem" ou a data).
+export function formatMomentSkippingToday(at: number, context: MomentContext): string {
+  if (formatDayInZone(at, context.timeZone) === formatDayInZone(context.now, context.timeZone)) {
+    return formatTimeInZone(at, context.timeZone);
+  }
+  return formatRelativeMoment(at, context);
+}

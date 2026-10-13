@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 
 import { Card } from '../layout/Card.component.js';
 import controls from '../styles/Controls.module.css';
+import { LiveRunStatus } from './LiveRunStatus.component.js';
 import { RUN_STATUS, statusLabel } from './run.constant.js';
 import styles from './Runs.module.css';
 import { useStopRunMutation } from './runs.query.js';
@@ -16,6 +17,7 @@ export function RunProgressCard({ run }: RunProgressCardProps): ReactElement {
   return (
     <Card title="Andamento">
       <p className={styles.sub}>{statusLabel(run.status)}</p>
+      <LiveRunStatus run={run} />
       {run.status === RUN_STATUS.QUEUED && position !== null ? (
         <p>
           Posição na fila: {position.own} (de {position.overall} na fila geral)

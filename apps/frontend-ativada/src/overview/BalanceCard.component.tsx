@@ -4,18 +4,14 @@ import { Link } from 'react-router';
 
 import { ROUTE_PATH } from '../app/app.constant.js';
 import { Card } from '../layout/Card.component.js';
+import { LiveRunStatus } from '../runs/LiveRunStatus.component.js';
 import controls from '../styles/Controls.module.css';
 import { EquitySparkline } from './EquitySparkline.component.js';
 import styles from './Overview.module.css';
 import { RUN_STATUS } from './overview.constant.js';
 import type { RunDetail } from '../runs/run.validation.js';
 import type { EquityPoint, Signal } from './overview.validation.js';
-import {
-  computeChangeRatio,
-  formatChangePercent,
-  formatDateTime,
-  formatDecimal,
-} from '../format/format.js';
+import { computeChangeRatio, formatChangePercent, formatDecimal } from '../format/format.js';
 
 export type BalanceCardProps = {
   readonly run: RunDetail;
@@ -24,7 +20,6 @@ export type BalanceCardProps = {
 };
 
 function describeState(run: RunDetail): string {
-  if (run.waitingForData !== null) return 'Aguardando dados do mercado';
   return run.status === RUN_STATUS.RUNNING ? 'Rodando' : 'Na fila';
 }
 
@@ -73,16 +68,10 @@ export function BalanceCard({ run, points, signals }: BalanceCardProps): ReactEl
   const latest = points.at(-1);
   return (
     <Card title="Saldo da simulação">
-      <p className={styles.state}>
-        {describeState(run)}
-        {run.waitingForData === null ? null : (
-          <span className={controls.muted}> desde {formatDateTime(run.waitingForData.since)}</span>
-        )}
-      </p>
+      <p className={styles.state}>{describeState(run)}</p>
+      <LiveRunStatus run={run} />
       {latest === undefined ? (
-        <p className={controls.muted}>
-          Aguardando o primeiro candle fechado para calcular o saldo.
-        </p>
+        <p className={controls.muted}>O saldo aparece quando a primeira vela fechar.</p>
       ) : (
         <>
           <p className={styles.bigNumber}>

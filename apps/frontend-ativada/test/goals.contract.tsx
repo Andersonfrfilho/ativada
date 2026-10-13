@@ -581,7 +581,8 @@ describe('active goal on the overview', () => {
       ],
     });
     const card = await screen.findByRole('region', { name: 'Meta ativa' });
-    await waitFor(() => expect(card.textContent).toContain('Aguardando o primeiro candle'));
+    await waitFor(() => expect(card.textContent).toContain('Aguardando a primeira vela'));
+    expect(card.textContent).not.toMatch(/primeiro[ ]candle/);
   });
 
   test('no goal simulation means no card', async () => {

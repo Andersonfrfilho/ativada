@@ -66,6 +66,9 @@ export const runSchema = z.object({
   goalId: z.string().nullish(),
   goalOutcome: z.string().nullish(),
   stalledSince: z.number().optional(),
+  // Abertura da última vela processada; nula até o primeiro passo da simulação ao vivo.
+  lastCandleTime: z.number().nullish(),
+  startedAt: z.string().nullish(),
   createdAt: z.string(),
 });
 

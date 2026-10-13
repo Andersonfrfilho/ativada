@@ -5,7 +5,9 @@ import { Link } from 'react-router';
 import { formatChangePercent, formatPercent, formatSymbol } from '../format/format.js';
 import { Card } from '../layout/Card.component.js';
 import { useEquitySeriesQuery } from '../overview/overview.query.js';
-import type { Run } from '../overview/overview.validation.js';
+import type { EquityPoint, Run } from '../overview/overview.validation.js';
+import { LiveRunStatus } from '../runs/LiveRunStatus.component.js';
+import type { RunDetail } from '../runs/run.validation.js';
 import { useRunDetailQuery } from '../runs/runs.query.js';
 import controls from '../styles/Controls.module.css';
 import { FULL_PERCENT, GOAL_OUTCOME_TEXT } from './goal.constant.js';
@@ -49,11 +51,12 @@ function PaceBars({
 
 type ProgressViewProps = {
   readonly goal: Goal;
+  readonly detail: RunDetail;
   readonly outcome: string | undefined;
   readonly progress: GoalProgress | undefined;
 };
 
-function GoalProgressView({ goal, outcome, progress }: ProgressViewProps): ReactElement {
+function GoalProgressView({ goal, detail, outcome, progress }: ProgressViewProps): ReactElement {
   return (
     <>
       <p>
@@ -66,9 +69,8 @@ function GoalProgressView({ goal, outcome, progress }: ProgressViewProps): React
           <strong>{outcome}</strong>
         </p>
       )}
-      {progress === undefined ? (
-        <p className={controls.muted}>Aguardando o primeiro candle.</p>
-      ) : (
+      <LiveRunStatus run={detail} />
+      {progress === undefined ? null : (
         <PaceBars progress={progress} isFinished={outcome !== undefined} />
       )}
     </>
@@ -79,6 +81,37 @@ function readOutcomeText(run: Run): string | undefined {
   return run.goalOutcome === null || run.goalOutcome === undefined
     ? undefined
     : GOAL_OUTCOME_TEXT[run.goalOutcome];
+}
+
+type ProgressParams = {
+  readonly goal: Goal;
+  readonly run: Run;
+  readonly initialBalance: string;
+  readonly latest: EquityPoint | undefined;
+};
+
+function buildProgress({
+  goal,
+  run,
+  initialBalance,
+  latest,
+}: ProgressParams): GoalProgress | undefined {
+  if (latest === undefined) return undefined;
+  return computeGoalProgress({
+    ...goal,
+    initialBalance,
+    equity: latest.equity,
+    startTime: run.periodStart ?? Date.now(),
+    now: Date.now(),
+  });
+}
+
+function GoalLoadFailure(): ReactElement {
+  return (
+    <p role="alert" className={controls.error}>
+      Não foi possível carregar a meta. Tente novamente em instantes.
+    </p>
+  );
 }
 
 function GoalRunBody({
@@ -93,30 +126,20 @@ function GoalRunBody({
   const equity = useEquitySeriesQuery(run.id);
   const initialBalance =
     detail.data?.runParameters.initialBalance ?? detail.data?.survival?.initialBalance;
-  if (goal.isError || detail.isError || equity.isError) {
-    return (
-      <p role="alert" className={controls.error}>
-        Não foi possível carregar a meta. Tente novamente em instantes.
-      </p>
-    );
-  }
-  if (goal.data === undefined || initialBalance === undefined || equity.data === undefined) {
+  if (goal.isError || detail.isError || equity.isError) return <GoalLoadFailure />;
+  if (!goal.data || !detail.data || initialBalance === undefined || !equity.data) {
     return <p role="status">Carregando a meta…</p>;
   }
   const latest = equity.data.at(-1);
-  const progress =
-    latest === undefined
-      ? undefined
-      : computeGoalProgress({
-          ...goal.data,
-          initialBalance,
-          equity: latest.equity,
-          startTime: run.periodStart ?? Date.now(),
-          now: Date.now(),
-        });
+  const progress = buildProgress({ goal: goal.data, run, initialBalance, latest });
   return (
     <>
-      <GoalProgressView goal={goal.data} outcome={readOutcomeText(run)} progress={progress} />
+      <GoalProgressView
+        goal={goal.data}
+        detail={detail.data}
+        outcome={readOutcomeText(run)}
+        progress={progress}
+      />
       <GoalLink goalId={goalId} />
     </>
   );
