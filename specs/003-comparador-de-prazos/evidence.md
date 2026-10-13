@@ -229,3 +229,19 @@ horizon-intraday, backtest-use-case, backtest-continuity, api-openapi, code-size
 | Resposta inválida não renderiza (estado de erro padrão, sem a frase de recomendação); 500 mostra o mesmo erro | idem |
 
 **Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos; `panel-test`: 365 pass, 0 fail (31 arquivos).
+
+## T3.2 — Linhas por prazo, selo e estados (2026-10-12)
+
+**O que há.** `HorizonResults` (frase de recomendação do servidor + "Como ler" recolhível + linhas + aviso de lista cortada) dentro de um `Card`; `HorizonRows` (lista ordenada na ordem do servidor: 15 minutos, 7, 15 e 30 dias), `DailyHorizonRow` e `IntradayHorizonRow` (título do prazo, a frase do servidor exibida como veio, estratégia e versão, números), `DistributionFigures`/`HorizonFigure` (rótulos "Em geral", "Em quantas vezes deu positivo", "No pior caso", e o mesmo trio para "comprar e segurar"), `RecommendedBadge` (selo "✓ Recomendável": forma, texto e borda de 2 px, não só cor), `horizon-format.ts` (taxa em texto vira porcentagem por `BigInt` de `src/format/decimal.ts`, 1 casa, sem `Number`; dado ausente vira "—"), `Horizons.module.css` (só tokens). O aviso `HistoryNote` (RF07) já estava na página. Histórico curto aparece como etiqueta "Histórico curto" na linha (a frase do servidor continua sendo a explicação). Sem estratégia ou sem candles não há lista: só a frase do servidor.
+
+| Contrato | Arquivo |
+|---|---|
+| Spec §7.2 caso 1 (só 30 dias recomendado): ordem 15 min, 7, 15, 30; frases do servidor presentes tal como vieram; UM selo, na linha de 30 dias; frase "O prazo mais recomendável… 30 dias" | `test/horizons.contract.tsx` |
+| Números exatos: 30 dias `+0,4%`, `58,0% (232 de 400)`, `-7,0%`; comprar e segurar `+0,2%`, `51,0%`, `-12,0%` | idem |
+| Linha de 15 min "não compensa": texto e forma (✕), resultado `-1,2%`, 41 operações, `31,50 USDT` de taxas, `—` quando a fatia é nula; e a variante "Compensa" | idem |
+| Spec §7.2 caso 2 (nenhum recomendado): frase "Nenhum prazo compensou…", nenhum selo, as 4 linhas continuam | idem |
+| Histórico curto na linha; taxa nula é `—`; sem estratégia: só a frase do servidor, sem lista nem "Como ler" | idem |
+| Aviso fixo do `HistoryNote`; "Como ler" fechado por padrão; carregando em `role="status"`; aviso de lista cortada | idem |
+| Contraste (≥ 4,5:1, claro e escuro) do texto do selo e das etiquetas: `ink` sobre `buy-soft`, `sell-soft`, `warn-soft`, `surface-2`, e `ink-2` sobre `surface-2` | `test/contrast.contract.ts` |
+
+**Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos; `panel-test` completo verde.

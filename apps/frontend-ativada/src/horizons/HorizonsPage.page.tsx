@@ -7,6 +7,7 @@ import runStyles from '../runs/Runs.module.css';
 import controls from '../styles/Controls.module.css';
 import { useHorizonsQuery } from './horizon.query.js';
 import { HorizonFilters } from './HorizonFilters.component.js';
+import { HorizonResults } from './HorizonResults.component.js';
 import { useHorizonFilters } from './useHorizonFilters.hook.js';
 
 export function HorizonsPage(): ReactElement {
@@ -28,7 +29,7 @@ export function HorizonsPage(): ReactElement {
         </p>
       ) : null}
       {horizons.isPending ? <p role="status">Calculando o histórico…</p> : null}
-      {horizons.data === undefined ? null : <p>{horizons.data.recommendationMessage}</p>}
+      {horizons.data === undefined ? null : <HorizonResults horizons={horizons.data} />}
     </div>
   );
 }

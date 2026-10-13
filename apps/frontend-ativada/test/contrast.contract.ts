@@ -55,6 +55,11 @@ const PAIRS: readonly (readonly [string, string])[] = [
   ['accent', 'surface'],
   ['on-accent', 'accent'],
   ['warn', 'warn-soft'],
+  ['ink', 'buy-soft'],
+  ['ink', 'sell-soft'],
+  ['ink', 'warn-soft'],
+  ['ink', 'surface-2'],
+  ['ink-2', 'surface-2'],
   ['bench', 'surface'],
 ];
 

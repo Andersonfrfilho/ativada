@@ -1,13 +1,14 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 
 import { horizonsSchema } from '../src/horizons/horizon.validation.js';
 import { buildStrategy } from './support/run-fixtures.js';
 import { dataResponse, jsonResponse, pageResponse, type FakeRoute } from './support/fake-fetch.js';
 import {
   buildDailyRow,
+  buildIntradayRow,
   buildNoneRecommendedHorizons,
   buildRecommendedHorizons,
 } from './support/horizon-fixtures.js';
@@ -100,6 +101,186 @@ describe('horizons route and menu', () => {
         ),
       ).toEqual(['Melhor por prazo', 'Momentum rápido']),
     );
+  });
+});
+
+function rowsOf(): HTMLElement[] {
+  return within(screen.getByRole('list', { name: 'Prazos comparados' })).getAllByRole('listitem');
+}
+
+function rowTitled(title: string): HTMLElement {
+  const row = rowsOf().find((item) => within(item).queryByRole('heading', { name: title }));
+  if (row === undefined) throw new Error(`linha ${title} não encontrada`);
+  return row;
+}
+
+function figures(row: HTMLElement, label: string): Record<string, string> {
+  const list = within(row).getByLabelText(label);
+  return Object.fromEntries(
+    [...list.querySelectorAll('div')].map((item) => [
+      item.querySelector('dt')?.textContent ?? '',
+      item.querySelector('dd')?.textContent ?? '',
+    ]),
+  );
+}
+
+describe('horizon rows (spec 7.2)', () => {
+  test('one recommended horizon: fixed order, server sentences as they came, one badge', async () => {
+    renderApp({ path: '/prazos', isAuthenticated: true, routes: horizonRoutes() });
+    await screen.findByRole('list', { name: 'Prazos comparados' });
+    expect(
+      rowsOf().map((item) => within(item).getByRole('heading', { level: 3 }).textContent),
+    ).toEqual(['15 minutos', '7 dias', '15 dias', '30 dias']);
+    expect(rowTitled('7 dias').textContent).toContain(
+      'Por 7 dias: em geral -0,1%, positivo em 40% das vezes.',
+    );
+    expect(rowTitled('30 dias').textContent).toContain(
+      'Por 30 dias: em geral +0,4%, positivo em 58% das vezes. É o prazo mais recomendável no histórico.',
+    );
+    expect(screen.getAllByText('Recomendável')).toHaveLength(1);
+    expect(within(rowTitled('30 dias')).getByText('Recomendável')).toBeDefined();
+    expect(within(rowTitled('7 dias')).queryByText('Recomendável')).toBeNull();
+    expect(
+      screen.getByText('O prazo mais recomendável no histórico desta moeda é de 30 dias.'),
+    ).toBeDefined();
+  });
+
+  test('shows the numbers in plain Portuguese, exactly, for the strategy and for buy and hold', async () => {
+    renderApp({ path: '/prazos', isAuthenticated: true, routes: horizonRoutes() });
+    await screen.findByRole('list', { name: 'Prazos comparados' });
+    const thirty = rowTitled('30 dias');
+    expect(figures(thirty, '30 dias com a estratégia')).toEqual({
+      'Em geral': '+0,4%',
+      'Em quantas vezes deu positivo': '58,0% (232 de 400)',
+      'No pior caso': '-7,0%',
+    });
+    expect(figures(thirty, '30 dias comprando e segurando')).toEqual({
+      'Em geral': '+0,2%',
+      'Em quantas vezes deu positivo': '51,0%',
+      'No pior caso': '-12,0%',
+    });
+    expect(within(thirty).getByText(/comprar e segurar/)).toBeDefined();
+  });
+
+  test('the 15 minute row shows the verdict as text and shape, with fees and trades', async () => {
+    renderApp({ path: '/prazos', isAuthenticated: true, routes: horizonRoutes() });
+    await screen.findByRole('list', { name: 'Prazos comparados' });
+    const quick = rowTitled('15 minutos');
+    expect(within(quick).getByText('Não compensa')).toBeDefined();
+    expect(quick.textContent).toContain('✕');
+    expect(figures(quick, '15 minutos')).toEqual({
+      'Resultado depois das taxas': '-1,2%',
+      Operações: '41',
+      'Taxas pagas': '31,50 USDT',
+      'Taxas sobre o ganho bruto': '—',
+    });
+  });
+
+  test('a 15 minute row that pays off says so', async () => {
+    const body = {
+      ...buildRecommendedHorizons(),
+      rows: [
+        buildIntradayRow({
+          verdict: 'COMPENSA',
+          netReturn: '0.031',
+          feeShareOfGross: '0.2',
+          message: 'Operar de 15 em 15 minutos: compensou, +3,1% depois das taxas.',
+        }),
+      ],
+    };
+    renderApp({ path: '/prazos', isAuthenticated: true, routes: horizonRoutes(body) });
+    const row = (await screen.findByRole('heading', { name: '15 minutos' })).closest('li');
+    expect(row?.textContent).toContain('Compensa');
+    expect(row?.textContent).not.toContain('Não compensa');
+    expect(row?.textContent).toContain('+3,1%');
+    expect(row?.textContent).toContain('20,0%');
+  });
+
+  test('no horizon paid off: the server sentence, no badge, all rows still shown', async () => {
+    renderApp({
+      path: '/prazos',
+      isAuthenticated: true,
+      routes: horizonRoutes(buildNoneRecommendedHorizons()),
+    });
+    expect(
+      await screen.findByText('Nenhum prazo compensou no histórico desta moeda.'),
+    ).toBeDefined();
+    expect(screen.queryByText('Recomendável')).toBeNull();
+    expect(rowsOf()).toHaveLength(4);
+    expect(figures(rowTitled('30 dias'), '30 dias com a estratégia')['Em geral']).toBe('-3,0%');
+  });
+
+  test('a short history is flagged on the row, and a missing rate shows a dash', async () => {
+    const body = {
+      ...buildRecommendedHorizons(),
+      rows: [
+        buildDailyRow(30, {
+          isShortHistory: true,
+          windowCount: 12,
+          positiveCount: 7,
+          median: null,
+        }),
+      ],
+    };
+    renderApp({ path: '/prazos', isAuthenticated: true, routes: horizonRoutes(body) });
+    const row = (await screen.findByRole('heading', { name: '30 dias' })).closest('li');
+    expect(row?.textContent).toContain('Histórico curto');
+    expect(row ? figures(row, '30 dias com a estratégia')['Em geral'] : undefined).toBe('—');
+  });
+
+  test('with no strategy there are no rows: only the server sentence', async () => {
+    const message = 'Você ainda não tem estratégia para comparar os prazos desta moeda.';
+    const body = {
+      ...buildRecommendedHorizons(),
+      evaluatedStrategies: 0,
+      rows: [],
+      recommendedHorizonDays: null,
+      recommendationMessage: message,
+    };
+    renderApp({ path: '/prazos', isAuthenticated: true, routes: horizonRoutes(body) });
+    expect(await screen.findByText(message)).toBeDefined();
+    expect(screen.queryByRole('list', { name: 'Prazos comparados' })).toBeNull();
+    expect(screen.queryByText('Como ler esta tela')).toBeNull();
+  });
+});
+
+describe('horizons screen furniture', () => {
+  test('always carries the fixed history notice (RF07)', async () => {
+    renderApp({ path: '/prazos', isAuthenticated: true, routes: horizonRoutes() });
+    const note = await screen.findByRole('note', { name: 'Leia com cuidado' });
+    expect(note.textContent).toContain('O passado não promete o futuro');
+    expect(note.textContent).toContain('nada aqui é recomendação de investimento');
+  });
+
+  test('"Como ler" is a collapsed disclosure', async () => {
+    renderApp({ path: '/prazos', isAuthenticated: true, routes: horizonRoutes() });
+    const summary = await screen.findByText('Como ler esta tela');
+    const details = summary.closest('details');
+    expect(details?.open).toBe(false);
+    expect(details?.textContent).toContain('No pior caso');
+  });
+
+  test('says it is loading while the numbers are not there', async () => {
+    renderApp({
+      path: '/prazos',
+      isAuthenticated: true,
+      routes: [
+        {
+          method: 'GET',
+          path: '/v1/horizons',
+          respond: (): Promise<Response> => new Promise<Response>(() => undefined),
+        },
+      ],
+    });
+    expect((await screen.findByText('Calculando o histórico…')).getAttribute('role')).toBe(
+      'status',
+    );
+  });
+
+  test('says when the strategy list was cut', async () => {
+    const body = { ...buildRecommendedHorizons(), isStrategyListTruncated: true };
+    renderApp({ path: '/prazos', isAuthenticated: true, routes: horizonRoutes(body) });
+    expect(await screen.findByText(/Só as estratégias mais recentes/)).toBeDefined();
   });
 });
 
