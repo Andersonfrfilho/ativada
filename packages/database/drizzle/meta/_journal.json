@@ -155,6 +155,13 @@
       "when": 1791756876509,
       "tag": "0021_run_soft_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791918123676,
+      "tag": "0022_worker_heartbeats",
+      "breakpoints": true
     }
   ]
 }

@@ -16,6 +16,7 @@ const WORKER_VARIABLES: readonly string[] = [
   'STREAM_STALE_SECONDS',
   'STREAM_GAP_LOOKBACK_HOURS',
   'STREAM_GAP_CHECK_MINUTES',
+  'WORKER_HEARTBEAT_SECONDS',
   'LIVE_POLL_SECONDS',
   'LIVE_HEARTBEAT_TIMEOUT_SECONDS',
   'LIVE_GAP_CONFIRM_RECOVERIES',
@@ -66,6 +67,16 @@ describe('worker environment', () => {
     expect(environment.STREAM_STALE_SECONDS).toBe(60);
     expect(environment.STREAM_GAP_LOOKBACK_HOURS).toBe(168);
     expect(environment.STREAM_GAP_CHECK_MINUTES).toBe(15);
+  });
+
+  test('batimento do worker: 15 s por padrão, configurável de 5 a 120', async () => {
+    const defaults = parseEnvironment(environmentSchema, await buildSource());
+    expect(defaults.WORKER_HEARTBEAT_SECONDS).toBe(15);
+    const custom = parseEnvironment(
+      environmentSchema,
+      await buildSource({ WORKER_HEARTBEAT_SECONDS: '30' }),
+    );
+    expect(custom.WORKER_HEARTBEAT_SECONDS).toBe(30);
   });
 
   test('simulação ao vivo: ronda de 5 s e batimento vencido em 60 s por padrão, configuráveis', async () => {
@@ -154,6 +165,9 @@ describe('worker environment', () => {
     ['STREAM_GAP_LOOKBACK_HOURS', 'muito'],
     ['STREAM_GAP_CHECK_MINUTES', '0'],
     ['STREAM_GAP_CHECK_MINUTES', '1441'],
+    ['WORKER_HEARTBEAT_SECONDS', '4'],
+    ['WORKER_HEARTBEAT_SECONDS', '121'],
+    ['WORKER_HEARTBEAT_SECONDS', 'muito'],
     ['LIVE_POLL_SECONDS', '0'],
     ['LIVE_POLL_SECONDS', '301'],
     ['LIVE_POLL_SECONDS', 'muito'],

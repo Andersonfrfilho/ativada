@@ -26,6 +26,7 @@ import {
 import { checkRunEvents } from './run-event-checks.js';
 import { checkRunDataWait } from './run-data-wait-checks.js';
 import { checkReconnection } from './reconnect-checks.js';
+import { checkWorkerHeartbeats } from './worker-heartbeat-checks.js';
 import { checkRunLog } from './run-log-checks.js';
 import { checkRunDeletion } from './run-delete-checks.js';
 import { checkRunRepository } from './run-checks.js';
@@ -205,6 +206,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkPersistence(lifecycle);
     await checkRunEvents(lifecycle, databaseUrl);
     await checkRunDataWait(lifecycle, databaseUrl);
+    await checkWorkerHeartbeats(lifecycle);
     await checkReconnection(lifecycle, databaseUrl);
   } finally {
     await client.close();

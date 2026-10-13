@@ -21,6 +21,7 @@ import { telegramLinkCodes } from '../schema/telegram-link-codes.schema.js';
 import { userAssets } from '../schema/user-assets.schema.js';
 import { users } from '../schema/users.schema.js';
 import { walkForwardWindows } from '../schema/walk-forward-windows.schema.js';
+import { workerHeartbeats } from '../schema/worker-heartbeats.schema.js';
 
 export {
   OWNED_TABLE_EXPORT_MODE,
@@ -76,11 +77,12 @@ export const PSEUDONYMIZED_TABLES: readonly PseudonymizedTable[] = [
 
 export const SHARED_TABLES: readonly PgTable[] = [users];
 
-// Dados públicos de mercado, sem dono e sem user_id (ADR 0001 §h): tabela sem dono nova entra aqui de propósito.
+// Dados públicos de mercado e operacionais, sem dono e sem user_id (ADR 0001 §h): tabela sem dono nova entra aqui de propósito.
 export const UNOWNED_PUBLIC_TABLES: readonly PgTable[] = [
   candles,
   sentimentDaily,
   sentimentObservations,
+  workerHeartbeats,
 ];
 
 export function tableNameOf(table: PgTable): string {

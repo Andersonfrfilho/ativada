@@ -42,8 +42,13 @@ export const WORKER_LOG = {
   GAP_RECOVERY_BANNED: 'gap recovery paused: IP banned by the exchange',
   GAP_RECOVERY_RETRY: 'gap recovery retry scheduled',
   SERVER_CLOCK_UNAVAILABLE: 'server clock unavailable, using the local clock',
+  HEARTBEAT_FAILED: 'worker heartbeat failed',
   SHUTDOWN_STARTED: 'shutdown started',
   SHUTDOWN_TIMED_OUT: 'shutdown timed out',
   SHUTDOWN_COMPLETE: 'shutdown complete',
   SHUTDOWN_FAILED: 'shutdown failed',
 } as const;
+
+export const WORKER_HEARTBEAT_DEFAULT_SECONDS = 15;
+export const WORKER_HEARTBEAT_MINIMUM_SECONDS = 5;
+export const WORKER_HEARTBEAT_MAXIMUM_SECONDS = 120;

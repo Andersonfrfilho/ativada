@@ -117,6 +117,7 @@ describe('public tables without an owner', () => {
       'candles',
       'sentiment_daily',
       'sentiment_observations',
+      'worker_heartbeats',
     ]);
   });
 });

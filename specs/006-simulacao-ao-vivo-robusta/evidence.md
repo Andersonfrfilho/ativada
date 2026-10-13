@@ -182,3 +182,24 @@ resiliência, agendadores, recuperação, stream, ban, shutdown, avaliador ao vi
 
 Pendências: o candle writer grava por vela com retry próprio (3 tentativas) e continua logando só `errorName` por falha de gravação
 (sem mensagem), fora do resumo de 60 s; a API ainda não usa a guarda (T1.6/T2.3).
+
+## T1.5 — Batimento do worker (2026-10-13, `sonnet`)
+
+- Migration `0022_worker_heartbeats` (+ `.rollback.sql`, snapshot e `_journal.json` gerados por `drizzle-kit generate --name worker_heartbeats` no WSL;
+  uma segunda rodada deu "No schema changes"). Tabela `worker_heartbeats`: `instance_id` (PK, varchar 64, sorteado no boot), `started_at`,
+  `last_beat_at` (ambos `now()` do banco), `version` (varchar 32, opcional), índice em `last_beat_at DESC`. Sem `user_id`, sem dado pessoal.
+- `packages/database/src/worker-heartbeats/`: `createWorkerHeartbeatRepository(handle)` com `recordBeat` (upsert da instância + apaga linhas que não
+  batem há mais de 24 h) e `findLatest` (a batida mais nova, com `ageMilliseconds` pelo relógio do banco, para a T1.6). Exportado em `index.ts`
+  (que ganhou espaço trocando a lista de tipos de `run-result.types` por `export type *`).
+- Registro LGPD: tabela sem dono declarada em `UNOWNED_PUBLIC_TABLES` (como `candles`), comentário ajustado para "mercado e operacionais".
+- Worker: `WORKER_HEARTBEAT_SECONDS` (5 a 120, padrão 15) no `environment.ts`; `heartbeat/heartbeat-loop.ts` (batida imediata e a cada intervalo, sem
+  sobreposição, espera o backoff do porteiro com a guarda própria, loga só o resumo da queda ou `errorName`, `stop()` espera a batida em voo) e
+  `heartbeat/create-heartbeat-wiring.ts`; `main.ts` liga no boot e o desliga no shutdown gracioso, antes de fechar o banco.
+- Desvios do ADR/spec: a coluna é `last_beat_at` (H3), não `beat_at`; os "contadores agregados das rondas" ficam de fora (nada no worker os produz hoje,
+  e a spec não os usa); `version` é gravada vazia até haver uma fonte da versão.
+
+Gates: `typecheck`, `lint` e `format` limpos (WSL, `gates6.sh`); 191/191 em `database`, `worker-heartbeat` (novo, 5), `worker-environment`,
+`candle-schema`, `ownership-registry`, `account-delete`, `account-export`, `code-size-limits`, boundaries; `worker-database-outage` 6/6.
+Banco real (Postgres 18.3 embutido, WSL, porta 56434, fora do repo; containers do projeto intocados), equivalentes de `make`:
+`DATABASE_URL=<postgres://…:56434/postgres> bun run --cwd packages/database db:migration-test` -> "OK (23 migrations aplicadas e desfeitas)" (rollback
+deixa `public` vazio) e `... db:database-test` -> "OK", incluindo os 3 casos novos de batimento (`worker-heartbeat-checks.ts`).

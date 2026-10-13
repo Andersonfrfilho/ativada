@@ -89,27 +89,7 @@ export type * from './runs/run.types.js';
 export type { DataWaitState, RecordDataWaitParams } from './runs/run-data-wait.js';
 export { createRunResultRepository } from './run-results/run-result.repository.js';
 export { RESULT_ORDER } from './run-results/run-result.types.js';
-export type {
-  AppendResult,
-  CommandInput,
-  EquityPointInput,
-  FillCursor,
-  FillInput,
-  ListPositionsParams,
-  ListResultsParams,
-  OrderCursor,
-  OrderInput,
-  PositionCursor,
-  PositionInput,
-  ResultOrder,
-  ResultPage,
-  RunResultRepository,
-  SignalInput,
-  SurvivalPointInput,
-  SurvivalPointsParams,
-  TimeRange,
-  WalkForwardWindowInput,
-} from './run-results/run-result.types.js';
+export type * from './run-results/run-result.types.js';
 export {
   WALK_FORWARD_WINDOW_STATUS,
   type PositionStatus,
@@ -200,3 +180,5 @@ export {
   USER_ASSET_MUTATE_OUTCOME,
 } from './user-assets/user-asset.constant.js';
 export type * from './user-assets/user-asset.types.js';
+export { createWorkerHeartbeatRepository } from './worker-heartbeats/worker-heartbeat.repository.js';
+export type * from './worker-heartbeats/worker-heartbeat.types.js';

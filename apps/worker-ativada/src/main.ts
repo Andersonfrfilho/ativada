@@ -15,6 +15,7 @@ import { loadEnvironment, type Environment } from './environment.js';
 import { createLiveRunDatabase } from './live/create-live-run-database.js';
 import { createGapConfirmation } from './live/gap-confirmation.js';
 import { createGapPolicy } from './live/create-gap-policy.js';
+import { createHeartbeatWiring } from './heartbeat/create-heartbeat-wiring.js';
 import { createLiveEvaluator } from './live/live-evaluator.js';
 import type { LiveAlertingSettings } from './live/live-run.types.js';
 import { createLiveScheduler, type LiveScheduler } from './live/live-scheduler.js';
@@ -158,10 +159,16 @@ function startWorker(environment: Environment): void {
     onCandleStored: live.trigger,
     recoveryClock,
   });
+  const heartbeat = createHeartbeatWiring({ environment, database, logger });
   live.start();
   alerts.scheduler?.start();
+  heartbeat.start();
   reportStarted({ logger, environment, isAlertingEnabled: alerts.scheduler !== undefined });
-  registerWorkerShutdown({ logger, database, stoppables: [live, alerts.scheduler, worker] });
+  registerWorkerShutdown({
+    logger,
+    database,
+    stoppables: [live, alerts.scheduler, worker, heartbeat],
+  });
 }
 
 runWithEnvironment({ appName: WORKSPACE_NAME, load: loadEnvironment, run: startWorker });
