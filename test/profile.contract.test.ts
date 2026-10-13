@@ -18,6 +18,7 @@ const PROFILE_KEYS = [
   'displayCurrency',
   'displayName',
   'id',
+  'limits',
   'telegramLinked',
   'timezone',
 ];
@@ -76,6 +77,7 @@ describe('GET /v1/me', () => {
   test('reports telegramLinked false when no chat is linked', async () => {
     const data = await readData(await callMe({ subject: SUBJECT_B }));
     expect(data['telegramLinked']).toBe(false);
+    expect(data['limits']).toStrictEqual({ maxActiveLivePaperRuns: 5 });
     expect(data['displayCurrency']).toBe('BRL');
     expect(data['timezone']).toBe('America/Sao_Paulo');
     expect(data['alertTelegramEnabled']).toBe(true);

@@ -5,6 +5,7 @@ import type {
   ProfileRepository,
 } from '../../packages/database/src/index.js';
 import { DISPLAY_CURRENCY } from '../../packages/database/src/users/display-currency.constant.js';
+import { DEFAULT_RUN_LIMITS } from '../../packages/database/src/run-queue/run-queue.constant.js';
 import type { OwnerScope } from '../../packages/database/src/ownership/owner-scope.js';
 import { userIdFromDatabase } from '../../packages/database/src/ownership/user-id.js';
 import type { UserId } from '../../packages/database/src/ownership/user-id.js';
@@ -17,6 +18,7 @@ export type StoredUser = {
   timezone: string;
   alertTelegramEnabled: boolean;
   telegramChatId: string | undefined;
+  maxActiveLivePaperRuns: number;
   blockedAt: Date | undefined;
   deletedAt: Date | undefined;
   readonly createdAt: Date;
@@ -42,6 +44,7 @@ function toRecord(stored: StoredUser): ProfileRecord {
     timezone: stored.timezone,
     alertTelegramEnabled: stored.alertTelegramEnabled,
     isTelegramLinked: stored.telegramChatId !== undefined,
+    maxActiveLivePaperRuns: stored.maxActiveLivePaperRuns,
     createdAt: stored.createdAt,
   };
 }
@@ -73,6 +76,7 @@ export function createInMemoryUserStore(): InMemoryUserStore {
         timezone: 'America/Sao_Paulo',
         alertTelegramEnabled: true,
         telegramChatId: undefined,
+        maxActiveLivePaperRuns: DEFAULT_RUN_LIMITS.maxActiveLivePaperRuns,
         blockedAt: undefined,
         deletedAt: undefined,
         createdAt: createdAt ?? new Date('2026-10-01T12:00:00.000Z'),

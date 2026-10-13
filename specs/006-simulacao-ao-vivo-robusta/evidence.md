@@ -547,3 +547,14 @@ da correção e dos vizinhos no espelho do WSL (`gates6.sh`).
 - **Contratos** (`test/live-run-status.contract.tsx`): fixtures com e sem aquecimento gravado (vela de 16:00Z com `periodStart`
   17:00Z continua aguardando; vela a partir de `periodStart` vira "Última decisão"), execução na fila com `periodStart` próprio, o
   4h perto da meia-noite ("amanhã") e o cartão de saldo da Visão geral com aquecimento gravado.
+
+### Achado 4 — limite de simulações ao vivo e contagem (API: `GET /v1/me` com `limits`)
+
+- **Verificação.** `GET /v1/runs` NÃO aceita `status` (só `limit`, `after` e `kind`), então o filtro por status ativo no servidor ficou
+  de fora: o painel contava a 1ª página de 100 execuções ao vivo de qualquer status. Pedir o filtro exigiria rota, repositório, OpenAPI
+  e os mutantes das rotas de execução; fica como pendência (o painel agora pagina, abaixo).
+- **Limite do usuário, aditivo e barato.** `GET /v1/me` e `PATCH /v1/me` passam a devolver `limits: { maxActiveLivePaperRuns }`
+  (`ProfileRecord.maxActiveLivePaperRuns` lido de `users.limits` por `readUserRunLimits`, com o padrão 5 quando o jsonb é inválido; a
+  mesma conta do worker e da admissão). Nenhuma migration. `profile.docs.ts` (OpenAPI), `profile-view.ts`, fixture em memória e
+  contrato `test/profile.contract.test.ts` (chaves da resposta e `limits` igual a 5) atualizados; `profile-checks.ts` ganhou a
+  verificação do padrão no Postgres (roda no `make database-test`, que NÃO foi executado aqui).
