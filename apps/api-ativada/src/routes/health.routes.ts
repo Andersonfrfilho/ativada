@@ -17,7 +17,6 @@ const HEALTH_STATUS = { OK: 'ok', DEGRADED: 'degraded' } as const;
 const DEPENDENCY_STATE = { UP: 'up', DOWN: 'down' } as const;
 
 export type HealthRouteDependencies = HealthDependencies & {
-  readonly checkDatabase: () => Promise<boolean>;
   // Contagens AGREGADAS da fila de execuções (por estado e tipo): nenhum dado de usuário.
   readonly readRunQueueSummary: () => Promise<RunQueueSummary>;
   readonly readListenerHealth: () => ListenerHealth;
@@ -40,7 +39,8 @@ async function readPublicHealth(dependencies: HealthRouteDependencies): Promise<
 }
 
 async function readAdminHealth(dependencies: HealthRouteDependencies): Promise<RouteResult> {
-  const isDatabaseUp = await dependencies.checkDatabase();
+  // O mesmo teto de 1 s do público: o admin responde mesmo com o banco lento e mostra o estado do porteiro.
+  const isDatabaseUp = await dependencies.probeDatabase();
   const listener = dependencies.readListenerHealth();
   const isHealthy = isDatabaseUp && listener.state !== LISTENER_STATE.FAILED;
   return {

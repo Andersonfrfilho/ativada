@@ -526,3 +526,12 @@ da correção e dos vizinhos no espelho do WSL (`gates6.sh`).
   não contam em `Error` comum nem em `fetch failed` com `cause`; erro de integração dentro de `begin` deixa o porteiro `up`) e
   `test/api-database-outage.contract.test.ts` (rota com erro de outra integração = 500 `INTERNAL_ERROR`, sem resumo de queda). Mutantes
   novos: `NETWORK_CODE_OF_ANOTHER_INTEGRATION_COUNTS` e `NETWORK_CODE_OF_THE_DRIVER_IGNORED`. ADR 0002 (R1) atualizado.
+
+### Achado 11 — admin health com o mesmo teto curto do público
+
+- **Causa.** `GET /v1/admin/health` usava `checkDatabase` (`pingDatabase` direto, sem teto de 1 s): com o banco lento o admin pendurava
+  até o teto do porteiro, justamente quando o operador mais precisa dele.
+- **Correção.** `readAdminHealth` (`routes/health.routes.ts`) usa `probeDatabase` (o `probeDatabaseWithin` de 1 s do público) e
+  `checkDatabase` saiu do tipo `HealthRouteDependencies`, de `create-api-router.ts` e dos fixtures. Estourar o 1 s responde com
+  `checks.database = down` e `status = degraded`, sem contar como falha de conexão (`database.state` segue `up`).
+- **Contrato** em `test/api-database-outage.contract.test.ts`: banco mudo (HUNG) → resposta do admin em 0,9 a 3 s com o banco `down`.

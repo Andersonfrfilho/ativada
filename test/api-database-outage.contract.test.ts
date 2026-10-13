@@ -177,6 +177,20 @@ describe('GET /v1/admin/health with the database out', () => {
     return (await response.json()) as { data: Record<string, unknown> };
   }
 
+  test('a database that does not answer within 1 s still gets an admin answer in about 1 s, with the database reported down', async () => {
+    const rig = createRig();
+    await ping(rig);
+    rig.server.setMode(FLAKY_MODE.HUNG);
+    const startedAt = Date.now();
+    const body = await adminHealth(rig, undefined);
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(900);
+    expect(Date.now() - startedAt).toBeLessThan(3_000);
+    expect((body.data['checks'] as { database: string }).database).toBe('down');
+    expect(body.data['status']).toBe('degraded');
+    expect(body.data['database']).toMatchObject({ state: 'up' });
+    await rig.database.close();
+  });
+
   test('reports the database state and the last failure CODE, never the message', async () => {
     const rig = createRig();
     rig.server.setMode(FLAKY_MODE.REFUSED);

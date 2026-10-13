@@ -3,7 +3,6 @@ import {
   createProfileRepository,
   createRunQueueRepository,
   createStrategyRepository,
-  pingDatabase,
   resolveUserBySubject,
   type DatabaseHandle,
 } from '@ativada/database';
@@ -105,7 +104,6 @@ function assembleRouteDependencies(assembly: RouteAssemblyParams): ApiRouteDepen
   const { params, domain } = assembly;
   const { environment, logger, database, identity, verifyAccessToken } = params;
   return {
-    checkDatabase: () => pingDatabase(database),
     readRunQueueSummary: () => createRunQueueRepository(database).readQueueSummary(),
     readListenerHealth: params.readListenerHealth,
     ...createDatabaseHealthDependencies(database, environment.WORKER_HEARTBEAT_SECONDS),

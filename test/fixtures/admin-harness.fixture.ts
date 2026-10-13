@@ -164,7 +164,6 @@ export async function createAdminHarness(): Promise<AdminHarness> {
         unblockAccount: createUnblockAccountUseCase(accountState),
       }),
       ...createHealthRoutes({
-        checkDatabase: () => Promise.resolve(true),
         probeDatabase: () => Promise.resolve(true),
         readDatabaseHealthView: () => UP_DATABASE_HEALTH,
         readWorkerHealth: () => Promise.resolve(UNKNOWN_WORKER),

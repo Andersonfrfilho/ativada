@@ -49,7 +49,6 @@ export function buildApiRouteDependencies(
 ): ApiRouteDependencies {
   const notUsed = (): Promise<never> => Promise.reject(new Error('not used'));
   return {
-    checkDatabase,
     probeDatabase: checkDatabase,
     readDatabaseHealthView: () => UP_DATABASE_HEALTH,
     readWorkerHealth: () => Promise.resolve(UNKNOWN_WORKER),
