@@ -157,3 +157,28 @@ isolado (temporização).
 
 Desvio do ADR R8: o porteiro NÃO loga; quem loga é cada laço do worker pelo `outage-log` (T1.4), que dá ≤ 1 linha por laço a
 cada 60 s e vale também para a API quando ela passar a usar o mesmo resumo.
+
+## T1.4 — Laços do worker esperam o backoff e logam pelo `outage-log` (2026-10-13, `sonnet`)
+
+- `packages/database/src/connection/outage-guard.ts`: `createDatabaseOutageGuard({ readHealth, now, write })` (pública). Uma guarda
+  por laço: `isWaiting`/`waitMilliseconds` (porteiro `down` e antes de `nextAttemptAt`), `handleFailure` (erro de conexão vira
+  resumo do `outage-log`; outro erro devolve `false` e o laço trata como antes), `handleSuccess` (linha `database recovered`).
+- Worker: `outage/loop-outage-guard.ts` liga a guarda ao logger e ao `readDatabaseHealth`. `live-scheduler` e `alert-scheduler`
+  pulam a ronda enquanto o porteiro espera e, na falha de conexão, logam só o resumo (`database unavailable` com `code`,
+  `failures`, `sinceMs`, no máximo uma por 60 s por laço; nada de `live tick failed`/`alert dispatch failed` com erro).
+  `recovery-runner` espera `max(backoff do porteiro, 1 s)` e tenta de novo; `recoverGaps` deixa o erro de conexão subir (não conta por
+  par). Cada laço tem a própria guarda (live, alertas, recuperação), criadas em `main.ts` e `create-alert-wiring.ts`.
+- Contrato `test/worker-database-outage.contract.test.ts`: com o banco fora (dublê `refused`/`closed`) e relógio injetado, 1.000
+  rondas de 5 s do laço ao vivo e 1.000 ciclos do laço de alertas dão linhas separadas por ≥ 60 s, todas com `code`, nenhuma com URL,
+  senha, texto de consulta ou parâmetro; a primeira ronda depois do `nextAttemptAt` com o banco de volta loga `database recovered`
+  e o porteiro volta a `up`. Recuperação de lacunas: espera, resume e termina quando o banco volta, sem `gap recovery failed` nem
+  `retry scheduled`. Erro que não é de conexão segue indo ao log só pelo nome.
+- Superfície pública: `createDatabaseOutageGuard` entra e `isDatabaseConnectionFailure` sai (o `index.ts` está no teto de 200 linhas);
+  `DatabaseUnavailableError` e `readDatabaseHealth` ficam para a API (T1.6).
+
+Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; 360/360 em 24 arquivos (contratos novos, `database`,
+resiliência, agendadores, recuperação, stream, ban, shutdown, avaliador ao vivo e seus mutantes, despachante de alertas,
+`code-size-limits`, boundaries, ownership) e 35/35 em `environment` + `database` + o novo.
+
+Pendências: o candle writer grava por vela com retry próprio (3 tentativas) e continua logando só `errorName` por falha de gravação
+(sem mensagem), fora do resumo de 60 s; a API ainda não usa a guarda (T1.6/T2.3).

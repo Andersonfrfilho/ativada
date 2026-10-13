@@ -3,7 +3,12 @@ import { MILLISECONDS_PER_SECOND, readErrorName } from '@ativada/environment';
 import { computeBackoffDelay } from '@ativada/market-data-crypto';
 
 import type { WorkerLogger } from '../logging/worker-logger.js';
-import { BAN_SLEEP_SLICE_MILLISECONDS, WORKER_LOG } from '../worker.constant.js';
+import type { LoopOutageGuard } from '../outage/loop-outage-guard.js';
+import {
+  BAN_SLEEP_SLICE_MILLISECONDS,
+  OUTAGE_MINIMUM_WAIT_MILLISECONDS,
+  WORKER_LOG,
+} from '../worker.constant.js';
 import type { RecoveryOutcome } from './gap-recovery.js';
 
 export type { RecoveryOutcome } from './gap-recovery.js';
@@ -11,6 +16,7 @@ export type { RecoveryOutcome } from './gap-recovery.js';
 export type RecoveryRunnerDependencies = {
   readonly recover: () => Promise<RecoveryOutcome>;
   readonly logger: WorkerLogger;
+  readonly outage?: LoopOutageGuard | undefined;
   readonly sleep: (milliseconds: number) => Promise<void>;
   readonly random: () => number;
   readonly backoffBaseMilliseconds: number;
@@ -71,12 +77,34 @@ async function waitBeforeRetry(context: RunnerContext, attempt: number): Promise
   await Promise.race([dependencies.sleep(delay), stoppedSignal]);
 }
 
+// Banco fora: espera o backoff do porteiro e resume a queda; `true` = a tentativa foi absorvida, tente de novo.
+async function absorbOutage(context: RunnerContext, error: unknown): Promise<boolean> {
+  const { outage, sleep } = context.dependencies;
+  if (outage === undefined || !outage.handleFailure(error)) return false;
+  const wait = Math.max(outage.waitMilliseconds(), OUTAGE_MINIMUM_WAIT_MILLISECONDS);
+  await Promise.race([sleep(wait), context.stoppedSignal]);
+  return true;
+}
+
+async function recoverOnce(context: RunnerContext): Promise<RecoveryOutcome | undefined> {
+  const { dependencies } = context;
+  try {
+    const outcome = await dependencies.recover();
+    dependencies.outage?.handleSuccess();
+    return outcome;
+  } catch (error: unknown) {
+    if (await absorbOutage(context, error)) return undefined;
+    throw error;
+  }
+}
+
 async function runUntilDone(context: RunnerContext, ownGeneration: number): Promise<void> {
   const { dependencies } = context;
   for (let attempt = 0; isCurrent(context, ownGeneration); attempt += 1) {
     await waitOutBan(context, ownGeneration);
     if (!isCurrent(context, ownGeneration)) return;
-    const outcome = await dependencies.recover();
+    const outcome = await recoverOnce(context);
+    if (outcome === undefined) continue;
     if (outcome.failures === 0) {
       dependencies.logger.info(WORKER_LOG.GAP_RECOVERY_FINISHED, { attempts: attempt + 1 });
       return;

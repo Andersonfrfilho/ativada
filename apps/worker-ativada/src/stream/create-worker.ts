@@ -12,6 +12,7 @@ import {
 } from '@ativada/market-data-crypto';
 
 import type { WorkerLogger } from '../logging/worker-logger.js';
+import type { LoopOutageGuard } from '../outage/loop-outage-guard.js';
 import {
   DEFAULT_STREAM_GAP_CHECK_MINUTES,
   DEFAULT_STREAM_GAP_LOOKBACK_HOURS,
@@ -49,6 +50,8 @@ export type WorkerDependencies = {
   >;
   readonly client: Pick<MarketDataClient, 'fetchKlinesRange'>;
   readonly logger: WorkerLogger;
+  // Banco fora: a recuperação de lacunas espera o backoff do porteiro e a queda sai resumida, sem erro cru.
+  readonly outage?: LoopOutageGuard | undefined;
   readonly streamBaseUrl: string;
   readonly staleAfterMilliseconds: number;
   readonly gapLookbackHours?: number | undefined;
@@ -122,6 +125,7 @@ function createRecovery(dependencies: WorkerDependencies, timing: ResolvedTiming
       return outcome;
     },
     logger: dependencies.logger,
+    outage: dependencies.outage,
     sleep: timing.sleep,
     random: timing.random,
     backoffBaseMilliseconds: timing.backoffBase,

@@ -14,6 +14,7 @@ import {
 } from '@ativada/market-data-crypto';
 
 import type { WorkerLogger } from '../logging/worker-logger.js';
+import type { LoopOutageGuard } from '../outage/loop-outage-guard.js';
 import {
   DEFAULT_BAN_SECONDS,
   MAXIMUM_BAN_SECONDS,
@@ -28,6 +29,7 @@ export type GapRecoveryDependencies = {
   >;
   readonly client: Pick<MarketDataClient, 'fetchKlinesRange'>;
   readonly logger: WorkerLogger;
+  readonly outage?: LoopOutageGuard | undefined;
   readonly now: () => number;
   readonly refreshClock: () => Promise<void>;
   readonly exchange: string;
@@ -130,6 +132,8 @@ export async function recoverGaps(dependencies: GapRecoveryDependencies): Promis
         await recoverPair(dependencies, { symbol, timeframe });
       } catch (error: unknown) {
         if (dependencies.signal.aborted) return { failures };
+        // Banco fora vale para todos os pares: sobe para o laço, que espera o backoff e resume a queda.
+        if (dependencies.outage?.isOutage(error) === true) throw error;
         failures += 1;
         dependencies.logger.error(WORKER_LOG.GAP_RECOVERY_FAILED, {
           pairId: formatPairLabel({ symbol, timeframe }),

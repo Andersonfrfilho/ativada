@@ -5,6 +5,7 @@ import { MILLISECONDS_PER_SECOND } from '@ativada/environment';
 import { LIVE_ALERT_MAX_AGE_CANDLES } from '../live/live.constant.js';
 import type { LiveAlertingSettings } from '../live/live-run.types.js';
 import type { WorkerLogger } from '../logging/worker-logger.js';
+import { createLoopOutageGuard } from '../outage/loop-outage-guard.js';
 import { createAlertDispatcher } from './alert-dispatcher.js';
 import { createAlertScheduler, type AlertScheduler } from './alert-scheduler.js';
 import { createTelegramClient } from './telegram-client.js';
@@ -37,6 +38,7 @@ export function createAlertWiring(params: CreateAlertWiringParams): AlertWiring 
     alerting: { now: Date.now, maxAgeCandles: LIVE_ALERT_MAX_AGE_CANDLES },
     scheduler: createAlertScheduler({
       logger,
+      outage: createLoopOutageGuard({ database, logger }),
       pollMilliseconds: environment.ALERT_POLL_SECONDS * MILLISECONDS_PER_SECOND,
       dispatcher: createAlertDispatcher({
         alerts: createAlertRepository(database),

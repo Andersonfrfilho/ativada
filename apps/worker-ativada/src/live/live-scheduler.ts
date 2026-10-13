@@ -2,6 +2,7 @@
 import { readErrorName } from '@ativada/environment';
 
 import type { WorkerLogger } from '../logging/worker-logger.js';
+import type { LoopOutageGuard } from '../outage/loop-outage-guard.js';
 import { LIVE_LOG } from './live.constant.js';
 import type { LiveEvaluator } from './live-run.types.js';
 
@@ -17,6 +18,8 @@ export type LiveSchedulerDependencies = {
   readonly evaluator: LiveEvaluator;
   readonly logger: WorkerLogger;
   readonly pollMilliseconds: number;
+  // Banco fora: a ronda espera o backoff do porteiro e a queda sai resumida (uma linha por minuto), sem erro cru.
+  readonly outage?: LoopOutageGuard | undefined;
 };
 
 type SchedulerState = {
@@ -28,9 +31,13 @@ type SchedulerState = {
 };
 
 async function runTick(dependencies: LiveSchedulerDependencies): Promise<void> {
+  const { outage } = dependencies;
+  if (outage?.isWaiting() === true) return;
   try {
     await dependencies.evaluator.tick();
+    outage?.handleSuccess();
   } catch (error: unknown) {
+    if (outage?.handleFailure(error) === true) return;
     dependencies.logger.error(LIVE_LOG.TICK_FAILED, { errorName: readErrorName(error) });
   }
 }

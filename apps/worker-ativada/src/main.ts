@@ -9,6 +9,7 @@ import {
 import { MILLISECONDS_PER_SECOND, runWithEnvironment } from '@ativada/environment';
 import { createMarketDataClient, createServerClock } from '@ativada/market-data-crypto';
 
+import { createLoopOutageGuard } from './outage/loop-outage-guard.js';
 import { createAlertWiring } from './alerts/create-alert-wiring.js';
 import { loadEnvironment, type Environment } from './environment.js';
 import { createLiveRunDatabase } from './live/create-live-run-database.js';
@@ -54,6 +55,7 @@ function createConfiguredWorker(params: WorkerWiringParams): Worker {
     abortController,
     serverClock,
     logger,
+    outage: createLoopOutageGuard({ database, logger }),
     streamBaseUrl: environment.BINANCE_STREAM_URL,
     staleAfterMilliseconds: environment.STREAM_STALE_SECONDS * MILLISECONDS_PER_SECOND,
     gapLookbackHours: environment.STREAM_GAP_LOOKBACK_HOURS,
@@ -76,6 +78,7 @@ function createConfiguredLiveScheduler(params: {
   const { environment, database, logger } = params;
   return createLiveScheduler({
     logger,
+    outage: createLoopOutageGuard({ database, logger }),
     pollMilliseconds: environment.LIVE_POLL_SECONDS * MILLISECONDS_PER_SECOND,
     evaluator: createLiveEvaluator({
       claims: createLiveRunRepository(database),
