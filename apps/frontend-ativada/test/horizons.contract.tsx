@@ -12,6 +12,7 @@ import {
   buildNoneRecommendedHorizons,
   buildRecommendedHorizons,
 } from './support/horizon-fixtures.js';
+import { buildEvaluation, buildGoal } from './support/goal-fixtures.js';
 import { renderApp } from './support/render-app.js';
 
 function horizonRoutes(body: unknown = buildRecommendedHorizons()): readonly FakeRoute[] {
@@ -333,5 +334,61 @@ describe('horizons response validation', () => {
     expect((await screen.findByRole('alert')).textContent).toContain(
       'Não foi possível carregar os prazos',
     );
+  });
+});
+
+describe('goal to horizons navigation (RF08)', () => {
+  function goalRoutes(symbol: string): readonly FakeRoute[] {
+    return [
+      ...horizonRoutes(),
+      {
+        method: 'GET',
+        path: '/v1/goals/goal-1',
+        respond: (): Response => dataResponse(buildGoal({ symbol })),
+      },
+      {
+        method: 'GET',
+        path: '/v1/goals/goal-1/evaluation',
+        respond: (): Response => dataResponse(buildEvaluation([])),
+      },
+    ];
+  }
+
+  test('the goal screen links to the horizons of the goal pair', async () => {
+    const { fake, router } = renderApp({
+      path: '/metas/goal-1',
+      isAuthenticated: true,
+      routes: goalRoutes('ETHUSDT'),
+    });
+    const link = await screen.findByRole('link', { name: 'Comparar prazos desta moeda' });
+    expect(link.getAttribute('href')).toBe('/prazos?symbol=ETHUSDT');
+    fireEvent.click(link);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/prazos'));
+    expect(router.state.location.search).toBe('?symbol=ETHUSDT');
+    expect(await screen.findByLabelText('Moeda')).toHaveProperty('value', 'ETHUSDT');
+    await waitFor(() =>
+      expect(fake.callsTo('GET', '/v1/horizons')[0]?.query.get('symbol')).toBe('ETHUSDT'),
+    );
+  });
+
+  test('there is no link before the goal is known', async () => {
+    renderApp({
+      path: '/metas/goal-1',
+      isAuthenticated: true,
+      routes: [
+        {
+          method: 'GET',
+          path: '/v1/goals/goal-1',
+          respond: (): Promise<Response> => new Promise<Response>(() => undefined),
+        },
+        {
+          method: 'GET',
+          path: '/v1/goals/goal-1/evaluation',
+          respond: (): Promise<Response> => new Promise<Response>(() => undefined),
+        },
+      ],
+    });
+    await screen.findByRole('heading', { level: 1, name: 'Meta' });
+    expect(screen.queryByRole('link', { name: 'Comparar prazos desta moeda' })).toBeNull();
   });
 });

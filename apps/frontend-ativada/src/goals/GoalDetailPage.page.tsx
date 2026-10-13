@@ -6,6 +6,7 @@ import { formatChangePercent, formatPercent, formatSymbol } from '../format/form
 import runStyles from '../runs/Runs.module.css';
 import controls from '../styles/Controls.module.css';
 import { HistoryNote } from '../layout/HistoryNote.component.js';
+import { CompareHorizonsLink } from './CompareHorizonsLink.component.js';
 import { CoinsSituationCard } from './CoinsSituationCard.component.js';
 import { useGoalEvaluationQuery, useGoalQuery } from './goal.query.js';
 import { RankingCard } from './RankingCard.component.js';
@@ -27,6 +28,7 @@ export function GoalDetailPage(): ReactElement {
           Perda máxima aceita: {formatPercent(Number(data.maxLossRate))}.
         </p>
       )}
+      {data === undefined ? null : <CompareHorizonsLink symbol={data.symbol} />}
       <HistoryNote extra="COMPRAR, SEGURAR e EVITAR descrevem o que o histórico mostrou." />
       {goal.isError || evaluation.isError ? (
         <p role="alert" className={controls.error}>

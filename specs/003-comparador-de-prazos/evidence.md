@@ -245,3 +245,14 @@ horizon-intraday, backtest-use-case, backtest-continuity, api-openapi, code-size
 | Contraste (≥ 4,5:1, claro e escuro) do texto do selo e das etiquetas: `ink` sobre `buy-soft`, `sell-soft`, `warn-soft`, `surface-2`, e `ink-2` sobre `surface-2` | `test/contrast.contract.ts` |
 
 **Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos; `panel-test` completo verde.
+
+## T3.3 — Link "Comparar prazos desta moeda" na meta (2026-10-12)
+
+**O que há.** `goals/CompareHorizonsLink.component.tsx`, usado na `GoalDetailPage` logo abaixo da perda máxima: leva a `/prazos?symbol=<par da meta>` (o parâmetro vem de `HORIZON_PARAM.SYMBOL`, montado com `URLSearchParams`). Enquanto a meta não carregou, não há link.
+
+| Contrato | Arquivo |
+|---|---|
+| Meta em ETHUSDT: o link tem `href="/prazos?symbol=ETHUSDT"`; o clique abre `/prazos`, o seletor de moeda mostra ETHUSDT e a consulta de prazos sai com `symbol=ETHUSDT` | `test/horizons.contract.tsx` |
+| Meta ainda carregando: sem link | idem |
+
+**Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos; `panel-test` completo verde.
