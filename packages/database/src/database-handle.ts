@@ -1,15 +1,24 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { drizzle, type BunSQLDatabase } from 'drizzle-orm/bun-sql';
 
-// Espera as consultas em andamento só este tanto: banco inalcançável não pode segurar o encerramento.
-const CLOSE_DRAIN_SECONDS = 1;
+import {
+  CONNECTION_TIMEOUT_SECONDS,
+  DEFAULT_QUERY_TIMEOUT_SECONDS,
+  MILLISECONDS_PER_SECOND,
+  RECONNECT_BASE_MILLISECONDS,
+  RECONNECT_FAILURE_THRESHOLD,
+  RECONNECT_MAX_MILLISECONDS,
+} from './connection/connection.constant.js';
+import { createResilientDatabase } from './connection/resilient-database.js';
+import type { DatabaseHealth, ResilientDatabase } from './connection/resilient-database.types.js';
+import type { SqlClient } from './connection/sql-client.types.js';
 
 declare const DATABASE_HANDLE_BRAND: unique symbol;
 
 export type DatabaseHandle = { readonly [DATABASE_HANDLE_BRAND]: 'DatabaseHandle' };
 
 type OpenDatabase = {
-  readonly client: Bun.SQL;
+  readonly connection: ResilientDatabase;
   readonly database: BunSQLDatabase;
 };
 
@@ -19,20 +28,37 @@ export type OpenDatabaseOptions = {
   // A CA (PEM) de um banco que o sistema não conhece (o Railway): com `sslmode=verify-full` na URL, o certificado é validado
   // contra ela E contra o nome do servidor. Sem ela, vale a loja de CAs do sistema.
   readonly sslRootCertificate?: string | undefined;
+  // Teto de tempo por unidade de trabalho (consulta avulsa ou transação inteira); vencido, a unidade falha e o cliente é reaberto.
+  readonly queryTimeoutSeconds?: number | undefined;
 };
+
+function openBunClient(databaseUrl: string, options: OpenDatabaseOptions): SqlClient {
+  const connectionTimeout = CONNECTION_TIMEOUT_SECONDS;
+  return options.sslRootCertificate === undefined
+    ? new Bun.SQL(databaseUrl, { connectionTimeout })
+    : new Bun.SQL(databaseUrl, {
+        connectionTimeout,
+        tls: { ca: options.sslRootCertificate, rejectUnauthorized: true },
+      });
+}
 
 export function openDatabase(
   databaseUrl: string,
   options: OpenDatabaseOptions = {},
 ): DatabaseHandle {
-  const client =
-    options.sslRootCertificate === undefined
-      ? new Bun.SQL(databaseUrl)
-      : new Bun.SQL(databaseUrl, {
-          tls: { ca: options.sslRootCertificate, rejectUnauthorized: true },
-        });
+  const queryTimeoutSeconds = options.queryTimeoutSeconds ?? DEFAULT_QUERY_TIMEOUT_SECONDS;
+  const connection = createResilientDatabase({
+    openClient: () => openBunClient(databaseUrl, options),
+    queryTimeoutMilliseconds: queryTimeoutSeconds * MILLISECONDS_PER_SECOND,
+    now: () => Date.now(),
+    random: () => Math.random(),
+    failureThreshold: RECONNECT_FAILURE_THRESHOLD,
+    reconnectBaseMilliseconds: RECONNECT_BASE_MILLISECONDS,
+    reconnectMaxMilliseconds: RECONNECT_MAX_MILLISECONDS,
+  });
   const handle = Object.freeze({}) as DatabaseHandle;
-  openDatabases.set(handle, { client, database: drizzle(client) });
+  // O Drizzle só chama `unsafe` e `begin` do cliente; o porteiro responde por ambos e troca o `Bun.SQL` por baixo.
+  openDatabases.set(handle, { connection, database: drizzle(connection as unknown as Bun.SQL) });
   return handle;
 }
 
@@ -43,17 +69,21 @@ export function readOpenDatabase(handle: DatabaseHandle): OpenDatabase {
 }
 
 export async function closeDatabase(handle: DatabaseHandle): Promise<void> {
-  const { client } = readOpenDatabase(handle);
+  const { connection } = readOpenDatabase(handle);
   openDatabases.delete(handle);
-  await client.close({ timeout: CLOSE_DRAIN_SECONDS });
+  await connection.close();
 }
 
 export async function pingDatabase(handle: DatabaseHandle): Promise<boolean> {
-  const { client } = readOpenDatabase(handle);
+  const { connection } = readOpenDatabase(handle);
   try {
-    await client`SELECT 1`;
+    await connection.unsafe('SELECT 1');
     return true;
   } catch {
     return false;
   }
+}
+
+export function readDatabaseHealth(handle: DatabaseHandle): DatabaseHealth {
+  return readOpenDatabase(handle).connection.readHealth();
 }

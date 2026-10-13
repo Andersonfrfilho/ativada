@@ -45,10 +45,11 @@ export {
 export {
   closeDatabase,
   openDatabase,
-  type OpenDatabaseOptions,
   pingDatabase,
+  readDatabaseHealth,
   type DatabaseHandle,
 } from './database-handle.js';
+export { DatabaseUnavailableError, isDatabaseConnectionFailure } from './connection/public.js';
 export { CLOCK_SKEW_TOLERANCE_MILLISECONDS } from './candles/candle.constant.js';
 export { createCandleRepository } from './candles/candle.repository.js';
 export type * from './candles/candle.types.js';

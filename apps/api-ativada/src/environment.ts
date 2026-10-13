@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
   checkProductionRules,
+  databaseQueryTimeoutSecondsSchema,
   environmentNameSchema,
   httpUrlSchema,
   nonEmptyTextSchema,
@@ -108,6 +109,7 @@ export const environmentSchema = z
     ENV: environmentNameSchema,
     DATABASE_URL: postgresUrlSchema,
     DATABASE_SSL_ROOT_CERT: pemCertificateSchema.optional(),
+    DATABASE_QUERY_TIMEOUT_SECONDS: databaseQueryTimeoutSecondsSchema,
     API_HOST: nonEmptyTextSchema.default(DEFAULT_API_HOST),
     API_PORT: z.coerce
       .number({ error: API_PORT_EXPECTATION })

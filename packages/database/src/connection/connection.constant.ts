@@ -19,3 +19,25 @@ export const OUTAGE_LOG_LEVEL = {
 export const MAX_ERROR_CAUSE_DEPTH = 4;
 export const UNKNOWN_ERROR_NAME = 'UnknownError';
 export const UNKNOWN_ERROR_CODE = 'UNKNOWN';
+
+export const DATABASE_CONNECTION_STATE = {
+  UP: 'up',
+  DOWN: 'down',
+} as const;
+export type DatabaseConnectionState =
+  (typeof DATABASE_CONNECTION_STATE)[keyof typeof DATABASE_CONNECTION_STATE];
+
+export const DATABASE_UNAVAILABLE_CODE = {
+  UNAVAILABLE: 'DATABASE_UNAVAILABLE',
+  QUERY_TIMEOUT: 'DATABASE_QUERY_TIMEOUT',
+} as const;
+export type DatabaseUnavailableCode =
+  (typeof DATABASE_UNAVAILABLE_CODE)[keyof typeof DATABASE_UNAVAILABLE_CODE];
+
+// Falhas de conexão SEGUIDAS (por código) que pedem um cliente novo; o teto de tempo pede na hora (ADR 0002, R5).
+export const RECONNECT_FAILURE_THRESHOLD = 2;
+export const DEFAULT_QUERY_TIMEOUT_SECONDS = 30;
+export const CONNECTION_TIMEOUT_SECONDS = 10;
+// Fecha o cliente aposentado sem esperar consulta pendurada (ADR 0002, R6).
+export const RETIRED_CLIENT_CLOSE_TIMEOUT_SECONDS = 1;
+export const MILLISECONDS_PER_SECOND = 1_000;

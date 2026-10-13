@@ -1,0 +1,348 @@
+// Copyright (c) 2026 Ada Technology. All rights reserved.
+import { describe, expect, test } from 'bun:test';
+
+import { DatabaseUnavailableError } from '../packages/database/src/connection/connection-error.js';
+import { createResilientDatabase } from '../packages/database/src/connection/resilient-database.js';
+import {
+  createFlakyServer,
+  FLAKY_MODE,
+  FLAKY_ROWS,
+  FlakyPostgresError,
+  wrapLikeDrizzle,
+  type FlakyServer,
+} from '../packages/database/test-support/flaky-sql.js';
+
+const TIMEOUT_MILLISECONDS = 25;
+const BACKOFF_BASE = 1_000;
+const BACKOFF_MAX = 30_000;
+const SETTLE_MILLISECONDS = 10;
+const LONG_TIMEOUT_MILLISECONDS = 100;
+
+type Harness = {
+  readonly server: FlakyServer;
+  readonly database: ReturnType<typeof createResilientDatabase>;
+  readonly advance: (milliseconds: number) => void;
+  readonly now: () => number;
+};
+
+type HarnessOptions = { readonly random?: number; readonly timeoutMilliseconds?: number };
+
+function createHarness(options: HarnessOptions = {}): Harness {
+  const server = createFlakyServer();
+  let clock = 1_000_000;
+  const database = createResilientDatabase({
+    openClient: () => server.openClient(),
+    queryTimeoutMilliseconds: options.timeoutMilliseconds ?? TIMEOUT_MILLISECONDS,
+    now: () => clock,
+    random: () => options.random ?? 0,
+    failureThreshold: 2,
+    reconnectBaseMilliseconds: BACKOFF_BASE,
+    reconnectMaxMilliseconds: BACKOFF_MAX,
+  });
+  return {
+    server,
+    database,
+    advance: (milliseconds): void => {
+      clock += milliseconds;
+    },
+    now: () => clock,
+  };
+}
+
+async function capture(work: PromiseLike<unknown>): Promise<unknown> {
+  try {
+    await work;
+  } catch (error: unknown) {
+    return error;
+  }
+  return undefined;
+}
+
+function expectUnavailable(error: unknown, code: string): void {
+  expect(error).toBeInstanceOf(DatabaseUnavailableError);
+  expect(error).toMatchObject({ code });
+}
+
+function expectDriverCode(error: unknown, code: string): void {
+  expect(error).toBeInstanceOf(FlakyPostgresError);
+  expect(error).toMatchObject({ code });
+}
+
+function settle(): Promise<void> {
+  return Bun.sleep(SETTLE_MILLISECONDS);
+}
+
+describe('ResilientDatabase: healthy path', () => {
+  test('passes rows and values through and stays up', async () => {
+    const { database } = createHarness();
+    expect(await database.unsafe('select 1', [])).toStrictEqual(FLAKY_ROWS);
+    expect(await database.unsafe('select 1').values()).toStrictEqual([[1]]);
+    expect(await database.begin(() => Promise.resolve('tx'))).toBe('tx');
+    expect(database.readHealth()).toStrictEqual({
+      state: 'up',
+      consecutiveFailures: 0,
+      downSince: undefined,
+      nextAttemptAt: undefined,
+      lastFailureCode: undefined,
+      lastFailureErrno: undefined,
+      lastFailureAt: undefined,
+    });
+  });
+
+  test('a query error (23505, a failing callback) is not an outage and keeps its own error', async () => {
+    const { database } = createHarness();
+    const duplicate = new FlakyPostgresError('ERR_POSTGRES_SERVER_ERROR', '23505');
+    const thrown = await capture(database.begin(() => Promise.reject(duplicate)));
+    expect(thrown).toBe(duplicate);
+    expect(database.readHealth().state).toBe('up');
+    expect(database.readHealth().consecutiveFailures).toBe(0);
+  });
+});
+
+describe('ResilientDatabase: down, fail fast, one probe, up', () => {
+  test('the first connection failure goes down with the code and the backoff, without reopening', async () => {
+    const { server, database, now } = createHarness();
+    const first = server.clients[0];
+    server.setMode(FLAKY_MODE.CLOSED);
+    expectDriverCode(await capture(database.unsafe('select 1')), 'ERR_POSTGRES_CONNECTION_CLOSED');
+    expect(database.readHealth()).toStrictEqual({
+      state: 'down',
+      consecutiveFailures: 1,
+      downSince: now(),
+      nextAttemptAt: now() + 500,
+      lastFailureCode: 'ERR_POSTGRES_CONNECTION_CLOSED',
+      lastFailureErrno: undefined,
+      lastFailureAt: now(),
+    });
+    expect(server.clients).toHaveLength(1);
+    expect(first?.isClosed()).toBe(false);
+  });
+
+  test('before the next attempt the work fails at once and never touches the client', async () => {
+    const { server, database, advance } = createHarness();
+    server.setMode(FLAKY_MODE.REFUSED);
+    await capture(database.unsafe('select 1'));
+    const client = server.clients[0];
+    const executedBefore = client?.executed.length;
+    advance(499);
+    for (let round = 0; round < 50; round += 1) {
+      expectUnavailable(await capture(database.unsafe('select 1')), 'DATABASE_UNAVAILABLE');
+      expectUnavailable(
+        await capture(database.begin(() => Promise.resolve(1))),
+        'DATABASE_UNAVAILABLE',
+      );
+    }
+    expect(client?.executed.length).toBe(executedBefore);
+    expect(database.readHealth().consecutiveFailures).toBe(1);
+  });
+
+  test('after the wait only ONE probe goes out; the others keep failing fast until it answers', async () => {
+    const { server, database, advance } = createHarness();
+    server.setMode(FLAKY_MODE.REFUSED);
+    await capture(database.unsafe('select 1'));
+    server.setMode(FLAKY_MODE.HEALTHY);
+    server.hold();
+    advance(500);
+    const probe = Promise.resolve(database.unsafe('probe'));
+    expectUnavailable(await capture(database.unsafe('other')), 'DATABASE_UNAVAILABLE');
+    server.release();
+    expect(await probe).toStrictEqual(FLAKY_ROWS);
+    expect(database.readHealth().state).toBe('up');
+    expect(await database.unsafe('after')).toStrictEqual(FLAKY_ROWS);
+  });
+
+  test('the second failure in a row reopens the client: the old one is closed with a 1 s drain, new work goes to the new one', async () => {
+    const { server, database, advance } = createHarness();
+    server.setMode(FLAKY_MODE.CLOSED);
+    await capture(database.unsafe('select 1'));
+    advance(500);
+    await capture(database.unsafe('probe'));
+    expect(server.clients).toHaveLength(2);
+    expect(server.clients[0]?.isClosed()).toBe(true);
+    expect(server.clients[0]?.closeTimeouts).toStrictEqual([1]);
+    expect(database.readHealth().consecutiveFailures).toBe(2);
+    server.setMode(FLAKY_MODE.HEALTHY);
+    advance(1_000);
+    expect(await database.unsafe('after')).toStrictEqual(FLAKY_ROWS);
+    expect(server.clients[1]?.executed).toStrictEqual(['after']);
+    expect(database.readHealth().state).toBe('up');
+    expect(database.readHealth().consecutiveFailures).toBe(0);
+  });
+
+  test('drops and comes back: down, reopen, up, with the backoff growing and never above 30 s', async () => {
+    const { server, database, advance, now } = createHarness({ random: 1 });
+    server.setMode(FLAKY_MODE.REFUSED);
+    const waits: number[] = [];
+    for (let attempt = 1; attempt <= 8; attempt += 1) {
+      await capture(database.unsafe('select 1'));
+      const next = database.readHealth().nextAttemptAt ?? 0;
+      waits.push(next - now());
+      advance(next - now());
+    }
+    expect(waits).toStrictEqual([1_000, 2_000, 4_000, 8_000, 16_000, 30_000, 30_000, 30_000]);
+    server.setMode(FLAKY_MODE.HEALTHY);
+    expect(await database.unsafe('back')).toStrictEqual(FLAKY_ROWS);
+    expect(database.readHealth().state).toBe('up');
+  });
+
+  test('the parada limpa (57P01 in errno) is a connection failure and the errno is recorded', async () => {
+    const { server, database } = createHarness();
+    server.setMode(FLAKY_MODE.STOPPING);
+    await capture(database.unsafe('select 1'));
+    const health = database.readHealth();
+    expect(health.state).toBe('down');
+    expect(health.lastFailureCode).toBe('ERR_POSTGRES_SERVER_ERROR');
+    expect(health.lastFailureErrno).toBe('57P01');
+  });
+
+  test('a driver error wrapped like Drizzle still counts; a fail-fast error inside a callback does not', async () => {
+    const wrapped = createHarness();
+    const closed = new FlakyPostgresError('ERR_POSTGRES_CONNECTION_CLOSED');
+    await capture(wrapped.database.begin(() => Promise.reject(wrapLikeDrizzle(closed))));
+    expect(wrapped.database.readHealth().state).toBe('down');
+    const nested = createHarness();
+    const failFast = new DatabaseUnavailableError('DATABASE_UNAVAILABLE');
+    await capture(nested.database.begin(() => Promise.reject(wrapLikeDrizzle(failFast))));
+    expect(nested.database.readHealth().state).toBe('up');
+  });
+
+  test('a probe that times out frees the probe slot for the next attempt', async () => {
+    const { server, database, advance } = createHarness();
+    server.setMode(FLAKY_MODE.REFUSED);
+    await capture(database.unsafe('select 1'));
+    server.setMode(FLAKY_MODE.HUNG);
+    advance(500);
+    expectUnavailable(await capture(database.unsafe('probe')), 'DATABASE_QUERY_TIMEOUT');
+    server.setMode(FLAKY_MODE.HEALTHY);
+    advance(1_000);
+    expect(await database.unsafe('next')).toStrictEqual(FLAKY_ROWS);
+    expect(database.readHealth().state).toBe('up');
+  });
+});
+
+describe('ResilientDatabase: the time cap per unit', () => {
+  test('a mute connection times out, reopens at once and the next unit goes to the new client', async () => {
+    const { server, database, advance } = createHarness();
+    server.setMode(FLAKY_MODE.HUNG);
+    expectUnavailable(await capture(database.unsafe('stuck')), 'DATABASE_QUERY_TIMEOUT');
+    expect(server.clients).toHaveLength(2);
+    expect(server.clients[0]?.isClosed()).toBe(true);
+    expect(database.readHealth()).toMatchObject({
+      state: 'down',
+      consecutiveFailures: 1,
+      lastFailureCode: 'DATABASE_QUERY_TIMEOUT',
+    });
+    server.setMode(FLAKY_MODE.HEALTHY);
+    advance(500);
+    expect(await database.unsafe('fresh')).toStrictEqual(FLAKY_ROWS);
+    expect(server.clients[1]?.executed).toStrictEqual(['fresh']);
+    expect(database.readHealth().state).toBe('up');
+  });
+
+  test('a transaction that overruns the cap fails with the timeout and reopens at once', async () => {
+    const { server, database } = createHarness();
+    server.hold();
+    const failure = await capture(
+      database.begin(async (transaction) => {
+        await transaction.unsafe('inside');
+      }),
+    );
+    expectUnavailable(failure, 'DATABASE_QUERY_TIMEOUT');
+    expect(server.clients).toHaveLength(2);
+  });
+
+  test('R7: a unit that overran the cap reports the failure even if the server applied it; what the old client says later is ignored', async () => {
+    const { server, database } = createHarness();
+    server.setMode(FLAKY_MODE.FROZEN);
+    const late = capture(database.unsafe('maybe committed'));
+    expectUnavailable(await late, 'DATABASE_QUERY_TIMEOUT');
+    server.setMode(FLAKY_MODE.HEALTHY);
+    await settle();
+    expect(database.readHealth().state).toBe('down');
+  });
+});
+
+describe('ResilientDatabase: a transaction in flight is never swapped out', () => {
+  test('the old client stays open while the transaction lives, then closes; new work uses the new client', async () => {
+    const { server, database, advance } = createHarness({
+      timeoutMilliseconds: LONG_TIMEOUT_MILLISECONDS,
+    });
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const transaction = database.begin(async (inner) => {
+      await gate;
+      await inner.unsafe('last statement');
+      return 'committed';
+    });
+    await settle();
+    server.setMode(FLAKY_MODE.CLOSED);
+    await capture(database.unsafe('x'));
+    advance(500);
+    await capture(database.unsafe('y'));
+    expect(server.clients).toHaveLength(2);
+    expect(server.clients[0]?.isClosed()).toBe(false);
+    expect(server.clients[0]?.closeTimeouts).toStrictEqual([]);
+    server.setMode(FLAKY_MODE.HEALTHY);
+    advance(1_000);
+    expect(await database.unsafe('on the new client')).toStrictEqual(FLAKY_ROWS);
+    expect(server.clients[1]?.executed).toContain('on the new client');
+    release();
+    expect(await transaction).toBe('committed');
+    expect(server.clients[0]?.isClosed()).toBe(true);
+    expect(server.clients[0]?.closeTimeouts).toStrictEqual([1]);
+  });
+
+  test('the failure of a transaction on a retired client does not disturb the state of the new one', async () => {
+    const { server, database, advance } = createHarness({
+      timeoutMilliseconds: LONG_TIMEOUT_MILLISECONDS,
+    });
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const transaction = capture(
+      database.begin(async (inner) => {
+        await gate;
+        await inner.unsafe('late');
+      }),
+    );
+    await settle();
+    server.setMode(FLAKY_MODE.CLOSED);
+    await capture(database.unsafe('x'));
+    advance(500);
+    await capture(database.unsafe('y'));
+    server.setMode(FLAKY_MODE.HEALTHY);
+    advance(1_000);
+    await database.unsafe('recovered');
+    server.setMode(FLAKY_MODE.CLOSED);
+    release();
+    expectDriverCode(await transaction, 'ERR_POSTGRES_CONNECTION_CLOSED');
+    expect(database.readHealth().state).toBe('up');
+  });
+
+  test('a unit that overran the cap does not keep the old client open', async () => {
+    const { server, database } = createHarness();
+    server.setMode(FLAKY_MODE.HUNG);
+    await capture(database.unsafe('stuck'));
+    expect(server.clients[0]?.isClosed()).toBe(true);
+  });
+});
+
+describe('ResilientDatabase: close', () => {
+  test('closes the current client and the retired ones still waiting for their transaction', async () => {
+    const { server, database, advance } = createHarness({
+      timeoutMilliseconds: LONG_TIMEOUT_MILLISECONDS,
+    });
+    const transaction = capture(database.begin(() => new Promise<void>(() => undefined)));
+    await settle();
+    server.setMode(FLAKY_MODE.CLOSED);
+    await capture(database.unsafe('x'));
+    advance(500);
+    await capture(database.unsafe('y'));
+    await database.close();
+    expect(server.clients.every((client) => client.isClosed())).toBe(true);
+    expectUnavailable(await transaction, 'DATABASE_QUERY_TIMEOUT');
+  });
+});

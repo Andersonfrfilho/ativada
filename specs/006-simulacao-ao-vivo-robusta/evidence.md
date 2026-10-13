@@ -123,3 +123,37 @@ Gates (WSL, `gates6.sh`): contratos novos 25/25; `typecheck`, `lint` e `format` 
   cliente onde deve curar e não curar onde não deve, `close()` por cliente, formato dos erros).
 
 Gates (WSL, `gates6.sh`): contrato 13/13; `typecheck`, `lint` e `format` limpos; vizinhos 145/145.
+
+## T1.3 — `ResilientDatabase` (2026-10-13, `sonnet`)
+
+Código em `packages/database/src/connection/`: `connection-error.ts` (R1: `isDatabaseConnectionFailure` percorre erro e `cause` até 4
+níveis, lê `code` e `errno`; `DatabaseUnavailableError` com `DATABASE_UNAVAILABLE` e `DATABASE_QUERY_TIMEOUT`),
+`connection-gate.ts` (estado `up`/`down`, sonda única, backoff, troca do cliente, aposentadoria do velho),
+`resilient-database.ts` (teto por unidade, consulta preguiçosa e `begin`), `sql-client.types.ts`, `public.ts`.
+`openDatabase` monta o porteiro com `connectionTimeout: 10` e entrega ao Drizzle um `SqlClient` que só expõe `unsafe`/`begin`
+(o Drizzle só chama esses dois); a forma opaca do `DatabaseHandle` não mudou. Novo: `readDatabaseHealth(handle)`,
+`DatabaseUnavailableError`, `isDatabaseConnectionFailure` na superfície pública. `DATABASE_QUERY_TIMEOUT_SECONDS` (5 a 300, padrão
+30) validado por `databaseQueryTimeoutSecondsSchema` em `@ativada/environment` e ligado no ambiente e na abertura do banco da API e
+do worker (as threads de backtest/walk-forward e o cron usam o padrão de 30 s).
+
+Contrato (`test/database-resilient.contract.test.ts`, 17 casos, com o dublê): cai → `down` na primeira falha com o backoff da
+conta à mão → falha rápida sem tocar o cliente → UMA sonda por espera → a segunda falha seguida reabre o cliente (velho fechado
+com dreno de 1 s) → volta a `up` na primeira consulta; backoff 1, 2, 4, 8, 16, 30, 30 s; 57P01 em `errno` conta; erro de consulta
+(23505) não; erro embrulhado como o Drizzle conta e falha rápida aninhada não; conexão muda estoura o teto, reabre na hora e a
+unidade seguinte vai ao cliente novo; transação em voo nunca é trocada (o cliente velho só fecha depois dela; falha dela não
+mexe no estado do novo); R7 documentado no teste (unidade vencida devolve falha mesmo que o servidor tenha aplicado; o que o
+cliente velho disser depois é ignorado); `close()` fecha atual e aposentados.
+
+Banco real (Postgres 18.3 embutido do WSL, porta 56434, fora do repo; containers do projeto intocados): novo
+`checkReconnection` em `packages/database/test-support/reconnect-checks.ts`, chamado por `database-test.ts`: `pg_terminate_backend` na
+conexão do cliente → `down` → volta a `up` sozinho em ~0,9 s (`down=true`). **Pendência:** o `database-test` inteiro não chega ao
+fim neste WSL porque a medição "lote de 17.520 pontos < 1.500 ms" já falha SEM a mudança (commit anterior 1.922 ms; com a
+mudança 1.677 ms, disco do WSL); rodei o caso novo isoladamente. `make database-test` precisa de Docker (instável aqui).
+
+Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; 335/335 nos contratos novos e nos vizinhos (`database`,
+`database-tls` com a CA própria pelo `openDatabase` real, `code-size-limits`, boundaries, ownership, ambientes da API e do
+worker, agendadores). Observação: `environment.contract.test.ts` "worker-ativada boots" falhou uma vez em lote paralelo e passa
+isolado (temporização).
+
+Desvio do ADR R8: o porteiro NÃO loga; quem loga é cada laço do worker pelo `outage-log` (T1.4), que dá ≤ 1 linha por laço a
+cada 60 s e vale também para a API quando ela passar a usar o mesmo resumo.

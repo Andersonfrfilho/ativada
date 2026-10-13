@@ -133,6 +133,7 @@ function startWorker(environment: Environment): void {
   });
   const database = openDatabase(environment.DATABASE_URL, {
     sslRootCertificate: environment.DATABASE_SSL_ROOT_CERT,
+    queryTimeoutSeconds: environment.DATABASE_QUERY_TIMEOUT_SECONDS,
   });
   const unfillable = new Set<string>();
   const recoveryClock = createRecoveryClock(() => Date.now());

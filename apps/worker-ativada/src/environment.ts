@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
   checkProductionRules,
+  databaseQueryTimeoutSecondsSchema,
   environmentNameSchema,
   httpUrlSchema,
   nonEmptyTextSchema,
@@ -72,6 +73,7 @@ export const environmentSchema = z
     ENV: environmentNameSchema,
     DATABASE_URL: postgresUrlSchema,
     DATABASE_SSL_ROOT_CERT: pemCertificateSchema.optional(),
+    DATABASE_QUERY_TIMEOUT_SECONDS: databaseQueryTimeoutSecondsSchema,
     ...marketEnvironmentShape,
     BINANCE_BASE_URL: httpUrlSchema.default(BINANCE_MARKET_DATA_BASE_URL),
     BINANCE_STREAM_URL: webSocketUrlSchema.default(BINANCE_STREAM_BASE_URL),

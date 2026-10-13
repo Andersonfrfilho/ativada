@@ -87,6 +87,7 @@ function createLifecycle(params: LifecycleParams): Pick<Application, 'start' | '
 function openApplicationDatabase(environment: Environment): DatabaseHandle {
   return openDatabase(environment.DATABASE_URL, {
     sslRootCertificate: environment.DATABASE_SSL_ROOT_CERT,
+    queryTimeoutSeconds: environment.DATABASE_QUERY_TIMEOUT_SECONDS,
   });
 }
 
