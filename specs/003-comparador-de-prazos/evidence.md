@@ -345,3 +345,13 @@ Parágrafo acrescentado ao fim da seção "Filtros de preço e quantidade por pa
 - **Achado 5.** O caminho quente lê ~9 mil candles antes de consultar o cache (as séries são carregadas para montar a chave).
 
 Ambos ficam como pendência de desempenho para uma tarefa à parte (partir o cache da linha diária e da de 15 minutos; montar a chave com o último candle, sem ler a série inteira).
+
+### Achado 10 — "Como ler" avisa que o resultado real tende a ser pior
+
+Segunda frase do "Como ler esta tela": "Cada linha mostra a melhor das suas estratégias naquele prazo, escolhida olhando o passado; por isso o resultado real tende a ser um pouco pior." Para caber no limite de 40 linhas por função, os itens do componente passaram a uma lista constante (`EXPLANATIONS`); o texto dos demais itens não mudou.
+
+| Contrato | Arquivo |
+|---|---|
+| O "Como ler" (fechado por padrão) contém a frase nova, e ainda "No pior caso" | `apps/frontend-ativada/test/horizons.contract.tsx` |
+
+**Gates (WSL).** typecheck, lint e prettier limpos; `panel-test` completo verde.

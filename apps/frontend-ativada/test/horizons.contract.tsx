@@ -265,6 +265,9 @@ describe('horizons screen furniture', () => {
     const details = summary.closest('details');
     expect(details?.open).toBe(false);
     expect(details?.textContent).toContain('No pior caso');
+    expect(details?.textContent).toContain(
+      'Cada linha mostra a melhor das suas estratégias naquele prazo, escolhida olhando o passado; por isso o resultado real tende a ser um pouco pior.',
+    );
   });
 
   test('says it is loading while the numbers are not there', async () => {
