@@ -18,6 +18,12 @@ export const DATABASE_QUERY_TIMEOUT_MAXIMUM_SECONDS = 300;
 export const DATABASE_QUERY_TIMEOUT_DEFAULT_SECONDS = 30;
 const DATABASE_QUERY_TIMEOUT_EXPECTATION = `inteiro de ${DATABASE_QUERY_TIMEOUT_MINIMUM_SECONDS} a ${DATABASE_QUERY_TIMEOUT_MAXIMUM_SECONDS}`;
 
+// Perfil longo (cron e threads de backtest e walk-forward): a transação da purga LGPD e a busca do walk-forward passam de 30 s legitimamente.
+export const DATABASE_LONG_QUERY_TIMEOUT_MINIMUM_SECONDS = 30;
+export const DATABASE_LONG_QUERY_TIMEOUT_MAXIMUM_SECONDS = 3600;
+export const DATABASE_LONG_QUERY_TIMEOUT_DEFAULT_SECONDS = 600;
+const DATABASE_LONG_QUERY_TIMEOUT_EXPECTATION = `inteiro de ${DATABASE_LONG_QUERY_TIMEOUT_MINIMUM_SECONDS} a ${DATABASE_LONG_QUERY_TIMEOUT_MAXIMUM_SECONDS}`;
+
 export const WORKER_HEARTBEAT_MINIMUM_SECONDS = 5;
 export const WORKER_HEARTBEAT_MAXIMUM_SECONDS = 120;
 export const WORKER_HEARTBEAT_DEFAULT_SECONDS = 15;
@@ -53,6 +59,18 @@ export const databaseQueryTimeoutSecondsSchema = z.coerce
   .min(DATABASE_QUERY_TIMEOUT_MINIMUM_SECONDS, { error: DATABASE_QUERY_TIMEOUT_EXPECTATION })
   .max(DATABASE_QUERY_TIMEOUT_MAXIMUM_SECONDS, { error: DATABASE_QUERY_TIMEOUT_EXPECTATION })
   .default(DATABASE_QUERY_TIMEOUT_DEFAULT_SECONDS);
+
+// Teto por unidade do perfil longo (cron, thread de backtest e de walk-forward); a API e o worker usam o curto acima.
+export const databaseLongQueryTimeoutSecondsSchema = z.coerce
+  .number({ error: DATABASE_LONG_QUERY_TIMEOUT_EXPECTATION })
+  .int({ error: DATABASE_LONG_QUERY_TIMEOUT_EXPECTATION })
+  .min(DATABASE_LONG_QUERY_TIMEOUT_MINIMUM_SECONDS, {
+    error: DATABASE_LONG_QUERY_TIMEOUT_EXPECTATION,
+  })
+  .max(DATABASE_LONG_QUERY_TIMEOUT_MAXIMUM_SECONDS, {
+    error: DATABASE_LONG_QUERY_TIMEOUT_EXPECTATION,
+  })
+  .default(DATABASE_LONG_QUERY_TIMEOUT_DEFAULT_SECONDS);
 
 // Intervalo do batimento do worker; a API usa o mesmo valor para decidir quando a última batida já está velha.
 export const workerHeartbeatSecondsSchema = z.coerce

@@ -10,6 +10,7 @@ serveBacktestWorker({
     const environment = loadBacktestWorkerEnvironment();
     const handle = openDatabase(environment.DATABASE_URL, {
       sslRootCertificate: environment.DATABASE_SSL_ROOT_CERT,
+      queryTimeoutSeconds: environment.DATABASE_LONG_QUERY_TIMEOUT_SECONDS,
     });
     return Promise.resolve({
       database: createBacktestDatabase(handle),

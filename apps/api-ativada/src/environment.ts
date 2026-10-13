@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
   checkProductionRules,
+  databaseLongQueryTimeoutSecondsSchema,
   databaseQueryTimeoutSecondsSchema,
   environmentNameSchema,
   httpUrlSchema,
@@ -112,6 +113,7 @@ export const environmentSchema = z
     DATABASE_URL: postgresUrlSchema,
     DATABASE_SSL_ROOT_CERT: pemCertificateSchema.optional(),
     DATABASE_QUERY_TIMEOUT_SECONDS: databaseQueryTimeoutSecondsSchema,
+    DATABASE_LONG_QUERY_TIMEOUT_SECONDS: databaseLongQueryTimeoutSecondsSchema,
     WORKER_HEARTBEAT_SECONDS: workerHeartbeatSecondsSchema,
     API_HOST: nonEmptyTextSchema.default(DEFAULT_API_HOST),
     API_PORT: z.coerce
@@ -189,10 +191,11 @@ export function loadEnvironment(): Environment {
   return parseEnvironment(environmentSchema, process.env);
 }
 
-// O que a thread do backtest lê do ambiente que a API lhe passa: só a conexão com o banco.
+// O que a thread do backtest lê do ambiente que a API lhe passa: a conexão com o banco e o teto do perfil longo.
 export const backtestWorkerEnvironmentSchema = z.object({
   DATABASE_URL: postgresUrlSchema,
   DATABASE_SSL_ROOT_CERT: pemCertificateSchema.optional(),
+  DATABASE_LONG_QUERY_TIMEOUT_SECONDS: databaseLongQueryTimeoutSecondsSchema,
 });
 
 export type BacktestWorkerEnvironment = z.infer<typeof backtestWorkerEnvironmentSchema>;
@@ -201,10 +204,11 @@ export function loadBacktestWorkerEnvironment(): BacktestWorkerEnvironment {
   return parseEnvironment(backtestWorkerEnvironmentSchema, process.env);
 }
 
-// O que a thread do walk-forward lê do ambiente que a API lhe passa: a conexão com o banco e as threads de busca.
+// O que a thread do walk-forward lê do ambiente que a API lhe passa: a conexão com o banco, o teto do perfil longo e as threads de busca.
 export const walkForwardWorkerEnvironmentSchema = z.object({
   DATABASE_URL: postgresUrlSchema,
   DATABASE_SSL_ROOT_CERT: pemCertificateSchema.optional(),
+  DATABASE_LONG_QUERY_TIMEOUT_SECONDS: databaseLongQueryTimeoutSecondsSchema,
   WALK_FORWARD_THREADS: walkForwardThreadsSchema,
 });
 

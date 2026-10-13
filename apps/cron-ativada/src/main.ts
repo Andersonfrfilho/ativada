@@ -16,6 +16,7 @@ async function runAllTasks(environment: Environment): Promise<ExitCode> {
   });
   const database = openDatabase(environment.DATABASE_URL, {
     sslRootCertificate: environment.DATABASE_SSL_ROOT_CERT,
+    queryTimeoutSeconds: environment.DATABASE_LONG_QUERY_TIMEOUT_SECONDS,
   });
   try {
     return await runCronTasks(createProductionTasks({ environment, database, logger }), logger);

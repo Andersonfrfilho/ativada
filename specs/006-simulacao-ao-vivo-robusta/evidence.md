@@ -497,3 +497,18 @@ da correção e dos vizinhos no espelho do WSL (`gates6.sh`).
   contrato de achado 5 ganhou o caso "unidades que falham com CLOSED por causa do próprio `close()`" (o `close` rejeita as pendentes e
   duas falhas seguidas reabririam o cliente).
 - ADR 0002 (R1, R4, R5) e CLAUDE.md (item 1 da spec 006) atualizados.
+
+### Achado 2 — teto por perfil de processo (cron e threads longas não são abortados aos 30 s)
+
+- **Causa.** O teto de 30 s valia para toda unidade de todo processo, inclusive a transação única da purga LGPD
+  (`account-purge.repository.ts`), o cron (`apps/cron-ativada/src/main.ts`) e as threads de backtest e walk-forward, que abriam o
+  banco com o padrão.
+- **Correção.** Variável nova `DATABASE_LONG_QUERY_TIMEOUT_SECONDS` (30 a 3600, padrão 600; `packages/environment/src/common-schemas.ts`,
+  `databaseLongQueryTimeoutSecondsSchema`), validada no ambiente do cron, da API (no boot, para erro cair cedo) e das duas threads;
+  `openDatabase` do cron, `backtest.worker.ts` e `walk-forward.worker.ts` passam `queryTimeoutSeconds` com ela. API e worker seguem em
+  `DATABASE_QUERY_TIMEOUT_SECONDS` (30). O `statement_timeout` acompanha o perfil (teto − 5 s: 595 s no longo).
+- **Contrato** `test/database-timeout-profiles.contract.test.ts`: os padrões de cada processo (30 / 30 / 600 / 600 / 600), faixa do
+  perfil longo (29, 3601, 1.5, abc e vazio recusados) e uma unidade de 45 (escala 1 s = 1 ms) abortada no teto de 30 e concluída no de
+  600. ADR 0002 (R4) e CLAUDE.md atualizados.
+- **Medida na purga (`make lgpd-test`):** NÃO feita. O alvo sobe a infra por Docker (proibido tocar nos containers) e o espelho do WSL
+  não tem o `compose`; registrado como pendência: medir o tempo da transação da purga com volume real antes de reduzir o teto longo.

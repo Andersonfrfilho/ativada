@@ -46,7 +46,11 @@ describe('ambiente da thread do walk-forward', () => {
       DATABASE_URL: databaseUrl,
       WALK_FORWARD_THREADS: '3',
     });
-    expect(parsed).toEqual({ DATABASE_URL: databaseUrl, WALK_FORWARD_THREADS: 3 });
+    expect(parsed).toEqual({
+      DATABASE_URL: databaseUrl,
+      DATABASE_LONG_QUERY_TIMEOUT_SECONDS: 600,
+      WALK_FORWARD_THREADS: 3,
+    });
     const defaults = parseEnvironment(walkForwardWorkerEnvironmentSchema, {
       DATABASE_URL: databaseUrl,
     });
