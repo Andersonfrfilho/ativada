@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -36,7 +37,7 @@ import {
 
 export const RUN_QUERY_ROOT = 'runs';
 const FIRST_PAGE: string | null = null;
-const TRADES_PAGE_SIZE = 20;
+const TRADES_PAGE_SIZE = 100;
 const WINDOWS_PAGE_SIZE = 100;
 
 function pagePath(base: string, extra: Record<string, string>, cursor: string | null): string {
@@ -118,6 +119,8 @@ export function useTradesQuery(
   return useInfiniteQuery({
     queryKey: [RUN_QUERY_ROOT, runId, 'trades', filters.from, filters.to, filters.status],
     initialPageParam: FIRST_PAGE,
+    // A tabela segue a faixa do gráfico: a lista anterior fica na tela enquanto a nova faixa carrega.
+    placeholderData: keepPreviousData,
     queryFn: ({ pageParam }) =>
       client.requestPage({
         path: pagePath(

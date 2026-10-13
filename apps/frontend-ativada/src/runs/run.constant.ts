@@ -57,6 +57,7 @@ export const METRIC_UNAVAILABLE_TEXT: Readonly<Record<string, string>> = {
   no_wins: 'sem ganhos',
 };
 
+// Rótulo curto da tabela antiga `TradesCard`; sai quando o cartão "Preço e operações" a substituir (T4.4).
 export const EXIT_REASON_LABEL: Readonly<Record<string, string>> = {
   stop: 'Stop',
   target: 'Alvo',
@@ -64,3 +65,17 @@ export const EXIT_REASON_LABEL: Readonly<Record<string, string>> = {
   command: 'Comando',
   gap: 'Lacuna',
 };
+
+// Os cinco motivos reais do motor (ADR 0002, spec 005 O12), em português simples.
+export const EXIT_REASON_PLAIN_TEXT: Readonly<Record<string, string>> = {
+  target: 'atingiu o alvo de lucro',
+  stop: 'vendeu para limitar a perda (stop)',
+  signal: 'a estratégia mandou vender',
+  command: 'a meta chegou ao fim e a simulação vendeu',
+  gap: 'faltaram dados do mercado e a posição foi fechada',
+};
+
+// Motivo que este painel não conhece aparece como veio, nunca some.
+export function exitReasonText(code: string): string {
+  return EXIT_REASON_PLAIN_TEXT[code] ?? code;
+}
