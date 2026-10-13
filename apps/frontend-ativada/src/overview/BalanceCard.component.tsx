@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
+import { Link } from 'react-router';
 
+import { ROUTE_PATH } from '../app/app.constant.js';
 import { Card } from '../layout/Card.component.js';
 import controls from '../styles/Controls.module.css';
 import { EquitySparkline } from './EquitySparkline.component.js';
@@ -90,6 +92,9 @@ export function BalanceCard({ run, points, signals }: BalanceCardProps): ReactEl
           <EquitySparkline points={points} {...(signals === undefined ? {} : { signals })} />
         </>
       )}
+      <Link to={`${ROUTE_PATH.BACKTESTS}/${run.id}`} className={controls.textLink}>
+        Ver compras e vendas no gráfico
+      </Link>
     </Card>
   );
 }

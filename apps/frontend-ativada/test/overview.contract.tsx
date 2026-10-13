@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import { HTTP_STATUS } from '@ativada/environment';
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 
 import {
   dataResponse,
@@ -163,6 +163,16 @@ function overviewRoutes(overrides: {
 }
 
 describe('overview page', () => {
+  test('links the balance card to the chart of the active live run', async () => {
+    const app = renderApp({ path: '/', isAuthenticated: true, routes: overviewRoutes({}) });
+    const balance = await screen.findByRole('region', { name: 'Saldo da simulação' });
+    const link = within(balance).getByRole('link', { name: 'Ver compras e vendas no gráfico' });
+    expect(link.getAttribute('href')).toBe('/backtests/run-1');
+    fireEvent.click(link);
+    await waitFor(() => expect(app.router.state.location.pathname).toBe('/backtests/run-1'));
+    expect(await screen.findByRole('heading', { name: /Simulação ao vivo/ })).toBeDefined();
+  });
+
   test('shows the balance, the comparison with buy and hold, and the running state', async () => {
     renderApp({ path: '/', isAuthenticated: true, routes: overviewRoutes({}) });
     expect(await screen.findByRole('heading', { name: 'Visão geral' })).toBeDefined();
