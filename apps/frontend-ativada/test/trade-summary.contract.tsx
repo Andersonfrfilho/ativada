@@ -52,6 +52,16 @@ describe('TradeSummary', () => {
     });
   });
 
+  test('rounds against the user: 613.1125 paid is 613,12 and 613.1125 received is 613,11', async () => {
+    show(<TradeSummary runId="run-1" />, [
+      summaryRoute({ totalPaid: '613.1125', totalReceived: '613.1125', totalFees: '0.1125' }),
+    ]);
+    await screen.findByRole('region', { name: 'Resumo das operações' });
+    expect(facts()['Total pago']).toBe('613,12 USDT');
+    expect(facts()['Total recebido']).toBe('613,11 USDT');
+    expect(facts()['Taxas']).toBe('0,12 USDT');
+  });
+
   test('a loss shows the minus sign and an open trade shows what was paid on it', async () => {
     show(<TradeSummary runId="run-1" />, [
       summaryRoute({ net: '-508.12', openTrades: 1, openPaid: '412', closedTrades: 3 }),

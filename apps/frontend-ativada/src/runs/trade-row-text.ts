@@ -1,7 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { formatSignedScaled, formatSignedScaledPercent, parseScaled } from '../format/decimal.js';
-import { formatDecimal, formatPrice, formatQuantity } from '../format/format.js';
+import { formatSignedScaledPercent, parseScaled } from '../format/decimal.js';
+import { formatPrice, formatQuantity } from '../format/format.js';
 import { formatInZone } from '../format/zoned-time.js';
+import {
+  formatDirectedMoney,
+  formatDirectedResult,
+  type RoundingDirection,
+} from './directed-money.js';
 import { exitReasonText } from './run.constant.js';
 import type { Trade } from './run.validation.js';
 
@@ -27,8 +32,8 @@ export type TradeRowText = {
 
 export type TradeRowParams = { readonly trade: Trade; readonly timeZone: string };
 
-function moneyOrMissing(text: string | undefined): string {
-  return text === undefined ? MISSING_TEXT : formatDecimal(text);
+function moneyOrMissing(text: string | undefined, direction: RoundingDirection): string {
+  return text === undefined ? MISSING_TEXT : formatDirectedMoney(text, direction);
 }
 
 type Outcome = { readonly text: string; readonly tone: ResultTone };
@@ -40,7 +45,7 @@ function describeOutcome(trade: Trade): Outcome {
   const rate = trade.netProfitRate === undefined ? undefined : parseScaled(trade.netProfitRate);
   const percent = rate === undefined ? '' : ` (${formatSignedScaledPercent(rate)})`;
   return {
-    text: `${formatSignedScaled(profit)}${percent}`,
+    text: `${formatDirectedResult(profit)}${percent}`,
     tone: profit >= 0n ? 'gain' : 'loss',
   };
 }
@@ -57,9 +62,9 @@ export function describeTradeRow(params: TradeRowParams): TradeRowText {
     entryPrice: formatPrice(trade.entryPrice),
     exitPrice: trade.exitPrice === undefined ? MISSING_TEXT : formatPrice(trade.exitPrice),
     quantity: formatQuantity(trade.quantity),
-    paid: moneyOrMissing(trade.paid),
-    received: moneyOrMissing(trade.received),
-    fees: moneyOrMissing(trade.fees),
+    paid: moneyOrMissing(trade.paid, 'up'),
+    received: moneyOrMissing(trade.received, 'down'),
+    fees: moneyOrMissing(trade.fees, 'up'),
     result: outcome.text,
     resultTone: outcome.tone,
     reason: trade.exitReason === undefined ? MISSING_TEXT : exitReasonText(trade.exitReason),

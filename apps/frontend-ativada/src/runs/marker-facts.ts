@@ -1,7 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { formatSignedScaled, formatSignedScaledPercent, parseScaled } from '../format/decimal.js';
-import { formatDecimal, formatPrice, formatQuantity } from '../format/format.js';
+import { formatSignedScaledPercent, parseScaled } from '../format/decimal.js';
+import { formatPrice, formatQuantity } from '../format/format.js';
 import { formatInZone, zoneLabel } from '../format/zoned-time.js';
+import {
+  formatDirectedMoney,
+  formatDirectedResult,
+  type RoundingDirection,
+} from './directed-money.js';
 import { clusterKey, describeCluster, markerKey } from './price-chart-markers.js';
 import type { ChartCluster, ChartMarker, TradeChart } from './trade-chart.validation.js';
 
@@ -28,8 +33,8 @@ function baseAsset(symbol: string): string {
   return symbol.endsWith(QUOTE_ASSET) ? symbol.slice(0, -QUOTE_ASSET.length) : symbol;
 }
 
-function money(text: string): string {
-  return `${formatDecimal(text)} ${QUOTE_ASSET}`;
+function money(text: string, direction: RoundingDirection): string {
+  return `${formatDirectedMoney(text, direction)} ${QUOTE_ASSET}`;
 }
 
 // Hora no fuso do usuário SEMPRE com o deslocamento ao lado: "04/04/2026 11:00 (GMT−3)".
@@ -42,7 +47,7 @@ function formatOutcome(marker: ChartMarker): string | undefined {
   if (profit === undefined) return undefined;
   const rate = marker.netProfitRate === undefined ? undefined : parseScaled(marker.netProfitRate);
   const percent = rate === undefined ? '' : ` (${formatSignedScaledPercent(rate)})`;
-  return `${formatSignedScaled(profit)} ${QUOTE_ASSET}${percent}`;
+  return `${formatDirectedResult(profit)} ${QUOTE_ASSET}${percent}`;
 }
 
 // Só texto que veio do servidor, formatado em texto decimal: nenhum `Number` toca em dinheiro.
@@ -54,8 +59,11 @@ export function buildMarkerTooltip(params: MarkerFactsParams): TooltipContent {
     { label: 'Quando', value: formatMoment(marker.candleTime, timeZone) },
     { label: 'Preço', value: `${formatPrice(marker.price)} ${QUOTE_ASSET}` },
     { label: 'Quantidade', value: `${formatQuantity(marker.quantity)} ${baseAsset(symbol)}` },
-    { label: isBuy ? 'Valor pago' : 'Valor recebido', value: money(marker.amount) },
-    { label: 'Taxa', value: money(marker.fee) },
+    {
+      label: isBuy ? 'Valor pago' : 'Valor recebido',
+      value: money(marker.amount, isBuy ? 'up' : 'down'),
+    },
+    { label: 'Taxa', value: money(marker.fee, 'up') },
     ...(outcome === undefined ? [] : [{ label: 'Resultado', value: outcome }]),
   ];
   return { heading: isBuy ? 'Compra' : 'Venda', tone: marker.side, rows, note: undefined };

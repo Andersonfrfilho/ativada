@@ -152,11 +152,29 @@ describe('TradesTable: colunas do RF07', () => {
     expect(screen.getByText('31/12/2025 19:00')).toBeDefined();
   });
 
+  test('money rounds against the user, like the summary: paid and fees up, received and result down', async () => {
+    showTable({
+      trades: [
+        closedTrade(0, {
+          paid: '613.1125',
+          received: '613.1125',
+          fees: '0.1125',
+          netProfit: '0.1125',
+        }),
+      ],
+    });
+    await waitForRows();
+    const cells = Array.from(dataRows()[0]?.querySelectorAll('td') ?? []).map(
+      (cell) => cell.textContent,
+    );
+    expect(cells.slice(5, 9)).toEqual(['613,12', '613,11', '0,12', '+0,11 (+1,46%)']);
+  });
+
   test('a loss shows the minus sign and the negative rate', async () => {
     showTable({
       trades: [closedTrade(0, { netProfit: '-2.1834', netProfitRate: '-0.01132513' })],
     });
-    expect(await screen.findByText('-2,18 (-1,13%)')).toBeDefined();
+    expect(await screen.findByText('-2,19 (-1,13%)')).toBeDefined();
   });
 
   test('every real exit reason has a plain sentence and an unknown one shows as it came', async () => {

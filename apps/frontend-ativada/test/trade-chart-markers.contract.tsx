@@ -93,8 +93,8 @@ describe('PriceChart: dica', () => {
       Quando: '04/04/2026 11:00 (GMT−3)',
       Preço: '609,00 USDT',
       Quantidade: '0,5 BNB',
-      'Valor pago': '304,80 USDT',
-      Taxa: '0,30 USDT',
+      'Valor pago': '304,81 USDT',
+      Taxa: '0,31 USDT',
     });
   });
 
@@ -108,14 +108,31 @@ describe('PriceChart: dica', () => {
       Quantidade: '0,5 BNB',
       'Valor recebido': '305,94 USDT',
       Taxa: '0,31 USDT',
-      Resultado: '+1,14 USDT (+0,37%)',
+      Resultado: '+1,13 USDT (+0,37%)',
     });
+  });
+
+  test('money rounds against the user, like the summary: paid 613.1125 is 613,12 and received 613.1125 is 613,11', () => {
+    const chart = parseChart(buildFixtureChart());
+    const [buy, sell] = chart.markers ?? [];
+    if (buy === undefined || sell === undefined) throw new Error('fixture sem operação');
+    show({
+      ...chart,
+      markers: [
+        { ...buy, amount: '613.1125' },
+        { ...sell, amount: '613.1125' },
+      ],
+    });
+    fireEvent.focus(itemAt(0));
+    expect(tooltipRows()['Valor pago']).toBe('613,12 USDT');
+    fireEvent.focus(itemAt(1));
+    expect(tooltipRows()['Valor recebido']).toBe('613,11 USDT');
   });
 
   test('a losing sell keeps the minus sign', () => {
     show(parseChart(buildFixtureChart()));
     fireEvent.focus(itemAt(5));
-    expect(tooltipRows().Resultado).toBe('-2,18 USDT (-1,13%)');
+    expect(tooltipRows().Resultado).toBe('-2,19 USDT (-1,13%)');
   });
 
   test('the marker points at the tip with aria-describedby only while it is open', () => {
@@ -124,7 +141,7 @@ describe('PriceChart: dica', () => {
     expect(first.getAttribute('aria-describedby')).toBeNull();
     fireEvent.focus(first);
     expect(first.getAttribute('aria-describedby')).toBe(screen.getByRole('tooltip').id);
-    expect(first.getAttribute('aria-label')).toContain('Valor pago 304,80 USDT');
+    expect(first.getAttribute('aria-label')).toContain('Valor pago 304,81 USDT');
   });
 
   test('mouse over opens, leaving closes, and Esc closes while the focus stays', () => {

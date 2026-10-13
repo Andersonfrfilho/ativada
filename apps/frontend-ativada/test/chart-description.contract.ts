@@ -88,7 +88,7 @@ describe('describeMarker e describeClusterItem', () => {
     if (buy === undefined) throw new Error('fixture sem compra');
     expect(describeMarker({ marker: buy, symbol: chart.symbol, timeZone: SAO_PAULO })).toBe(
       'Compra: Quando 04/04/2026 11:00 (GMT−3); Preço 609,00 USDT; Quantidade 0,5 BNB; ' +
-        'Valor pago 304,80 USDT; Taxa 0,30 USDT',
+        'Valor pago 304,81 USDT; Taxa 0,31 USDT',
     );
   });
 
@@ -96,7 +96,7 @@ describe('describeMarker e describeClusterItem', () => {
     if (sell === undefined) throw new Error('fixture sem venda');
     expect(describeMarker({ marker: sell, symbol: chart.symbol, timeZone: SAO_PAULO })).toBe(
       'Venda: Quando 09/04/2026 11:00 (GMT−3); Preço 612,50 USDT; Quantidade 0,5 BNB; ' +
-        'Valor recebido 305,94 USDT; Taxa 0,31 USDT; Resultado +1,14 USDT (+0,37%)',
+        'Valor recebido 305,94 USDT; Taxa 0,31 USDT; Resultado +1,13 USDT (+0,37%)',
     );
   });
 
