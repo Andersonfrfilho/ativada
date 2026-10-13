@@ -3,6 +3,7 @@ import { expect, type Page } from '@playwright/test';
 
 const STRATEGY_NAME = 'Minha estratégia ao vivo';
 const EVALUATION_TIMEOUT_MILLISECONDS = 60_000;
+const WAITING_FIRST_CANDLE = /Aguardando a primeira vela, que fecha às d{2}:d{2} de (hoje|amanhã)./;
 
 export async function openMainLink(page: Page, name: string): Promise<void> {
   await page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name }).click();
@@ -20,11 +21,19 @@ export async function declareGoalRankAndSimulate(page: Page): Promise<void> {
   await expect(page.getByRole('note', { name: 'Leia com cuidado' })).toContainText('histórico');
   const situations = page.getByRole('region', { name: 'Moedas: situação e próximo gatilho' });
   await expect(situations.getByRole('article', { name: 'BTC/USDT' })).toBeVisible();
+  const picker = page.getByRole('group', { name: 'De quanto em quanto tempo olhar o mercado' });
+  await expect(picker.getByRole('radio', { name: '1 hora' })).toBeChecked();
+  await expect(picker).toContainText(
+    'A simulação olha o mercado a cada 1 hora. Primeira vela fecha às',
+  );
+  await expect(picker).toContainText('O ranking desta meta é calculado com velas diárias');
   await page.getByRole('button', { name: `Simular esta meta com ${STRATEGY_NAME}` }).click();
   await expect(page).toHaveURL(/\/$/);
   const card = page.getByRole('region', { name: 'Meta ativa' });
   await expect(card).toContainText('alvo +3,00%');
   await expect(card).toContainText('perda máxima 5,00%');
+  // Sem worker no harness a simulação não dá passo: o painel diz quando a primeira vela de 1 hora fecha.
+  await expect(card).toContainText(WAITING_FIRST_CANDLE);
 }
 
 export async function openPlanOfTheFirstGoal(page: Page): Promise<void> {

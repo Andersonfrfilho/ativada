@@ -14,3 +14,9 @@ export async function sendFill(control: Control, side: 'buy' | 'sell'): Promise<
   const response = await control.request.post(`${control.url}/fill`, { data: { side } });
   expect(response.ok()).toBe(true);
 }
+
+// A faixa de parada vem do mesmo caminho da varredura da API: `runs.stalled_since` no banco e o NOTIFY `warning`; só a origem do dado é do teste.
+export async function sendStall(control: Control, action: 'stall' | 'resume'): Promise<void> {
+  const response = await control.request.post(`${control.url}/stall`, { data: { action } });
+  expect(response.ok()).toBe(true);
+}

@@ -15,6 +15,7 @@ import { declareGoalRankAndSimulate, openPlanOfTheFirstGoal } from './flows/goal
 import { dropTheSocketAndComeBack } from './flows/live.flow.js';
 import { watchLiveFillsAppearOnTheChart } from './flows/live-trades.flow.js';
 import { alertOnTheTargetAndLetTheTickFireIt } from './flows/plan-alert.flow.js';
+import { watchTheStalledBannerComeAndGo } from './flows/stall.flow.js';
 import { deleteTheCopy, editStrategyIntoANewVersion } from './flows/strategy.flow.js';
 
 const environment = readE2eEnvironment();
@@ -186,6 +187,13 @@ test('simulação ao vivo: pela Visão geral até o gráfico, e a compra e a ven
 
 test('metas: declarar a meta, ver o ranking estratégia x moeda e simular, com o cartão de meta ativa no painel', async () => {
   await declareGoalRankAndSimulate(page);
+});
+
+test('simulação parada: a faixa aparece pelo NOTIFY do servidor de controle e some quando a simulação volta, sem recarregar', async () => {
+  await watchTheStalledBannerComeAndGo(page, {
+    request: page.request,
+    url: environment.controlUrl,
+  });
 });
 
 test('plano: níveis e gráfico; "Avisar no plano" cria o alerta e o tick o dispara sem recarregar', async () => {

@@ -22,6 +22,7 @@ const FILL_SELL_PRICE = '61500';
 const FILL_BUY_FEE = '0.6125';
 const FILL_SELL_FEE = '0.615';
 const FILL_NET_PROFIT = '1.2725';
+const STALL_AGE_MILLISECONDS = 20 * 60_000;
 
 export type ControlParams = {
   readonly handle: DatabaseHandle;
@@ -118,6 +119,32 @@ async function pushFill(params: ControlParams, side: FillSide): Promise<void> {
   await notify(params.sql, { runId: params.runId, kind: 'trade', eventId: String(candleTime) });
 }
 
+type StallAction = 'stall' | 'resume';
+
+function isStallAction(value: unknown): value is StallAction {
+  return value === 'stall' || value === 'resume';
+}
+
+async function readStallAction(request: Request): Promise<StallAction> {
+  const body: unknown = await request.json();
+  const action: unknown =
+    typeof body === 'object' && body !== null ? Reflect.get(body, 'action') : undefined;
+  if (!isStallAction(action)) throw new Error('corpo do /stall inválido');
+  return action;
+}
+
+// Faz o papel da varredura da API (spec 006): marca ou limpa `runs.stalled_since` e avisa o painel pelo NOTIFY real
+// (`warning`); o painel relê a execução e mostra ou tira a faixa de parada. A marca é de ~20 min atrás, como a de um episódio real.
+async function pushStall(params: ControlParams, action: StallAction): Promise<void> {
+  const stalledSince = Date.now() - STALL_AGE_MILLISECONDS;
+  if (action === 'stall') {
+    await params.sql`UPDATE runs SET stalled_since = ${stalledSince} WHERE id = ${params.runId}`;
+  } else {
+    await params.sql`UPDATE runs SET stalled_since = NULL WHERE id = ${params.runId}`;
+  }
+  await notify(params.sql, { runId: params.runId, kind: 'warning', eventId: String(stalledSince) });
+}
+
 const TICKER_CONNECTION_TIMEOUT_MILLISECONDS = 15_000;
 const TICKER_POLL_MILLISECONDS = 50;
 
@@ -172,6 +199,7 @@ export function startControlServer(params: ControlParams): ControlServer {
       else if (pathname === '/price-alert') await pushPriceAlert(params);
       else if (pathname === '/tick') await pushTick(params, request);
       else if (pathname === '/fill') await pushFill(params, await readFillSide(request));
+      else if (pathname === '/stall') await pushStall(params, await readStallAction(request));
       else return new Response(null, { status: 404 });
       return Response.json({ ok: true });
     },

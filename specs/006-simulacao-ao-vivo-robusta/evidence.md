@@ -369,3 +369,20 @@ Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; `panel-test` 65
 - Contrato `test/live-run-status.contract.tsx` (15 casos, relógio fixo em 2026-10-13 17:20 UTC = 14:20 em São Paulo, na lista do `package.json`): os quatro estados com fixture (função pura: hoje, amanhã, "fechou", última/próxima, parada hoje e ontem, nenhum estado para backtest, encerrada ou vela desconhecida) e nos três lugares (Visão geral, meta ativa e detalhe), inclusive a faixa que some quando o campo some. Armadilha registrada no teste: dentro de `waitFor`, `toBeNull()` falho serializa o elemento do DOM e leva segundos por tentativa; use comparação booleana.
 
 Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; `panel-test` 665/665 em 52 arquivos.
+
+## T3.4 — E2E: simular em 1 hora, estado "aguardando" e faixa de parada (2026-10-13, `haiku`→feito em `sonnet` junto da fase)
+
+**PENDENTE de execução.** `make panel-e2e` não roda neste ambiente (sem `make` e sem Chromium no WSL). O código foi escrito e passou `typecheck`, `lint` e `format`; o primeiro `make panel-e2e` com Docker e Chromium deve ser feito pelo responsável (ou numa máquina com `make`):
+
+```bash
+make panel-e2e
+```
+
+(equivale a `set -a; . envs/env.test; set +a; make up ENV=test && bun --env-file=envs/env.test run scripts/panel-e2e.ts`, que derruba a infra descartável com `--volumes` ao sair.)
+
+- `e2e/flows/goals.flow.ts` (`declareGoalRankAndSimulate`): antes de clicar em "Simular esta meta", confere o seletor (radio "1 hora" marcado, a frase "A simulação olha o mercado a cada 1 hora. Primeira vela fecha às…" e o aviso do ranking diário); depois da criação, o cartão "Meta ativa" deve dizer "Aguardando a primeira vela, que fecha às HH:MM de hoje|amanhã." (o harness não tem worker, então a simulação nova não dá passo).
+- `scripts/panel-e2e/control-server.ts`: rota `POST /stall` `{ action: 'stall' | 'resume' }`, no papel da varredura da API: grava (ou zera) `runs.stalled_since` (marca de ~20 min atrás) na simulação semeada e dá o `pg_notify('run_events', { runId, kind: 'warning' })` real; o painel relê a execução e mostra ou tira a faixa. Só a origem do dado é do teste.
+- `e2e/flows/control.ts` (`sendStall`) e `e2e/flows/stall.flow.ts` (`watchTheStalledBannerComeAndGo`): Visão geral → "Rodando" sem faixa → `stall` → "Sua simulação está parada desde HH:MM", "Parada." e "nenhuma operação foi perdida" no cartão "Saldo da simulação" → `resume` → a faixa some, tudo sem recarregar. Ligado em `e2e/panel.e2e.ts` depois do teste de metas.
+- Risco a observar na primeira execução: se o harness da API subir a varredura de parada (`stall-sweeper`, a cada 60 s), ela pode limpar a marca manual antes da asserção; a asserção acontece em segundos, então o esperado é passar. Se flakear, desligar a varredura no env do E2E.
+
+Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; `panel-test` 665/665 em 52 arquivos (o E2E não faz parte dele).
