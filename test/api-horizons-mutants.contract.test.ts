@@ -78,8 +78,28 @@ const MUTANTS: readonly SourceMutant[] = [
     ),
   },
   {
-    name: 'ONE_FAILURE_DOES_NOT_CANCEL_THE_OTHERS',
-    edits: edit(EVALUATION, '    failure.abort(error);\n', ''),
+    name: 'ONE_FAILURE_SINKS_THE_WHOLE_BATCH',
+    edits: edit(EVALUATION, 'await Promise.allSettled(', 'await Promise.all('),
+  },
+  {
+    name: 'ABORTED_REQUEST_KEEPS_THE_BATCH',
+    edits: edit(EVALUATION, '  params.signal?.throwIfAborted();\n', ''),
+  },
+  {
+    name: 'ALL_STRATEGIES_FAILING_IS_SWALLOWED',
+    edits: edit(
+      EVALUATION,
+      'if (firstFailure !== undefined && failed.length === settled.length) throw firstFailure.reason;',
+      '',
+    ),
+  },
+  {
+    name: 'A_FAILURE_LOSES_THE_STRATEGY_ID',
+    edits: edit(
+      EVALUATION,
+      'strategyId: entry.ref.id, reason: unavailableReasonOf',
+      "strategyId: '', reason: unavailableReasonOf",
+    ),
   },
   {
     name: 'STRATEGY_ID_IGNORED',

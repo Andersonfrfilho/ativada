@@ -152,16 +152,45 @@ describe('avaliação de prazos de uma moeda', () => {
     expect(harness.computations.count).toBe(0);
   });
 
-  test('se o cálculo de uma estratégia falha, o das outras é cancelado e o erro sobe', async () => {
+  test('uma estratégia que falha no cálculo vira indisponível só ela; as outras aparecem e não são canceladas', async () => {
     const harness = await openHarness();
-    await harness.seedStrategy(SUBJECT_A, 'a');
-    await harness.seedStrategy(SUBJECT_A, 'b');
+    const first = await harness.seedStrategy(SUBJECT_A, 'a');
+    const second = await harness.seedStrategy(SUBJECT_A, 'b');
     harness.computations.failFirst = true;
-    harness.computations.hold = new Promise<void>((resolve) => setTimeout(resolve, 200));
+    harness.computations.hold = new Promise<void>((resolve) => setTimeout(resolve, 50));
+    const result = await evaluate(harness, { symbol: 'BTCUSDT' });
+    expect(result.evaluatedStrategies).toBe(2);
+    expect(result.unavailable).toHaveLength(1);
+    expect(result.unavailable[0]?.reason).toBe('HORIZON_EVALUATION_FAILED');
+    const failedId = result.unavailable[0]?.strategyId;
+    expect([first.strategyId, second.strategyId].includes(failedId ?? '')).toBe(true);
+    const survivor = failedId === first.strategyId ? second.strategyId : first.strategyId;
+    expect(result.daily.length).toBeGreaterThan(0);
+    expect(result.daily.every((row) => row.strategy.id === survivor)).toBe(true);
+    expect(harness.computations.signals.every((signal) => signal?.aborted !== true)).toBe(true);
+  });
+
+  test('se TODAS as estratégias falham no cálculo, o erro sobe', async () => {
+    const harness = await openHarness();
+    await harness.seedStrategy(SUBJECT_A, 'unica');
+    harness.computations.failFirst = true;
     const failure = await expectRejection(evaluate(harness, { symbol: 'BTCUSDT' }));
     expect((failure as Error).message).toBe('thread perdida');
-    expect(harness.computations.signals).toHaveLength(2);
-    expect(harness.computations.signals[1]?.aborted).toBe(true);
+  });
+
+  test('o pedido abortado aborta o lote, mesmo com cálculos que terminaram', async () => {
+    const harness = await openHarness();
+    await harness.seedStrategy(SUBJECT_A, 'a');
+    harness.computations.hold = new Promise<void>((resolve) => setTimeout(resolve, 50));
+    const controller = new AbortController();
+    const pending = harness.evaluateHorizons(
+      harness.scopeOf(SUBJECT_A),
+      { symbol: 'BTCUSDT', strategyId: undefined },
+      controller.signal,
+    );
+    controller.abort(new Error('cliente saiu'));
+    const failure = await expectRejection(pending);
+    expect((failure as Error).message).toBe('cliente saiu');
   });
 
   test('estratégia sem versão legível é o mesmo 404', async () => {

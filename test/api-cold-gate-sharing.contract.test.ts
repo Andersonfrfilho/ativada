@@ -6,8 +6,6 @@ import {
   type OwnerScope,
 } from '../packages/database/src/ownership/owner-scope.js';
 import { userIdFromDatabase } from '../packages/database/src/ownership/user-id.js';
-import { GoalEvaluationBusyError } from '../apps/api-ativada/src/goals/goal.error.js';
-import { RateLimitedError } from '../apps/api-ativada/src/rate-limit/rate-limited.error.js';
 import { loadApiApp, type ApiApp } from './fixtures/api-routes/api-app.fixture.js';
 
 const scopeOf = (id: string): OwnerScope => createOwnerScope(userIdFromDatabase(id));
@@ -56,7 +54,7 @@ describe('metas e prazos dividem o MESMO portão a frio (RNF01)', () => {
     const error = await rejectionOf(
       horizonGate.run({ scope: USER_A, signature: 'prazo' }, () => Promise.reject(new Error('x'))),
     );
-    expect(error).toBeInstanceOf(RateLimitedError);
+    expect(error).toMatchObject({ status: 429, code: 'RATE_LIMITED' });
     inFlight.release();
     await rejectionOf(goal);
   });
@@ -68,7 +66,7 @@ describe('metas e prazos dividem o MESMO portão a frio (RNF01)', () => {
     const error = await rejectionOf(
       goalGate.run({ scope: USER_A, signature: 'meta' }, () => Promise.reject(new Error('x'))),
     );
-    expect(error).toBeInstanceOf(RateLimitedError);
+    expect(error).toMatchObject({ status: 429, code: 'RATE_LIMITED' });
     inFlight.release();
     await rejectionOf(horizon);
   });
@@ -85,7 +83,7 @@ describe('metas e prazos dividem o MESMO portão a frio (RNF01)', () => {
     const error = await rejectionOf(
       horizonGate.run({ scope: USER_C, signature: 'outro' }, () => Promise.reject(new Error('x'))),
     );
-    expect(error).toBeInstanceOf(GoalEvaluationBusyError);
+    expect(error).toMatchObject({ status: 503, code: 'GOAL_EVALUATION_BUSY' });
     holdGoal.release();
     holdHorizon.release();
     await rejectionOf(goal);

@@ -5,6 +5,7 @@ import { HORIZON_DAYS, recommendHorizon } from '@ativada/strategy-engine';
 import type { ColdEvaluationGate } from '../goals/goal-cold-gate.js';
 import type { StrategyEntry } from '../goals/goal-evaluation-combination.js';
 import type { ComputeHorizonLine } from '../goals/goal-evaluation-pool.js';
+import { GoalEvaluationTimeoutError } from '../goals/goal.error.js';
 import type { SeriesReader } from '../goals/goal-evaluation-series.js';
 import { pickBestDaily, pickBestIntraday } from './horizon-best.js';
 import type { HorizonCache, HorizonCacheKeyParams } from './horizon-cache.js';
@@ -19,6 +20,7 @@ import { loadHorizonSeries, type HorizonSeriesSet } from './horizon-series.js';
 import { loadHorizonStrategies, type HorizonStrategyReader } from './horizon-strategies.js';
 
 const INVALID_STRATEGY_REASON = 'INVALID_STRATEGY_CONFIG';
+const EVALUATION_FAILED_REASON = 'HORIZON_EVALUATION_FAILED';
 
 export type HorizonEvaluationDependencies = SeriesReader & {
   readonly strategies: HorizonStrategyReader;
@@ -93,24 +95,33 @@ async function evaluateCell(
   return { entry, line: computation.line };
 }
 
-// Todas as estratégias ao mesmo tempo: o pool limita o paralelismo. Se uma falha, as outras são canceladas, em vez de
-// seguirem ocupando as threads para uma resposta que já não existe.
+function unavailableReasonOf(error: unknown): string {
+  return error instanceof GoalEvaluationTimeoutError ? error.code : EVALUATION_FAILED_REASON;
+}
+
+// Todas as estratégias ao mesmo tempo: o pool limita o paralelismo. Uma que estoura o tempo ou perde a thread vira
+// "indisponível" só ela; as outras aparecem. O lote só aborta se o pedido abortar ou se NENHUMA estratégia respondeu.
 async function evaluateAll(
   dependencies: HorizonEvaluationDependencies,
   params: Entries & { readonly signal: AbortSignal | undefined },
 ): Promise<Cell[]> {
-  const failure = new AbortController();
-  const signal =
-    params.signal === undefined ? failure.signal : AbortSignal.any([params.signal, failure.signal]);
-  const cells = params.entries.map((entry) =>
-    evaluateCell(dependencies, { entry, series: params.series, signal }),
+  const settled = await Promise.allSettled(
+    params.entries.map((entry) =>
+      evaluateCell(dependencies, { entry, series: params.series, signal: params.signal }),
+    ),
   );
-  try {
-    return await Promise.all(cells);
-  } catch (error: unknown) {
-    failure.abort(error);
-    throw error;
-  }
+  params.signal?.throwIfAborted();
+  const failed = settled.flatMap((outcome) => (outcome.status === 'rejected' ? [outcome] : []));
+  const [firstFailure] = failed;
+  if (firstFailure !== undefined && failed.length === settled.length) throw firstFailure.reason;
+  return params.entries.flatMap((entry, index): Cell[] => {
+    const outcome = settled[index];
+    if (outcome === undefined) return [];
+    if (outcome.status === 'fulfilled') return [outcome.value];
+    return [
+      { unavailable: { strategyId: entry.ref.id, reason: unavailableReasonOf(outcome.reason) } },
+    ];
+  });
 }
 
 function pickLines(cells: readonly Cell[]): Pick<HorizonEvaluation, 'daily' | 'intraday'> {

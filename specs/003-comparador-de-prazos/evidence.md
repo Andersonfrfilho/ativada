@@ -301,3 +301,18 @@ Feita no app em execução (painel `127.0.0.1:56100`, API reiniciada para servir
 | Mutante `HORIZON_GATE_SEPARATE_FROM_THE_GOAL_GATE` (portões separados) em `api-horizons-mutants`; o arquivo entra nos `judgeTestFiles`. Conferido à mão: com a edição, 3 dos 4 contratos novos falham | `test/api-horizons-mutants.contract.test.ts` |
 
 **Gates (WSL).** typecheck, lint e prettier limpos; `goal-cold-gate`, `api-cold-gate-sharing`, `api-horizons`, `api-goals`, `api-openapi`, `horizon-evaluation`, `goal-evaluation-pool`, `strategy-engine-boundary`, `code-size-limits` e `app-import-boundary` verdes. O `api-horizons-mutants` completo roda uma vez no fim do achado 3.
+
+### Achado 3 — uma estratégia lenta derrubava a rota inteira
+
+`evaluateAll` usava `Promise.all` e cancelava as outras ao primeiro erro: uma das até 5 estratégias que estourasse o tempo ou perdesse a thread dava 503 para todas. Agora usa `Promise.allSettled`: a que falha vira `unavailable` DAQUELA estratégia (`GOAL_EVALUATION_TIMEOUT` no estouro de tempo, `HORIZON_EVALUATION_FAILED` nos demais casos; mesmo desenho do `GoalInputError`) e as outras aparecem e entram na escolha da melhor linha. O lote só aborta quando o `request.signal` aborta (`throwIfAborted` depois do `allSettled`) ou quando TODAS falham (o primeiro erro sobe, como antes).
+
+| Contrato | Arquivo |
+|---|---|
+| Duas estratégias, a primeira falha: resposta com 1 indisponível (`HORIZON_EVALUATION_FAILED`), linhas só da outra, nenhum sinal de cancelamento (substitui "falha cancela as outras") | `test/horizon-evaluation.contract.test.ts` |
+| Uma só estratégia e ela falha: o erro sobe | idem |
+| Pedido abortado no meio: o lote aborta com a razão do aborto, mesmo com cálculos terminados | idem |
+| Mutantes novos: `ONE_FAILURE_SINKS_THE_WHOLE_BATCH` (`Promise.all` de volta), `ABORTED_REQUEST_KEEPS_THE_BATCH`, `ALL_STRATEGIES_FAILING_IS_SWALLOWED`, `A_FAILURE_LOSES_THE_STRATEGY_ID` (o antigo `ONE_FAILURE_DOES_NOT_CANCEL_THE_OTHERS` deixou de existir com o cancelamento) | `test/api-horizons-mutants.contract.test.ts` |
+
+**Mutantes.** `api-horizons-mutants` completo (incluindo o `HORIZON_GATE_SEPARATE_FROM_THE_GOAL_GATE` do achado 2): 53 pass, 0 fail. A primeira rodada reprovou só o controle: o contrato do achado 2 usava `toBeInstanceOf` com classes importadas do `src` de produção, e na cópia mutada as classes são outras; passou a comparar `status` e `code` (o commit deste achado leva essa correção).
+
+**Gates (WSL).** typecheck, lint e prettier limpos; contratos de prazos, portão, pool, OpenAPI, fronteiras e limites de tamanho verdes.
