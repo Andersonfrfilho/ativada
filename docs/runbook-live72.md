@@ -8,6 +8,9 @@ alertas". Dados REAIS da Binance (públicos, sem chave), dinheiro fictício, uma
 `caffeinate -dimsu`, que impede a suspensão por inatividade; `-s` só vale na tomada, e fechar a tampa
 sem monitor externo suspende o Mac mesmo assim.
 
+Para o ambiente de desenvolvimento do dia a dia (subir, descer, "o banco não responde", logs e saúde), veja
+`docs/runbook-dev-local.md`.
+
 ## O que existe
 
 | Peça | Onde |

@@ -407,3 +407,9 @@ Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; `panel-test` 66
   No Windows: `pwsh scripts/dev-up.ps1 -EnvFile C:\caminho\env.devtest -StateDir C:\temp\ativada-dev` (e `dev-down.ps1 -Infra`).
 
 Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; `test test/dev-scripts.contract.test.ts test/infrastructure.contract.test.ts` 79/79.
+
+## T4.2 — Runbook do ambiente local (2026-10-13, `sonnet`)
+
+- `docs/runbook-dev-local.md` (pt-BR): §1 subir e descer (tabela PowerShell x bash, `--dry-run`/`--infra`, URLs 56100, 56101, 56180 e 56126); §2 "o banco não responde" (`docker ps` com `PORTS` vazia = Docker não publicou a porta, `Test-NetConnection 127.0.0.1 -Port 56432` / `nc -z 127.0.0.1 56432`, correção = reiniciar o Docker Desktop, por que acontece após suspensão, API e worker voltam sozinhos); §3 logs em `.dev/logs/`; §4 `/v1/health` (público, só ok/degraded) e `/v1/admin/health` (`database` e `worker`); §5 o que significam `database unavailable`, `database recovered` e a faixa "Sua simulação está parada desde HH:MM" (distinta de "Aguardando dados do mercado"); §6 moedas ativas e como mudá-las. Link em `docs/runbook-live72.md`.
+- Conferência: nomes das mensagens de log contra `OUTAGE_LOG_MESSAGE` (`packages/database/src/connection/connection.constant.ts`), campos de saúde contra `health-view.ts`, texto da faixa contra o RF13 e a T3.3; `nc -z` no WSL e `Test-NetConnection` no PowerShell 7 numa porta fechada dão "fechada" / `False`; os scripts e o `--dry-run` citados foram rodados na T4.1. `docker ps` não existe no WSL desta máquina (conferido apenas pela sintaxe do filtro `--filter name=`).
+- Diff revisado: só dois arquivos de docs mudam (runbook novo e 3 linhas no `runbook-live72.md`), sem código.
