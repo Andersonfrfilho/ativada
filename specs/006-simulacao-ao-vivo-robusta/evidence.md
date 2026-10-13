@@ -83,3 +83,25 @@ incidente (meia conexão do encaminhador do Docker Desktop depois do sono) é a 
 reproduzida no Docker Desktop em si (proibido tocar nos containers); o contrato cobre os dois ramos.
 
 Gates: só documentação; `bun x prettier --check` nos dois arquivos.
+
+## T1.1 — Backoff, resumo de queda e campos seguros (2026-10-13, `sonnet`)
+
+Código em `packages/database/src/connection/` (puro, sem I/O, ainda não exportado pela superfície pública):
+
+- `reconnect-backoff.ts`: `computeBackoff({ attempt, baseMilliseconds, maxMilliseconds, random })`, a mesma conta do escutador
+  (`c = min(base × 2^(attempt − 1), teto)`, espera `round(c/2 + c/2 × sorteio)`); o sorteio em `[0, 1]` entra pronto, sem
+  `Math.random`, e fora da faixa é cortado.
+- `safe-error-fields.ts`: `readSafeErrorFields` lê `errorName`, `code` e `errno` do erro MAIS INTERNO que tem `code`, até 4
+  níveis de `cause`; só aceita token `[A-Za-z0-9_.-]{1,64}`, então URL, senha ou parâmetro num campo viram `UNKNOWN`.
+- `outage-log.ts`: `createOutageLog()`: linha na primeira falha (`failures: 1, sinceMs: 0`), depois no máximo uma por 60 s,
+  e `database recovered` (`downtimeMs`, `failures`) só se a queda chegou a ser registrada. Recebe o erro e só devolve campos
+  seguros.
+
+Contratos: `test/database-reconnect-backoff.contract.test.ts` (contas à mão para as tentativas 1 a 7 com sorteio 0, 0,5 e 1;
+propriedades em 2.000 tentativas: nunca acima de 30 s, nunca abaixo de metade do degrau, inteiro positivo) e
+`test/database-outage-log.contract.test.ts` (1.000 falhas a 1 s dão 17 linhas e a da volta; mensagem com URL, senha e
+parâmetro nunca sai).
+
+Gates (WSL, `gates6.sh`): contratos novos 25/25; `typecheck`, `lint` e `format` limpos; vizinhos (`database`,
+`code-size-limits`, `test-support-boundary`, `app-import-boundary`, `ownership-registry`, `strategy-engine-boundary`,
+`worker-environment`) 145/145.
