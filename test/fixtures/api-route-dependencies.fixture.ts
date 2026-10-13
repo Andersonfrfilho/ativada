@@ -105,6 +105,7 @@ export function buildApiRouteDependencies(
         windows: notUsed,
       },
       exportRunCsv: notUsed,
+      chart: notUsed,
     },
     isDocumentationEnabled,
   };

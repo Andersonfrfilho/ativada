@@ -19,6 +19,8 @@ import type * as ApplicationDispatcherModule from '../../../apps/api-ativada/src
 import type * as RunAdmissionModule from '../../../apps/api-ativada/src/runs/run-admission.js';
 import type * as ExportCsvModule from '../../../apps/api-ativada/src/runs/export-run-csv.use-case.js';
 import type * as RunExportRoutesModule from '../../../apps/api-ativada/src/runs/run-export.routes.js';
+import type * as RunChartRouteModule from '../../../apps/api-ativada/src/runs/chart/run-chart.route.js';
+import type * as RunChartUseCaseModule from '../../../apps/api-ativada/src/runs/chart/run-chart.use-case.js';
 import type * as RunSeriesRoutesModule from '../../../apps/api-ativada/src/runs/run-series.routes.js';
 import type * as RunSeriesUseCasesModule from '../../../apps/api-ativada/src/runs/run-series.use-cases.js';
 import type * as RunUseCasesModule from '../../../apps/api-ativada/src/runs/run.use-cases.js';
@@ -90,6 +92,8 @@ export type ApiApp = {
   readonly runAdmission: typeof RunAdmissionModule;
   readonly exportCsv: typeof ExportCsvModule;
   readonly runExportRoutes: typeof RunExportRoutesModule;
+  readonly runChartRoute: typeof RunChartRouteModule;
+  readonly runChartUseCase: typeof RunChartUseCaseModule;
   readonly runSeriesRoutes: typeof RunSeriesRoutesModule;
   readonly runSeriesUseCases: typeof RunSeriesUseCasesModule;
   readonly runUseCases: typeof RunUseCasesModule;
@@ -166,6 +170,8 @@ export async function loadApiApp(): Promise<ApiApp> {
     runAdmission: await load('runs/run-admission'),
     exportCsv: await load('runs/export-run-csv.use-case'),
     runExportRoutes: await load('runs/run-export.routes'),
+    runChartRoute: await load('runs/chart/run-chart.route'),
+    runChartUseCase: await load('runs/chart/run-chart.use-case'),
     runSeriesRoutes: await load('runs/run-series.routes'),
     runSeriesUseCases: await load('runs/run-series.use-cases'),
     runUseCases: await load('runs/run.use-cases'),

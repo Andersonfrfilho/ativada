@@ -219,6 +219,13 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
       deleteRun: app.runUseCases.createDeleteRunUseCase(runDeps),
     }),
     ...app.runSeriesRoutes.createRunSeriesRoutes(series),
+    app.runChartRoute.createRunChartRoute(
+      app.runChartUseCase.createRunChartUseCase({
+        runs: runs.repository,
+        results: runs.results,
+        exchange: EXCHANGE,
+      }),
+    ),
     ...app.runExportRoutes.createRunExportRoutes(
       app.exportCsv.createExportRunCsvUseCase({
         results: runs.results,

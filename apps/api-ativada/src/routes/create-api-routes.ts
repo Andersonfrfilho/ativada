@@ -16,6 +16,8 @@ import {
 } from '../markets/sentiment.routes.js';
 import { createProfileRoutes, type ProfileRouteDependencies } from '../profile/profile.routes.js';
 import type { Route } from '../router/route.types.js';
+import { createRunChartRoute } from '../runs/chart/run-chart.route.js';
+import type { RunChartUseCase } from '../runs/chart/run-chart.use-case.js';
 import type { ExportRunCsvUseCase } from '../runs/export-run-csv.use-case.js';
 import { createRunExportRoutes } from '../runs/run-export.routes.js';
 import { createRunSeriesRoutes } from '../runs/run-series.routes.js';
@@ -38,6 +40,7 @@ export type RunRoutesBundle = {
   readonly routes: RunRouteDependencies;
   readonly series: RunSeriesUseCases;
   readonly exportRunCsv: ExportRunCsvUseCase;
+  readonly chart: RunChartUseCase;
 };
 
 export type ApiRouteDependencies = HealthRouteDependencies & {
@@ -77,6 +80,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     ...createAssetRoutes(dependencies.assets),
     ...createRunRoutes(dependencies.runs.routes),
     ...createRunSeriesRoutes(dependencies.runs.series),
+    createRunChartRoute(dependencies.runs.chart),
     ...createRunExportRoutes(dependencies.runs.exportRunCsv),
   ];
   // A tabela final inclui as próprias rotas de documentação: o documento é gerado depois, dela inteira.

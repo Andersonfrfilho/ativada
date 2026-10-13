@@ -93,3 +93,34 @@ estiver de pé.
 
 Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `prettier --check .` limpo; 294 testes verdes
 em 17 arquivos (os da T1.1 mais `run-chart-oracle`).
+
+## T1.3 — `GET /v1/runs/:runId/chart` (2026-10-13, `sonnet`)
+
+Entrega: rota nova, só do dono (`access: USER` e `documentation`), query estrita validada por Zod (`from`, `to`, `columns`),
+sem migration. `CHART_MARKER_LIMIT = 500` em `runs.constant.ts`.
+
+| Peça | Onde |
+|---|---|
+| Rota, esquema, OpenAPI | `apps/api-ativada/src/runs/chart/run-chart.{route,schema,docs}.ts` (`columns` 100 a 2.000, padrão 800, texto de dígitos; `to <= from` é `to: must_be_after_from`) |
+| Caso de uso | `run-chart.use-case.ts` (contagem + colunas em paralelo; ≤ 500 lê marcadores, 501+ lê agrupamentos; nunca os dois) |
+| Faixa da execução (ADR O1) | `run-chart-range.ts` (`resolveRunRange`: backtest concluído = `[period_start, period_end)`; senão, e no ao vivo, até `last_candle_time + duração`; walk-forward = `[min(test_start), max(test_end))`) e `clipRange` (recorta; sem interseção = `400 from: outside_run`) |
+| Marcadores e agrupamentos | `chart-views.ts` (`amount` = pago na compra e recebido na venda; `netProfitRate` pelo piso a 8 casas, com pago = recebido − resultado; limites do balde `from + ceil(b·W/C)`) |
+| Arredondamento compartilhado | `apps/api-ativada/src/runs/money-rounding.ts` (usado também por `trades/trade-amounts.ts`) |
+| Ligação | `routes/create-api-routes.ts`, `create-domain-route-dependencies.ts`; harness `runs-harness.fixture.ts` e `api-app.fixture.ts` (módulos carregáveis pelos mutantes) |
+| Contrato | `test/api-run-chart.contract.test.ts` (21 casos) |
+
+Provas: colunas conferidas à mão (cada vela de 100+i abre em 100+i, fecha em 100,5+i, mínima 98+i, máxima 108+i: coluna de
+4 velas = primeiro 100, último 103,5, mínima 98, máxima 111); nunca mais colunas que o pedido; recorte da faixa e `to`
+excluído; 404 igual para alheia, inexistente, malformada e apagada; 400 com todos os erros e sem eco (`columns` 99, 2001,
+`abc`, `1.5`, `-100`, vazio; `to <= from`); exatamente 500 preenchimentos dão `markers` (e o repositório de agrupamento
+não é chamado), 501 dão `clusters` (e o de marcadores não é chamado), soma dos agrupamentos = `totals`, limites pela fórmula
+com largura que não divide (137 colunas sobre 10 h); `amount`, `netProfit` e `netProfitRate` do marcador iguais aos do
+`/trades`; walk-forward só nas janelas de teste (colunas começam em `test_start` e terminam antes de `test_end`); ao vivo
+para na última vela processada (a vela gravada depois dela só aparece quando `last_candle_time` avança); execução na fila e
+ao vivo sem vela dão listas vazias; resposta valida no esquema documentado.
+
+Auditoria §15: o único `Promise.all` novo junta a contagem e as colunas de preço, ambas do caminho crítico (falhar uma já
+invalida a resposta), então não há consulta de refinamento que possa derrubar o fluxo.
+
+Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `prettier --check .` limpo; 391 testes
+verdes em 19 arquivos (os da T1.1 e T1.2, `api-run-chart` e o `api-routes-mutants`, 134 s).

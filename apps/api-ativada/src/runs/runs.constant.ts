@@ -50,3 +50,12 @@ export const RUN_RANGE_REASON = {
   OUTSIDE_RUN: 'outside_run',
 } as const;
 export const TRADE_STATUS_FILTER = ['open', 'closed'] as const;
+
+export const RUN_CHART_PATH = '/v1/runs/:runId/chart';
+export const RUN_TRADE_SUMMARY_PATH = '/v1/runs/:runId/trade-summary';
+
+// Acima disto, o gráfico agrupa os preenchimentos por coluna em vez de mandar cada um (ADR 0002, spec 005, O9).
+export const CHART_MARKER_LIMIT = 500;
+export const CHART_COLUMNS = { MINIMUM: 100, MAXIMUM: 2_000, DEFAULT: 800 } as const;
+// Todas as execuções de uma vez: o walk-forward tem poucas janelas.
+export const CHART_WINDOW_READ_LIMIT = 5_000;
