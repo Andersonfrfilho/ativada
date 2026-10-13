@@ -2,7 +2,7 @@
 import { DATABASE_UNAVAILABLE_CODE, type DatabaseUnavailableCode } from './connection.constant.js';
 import { collectErrorChain } from './safe-error-fields.js';
 
-// ADR 0002, R1: os códigos medidos na reprodução, o nosso teto de tempo e, por defesa, os de rede que o Bun não expôs.
+// ADR 0002, R1: os códigos medidos na reprodução e o nosso teto de tempo.
 const CONNECTION_FAILURE_CODES: ReadonlySet<string> = new Set([
   'ERR_POSTGRES_CONNECTION_CLOSED',
   'ERR_POSTGRES_CONNECTION_REFUSED',
@@ -10,6 +10,11 @@ const CONNECTION_FAILURE_CODES: ReadonlySet<string> = new Set([
   'ERR_POSTGRES_EXPECTED_REQUEST',
   DATABASE_UNAVAILABLE_CODE.UNAVAILABLE,
   DATABASE_UNAVAILABLE_CODE.QUERY_TIMEOUT,
+]);
+// Por defesa (o Bun 1.4.3 não os expôs): só contam quando o próprio nível do erro é do driver (`name === 'PostgresError'`).
+// Erro de outra integração (Keycloak, Telegram, Binance) traz o mesmo código na `cause` e NÃO é banco fora.
+const DRIVER_NAME = 'PostgresError';
+const DRIVER_NETWORK_CODES: ReadonlySet<string> = new Set([
   'ECONNREFUSED',
   'ECONNRESET',
   'ETIMEDOUT',
@@ -42,11 +47,16 @@ function readField(source: object, field: string): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+function isConnectionCode(value: string, isDriverLevel: boolean): boolean {
+  if (CONNECTION_FAILURE_CODES.has(value) || CONNECTION_SQLSTATE_PATTERN.test(value)) return true;
+  return isDriverLevel && DRIVER_NETWORK_CODES.has(value);
+}
+
 function isConnectionLevel(level: object): boolean {
+  const isDriverLevel = readField(level, 'name') === DRIVER_NAME;
   for (const field of ['code', 'errno']) {
     const value = readField(level, field);
-    if (value === undefined) continue;
-    if (CONNECTION_FAILURE_CODES.has(value) || CONNECTION_SQLSTATE_PATTERN.test(value)) return true;
+    if (value !== undefined && isConnectionCode(value, isDriverLevel)) return true;
   }
   return false;
 }

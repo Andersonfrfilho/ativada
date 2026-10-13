@@ -309,6 +309,16 @@ describe('routes with the database out answer 503 DATABASE_UNAVAILABLE instead o
     expect(summaries).toStrictEqual([]);
   });
 
+  test('a refused connection to ANOTHER integration (Keycloak, Telegram) is a 500, never DATABASE_UNAVAILABLE', async () => {
+    const refused = Object.assign(new Error('connect failed'), { code: 'ECONNREFUSED' });
+    const response = await sendFailing(new Error('fetch failed', { cause: refused }));
+    expect(response.status).toBe(500);
+    expect(((await response.json()) as { error: { code: string } }).error.code).toBe(
+      'INTERNAL_ERROR',
+    );
+    expect(summaries).toStrictEqual([]);
+  });
+
   test('an authenticated route whose user lookup hits the dead database answers 503', async () => {
     const harness = await createApiHarness();
     try {

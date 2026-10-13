@@ -28,6 +28,7 @@ const TIMEOUT_REOPEN = '  reopen(gate);\n  const fresh = gate.current;\n';
 const CONFIRMATION_CLIENT = 'await pingClient(fresh.client,';
 const CONFIRMATION_FAILURE = '  } catch {\n    return false;\n  }\n';
 const CONNECTION_SQLSTATES = '57P0[123]';
+const DRIVER_NETWORK_RULE = '  return isDriverLevel && DRIVER_NETWORK_CODES.has(value);\n';
 const THRESHOLD_REOPEN_LINE =
   '  if (gate.status.failures >= gate.settings.failureThreshold) reopen(gate);\n';
 const ADMIT_LINE = 'if (status.isProbing || isBeforeNextAttempt) {';
@@ -70,6 +71,18 @@ const CONFIRMATION_MUTANTS: readonly SourceMutant[] = [
   {
     name: 'CONFIRMATION_ON_THE_MUTE_CLIENT',
     edits: edit(RESILIENT, CONFIRMATION_CLIENT, 'await pingClient(slot.client,'),
+  },
+  {
+    name: 'NETWORK_CODE_OF_ANOTHER_INTEGRATION_COUNTS',
+    edits: edit(
+      CONNECTION_ERROR,
+      DRIVER_NETWORK_RULE,
+      '  return DRIVER_NETWORK_CODES.has(value);\n',
+    ),
+  },
+  {
+    name: 'NETWORK_CODE_OF_THE_DRIVER_IGNORED',
+    edits: edit(CONNECTION_ERROR, DRIVER_NETWORK_RULE, '  return false;\n'),
   },
   {
     name: 'QUERY_CANCELED_IS_A_CONNECTION_FAILURE',

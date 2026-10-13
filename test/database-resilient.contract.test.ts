@@ -461,6 +461,32 @@ describe('classification of connection failures (ADR 0002, R1)', () => {
   });
 
   test.each([
+    'ECONNREFUSED',
+    'ECONNRESET',
+    'ETIMEDOUT',
+    'EPIPE',
+    'EHOSTUNREACH',
+    'ENOTFOUND',
+    'EAI_AGAIN',
+  ])('the network code %s counts only when the driver itself carries it', (code) => {
+    const fromDriver = new FlakyPostgresError(code);
+    expect(isDatabaseConnectionFailure(fromDriver)).toBe(true);
+    expect(isDatabaseConnectionFailure(wrapLikeDrizzle(fromDriver))).toBe(true);
+    const other = Object.assign(new Error('connect failed'), { code });
+    expect(isDatabaseConnectionFailure(other)).toBe(false);
+    expect(isDatabaseConnectionFailure(new Error('fetch failed', { cause: other }))).toBe(false);
+  });
+
+  test('an error from another integration with a network code never takes the gate down', async () => {
+    const { database } = createHarness();
+    const refused = Object.assign(new Error('connect failed'), { code: 'ECONNREFUSED' });
+    await capture(
+      database.begin(() => Promise.reject(new Error('fetch failed', { cause: refused }))),
+    );
+    expect(database.readHealth()).toMatchObject({ state: 'up', consecutiveFailures: 0 });
+  });
+
+  test.each([
     ['ERR_POSTGRES_SERVER_ERROR', '23505'],
     ['ERR_POSTGRES_SERVER_ERROR', '53300'],
     ['ERR_POSTGRES_SERVER_ERROR', '57014'],

@@ -512,3 +512,17 @@ da correção e dos vizinhos no espelho do WSL (`gates6.sh`).
   600. ADR 0002 (R4) e CLAUDE.md atualizados.
 - **Medida na purga (`make lgpd-test`):** NÃO feita. O alvo sobe a infra por Docker (proibido tocar nos containers) e o espelho do WSL
   não tem o `compose`; registrado como pendência: medir o tempo da transação da purga com volume real antes de reduzir o teto longo.
+
+### Achado 12 — código de rede de outra integração não vira "banco fora"
+
+- **Causa.** `ECONNREFUSED`, `ECONNRESET`, `ETIMEDOUT`, `EPIPE`, `EHOSTUNREACH`, `ENOTFOUND` e `EAI_AGAIN` contavam em qualquer nível do
+  erro: um `fetch failed` do Keycloak ou do Telegram com `cause.code = ECONNREFUSED` virava `DatabaseUnavailable`/503 e podia pôr o
+  porteiro em `down`.
+- **Correção** (`connection-error.ts`): a reprodução da T0.1 mostrou que o Bun 1.4.3 já traduz a rede em `ERR_POSTGRES_*`, então os
+  códigos de rede ficaram só como defesa e só valem quando o nível do erro tem `name === 'PostgresError'` (a marca do driver). Os
+  códigos `ERR_POSTGRES_*`, `08xxx`, `57P01/02/03` e os do próprio porteiro seguem valendo em qualquer nível. R1 coerente (testes de R1
+  intactos).
+- **Contratos:** `test/database-resilient.contract.test.ts` (os 7 códigos de rede contam no driver, solto e embrulhado no Drizzle, e
+  não contam em `Error` comum nem em `fetch failed` com `cause`; erro de integração dentro de `begin` deixa o porteiro `up`) e
+  `test/api-database-outage.contract.test.ts` (rota com erro de outra integração = 500 `INTERNAL_ERROR`, sem resumo de queda). Mutantes
+  novos: `NETWORK_CODE_OF_ANOTHER_INTEGRATION_COUNTS` e `NETWORK_CODE_OF_THE_DRIVER_IGNORED`. ADR 0002 (R1) atualizado.
