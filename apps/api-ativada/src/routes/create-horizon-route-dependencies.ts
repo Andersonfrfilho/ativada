@@ -7,26 +7,24 @@ import {
 } from '@ativada/database';
 
 import type { Environment } from '../environment.js';
-import { createGoalColdBudget } from '../goals/goal-cold-budget.js';
-import { createColdEvaluationGate } from '../goals/goal-cold-gate.js';
+import type { ColdEvaluationGate } from '../goals/goal-cold-gate.js';
 import type { ComputeHorizonLine } from '../goals/goal-evaluation-pool.js';
 import { createHorizonCache } from '../horizons/horizon-cache.js';
 import type { HorizonEvaluation } from '../horizons/horizon-evaluation.types.js';
 import { createHorizonEvaluationUseCase } from '../horizons/horizon-evaluation.use-case.js';
 import type { HorizonRouteDependencies } from '../horizons/horizons.routes.js';
-import type { RateLimiter } from '../rate-limit/rate-limiter.js';
 
 export type HorizonRouteParams = {
   readonly environment: Environment;
   readonly database: DatabaseHandle;
   readonly now: () => number;
-  // O limitador do roteador: o orçamento das avaliações a frio é o mesmo das metas.
-  readonly rateLimiter: RateLimiter;
+  // O MESMO portão das metas: uma avaliação a frio em voo por usuário, teto global e o mesmo orçamento.
+  readonly coldGate: ColdEvaluationGate<HorizonEvaluation>;
   // O cálculo roda no pool de threads (nunca na thread da API).
   readonly computeHorizon: ComputeHorizonLine;
 };
 
-// Os prazos dividem com as metas o orçamento das avaliações a frio (o mesmo limitador) e o pool de threads.
+// Os prazos dividem com as metas o portão das avaliações a frio (vaga por usuário, teto global, orçamento) e o pool de threads.
 export function createHorizonRouteDependencies(
   params: HorizonRouteParams,
 ): HorizonRouteDependencies {
@@ -41,10 +39,7 @@ export function createHorizonRouteDependencies(
       now: params.now,
       cache: createHorizonCache(),
       computeHorizon: params.computeHorizon,
-      coldGate: createColdEvaluationGate<HorizonEvaluation>({
-        maxConcurrent: environment.GOAL_EVALUATION_MAX_CONCURRENT,
-        budget: createGoalColdBudget({ rateLimiter: params.rateLimiter }),
-      }),
+      coldGate: params.coldGate,
     }),
   };
 }

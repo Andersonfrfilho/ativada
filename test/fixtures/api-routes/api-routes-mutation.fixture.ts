@@ -128,6 +128,7 @@ export const HORIZONS_MUTANT_TARGET: MutantTarget = {
     'test/horizon-view.contract.test.ts',
     'test/horizon-intraday-run.contract.test.ts',
     'test/api-horizons.contract.test.ts',
+    'test/api-cold-gate-sharing.contract.test.ts',
     'test/api-openapi.contract.test.ts',
   ],
   sourceVariable: 'API_ROUTES_APP_SOURCE',

@@ -34,6 +34,7 @@ import type * as GoalCandlesModule from '../../../apps/api-ativada/src/goals/goa
 import type * as GoalCacheModule from '../../../apps/api-ativada/src/goals/goal-evaluation-cache.js';
 import type * as GoalEvaluationModule from '../../../apps/api-ativada/src/goals/goal-evaluation.use-case.js';
 import type * as GoalColdBudgetModule from '../../../apps/api-ativada/src/goals/goal-cold-budget.js';
+import type * as ColdWiringModule from '../../../apps/api-ativada/src/routes/create-cold-evaluation-gates.js';
 import type * as GoalColdGateModule from '../../../apps/api-ativada/src/goals/goal-cold-gate.js';
 import type * as GoalComputationModule from '../../../apps/api-ativada/src/goals/goal-computation.js';
 import type * as GoalSeriesModule from '../../../apps/api-ativada/src/goals/goal-evaluation-series.js';
@@ -101,6 +102,7 @@ export type ApiApp = {
   readonly goalCache: typeof GoalCacheModule;
   readonly goalColdBudget: typeof GoalColdBudgetModule;
   readonly goalColdGate: typeof GoalColdGateModule;
+  readonly coldWiring: typeof ColdWiringModule;
   readonly goalComputation: typeof GoalComputationModule;
   readonly assetPosition: typeof AssetPositionModule;
   readonly assetRule: typeof AssetRuleModule;
@@ -176,6 +178,7 @@ export async function loadApiApp(): Promise<ApiApp> {
     goalCache: await load('goals/goal-evaluation-cache'),
     goalColdBudget: await load('goals/goal-cold-budget'),
     goalColdGate: await load('goals/goal-cold-gate'),
+    coldWiring: await load('routes/create-cold-evaluation-gates'),
     goalComputation: await load('goals/goal-computation'),
     assetPosition: await load('assets/asset-position'),
     assetRule: await load('assets/asset-rule'),

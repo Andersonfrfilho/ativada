@@ -22,6 +22,7 @@ const REQUESTS = 'horizons/horizon-requests.ts';
 const MESSAGES = 'horizons/horizon-messages.ts';
 const VIEW = 'horizons/horizon-view.ts';
 const INTRADAY = 'horizons/horizon-intraday-run.ts';
+const COLD_WIRING = 'routes/create-cold-evaluation-gates.ts';
 
 function edit(file: string, find: string, replace: string): SourceEdit[] {
   return [{ file, find, replace, occurrences: 1 }];
@@ -51,6 +52,14 @@ const MUTANTS: readonly SourceMutant[] = [
   {
     name: 'EVALUATION_DOES_NOT_STORE_IN_THE_CACHE',
     edits: edit(EVALUATION, '  dependencies.cache.set(key, computation.line);\n', ''),
+  },
+  {
+    name: 'HORIZON_GATE_SEPARATE_FROM_THE_GOAL_GATE',
+    edits: edit(
+      COLD_WIRING,
+      '    horizonGate: gates.forResult<HorizonEvaluation>(),\n',
+      '    horizonGate: createColdEvaluationGates({ maxConcurrent: params.environment.GOAL_EVALUATION_MAX_CONCURRENT, budget }).forResult<HorizonEvaluation>(),\n',
+    ),
   },
   {
     name: 'COLD_GATE_SKIPPED',

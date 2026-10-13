@@ -5,7 +5,6 @@ import {
   createRunRepository,
   createRunQueueRepository,
   createRunResultRepository,
-  createSentimentObservationRepository,
   createSentimentRepository,
   createStrategyRepository,
   type DatabaseHandle,
@@ -13,23 +12,11 @@ import {
 
 import type { Environment } from '../environment.js';
 import type { RateLimiter } from '../rate-limit/rate-limiter.js';
-import { createGoalColdBudget } from '../goals/goal-cold-budget.js';
-import { createColdEvaluationGate } from '../goals/goal-cold-gate.js';
-import { createGoalEvaluationCache } from '../goals/goal-evaluation-cache.js';
 import type { ComputeGoalCombination, ComputeHorizonLine } from '../goals/goal-evaluation-pool.js';
-import { createGoalEvaluationUseCase } from '../goals/goal-evaluation.use-case.js';
-import { createGoalPlanCache } from '../goals/goal-plan-cache.js';
-import { createGoalPlanUseCase } from '../goals/goal-plan.use-case.js';
-import { MAX_GOALS_PER_USER } from '../goals/goal.constant.js';
-import {
-  createCreateGoalUseCase,
-  createDeleteGoalUseCase,
-  createGetGoalUseCase,
-  createListGoalsUseCase,
-  createUpdateGoalUseCase,
-} from '../goals/goal.use-cases.js';
-import type { GoalRouteDependencies } from '../goals/goals.routes.js';
+import { createColdEvaluationWiring } from './create-cold-evaluation-gates.js';
+import { createGoalDependencies } from './create-goal-route-dependencies.js';
 import { createHorizonRouteDependencies } from './create-horizon-route-dependencies.js';
+import type { GoalRouteDependencies } from '../goals/goals.routes.js';
 import type { AssetRouteDependencies } from '../assets/assets.routes.js';
 import type { PriceAlertRouteDependencies } from '../price-alerts/price-alerts.routes.js';
 import {
@@ -106,45 +93,6 @@ function createStrategyDependencies(
   };
 }
 
-function createGoalDependencies(params: DomainRouteParams): GoalRouteDependencies {
-  const { database, environment } = params;
-  const goals = createGoalRepository(database);
-  const coldBudget = createGoalColdBudget({ rateLimiter: params.rateLimiter });
-  const dependencies = { goals, maxGoals: MAX_GOALS_PER_USER, coldBudget };
-  return {
-    enabledSymbols: environment.MARKET_SYMBOLS,
-    createGoal: createCreateGoalUseCase(dependencies),
-    listGoals: createListGoalsUseCase(dependencies),
-    getGoal: createGetGoalUseCase(dependencies),
-    updateGoal: createUpdateGoalUseCase(dependencies),
-    deleteGoal: createDeleteGoalUseCase(dependencies),
-    evaluateGoal: createGoalEvaluationUseCase({
-      goals,
-      strategies: createStrategyRepository(database),
-      candles: createCandleRepository(database),
-      sentiments: createSentimentObservationRepository(database),
-      exchange: environment.MARKET_EXCHANGE,
-      symbols: environment.MARKET_SYMBOLS,
-      now: params.now,
-      cache: createGoalEvaluationCache(),
-      compute: params.computeGoal,
-      coldGate: createColdEvaluationGate({
-        maxConcurrent: environment.GOAL_EVALUATION_MAX_CONCURRENT,
-        budget: coldBudget,
-      }),
-    }),
-    getGoalPlan: createGoalPlanUseCase({
-      goals,
-      strategies: createStrategyRepository(database),
-      candles: createCandleRepository(database),
-      sentiments: createSentimentObservationRepository(database),
-      exchange: environment.MARKET_EXCHANGE,
-      now: params.now,
-      cache: createGoalPlanCache(),
-    }),
-  };
-}
-
 function createRunDependencies(
   params: DomainRouteParams,
   enabled: MarketRouteDependencies['enabled'],
@@ -187,6 +135,7 @@ function createRunDependencies(
 // pelo tipo; o ambiente decide quais pares e timeframes existem.
 export function createDomainRouteDependencies(params: DomainRouteParams): DomainRouteDependencies {
   const { database, environment } = params;
+  const cold = createColdEvaluationWiring(params);
   const enabled = {
     symbols: environment.MARKET_SYMBOLS,
     timeframes: environment.MARKET_TIMEFRAMES,
@@ -203,8 +152,8 @@ export function createDomainRouteDependencies(params: DomainRouteParams): Domain
       getSentiment: createGetSentimentUseCase({ sentiments: createSentimentRepository(database) }),
     },
     strategies: createStrategyDependencies(params),
-    goals: createGoalDependencies(params),
-    horizons: createHorizonRouteDependencies(params),
+    goals: createGoalDependencies(params, cold),
+    horizons: createHorizonRouteDependencies({ ...params, coldGate: cold.horizonGate }),
     priceAlerts: createPriceAlertDependencies(params),
     assets: createAssetDependencies(params),
     runs: createRunDependencies(params, enabled),

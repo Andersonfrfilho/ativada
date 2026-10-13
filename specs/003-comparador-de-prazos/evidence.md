@@ -288,3 +288,16 @@ Feita no app em execução (painel `127.0.0.1:56100`, API reiniciada para servir
 | `0.0046` → `+0,4%`; `0.5499` → `+54,9%`; `0.54773869` → `54,7%`; negativos `-0.0041` → `-0,5%`, `-0.00001` → `-0,1%`; `0.0004` → `0,0%` sem tom; fatia `0.4501` → `45,1%` (teto); nulo/`NaN` → `—` | `apps/frontend-ativada/test/horizon-format.contract.ts` |
 
 **Gates (WSL).** typecheck, lint e prettier limpos; `panel-test`: 393 pass, 0 fail.
+
+### Achado 2 — prazos tinham um portão a frio próprio (RNF01)
+
+`create-horizon-route-dependencies.ts` criava um `createColdEvaluationGate` NOVO: uma meta a frio e um prazo a frio do mesmo usuário rodavam juntos, e o teto global contava só cada tipo. Agora `goals/goal-cold-gate.ts` tem `createColdEvaluationGates` (as vagas por usuário e o teto global são UM conjunto; cada tipo de resultado ganha o seu mapa tipado por `forResult<TResult>()`, sem `as`) e `routes/create-cold-evaluation-gates.ts` cria o portão e o orçamento UMA vez na fiação, injetando o portão das metas e o dos prazos (`create-goal-route-dependencies.ts` foi extraído de `create-domain-route-dependencies.ts`, que estava no limite de 200 linhas). `createColdEvaluationGate` continua existindo para um tipo só.
+
+| Contrato | Arquivo |
+|---|---|
+| Meta a frio em voo → prazo a frio do mesmo usuário recusado com o `RateLimitedError` (429) do portão; e o inverso | `test/api-cold-gate-sharing.contract.test.ts` |
+| O teto global conta metas e prazos juntos (`GoalEvaluationBusyError`, 503) | idem |
+| Terminada a avaliação a vaga volta (não há 429 sobrando) | idem |
+| Mutante `HORIZON_GATE_SEPARATE_FROM_THE_GOAL_GATE` (portões separados) em `api-horizons-mutants`; o arquivo entra nos `judgeTestFiles`. Conferido à mão: com a edição, 3 dos 4 contratos novos falham | `test/api-horizons-mutants.contract.test.ts` |
+
+**Gates (WSL).** typecheck, lint e prettier limpos; `goal-cold-gate`, `api-cold-gate-sharing`, `api-horizons`, `api-goals`, `api-openapi`, `horizon-evaluation`, `goal-evaluation-pool`, `strategy-engine-boundary`, `code-size-limits` e `app-import-boundary` verdes. O `api-horizons-mutants` completo roda uma vez no fim do achado 3.
