@@ -276,3 +276,15 @@ Feita no app em execução (painel `127.0.0.1:56100`, API reiniciada para servir
 **Captura de prova.** `specs/003-comparador-de-prazos/evidence/prazos-375px.png` (375 px, tema claro, página inteira, Edge via Playwright, dados reais do usuário de teste).
 
 **Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos; `panel-test`: 388 pass, 0 fail.
+
+## T4.2 — correções da revisão (2026-10-12)
+
+### Achado 1 — número da figura contradizia a frase do servidor
+
+`formatRate` (painel) arredondava meio para cima; a frase do servidor corta (piso). Mediana `0.0046` era "+0,4%" na frase e "+0,5%" na figura. Agora `horizon-format.ts` corta com BigInt de escala 8, sem `Number`, pela MESMA regra por tipo de número do servidor: ganho, resultado e fração de acertos para BAIXO (piso, então perda se afasta de zero), fatia das taxas para CIMA (`formatFeeShare`). Ganho que fica em `0,0` continua sem sinal nem cor (T3.4).
+
+| Contrato | Arquivo |
+|---|---|
+| `0.0046` → `+0,4%`; `0.5499` → `+54,9%`; `0.54773869` → `54,7%`; negativos `-0.0041` → `-0,5%`, `-0.00001` → `-0,1%`; `0.0004` → `0,0%` sem tom; fatia `0.4501` → `45,1%` (teto); nulo/`NaN` → `—` | `apps/frontend-ativada/test/horizon-format.contract.ts` |
+
+**Gates (WSL).** typecheck, lint e prettier limpos; `panel-test`: 393 pass, 0 fail.

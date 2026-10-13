@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 
 import runStyles from '../runs/Runs.module.css';
 import controls from '../styles/Controls.module.css';
-import { formatFees, formatRate, rateTone } from './horizon-format.js';
+import { formatFeeShare, formatFees, formatRate, rateTone } from './horizon-format.js';
 import { HorizonFigure } from './HorizonFigure.component.js';
 import { INTRADAY_VERDICT } from './horizon.constant.js';
 import type { IntradayRowData } from './horizon.validation.js';
@@ -36,7 +36,7 @@ export function IntradayHorizonRow({ row }: IntradayHorizonRowProps): ReactEleme
         <HorizonFigure label="Taxas pagas" value={formatFees(row.feesPaid)} />
         <HorizonFigure
           label="Taxas sobre o ganho bruto"
-          value={formatRate(row.feeShareOfGross, false)}
+          value={formatFeeShare(row.feeShareOfGross)}
         />
       </dl>
     </li>
