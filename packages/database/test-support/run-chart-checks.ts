@@ -4,6 +4,7 @@ import ethDaily from '../../../test/fixtures/strategy-engine/market/ethusdt-1d-4
 import {
   referenceFillClusters,
   referencePriceColumns,
+  referenceTradeTotals,
   type OracleCandle,
 } from '../../../test/fixtures/run-chart/chart-oracle.fixture.js';
 import {
@@ -218,7 +219,7 @@ function fillOf(params: { index: number; side: 'buy' | 'sell'; candle: number })
     side: params.side,
     price: '30000.00000000',
     quantity: '0.01500000',
-    notional: '450.00000000',
+    notional: `${450 + (params.index % 11)}.${String((params.index * 7919 + 1) % 1_000_000_000_000).padStart(12, '0')}`,
     fee: '0.45000000',
   };
 }
@@ -386,5 +387,55 @@ export async function checkTradeFilters(context: LifecycleCheckContext): Promise
   );
   reportCheck(
     `operações: faixa, status e preenchimentos da página conferidos (${expected.length} na faixa)`,
+  );
+}
+
+export async function checkTradeTotals(context: LifecycleCheckContext): Promise<void> {
+  const { handle, assertCondition, reportCheck } = context;
+  const owner = await resolvePersistenceOwner(handle, 'subject-chart-totals');
+  const stranger = await resolvePersistenceOwner(handle, 'subject-chart-totals-other');
+  const run = await seedRun(handle, owner);
+  const empty = await createRunResultRepository(handle).readTradeTotals(owner.scope, run.id);
+  assertCondition(
+    empty?.closedTrades === 0 && empty.totalPaid === '0' && empty.openPaid === undefined,
+    'resumo: execução sem operação deve somar zero',
+  );
+  const { fills, positions } = buildChartFills();
+  const openIndex = POSITION_COUNT;
+  const openPosition: PositionInput = {
+    ...(positions[0] as PositionInput),
+    engineKey: `position-${openIndex}`,
+    status: POSITION_STATUS.OPEN,
+    exitPrice: undefined,
+    exitFee: undefined,
+    netProfit: undefined,
+    exitReason: undefined,
+    closedCandleTime: undefined,
+  };
+  const openFill = fillOf({ index: openIndex, side: ORDER_SIDE.BUY, candle: 2_000 });
+  await createRunBatchRepository(handle).runInBatch(owner.scope, run.id, (writer) =>
+    writer.appendResults({
+      signals: [],
+      orders: [],
+      fills: [...fills, openFill],
+      positions: [...positions, openPosition],
+      equityPoints: [],
+      commands: [],
+    }),
+  );
+  const results = createRunResultRepository(handle);
+  const found = await results.readTradeTotals(owner.scope, run.id);
+  const expected = referenceTradeTotals({
+    positions: [...positions, openPosition],
+    fills: [...fills, openFill],
+  });
+  assertCondition(
+    JSON.stringify(found) === JSON.stringify(expected),
+    `resumo: o SQL diverge do oráculo: ${JSON.stringify(found)} contra ${JSON.stringify(expected)}`,
+  );
+  const foreign = await results.readTradeTotals(stranger.scope, run.id);
+  assertCondition(foreign === undefined, 'resumo: execução de outro dono devolveu totais');
+  reportCheck(
+    `resumo: ${expected.closedTrades} fechadas e 1 aberta, pago ${expected.totalPaid} e recebido ${expected.totalReceived} iguais ao oráculo bigint; dono alheio recebe undefined`,
   );
 }

@@ -106,6 +106,7 @@ export function buildApiRouteDependencies(
       },
       exportRunCsv: notUsed,
       chart: notUsed,
+      tradeSummary: notUsed,
     },
     isDocumentationEnabled,
   };

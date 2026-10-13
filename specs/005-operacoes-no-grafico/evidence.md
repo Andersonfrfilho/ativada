@@ -124,3 +124,34 @@ invalida a resposta), então não há consulta de refinamento que possa derrubar
 
 Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `prettier --check .` limpo; 391 testes
 verdes em 19 arquivos (os da T1.1 e T1.2, `api-run-chart` e o `api-routes-mutants`, 134 s).
+
+## T1.4 — `GET /v1/runs/:runId/trade-summary` (2026-10-13, `sonnet`)
+
+Entrega: rota nova, só do dono (`access: USER`, `documentation`), sem query (qualquer parâmetro é `400`), resumo da execução
+INTEIRA (não muda com o zoom), sem migration.
+
+| Peça | Onde |
+|---|---|
+| UMA consulta agregada em `numeric` | `packages/database/src/run-results/run-trade-totals.ts` (`readTradeTotals`: `ceil(notional·1e8)/1e8 + taxa` na compra, `floor(...)  − taxa` na venda, só das fechadas; `open_paid` das abertas; `trim_scale` na saída) |
+| Caso de uso, rota, OpenAPI | `apps/api-ativada/src/runs/trade-summary/trade-summary.{use-case,route,docs}.ts` (`net = recebido − pago`, grafia canônica) |
+| Frase em português | `trade-summary-message.ts` (2 casas, milhar com ponto e vírgula decimal; pago, taxas e pago-na-aberta arredondados para CIMA; recebido e saldo para BAIXO, em direção a −∞; menos tipográfico U+2212 no saldo negativo; "1 compra" no singular; "uma operação ainda aberta" ou "N operações ainda abertas") |
+| Oráculo `bigint` (escala 18, sem importar produção) | `referenceTradeTotals` em `test/fixtures/run-chart/chart-oracle.fixture.ts`, usado pelo repositório em memória |
+| Contratos | `test/api-run-trade-summary.contract.test.ts` (8 casos) e `test/trade-summary-message.contract.test.ts` (8 casos) |
+
+Reconciliação (RF12, critério 2): em 200 posições fechadas sorteadas, com `net_profit` calculado em `bigint` pela conta do
+caixa, `net` é igual à soma de `net_profit` EXATA, `totalReceived − totalPaid` também, e `totalPaid`/`totalReceived` são
+iguais à soma dos campos `paid`/`received` do `/trades` (todas as páginas) e à soma recalculada linha a linha do
+`/v1/runs/:id/log.csv` (preenchimentos `buy` e `sell`: notional com 12 casas, teto/piso a 8, taxa).
+
+Contas à mão (uma fechada e uma aberta): pago 300,57345679 (notional 300,123456789 sobe a 300,12345679 + 0,45), recebido
+310,51765432 (310,987654321 desce a 310,98765432 − 0,47), taxas 0,92, saldo 9,94419753, pago na aberta 412,412; frase
+"Você pagou 300,58 USDT em 1 compra e recebeu 310,51 USDT nas vendas. Taxas: 0,92 USDT. Saldo líquido: 9,94 USDT. + uma
+operação ainda aberta, com 412,42 USDT pagos." Prejuízo: −0,33333333 vira "−0,34". Execução sem operação soma zero.
+404 igual para alheia, inexistente, malformada e apagada.
+
+SQL verificado em Postgres de verdade (PGlite, mesmo script descartável da T1.2): 400 fechadas + 1 aberta com notional de
+12 casas, resultado igual ao oráculo (`closedTrades 400`, `totalPaid 182166.00063394`, `openPaid 123.90678902`, execução
+vazia e dono alheio). `checkTradeTotals` entrou no `make database-test` (PENDENTE de rodar com Docker; ver T1.2).
+
+Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `prettier --check .` limpo; 331 testes verdes
+em 20 arquivos (os anteriores mais os dois novos).

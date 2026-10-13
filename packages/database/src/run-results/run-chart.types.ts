@@ -36,3 +36,14 @@ export type FillClusterBucket = {
   readonly buys: number;
   readonly sells: number;
 };
+
+// Os totais das operações da execução inteira (spec 005, O10), em texto decimal exato: pago = notional da compra para cima
+// (8 casas) + taxa; recebido = notional da venda para baixo - taxa; só das posições fechadas. `openPaid` é o pago nas abertas.
+export type TradeTotals = {
+  readonly closedTrades: number;
+  readonly openTrades: number;
+  readonly totalPaid: string;
+  readonly totalReceived: string;
+  readonly totalFees: string;
+  readonly openPaid: string | undefined;
+};

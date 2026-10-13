@@ -15,6 +15,7 @@ import { listRunLog } from './run-log-list.js';
 import { listFillsOfPositions } from './run-fill-list.js';
 import { countFillsInRange, listFillClusters, listFillMarkers } from './run-fill-markers.js';
 import { listPriceColumns } from './run-price-columns.js';
+import { readTradeTotals } from './run-trade-totals.js';
 import { listPositions } from './run-position-list.js';
 import { listSurvivalPoints } from './run-survival-points.js';
 import { listWindows } from './run-window-list.js';
@@ -78,7 +79,11 @@ function lister<TItem, TCursor, TParams extends ListResultsParams<TCursor>>(
 
 type ChartReaders = Pick<
   RunResultRepository,
-  'listPriceColumns' | 'listFillMarkers' | 'countFillsInRange' | 'listFillClusters'
+  | 'listPriceColumns'
+  | 'listFillMarkers'
+  | 'countFillsInRange'
+  | 'listFillClusters'
+  | 'readTradeTotals'
 >;
 
 // As leituras do gráfico: cada uma confere o dono da execução antes de ler.
@@ -99,6 +104,10 @@ function createChartReaders(database: Database): ChartReaders {
     listFillClusters: async (scope, runId, params) =>
       (await isOwnedRun(database, scope, runId))
         ? listFillClusters({ executor: database, scope, runId, params })
+        : undefined,
+    readTradeTotals: async (scope, runId) =>
+      (await isOwnedRun(database, scope, runId))
+        ? readTradeTotals({ executor: database, scope, runId })
         : undefined,
   };
 }

@@ -1,8 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type {
   FillClusterBucket,
+  FillInput,
+  PositionInput,
   PriceColumn,
   TimeRange,
+  TradeTotals,
 } from '../../../packages/database/src/index.js';
 
 // O oráculo do gráfico (spec 005, T1.2): a redução do preço e o agrupamento de preenchimentos em TypeScript puro,
@@ -113,4 +116,68 @@ export function referenceFillClusters(params: {
       sells: group.filter((fill) => fill.side === 'sell').length,
     }),
   );
+}
+
+// Os totais das operações (T1.4): contas em `bigint` de escala 18 (cobre os 12 decimais do notional), arredondando para a
+// escala 8 do caixa do motor: pago = teto(notional da compra) + taxa; recebido = piso(notional da venda) - taxa.
+const WIDE_DIGITS = 18;
+const WIDE_SCALE = 10n ** BigInt(WIDE_DIGITS);
+const NARROW_FACTOR = 10n ** BigInt(WIDE_DIGITS - DECIMAL_PLACES);
+
+function toWide(text: string): bigint {
+  const [whole = '0', fraction = ''] = text.split('.');
+  return (
+    BigInt(whole) * WIDE_SCALE + BigInt(fraction.padEnd(WIDE_DIGITS, '0').slice(0, WIDE_DIGITS))
+  );
+}
+
+const ceilToCents8 = (wide: bigint): bigint => (wide + NARROW_FACTOR - 1n) / NARROW_FACTOR;
+const floorToCents8 = (wide: bigint): bigint => wide / NARROW_FACTOR;
+
+function formatScale8(value: bigint): string {
+  const negative = value < 0n;
+  const digits = (negative ? -value : value).toString().padStart(DECIMAL_PLACES + 1, '0');
+  const text = `${digits.slice(0, -DECIMAL_PLACES)}.${digits.slice(-DECIMAL_PLACES)}`;
+  return canonicalDecimal(`${negative ? '-' : ''}${text}`);
+}
+
+function sumScale8<TItem>(
+  items: readonly TItem[],
+  valueOf: (item: TItem) => bigint | undefined,
+): bigint {
+  return items.reduce((total, item) => total + (valueOf(item) ?? 0n), 0n);
+}
+
+export function referenceTradeTotals(params: {
+  readonly positions: readonly PositionInput[];
+  readonly fills: readonly FillInput[];
+}): TradeTotals {
+  const fillOf = (position: PositionInput, side: string): FillInput | undefined =>
+    params.fills.find((fill) => fill.positionKey === position.engineKey && fill.side === side);
+  const paidOf = (position: PositionInput): bigint | undefined => {
+    const buy = fillOf(position, 'buy');
+    return buy === undefined
+      ? undefined
+      : ceilToCents8(toWide(buy.notional)) + toScaled(position.entryFee);
+  };
+  const receivedOf = (position: PositionInput): bigint | undefined => {
+    const sell = fillOf(position, 'sell');
+    if (sell === undefined || position.exitFee === undefined) return undefined;
+    return floorToCents8(toWide(sell.notional)) - toScaled(position.exitFee);
+  };
+  const closed = params.positions.filter((position) => position.status === 'closed');
+  const open = params.positions.filter((position) => position.status === 'open');
+  return {
+    closedTrades: closed.length,
+    openTrades: open.length,
+    totalPaid: formatScale8(sumScale8(closed, paidOf)),
+    totalReceived: formatScale8(sumScale8(closed, receivedOf)),
+    totalFees: formatScale8(
+      sumScale8(
+        closed,
+        (position) => toScaled(position.entryFee) + toScaled(position.exitFee ?? '0'),
+      ),
+    ),
+    openPaid: open.length === 0 ? undefined : formatScale8(sumScale8(open, paidOf)),
+  };
 }

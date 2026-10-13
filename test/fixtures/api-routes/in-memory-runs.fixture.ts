@@ -26,7 +26,11 @@ import type {
   WalkForwardWindowInput,
 } from '../../../packages/database/src/index.js';
 import type { OwnerScope } from '../../../packages/database/src/ownership/owner-scope.js';
-import { referenceFillClusters, referencePriceColumns } from '../run-chart/chart-oracle.fixture.js';
+import {
+  referenceFillClusters,
+  referencePriceColumns,
+  referenceTradeTotals,
+} from '../run-chart/chart-oracle.fixture.js';
 import type { UserId } from '../../../packages/database/src/ownership/user-id.js';
 import {
   RUN_STATUS,
@@ -70,6 +74,7 @@ export type InMemoryRuns = {
     | 'listFillMarkers'
     | 'countFillsInRange'
     | 'listFillClusters'
+    | 'readTradeTotals'
     | 'listEquityPoints'
     | 'listWindows'
     | 'listLog'
@@ -508,7 +513,16 @@ export function createInMemoryRuns(
     );
   };
 
+  const readTradeTotals: InMemoryRuns['results']['readTradeTotals'] = (scope, runId) => {
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    const store = storeOf(runId);
+    return Promise.resolve(
+      referenceTradeTotals({ positions: store.positions, fills: store.fills }),
+    );
+  };
+
   const results: InMemoryRuns['results'] = {
+    readTradeTotals,
     listPriceColumns,
     listFillMarkers,
     countFillsInRange,

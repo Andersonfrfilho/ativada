@@ -21,6 +21,9 @@ import type * as ExportCsvModule from '../../../apps/api-ativada/src/runs/export
 import type * as RunExportRoutesModule from '../../../apps/api-ativada/src/runs/run-export.routes.js';
 import type * as RunChartRouteModule from '../../../apps/api-ativada/src/runs/chart/run-chart.route.js';
 import type * as RunChartUseCaseModule from '../../../apps/api-ativada/src/runs/chart/run-chart.use-case.js';
+import type * as TradeSummaryRouteModule from '../../../apps/api-ativada/src/runs/trade-summary/trade-summary.route.js';
+import type * as TradeSummaryUseCaseModule from '../../../apps/api-ativada/src/runs/trade-summary/trade-summary.use-case.js';
+import type * as TradeSummaryMessageModule from '../../../apps/api-ativada/src/runs/trade-summary/trade-summary-message.js';
 import type * as RunSeriesRoutesModule from '../../../apps/api-ativada/src/runs/run-series.routes.js';
 import type * as RunSeriesUseCasesModule from '../../../apps/api-ativada/src/runs/run-series.use-cases.js';
 import type * as RunUseCasesModule from '../../../apps/api-ativada/src/runs/run.use-cases.js';
@@ -94,6 +97,9 @@ export type ApiApp = {
   readonly runExportRoutes: typeof RunExportRoutesModule;
   readonly runChartRoute: typeof RunChartRouteModule;
   readonly runChartUseCase: typeof RunChartUseCaseModule;
+  readonly tradeSummaryRoute: typeof TradeSummaryRouteModule;
+  readonly tradeSummaryUseCase: typeof TradeSummaryUseCaseModule;
+  readonly tradeSummaryMessage: typeof TradeSummaryMessageModule;
   readonly runSeriesRoutes: typeof RunSeriesRoutesModule;
   readonly runSeriesUseCases: typeof RunSeriesUseCasesModule;
   readonly runUseCases: typeof RunUseCasesModule;
@@ -172,6 +178,9 @@ export async function loadApiApp(): Promise<ApiApp> {
     runExportRoutes: await load('runs/run-export.routes'),
     runChartRoute: await load('runs/chart/run-chart.route'),
     runChartUseCase: await load('runs/chart/run-chart.use-case'),
+    tradeSummaryRoute: await load('runs/trade-summary/trade-summary.route'),
+    tradeSummaryUseCase: await load('runs/trade-summary/trade-summary.use-case'),
+    tradeSummaryMessage: await load('runs/trade-summary/trade-summary-message'),
     runSeriesRoutes: await load('runs/run-series.routes'),
     runSeriesUseCases: await load('runs/run-series.use-cases'),
     runUseCases: await load('runs/run.use-cases'),

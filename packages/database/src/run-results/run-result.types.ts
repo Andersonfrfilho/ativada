@@ -9,6 +9,7 @@ import type {
   FillMarkersParams,
   PriceColumn,
   PriceColumnsParams,
+  TradeTotals,
 } from './run-chart.types.js';
 import type { RunLogCursor, RunLogEntry } from './run-log.types.js';
 import type {
@@ -221,6 +222,7 @@ export type RunResultRepository = {
     runId: string,
     params: FillClustersParams,
   ) => Promise<readonly FillClusterBucket[] | undefined>;
+  readonly readTradeTotals: (scope: OwnerScope, runId: string) => Promise<TradeTotals | undefined>;
   // O registro cronológico (sinais, ordens e preenchimentos) por cursor, para o CSV do registro (RF12).
   readonly listLog: ListOf<RunLogEntry, RunLogCursor>;
 };

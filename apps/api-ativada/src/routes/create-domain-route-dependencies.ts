@@ -29,6 +29,7 @@ import { createCreateRunUseCase } from '../runs/create-run.use-case.js';
 import { createExportRunCsvUseCase } from '../runs/export-run-csv.use-case.js';
 import type { RunDispatcher } from '../runs/run-dispatcher.js';
 import { createRunChartUseCase } from '../runs/chart/run-chart.use-case.js';
+import { createTradeSummaryUseCase } from '../runs/trade-summary/trade-summary.use-case.js';
 import { createRunSeriesUseCases } from '../runs/run-series.use-cases.js';
 import {
   createGetRunUseCase,
@@ -130,6 +131,7 @@ function createRunDependencies(
     series: createRunSeriesUseCases({ results }),
     exportRunCsv: createExportRunCsvUseCase({ results, now: params.now }),
     chart: createRunChartUseCase(shared),
+    tradeSummary: createTradeSummaryUseCase({ results }),
   };
 }
 

@@ -226,6 +226,9 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
         exchange: EXCHANGE,
       }),
     ),
+    app.tradeSummaryRoute.createTradeSummaryRoute(
+      app.tradeSummaryUseCase.createTradeSummaryUseCase({ results: runs.results }),
+    ),
     ...app.runExportRoutes.createRunExportRoutes(
       app.exportCsv.createExportRunCsvUseCase({
         results: runs.results,

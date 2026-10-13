@@ -122,6 +122,7 @@ export type {
   FillMarkersParams,
   PriceColumn,
   PriceColumnsParams,
+  TradeTotals,
 } from './run-results/run-chart.types.js';
 export type { RunLogCursor, RunLogEntry } from './run-results/run-log.types.js';
 export { createRunBatchRepository } from './run-results/run-batch.repository.js';

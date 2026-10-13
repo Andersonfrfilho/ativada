@@ -18,6 +18,8 @@ import { createProfileRoutes, type ProfileRouteDependencies } from '../profile/p
 import type { Route } from '../router/route.types.js';
 import { createRunChartRoute } from '../runs/chart/run-chart.route.js';
 import type { RunChartUseCase } from '../runs/chart/run-chart.use-case.js';
+import { createTradeSummaryRoute } from '../runs/trade-summary/trade-summary.route.js';
+import type { TradeSummaryUseCase } from '../runs/trade-summary/trade-summary.use-case.js';
 import type { ExportRunCsvUseCase } from '../runs/export-run-csv.use-case.js';
 import { createRunExportRoutes } from '../runs/run-export.routes.js';
 import { createRunSeriesRoutes } from '../runs/run-series.routes.js';
@@ -41,6 +43,7 @@ export type RunRoutesBundle = {
   readonly series: RunSeriesUseCases;
   readonly exportRunCsv: ExportRunCsvUseCase;
   readonly chart: RunChartUseCase;
+  readonly tradeSummary: TradeSummaryUseCase;
 };
 
 export type ApiRouteDependencies = HealthRouteDependencies & {
@@ -81,6 +84,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     ...createRunRoutes(dependencies.runs.routes),
     ...createRunSeriesRoutes(dependencies.runs.series),
     createRunChartRoute(dependencies.runs.chart),
+    createTradeSummaryRoute(dependencies.runs.tradeSummary),
     ...createRunExportRoutes(dependencies.runs.exportRunCsv),
   ];
   // A tabela final inclui as próprias rotas de documentação: o documento é gerado depois, dela inteira.
