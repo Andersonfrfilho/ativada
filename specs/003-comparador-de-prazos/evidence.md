@@ -334,3 +334,14 @@ Conferido: o gerador acrescenta o 429 `RATE_LIMITED` a TODA rota por `COMMON_ERR
 | Contrato | Arquivo |
 |---|---|
 | `GET /v1/horizons` e `GET /v1/goals/{goalId}/evaluation` têm a resposta `429` no documento gerado | `test/api-openapi.contract.test.ts` |
+
+### Achado 8 — ETHUSDT e a tabela de filtros no ADR 0002
+
+Parágrafo acrescentado ao fim da seção "Filtros de preço e quantidade por par": ETHUSDT fica nos padrões do motor (`quantityStep` 0,00001) embora a Binance use 0,0001, para não mudar o `runHash` das execuções antigas; metas e prazos de ETH usam esse passo; a conferência com a Binance é da spec 002. Também registra que a tabela foi conferida de memória e deve ser conferida contra o `exchangeInfo` no PR que acrescentar o par. Só documentação.
+
+### Pendências de desempenho (achados 4 e 5, não corrigidos nesta revisão)
+
+- **Achado 4.** O cache diário é invalidado a cada vela de 15 minutos: a chave leva o último candle de 15 min, então a cada 15 min a avaliação volta a ser a frio, mesmo com a série diária inalterada.
+- **Achado 5.** O caminho quente lê ~9 mil candles antes de consultar o cache (as séries são carregadas para montar a chave).
+
+Ambos ficam como pendência de desempenho para uma tarefa à parte (partir o cache da linha diária e da de 15 minutos; montar a chave com o último candle, sem ler a série inteira).
