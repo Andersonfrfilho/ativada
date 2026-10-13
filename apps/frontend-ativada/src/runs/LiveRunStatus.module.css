@@ -23,5 +23,6 @@
 }
 
 .stalled small {
+  color: var(--ink-2);
   font-weight: 400;
 }

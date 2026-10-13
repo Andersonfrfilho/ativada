@@ -413,3 +413,42 @@ Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; `test test/dev-
 - `docs/runbook-dev-local.md` (pt-BR): §1 subir e descer (tabela PowerShell x bash, `--dry-run`/`--infra`, URLs 56100, 56101, 56180 e 56126); §2 "o banco não responde" (`docker ps` com `PORTS` vazia = Docker não publicou a porta, `Test-NetConnection 127.0.0.1 -Port 56432` / `nc -z 127.0.0.1 56432`, correção = reiniciar o Docker Desktop, por que acontece após suspensão, API e worker voltam sozinhos); §3 logs em `.dev/logs/`; §4 `/v1/health` (público, só ok/degraded) e `/v1/admin/health` (`database` e `worker`); §5 o que significam `database unavailable`, `database recovered` e a faixa "Sua simulação está parada desde HH:MM" (distinta de "Aguardando dados do mercado"); §6 moedas ativas e como mudá-las. Link em `docs/runbook-live72.md`.
 - Conferência: nomes das mensagens de log contra `OUTAGE_LOG_MESSAGE` (`packages/database/src/connection/connection.constant.ts`), campos de saúde contra `health-view.ts`, texto da faixa contra o RF13 e a T3.3; `nc -z` no WSL e `Test-NetConnection` no PowerShell 7 numa porta fechada dão "fechada" / `False`; os scripts e o `--dry-run` citados foram rodados na T4.1. `docker ps` não existe no WSL desta máquina (conferido apenas pela sintaxe do filtro `--filter name=`).
 - Diff revisado: só dois arquivos de docs mudam (runbook novo e 3 linhas no `runbook-live72.md`), sem código.
+
+## T5.1 — Revisão de design (web.md §15) (2026-10-13, `sonnet`)
+
+Ambiente: API e worker reiniciados com o código novo (o painel já servia o código novo pelo Vite); migrations 0022 e 0023 aplicadas no banco de dev com `scripts/dev-migrate.ts` (aditivas). `/v1/health` 200. Verificação por texto, CSS computado e geometria (navegador embutido, usuário de teste local); 375 px, tema do sistema (escuro) e `data-theme='light'`.
+
+Achados, por item da tarefa:
+
+1. **Seletor de vela** (`/metas/<id>`, é o mesmo cartão do ranking): `<fieldset>` com 3 radios visíveis (1 hora marcado) e frases em `aria-describedby`; "Mais opções" (`aria-expanded`) revela o 15 minutos, que só aparece com o aviso de taxas ("⚠ Com velas de 15 min…"); aviso do ranking diário sempre visível; "Você tem N de 5 simulações ao vivo" (2 de 5 e, depois de criar uma, 3 de 5); duplicata: "⚠ Você já tem esta simulação rodando." com link "Ver a simulação que já está rodando" (44 px de altura) e o botão segue habilitado (D4). Limite de 5 coberto pelo contrato `simulation-picker.contract.tsx` (não forçado no banco de dev). OK.
+2. **"Aguardando a primeira vela, que fecha às 19:00 de hoje."**: visto no cartão "Meta ativa" da Visão geral logo depois de criar a simulação 1h pelo painel. Com o worker saudável o estado dura segundos: o worker grava `last_candle_time` da última vela já fechada no primeiro passo e a tela passa para "Última decisão às 18:00 de hoje · próxima às 19:00 de hoje" (ver pendência P1). No detalhe, o estado em si não pôde ser mantido na tela (o worker devolve o valor), então fica provado pelo contrato `live-run-status.contract.tsx` (15 casos).
+3. **Faixa de parada**: gravei `runs.stalled_since` (20 min atrás) numa simulação de dev criada para o teste e devolvi `null` ao fim; a faixa aparece na Visão geral (Saldo da simulação e Meta ativa) e no detalhe: "⚠ **Parada.** Sua simulação está parada desde 18:18. O sistema está tentando retomar; nenhuma operação foi perdida. Horários em GMT−3.", `role="status"`, borda de 6 px à esquerda, `--warn` sobre `--warn-soft`. A varredura da API (60 s) apaga a marca de uma simulação que não está parada: é o esperado. As duas simulações diárias (PEPE, LINK) não foram tocadas.
+4. **375 px**: `scrollWidth` 375 = `innerWidth` nos dois temas, em `/`, `/metas/<id>` (com "Mais opções" aberto e o 15 min marcado) e no detalhe; nenhum elemento passa da borda direita. Contraste medido (razão WCAG, mesma conta de `test/contrast.contract.ts`):
+
+   | Par | Claro | Escuro | Exigido |
+   |---|---|---|---|
+   | `warn` sobre `warn-soft` (texto do aviso e da faixa) | 6,30 | 8,84 | 4,5 |
+   | `ink` sobre `warn-soft` | já coberto | já coberto | 4,5 |
+   | `ink-2` sobre `warn-soft` (legenda "Horários em GMT−3" depois da correção) | 6,98 | 6,81 | 4,5 (novo no contrato) |
+   | `ink-3` sobre `warn-soft` (a cor antiga da legenda) | 4,72 | 4,81 | 4,5 (passava, sem folga) |
+   | `accent` sobre `warn-soft` (link da duplicata dentro do aviso) | 7,49 | 6,14 | 4,5 (novo no contrato) |
+   | `ink`/`ink-2`/`accent` sobre `accent-soft` (aviso do ranking) | 14,55 / 6,40 / 6,87 | 11,84 / 6,52 / 5,89 | 4,5 (já coberto) |
+   | `warn` sobre `surface` (borda da faixa, elemento gráfico) | 7,13 | 10,48 | 3 (novo no contrato) |
+   | `warn` sobre `bg` (idem) | 6,47 | 11,56 | 3 (novo no contrato) |
+
+   `ink-3` sobre `accent-soft` dá 4,33 no claro (reprova), mas nenhum texto usa essa combinação; fica fora do contrato de propósito.
+5. **Foco e Tab** (teclas reais): a ordem é "Como ler este ranking" → "Mais opções" → radio marcado (o grupo é uma parada só; setas trocam) → "Só o par da meta" → "Ver o plano" → "Simular esta meta"; todos com contorno de 2 px `#8ea3ff` (`:focus-visible`).
+6. **Vizinhos**: o seletor usa raio 12 px, borda de 1 px `--line` e padding 12×14, igual a `.explainer` e `.situation`; avisos com raio 6 px e padding 10×12, igual à faixa de parada; alvos de 44 px. Sem divergência de tamanho de fonte (16 px de corpo, 13,5 px para legendas).
+7. **Linguagem**: frases do RF02/RF03/RF13 conferem com a spec; "vela" é o termo da spec. Resíduo antigo fora desta spec: o aviso "O que teria acontecido com candles que já aconteceram" ainda diz "candles".
+
+Console e rede: depois de recarregar, nenhum recurso com status ≥ 400 (250 recursos); os erros acumulados na aba (HMR do Vite durante as fases e 401/502 enquanto a API antiga reiniciava) são anteriores à recarga.
+
+Corrigido: `.stalled small` (legenda "Horários em GMT−3." da faixa) usava o cinza mais fraco (`--ink-3`, 4,7:1); passou a `--ink-2` (≥ 6,8:1). Contrato de contraste ganhou 4 pares (`ink-2`/`warn-soft`, `accent`/`warn-soft` e, como gráficos, `warn`/`surface` e `warn`/`bg`).
+
+Pendências (não corrigidas, fora de CSS/texto):
+- **P1.** No primeiro passo o worker marca a última vela JÁ fechada como processada; "Aguardando a primeira vela" some em segundos e "Última decisão" cita uma vela anterior à criação. Decidir se a tela deve esperar o primeiro fechamento POSTERIOR à criação (critério de aceite 1 da spec) ou se o texto "Última decisão" deve dizer "Vela de HH:MM já analisada".
+- **P2.** Na faixa de parada o selo "Rodando" aparece logo acima de "Parada." (e a Visão geral mostra a mesma faixa no cartão de saldo e no de meta ativa quando é a mesma simulação). Não contradiz o texto, mas é redundante; avaliar trocar o selo por "Parada" no `BalanceCard`.
+- **P3.** Limite de 5 simulações e fim do estado "Aguardando" no detalhe só provados por contrato (não reproduzidos no app).
+- **P4.** Por permissão, não consegui cancelar a simulação 1h de teste que criei (LINK/USDT, Rompimento Donchian, id `01a13733-0a5d-717d-ba48-0c32767df00e`): ela continua `running`; o responsável pode cancelar em `/backtests/<id>`.
+
+Captura final (duas imagens, Playwright com o Edge do Windows, faixa de parada ativa): `specs/006-simulacao-ao-vivo-robusta/evidence/simulacao-ao-vivo-375-escuro.png` (375 px, tema escuro) e `simulacao-ao-vivo-1280-claro.png` (1280 px, tema claro); `scrollWidth` 375 e 1280.
