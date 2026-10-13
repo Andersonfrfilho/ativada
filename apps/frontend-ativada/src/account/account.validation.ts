@@ -8,6 +8,8 @@ export const profileSchema = z.object({
   timezone: z.string(),
   alertTelegramEnabled: z.boolean(),
   telegramLinked: z.boolean(),
+  // Ausente numa API mais antiga: o painel cai no padrão do servidor.
+  limits: z.object({ maxActiveLivePaperRuns: z.number().int().min(1) }).optional(),
   createdAt: z.string(),
 });
 

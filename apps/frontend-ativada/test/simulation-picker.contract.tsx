@@ -140,8 +140,62 @@ describe('creating the simulation with the chosen timeframe', () => {
     );
     fireEvent.click(await screen.findByRole('button', { name: SIMULATE }));
     expect((await screen.findByRole('alert')).textContent).toBe(
-      'Você chegou ao limite de 5 simulações ao vivo. Pare uma para começar outra.',
+      'Você chegou ao limite de simulações ao vivo. Pare uma para começar outra.',
     );
+  });
+});
+
+function profileRoute(maxActiveLivePaperRuns: number): FakeRoute {
+  return {
+    method: 'GET',
+    path: '/v1/me',
+    respond: (): Response =>
+      dataResponse({
+        id: 'user-1',
+        displayName: null,
+        displayCurrency: 'BRL',
+        timezone: 'America/Sao_Paulo',
+        alertTelegramEnabled: true,
+        telegramLinked: false,
+        limits: { maxActiveLivePaperRuns },
+        createdAt: '2026-10-01T12:00:00.000Z',
+      }),
+  };
+}
+
+function pagedRuns(): FakeRoute {
+  return {
+    method: 'GET',
+    path: '/v1/runs',
+    respond: (call): Response => {
+      if (call.query.get('cursor') === null) {
+        const stopped = ['a', 'b', 'c'].map((id) => liveRun(`run-${id}`, { status: 'completed' }));
+        return pageResponse(stopped, 'cursor-2');
+      }
+      return pageResponse([liveRun('run-d'), liveRun('run-e', { status: 'queued' })]);
+    },
+  };
+}
+
+describe('the limit and the count come from the server', () => {
+  test('counts the active ones past the first page: stopped ones first, active ones on page two', async () => {
+    open([], [pagedRuns()]);
+    expect(await screen.findByText('Você tem 2 de 5 simulações ao vivo.')).toBeDefined();
+  });
+
+  test('the limit comes from the profile of the user: 8 allows a sixth simulation', async () => {
+    const six = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => liveRun(`run-${id}`));
+    open(six, [profileRoute(8)]);
+    expect(await screen.findByText('Você tem 6 de 8 simulações ao vivo.')).toBeDefined();
+    expect(screen.getByRole('button', { name: SIMULATE })).toHaveProperty('disabled', false);
+  });
+
+  test('at the limit of the profile the reason names that number and the button is disabled', async () => {
+    const eight = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((id) => liveRun(`run-${id}`));
+    open(eight, [profileRoute(8)]);
+    const reason = 'Você chegou ao limite de 8 simulações ao vivo. Pare uma para começar outra.';
+    expect(await screen.findByText(reason)).toBeDefined();
+    expect(screen.getByRole('button', { name: SIMULATE })).toHaveProperty('disabled', true);
   });
 });
 

@@ -11,11 +11,12 @@ import styles from './Goals.module.css';
 import { computeOutcomeSegments } from './outcome-bar.js';
 import { OutcomeBar } from './OutcomeBar.component.js';
 import { describeBenchmark, describeOutcomes } from './ranking-text.js';
-import { DUPLICATE_RUN_TEXT, LIVE_RUN_LIMIT_TEXT } from './simulation-timeframe.constant.js';
+import { buildLiveRunLimitText, DUPLICATE_RUN_TEXT } from './simulation-timeframe.constant.js';
 
 export type SimulationAvailability = {
   readonly isPending: boolean;
   readonly isAtLimit: boolean;
+  readonly limit: number;
   // Já existe uma simulação ativa com a mesma estratégia, par e vela: avisa e leva até ela.
   readonly duplicateRunId: string | undefined;
 };
@@ -78,7 +79,7 @@ function RankingActions({
       </button>
       {availability.isAtLimit ? (
         <p id={limitId} className={controls.muted}>
-          {LIVE_RUN_LIMIT_TEXT}
+          {buildLiveRunLimitText(availability.limit)}
         </p>
       ) : null}
       <DuplicateNotice runId={availability.duplicateRunId} />

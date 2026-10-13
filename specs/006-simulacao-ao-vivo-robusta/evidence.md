@@ -558,3 +558,10 @@ da correção e dos vizinhos no espelho do WSL (`gates6.sh`).
   mesma conta do worker e da admissão). Nenhuma migration. `profile.docs.ts` (OpenAPI), `profile-view.ts`, fixture em memória e
   contrato `test/profile.contract.test.ts` (chaves da resposta e `limits` igual a 5) atualizados; `profile-checks.ts` ganhou a
   verificação do padrão no Postgres (roda no `make database-test`, que NÃO foi executado aqui).
+- **Painel** (`src/goals/`): `useLiveRunSlots` lê o teto de `GET /v1/me` (`limits` é opcional no esquema, para não quebrar contra uma
+  API mais antiga; sem ele vale `DEFAULT_LIVE_RUN_LIMIT` = 5) e `useActiveLiveRunsQuery` pagina `GET /v1/runs?kind=live_paper` até o
+  fim (teto de 20 páginas de 100) e conta só as ativas, em vez de olhar a 1ª página. "Você tem N de L", o botão desabilitado e o motivo
+  usam o `L` do servidor (`buildLiveRunLimitText`); o texto do `409 LIVE_RUN_LIMIT_REACHED` não repete número (a resposta não o traz).
+  Contratos em `test/simulation-picker.contract.tsx`: execuções ativas só na 2ª página, teto 8 libera a sexta e bloqueia na oitava com
+  o número certo. Os testes que citavam "limite de 5" no 409 passaram a "limite de simulações".
+- **Pendência registrada:** filtro `status=running|queued` em `GET /v1/runs` (hoje o painel pagina e filtra no cliente).

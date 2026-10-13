@@ -65,12 +65,32 @@ function RankingList({
           availability={{
             isPending: simulation.isPending,
             isAtLimit: slots.isAtLimit,
+            limit: slots.limit,
             duplicateRunId: slots.findDuplicateRunId(combination, timeframe),
           }}
           onSimulate={simulation.simulate}
         />
       ))}
     </ol>
+  );
+}
+
+function GoalOnlyToggle({
+  isChecked,
+  onChange,
+}: {
+  readonly isChecked: boolean;
+  readonly onChange: (isChecked: boolean) => void;
+}): ReactElement {
+  return (
+    <label className={styles.checkbox}>
+      <input
+        type="checkbox"
+        checked={isChecked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      Só o par da meta
+    </label>
   );
 }
 
@@ -89,15 +109,9 @@ export function RankingCard({ goalId, evaluation }: RankingCardProps): ReactElem
         value={timeframe}
         onChange={setTimeframe}
         activeCount={slots.count}
+        limit={slots.limit}
       />
-      <label className={styles.checkbox}>
-        <input
-          type="checkbox"
-          checked={isGoalOnly}
-          onChange={(event) => setIsGoalOnly(event.target.checked)}
-        />
-        Só o par da meta
-      </label>
+      <GoalOnlyToggle isChecked={isGoalOnly} onChange={setIsGoalOnly} />
       <RankingList
         goalId={goalId}
         combinations={shown}

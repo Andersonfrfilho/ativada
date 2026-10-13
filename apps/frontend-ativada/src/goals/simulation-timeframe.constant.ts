@@ -51,8 +51,16 @@ export const SMALL_CANDLE_FEES_NOTICE =
 
 export const SIMULATION_PICKER_LEGEND = 'De quanto em quanto tempo olhar o mercado';
 
-export const LIVE_RUN_LIMIT = 5;
-export const LIVE_RUN_LIMIT_TEXT = `Você chegou ao limite de ${LIVE_RUN_LIMIT} simulações ao vivo. Pare uma para começar outra.`;
+// O teto de verdade vem de `GET /v1/me` (`limits.maxActiveLivePaperRuns`); este é o padrão do servidor, usado enquanto o perfil não chega.
+export const DEFAULT_LIVE_RUN_LIMIT = 5;
+
+export function buildLiveRunLimitText(limit: number): string {
+  return `Você chegou ao limite de ${limit} simulações ao vivo. Pare uma para começar outra.`;
+}
+
+// A resposta 409 da API não diz o teto do usuário: o texto não repete o número.
+export const LIVE_RUN_LIMIT_REACHED_TEXT =
+  'Você chegou ao limite de simulações ao vivo. Pare uma para começar outra.';
 
 export const DUPLICATE_RUN_TEXT = 'Você já tem esta simulação rodando.';
 

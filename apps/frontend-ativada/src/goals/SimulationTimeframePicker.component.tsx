@@ -8,7 +8,6 @@ import styles from './Goals.module.css';
 import { describeFrequency, describeSimulationSummary } from './simulation-text.js';
 import {
   HIDDEN_SIMULATION_TIMEFRAME_OPTIONS,
-  LIVE_RUN_LIMIT,
   RANKING_TIMEFRAME_NOTICE,
   SIMULATION_PICKER_LEGEND,
   SIMULATION_TIMEFRAME,
@@ -22,6 +21,7 @@ export type SimulationTimeframePickerProps = {
   readonly value: SimulationTimeframe;
   readonly onChange: (timeframe: SimulationTimeframe) => void;
   readonly activeCount: number;
+  readonly limit: number;
 };
 
 type OptionProps = {
@@ -118,10 +118,12 @@ function PickerNotices({
   value,
   context,
   activeCount,
+  limit,
 }: {
   readonly value: SimulationTimeframe;
   readonly context: MomentContext;
   readonly activeCount: number;
+  readonly limit: number;
 }): ReactElement {
   return (
     <>
@@ -134,7 +136,7 @@ function PickerNotices({
         </p>
       ) : null}
       <p className={controls.muted}>
-        Você tem {activeCount} de {LIVE_RUN_LIMIT} simulações ao vivo.
+        Você tem {activeCount} de {limit} simulações ao vivo.
       </p>
     </>
   );
@@ -144,6 +146,7 @@ export function SimulationTimeframePicker({
   value,
   onChange,
   activeCount,
+  limit,
 }: SimulationTimeframePickerProps): ReactElement {
   const context = { now: Date.now(), timeZone: useUserTimeZone() };
   return (
@@ -156,7 +159,7 @@ export function SimulationTimeframePicker({
         context={context}
       />
       <MoreOptions value={value} onChange={onChange} context={context} />
-      <PickerNotices value={value} context={context} activeCount={activeCount} />
+      <PickerNotices value={value} context={context} activeCount={activeCount} limit={limit} />
     </fieldset>
   );
 }

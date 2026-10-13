@@ -7,7 +7,7 @@ import {
   DEFAULT_SIMULATION_TIMEFRAME,
   HIDDEN_SIMULATION_TIMEFRAME_OPTIONS,
   isSimulationTimeframe,
-  LIVE_RUN_LIMIT,
+  DEFAULT_LIVE_RUN_LIMIT,
   RANKING_TIMEFRAME_NOTICE,
   SIMULATION_TIMEFRAME_OPTIONS,
   SMALL_CANDLE_FEES_NOTICE,
@@ -122,7 +122,7 @@ describe('the options', () => {
     expect(DEFAULT_SIMULATION_TIMEFRAME).toBe('1h');
     expect(SIMULATION_TIMEFRAME_OPTIONS).toEqual(['1h', '4h', '1d']);
     expect(HIDDEN_SIMULATION_TIMEFRAME_OPTIONS).toEqual(['15m']);
-    expect(LIVE_RUN_LIMIT).toBe(5);
+    expect(DEFAULT_LIVE_RUN_LIMIT).toBe(5);
   });
 
   test('only the four timeframes of the API are accepted', () => {
