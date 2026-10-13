@@ -10,8 +10,6 @@ export const OPERATION_PARAM = 'operacao';
 
 export type TradeSelection = {
   readonly range: ChartRange | undefined;
-  // Pronto para espalhar na consulta: sem faixa na URL não manda `from` nem `to`.
-  readonly queryRange: { readonly from?: number; readonly to?: number };
   // A operação selecionada (`?operacao=<engineKey>`), a mesma chave da linha da tabela e das setas.
   readonly selectedKey: string | undefined;
   readonly setRange: (range: ChartRange | undefined) => void;
@@ -37,7 +35,6 @@ export function useTradeSelection(): TradeSelection {
   const selectedKey = searchParams.get(OPERATION_PARAM) ?? undefined;
   return {
     range,
-    queryRange: range === undefined ? {} : { from: range.from, to: range.to },
     selectedKey: selectedKey === '' ? undefined : selectedKey,
     setRange: (next): void =>
       setSearchParams((current) => writeRange(new URLSearchParams(current), next)),

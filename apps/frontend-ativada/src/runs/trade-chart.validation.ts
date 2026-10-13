@@ -37,6 +37,7 @@ export const tradeChartSchema = z.object({
   timeframe: z.string(),
   from: z.number(),
   to: z.number(),
+  runRange: z.object({ from: z.number(), to: z.number() }),
   lastClosedCandleTime: z.number().nullable(),
   columns: z.array(priceColumnSchema),
   markers: z.array(chartMarkerSchema).nullable(),

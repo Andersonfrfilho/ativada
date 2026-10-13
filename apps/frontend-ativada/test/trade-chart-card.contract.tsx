@@ -29,6 +29,8 @@ const CHART_PATH = '/v1/runs/run-1/chart';
 type CardOptions = {
   readonly search?: string;
   readonly runDays?: number;
+  // A faixa efetiva da execução que a API devolve (walk-forward: só as janelas de teste); padrão: o período inteiro.
+  readonly runRange?: { readonly from: number; readonly to: number };
   readonly build?: (overrides: Record<string, unknown>) => Record<string, unknown>;
   readonly respondChart?: (call: RecordedCall) => Response | Promise<Response>;
 };
@@ -54,7 +56,12 @@ function echoedChart(call: RecordedCall, options: CardOptions): Response {
   const build = options.build ?? buildFixtureChart;
   const from = Number(call.query.get('from') ?? FIXTURE_FROM);
   const to = Number(call.query.get('to') ?? FIXTURE_TO);
-  return dataResponse(build({ from, to }));
+  const runDays = options.runDays ?? 40;
+  const runRange = options.runRange ?? {
+    from: FIXTURE_FROM,
+    to: FIXTURE_FROM + runDays * FIXTURE_DAY,
+  };
+  return dataResponse(build({ from, to, runRange }));
 }
 
 function showCard(options: CardOptions = {}): {
@@ -119,6 +126,10 @@ function chartItems(): HTMLElement[] {
 
 async function waitForChart(): Promise<void> {
   await screen.findByRole('group', { name: 'Preço e operações' });
+}
+
+function rangedCall(calls: RecordedCall[]): RecordedCall | undefined {
+  return calls.find((call) => call.query.has('from'));
 }
 
 const LAST_WEEK = { from: FIXTURE_TO - 7 * FIXTURE_DAY, to: FIXTURE_TO };
@@ -198,15 +209,15 @@ describe('TradeChartCard: atalhos e URL', () => {
   test('a link with the range opens on it (ISO)', async () => {
     const { chartCalls } = showCard({ search: rangeSearch(LAST_WEEK.from, LAST_WEEK.to) });
     await waitForChart();
-    expect(chartCalls()[0]?.query.get('from')).toBe(String(LAST_WEEK.from));
-    expect(chartCalls()[0]?.query.get('to')).toBe(String(LAST_WEEK.to));
+    expect(rangedCall(chartCalls())?.query.get('from')).toBe(String(LAST_WEEK.from));
+    expect(rangedCall(chartCalls())?.query.get('to')).toBe(String(LAST_WEEK.to));
   });
 
   test('a link with milliseconds works too', async () => {
     const { chartCalls } = showCard({ search: `?de=${LAST_WEEK.from}&ate=${LAST_WEEK.to}` });
     await waitForChart();
-    expect(chartCalls()[0]?.query.get('from')).toBe(String(LAST_WEEK.from));
-    expect(chartCalls()[0]?.query.get('to')).toBe(String(LAST_WEEK.to));
+    expect(rangedCall(chartCalls())?.query.get('from')).toBe(String(LAST_WEEK.from));
+    expect(rangedCall(chartCalls())?.query.get('to')).toBe(String(LAST_WEEK.to));
   });
 });
 
@@ -298,5 +309,74 @@ describe('TradeChartCard: sem piscar', () => {
     expect(screen.queryByText('Carregando o gráfico…')).toBeNull();
     release?.();
     await waitFor(() => expect(chartItems()).toHaveLength(6));
+  });
+});
+
+describe('TradeChartCard: walk-forward (só a faixa de teste)', () => {
+  const runRange = { from: FIXTURE_FROM + 10 * FIXTURE_DAY, to: FIXTURE_FROM + 30 * FIXTURE_DAY };
+
+  test('a link range is clamped to the test windows before it reaches the API', async () => {
+    const { chartCalls } = showCard({
+      runRange,
+      search: rangeSearch(FIXTURE_FROM + 5 * FIXTURE_DAY, FIXTURE_FROM + 15 * FIXTURE_DAY),
+    });
+    await waitForChart();
+    const call = rangedCall(chartCalls());
+    expect(call?.query.get('from')).toBe(String(runRange.from));
+    expect(call?.query.get('to')).toBe(String(FIXTURE_FROM + 15 * FIXTURE_DAY));
+  });
+
+  test('a link entirely outside the test windows falls back to the whole range', async () => {
+    const { chartCalls } = showCard({
+      runRange,
+      search: rangeSearch(FIXTURE_FROM, FIXTURE_FROM + 5 * FIXTURE_DAY),
+    });
+    await waitForChart();
+    expect(rangedCall(chartCalls())).toBeUndefined();
+    expect(chartItems().length).toBeGreaterThan(0);
+  });
+
+  test('a year-1900 start in the link is cut at the beginning of the run', async () => {
+    const { chartCalls } = showCard({
+      runRange,
+      search: `?de=1900-01-01&ate=${new Date(FIXTURE_FROM + 20 * FIXTURE_DAY).toISOString()}`,
+    });
+    await waitForChart();
+    expect(rangedCall(chartCalls())?.query.get('from')).toBe(String(runRange.from));
+  });
+
+  test('"anterior" never leaves the test windows and the shortcuts end inside them', async () => {
+    const { router, chartCalls } = showCard({
+      runRange,
+      search: rangeSearch(runRange.from + 3 * FIXTURE_DAY, runRange.from + 10 * FIXTURE_DAY),
+    });
+    await waitForChart();
+    const previous = await screen.findByRole<HTMLButtonElement>('button', { name: /anterior/ });
+    await waitFor(() => expect(previous.disabled).toBe(false));
+    fireEvent.click(previous);
+    await waitFor(() => expect(urlRange(router).de).toBe(new Date(runRange.from).toISOString()));
+    expect(urlRange(router).ate).toBe(new Date(runRange.from + 7 * FIXTURE_DAY).toISOString());
+    await waitFor(() => expect(previous.disabled).toBe(true));
+    fireEvent.click(screen.getByRole('button', { name: '7 dias' }));
+    await waitFor(() =>
+      expect(urlRange(router).de).toBe(new Date(runRange.to - 7 * FIXTURE_DAY).toISOString()),
+    );
+    expect(
+      chartCalls().every(
+        (call) => Number(call.query.get('from') ?? runRange.from) >= runRange.from,
+      ),
+    ).toBe(true);
+  });
+
+  test('a "De" before the test windows is cut at their start', async () => {
+    const { router } = showCard({
+      runRange,
+      search: rangeSearch(runRange.from + 5 * FIXTURE_DAY, runRange.from + 12 * FIXTURE_DAY),
+    });
+    await waitForChart();
+    const from = await screen.findByLabelText<HTMLInputElement>('De (data em UTC)');
+    await waitFor(() => expect(from.value).not.toBe(''));
+    fireEvent.change(from, { target: { value: '2026-04-02' } });
+    await waitFor(() => expect(urlRange(router).de).toBe(new Date(runRange.from).toISOString()));
   });
 });

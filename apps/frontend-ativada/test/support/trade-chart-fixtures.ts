@@ -7,6 +7,7 @@ export function buildChartResponse(
     timeframe: '15m',
     from: 1_767_225_600_000,
     to: 1_767_312_000_000,
+    runRange: { from: 1_767_225_600_000, to: 1_767_312_000_000 },
     lastClosedCandleTime: 1_767_311_100_000,
     columns: [
       {

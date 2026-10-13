@@ -40,6 +40,7 @@ type Chart = {
   timeframe: string;
   from: number;
   to: number;
+  runRange: { from: number; to: number };
   lastClosedCandleTime: number | null;
   columns: Column[];
   markers: Marker[] | null;
@@ -203,6 +204,9 @@ describe('faixa pedida e faixa da execução', () => {
     const runId = await createCompletedBacktest();
     const wide = await chart(runId, `?from=${at(-50)}&to=${at(900)}&columns=100`);
     expect([wide.from, wide.to]).toStrictEqual([at(0), at(CANDLES)]);
+    expect(wide.runRange).toStrictEqual({ from: at(0), to: at(CANDLES) });
+    const narrow = await chart(runId, `?from=${at(100)}&to=${at(200)}&columns=100`);
+    expect(narrow.runRange).toStrictEqual({ from: at(0), to: at(CANDLES) });
     const partial = await chart(runId, `?from=${at(100)}&to=${at(900)}&columns=100`);
     expect([partial.from, partial.to]).toStrictEqual([at(100), at(CANDLES)]);
     expect(partial.columns[0]?.startTime).toBe(at(100));
@@ -238,6 +242,7 @@ describe('faixa pedida e faixa da execução', () => {
       clusters: null,
       totals: { buys: 0, sells: 0 },
       lastClosedCandleTime: null,
+      runRange: { from: result.from, to: result.from },
     });
   });
 });
@@ -512,6 +517,12 @@ describe('walk-forward e ao vivo', () => {
     ]);
     const result = await chart(runId, '?columns=100');
     expect([result.from, result.to]).toStrictEqual([at(100), at(200)]);
+    expect(result.runRange).toStrictEqual({ from: at(100), to: at(200) });
+    const inFit = await harness.call({
+      subject: SUBJECT_A,
+      path: `${RUNS}/${runId}/chart?from=${at(0)}&to=${at(100)}`,
+    });
+    expect(inFit.status).toBe(400);
     expect(result.columns[0]?.startTime).toBe(at(100));
     expect(result.columns.at(-1)?.endTime).toBe(at(199));
     expect(result.totals).toStrictEqual({ buys: 1, sells: 1 });
@@ -522,6 +533,7 @@ describe('walk-forward e ao vivo', () => {
     harness.runs.updateRun(runId, { status: 'running', lastCandleTime: at(50) });
     const result = await chart(runId, '?columns=100');
     expect([result.from, result.to]).toStrictEqual([at(0), at(51)]);
+    expect(result.runRange).toStrictEqual({ from: at(0), to: at(51) });
     expect(result.lastClosedCandleTime).toBe(at(50));
     expect(result.columns.at(-1)?.endTime).toBe(at(50));
     harness.runs.updateRun(runId, { lastCandleTime: at(60) });

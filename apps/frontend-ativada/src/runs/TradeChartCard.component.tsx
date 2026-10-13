@@ -21,9 +21,9 @@ export type TradeChartCardProps = { readonly runId: string };
 export function TradeChartCard({ runId }: TradeChartCardProps): ReactElement {
   const timeZone = useUserTimeZone();
   const selection = useTradeSelection();
-  const view = useChartView(runId, selection.queryRange);
+  const view = useChartView(runId, selection.range);
   function handleSelectTrade(trade: Trade): void {
-    selection.select(planTradeSelection({ trade, range: selection.range, extent: view.extent }));
+    selection.select(planTradeSelection({ trade, range: view.range, extent: view.extent }));
   }
   return (
     <Card title="Preço e operações">
@@ -31,7 +31,7 @@ export function TradeChartCard({ runId }: TradeChartCardProps): ReactElement {
       <TradeSummary runId={runId} />
       <ChartRangeControls
         extent={view.extent}
-        range={selection.range}
+        range={view.range}
         shown={view.shown}
         onRangeChange={selection.setRange}
       />
@@ -45,7 +45,7 @@ export function TradeChartCard({ runId }: TradeChartCardProps): ReactElement {
       />
       <TradesTable
         runId={runId}
-        range={selection.queryRange}
+        range={view.queryRange}
         timeZone={timeZone}
         selectedKey={selection.selectedKey}
         onSelectTrade={handleSelectTrade}

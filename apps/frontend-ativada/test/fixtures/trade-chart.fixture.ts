@@ -108,6 +108,7 @@ function baseChart(): Record<string, unknown> {
     timeframe: '1h',
     from: FIXTURE_FROM,
     to: FIXTURE_TO,
+    runRange: { from: FIXTURE_FROM, to: FIXTURE_TO },
     lastClosedCandleTime: FIXTURE_TO - FIXTURE_HOUR,
     columns: buildColumns(),
   };

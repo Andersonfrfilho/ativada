@@ -12,7 +12,6 @@ import {
   parseRangeParam,
   rangeForShortcut,
   RANGE_SHORTCUTS,
-  runExtent,
   shiftRange,
   toDateFieldValue,
 } from '../src/runs/chart-range.js';
@@ -147,31 +146,5 @@ describe('date fields', () => {
       to: START + 100,
     });
     expect(clampRange({ from: EXTENT.to + 1, to: EXTENT.to + 9 }, EXTENT)).toBeUndefined();
-  });
-});
-
-describe('runExtent', () => {
-  test('a backtest has its own period', () => {
-    expect(runExtent({ periodStart: 10, periodEnd: 50, lastClosedCandleTime: 20 })).toEqual({
-      from: 10,
-      to: 50,
-    });
-  });
-
-  test('a live simulation goes up to the last closed candle', () => {
-    expect(runExtent({ periodStart: 10, periodEnd: null, lastClosedCandleTime: 99 })).toEqual({
-      from: 10,
-      to: 100,
-    });
-  });
-
-  test('nothing to show yet means no extent', () => {
-    expect(
-      runExtent({ periodStart: 10, periodEnd: null, lastClosedCandleTime: null }),
-    ).toBeUndefined();
-    expect(
-      runExtent({ periodStart: 10, periodEnd: null, lastClosedCandleTime: undefined }),
-    ).toBeUndefined();
-    expect(runExtent({ periodStart: 10, periodEnd: 10, lastClosedCandleTime: 5 })).toBeUndefined();
   });
 });

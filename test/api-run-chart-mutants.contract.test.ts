@@ -169,6 +169,14 @@ const RANGE_AND_MARKERS: readonly SourceMutant[] = [
     ),
   },
   {
+    name: 'CHART_RUN_RANGE_IS_THE_REQUESTED_RANGE',
+    edits: edit(
+      CHART_USE_CASE,
+      'runRange: { from: runRange.from, to: runRange.to },',
+      'runRange: { from: range.from, to: range.to },',
+    ),
+  },
+  {
     name: 'CHART_MARKER_BUY_AMOUNT_ROUNDED_DOWN',
     edits: edit(
       CHART_VIEWS,

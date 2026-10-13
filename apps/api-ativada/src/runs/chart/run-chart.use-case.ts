@@ -44,6 +44,7 @@ function emptyChart(run: RunRecord): ChartView {
     timeframe: run.timeframe,
     from: run.periodStart,
     to: run.periodStart,
+    runRange: { from: run.periodStart, to: run.periodStart },
     lastClosedCandleTime: run.lastCandleTime ?? null,
     columns: [],
     markers: [],
@@ -69,6 +70,7 @@ type ChartRead = {
   readonly scope: OwnerScope;
   readonly run: RunRecord;
   readonly range: TimeRange;
+  readonly runRange: TimeRange;
   readonly columns: number;
 };
 
@@ -95,7 +97,7 @@ async function readFills(
 
 async function buildChart(dependencies: RunChartDependencies, read: ChartRead): Promise<ChartView> {
   const { results, exchange } = dependencies;
-  const { scope, run, range, columns } = read;
+  const { scope, run, range, runRange, columns } = read;
   const [totals, priceColumns] = await Promise.all([
     results.countFillsInRange(scope, run.id, range),
     results.listPriceColumns(scope, run.id, {
@@ -112,6 +114,7 @@ async function buildChart(dependencies: RunChartDependencies, read: ChartRead): 
     timeframe: run.timeframe,
     from: range.from,
     to: range.to,
+    runRange: { from: runRange.from, to: runRange.to },
     lastClosedCandleTime: run.lastCandleTime ?? null,
     columns: priceColumns,
     ...(await readFills(dependencies, read, totals)),
@@ -131,6 +134,7 @@ export function createRunChartUseCase(dependencies: RunChartDependencies): RunCh
       scope,
       run,
       range: clipRange(runRange, query),
+      runRange,
       columns: query.columns ?? CHART_COLUMNS.DEFAULT,
     });
   };

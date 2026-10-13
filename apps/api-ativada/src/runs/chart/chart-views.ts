@@ -34,6 +34,8 @@ export type ChartView = {
   readonly timeframe: string;
   readonly from: number;
   readonly to: number;
+  // A faixa efetiva da execução (a que `from`/`to` pedidos são recortados), para o painel limitar atalhos e deslocamento.
+  readonly runRange: { readonly from: number; readonly to: number };
   readonly lastClosedCandleTime: number | null;
   readonly columns: readonly PriceColumn[];
   readonly markers: readonly ChartMarkerView[] | null;

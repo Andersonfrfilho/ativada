@@ -45,6 +45,7 @@ const CHART_SCHEMA = z.strictObject({
   timeframe: z.string(),
   from: epochMillisecondsSchema,
   to: epochMillisecondsSchema,
+  runRange: z.strictObject({ from: epochMillisecondsSchema, to: epochMillisecondsSchema }),
   lastClosedCandleTime: epochMillisecondsSchema.nullable(),
   columns: z.array(COLUMN_SCHEMA),
   markers: z.array(MARKER_SCHEMA).nullable(),
@@ -59,7 +60,7 @@ export const RUN_CHART_DOCUMENTATION: RouteDocumentation = {
   summary:
     'Preço da moeda reduzido a colunas (primeiro, último, mínima e máxima) e as compras e vendas da faixa. A faixa ' +
     '`[from, to)` (ms UTC) é recortada à da execução (walk-forward: só a parte fora da amostra; ao vivo: até a última ' +
-    'vela processada). `columns` vai de 100 a 2.000 (padrão 800). Até 500 preenchimentos vêm em `markers`; acima disso, ' +
+    'vela processada); `runRange` devolve essa faixa efetiva da execução. `columns` vai de 100 a 2.000 (padrão 800). Até 500 preenchimentos vêm em `markers`; acima disso, ' +
     '`clusters` por coluna (um dos dois é `null`).',
   tag: 'Execuções — séries',
   params: pathIdSchema(RUN_ID_PARAM),

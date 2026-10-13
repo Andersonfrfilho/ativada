@@ -493,3 +493,13 @@ Gates (WSL, espelho `ativada-spec5`): `tsc` limpo; `eslint .` limpo; `prettier -
 
 - Dois itens novos, em linhas curtas: na seção do painel ("Operações no gráfico", `src/runs/`: cartão, tabela virtual, `?de=&ate=&operacao=`, fuso do usuário, glossário e `Term`, ao vivo só com vela fechada) e junto das regras das rotas de execução (`/trades` ampliado, `/chart` com colunas mín-máx em SQL, até 500 marcadores ou clusters, faixa `[from, to)` em ms UTC e sem cache no servidor, `/trade-summary`).
 - Gates (WSL, espelho `ativada-spec5`): `tsc` limpo; `eslint .` limpo; `prettier --check .` limpo; painel 615 testes verdes em 49 arquivos (só mudou documentação).
+
+## T6.3 — correções da revisão
+
+Achados da revisão final (Opus), um commit por achado ou grupo coeso. Gates de cada commit no espelho WSL `ativada-spec5`.
+
+### Achado 1 (alto) e 6 (baixo) — a faixa efetiva da execução vem da API
+
+- **Causa:** o painel limitava atalhos, campos de data e "anterior/próximo" ao `periodStart`/`periodEnd` da execução, e a API recorta ao intervalo efetivo (walk-forward: de `min(testStart)` a `max(testEnd)`; ao vivo e backtest em andamento: até a última vela). Fora dele a API responde 400 `outside_run`.
+- **Correção:** `/chart` devolve `runRange` `{from, to}` (ms, aditivo; esquema Zod do OpenAPI, espelho `trade-chart.validation.ts` e fixtures). O painel deixou de usar o período da execução (`runExtent` removido): `extent` é o `runRange` da resposta, e a faixa da URL passa por `clampRange` antes de ir à API (atalhos, campos de data, anterior/próximo, link). Com faixa na URL, uma sonda de 100 colunas (`PROBE_COLUMNS`) descobre o `runRange` antes da consulta real; faixa sem interseção cai em "Tudo". Sem faixa na URL não há sonda.
+- **Testes:** contrato da API (`api-run-chart`): backtest devolve `runRange` igual ao período mesmo com faixa estreita, walk-forward devolve exatamente as janelas de teste (e pedir só o ajuste é 400), ao vivo vai até a vela processada, fila devolve `runRange` vazio. Contrato do painel (`trade-chart-card`, "walk-forward"): link recortado antes de chegar à API, link inteiro fora cai em "Tudo", `?de=1900-01-01` é cortado no começo, "anterior" nunca sai das janelas de teste, "De" fora é recortado. Mutante novo `CHART_RUN_RANGE_IS_THE_REQUESTED_RANGE` em `api-run-chart-mutants`.

@@ -25,19 +25,6 @@ export const RANGE_SHORTCUTS: readonly RangeShortcut[] = [
   { key: '1d', label: '1 dia', milliseconds: DAY_MILLISECONDS },
 ];
 
-export type RunExtentParams = {
-  readonly periodStart: number;
-  readonly periodEnd: number | null;
-  readonly lastClosedCandleTime: number | null | undefined;
-};
-
-// O período inteiro da execução; a simulação ao vivo não tem fim e vai até a última vela fechada.
-export function runExtent(params: RunExtentParams): ChartRange | undefined {
-  const { periodStart, periodEnd, lastClosedCandleTime } = params;
-  const end = periodEnd ?? (lastClosedCandleTime == null ? undefined : lastClosedCandleTime + 1);
-  return end === undefined || end <= periodStart ? undefined : { from: periodStart, to: end };
-}
-
 // "Tudo" sempre; o atalho mais longo que o período da execução some.
 export function availableShortcuts(extent: ChartRange | undefined): readonly RangeShortcut[] {
   return RANGE_SHORTCUTS.filter(
