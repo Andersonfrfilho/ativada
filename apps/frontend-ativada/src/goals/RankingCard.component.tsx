@@ -1,19 +1,16 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { useState, type ReactElement } from 'react';
-import { useNavigate } from 'react-router';
 
-import { ROUTE_PATH } from '../app/app.constant.js';
 import { formatSymbol } from '../format/format.js';
 import { Card } from '../layout/Card.component.js';
-import { RUN_KIND } from '../runs/run.constant.js';
-import { useCreateRunMutation } from '../runs/runs.query.js';
 import controls from '../styles/Controls.module.css';
-import { messageFromGoalError } from './goal-form.validation.js';
-import { GOAL_TIMEFRAME, UNAVAILABLE_REASON_TEXT } from './goal.constant.js';
-import type { Combination, GoalEvaluation } from './goal.validation.js';
+import { UNAVAILABLE_REASON_TEXT } from './goal.constant.js';
+import type { GoalEvaluation } from './goal.validation.js';
 import styles from './Goals.module.css';
 import { RankingExplainer } from './RankingExplainer.component.js';
 import { RankingItem } from './RankingItem.component.js';
+import { DEFAULT_SIMULATION_TIMEFRAME } from './simulation-timeframe.constant.js';
+import { useGoalSimulation } from './useGoalSimulation.hook.js';
 
 export type RankingCardProps = { readonly goalId: string; readonly evaluation: GoalEvaluation };
 
@@ -38,34 +35,8 @@ function UnavailableList({
   );
 }
 
-type Simulation = {
-  readonly isPending: boolean;
-  readonly message: string | undefined;
-  readonly simulate: (combination: Combination) => void;
-};
-
-function useGoalSimulation(goalId: string): Simulation {
-  const navigate = useNavigate();
-  const create = useCreateRunMutation();
-  return {
-    isPending: create.isPending,
-    message: messageFromGoalError(create.error),
-    simulate: (combination) =>
-      create.mutate(
-        {
-          strategyVersionId: combination.strategy.versionId,
-          kind: RUN_KIND.LIVE_PAPER,
-          symbol: combination.symbol,
-          timeframe: GOAL_TIMEFRAME,
-          goalId,
-        },
-        { onSuccess: () => void navigate(ROUTE_PATH.OVERVIEW) },
-      ),
-  };
-}
-
 export function RankingCard({ goalId, evaluation }: RankingCardProps): ReactElement {
-  const simulation = useGoalSimulation(goalId);
+  const simulation = useGoalSimulation(goalId, DEFAULT_SIMULATION_TIMEFRAME);
   const [isGoalOnly, setIsGoalOnly] = useState(false);
   const shown = [...evaluation.combinations]
     .filter((item) => !isGoalOnly || item.isGoalSymbol)

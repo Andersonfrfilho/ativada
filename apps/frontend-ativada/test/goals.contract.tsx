@@ -283,7 +283,7 @@ describe('goal ranking', () => {
       strategyVersionId: 'version-1',
       kind: 'live_paper',
       symbol: 'BTCUSDT',
-      timeframe: '1d',
+      timeframe: '1h',
       goalId: 'goal-1',
     });
   });

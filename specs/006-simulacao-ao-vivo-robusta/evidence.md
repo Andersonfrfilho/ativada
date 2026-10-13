@@ -333,3 +333,17 @@ Correção da T2.4: `test/alert-stall.contract.test.ts` tem 8 casos (não 9).
   `kill` e `half-open` seguem iguais (307 sinais e 27 preenchimentos iguais aos da execução contínua) e o batimento `alive -> stale -> alive`.
 
 Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; 726/726 em 45 arquivos (`live-*`, `alert*`, `telegram*`, `database*`, `api-run*`, boundaries, ownership, lgpd, code-size; sem os arquivos de mutantes, que rodaram à parte: `live-stall-mutants` 24/24).
+
+## T3.1 — Constantes da vela, `nextCandleClose` puro e `useGoalSimulation` (2026-10-13, `sonnet`)
+
+Decisão do usuário (2026-10-13): vela padrão da simulação = 1 hora; o ritmo FINAL será decidido por um futuro "analista de risco" (spec 007), que NÃO nasce nesta spec. Aqui entra só o padrão `1h` com o seletor simples da spec.
+
+- `src/goals/simulation-timeframe.constant.ts`: `SIMULATION_TIMEFRAME`, padrão `1h` (`DEFAULT_SIMULATION_TIMEFRAME`), opções visíveis 1h/4h/1d, escondida 15m, frases do RF02 e avisos do RF03 EXATAMENTE como no `spec.md`, `LIVE_RUN_LIMIT = 5`.
+- `src/goals/next-candle-close.ts`: `nextCandleClose({ timeframe, now })`, PURO (sem relógio global; `now` entra por parâmetro). As velas alinham à época UTC (a diária fecha 00:00 UTC = 21:00 em São Paulo); no instante exato do fechamento nasce a vela seguinte.
+- `src/format/zoned-moment.ts`: `formatRelativeMoment` ("21:00 de hoje" / "de amanhã" / "de ontem" / data completa no fuso do usuário, via `formatDayInZone`/`formatTimeInZone` da spec 005) e `describeZone` ("horário de Brasília" no fuso padrão; nos demais, o deslocamento "GMT−4").
+- `src/goals/simulation-text.ts`: `describeFrequency` (a frase do 1d usa o horário do fechamento no fuso do usuário) e `describeSimulationSummary` ("A simulação olha o mercado a cada 1 hora. Primeira vela fecha às 10:00 de hoje (horário de Brasília).").
+- `src/goals/useGoalSimulation.hook.ts` saiu do `RankingCard`; agora recebe a vela e o `POST /v1/runs` leva `timeframe` escolhido (o `RankingCard` passa o padrão `1h` até o seletor da T3.2). `GOAL_TIMEFRAME` segue só para o plano (`plan.query.ts`), que é diário.
+- Desvio pequeno: o resumo diz "às 10:00 **de hoje** (horário de Brasília)" (o spec escreve "às 15:00 (horário de Brasília)"): o "hoje/amanhã" é o do RF06 e evita ambiguidade quando o fechamento é amanhã.
+- `test/goals.contract.tsx`: o `POST` agora espera `timeframe: '1h'` (era `1d`). `test/simulation-timeframe.contract.ts` (14 casos, na lista explícita do `package.json`): fim da vela em 15m/1h/4h/1d, instante exato do fechamento, grade de 4h, virada do dia em São Paulo (21:00 hoje/amanhã, 00:00 de amanhã às 02:59 UTC), outro fuso (New York), frases exatas.
+
+Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; `panel-test` 638/638 em 50 arquivos.
