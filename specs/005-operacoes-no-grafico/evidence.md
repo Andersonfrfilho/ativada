@@ -435,3 +435,19 @@ Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `p
 - `BalanceCard` (cartão "Saldo da simulação") ganhou o link "Ver compras e vendas no gráfico" para `/backtests/<id da execução ao vivo ativa>` (a mesma rota do detalhe, onde a T5.1 monta o cartão); o link existe também enquanto o saldo ainda aguarda o primeiro candle fechado. Sem simulação ativa não há cartão e portanto não há link.
 - Contrato de navegação em `test/overview.contract.tsx`: o link está dentro da região "Saldo da simulação", o `href` é `/backtests/run-1`, clicar leva a rota a `/backtests/run-1` e o detalhe abre o título "Simulação ao vivo".
 - Gates (WSL, espelho `ativada-spec5`): `tsc` limpo; `eslint .` limpo; `prettier --check .` limpo; painel 588 testes verdes em 49 arquivos (mesma rodada da T5.1, que já continha este teste).
+
+## T5.3 — E2E do cartão (backtest e ao vivo)
+
+**Status: escrito, NÃO executado. PENDENTE DE EXECUÇÃO.** Nesta máquina (Windows) não há `make`, o `make panel-e2e` sobe infra descartável (Postgres, Keycloak, Mailpit em `ENV=test`) e usa Playwright com Chromium, que não existe no WSL; o app em execução (portas 56100/56101/56432) não foi usado. O Docker Desktop respondeu a `docker ps` nesta rodada, mas isso não basta sem `make` e sem o navegador. Comando que falta rodar, numa máquina com `make`, Docker e o Chromium do Playwright 1.58 em cache (Linux/macOS ou WSL com `playwright install chromium`):
+
+```text
+make panel-e2e
+```
+
+Entregue (typecheck, lint e format limpos; nada do que está abaixo foi exercitado ainda):
+
+- Backtest pela tela (`e2e/flows/backtest.flow.ts`, `expectBacktestResult` chama o novo `expectTradesOnTheChart`): o cartão "Preço e operações" tem resumo, controles de período, gráfico e a tabela de operações; havendo setas, clicar na primeira seleciona UMA linha da tabela (`aria-selected`) e grava `?operacao=` na URL; sem setas o teste exige o texto "Nenhuma operação no período.". Desvio consciente: a ramificação existe porque quem decide as operações do backtest é a estratégia sobre os candles diários do seed, que o harness não controla; o caminho com setas fica garantido de forma determinística pelo fluxo ao vivo abaixo.
+- Ao vivo (`e2e/flows/live-trades.flow.ts`, teste novo `simulação ao vivo: …` em `panel.e2e.ts`, antes do teste de metas, que cria outra simulação ativa): da Visão geral, o link "Ver compras e vendas no gráfico" (T5.2) leva ao detalhe; o cartão diz "Acompanhando o fim da simulação" e não tem setas; `POST /fill {side:'buy'}` no servidor de controle e, sem recarregar, aparece 1 seta, o rótulo "última vela fechada às HH:MM" e a linha "aberta" na tabela; `POST /fill {side:'sell'}` e aparecem 2 setas e a frase do resumo "Você pagou 613,12 USDT em 1 compra e recebeu 614,38 USDT" (contas à mão: 0,01 a 61.250 com taxa de 0,1% paga 613,1125 e sobe para 613,12; venda a 61.500 recebe 614,385 e desce para 614,38; resultado 1,2725).
+- Servidor de controle (`scripts/panel-e2e/control-server.ts`): nova rota `POST /fill` com `{ side: 'buy' | 'sell' }`, no papel do worker: grava a posição (aberta na compra; fechada na venda, com saída, taxa, resultado e motivo `target`) e o preenchimento pelos repositórios reais (`appendPositions`, `appendFills`), avança `runs.last_candle_time` com `GREATEST` (o gráfico ao vivo para na última vela processada e o seed não a preenche) e dá o `pg_notify` do tipo `trade` na ordem dado → marcador → aviso, como o worker. Compra e venda caem duas e uma vela antes da última vela de 1 h semeada. Helper `sendFill` em `e2e/flows/control.ts`.
+- Não coberto no E2E (coberto por contrato na T5.1): faixa fixa e o aviso "ir para o fim", porque a simulação semeada tem menos de 1 dia e só o atalho "Tudo" existe.
+- Gates (WSL, espelho `ativada-spec5`): `tsc` limpo (raiz e painel, que inclui `e2e/`), `eslint .` limpo, `prettier --check .` limpo, painel 588 testes verdes em 49 arquivos (sem teste novo nesta task).

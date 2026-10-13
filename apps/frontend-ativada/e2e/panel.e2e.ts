@@ -13,6 +13,7 @@ import {
 } from './flows/backtest.flow.js';
 import { declareGoalRankAndSimulate, openPlanOfTheFirstGoal } from './flows/goals.flow.js';
 import { dropTheSocketAndComeBack } from './flows/live.flow.js';
+import { watchLiveFillsAppearOnTheChart } from './flows/live-trades.flow.js';
 import { alertOnTheTargetAndLetTheTickFireIt } from './flows/plan-alert.flow.js';
 import { deleteTheCopy, editStrategyIntoANewVersion } from './flows/strategy.flow.js';
 
@@ -171,6 +172,13 @@ test('estratégias: duplicar o exemplo, editar um parâmetro gera a versão 2 e 
 
 test('alertas: sinal e alerta de preço chegam pelo WebSocket e aparecem sem recarregar', async () => {
   await receiveLiveAlertsWithoutReloading(page, {
+    request: page.request,
+    url: environment.controlUrl,
+  });
+});
+
+test('simulação ao vivo: pela Visão geral até o gráfico, e a compra e a venda gravadas aparecem como setas sem recarregar', async () => {
+  await watchLiveFillsAppearOnTheChart(page, {
     request: page.request,
     url: environment.controlUrl,
   });

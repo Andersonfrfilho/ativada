@@ -13,6 +13,15 @@ import { HOUR_MILLISECONDS } from './panel-e2e.constant.js';
 const RUN_EVENTS_CHANNEL = 'run_events';
 const MAX_ENABLED_ALERTS = 50;
 const ALERT_VALUE = '65000';
+// Uma operação de teste na simulação ao vivo (contas à mão, taxa de 0,1%): compra 0,01 a 61.250 (pago 613,1125) e venda a
+// 61.500 (recebido 614,385; resultado 1,2725). A compra cai duas velas antes da última vela de 1 h do seed e a venda uma antes.
+const FILL_ENTRY_KEY = 'e2e-trade-1';
+const FILL_QUANTITY = '0.01';
+const FILL_BUY_PRICE = '61250';
+const FILL_SELL_PRICE = '61500';
+const FILL_BUY_FEE = '0.6125';
+const FILL_SELL_FEE = '0.615';
+const FILL_NET_PROFIT = '1.2725';
 
 export type ControlParams = {
   readonly handle: DatabaseHandle;
@@ -63,6 +72,52 @@ async function pushPriceAlert(params: ControlParams): Promise<void> {
   await notify(params.sql, { kind: 'price_alert', alertId });
 }
 
+type FillSide = 'buy' | 'sell';
+
+function isFillSide(value: unknown): value is FillSide {
+  return value === 'buy' || value === 'sell';
+}
+
+// Faz o papel do worker: grava a posição e o preenchimento (compra ou venda), avança `last_candle_time` (o gráfico ao vivo
+// para na última vela processada) e avisa a API pelo NOTIFY real, tudo nessa ordem: o aviso nunca precede o dado.
+async function pushFill(params: ControlParams, side: FillSide): Promise<void> {
+  const isBuy = side === 'buy';
+  const candleTime = params.lastOpenTime - (isBuy ? 2 : 1) * HOUR_MILLISECONDS;
+  const openedCandleTime = params.lastOpenTime - 2 * HOUR_MILLISECONDS;
+  const results = createRunResultRepository(params.handle);
+  await results.appendPositions(params.scope, params.runId, [
+    {
+      engineKey: FILL_ENTRY_KEY,
+      status: isBuy ? 'open' : 'closed',
+      entryPrice: FILL_BUY_PRICE,
+      quantity: FILL_QUANTITY,
+      stopPrice: '60000',
+      targetPrice: FILL_SELL_PRICE,
+      entryFee: FILL_BUY_FEE,
+      exitPrice: isBuy ? undefined : FILL_SELL_PRICE,
+      exitFee: isBuy ? undefined : FILL_SELL_FEE,
+      netProfit: isBuy ? undefined : FILL_NET_PROFIT,
+      exitReason: isBuy ? undefined : 'target',
+      openedCandleTime,
+      closedCandleTime: isBuy ? undefined : candleTime,
+    },
+  ]);
+  await results.appendFills(params.scope, params.runId, [
+    {
+      orderKey: `${FILL_ENTRY_KEY}:${side}`,
+      positionKey: FILL_ENTRY_KEY,
+      candleTime,
+      side,
+      price: isBuy ? FILL_BUY_PRICE : FILL_SELL_PRICE,
+      quantity: FILL_QUANTITY,
+      notional: isBuy ? '612.5' : '615',
+      fee: isBuy ? FILL_BUY_FEE : FILL_SELL_FEE,
+    },
+  ]);
+  await params.sql`UPDATE runs SET last_candle_time = GREATEST(COALESCE(last_candle_time, 0), ${candleTime}) WHERE id = ${params.runId}`;
+  await notify(params.sql, { runId: params.runId, kind: 'trade', eventId: String(candleTime) });
+}
+
 const TICKER_CONNECTION_TIMEOUT_MILLISECONDS = 15_000;
 const TICKER_POLL_MILLISECONDS = 50;
 
@@ -97,6 +152,14 @@ async function pushTick(params: ControlParams, request: Request): Promise<void> 
   });
 }
 
+async function readFillSide(request: Request): Promise<FillSide> {
+  const body: unknown = await request.json();
+  const side: unknown =
+    typeof body === 'object' && body !== null ? Reflect.get(body, 'side') : undefined;
+  if (!isFillSide(side)) throw new Error('corpo do /fill inválido');
+  return side;
+}
+
 export function startControlServer(params: ControlParams): ControlServer {
   let signals = 0;
   const server = Bun.serve({
@@ -108,6 +171,7 @@ export function startControlServer(params: ControlParams): ControlServer {
       if (pathname === '/signal') await pushSignal(params, (signals += 1));
       else if (pathname === '/price-alert') await pushPriceAlert(params);
       else if (pathname === '/tick') await pushTick(params, request);
+      else if (pathname === '/fill') await pushFill(params, await readFillSide(request));
       else return new Response(null, { status: 404 });
       return Response.json({ ok: true });
     },
