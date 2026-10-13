@@ -171,3 +171,17 @@
   color: var(--ink-2);
   font-weight: 600;
 }
+
+/* Operação selecionada: as duas setas ganham um halo e um contorno mais grosso (nunca só cor). */
+.selectedItem .hit {
+  stroke: var(--ink);
+  stroke-width: 2;
+  fill: var(--accent-soft);
+  fill-opacity: 0.6;
+}
+
+.selectedItem .buyArrow,
+.selectedItem .sellArrow {
+  stroke: var(--ink);
+  stroke-width: 2;
+}

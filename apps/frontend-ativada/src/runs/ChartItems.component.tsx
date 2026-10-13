@@ -24,7 +24,9 @@ export type ChartItemsProps = {
   readonly timeZone: string;
   readonly active: ActiveChartItem;
   readonly tooltipId: string;
+  readonly selectedKey: string | undefined;
   readonly onRangeChange: (range: ChartRange) => void;
+  readonly onSelectKey: (key: string) => void;
 };
 
 function describedByFor(props: ChartItemsProps, key: string): string | undefined {
@@ -42,6 +44,8 @@ function MarkerLayer(props: ChartItemsProps): ReactElement {
           label={describeMarker({ marker, symbol: chart.symbol, timeZone })}
           handlers={active.bind(markerKey(marker))}
           describedBy={describedByFor(props, markerKey(marker))}
+          isSelected={marker.positionKey === props.selectedKey}
+          onSelect={() => props.onSelectKey(marker.positionKey)}
         />
       ))}
     </>

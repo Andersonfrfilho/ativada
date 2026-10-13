@@ -26,7 +26,15 @@ function show(chart: TradeChart): Mock<(range: ChartRange) => void> {
   renderApp({
     path: '/',
     isAuthenticated: true,
-    probe: <PriceChart chart={chart} timeZone={SAO_PAULO} onRangeChange={onRangeChange} />,
+    probe: (
+      <PriceChart
+        chart={chart}
+        timeZone={SAO_PAULO}
+        selectedKey={undefined}
+        onRangeChange={onRangeChange}
+        onSelectKey={() => undefined}
+      />
+    ),
   });
   return onRangeChange;
 }

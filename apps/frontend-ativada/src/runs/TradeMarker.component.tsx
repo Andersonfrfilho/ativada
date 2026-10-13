@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { ReactElement } from 'react';
+import type { KeyboardEvent, ReactElement } from 'react';
 
 import { CHART_ITEM_ATTRIBUTE } from './chart-keyboard.js';
 import { HIT_RADIUS, type MarkerPlacement } from './price-chart-markers.js';
@@ -11,25 +11,38 @@ export type TradeMarkerProps = {
   readonly label: string;
   readonly handlers: ItemHandlers;
   readonly describedBy: string | undefined;
+  readonly isSelected: boolean;
+  readonly onSelect: () => void;
 };
 
-// Compra: seta para cima, abaixo do preço. Venda: seta para baixo, acima. Foco e dica vêm do mesmo elemento.
+// Compra: seta para cima, abaixo do preço. Venda: seta para baixo, acima. Foco e dica vêm do mesmo elemento;
+// clicar ou apertar Enter seleciona a operação (a linha da tabela acompanha).
 export function TradeMarker({
   placement,
   label,
   handlers,
   describedBy,
+  isSelected,
+  onSelect,
 }: TradeMarkerProps): ReactElement {
   const dataAttribute = { [CHART_ITEM_ATTRIBUTE]: placement.side };
+  function handleKeyDown(event: KeyboardEvent<SVGGElement>): void {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    onSelect();
+  }
   return (
     <g
       {...handlers}
       {...dataAttribute}
-      className={styles.item}
+      className={`${styles.item} ${isSelected ? styles.selectedItem : ''}`}
       role="img"
       tabIndex={0}
       aria-label={label}
       aria-describedby={describedBy}
+      aria-current={isSelected ? 'true' : undefined}
+      onClick={onSelect}
+      onKeyDown={handleKeyDown}
     >
       <circle className={styles.hit} cx={placement.x} cy={placement.centerY} r={HIT_RADIUS} />
       <path

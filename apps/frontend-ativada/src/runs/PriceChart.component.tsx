@@ -26,7 +26,9 @@ import { useActiveChartItem } from './useActiveChartItem.hook.js';
 export type PriceChartProps = {
   readonly chart: TradeChart;
   readonly timeZone: string;
+  readonly selectedKey: string | undefined;
   readonly onRangeChange: (range: ChartRange) => void;
+  readonly onSelectKey: (key: string) => void;
 };
 
 type PriceLayersProps = {
@@ -51,7 +53,8 @@ function PriceLayers({ chart, scale, descriptionId }: PriceLayersProps): ReactEl
 }
 
 // SVG à mão, sem biblioteca: faixa da mínima à máxima, linha do fechamento e, por cima, as setas ou os agrupamentos.
-export function PriceChart({ chart, timeZone, onRangeChange }: PriceChartProps): ReactElement {
+export function PriceChart(props: PriceChartProps): ReactElement {
+  const { chart, timeZone, selectedKey, onRangeChange, onSelectKey } = props;
   const tooltipId = useId();
   const descriptionId = useId();
   const active = useActiveChartItem();
@@ -75,6 +78,8 @@ export function PriceChart({ chart, timeZone, onRangeChange }: PriceChartProps):
           active={active}
           tooltipId={tooltipId}
           onRangeChange={onRangeChange}
+          selectedKey={selectedKey}
+          onSelectKey={onSelectKey}
         />
       </svg>
       <figcaption id={descriptionId} className={styles.caption}>

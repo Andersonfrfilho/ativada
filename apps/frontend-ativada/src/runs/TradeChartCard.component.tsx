@@ -3,51 +3,51 @@ import type { ReactElement } from 'react';
 
 import { useUserTimeZone } from '../account/useUserTimeZone.hook.js';
 import { Card } from '../layout/Card.component.js';
-import controls from '../styles/Controls.module.css';
-import { runExtent } from './chart-range.js';
 import { ChartRangeControls } from './ChartRangeControls.component.js';
-import { CHART_WIDTH, chartColumnsFor } from './price-chart.js';
-import { PriceChart } from './PriceChart.component.js';
-import { useRunDetailQuery } from './runs.query.js';
-import { useTradeChartQuery } from './trade-chart.query.js';
+import { planTradeSelection } from './trade-selection.js';
+import { TradeChartBody } from './TradeChartBody.component.js';
+import { TradeNotice } from './TradeNotice.component.js';
+import { TradeSummary } from './TradeSummary.component.js';
+import { TradesTable } from './TradesTable.component.js';
+import type { Trade } from './run.validation.js';
+import { useChartView } from './useChartView.hook.js';
 import { useTradeSelection } from './useTradeSelection.hook.js';
 
 export type TradeChartCardProps = { readonly runId: string };
 
-// O gráfico de preço da execução com as compras e vendas; a faixa visível vem da URL (`?de=&ate=`).
+// O cartão "Preço e operações": aviso, resumo, gráfico com controles e a tabela, ligados pela seleção na URL
+// (`?de=&ate=` e `?operacao=`): uma seta seleciona a linha e uma linha seleciona as setas, movendo a faixa se preciso.
 export function TradeChartCard({ runId }: TradeChartCardProps): ReactElement {
   const timeZone = useUserTimeZone();
   const selection = useTradeSelection();
-  const run = useRunDetailQuery(runId);
-  const chart = useTradeChartQuery({
-    runId,
-    columns: chartColumnsFor(CHART_WIDTH),
-    ...selection.queryRange,
-  });
-  const extent =
-    run.data === undefined
-      ? undefined
-      : runExtent({
-          periodStart: run.data.periodStart,
-          periodEnd: run.data.periodEnd,
-          lastClosedCandleTime: chart.data?.lastClosedCandleTime,
-        });
-  const shown = chart.data === undefined ? undefined : { from: chart.data.from, to: chart.data.to };
+  const view = useChartView(runId, selection.queryRange);
+  function handleSelectTrade(trade: Trade): void {
+    selection.select(planTradeSelection({ trade, range: selection.range, extent: view.extent }));
+  }
   return (
     <Card title="Preço e operações">
+      <TradeNotice isLive={view.isLive} />
+      <TradeSummary runId={runId} />
       <ChartRangeControls
-        extent={extent}
+        extent={view.extent}
         range={selection.range}
-        shown={shown}
+        shown={view.shown}
         onRangeChange={selection.setRange}
       />
-      {chart.data === undefined ? (
-        <p className={controls.muted}>
-          {chart.isError ? 'Não foi possível carregar o gráfico.' : 'Carregando o gráfico…'}
-        </p>
-      ) : (
-        <PriceChart chart={chart.data} timeZone={timeZone} onRangeChange={selection.setRange} />
-      )}
+      <TradeChartBody
+        chart={view.chart}
+        timeZone={timeZone}
+        selectedKey={selection.selectedKey}
+        onRangeChange={selection.setRange}
+        onSelectKey={(key) => selection.select({ key, range: undefined })}
+      />
+      <TradesTable
+        runId={runId}
+        range={selection.queryRange}
+        timeZone={timeZone}
+        selectedKey={selection.selectedKey}
+        onSelectTrade={handleSelectTrade}
+      />
     </Card>
   );
 }

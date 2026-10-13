@@ -14,9 +14,15 @@ import {
   FIXTURE_FROM,
   FIXTURE_TO,
 } from './fixtures/trade-chart.fixture.js';
-import { dataResponse, type FakeRoute, type RecordedCall } from './support/fake-fetch.js';
+import {
+  dataResponse,
+  pageResponse,
+  type FakeRoute,
+  type RecordedCall,
+} from './support/fake-fetch.js';
 import { renderApp } from './support/render-app.js';
 import { buildRun } from './support/run-fixtures.js';
+import { buildSummaryResponse } from './support/trade-chart-fixtures.js';
 
 const CHART_PATH = '/v1/runs/run-1/chart';
 
@@ -71,6 +77,12 @@ function showCard(options: CardOptions = {}): {
       path: CHART_PATH,
       respond: (call) => options.respondChart?.(call) ?? echoedChart(call, options),
     },
+    {
+      method: 'GET',
+      path: '/v1/runs/run-1/trade-summary',
+      respond: (): Response => dataResponse(buildSummaryResponse()),
+    },
+    { method: 'GET', path: '/v1/runs/run-1/trades', respond: (): Response => pageResponse([]) },
   ];
   const router = createMemoryRouter(
     [{ path: '/runs/:runId', element: <TradeChartCard runId="run-1" /> }],
