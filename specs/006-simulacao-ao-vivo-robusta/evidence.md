@@ -587,3 +587,23 @@ da correção e dos vizinhos no espelho do WSL (`gates6.sh`).
   (`candleTime`, `NO_CANDLES`) não mudam.
 - **Testes ajustados porque citavam o texto:** `plan.contract.tsx` ("velas suficientes") e `backtests.contract.tsx` ("Não há velas").
   O texto do Telegram (`test/alert-message.contract.test.ts`, "próximo candle") é da API, outra superfície, e ficou como está.
+
+### Achado 13 — scripts de ambiente local no Windows
+
+- **Git Bash/MSYS.** `dev-lib.sh` ganhou `dev_refuse_windows_shell` (primeira linha de `dev_parse_arguments`, logo antes de qualquer
+  efeito): `uname -s` `MINGW*`, `MSYS*` ou `CYGWIN*` sai com 1 e diz `pwsh scripts/dev-up.ps1` (ou `dev-down.ps1`).
+- **Env sem `source`.** `dev_read_environment_file` lê `KEY=VALUE` linha a linha (ignora comentário e linha sem `=` colado ao nome,
+  tira o CR do CRLF e um par de aspas simples ou duplas) e dá `export`; nada é executado nem expandido, então `$`, `${}` e `$(...)` na
+  senha ficam literais, igual ao `Read-DevEnvironmentFile` do `.ps1`. O `env.dev.local` segue por cima e a precedência das moedas não
+  mudou. Rodado em `bash scripts/dev-up.sh --dry-run` e `dev-down.sh --dry-run` no espelho do WSL com o `envs/env.dev` real (os
+  conflitos de porta que ele relatou são os apps de dev do próprio usuário no ar; nada foi iniciado nem parado).
+- **PowerShell, encerramento gracioso.** `Stop-DevProcessTree` tenta `taskkill /PID /T` SEM `/F`, espera até 10 s
+  (`$script:DevGracefulStopSeconds`) e só então usa `/F`; fora do Windows, `kill -TERM` + 10 s + `Stop-Process -Force`.
+  **Desvio medido nesta máquina (Windows 11, pwsh 7):** o `taskkill` sem `/F` NÃO encerra um processo de console escondido (`node`
+  com `-WindowStyle Hidden`: "só pode ser forçada com /F", código 128), que é como o `dev-up.ps1` sobe a API e o worker. Então, na
+  prática, o gracioso só vale para quem tem janela; para o resto o código vê o código de saída diferente de zero e vai direto ao `/F`
+  (1,2 s no teste, sem esperar à toa). Enviar um Ctrl+C real a um processo de console escondido não é possível só com `taskkill`
+  (exigiria `GenerateConsoleCtrlEvent` com o console compartilhado); fica como limitação: no Windows o worker ainda cai à força.
+- **Contrato** `test/dev-scripts.contract.test.ts`: `uname` falso (MINGW, MSYS, CYGWIN) recusa e cita o `.ps1`; arquivo de env com
+  `$`, `${c}`, `$(echo x)`, aspas, CRLF e comentário é lido literalmente; `dev-lib.sh` não usa `source` no env; ordem
+  `taskkill` sem `/F` → `Wait-Process` → `taskkill /F` no `.ps1`.

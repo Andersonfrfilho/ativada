@@ -13,6 +13,22 @@ imprime segredo.
 | Descer também os containers | `pwsh scripts/dev-down.ps1 -Infra` | `scripts/dev-down.sh --infra` |
 | Ver o que faria, sem executar | acrescente `-DryRun` | acrescente `--dry-run` |
 
+Os scripts `.sh` recusam o Git Bash/MSYS (o pid e o `ps` são do emulador): no Windows use sempre o `.ps1`. O env é lido
+linha a linha, sem `source`: um `# Runbook — ambiente local de desenvolvimento
+
+Como subir e descer o AtivAdA na sua máquina (Windows PowerShell 7, WSL, Linux ou macOS) e o que fazer
+quando o banco "não responde". Valores de desenvolvimento ficam em `envs/env.dev`; nenhum script daqui
+imprime segredo.
+
+## 1. Subir e descer
+
+| | Windows (PowerShell 7) | WSL / Linux / macOS (bash) |
+|---|---|---|
+| Subir | `pwsh scripts/dev-up.ps1` | `scripts/dev-up.sh` |
+| Descer os processos | `pwsh scripts/dev-down.ps1` | `scripts/dev-down.sh` |
+| Descer também os containers | `pwsh scripts/dev-down.ps1 -Infra` | `scripts/dev-down.sh --infra` |
+ na senha vale literalmente.
+
 O `dev-up` faz, nesta ordem: confere o Docker; `docker compose --env-file envs/env.dev -f compose.yaml up -d --wait`;
 espera a porta do Postgres responder (até 60 s); aplica as migrations; sobe **API**, **worker** e **painel** em segundo
 plano. Rodar de novo não duplica nada: se o processo registrado em `.dev/pids/` está vivo, ele é mantido; se a porta

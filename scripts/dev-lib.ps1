@@ -51,7 +51,20 @@ function Get-DevRegisteredPid([string]$PidDir, [string]$Name) {
     return $process.Id
 }
 
+$script:DevGracefulStopSeconds = 10
+
+function Test-DevProcessAlive([int]$ProcessId) { return [bool](Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) }
+
+# Primeiro o encerramento gracioso e uma espera de ~10 s; só então a força. No Windows o taskkill sem /F só fecha quem tem
+# janela: processo de console (o caso do bun escondido) recusa e cai direto no /F, sem esperar à toa.
 function Stop-DevProcessTree([int]$ProcessId) {
-    if ($IsWindows) { & taskkill /PID $ProcessId /T /F *> $null; return }
-    Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+    if ($IsWindows) {
+        & taskkill /PID $ProcessId /T *> $null
+        if ($LASTEXITCODE -eq 0) { Wait-Process -Id $ProcessId -Timeout $script:DevGracefulStopSeconds -ErrorAction SilentlyContinue }
+        if (Test-DevProcessAlive $ProcessId) { & taskkill /PID $ProcessId /T /F *> $null }
+        return
+    }
+    & kill -TERM $ProcessId *> $null
+    Wait-Process -Id $ProcessId -Timeout $script:DevGracefulStopSeconds -ErrorAction SilentlyContinue
+    if (Test-DevProcessAlive $ProcessId) { Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue }
 }

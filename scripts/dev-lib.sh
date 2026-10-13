@@ -7,7 +7,17 @@ DEV_SERVICE_NAMES=(api worker painel)
 
 dev_say() { printf '%s\n' "$*"; }
 
+# No Git Bash/MSYS o pid, o ps e o /dev/tcp são do emulador, não do Windows: o par dev-up.ps1/dev-down.ps1 é o caminho.
+dev_refuse_windows_shell() {
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*)
+      dev_say "ERRO: este script não roda no Git Bash/MSYS. No Windows use o PowerShell: pwsh scripts/$(basename "$0" .sh).ps1"
+      exit 1 ;;
+  esac
+}
+
 dev_parse_arguments() {
+  dev_refuse_windows_shell
   DEV_DRY_RUN=0
   DEV_WITH_INFRA=0
   DEV_ENV_FILE="envs/env.dev"
@@ -27,19 +37,32 @@ dev_parse_arguments() {
   DEV_PID_DIR="$DEV_STATE_DIR/pids"
 }
 
+# Lê KEY=VALUE linha a linha, sem executar nada: o valor é literal (uma senha com $ não expande), igual ao dev-lib.ps1.
+dev_read_environment_file() {
+  local line name value
+  local double_quoted='^"(.*)"$' single_quoted="^'(.*)'\$"
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue
+    name="${BASH_REMATCH[1]}"
+    value="${BASH_REMATCH[2]}"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    if [[ "$value" =~ $double_quoted || "$value" =~ $single_quoted ]]; then value="${BASH_REMATCH[1]}"; fi
+    export "$name=$value"
+  done < "$1"
+}
+
 # Precedência das moedas: DEV_MARKET_SYMBOLS (shell) > MARKET_SYMBOLS do env.dev.local > lista padrão.
 dev_load_environment() {
   [ -f "$DEV_ENV_FILE" ] || { dev_say "ERRO: $DEV_ENV_FILE não existe."; exit 1; }
   local shell_symbols="${DEV_MARKET_SYMBOLS:-}"
-  set -a
-  # shellcheck disable=SC1090
-  . "$DEV_ENV_FILE"
+  dev_read_environment_file "$DEV_ENV_FILE"
   unset MARKET_SYMBOLS VITE_MARKET_SYMBOLS
-  # shellcheck disable=SC1090
-  [ -f "$DEV_ENV_FILE.local" ] && . "$DEV_ENV_FILE.local"
+  if [ -f "$DEV_ENV_FILE.local" ]; then dev_read_environment_file "$DEV_ENV_FILE.local"; fi
   MARKET_SYMBOLS="${shell_symbols:-${MARKET_SYMBOLS:-$DEV_DEFAULT_SYMBOLS}}"
   VITE_MARKET_SYMBOLS="$MARKET_SYMBOLS"
-  set +a
+  export MARKET_SYMBOLS VITE_MARKET_SYMBOLS
 }
 
 dev_compose() {
