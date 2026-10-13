@@ -96,18 +96,33 @@ export function useEquityCurveQuery(
   });
 }
 
+export type TradesFilters = {
+  readonly from?: number;
+  readonly to?: number;
+  readonly status?: 'open' | 'closed';
+};
+
+function tradesFilterParams(filters: TradesFilters): Record<string, string> {
+  return {
+    ...(filters.from === undefined ? {} : { from: String(filters.from) }),
+    ...(filters.to === undefined ? {} : { to: String(filters.to) }),
+    ...(filters.status === undefined ? {} : { status: filters.status }),
+  };
+}
+
 export function useTradesQuery(
   runId: string,
+  filters: TradesFilters = {},
 ): UseInfiniteQueryResult<InfiniteData<Page<Trade>, string | null>> {
   const client = useApiClient();
   return useInfiniteQuery({
-    queryKey: [RUN_QUERY_ROOT, runId, 'trades'],
+    queryKey: [RUN_QUERY_ROOT, runId, 'trades', filters.from, filters.to, filters.status],
     initialPageParam: FIRST_PAGE,
     queryFn: ({ pageParam }) =>
       client.requestPage({
         path: pagePath(
           `${API_PATH.RUNS}/${runId}/trades`,
-          { limit: String(TRADES_PAGE_SIZE) },
+          { limit: String(TRADES_PAGE_SIZE), ...tradesFilterParams(filters) },
           pageParam,
         ),
         schema: tradeSchema,

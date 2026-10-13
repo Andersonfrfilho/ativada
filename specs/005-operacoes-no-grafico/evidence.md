@@ -218,3 +218,16 @@ O check está em `scripts/api-runs-test/check-chart-load.ts` e falha se algum p9
 
 Gates (WSL, espelho `ativada-spec5`): `tsc --noEmit` limpo; `eslint .` limpo; `prettier --check .` limpo; 367 testes verdes em
 21 arquivos (os anteriores mais `api-run-chart-mutants`).
+
+## T2.1 — Esquemas e consultas do painel
+
+- `trade-chart.validation.ts` e `trade-summary.validation.ts` espelham `/chart` e `/trade-summary` (decimais só como texto
+  exato; `side` só `buy`/`sell`; `markers` e `clusters` anuláveis, como na API). `tradeSchema` ganhou `entryNotional`,
+  `exitNotional`, `paid`, `received`, `fees` e `netProfitRate`, todos opcionais (aditivo: o contrato antigo continua válido).
+- `trade-chart.query.ts`: `useTradeChartQuery` (`[runs, runId, 'chart', from, to, columns]`) e `useTradeSummaryQuery`
+  (`[runs, runId, 'trade-summary']`); `useTradesQuery(runId, filters)` aceita `from`, `to` e `status` e os põe na chave.
+  Todas sob a raiz `runs`, então o aviso do stream invalida as três.
+- Teste: `test/trade-chart-queries.contract.tsx` (10 testes: esquemas aceitam o formato do servidor e recusam preço não
+  decimal, lado desconhecido e campo ausente; resposta inválida vira erro de consulta e nada renderiza; query string com
+  faixa/colunas/status; chave começa com `runs`). `test/support/render-app.tsx` ganhou a opção `probe` (renderiza um
+  componente nos provedores, sem rotas) para testar hooks sozinhos.

@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import type { ReactElement } from 'react';
 import { QueryClient } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import { createMemoryRouter } from 'react-router';
@@ -31,6 +32,8 @@ export type RenderAppOptions = {
   readonly ownsSessionRoute?: boolean;
   // Só para provar o silêncio por par sem dormir 10 s.
   readonly silenceMilliseconds?: number;
+  // Para testar um hook ou componente sozinho: renderiza isto dentro dos provedores, no lugar das rotas.
+  readonly probe?: ReactElement;
 };
 
 export type FakeStream = {
@@ -111,7 +114,7 @@ export function renderApp(options: RenderAppOptions): RenderedApp {
       queryClient={queryClient}
       connectStream={connect}
     >
-      <RouterProvider router={router} />
+      {options.probe ?? <RouterProvider router={router} />}
     </AppProviders>,
   );
   return { fake, session, router, stream };

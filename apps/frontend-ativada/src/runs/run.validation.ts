@@ -91,6 +91,13 @@ export const tradeSchema = z.object({
   exitReason: z.string().optional(),
   openedCandleTime: z.number(),
   closedCandleTime: z.number().optional(),
+  // Campos da spec 005 (aditivos): valores pagos e recebidos vêm dos preenchimentos, em texto decimal exato.
+  entryNotional: decimalText.optional(),
+  exitNotional: decimalText.optional(),
+  paid: decimalText.optional(),
+  received: decimalText.optional(),
+  fees: decimalText.optional(),
+  netProfitRate: decimalText.optional(),
 });
 
 export const windowSchema = z.object({
