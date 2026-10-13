@@ -126,6 +126,7 @@ export const HORIZONS_MUTANT_TARGET: MutantTarget = {
     'test/horizon-best.contract.test.ts',
     'test/horizon-messages.contract.test.ts',
     'test/horizon-view.contract.test.ts',
+    'test/horizon-intraday-run.contract.test.ts',
     'test/api-horizons.contract.test.ts',
     'test/api-openapi.contract.test.ts',
   ],

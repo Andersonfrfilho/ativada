@@ -21,6 +21,7 @@ const ROUTES = 'horizons/horizons.routes.ts';
 const REQUESTS = 'horizons/horizon-requests.ts';
 const MESSAGES = 'horizons/horizon-messages.ts';
 const VIEW = 'horizons/horizon-view.ts';
+const INTRADAY = 'horizons/horizon-intraday-run.ts';
 
 function edit(file: string, find: string, replace: string): SourceEdit[] {
   return [{ file, find, replace, occurrences: 1 }];
@@ -250,6 +251,54 @@ const MUTANTS: readonly SourceMutant[] = [
       'recommendedHorizonDays: recommendedHorizonDays ?? null,',
       'recommendedHorizonDays: recommendedHorizonDays ?? 0,',
     ),
+  },
+  {
+    name: 'INTRADAY_PREVIOUS_CANDLE_NOT_TRACKED',
+    edits: edit(INTRADAY, '    previousOpenTime = candle.openTime;\n', ''),
+  },
+  {
+    name: 'INTRADAY_ENGINE_STATE_NOT_CARRIED',
+    edits: edit(INTRADAY, '    recorded.state = result.state;\n', ''),
+  },
+  {
+    name: 'INTRADAY_EQUITY_POINTS_NOT_COLLECTED',
+    edits: edit(INTRADAY, '      recorded.equityPoints.push(result.decisions.equityPoint);\n', ''),
+  },
+  {
+    name: 'INTRADAY_CLOSED_POSITIONS_NOT_COLLECTED',
+    edits: edit(
+      INTRADAY,
+      '    recorded.closedPositions.push(...result.decisions.closedPositions);\n',
+      '',
+    ),
+  },
+  {
+    name: 'INTRADAY_OPEN_POSITION_AT_THE_WRONG_PRICE',
+    edits: edit(INTRADAY, 'lastClose: last.close,', 'lastClose: last.open,'),
+  },
+  {
+    name: 'INTRADAY_SENTIMENT_NOT_PICKED',
+    edits: edit(
+      INTRADAY,
+      'pickSentiment: (picked) => sentimentByOpenTime.get(picked.openTime),',
+      'pickSentiment: () => undefined,',
+    ),
+  },
+  {
+    name: 'INTRADAY_SENTIMENT_OF_THE_PREVIOUS_CANDLE',
+    edits: edit(
+      INTRADAY,
+      'candles.map((candle, index) => [candle.openTime, params.sentiments?.[index]])',
+      'candles.map((candle, index) => [candle.openTime, params.sentiments?.[index - 1]])',
+    ),
+  },
+  {
+    name: 'INTRADAY_WITHOUT_CANDLES_HAS_A_RESULT',
+    edits: edit(INTRADAY, '  if (last === undefined) return undefined;\n', ''),
+  },
+  {
+    name: 'INTRADAY_STARTS_FROM_ANOTHER_BALANCE',
+    edits: edit(INTRADAY, 'initialBalance: run.parameters.initialBalance,', "initialBalance: '1',"),
   },
 ];
 

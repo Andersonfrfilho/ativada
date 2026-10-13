@@ -189,3 +189,29 @@ versões: nasceu `horizon-view.contract.test.ts`, com a avaliação sintética d
 admin-boundary-routes, horizon-evaluation, horizon-best, horizon-pool, api-horizons-mutants (controle + 38), api-goal-evaluation, api-goals, api-goal-plan, goal-evaluation-pool,
 goal-cold-gate, code-size-limits, strategy-engine-boundary, app-import-boundary e ownership-registry: 282 pass numa rodada e 111 pass, 0 fail na rodada final
 (view, messages, api-horizons, api-openapi, horizon-evaluation, horizon-best, mutantes e code-size-limits) depois da correção dos dois mutantes.
+
+## T2.3 — Linha de 15 minutos em memória (2026-10-12)
+
+**O que há.** `horizons/horizon-intraday-run.ts`: `computeIntradayMetrics({ strategy, run, candles, sentiments })` roda o `advanceCandle` de `@ativada/run-recording` (o passo do backtest e do
+ao vivo, com a lacuna declarada pela contagem exata e o sentimento do candle) sobre a série e junta, na memória, os pontos de patrimônio e as operações fechadas; as métricas saem do
+mesmo `computeRunMetrics` do backtest (com `computeOpenPositionMetrics` para a posição aberta no último fechamento). `runIntradayInMemory` aplica `summarizeIntraday` a elas. Nada
+de carteira nova, nada de `runs`: o módulo `horizons/` não importa repositório de execução, lote, despachante nem o caso de uso do backtest. A série vem de
+`findCandles` dos últimos 90 dias de 15 min (sem aquecimento extra: o aquecimento da estratégia consome o começo da janela, como num backtest que começa no primeiro candle lido).
+
+| Contrato | Arquivo |
+|---|---|
+| **Paridade com o backtest gravado**: nos dois conjuntos reais (BTC 1 h, ETH 1 d) as métricas INTEIRAS (`toStrictEqual`: operações, `finalEquity`, `feesPaid`, drawdowns, Sharpe…) da memória são as de `runBacktest` do harness do backtest (`runGolden`), e o resumo é `summarizeIntraday` dessas métricas | `test/horizon-intraday-run.contract.test.ts` |
+| Com um buraco nos candles que faz a carteira sair por lacuna (achado pelo motor direto), a memória continua igual ao backtest, e o resultado difere do da série inteira | idem |
+| Com regra de sentimento (Placar clássico + `fear_greed`, leituras alternando medo e ganância a cada 24 candles) a memória continua igual ao backtest, e difere da corrida sem sentimento | idem |
+| Sem candle algum não há resultado (`undefined` nas métricas, `null` no resumo) | idem |
+| **Nenhuma linha nova em `runs`** depois da avaliação completa pelo harness (`runs.all()` igual ao de antes, nada despachado, nenhuma leitura de resultado) | idem |
+| O módulo `horizons/` não referencia escritor de execução (`createRunRepository`, `createRunResultRepository`, `createRunBatchRepository`, `appendDecisions`, `createBatchBuffer`, `toRunResultRows`, `RunDispatcher`, `runBacktest`) | idem |
+| mutantes: +9 (candle anterior não rastreado, estado do motor não carregado, pontos de patrimônio ou operações fechadas não coletados, posição aberta avaliada na abertura, sentimento não escolhido ou do candle anterior, sem candle e com resultado, saldo inicial trocado), todos reprovados | `test/api-horizons-mutants.contract.test.ts` (controle + 47) |
+
+**Desvios.** (1) O harness do backtest roda `runBacktest` com um banco em memória, não Postgres; a paridade é, portanto, com o MESMO caminho de código do backtest gravado, e o `make backtest-test`
+(Postgres) continua sendo a prova do lado do banco. (2) A API busca 90 dias de 15 min sem o aquecimento antes deles (o plano D4 fala em ~8.640 velas); a estratégia clássica leva ~50 candles
+para decidir, e a janela efetiva tem então 89,5 dias.
+
+**Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos. Testes: horizon-intraday-run, api-horizons-mutants (controle + 47), horizon-evaluation, api-horizons, horizon-pool,
+horizon-intraday, backtest-use-case, backtest-continuity, api-openapi, code-size-limits, strategy-engine-boundary, app-import-boundary, ownership-registry e test-support-boundary:
+219 pass, 0 fail.

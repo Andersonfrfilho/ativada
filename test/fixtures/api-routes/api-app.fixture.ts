@@ -49,6 +49,7 @@ import type * as PriceAlertEventDispatcherModule from '../../../apps/api-ativada
 import type * as PriceAlertRoutesModule from '../../../apps/api-ativada/src/price-alerts/price-alerts.routes.js';
 import type * as PriceAlertUseCasesModule from '../../../apps/api-ativada/src/price-alerts/price-alert.use-cases.js';
 import type * as HorizonBestModule from '../../../apps/api-ativada/src/horizons/horizon-best.js';
+import type * as HorizonIntradayRunModule from '../../../apps/api-ativada/src/horizons/horizon-intraday-run.js';
 import type * as HorizonMessagesModule from '../../../apps/api-ativada/src/horizons/horizon-messages.js';
 import type * as HorizonRoutesModule from '../../../apps/api-ativada/src/horizons/horizons.routes.js';
 import type * as HorizonViewModule from '../../../apps/api-ativada/src/horizons/horizon-view.js';
@@ -111,6 +112,7 @@ export type ApiApp = {
   readonly priceAlertRoutes: typeof PriceAlertRoutesModule;
   readonly priceAlertUseCases: typeof PriceAlertUseCasesModule;
   readonly horizonBest: typeof HorizonBestModule;
+  readonly horizonIntradayRun: typeof HorizonIntradayRunModule;
   readonly horizonMessages: typeof HorizonMessagesModule;
   readonly horizonRoutes: typeof HorizonRoutesModule;
   readonly horizonView: typeof HorizonViewModule;
@@ -185,6 +187,7 @@ export async function loadApiApp(): Promise<ApiApp> {
     priceAlertRoutes: await load('price-alerts/price-alerts.routes'),
     priceAlertUseCases: await load('price-alerts/price-alert.use-cases'),
     horizonBest: await load('horizons/horizon-best'),
+    horizonIntradayRun: await load('horizons/horizon-intraday-run'),
     horizonMessages: await load('horizons/horizon-messages'),
     horizonRoutes: await load('horizons/horizons.routes'),
     horizonView: await load('horizons/horizon-view'),

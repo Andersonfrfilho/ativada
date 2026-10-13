@@ -11,6 +11,7 @@ import {
   type EngineState,
   type EquityPointDecision,
   type IntradaySummary,
+  type RunMetrics,
   type RunSetup,
   type SentimentObservation,
   type StrategyVersion,
@@ -64,13 +65,14 @@ function stepAll(params: IntradayRunParams): Recorded {
   return recorded;
 }
 
-// A linha de 15 minutos (spec 003 RF03, T2.3): `null` sem candle algum.
-export function runIntradayInMemory(params: IntradayRunParams): IntradaySummary | null {
+// As métricas do backtest sobre a série, sem gravar nada (nada sem candle algum): as MESMAS que a execução gravada
+// daria, porque o passo é o `advanceCandle` dela e as métricas saem de `computeRunMetrics`.
+export function computeIntradayMetrics(params: IntradayRunParams): RunMetrics | undefined {
   const last = params.candles.at(-1);
-  if (last === undefined) return null;
+  if (last === undefined) return undefined;
   const { run } = params;
   const recorded = stepAll(params);
-  const metrics = computeRunMetrics({
+  return computeRunMetrics({
     equityPoints: recorded.equityPoints,
     closedPositions: recorded.closedPositions.sort(
       (first, second) => first.candleOpenTime - second.candleOpenTime,
@@ -85,5 +87,10 @@ export function runIntradayInMemory(params: IntradayRunParams): IntradaySummary 
       timeframeMilliseconds: ENGINE_TIMEFRAME_DURATION_MILLISECONDS[run.parameters.timeframe],
     },
   });
-  return summarizeIntraday(metrics);
+}
+
+// A linha de 15 minutos (spec 003 RF03, T2.3): nula sem candle algum.
+export function runIntradayInMemory(params: IntradayRunParams): IntradaySummary | null {
+  const metrics = computeIntradayMetrics(params);
+  return metrics === undefined ? null : summarizeIntraday(metrics);
 }
