@@ -3,6 +3,8 @@ import { formatDecimalText, formatScaled, parseScaled } from '../format/decimal.
 
 const NOT_AVAILABLE = '—';
 const PERCENT_FACTOR = 100n;
+// Um ganho que arredonda para "0,0" não leva "+": a frase do servidor também o escreve sem sinal.
+const ZERO_DIGITS = '0,0';
 const ONE_PLACE = { minimumFraction: 1, maximumFraction: 1 } as const;
 const MONEY_PLACES = { minimumFraction: 2, maximumFraction: 2 } as const;
 
@@ -10,8 +12,9 @@ const MONEY_PLACES = { minimumFraction: 2, maximumFraction: 2 } as const;
 export function formatRate(rate: string | null, hasSign: boolean): string {
   const scaled = rate === null ? undefined : parseScaled(rate);
   if (scaled === undefined) return NOT_AVAILABLE;
-  const sign = hasSign && scaled > 0n ? '+' : '';
-  return `${sign}${formatScaled(scaled * PERCENT_FACTOR, ONE_PLACE)}%`;
+  const digits = formatScaled(scaled * PERCENT_FACTOR, ONE_PLACE);
+  const sign = hasSign && scaled > 0n && digits !== ZERO_DIGITS ? '+' : '';
+  return `${sign}${digits}%`;
 }
 
 export function formatFees(fees: string): string {
@@ -20,6 +23,9 @@ export function formatFees(fees: string): string {
 
 export function rateTone(rate: string | null): 'positive' | 'negative' | undefined {
   const scaled = rate === null ? undefined : parseScaled(rate);
-  if (scaled === undefined || scaled === 0n) return undefined;
+  if (scaled === undefined) return undefined;
+  if (formatScaled(scaled * PERCENT_FACTOR, ONE_PLACE).replace('-', '') === ZERO_DIGITS) {
+    return undefined;
+  }
   return scaled > 0n ? 'positive' : 'negative';
 }

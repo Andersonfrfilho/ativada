@@ -256,3 +256,23 @@ horizon-intraday, backtest-use-case, backtest-continuity, api-openapi, code-size
 | Meta ainda carregando: sem link | idem |
 
 **Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos; `panel-test` completo verde.
+
+## T3.4 — Revisão de design (web.md §15) (2026-10-12)
+
+Feita no app em execução (painel `127.0.0.1:56100`, API reiniciada para servir `GET /v1/horizons`), pelo navegador embutido, por texto e geometria.
+
+| Verificação | Resultado |
+|---|---|
+| Vizinhos | Seletores usam o mesmo `SelectField` das metas (46 px, dica, borda e foco iguais); cartão, `HistoryNote`, "Como ler" (mesmo desenho do `RankingExplainer`) e links do menu (44 px) seguem as telas irmãs |
+| 375 px | `documentElement.scrollWidth` = 375 = viewport, nenhum elemento passa da borda; confirmado de novo no Edge pela captura (`scrollWidth 375`) |
+| Contraste, tema escuro e claro (cores calculadas no navegador, selo e etiqueta reais) | selo 12,5 / 15,3; etiqueta "Histórico curto" 12,4 / 15,9; veredito 13,3 / 14,7; frase de recomendação 13,4 / 15,4; ganho em verde sobre o fundo do selo 7,3 / 4,6; rótulos 4,9 / 4,5. Todos ≥ 4,5:1; pares dos tokens também em `test/contrast.contract.ts` |
+| Foco por teclado | Tab leva de Moeda a Estratégia e ao "Como ler"; o anel `:focus-visible` global (2 px, `--accent`) aparece; ordem lógica, nenhum controle fora do fluxo |
+| Rede e texto | `GET /v1/horizons?symbol=…` 200 para BTC, SOL e XRP; tela com as 4 linhas na ordem, frases do servidor e números; sem erro de tela |
+
+**Achados consertados na tarefa.** (1) Ganho minúsculo aparecia como `+0,0%` e em verde: agora o sinal e a cor só existem quando o número arredondado não é zero (a frase do servidor já o escrevia `0,0%`); contrato novo em `test/horizons.contract.tsx`. (2) Um erro `ZERO_DIGITS is not defined` no console é só do recarregamento a quente entre duas edições do mesmo arquivo; a página recarregada não o repete.
+
+**Limite da revisão.** Os pares reais testados (BTC, SOL, XRP) não têm prazo recomendável no histórico atual, então o selo "Recomendável" foi conferido com as classes CSS reais num bloco montado no DOM da página (contraste acima) e pelo contrato de `test/horizons.contract.tsx`; não há captura dele com dado real.
+
+**Captura de prova.** `specs/003-comparador-de-prazos/evidence/prazos-375px.png` (375 px, tema claro, página inteira, Edge via Playwright, dados reais do usuário de teste).
+
+**Gates (WSL, `~/gates/ativada-spec3`).** typecheck, lint e prettier limpos; `panel-test`: 388 pass, 0 fail.

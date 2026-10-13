@@ -161,6 +161,12 @@ describe('horizon rows (spec 7.2)', () => {
       'No pior caso': '-12,0%',
     });
     expect(within(thirty).getByText(/comprar e segurar/)).toBeDefined();
+    expect(figures(rowTitled('15 dias'), '15 dias com a estratégia')['Em geral']).toBe('0,0%');
+    const tinyGain = within(rowTitled('15 dias')).getByLabelText('15 dias com a estratégia');
+    expect(tinyGain.querySelector('dd')?.className).toBe('');
+    expect(
+      within(thirty).getByLabelText('30 dias com a estratégia').querySelector('dd')?.className,
+    ).toBe('positive');
   });
 
   test('the 15 minute row shows the verdict as text and shape, with fees and trades', async () => {
