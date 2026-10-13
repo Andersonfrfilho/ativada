@@ -11,6 +11,7 @@ const CYCLE_CHAT = '740000001';
 const STALE_CHAT = '740000002';
 const ROLLBACK_CHAT = '740000003';
 const LATE_CHAT = '740000004';
+const ACTIVE_CHAT = '740000005';
 const STALLED_SINCE = 1_760_000_900_000;
 const LAST_CANDLE_TIME = 1_760_000_000_000;
 const WAIT_MILLISECONDS = 8_000;
@@ -172,9 +173,18 @@ async function checkGuards(context: LifecycleCheckContext): Promise<void> {
 
   await client`UPDATE runs SET stalled_since = ${STALLED_SINCE} WHERE id = ${stale.runId}`;
   await client`UPDATE runs SET status = ${RUN_STATUS.CANCELLED}, finished_at = now() WHERE id = ${stale.runId}`;
+  const active = await startRunningRun(context, {
+    subject: 'subject-stall-active',
+    chat: ACTIVE_CHAT,
+  });
+  await client`UPDATE runs SET stalled_since = ${STALLED_SINCE} WHERE id = ${active.runId}`;
   const cleared = await repository.inTransaction((session) => session.clearInactiveEpisodes());
   assertCondition(cleared >= 1, 'o episódio de uma execução parada é apagado');
   assertCondition((await readStalledSince(client, stale.runId)) === null, 'marca apagada');
+  assertCondition(
+    (await readStalledSince(client, active.runId)) === String(STALLED_SINCE),
+    'o episódio de uma execução que segue rodando não é apagado',
+  );
   assertCondition((await readAlerts(client, stale.runId)).length === 0, 'sem aviso ao parar');
   reportCheck(
     'parada: leitura velha não abre episódio, dono sem Telegram sem alerta, RESUME só atrás de STALL, episódio órfão limpo',

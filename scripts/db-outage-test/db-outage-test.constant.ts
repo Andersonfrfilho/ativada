@@ -35,3 +35,8 @@ export const CRASH_MESSAGES = [
   'gap recovery failed',
   'worker heartbeat failed',
 ] as const;
+
+// A parada da simulação (spec 006, Fase 2): a API varre a cada poucos segundos e a carência é a de produção (15 min).
+export const STALL_SWEEP_SECONDS = 5;
+export const STALL_GRACE_MINUTES = 15;
+export const STALL_CHAT = '750000001';

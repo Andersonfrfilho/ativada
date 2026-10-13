@@ -30,6 +30,7 @@ import {
   DATABASE_QUERY_TIMEOUT_SECONDS,
   POLL_MILLISECONDS,
   REFERENCE_DATABASE_PREFIX,
+  STALL_SWEEP_SECONDS,
   SUBJECT_DATABASE_PREFIX,
   WAIT_TIMEOUT_MILLISECONDS,
   WORKER_HEARTBEAT_SECONDS,
@@ -93,6 +94,7 @@ export async function createOutageSite(): Promise<OutageSite> {
   // Estes valores valem para a API que roda neste processo; o worker recebe os dele em `buildEnvironment`.
   Bun.env['DATABASE_QUERY_TIMEOUT_SECONDS'] = String(DATABASE_QUERY_TIMEOUT_SECONDS);
   Bun.env['WORKER_HEARTBEAT_SECONDS'] = String(WORKER_HEARTBEAT_SECONDS);
+  Bun.env['LIVE_STALL_SWEEP_SECONDS'] = String(STALL_SWEEP_SECONDS);
   const adminUrl = readDatabaseUrl();
   const referenceDatabase = await createTemporaryDatabase(adminUrl, REFERENCE_DATABASE_PREFIX);
   const subjectDatabase = await createTemporaryDatabase(adminUrl, SUBJECT_DATABASE_PREFIX);

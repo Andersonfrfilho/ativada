@@ -313,3 +313,23 @@ Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; 298/298 em 14 a
 `DATABASE_URL=<postgres://probe:…@127.0.0.1:56434/postgres> bun --env-file=envs/env.test run scripts/telegram-test.ts` -> "telegram-test: OK" (297 mensagens entregues, retry, queda, LGPD e log limpos), EXIT 0.
 
 Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; 227/227 em 10 arquivos (alert-stall, alert-dispatcher/-scheduler/-message, telegram-alert-mutants, telegram-client, live-alerts, live-alert-parts, code-size-limits, app-import-boundary).
+
+## T2.5 — Mutantes da parada e o caso de parada no `db-outage-test` (2026-10-13, `sonnet`)
+
+Correção da T2.4: `test/alert-stall.contract.test.ts` tem 8 casos (não 9).
+
+- Mutantes da API, `test/live-stall-mutants.contract.test.ts` (23 + controle, todos mortos; cópia do `src` da API julgada por `live-stall-policy`, `live-stall-sweeper` e `alert-stall`, com `--bail`): carência ignorada, dobrada ou com
+  limite exclusivo; vela devida no começo da vela e não no fechamento; "próxima vela" sem avançar; primeira vela fora da grade; `waitingForData` contando como parada; `stalled_since` = instante da varredura (na regra e na gravação do episódio);
+  varredura sem a trava consultiva e ignorando a resposta dela; recuperação parcial que fecha e reabre o episódio (STALL duplicado); espera por dado que encerra o episódio; episódio que nunca fecha; marca que sobra em execução parada;
+  conteúdo do `RESUME` sem o início do episódio; conteúdo do alerta com `runId` (PII) ou sem o par; laço que ignora a espera do banco, loga toda ronda ou loga a mensagem crua do erro.
+- Mutantes do banco, `scripts/stall-mutants.ts` + `make stall-mutants` (11 + controle, todos mortos; juiz `packages/database/test-support/run-stall-test.ts` contra o Postgres real): sem `pg_try_advisory_xact_lock`; `ON CONFLICT` removido (STALL duplicado no mesmo
+  episódio); `RESUME` sem `STALL`; alerta para dono sem Telegram; leitura velha que abre episódio; episódio sobrescrito; episódio fechado por outro início; aviso ao painel que não sai; marca que sobra em execução parada; marca apagada em execução que
+  roda; varredura fora de uma transação. A primeira rodada deixou 1 sobrevivente (apagar a marca de execução rodando passava): o check ganhou "episódio de execução que segue rodando não é apagado" e o mutante passou a ser morto.
+  Comando (WSL, Postgres embutido porta 56434): `DATABASE_URL=<postgres://probe:…@127.0.0.1:56434/postgres> bun --env-file=envs/env.test run scripts/stall-mutants.ts` -> "stall-mutants: OK - 11 mutantes reprovados".
+- `scripts/db-outage-test/check-stall.ts` (ligado ao `scripts/db-outage-test.ts` entre a queda e o batimento): worker SIGKILL; usuário com Telegram vinculado; simulação `live_paper` `running` cuja linha do tempo recua 3 h (o relógio da API é o real, então "relógio
+  adiantado" é montado do outro lado: a regra só olha `agora − vela devida`); API real varrendo a cada 5 s -> `GET /v1/runs/:id` e a lista trazem `stalledSince` = vela devida + 15 min; várias rondas depois há UM `STALL` pendente e o `stalledSince` não muda; o
+  checkpoint alcança a última vela fechada -> a faixa some e fica UM `RESUME` (mesmo início do episódio); o log da varredura tem só as duas linhas de contagem, sem id, dono, par nem chat. O worker é reiniciado no fim para o caso do batimento.
+  Comando: `DATABASE_URL=<postgres://probe:…@127.0.0.1:56434/postgres> bun --env-file=envs/env.test run scripts/db-outage-test.ts` -> "db-outage-test: OK"; resultado da parada: faixa em 2.926 ms, faixa some em 4.747 ms depois do checkpoint; queda
+  `kill` e `half-open` seguem iguais (307 sinais e 27 preenchimentos iguais aos da execução contínua) e o batimento `alive -> stale -> alive`.
+
+Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; 726/726 em 45 arquivos (`live-*`, `alert*`, `telegram*`, `database*`, `api-run*`, boundaries, ownership, lgpd, code-size; sem os arquivos de mutantes, que rodaram à parte: `live-stall-mutants` 24/24).

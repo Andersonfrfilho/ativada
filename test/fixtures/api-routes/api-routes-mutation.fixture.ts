@@ -150,3 +150,19 @@ export const RUN_CHART_MUTANT_TARGET: MutantTarget = {
   ],
   sourceVariable: 'API_ROUTES_APP_SOURCE',
 };
+
+// A parada da simulação ao vivo (spec 006, Fase 2): a regra, a varredura, o laço e o conteúdo do alerta, julgados só pelos
+// contratos deles (e pelo que o despachante do worker aceita do conteúdo).
+export const LIVE_STALL_MUTANT_TARGET: MutantTarget = {
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-ativada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-ativada/.mutants`,
+  directoryPrefix: 'live-stall-',
+  judgeTestFiles: [
+    'test/live-stall-policy.contract.test.ts',
+    'test/live-stall-sweeper.contract.test.ts',
+    'test/alert-stall.contract.test.ts',
+  ],
+  sourceVariable: 'API_ROUTES_APP_SOURCE',
+  judgeTimeoutMilliseconds: 120_000,
+  shouldBailOnFirstFailure: true,
+};

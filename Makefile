@@ -7,7 +7,7 @@ COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
 LIVE72 := env -i PATH="$$PATH" HOME="$$HOME" bun --env-file=envs/env.live72 run scripts/live72/cli.ts
 
-.PHONY: help bootstrap config up down ps check panel-e2e contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants price-alert-mutants user-asset-mutants alert-mutants runlog-mutants telegram-test goals-test price-alerts-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants db-outage-test identity-logs live72-up live72-start live72-status live72-report live72-stop live72-down
+.PHONY: help bootstrap config up down ps check panel-e2e contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants stall-mutants price-alert-mutants user-asset-mutants alert-mutants runlog-mutants telegram-test goals-test price-alerts-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants db-outage-test identity-logs live72-up live72-start live72-status live72-report live72-stop live72-down
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -166,6 +166,13 @@ example-mutants: ## Prova que a semeadura da estratégia de exemplo reprova 6 mu
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/example-mutants.ts
+
+stall-mutants: ## Prova que a varredura de parada no banco reprova 11 mutantes (sem trava consultiva, STALL duplicado no mesmo episódio, RESUME sem STALL, alerta para dono sem Telegram, leitura velha que abre episódio, episódio sobrescrito ou fechado por outro, aviso ao painel que não sai, marca que sobra em execução parada, varredura fora de uma transação) contra um Postgres de teste descartável
+	set -a; . envs/env.test; set +a; \
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/stall-mutants.ts
 
 user-asset-mutants: ## Prova que os ativos do usuário reprovam 14 mutantes do banco (sem filtro de dono em leitura, lista e escrita, sem a trava do dono, teto ignorado ou com folga, recusa que ainda grava, cursor inclusivo, página sem ordem e cada CHECK ou unicidade removidos) num Postgres de teste descartável
 	set -a; . envs/env.test; set +a; \

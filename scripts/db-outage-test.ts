@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { checkOutage, OUTAGE_KIND } from './db-outage-test/check-outage.js';
+import { checkStall } from './db-outage-test/check-stall.js';
 import { checkWorkerHealth } from './db-outage-test/check-worker-health.js';
 import {
   assertCondition,
@@ -25,6 +26,7 @@ async function runChecks(site: OutageSite): Promise<void> {
   );
   await checkOutage(site, OUTAGE_KIND.KILL, KILL_SYMBOL);
   await checkOutage(site, OUTAGE_KIND.HALF_OPEN, HALF_OPEN_SYMBOL);
+  await checkStall(site);
   await checkWorkerHealth(site);
 }
 
