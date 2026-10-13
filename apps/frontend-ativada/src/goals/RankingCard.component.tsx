@@ -5,12 +5,17 @@ import { formatSymbol } from '../format/format.js';
 import { Card } from '../layout/Card.component.js';
 import controls from '../styles/Controls.module.css';
 import { UNAVAILABLE_REASON_TEXT } from './goal.constant.js';
-import type { GoalEvaluation } from './goal.validation.js';
+import type { Combination, GoalEvaluation } from './goal.validation.js';
 import styles from './Goals.module.css';
 import { RankingExplainer } from './RankingExplainer.component.js';
 import { RankingItem } from './RankingItem.component.js';
-import { DEFAULT_SIMULATION_TIMEFRAME } from './simulation-timeframe.constant.js';
-import { useGoalSimulation } from './useGoalSimulation.hook.js';
+import { SimulationTimeframePicker } from './SimulationTimeframePicker.component.js';
+import {
+  DEFAULT_SIMULATION_TIMEFRAME,
+  type SimulationTimeframe,
+} from './simulation-timeframe.constant.js';
+import { useGoalSimulation, type GoalSimulation } from './useGoalSimulation.hook.js';
+import { useLiveRunSlots, type LiveRunSlots } from './useLiveRunSlots.hook.js';
 
 export type RankingCardProps = { readonly goalId: string; readonly evaluation: GoalEvaluation };
 
@@ -35,8 +40,44 @@ function UnavailableList({
   );
 }
 
+type RankingListProps = {
+  readonly goalId: string;
+  readonly combinations: readonly Combination[];
+  readonly simulation: GoalSimulation;
+  readonly slots: LiveRunSlots;
+  readonly timeframe: SimulationTimeframe;
+};
+
+function RankingList({
+  goalId,
+  combinations,
+  simulation,
+  slots,
+  timeframe,
+}: RankingListProps): ReactElement {
+  return (
+    <ol className={styles.ranking} aria-label="Ranking de estratégias por moeda">
+      {combinations.map((combination) => (
+        <RankingItem
+          goalId={goalId}
+          key={`${combination.strategy.id}:${combination.symbol}`}
+          combination={combination}
+          availability={{
+            isPending: simulation.isPending,
+            isAtLimit: slots.isAtLimit,
+            duplicateRunId: slots.findDuplicateRunId(combination, timeframe),
+          }}
+          onSimulate={simulation.simulate}
+        />
+      ))}
+    </ol>
+  );
+}
+
 export function RankingCard({ goalId, evaluation }: RankingCardProps): ReactElement {
-  const simulation = useGoalSimulation(goalId, DEFAULT_SIMULATION_TIMEFRAME);
+  const [timeframe, setTimeframe] = useState<SimulationTimeframe>(DEFAULT_SIMULATION_TIMEFRAME);
+  const simulation = useGoalSimulation(goalId, timeframe);
+  const slots = useLiveRunSlots();
   const [isGoalOnly, setIsGoalOnly] = useState(false);
   const shown = [...evaluation.combinations]
     .filter((item) => !isGoalOnly || item.isGoalSymbol)
@@ -44,6 +85,11 @@ export function RankingCard({ goalId, evaluation }: RankingCardProps): ReactElem
   return (
     <Card title="Estratégia × moeda">
       <RankingExplainer />
+      <SimulationTimeframePicker
+        value={timeframe}
+        onChange={setTimeframe}
+        activeCount={slots.count}
+      />
       <label className={styles.checkbox}>
         <input
           type="checkbox"
@@ -52,17 +98,13 @@ export function RankingCard({ goalId, evaluation }: RankingCardProps): ReactElem
         />
         Só o par da meta
       </label>
-      <ol className={styles.ranking} aria-label="Ranking de estratégias por moeda">
-        {shown.map((combination) => (
-          <RankingItem
-            goalId={goalId}
-            key={`${combination.strategy.id}:${combination.symbol}`}
-            combination={combination}
-            isSimulating={simulation.isPending}
-            onSimulate={simulation.simulate}
-          />
-        ))}
-      </ol>
+      <RankingList
+        goalId={goalId}
+        combinations={shown}
+        simulation={simulation}
+        slots={slots}
+        timeframe={timeframe}
+      />
       <UnavailableList evaluation={evaluation} />
       {simulation.message === undefined ? null : (
         <p role="alert" className={controls.error}>

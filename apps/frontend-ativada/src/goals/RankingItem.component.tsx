@@ -2,6 +2,7 @@
 import type { ReactElement } from 'react';
 import { Link } from 'react-router';
 
+import { ROUTE_PATH } from '../app/app.constant.js';
 import { formatSymbol } from '../format/format.js';
 import controls from '../styles/Controls.module.css';
 import { VERDICT_HINT, VERDICT_PLAIN } from './goal.constant.js';
@@ -10,11 +11,19 @@ import styles from './Goals.module.css';
 import { computeOutcomeSegments } from './outcome-bar.js';
 import { OutcomeBar } from './OutcomeBar.component.js';
 import { describeBenchmark, describeOutcomes } from './ranking-text.js';
+import { DUPLICATE_RUN_TEXT, LIVE_RUN_LIMIT_TEXT } from './simulation-timeframe.constant.js';
+
+export type SimulationAvailability = {
+  readonly isPending: boolean;
+  readonly isAtLimit: boolean;
+  // Já existe uma simulação ativa com a mesma estratégia, par e vela: avisa e leva até ela.
+  readonly duplicateRunId: string | undefined;
+};
 
 export type RankingItemProps = {
   readonly goalId: string;
   readonly combination: Combination;
-  readonly isSimulating: boolean;
+  readonly availability: SimulationAvailability;
   readonly onSimulate: (combination: Combination) => void;
 };
 
@@ -24,13 +33,27 @@ function verdictClass(verdict: string): string {
   return styles.verdictHold ?? '';
 }
 
+function DuplicateNotice({ runId }: { readonly runId: string | undefined }): ReactElement | null {
+  if (runId === undefined) return null;
+  return (
+    <p role="status" className={styles.warning}>
+      <span aria-hidden="true">⚠ </span>
+      {DUPLICATE_RUN_TEXT}{' '}
+      <Link className={controls.textLink} to={`${ROUTE_PATH.BACKTESTS}/${runId}`}>
+        Ver a simulação que já está rodando
+      </Link>
+    </p>
+  );
+}
+
 function RankingActions({
   goalId,
   combination,
-  isSimulating,
+  availability,
   onSimulate,
 }: RankingItemProps): ReactElement {
   const { strategy } = combination;
+  const limitId = `limit-${strategy.id}`;
   if (!combination.isGoalSymbol) {
     return <p className={controls.muted}>a simulação usa o par da meta</p>;
   }
@@ -47,11 +70,18 @@ function RankingActions({
         type="button"
         className={`${controls.button} ${controls.primary}`}
         aria-label={`Simular esta meta com ${strategy.name}`}
-        disabled={isSimulating}
+        disabled={availability.isPending || availability.isAtLimit}
+        aria-describedby={availability.isAtLimit ? limitId : undefined}
         onClick={() => onSimulate(combination)}
       >
         Simular esta meta
       </button>
+      {availability.isAtLimit ? (
+        <p id={limitId} className={controls.muted}>
+          {LIVE_RUN_LIMIT_TEXT}
+        </p>
+      ) : null}
+      <DuplicateNotice runId={availability.duplicateRunId} />
     </div>
   );
 }

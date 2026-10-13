@@ -270,3 +270,64 @@
   gap: 12px;
   align-items: center;
 }
+
+.picker {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.pickerLegend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+
+.option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+}
+
+.option input[type='radio'] {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+
+.optionLabel {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.optionHint {
+  grid-column: 2;
+  margin-top: -8px;
+}
+
+.moreButton {
+  justify-self: start;
+}
+
+.notice {
+  padding: 10px 12px;
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent-soft);
+}
+
+.warning {
+  padding: 10px 12px;
+  border-left: 4px solid var(--warn);
+  border-radius: 6px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-weight: 600;
+}

@@ -313,7 +313,7 @@ describe('goal ranking', () => {
     fireEvent.click(
       await screen.findByRole('button', { name: 'Simular esta meta com Placar clássico' }),
     );
-    expect((await screen.findByRole('alert')).textContent).toContain('máximo de simulações');
+    expect((await screen.findByRole('alert')).textContent).toContain('limite de 5 simulações');
   });
 
   test('shows each coin with its situation now and the next trigger by family', async () => {

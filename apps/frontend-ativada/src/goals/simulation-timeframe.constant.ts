@@ -52,6 +52,9 @@ export const SMALL_CANDLE_FEES_NOTICE =
 export const SIMULATION_PICKER_LEGEND = 'De quanto em quanto tempo olhar o mercado';
 
 export const LIVE_RUN_LIMIT = 5;
+export const LIVE_RUN_LIMIT_TEXT = `Você chegou ao limite de ${LIVE_RUN_LIMIT} simulações ao vivo. Pare uma para começar outra.`;
+
+export const DUPLICATE_RUN_TEXT = 'Você já tem esta simulação rodando.';
 
 export function isSimulationTimeframe(value: string): value is SimulationTimeframe {
   return Object.values<string>(SIMULATION_TIMEFRAME).includes(value);

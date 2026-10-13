@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { LIVE_RUN_LIMIT_TEXT } from './simulation-timeframe.constant.js';
+
 export const GOAL_QUERY_ROOT = 'goals';
 export const GOAL_TIMEFRAME = '1d';
 export const GOAL_PAGE_SIZE = 100;
@@ -33,8 +35,7 @@ export const GOAL_ERROR_TEXT: Readonly<Record<string, string>> = {
   GOAL_IN_USE: 'Há simulações ligadas a esta meta: pare-as antes de apagá-la.',
   GOAL_INACTIVE: 'A meta está desligada: ligue-a para iniciar uma simulação.',
   GOAL_NOT_FOUND: 'Meta não encontrada.',
-  LIVE_RUN_LIMIT_REACHED:
-    'Você já está no máximo de simulações ao vivo. Pare uma para iniciar outra.',
+  LIVE_RUN_LIMIT_REACHED: LIVE_RUN_LIMIT_TEXT,
   GOAL_PLAN_UNAVAILABLE:
     'Ainda não há candles suficientes para montar o plano desta estratégia neste par.',
 };
