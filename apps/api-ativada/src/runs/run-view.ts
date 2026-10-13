@@ -30,6 +30,8 @@ export type RunView = {
   // A meta a que a simulação ao vivo está atrelada e como terminou (`null` enquanto não terminou ou sem meta).
   readonly goalId: string | null;
   readonly goalOutcome: GoalRunOutcome | null;
+  // Início (ms UTC) da parada da simulação ao vivo; ausente quando ela está em dia (e em qualquer execução que não esteja rodando).
+  readonly stalledSince?: number;
 };
 
 export type RunQueuePositionView = { readonly own: number; readonly overall: number };
@@ -58,6 +60,11 @@ function readOverfitting(record: RunRecord): JsonValue | null {
   return record.metrics['overfitting'] ?? null;
 }
 
+function toStalledSince(record: RunRecord): { readonly stalledSince?: number } {
+  if (record.status !== RUN_STATUS.RUNNING || record.stalledSince === undefined) return {};
+  return { stalledSince: record.stalledSince };
+}
+
 export function toRunView(record: RunRecord): RunView {
   return {
     id: record.id,
@@ -82,6 +89,7 @@ export function toRunView(record: RunRecord): RunView {
     finishedAt: record.finishedAt?.toISOString() ?? null,
     goalId: record.goalId ?? null,
     goalOutcome: record.goalOutcome ?? null,
+    ...toStalledSince(record),
   };
 }
 

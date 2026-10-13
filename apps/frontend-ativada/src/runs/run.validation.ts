@@ -65,6 +65,7 @@ export const runSchema = z.object({
   errorCode: z.string().nullable(),
   goalId: z.string().nullish(),
   goalOutcome: z.string().nullish(),
+  stalledSince: z.number().optional(),
   createdAt: z.string(),
 });
 

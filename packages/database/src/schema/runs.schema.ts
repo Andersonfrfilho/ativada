@@ -69,6 +69,8 @@ export const runs = pgTable(
     waitingOpenTime: bigint('waiting_open_time', { mode: 'number' }),
     waitingFailedRecoveries: integer('waiting_failed_recoveries').notNull().default(0),
     waitingLastRecoveryAt: bigint('waiting_last_recovery_at', { mode: 'number' }),
+    // Início do episódio de parada (ms UTC, migration 0023): gravado pela varredura da API, apagado quando a simulação volta ao ritmo.
+    stalledSince: bigint('stalled_since', { mode: 'number' }),
     claimedBy: varchar('claimed_by', { length: CLAIMED_BY_MAX_LENGTH }),
     heartbeatAt: timestamp('heartbeat_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

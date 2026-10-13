@@ -35,6 +35,11 @@ export const RUN_VIEW_SCHEMA = z.strictObject({
   finishedAt: isoDateTimeSchema.nullable(),
   goalId: resourceIdSchema.nullable(),
   goalOutcome: z.enum(GOAL_RUN_OUTCOME).nullable(),
+  stalledSince: epochMillisecondsSchema
+    .optional()
+    .describe(
+      'Início (ms UTC) da parada da simulação ao vivo: o último passo esperado não aconteceu e a carência passou. Ausente quando ela está em dia.',
+    ),
 });
 
 export const RUN_WARNING_SCHEMA = z.strictObject({ code: z.string(), message: z.string() });

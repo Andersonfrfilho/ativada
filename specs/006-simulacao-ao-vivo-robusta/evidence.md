@@ -257,3 +257,21 @@ não rodou (depende de `make up`), só o comando equivalente acima; `resync` do 
 - Estabilidade DURANTE o episódio (P3) não é da função pura (ela recalcula a partir do estado atual): o varredor da T2.3 mantém o `stalled_since` gravado enquanto a fórmula disser parada.
 
 Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; contrato novo 16/16; vizinhos (`code-size-limits`, `app-import-boundary`, `strategy-engine-boundary`, `ownership-registry`) 75/75.
+
+## T2.2 — Migration `0023_run_stall` e `stalledSince` na API (2026-10-13, `sonnet`)
+
+- Migration `0023_run_stall` (+ `.rollback.sql`, snapshot e `_journal.json` gerados por `drizzle-kit generate --name run_stall` no WSL; a segunda rodada deu "No schema changes, nothing to migrate"):
+  `ALTER TABLE runs ADD COLUMN stalled_since bigint` (nula, sem DEFAULT) e troca de `alerts_side_check` (DROP + ADD com `BUY, SELL, GOAL, PRICE, STALL, RESUME`); nenhuma linha existente é tocada.
+- `rollback`: apaga as linhas de `alerts` com lado `STALL`/`RESUME` (avisos operacionais que só existem por causa da migration; mesma regra do rollback da 0018 com `PRICE`), solta a coluna e restaura a CHECK antiga.
+  Provado à parte (Postgres embutido, WSL): com alertas `BUY`, `STALL` e `RESUME` gravados, o rollback deixa só o `BUY`, a coluna some, `STALL` volta a ser recusado, e reaplicar a 0023 aceita `STALL` de novo.
+- Schema Drizzle: `runs.stalledSince` (`bigint`, modo `number`); `ALERT_SIDE.STALL`/`RESUME` (a CHECK do schema sai de `Object.values(ALERT_SIDE)`); `RunRecord.stalledSince?` (opcional para não mexer nas fixtures em memória); mapper lê a coluna.
+- API: `GET /v1/runs/:id` e a lista trazem `stalledSince` (ms UTC) só quando gravado e a execução está `running`; AUSENTE nos outros casos (aditivo, `epochMillisecondsSchema.optional()` no `RUN_VIEW_SCHEMA`, descrito no OpenAPI). Painel: espelho Zod `stalledSince: z.number().optional()` em `run.validation.ts` (a faixa é da T3.3).
+- Dispatcher do worker: o lado `STALL`/`RESUME` ainda não tem texto (T2.4); até lá ele cai como `bad_payload` sem enviar, e nada os enfileira antes da T2.3.
+- Contratos: `api-runs` ganhou 2 casos (campo ausente em dia, presente no detalhe e na lista, some quando zera, não aparece em execução terminada, 404 idêntico para outro dono). `packages/database/test-support/run-stall-checks.ts` (ligado ao `database-test`): coluna nasce nula e guarda ms, `STALL`/`RESUME` aceitos uma vez por início de episódio, lado desconhecido recusado pela CHECK.
+
+Comandos (WSL, Postgres 18.3 embutido de `~/pg-scratch`, porta 56434, fora do repo; containers do projeto intocados), equivalente de `make migration-test`:
+`DATABASE_URL=<postgres://probe:…@127.0.0.1:56434/postgres> bun run --cwd packages/database db:migration-test` -> "migration-test: OK (24 migrations aplicadas e desfeitas)".
+O `run-stall-checks` rodou isolado ("stall-only OK"): o `database-test` inteiro continua não terminando neste WSL pela medição de 17.520 pontos (pendência herdada da T1.3).
+
+Gates (WSL, `gates6.sh`): `typecheck`, `lint` e `format` limpos; 207/207 (api-runs, api-openapi, ownership-registry, database, strategy-persistence-schema, alert-dispatcher/-scheduler/-message, candle-schema, users-schema);
+236/236 (live-alerts, live-alert-parts, live-evaluator, live-gap-wait, telegram-alert-mutants, code-size-limits, boundaries, api-run-delete/-export, account-export/-delete); painel 624/624.

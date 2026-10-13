@@ -91,6 +91,7 @@ function renderAlertText(alert: ClaimedAlert): string | undefined {
     const price = priceAlertPayloadSchema.safeParse(alert.payload);
     return price.success ? formatPriceAlertMessage(price.data) : undefined;
   }
+  if (alert.side === ALERT_SIDE.STALL || alert.side === ALERT_SIDE.RESUME) return undefined;
   const signal = alertPayloadSchema.safeParse(alert.payload);
   return signal.success
     ? formatAlertMessage({ side: alert.side, payload: signal.data })

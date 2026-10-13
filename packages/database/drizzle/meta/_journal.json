@@ -162,6 +162,13 @@
       "when": 1791918123676,
       "tag": "0022_worker_heartbeats",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791922208878,
+      "tag": "0023_run_stall",
+      "breakpoints": true
     }
   ]
 }

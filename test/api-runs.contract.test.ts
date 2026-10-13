@@ -660,6 +660,47 @@ describe('POST /v1/runs', () => {
     expect((read.body as RunBody).data['waitingForData']).toBeNull();
   });
 
+  test('stalledSince: ausente em dia; com o início gravado pela API mostra os ms UTC no detalhe e na lista', async () => {
+    const { body } = await post(SUBJECT_A, liveBody());
+    const created = (body as RunBody).data;
+    expect('stalledSince' in created).toBe(false);
+    const stalledSince = Date.UTC(2026, 9, 1, 14, 5);
+    harness.runs.updateRun(created.id, { status: 'running', stalledSince });
+    const detail = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${created.id}` }),
+    );
+    expect((detail.body as RunBody).data['stalledSince']).toBe(stalledSince);
+    const list = await readJson(await harness.call({ subject: SUBJECT_A, path: RUNS }));
+    const listed = (list.body as { data: { id: string; stalledSince?: number }[] }).data;
+    expect(listed.find((item) => item.id === created.id)?.stalledSince).toBe(stalledSince);
+    harness.runs.updateRun(created.id, { stalledSince: undefined });
+    const resumed = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${created.id}` }),
+    );
+    expect('stalledSince' in (resumed.body as RunBody).data).toBe(false);
+  });
+
+  test('stalledSince que sobrou numa execução já terminada não aparece, e o de outro dono dá o mesmo 404', async () => {
+    const { body } = await post(SUBJECT_A, liveBody());
+    const created = (body as RunBody).data;
+    harness.runs.updateRun(created.id, {
+      status: 'cancelled',
+      finishedAt: new Date(),
+      stalledSince: 1_760_000_000_000,
+    });
+    const read = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${created.id}` }),
+    );
+    expect('stalledSince' in (read.body as RunBody).data).toBe(false);
+    const foreign = await harness.call({ subject: SUBJECT_B, path: `${RUNS}/${created.id}` });
+    const missing = await harness.call({ subject: SUBJECT_B, path: `${RUNS}/${MISSING_ID}` });
+    await expectIndistinguishableNotFound({
+      expectedCode: 'RUN_NOT_FOUND',
+      foreignResourceResponse: foreign,
+      missingResourceResponse: missing,
+    });
+  });
+
   test('backtest e walk-forward não trazem o campo (é do RF09, ao vivo), nem ao criar nem ao ler', async () => {
     const { body } = await post(SUBJECT_A, backtestBody());
     const created = (body as RunBody).data;
