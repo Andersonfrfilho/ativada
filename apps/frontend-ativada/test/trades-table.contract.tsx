@@ -346,15 +346,16 @@ describe('TradesTable: seleção', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(calls().filter((call) => call.query.get('status') === 'closed')).toHaveLength(4);
     expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.queryAllByRole('row', { selected: true })).toHaveLength(0);
+    expect(document.querySelectorAll('tr[aria-current]')).toHaveLength(0);
   });
 
-  test('marks the selected row with aria-selected', async () => {
+  test('marks the selected row with aria-current (aria-selected means nothing in a plain table)', async () => {
     showTable({ trades: [closedTrade(0), closedTrade(1)], selectedKey: 't1' });
-    await screen.findAllByRole('row', { selected: true });
-    const selected = screen.getAllByRole('row', { selected: true });
+    await waitForRows();
+    const selected = document.querySelectorAll('tr[aria-current="true"]');
     expect(selected).toHaveLength(1);
     expect(selected[0]?.getAttribute('aria-rowindex')).toBe('3');
+    expect(document.querySelector('tr[aria-selected]')).toBeNull();
   });
 
   test('a click or Enter on a row reports that trade', async () => {

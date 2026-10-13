@@ -29,7 +29,7 @@ export function TradeRow({ text, rowIndex, isSelected, onSelect }: TradeRowProps
     <tr
       className={`${tableStyles.row} ${isSelected ? tableStyles.selected : ''}`}
       aria-rowindex={rowIndex}
-      aria-selected={isSelected}
+      aria-current={isSelected ? 'true' : undefined}
       tabIndex={0}
       onClick={onSelect}
       onKeyDown={handleKeyDown}

@@ -45,7 +45,7 @@ export function LiveChartStatus({
             className={`${controls.button} ${styles.notice}`}
             onClick={() => selection.setRange(undefined)}
           >
-            Há operações novas — ir para o fim
+            Há velas novas — ir para o fim
           </button>
         ) : null}
       </div>

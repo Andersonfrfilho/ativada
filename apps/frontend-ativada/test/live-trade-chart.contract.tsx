@@ -23,7 +23,7 @@ const RUN_ID = 'run-live';
 const BASE = `/v1/runs/${RUN_ID}`;
 const CARD = { name: 'Preço e operações' } as const;
 const FIRST_LAST_CLOSED = FIXTURE_TO - FIXTURE_HOUR;
-const NEW_BUTTON = { name: 'Há operações novas — ir para o fim' } as const;
+const NEW_BUTTON = { name: 'Há velas novas — ir para o fim' } as const;
 
 // O servidor do teste: cada vela nova fechada traz uma compra nova; a faixa pedida é recortada em "última vela + 1 h".
 type LiveServer = { lastClosed: number };

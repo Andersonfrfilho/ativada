@@ -172,7 +172,7 @@ async function waitForReady(): Promise<void> {
 
 function selectedRowIndexes(): (string | null)[] {
   return dataRows()
-    .filter((row) => row.getAttribute('aria-selected') === 'true')
+    .filter((row) => row.getAttribute('aria-current') === 'true')
     .map((row) => row.getAttribute('aria-rowindex'));
 }
 

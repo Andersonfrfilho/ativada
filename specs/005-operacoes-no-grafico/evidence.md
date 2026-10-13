@@ -522,3 +522,8 @@ Achados da revisão final (Opus), um commit por achado ou grupo coeso. Gates de 
 - **Agora:** `src/runs/directed-money.ts` (`formatDirectedMoney`, `formatDirectedResult`) aplica a regra do servidor nas duas telas: pago e taxas sobem, recebido desce, resultado desce sempre (ganho menor, perda maior). O texto de acessibilidade de cada seta (`describeMarker`) sai da mesma dica. Preços e quantidades não mudam.
 - **Efeito nos fixtures** (contas à mão): compra de 304,8045 passa de "304,80" para "304,81"; taxa de 0,3045 e 0,30625 passam a "0,31"; ganho de 1,13925 passa de "+1,14" para "+1,13"; perda de −2,1834 passa de "−2,18" para "−2,19".
 - **Testes:** 613,1125 na tabela (pago 613,12, recebido 613,11, taxa 0,1125 vira 0,12, resultado 0,1125 vira +0,11), na dica (pago 613,12, recebido 613,11) e no resumo (os mesmos números); os esperados dos testes de dica, descrição e linha de perda acompanharam.
+
+### Achado 11 (baixo) — aviso do ao vivo e linha selecionada
+
+- **Aviso:** o botão aparecia como "Há operações novas" também quando só chegou vela nova. O painel só sabe que há vela depois da faixa fixa (`hasNewerCandles`), não se há operação; o texto mais simples e verdadeiro virou "Há velas novas — ir para o fim" (`LiveChartStatus`), sem consulta extra.
+- **Linha selecionada:** `aria-selected` num `<tr>` de `<table>` comum é ignorado pelos leitores de tela; a linha selecionada passa a usar `aria-current="true"` (a mesma marca das setas) e a tabela continua não sendo um grid. Testes (`trades-table`, `trade-selection`, `live-trade-chart`) acompanharam.
