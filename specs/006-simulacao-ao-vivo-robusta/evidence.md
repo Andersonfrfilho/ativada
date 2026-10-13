@@ -617,3 +617,28 @@ da correção e dos vizinhos no espelho do WSL (`gates6.sh`).
   porteiro não tem logger; cada laço do worker (avaliação, alertas, recuperação de lacunas) e o resumo da API e da varredura de
   parada têm a sua guarda `createDatabaseOutageGuard`, uma linha por laço por minuto (RNF01). R8 e o item 1 do CLAUDE.md agora dizem
   isto. As mudanças dos achados 1 e 2 (R1, R4, R5, perfil longo, `isClosed`) já estavam no ADR e no CLAUDE.md desde os seus commits.
+
+### Pendências e notas registradas (achados 6, 8, 9, 10 e 16; nenhum código alterado)
+
+- **6. Alvos e premissas que a revisão não pôde confirmar.** `make db-outage-test`, `make stall-mutants`, o `make database-test`
+  completo e o `make panel-e2e` NÃO rodaram via `make`/Docker nesta rodada nem na T5.x (proibido tocar nos containers; o espelho do WSL
+  só roda os contratos). Premissas que ficam sem verificação de ponta a ponta: o `docker restart` real com o `statement_timeout` novo, a
+  meia conexão do encaminhador do Docker Desktop, a migration 0023 sobre um banco grande e o painel contra a API real após o `limits`
+  em `GET /v1/me`. Rodar os quatro alvos em máquina com Docker antes do deploy.
+- **8. Rollback da migration 0023.** O `.rollback.sql` remove os lados `STALL` e `RESUME` do CHECK de `alerts.side` e, para isso,
+  apaga as linhas de `alerts` com esses lados (e o estado de parada some junto). Quem reverter perde o histórico desses avisos; o
+  rollback é de emergência, não de rotina.
+- **9. `ADD CONSTRAINT` valida a tabela inteira sob lock.** A 0023 recria o CHECK de `alerts.side` com `ADD CONSTRAINT`, que varre a
+  tabela com `ACCESS EXCLUSIVE`. Em `alerts` grande a alternativa é `ADD CONSTRAINT ... NOT VALID` seguido de
+  `VALIDATE CONSTRAINT` em outra transação (lock curto). Migration só aditiva e só se pedida: não foi mudada.
+- **10. Custo da varredura de parada.** A cada `LIVE_STALL_SWEEP_SECONDS` a varredura lê as `live_paper` em andamento e as que têm
+  `stalled_since`. Índices parciais sugeridos, NÃO criados (a regra desta rodada proíbe migration nova): `ON runs (id) WHERE
+  stalled_since IS NOT NULL` e `ON runs (user_id) WHERE kind = 'live_paper' AND status = 'running'`. Há também um N+1 em
+  `isTelegramDeliverable` (uma consulta por execução que muda de estado); só pesa com muitas paradas simultâneas.
+- **16. Batimento com mais de uma instância.** `worker_heartbeats` guarda uma linha por instância e `worker.state` vale pela mais nova:
+  com duas instâncias, uma morta e outra viva, o admin mostra `alive`. Aceito para a réplica única de hoje (A3 do ADR 0001); com
+  réplicas, expor o estado por instância.
+- **Outras notas desta rodada.** (a) Achado 2: o tempo da transação da purga LGPD com volume real não foi medido (precisa do
+  `make lgpd-test`); 600 s é um teto, não uma medida. (b) Achado 4: `GET /v1/runs` ainda não filtra por `status`. (c) Achado 3: uma
+  simulação que ficou muito tempo na fila mostra "fechou às HH:MM" na primeira vela em vez de "na fila". (d) Achado 13: no Windows o
+  `taskkill` sem `/F` não fecha processo de console escondido, então API e worker ainda caem à força (ver o achado 13).
