@@ -1,8 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { createOutageLog } from '../packages/database/src/connection/outage-log.js';
-import { readSafeErrorFields } from '../packages/database/src/connection/safe-error-fields.js';
+import { loadDatabaseConnectionApi } from './fixtures/database-connection/database-connection-source.fixture.js';
+
+const { outageLog, safeFields } = await loadDatabaseConnectionApi();
+const { createOutageLog } = outageLog;
+const { readSafeErrorFields } = safeFields;
 
 const SECRET_URL = 'postgres://ativada:s3cret-pw@db.internal:5432/ativada';
 const SECRET_PARAMETER = 'user-email@example.com';

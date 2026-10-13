@@ -7,7 +7,7 @@ COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
 LIVE72 := env -i PATH="$$PATH" HOME="$$HOME" bun --env-file=envs/env.live72 run scripts/live72/cli.ts
 
-.PHONY: help bootstrap config up down ps check panel-e2e contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants price-alert-mutants user-asset-mutants alert-mutants runlog-mutants telegram-test goals-test price-alerts-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants identity-logs live72-up live72-start live72-status live72-report live72-stop live72-down
+.PHONY: help bootstrap config up down ps check panel-e2e contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants price-alert-mutants user-asset-mutants alert-mutants runlog-mutants telegram-test goals-test price-alerts-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants db-outage-test identity-logs live72-up live72-start live72-status live72-report live72-stop live72-down
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -145,6 +145,13 @@ live-test: ## Prova a simulação ao vivo contra Postgres de teste descartável:
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/live-test.ts
+
+db-outage-test: ## Prova a recuperação do worker e da API quando o banco cai e volta (SIGKILL do banco visto pelos clientes e meia conexão que não fecha), por um proxy TCP, contra um Postgres de teste descartável: volta em até 60 s, fills e signals iguais aos da execução contínua, /v1/health 503 e 200, batimento do worker e log sem PII
+	set -a; . envs/env.test; set +a; \
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/db-outage-test.ts
 
 live-mutants: ## Prova que o adaptador do banco da simulação ao vivo reprova 8 mutantes (passo em duas transações, checkpoint recusado que deixa linhas, bolsa errada, sentimento sem corte, espera por buraco que não grava ou não apaga, entre outros) contra o live-test inteiro, num Postgres de teste descartável
 	set -a; . envs/env.test; set +a; \

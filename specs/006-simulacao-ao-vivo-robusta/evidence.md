@@ -223,3 +223,26 @@ deixa `public` vazio) e `... db:database-test` -> "OK", incluindo os 3 casos nov
 - Desvio: R9 aplicada a qualquer falha de conexão (R1) e não só ao `DatabaseUnavailableError`, senão a primeira requisição depois da queda ainda dava 500.
 
 Gates (WSL): `typecheck`, `lint`, `format` limpos; 343/343 nos contratos da task e vizinhos; rodada completa de `test/*.contract.test.ts` sem mutantes: 0 falhas em todos os lotes.
+
+## T1.7 — `make db-outage-test` e mutantes da reconexão (2026-10-13, `sonnet`)
+
+- `packages/database/test-support/outage-proxy.ts`: proxy TCP de teste com `forward`, `refuse` (derruba tudo e fecha as novas na hora) e `mute` (conexões abertas e novas
+  ficam mudas SEM fechar; as antigas nunca voltam). Contrato próprio: `test/outage-proxy.contract.test.ts`.
+- `scripts/db-outage-test.ts` + `scripts/db-outage-test/` e alvo `make db-outage-test`: dois bancos descartáveis (execução contínua x cenário), worker REAL em processo à parte
+  e API real (em processo) atrás do proxy, Binance falsa. Por cenário: 60 velas antes, 30 s de queda com as 246 velas restantes chegando ao banco, volta; confere `/v1/health`
+  503 durante e 200 depois, `503 DATABASE_UNAVAILABLE` numa rota de usuário, linhas iguais às da execução contínua (digest de sinais, ordens, preenchimentos, posições, patrimônio),
+  log do worker (resumo com `code`, sem URL, senha, consulta nem "tick failed") e o admin (`database.lastFailureCode`). Fecha com o batimento: `alive` -> `stale` (SIGKILL) -> `alive`.
+- Resultado medido (Postgres 18.3 embutido do WSL, porta 56434; comando:
+  `DATABASE_URL=<…:56434/postgres> bun --env-file=envs/env.test run scripts/db-outage-test.ts` no espelho do WSL):
+  - kill (proxy `refuse`): `/v1/health` voltou a 200 em 2.773 ms e o worker alcançou a última vela em 4.773 ms depois da volta (limite 60.000); 307 sinais e 27 preenchimentos iguais
+    aos da execução contínua; 4 linhas "database unavailable" (códigos `DATABASE_QUERY_TIMEOUT`, `DATABASE_UNAVAILABLE`) e 4 "database recovered".
+  - meia conexão (proxy `mute`): 3.045 ms e 2.509 ms; os mesmos 307 sinais e 27 preenchimentos; 4 linhas e 3 "recovered".
+  - batimento: `stale` 14.867 ms depois do SIGKILL (limite 15.000), `alive` 267 ms depois de outro worker subir.
+- Mutantes `test/db-reconnect-mutants.contract.test.ts` (45 + controle, todos mortos): teto de tempo por unidade, reabertura após o limiar, troca do cliente com transação em voo,
+  eco de cliente aposentado, sonda única, classificação (cada código, SQLSTATE 08/57P0x, errno, `cause`), log com mensagem crua, janela de 60 s, volta registrada, backoff sem teto/
+  sem crescimento/sem sorteio. Os contratos `database-resilient`, `-outage-log` e `-reconnect-backoff` passaram a carregar o código por `loadDatabaseConnectionApi()` (é por onde
+  o mutante entra). Primeira rodada: 6 sobreviventes; 2 eram equivalentes (`isAbandoned` só vale entre o estouro e o `finally`, e sai removido do conjunto) e 4 viraram testes novos
+  (sucesso de transação num cliente aposentado não marca `up`; classificação de `CONNECTION_TIMEOUT`, `EXPECTED_REQUEST` e classe 08).
+
+Pendências: `docker restart` real do Postgres NÃO foi rodado (sem Docker utilizável aqui; o `kill` é o `refuse` do proxy, que para os clientes é igual); `make db-outage-test` em si
+não rodou (depende de `make up`), só o comando equivalente acima; `resync` do LISTEN não é asserido.

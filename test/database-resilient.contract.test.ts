@@ -1,8 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { DatabaseUnavailableError } from '../packages/database/src/connection/connection-error.js';
-import { createResilientDatabase } from '../packages/database/src/connection/resilient-database.js';
 import {
   createFlakyServer,
   FLAKY_MODE,
@@ -11,6 +9,11 @@ import {
   wrapLikeDrizzle,
   type FlakyServer,
 } from '../packages/database/test-support/flaky-sql.js';
+import { loadDatabaseConnectionApi } from './fixtures/database-connection/database-connection-source.fixture.js';
+
+const { connectionError, resilient } = await loadDatabaseConnectionApi();
+const { DatabaseUnavailableError } = connectionError;
+const { createResilientDatabase } = resilient;
 
 const TIMEOUT_MILLISECONDS = 25;
 const BACKOFF_BASE = 1_000;
@@ -322,6 +325,31 @@ describe('ResilientDatabase: a transaction in flight is never swapped out', () =
     expect(database.readHealth().state).toBe('up');
   });
 
+  test('the success of a transaction on a retired client does not mark the new client as up', async () => {
+    const { server, database, advance } = createHarness({
+      timeoutMilliseconds: LONG_TIMEOUT_MILLISECONDS,
+    });
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const transaction = database.begin(async (inner) => {
+      await gate;
+      await inner.unsafe('late');
+      return 'committed';
+    });
+    await settle();
+    server.setMode(FLAKY_MODE.CLOSED);
+    await capture(database.unsafe('x'));
+    advance(500);
+    await capture(database.unsafe('y'));
+    expect(database.readHealth().state).toBe('down');
+    server.setMode(FLAKY_MODE.HEALTHY);
+    release();
+    expect(await transaction).toBe('committed');
+    expect(database.readHealth().state).toBe('down');
+  });
+
   test('a unit that overran the cap does not keep the old client open', async () => {
     const { server, database } = createHarness();
     server.setMode(FLAKY_MODE.HUNG);
@@ -344,5 +372,32 @@ describe('ResilientDatabase: close', () => {
     await database.close();
     expect(server.clients.every((client) => client.isClosed())).toBe(true);
     expectUnavailable(await transaction, 'DATABASE_QUERY_TIMEOUT');
+  });
+});
+
+describe('classification of connection failures (ADR 0002, R1)', () => {
+  const { isDatabaseConnectionFailure } = connectionError;
+
+  test.each([
+    ['ERR_POSTGRES_CONNECTION_TIMEOUT', undefined],
+    ['ERR_POSTGRES_EXPECTED_REQUEST', undefined],
+    ['ERR_POSTGRES_CONNECTION_CLOSED', undefined],
+    ['ERR_POSTGRES_CONNECTION_REFUSED', undefined],
+    ['ERR_POSTGRES_SERVER_ERROR', '08006'],
+    ['ERR_POSTGRES_SERVER_ERROR', '08001'],
+    ['ERR_POSTGRES_SERVER_ERROR', '57P01'],
+    ['ERR_POSTGRES_SERVER_ERROR', '57P03'],
+  ])('%s %s is a connection failure, loose or wrapped like Drizzle', (code, errno) => {
+    const error = new FlakyPostgresError(code, errno);
+    expect(isDatabaseConnectionFailure(error)).toBe(true);
+    expect(isDatabaseConnectionFailure(wrapLikeDrizzle(error))).toBe(true);
+  });
+
+  test.each([
+    ['ERR_POSTGRES_SERVER_ERROR', '23505'],
+    ['ERR_POSTGRES_SERVER_ERROR', '53300'],
+    ['ERR_POSTGRES_SERVER_ERROR', undefined],
+  ])('%s %s is an error of the query, not of the connection', (code, errno) => {
+    expect(isDatabaseConnectionFailure(new FlakyPostgresError(code, errno))).toBe(false);
   });
 });

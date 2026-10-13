@@ -1,7 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { computeBackoff } from '../packages/database/src/connection/reconnect-backoff.js';
+import { loadDatabaseConnectionApi } from './fixtures/database-connection/database-connection-source.fixture.js';
+
+const { backoff: backoffModule } = await loadDatabaseConnectionApi();
+const { computeBackoff } = backoffModule;
 
 const BASE = 1_000;
 const MAX = 30_000;
