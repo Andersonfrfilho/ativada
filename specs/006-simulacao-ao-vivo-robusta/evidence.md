@@ -607,3 +607,13 @@ da correção e dos vizinhos no espelho do WSL (`gates6.sh`).
 - **Contrato** `test/dev-scripts.contract.test.ts`: `uname` falso (MINGW, MSYS, CYGWIN) recusa e cita o `.ps1`; arquivo de env com
   `$`, `${c}`, `$(echo x)`, aspas, CRLF e comentário é lido literalmente; `dev-lib.sh` não usa `source` no env; ordem
   `taskkill` sem `/F` → `Wait-Process` → `taskkill /F` no `.ps1`.
+
+### Achado 7 — documentação alinhada ao código real
+
+- **CLAUDE.md (spec 006, item 1)** dizia que o cliente reabre "só entre rondas, nunca dentro de `runInBatch`". O código reabre o
+  cliente a qualquer momento (R5/R6): a unidade nova vai ao cliente novo e a transação viva termina no velho, que só fecha quando
+  ninguém mais o usa (`closeIfIdle`). Texto corrigido no commit do achado 1 (que reescreveu a mesma frase) e confirmado aqui.
+- **ADR 0002, R8** dizia "o porteiro é quem loga, um por processo". Quem loga é cada laço (desvio já registrado na T1.4/T2.x): o
+  porteiro não tem logger; cada laço do worker (avaliação, alertas, recuperação de lacunas) e o resumo da API e da varredura de
+  parada têm a sua guarda `createDatabaseOutageGuard`, uma linha por laço por minuto (RNF01). R8 e o item 1 do CLAUDE.md agora dizem
+  isto. As mudanças dos achados 1 e 2 (R1, R4, R5, perfil longo, `isClosed`) já estavam no ADR e no CLAUDE.md desde os seus commits.
