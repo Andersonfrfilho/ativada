@@ -546,3 +546,10 @@ Achados da revisão final (Opus), um commit por achado ou grupo coeso. Gates de 
   | `/trade-summary` | 11,0 ms | 12,6 ms | 13,9 ms | 0,3 KB |
 
   O p95 do período inteiro com 10 vezes mais velas (31 ms em 17.520) subiu para 187 ms: cresce com o número de velas lidas na faixa (varredura da chave primária), dentro do alvo de 300 ms, sem índice novo nem migration. A faixa de 1 dia continua em 13 ms.
+
+### Pendências conhecidas da revisão (sem mudança de código)
+
+- **Achado 8:** cada `/chart` faz cerca de cinco consultas extras de verificação de dono (execução, janelas, totais, colunas, preenchimentos). Medido no p95 acima e dentro do alvo; unificar é otimização futura, não correção.
+- **Achado 9:** numa simulação ao vivo, `totals` e as setas (ou agrupamentos) são lidos em consultas separadas; se uma vela fecha entre as duas leituras, o total e as setas podem divergir por uma operação até a próxima leitura (o aviso do stream refaz a consulta).
+- **Achado 10:** se faltar o preenchimento de compra de uma posição, `total_paid` ignora a posição mas `total_fees` conta a taxa dela, e então `net` ≠ Σ `net_profit`. É um caso impossível no banco real (a venda exige a posição e o motor grava a compra antes); registrado também no ADR 0002, na seção da spec 005.
+- **Achado 12:** `CHART_WINDOW_READ_LIMIT = 5000` encolhe a faixa efetiva do walk-forward sem aviso se a execução tiver mais de 5.000 janelas de teste (o catálogo de janelas do produto fica muito abaixo disso).
