@@ -197,6 +197,38 @@ const MUTANTS: readonly Mutant[] = [
       '      readTradeTotals({ executor: database, scope, runId }),',
     ),
   },
+  {
+    name: 'LIVE_LATEST_EQUITY_POINT_READS_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-live-status.ts',
+      '.where(and(ownerCondition(scope, equityPoints.userId), eq(equityPoints.runId, runId)))',
+      '.where(eq(equityPoints.runId, runId))',
+    ),
+  },
+  {
+    name: 'LIVE_DECISION_ROWS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-live-status.ts',
+      '        ownerCondition(scope, signals.userId),\n        eq(signals.runId, runId),\n        params.before',
+      '        eq(signals.runId, runId),\n        params.before',
+    ),
+  },
+  {
+    name: 'LIVE_POSITIONS_AROUND_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-live-status.ts',
+      '        ownerCondition(scope, positions.userId),\n        eq(positions.runId, runId),\n        or(',
+      '        eq(positions.runId, runId),\n        or(',
+    ),
+  },
+  {
+    name: 'LIVE_DECISION_MARKERS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-live-status.ts',
+      '        ownerCondition(scope, signals.userId),\n        eq(signals.runId, runId),\n        gte(',
+      '        eq(signals.runId, runId),\n        gte(',
+    ),
+  },
 ];
 
 type Verdict = { readonly name: string; readonly exitCode: number; readonly output: string };

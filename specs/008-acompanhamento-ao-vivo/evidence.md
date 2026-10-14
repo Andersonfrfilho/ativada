@@ -171,3 +171,36 @@ WSL ~/gates/ativada-spec8b: typecheck verde · lint verde · format:check verde
 bun test (T1.1 a T1.5 + api-run* + api-openapi + ownership-registry + strategy-engine-boundary + code-size-limits +
 app-import-boundary): 460 pass, 0 fail
 ```
+
+## T1.6 — Mutantes do acompanhamento (sonnet, 2026-10-14)
+
+- `test/api-run-live-status-mutants.contract.test.ts` (alvo `LIVE_STATUS_MUTANT_TARGET` em
+  `test/fixtures/api-routes/api-routes-mutation.fixture.ts`; padrão do `api-run-chart-mutants`, cópia do `src` da API julgada
+  por `API_ROUTES_APP_SOURCE`, o primeiro teste que falha mata o mutante): **50 mutantes, todos mortos**, mais o controle (a
+  cópia sem edição passa). Famílias: dono e acesso (404 que vira outro erro, 409 `RUN_NOT_LIVE` removido ou virado 404, rotas
+  públicas, `decisions` do gráfico para backtest e walk-forward); validação e limites (query aberta, `limit` sem teto de 100,
+  página padrão que não é 24, `limit` e cursor ignorados, cursor nunca devolvido, cursor sem validar, `RUN_LIVE_STATUS` ausente em
+  cada rota ou com limite errado, teto de 500 velas do gráfico por uma a mais, removido ou com mais de 500 pontinhos mantidos);
+  arredondamento e conta (taxa para cima, saldo no lugar do benchmark, faixa do empate larga, bordas de `acima`/`abaixo`, o que
+  falta para baixo, o que cabe para cima, `remainingAmount` e `lossRoomAmount` negativos, prazo contado de agora, direções
+  trocadas no formato, cada direção das frases); frases e estados (limiar de venda na frase de compra, a carteira nas bordas da
+  vela de compra e de saída, precedência `not_running`, `no_candle` dito como aquecendo, estado sempre aguardando entrada,
+  posição aberta que é a fechada, canal anterior do Donchian trocado ou inventado, dado gravado que não é número mantido,
+  sentimento descartado).
+- Três mutantes sobreviveram na primeira rodada e viraram testes: arredondamento do que falta/cabe com saldo de mais de 8 casas
+  (`test/live-goal-progress.contract.test.ts`, dado sujo) e leitura gravada em texto no lugar do RSI
+  (`test/api-run-live-status.contract.test.ts`, nas decisões); a carteira nas bordas ganhou teste próprio.
+- `scripts/api-runs-mutants.ts`: +4 filtros de dono dos repositórios novos (`LIVE_LATEST_EQUITY_POINT_READS_EVERY_OWNER`,
+  `LIVE_DECISION_ROWS_READ_EVERY_OWNER`, `LIVE_POSITIONS_AROUND_READ_EVERY_OWNER`, `LIVE_DECISION_MARKERS_READ_EVERY_OWNER`); o
+  juiz `route-isolation-test` passou a rodar `checkLiveStatusReads`. Rodado no Postgres embutido do WSL (porta 56436, fora do
+  repositório; o `make api-runs-mutants` sobe o Docker de `ENV=test`, que outro executor usa): **25 mutantes de filtro de dono
+  reprovados** (21 antigos + 4 novos), controle passa. O texto do alvo `api-runs-mutants` no `Makefile` passou de 21 para 25.
+- O `api-run-chart-mutants` (spec 005) continua verde com a rota nova (38 testes).
+
+```text
+~/pg-scratch/pgctl-008.sh start · DATABASE_URL=...:56436 bun run scripts/api-runs-mutants.ts
+api-runs-mutants: OK - 25 mutantes de filtro de dono reprovados
+WSL ~/gates/ativada-spec8b: typecheck verde · lint verde · format:check verde
+bun test (live-status, chart-decisions, api-run*, api-openapi, database.contract, ownership-registry, strategy-engine-boundary,
+code-size-limits, app-import-boundary, frases e contas, mutantes do acompanhamento e do gráfico): 566 pass, 0 fail
+```

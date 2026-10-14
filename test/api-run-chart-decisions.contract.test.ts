@@ -175,6 +175,20 @@ describe('o teto de 500 velas', () => {
     expect(chart.decisions).toBeNull();
   });
 
+  test('dado sujo: mais de 500 decisões numa faixa de poucas velas também vira null, nunca 501 pontinhos', async () => {
+    const runId = await createLiveRun(harness, { subject: SUBJECT_A });
+    const rows = Array.from({ length: 501 }, (_unused, index) => ({
+      signal: { ...decisionRow(1, WAITING_VOTES), candleTime: PERIOD_START + index * 60_000 },
+      equity: equityRow(1, '1000', '1000'),
+    }));
+    seedDecisions(harness, runId, rows);
+    harness.runs.updateRun(runId, { lastCandleTime: PERIOD_START + 100 * HOUR });
+    const dirty = await chartOf(runId, `?from=${PERIOD_START}&to=${PERIOD_START + 100 * HOUR}`);
+    expect(dirty.decisions).toBeNull();
+    const clean = await chartOf(runId, `?from=${PERIOD_START}&to=${PERIOD_START + 5 * HOUR}`);
+    expect(clean.decisions).toHaveLength(300);
+  });
+
   test('acima do teto o banco nem é consultado para as decisões', async () => {
     const runId = await createLongRun();
     harness.queries.length = 0;

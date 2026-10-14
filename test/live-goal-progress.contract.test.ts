@@ -74,6 +74,12 @@ describe('progresso da meta da simulação ao vivo (ADR 0002, spec 008, L8)', ()
     expect(progressAt('900').remainingAmount).toBe('130');
   });
 
+  test('saldo com mais de 8 casas (dado sujo): o que falta sobe e o que cabe desce, sempre contra o usuário', () => {
+    const progress = progressAt('1012.123456789');
+    expect(progress.remainingAmount).toBe('17.87654322');
+    expect(progress.lossRoomAmount).toBe('62.12345678');
+  });
+
   test('o que falta sobe e o que cabe desce no oitavo decimal', () => {
     const progress = computeLiveGoalProgress({
       goal: GOAL,

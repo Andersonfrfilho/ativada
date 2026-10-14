@@ -166,3 +166,25 @@ export const LIVE_STALL_MUTANT_TARGET: MutantTarget = {
   judgeTimeoutMilliseconds: 120_000,
   shouldBailOnFirstFailure: true,
 };
+
+// O acompanhamento da simulação ao vivo (spec 008, Fase 1): as contas, as frases, as leituras gravadas, as rotas e as decisões
+// do `/chart`, julgados só pelos contratos deles (o primeiro teste que falha basta para matar o mutante).
+export const LIVE_STATUS_MUTANT_TARGET: MutantTarget = {
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-ativada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-ativada/.mutants`,
+  directoryPrefix: 'live-status-',
+  judgeTestFiles: [
+    'test/api-run-live-status.contract.test.ts',
+    'test/api-run-chart-decisions.contract.test.ts',
+    'test/live-balance.contract.test.ts',
+    'test/live-goal-progress.contract.test.ts',
+    'test/live-stored-readings.contract.test.ts',
+    'test/live-decision-messages.contract.test.ts',
+    'test/live-trigger-messages.contract.test.ts',
+    'test/live-status-messages.contract.test.ts',
+    'test/api-run-chart.contract.test.ts',
+    'test/api-openapi.contract.test.ts',
+  ],
+  sourceVariable: 'API_ROUTES_APP_SOURCE',
+  shouldBailOnFirstFailure: true,
+};

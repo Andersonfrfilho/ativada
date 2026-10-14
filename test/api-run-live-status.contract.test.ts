@@ -303,6 +303,23 @@ describe('simulação ao vivo sem nenhuma compra: o exemplo da spec', () => {
 });
 
 describe('sem vela, aquecendo, comprada, parada e concluída', () => {
+  test('leitura gravada que não é número (texto no lugar do RSI) vira ausência nas decisões: a frase sai sem o valor e a leitura é nula', async () => {
+    const runId = await createLiveRun(harness, { subject: SUBJECT_A });
+    const dirty = decisionRow(0, WAITING_VOTES);
+    seedDecisions(harness, runId, [
+      {
+        signal: { ...dirty, indicators: { ...dirty.indicators, 'rule:rsi-14': 'abc' } },
+        equity: equityRow(0, '1000', '1000'),
+      },
+    ]);
+    const { body } = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${runId}${DECISIONS_PATH}` }),
+    );
+    const [item] = (body as { data: Decision[] }).data;
+    expect(item?.message).toBe('Faltou 1 ponto: o RSI está entre 30 e 70.');
+    expect(item?.votes.find((vote) => vote.ruleId === 'rsi-14')?.reading).toBeNull();
+  });
+
   test('sem nenhuma vela fechada: saldo inicial, sem comparação, sem decisões e a razão dos gatilhos', async () => {
     const runId = await createLiveRun(harness, { subject: SUBJECT_A });
     const status = await liveStatusOf(runId);
@@ -444,6 +461,32 @@ describe('sem vela, aquecendo, comprada, parada e concluída', () => {
       scoreThreshold: '2',
       message: 'Faltou 1 ponto: o RSI (55) está entre 30 e 70.',
     });
+  });
+
+  test('a carteira nas bordas: aberta na própria vela conta, fechada nela não, compra e venda na mesma vela não', async () => {
+    const runId = await createLiveRun(harness, { subject: SUBJECT_A });
+    seedDecisions(harness, runId, flatRows());
+    harness.runs.seed(runId, 'positions', [
+      positionRow({ key: 'across', openedIndex: 5, closedIndex: 8 }),
+      positionRow({ key: 'same-candle', openedIndex: 12, closedIndex: 12 }),
+    ]);
+    const { body } = await readJson(
+      await harness.call({
+        subject: SUBJECT_A,
+        path: `${RUNS}/${runId}${DECISIONS_PATH}?limit=${DECISIONS}`,
+      }),
+    );
+    const thresholds = new Map(
+      (body as { data: Decision[] }).data.map((item) => [item.candleTime, item.scoreThreshold]),
+    );
+    expect([4, 5, 7, 8, 12, 13].map((index) => [index, thresholds.get(at(index))])).toStrictEqual([
+      [4, '2'],
+      [5, '-2'],
+      [7, '-2'],
+      [8, '2'],
+      [12, '2'],
+      [13, '2'],
+    ]);
   });
 
   test('parada ou concluída: o saldo continua e os gatilhos dizem por que não há', async () => {
