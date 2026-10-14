@@ -160,6 +160,54 @@ async function expectSameAsContinuous(journey: Journey, referenceRunId: string):
   return `${signals} sinais e ${fills} preenchimentos`;
 }
 
+// O `docker restart` do Postgres de teste: o worker fica sem ver as velas novas (proxy recusa), elas entram, e o reinício
+// real do contêiner derruba as conexões abertas no meio do trabalho. Só roda com OUTAGE_DOCKER_CONTAINER definido.
+export async function checkDockerRestart(
+  site: OutageSite,
+  params: { readonly container: string; readonly symbol: string; readonly dockerCommand: string },
+): Promise<void> {
+  const { container, symbol, dockerCommand } = params;
+  const plan = buildCandlePlan();
+  const referenceRunId = await runContinuousReference(site, { symbol, plan });
+  const journey = await startSubject(site, symbol, plan);
+  const logStart = site.worker.current.lines().length;
+  site.proxy.setMode(OUTAGE_PROXY_MODE.REFUSE);
+  await seedCandles(site.subject, plan.arriving.slice(CANDLES_BEFORE_OUTAGE), {
+    symbol,
+    allowFuture: true,
+  });
+  site.proxy.setMode(OUTAGE_PROXY_MODE.FORWARD);
+  const restartStartedAt = Date.now();
+  const restart = Bun.spawn([dockerCommand, 'restart', container], {
+    stdout: 'ignore',
+    stderr: 'pipe',
+  });
+  const healthStatuses: number[] = [];
+  while (
+    (await Promise.race([restart.exited, Bun.sleep(HEALTH_SAMPLE_MILLISECONDS)])) === undefined
+  ) {
+    healthStatuses.push((await readPublicHealth(site)).status);
+  }
+  assertCondition(
+    (await restart.exited) === 0,
+    `docker restart falhou: ${await new Response(restart.stderr).text()}`,
+  );
+  const restartMs = Date.now() - restartStartedAt;
+  assertCondition(
+    healthStatuses.every((status) => status === 503 || status === 200),
+    `/v1/health respondeu algo além de 200 e 503: ${healthStatuses.join(',')}`,
+  );
+  const recovery = await measureRecovery(journey);
+  const counted = await expectSameAsContinuous(journey, referenceRunId);
+  const audited = auditWorkerLog(site, logStart);
+  const admin = await readAdminSnapshot(site);
+  assertCondition(admin.database.state === 'up', `database.state: ${admin.database.state}`);
+  await cancelRun(site.subject, { runId: journey.runId });
+  reportLine(
+    `docker restart real de ${container} (${symbol}): reinício em ${restartMs} ms; /v1/health durante: ${healthStatuses.join(',') || 'sem amostra'}; 200 ${recovery.healthMs} ms depois; worker alcançou a última vela ${recovery.workerMs} ms depois (limite ${RECOVERY_LIMIT_MILLISECONDS} ms); ${counted} iguais aos da execução contínua; ${audited}`,
+  );
+}
+
 export async function checkOutage(
   site: OutageSite,
   kind: OutageKind,
