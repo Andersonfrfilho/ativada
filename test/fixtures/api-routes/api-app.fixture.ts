@@ -24,6 +24,9 @@ import type * as RunChartUseCaseModule from '../../../apps/api-ativada/src/runs/
 import type * as TradeSummaryRouteModule from '../../../apps/api-ativada/src/runs/trade-summary/trade-summary.route.js';
 import type * as TradeSummaryUseCaseModule from '../../../apps/api-ativada/src/runs/trade-summary/trade-summary.use-case.js';
 import type * as TradeSummaryMessageModule from '../../../apps/api-ativada/src/runs/trade-summary/trade-summary-message.js';
+import type * as LiveBalanceModule from '../../../apps/api-ativada/src/runs/live-status/live-balance.js';
+import type * as LiveGoalProgressModule from '../../../apps/api-ativada/src/runs/live-status/live-goal-progress.js';
+import type * as StoredReadingsModule from '../../../apps/api-ativada/src/runs/live-status/stored-readings.js';
 import type * as RunSeriesRoutesModule from '../../../apps/api-ativada/src/runs/run-series.routes.js';
 import type * as RunSeriesUseCasesModule from '../../../apps/api-ativada/src/runs/run-series.use-cases.js';
 import type * as RunUseCasesModule from '../../../apps/api-ativada/src/runs/run.use-cases.js';
@@ -106,6 +109,9 @@ export type ApiApp = {
   readonly tradeSummaryRoute: typeof TradeSummaryRouteModule;
   readonly tradeSummaryUseCase: typeof TradeSummaryUseCaseModule;
   readonly tradeSummaryMessage: typeof TradeSummaryMessageModule;
+  readonly liveBalance: typeof LiveBalanceModule;
+  readonly liveGoalProgress: typeof LiveGoalProgressModule;
+  readonly storedReadings: typeof StoredReadingsModule;
   readonly runSeriesRoutes: typeof RunSeriesRoutesModule;
   readonly runSeriesUseCases: typeof RunSeriesUseCasesModule;
   readonly runUseCases: typeof RunUseCasesModule;
@@ -193,6 +199,9 @@ export async function loadApiApp(): Promise<ApiApp> {
     tradeSummaryRoute: await load('runs/trade-summary/trade-summary.route'),
     tradeSummaryUseCase: await load('runs/trade-summary/trade-summary.use-case'),
     tradeSummaryMessage: await load('runs/trade-summary/trade-summary-message'),
+    liveBalance: await load('runs/live-status/live-balance'),
+    liveGoalProgress: await load('runs/live-status/live-goal-progress'),
+    storedReadings: await load('runs/live-status/stored-readings'),
     runSeriesRoutes: await load('runs/run-series.routes'),
     runSeriesUseCases: await load('runs/run-series.use-cases'),
     runUseCases: await load('runs/run.use-cases'),

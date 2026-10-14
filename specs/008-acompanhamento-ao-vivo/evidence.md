@@ -51,3 +51,26 @@ sessão e fora deste commit); `bun test` da paridade, `strategy-engine-boundary`
 `app-import-boundary` e `next-trigger-latest`: 73 pass, 0 fail.
 
 **[NEEDS CLARIFICATION]:** nenhum. A paridade bateu e não falta índice: o plano D3 vale, sem pool de threads nem cache.
+
+## T1.1 — Contas puras do acompanhamento (sonnet, 2026-10-14)
+
+- `apps/api-ativada/src/runs/live-status/live-balance.ts` (`computeLiveBalance`, `computeBuyAndHold`),
+  `live-goal-progress.ts` (`computeLiveGoalProgress`), `live-status.constant.ts` e a conclusão de `stored-readings.ts`
+  (`computeStoredTriggers`: remonta as leituras gravadas e chama `computeNextTriggers`; `needs_previous` na primeira decisão
+  com Donchian). Motor e `run-recording` intocados.
+- Contas à mão (ganho, perda, sem vela, 1/3 e −1/3 arredondados contra o usuário, empate em ±0,009 e ±0,01, o exemplo da spec
+  de 1.023,40) e propriedades de 2.000 sorteios contra um oráculo `bigint` independente (`test/fixtures/live-status/scaled-decimal.fixture.ts`):
+  taxa e diferença sempre o piso de 12 casas, `remainingAmount ≥ 0` (para cima), `lossRoomAmount ≥ 0` (para baixo),
+  `targetAmount`/`floorAmount` iguais a `computeGoalLevels`.
+- Prazo da meta: em 15m, 1h, 4h e 1d o candle em que `decideGoalStep` (worker) devolve `expired` fecha exatamente em
+  `deadlineAt = period_start + horizonDays × 86.400.000`.
+- Testes novos (carregam o módulo por `loadApiApp()`, então os mutantes entram): `test/live-balance.contract.test.ts`,
+  `test/live-goal-progress.contract.test.ts`, `test/live-stored-readings.contract.test.ts` (linha anterior entregue pelo
+  chamador mesmo com lacuna, valores não numéricos como ausência).
+
+```text
+WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
+bun test (3 arquivos novos): 38 pass, 0 fail
+vizinhos (live-stored-readings-parity, api-openapi, ownership-registry, strategy-engine-boundary, code-size-limits,
+app-import-boundary, api-run-trade-summary, api-runs): 193 pass, 0 fail
+```

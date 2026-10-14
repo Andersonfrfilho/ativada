@@ -1,15 +1,18 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
+  computeNextTriggers,
   REGIME_ADX_INDICATOR_ID,
   REGIME_FILTER_KIND,
   RISK_ATR_INDICATOR_ID,
   RULE_KIND,
   ruleIndicatorId,
   type IndicatorValue,
+  type NextTriggers,
   type RuleReading,
   type ScoreboardReadings,
   type SentimentObservation,
   type StrategyConfig,
+  type TriggerState,
 } from '@ativada/strategy-engine';
 
 // O que uma linha de `signals` guarda e o gatilho lê: `indicators` e `sentiment_observation` (jsonb, ainda sem tipo).
@@ -116,5 +119,39 @@ export function buildStoredReadings(params: BuildStoredReadingsParams): StoredRe
     status: STORED_READINGS_STATUS.READY,
     readings: { rules, atr: unflattenIndicator(latest, RISK_ATR_INDICATOR_ID), adx },
     sentiment: readSentiment(params.latest.sentimentObservation),
+  };
+}
+
+export type ComputeStoredTriggersParams = BuildStoredReadingsParams & {
+  readonly market: {
+    // `candles.close` e `candles.close_time` da vela da última linha: o mesmo `closeTime` que o motor recebeu (L1).
+    readonly close: string;
+    readonly closeTime: number;
+    readonly sentimentSource: string;
+  };
+  readonly state: TriggerState;
+};
+
+export type StoredTriggers =
+  | { readonly status: typeof STORED_READINGS_STATUS.READY; readonly triggers: NextTriggers }
+  | { readonly status: typeof STORED_READINGS_STATUS.NEEDS_PREVIOUS };
+
+// O que falta para a regra votar, das leituras GRAVADAS: monta as leituras e chama o `computeNextTriggers` puro (a
+// paridade com o recálculo sobre a série está provada em `live-stored-readings-parity.contract.test.ts`).
+export function computeStoredTriggers(params: ComputeStoredTriggersParams): StoredTriggers {
+  const { config, market, state } = params;
+  const stored = buildStoredReadings(params);
+  if (stored.status === STORED_READINGS_STATUS.NEEDS_PREVIOUS) return stored;
+  return {
+    status: STORED_READINGS_STATUS.READY,
+    triggers: computeNextTriggers({
+      config,
+      readings: stored.readings,
+      close: market.close,
+      closeTime: market.closeTime,
+      sentiment: stored.sentiment,
+      sentimentSource: market.sentimentSource,
+      state,
+    }),
   };
 }
