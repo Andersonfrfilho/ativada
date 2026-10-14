@@ -26,6 +26,11 @@ import type * as TradeSummaryUseCaseModule from '../../../apps/api-ativada/src/r
 import type * as TradeSummaryMessageModule from '../../../apps/api-ativada/src/runs/trade-summary/trade-summary-message.js';
 import type * as LiveBalanceModule from '../../../apps/api-ativada/src/runs/live-status/live-balance.js';
 import type * as LiveGoalProgressModule from '../../../apps/api-ativada/src/runs/live-status/live-goal-progress.js';
+import type * as DecisionConditionModule from '../../../apps/api-ativada/src/runs/live-status/decision-condition.js';
+import type * as DecisionMessagesModule from '../../../apps/api-ativada/src/runs/live-status/decision-messages.js';
+import type * as TriggerMessagesModule from '../../../apps/api-ativada/src/runs/live-status/trigger-messages.js';
+import type * as LiveStatusMessagesModule from '../../../apps/api-ativada/src/runs/live-status/live-status-messages.js';
+import type * as LiveNumberFormatModule from '../../../apps/api-ativada/src/runs/live-status/live-number-format.js';
 import type * as StoredReadingsModule from '../../../apps/api-ativada/src/runs/live-status/stored-readings.js';
 import type * as RunSeriesRoutesModule from '../../../apps/api-ativada/src/runs/run-series.routes.js';
 import type * as RunSeriesUseCasesModule from '../../../apps/api-ativada/src/runs/run-series.use-cases.js';
@@ -112,6 +117,11 @@ export type ApiApp = {
   readonly liveBalance: typeof LiveBalanceModule;
   readonly liveGoalProgress: typeof LiveGoalProgressModule;
   readonly storedReadings: typeof StoredReadingsModule;
+  readonly decisionCondition: typeof DecisionConditionModule;
+  readonly decisionMessages: typeof DecisionMessagesModule;
+  readonly triggerMessages: typeof TriggerMessagesModule;
+  readonly liveStatusMessages: typeof LiveStatusMessagesModule;
+  readonly liveNumberFormat: typeof LiveNumberFormatModule;
   readonly runSeriesRoutes: typeof RunSeriesRoutesModule;
   readonly runSeriesUseCases: typeof RunSeriesUseCasesModule;
   readonly runUseCases: typeof RunUseCasesModule;
@@ -202,6 +212,11 @@ export async function loadApiApp(): Promise<ApiApp> {
     liveBalance: await load('runs/live-status/live-balance'),
     liveGoalProgress: await load('runs/live-status/live-goal-progress'),
     storedReadings: await load('runs/live-status/stored-readings'),
+    decisionCondition: await load('runs/live-status/decision-condition'),
+    decisionMessages: await load('runs/live-status/decision-messages'),
+    triggerMessages: await load('runs/live-status/trigger-messages'),
+    liveStatusMessages: await load('runs/live-status/live-status-messages'),
+    liveNumberFormat: await load('runs/live-status/live-number-format'),
     runSeriesRoutes: await load('runs/run-series.routes'),
     runSeriesUseCases: await load('runs/run-series.use-cases'),
     runUseCases: await load('runs/run.use-cases'),

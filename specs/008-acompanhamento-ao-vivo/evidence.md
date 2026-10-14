@@ -74,3 +74,26 @@ bun test (3 arquivos novos): 38 pass, 0 fail
 vizinhos (live-stored-readings-parity, api-openapi, ownership-registry, strategy-engine-boundary, code-size-limits,
 app-import-boundary, api-run-trade-summary, api-runs): 193 pass, 0 fail
 ```
+
+## T1.2 — Catálogo de frases (sonnet, 2026-10-14)
+
+- `decision-messages.ts` (motivo por vela, L14, mais `resolveDecisionOutcome`, L12), `decision-condition.ts` (condição de cada
+  tipo de regra por voto, L15), `trigger-messages.ts` (o que falta por `metric`, o placar que falta, o aviso fixo e os três
+  motivos de "sem gatilho", L3/L11), `live-status-messages.ts` (saldo, comprar e segurar, meta; L6 a L9) e
+  `live-number-format.ts` (pt-BR sem `Intl`: vírgula, milhar com ponto, menos tipográfico, direção do arredondamento).
+  Nenhuma frase do servidor leva data ou hora (L9).
+- Texto literal conferido para: esperou (singular, plural e decimal, regra de maior peso, empate, regra de peso zero pelo filtro
+  ADX, sentimento sem leitura em 48 h, "todas a favor mas abaixo do limiar"), comprou (2 de 2, 2 de 3, 3 de 3, regra única),
+  vendeu, comprada esperando, a compra que não se repete, a venda sem posição, cada um dos 7 tipos de regra × voto contra/neutro,
+  cada `metric` × sentido × `basis`, regra que já vota a favor, sem limiar, placar que falta (compra e venda, singular, plural,
+  decimal, já alcançado), os quatro estados de `not_running`, `no_candle`, aquecendo (Donchian), saldo (ganho, perda, milhar,
+  menos 0,01, sem vela), acima/abaixo/empatada (singular em 1,00, módulo para cima) e a meta (1 dia, taxas digitadas, desfechos).
+- Desvios do texto do ADR: (a) "aquecendo" é só a frase dos gatilhos (L2); o ADR L12 já diz que decisão aquecendo não existe, então
+  `decision-messages` não tem essa frase; (b) o ADR não dá frase para "regra já vota a favor" nem "sem limiar": acrescentadas
+  ("{regra}: já vota para comprar/vender." e "{regra}: ainda não há leitura para dizer o que falta.").
+
+```text
+WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
+bun test (frases + T1.1 + paridade + api-openapi + ownership-registry + strategy-engine-boundary + code-size-limits +
+app-import-boundary): 215 pass, 0 fail
+```

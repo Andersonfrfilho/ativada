@@ -41,14 +41,14 @@ export type StoredReadings =
     }
   | { readonly status: typeof STORED_READINGS_STATUS.NEEDS_PREVIOUS };
 
-type IndicatorRecord = Readonly<Record<string, number | null>>;
+export type IndicatorRecord = Readonly<Record<string, number | null>>;
 
 function isPlainRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 // Só número finito vale; `null` (sentimento sem leitura) e qualquer outra coisa viram ausência.
-function readIndicatorRecord(value: unknown): IndicatorRecord {
+export function readIndicatorRecord(value: unknown): IndicatorRecord {
   if (!isPlainRecord(value)) return {};
   const entries = Object.entries(value).filter(
     (entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isFinite(entry[1]),
