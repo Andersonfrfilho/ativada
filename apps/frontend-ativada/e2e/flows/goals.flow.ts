@@ -3,7 +3,8 @@ import { expect, type Page } from '@playwright/test';
 
 const STRATEGY_NAME = 'Minha estratégia ao vivo';
 const EVALUATION_TIMEOUT_MILLISECONDS = 60_000;
-const WAITING_FIRST_CANDLE = /Aguardando a primeira vela, que fecha às d{2}:d{2} de (hoje|amanhã)./;
+const WAITING_FIRST_CANDLE =
+  /Aguardando a primeira vela, que fecha às \d{2}:\d{2} de (hoje|amanhã)\./;
 
 export async function openMainLink(page: Page, name: string): Promise<void> {
   await page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name }).click();

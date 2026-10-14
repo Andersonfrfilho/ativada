@@ -24,6 +24,7 @@ const REFRESH_COOKIE = '__Host-ativada_refresh';
 const JWT_PATTERN = /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\./;
 const DIST_INDEX = new URL('../dist/index.html', import.meta.url);
 const ROUND_PAUSE_MILLISECONDS = 6_000;
+const RATE_WINDOW_PAUSE_MILLISECONDS = 50_000;
 const consoleProblems: string[] = [];
 let page: Page;
 
@@ -142,15 +143,6 @@ test('Telegram: gera o código, vincula pelo webhook real e desvincula', async (
   await expect(page.getByText('Telegram não vinculado')).toBeVisible();
 });
 
-test('exportar meus dados baixa o arquivo da API com o e-mail do usuário', async () => {
-  const downloading = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Exportar meus dados' }).click();
-  const download = await downloading;
-  expect(download.suggestedFilename()).toMatch(/^ativada-export-\d{4}-\d{2}-\d{2}\.ndjson$/);
-  const path = await download.path();
-  expect(await readFile(path, 'utf8')).toContain(environment.email);
-});
-
 test('backtest: criar pela tela, acompanhar na fila e ver o resultado de uma execução real', async () => {
   await runBacktestThroughTheScreen(page, '0.0005');
   await expectBacktestResult(page);
@@ -190,6 +182,8 @@ test('metas: declarar a meta, ver o ranking estratégia x moeda e simular, com o
 });
 
 test('simulação parada: a faixa aparece pelo NOTIFY do servidor de controle e some quando a simulação volta, sem recarregar', async () => {
+  // As rodadas anteriores esgotam o limite de 120 requisições por minuto: um 429 na releitura deixaria a faixa velha na tela.
+  await page.waitForTimeout(RATE_WINDOW_PAUSE_MILLISECONDS);
   await watchTheStalledBannerComeAndGo(page, {
     request: page.request,
     url: environment.controlUrl,
@@ -257,6 +251,21 @@ test('celular: sem rolagem horizontal em nenhuma tela do painel', async () => {
     expect(overflow).toBeLessThanOrEqual(0);
   }
   await page.setViewportSize({ width: 1280, height: 720 });
+});
+
+// Depois do teste de tempo real de propósito: no Edge, a aba que intercepta o WebSocket trava depois do teste de um download.
+test('exportar meus dados baixa o arquivo da API com o e-mail do usuário', async () => {
+  await page.waitForTimeout(RATE_WINDOW_PAUSE_MILLISECONDS);
+  await page
+    .getByRole('navigation', { name: 'Principal' })
+    .getByRole('link', { name: 'Conta' })
+    .click();
+  const downloading = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Exportar meus dados' }).click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toMatch(/^ativada-export-\d{4}-\d{2}-\d{2}\.ndjson$/);
+  const path = await download.path();
+  expect(await readFile(path, 'utf8')).toContain(environment.email);
 });
 
 test('apagar a conta pede o e-mail, encerra a sessão e leva ao login', async () => {

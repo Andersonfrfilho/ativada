@@ -33,6 +33,7 @@ import { startFakeBinanceStreamServer } from '../packages/market-data-crypto/tes
 import { startApi } from './session-test/start-api.js';
 
 const HOLD_POLL_MILLISECONDS = 1000;
+const STALL_SWEEP_DISABLED_SECONDS = 3600;
 
 const EXPECTED_DISPLAY = {
   equity: '10.420,00',
@@ -89,6 +90,8 @@ async function main(): Promise<void> {
     const binance = startFakeBinanceStreamServer();
     identity.cleanup.register('parar a Binance falsa', () => binance.stop());
     Bun.env['TICKER_STREAM_ENABLED'] = 'true';
+    // A varredura de parada da API marcaria a simulação do seed (vela de ontem) por conta própria: o servidor de controle faz esse papel no teste.
+    Bun.env['LIVE_STALL_SWEEP_SECONDS'] = String(STALL_SWEEP_DISABLED_SECONDS);
     Bun.env['BINANCE_BASE_URL'] = binance.restUrl;
     Bun.env['BINANCE_STREAM_URL'] = binance.streamUrl;
     const api = startApi();

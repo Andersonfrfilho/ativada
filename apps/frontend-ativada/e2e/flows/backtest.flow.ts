@@ -60,6 +60,6 @@ async function expectTradesOnTheChart(page: Page): Promise<void> {
     return;
   }
   await arrows.first().click();
-  await expect(table.locator('tr[aria-selected="true"]')).toHaveCount(1);
+  await expect(table.locator('tr[aria-current="true"]')).toHaveCount(1);
   await expect(page).toHaveURL(/[?&]operacao=/);
 }
