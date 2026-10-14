@@ -553,3 +553,13 @@ Achados da revisão final (Opus), um commit por achado ou grupo coeso. Gates de 
 - **Achado 9:** numa simulação ao vivo, `totals` e as setas (ou agrupamentos) são lidos em consultas separadas; se uma vela fecha entre as duas leituras, o total e as setas podem divergir por uma operação até a próxima leitura (o aviso do stream refaz a consulta).
 - **Achado 10:** se faltar o preenchimento de compra de uma posição, `total_paid` ignora a posição mas `total_fees` conta a taxa dela, e então `net` ≠ Σ `net_profit`. É um caso impossível no banco real (a venda exige a posição e o motor grava a compra antes); registrado também no ADR 0002, na seção da spec 005.
 - **Achado 12:** `CHART_WINDOW_READ_LIMIT = 5000` encolhe a faixa efetiva do walk-forward sem aviso se a execução tiver mais de 5.000 janelas de teste (o catálogo de janelas do produto fica muito abaixo disso).
+
+## Rodada com Docker real (2026-10-14)
+
+Resultados completos e o método (compose no Windows, `bun` do WSL, ambiente `ENV=test` descartável derrubado com `--volumes`) estão em
+`specs/006-simulacao-ao-vivo-robusta/evidence.md`, seção "Rodada com Docker real". Para a spec 005: `database-test` completo VERDE
+(inclui o filtro de faixa, `listFillsOfPositions` e `checkTradeTotals` contra Postgres real), `api-runs-test` VERDE com `/chart`
+800 colunas p95 41,9 ms (144,3 KB), 2.000 colunas p95 39,6 ms (323 KB), 1 dia p95 9,5 ms, trades p95 14,0 ms, trade-summary p95 9,0 ms;
+`api-runs-mutants` VERDE (21 de 21 reprovados); `panel-e2e` VERDE, 21 de 21, com o Edge (`PANEL_E2E_BROWSER_CHANNEL=msedge`), o que
+fecha o "escrito, NÃO executado" da T-E2E deste arquivo. A primeira execução achou o seletor `aria-selected` do `backtest.flow.ts`
+(o cartão usa `aria-current`).

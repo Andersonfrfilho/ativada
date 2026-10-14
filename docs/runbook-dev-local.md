@@ -34,6 +34,8 @@ espera a porta do Postgres responder (até 60 s); aplica as migrations; sobe **A
 plano. Rodar de novo não duplica nada: se o processo registrado em `.dev/pids/` está vivo, ele é mantido; se a porta
 já está ocupada por outro processo, o script avisa e não sobe aquele serviço.
 
+**Não canalize a saída do `dev-up.ps1`** (`pwsh scripts/dev-up.ps1 | ...`): os processos filhos herdam o cano e o comando só termina quando eles morrerem. Para capturar, redirecione para arquivo (`pwsh scripts/dev-up.ps1 > dev-up.txt`) ou use `Start-Process -RedirectStandardOutput`.
+
 O `dev-down` para só os processos registrados em `.dev/pids/` (nunca por nome de processo) e **não apaga volumes**.
 Sem `--infra` ele só sugere derrubar os containers (em terminal interativo, pergunta).
 

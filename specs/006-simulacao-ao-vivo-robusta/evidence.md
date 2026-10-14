@@ -642,3 +642,54 @@ da correção e dos vizinhos no espelho do WSL (`gates6.sh`).
   `make lgpd-test`); 600 s é um teto, não uma medida. (b) Achado 4: `GET /v1/runs` ainda não filtra por `status`. (c) Achado 3: uma
   simulação que ficou muito tempo na fila mostra "fechou às HH:MM" na primeira vela em vez de "na fila". (d) Achado 13: no Windows o
   `taskkill` sem `/F` não fecha processo de console escondido, então API e worker ainda caem à força (ver o achado 13).
+
+## Rodada com Docker real (2026-10-14): pendências de Docker/make das specs 005 e 006
+
+Ambiente: Windows 11 + WSL Ubuntu; Docker Desktop 29.8.2 (Windows). O WSL não tem Docker próprio, então cada alvo foi rodado assim:
+`docker compose --env-file envs/env.test -f compose.yaml up -d --wait [serviços]` no Windows (projeto `ativada-test`, portas
+56433/56181/56127/56128), o `bun` do WSL por cima (`/mnt/c/...`, que não sofre do `/C:/` do `new URL().pathname`) e
+`docker compose ... down --volumes` do ambiente de TESTE em `finally`. Os containers `ativada-dev-*` não foram tocados (nem `down`,
+nem `restart`, nem volume). Bun 1.4.3 no WSL (o Makefile exige 1.3.14 e o `make` não existe aqui).
+
+| Alvo | Resultado | Detalhe |
+|---|---|---|
+| `migration-test` | VERDE | 24 migrations aplicadas e desfeitas |
+| `database-test` completo | VERDE (depois de 1 correção) | falhava em `users_telegram_chat_id_unique`: `goal-run-checks` e `run-stall-sweep-checks` usavam o chat `740000001`. Os chats da varredura de parada foram para `75000000x`. MEDIÇÃO do lote: **1.438 ms** para 17.520 pontos + 4.000 sinais + 300 ordens/preenchimentos/posições (meta < 1.500 ms; pontos 933 ms, sinais 400 ms): passa, com 62 ms de folga (disco `/mnt/c` ainda é o limite) |
+| `db-outage-test` | VERDE | `kill` 30 s fora, `/v1/health` 503 e depois 200 em 15 ms (outra rodada 756 ms), worker alcançou a última vela em 3,3 s; `half-open` 2,8 a 7,3 s para o health, worker em 1 a 4 s; 307 sinais e 27 preenchimentos iguais aos da execução contínua; parada com faixa em ~3 s, 1 STALL e 1 RESUME; batimento `alive -> stale` 15 s depois do SIGKILL |
+| `db-outage-test` com `docker restart` REAL | VERDE | cenário novo (`checkDockerRestart`, ligado por `OUTAGE_DOCKER_CONTAINER`, que o Makefile passa): o worker fica sem ver as velas (proxy recusa), elas entram, e `docker restart ativada-test-postgres` (reinício em 949 ms) derruba as conexões abertas: `/v1/health` 200 na amostra (o reinício é mais curto que a janela de 500 ms) e 200 em 3 ms depois; worker alcançou a última vela 4,5 s depois (limite 60 s); 307 sinais e 27 preenchimentos iguais; 1 "database unavailable" e 1 "database recovered", sem URL, senha nem consulta |
+| `stall-mutants` | VERDE | CONTROL passa e os 11 mutantes são reprovados |
+| `telegram-test` | VERDE | 297 mensagens, cada uma ao chat do dono; retry, `retry_after`, desistência, queda/reinício, LGPD e log sem token nem chat |
+| `lgpd-test` | VERDE | **duração da purga: o processo inteiro do cron (`main.ts`, só a tarefa `purge-deleted-accounts`) levou 954 ms** com o seed do teste (12 tabelas por dono, poucas linhas). Antes, rodando as 4 tarefas do cron, levou 72.857 ms, quase tudo do backfill indo à Binance de verdade; o teste agora passa `CRON_TASKS=purge-deleted-accounts`. **Volume real NÃO foi medido** (o seed é pequeno): a pendência do teto longo de 600 s continua aberta para uma conta com meses de execução ao vivo |
+| `api-runs-test` (spec 005) | VERDE | `/chart` 800 colunas, período inteiro: p50 20,2 ms, p95 **41,9 ms**, 144,3 KB; 2.000 colunas: p95 39,6 ms, 323 KB (ACIMA de 150 KB, como já documentado); 2.000 colunas com 499 marcadores: p95 35,2 ms, 300 KB; 1 dia: p95 9,5 ms; trades 100: p95 14,0 ms; trade-summary: p95 9,0 ms. `/v1/health` durante backtest e walk-forward: máx 4,1 e 6,9 ms |
+| `api-runs-mutants` (spec 005) | VERDE | CONTROL passa e os 21 mutantes de filtro de dono são reprovados |
+| `panel-e2e` | VERDE, 21 de 21 | com o Microsoft Edge (ver abaixo) |
+
+### panel-e2e com o Edge instalado (sem baixar nada)
+
+- **Opt-in, padrão intacto:** `PANEL_E2E_BROWSER_CHANNEL=msedge` (lido em `playwright.config.ts`, vira `use.channel`) e
+  `PANEL_E2E_PLAYWRIGHT_BIN` (troca o binário que o harness chama). Nada muda sem as variáveis.
+- **Como rodou aqui:** o Playwright 1.58 do `node_modules` é o do Windows (`playwright.exe`) e o `vite` do Windows tem a ligação
+  nativa do rolldown só para win32; então o harness rodou no WSL (`bun` do WSL, Postgres/Keycloak/Mailpit descartáveis do Docker do
+  Windows), o `vite build`/`preview` foi o do Windows (um `vite` num diretório de apoio no `PATH` delegando ao `bun.exe`) e o
+  `playwright.exe` do Windows abriu o Edge contra `127.0.0.1:56103` (rede espelhada do WSL). Variáveis passadas por `WSLENV`.
+  As portas de dev (56100/56101/56432) não foram usadas.
+- **Defeitos que a primeira execução real achou (a spec dizia "escrito, NÃO executado") e as correções:**
+  1. `backtest.flow.ts`: o teste esperava `tr[aria-selected="true"]`; o componente usa `aria-current` (o contrato de unidade já dizia isso).
+  2. `goals.flow.ts`: a regex perdeu as barras (`d{2}:d{2}` em vez de `\d{2}:\d{2}`).
+  3. `simulação parada`: a API do harness roda a varredura de parada de verdade (a cada 60 s) e marcava a simulação do seed (vela de
+     ontem) por conta própria. O harness agora define `LIVE_STALL_SWEEP_SECONDS=3600`: o servidor de controle faz esse papel.
+  4. Mesmo teste: o painel relê `GET /v1/runs` depois do aviso e a suíte inteira gasta o limite de **120 requisições por minuto**
+     por usuário; o `429` deixa a faixa velha na tela. Pausa de 50 s antes do teste (e antes da exportação, que também recebia
+     `429`; a tela mostra "Você já exportou há pouco" para qualquer 429, o que engana).
+  5. No Edge, `routeWebSocket` numa aba nova trava (sem fim) depois que um teste anterior terminou com um download.
+     Reproduzido isolado (teste A baixa, teste B abre aba e chama `routeWebSocket`; no mesmo teste não trava). O teste de
+     exportação foi para depois do de tempo real.
+- **Achado de produto (não corrigido):** o painel mostra "Você já exportou há pouco" para qualquer `429` do botão de exportação,
+  inclusive o do limite geral de 120/min; e uma releitura que recebe `429` deixa o dado velho na tela até o próximo aviso.
+
+### Ambiente do usuário religado
+
+`pwsh scripts/dev-up.ps1`: infra já no ar, migrations sem pendência (0022 e 0023 presentes), API `http://127.0.0.1:56101/v1/health`
+200, painel `http://127.0.0.1:56100` 200, 3 processos `bun` (api, worker, painel; pids em `.dev/pids/`), batimento do worker gravando
+(`worker_heartbeats`), segunda execução do script: "já está no ar" nos três, sem duplicar. Bug do script: com a saída canalizada
+(`| Select-Object`) o comando não termina, porque os filhos herdam o cano; registrado no runbook (redirecione para arquivo).
