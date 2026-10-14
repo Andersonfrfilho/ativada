@@ -7,11 +7,11 @@ import type { RunStallRepository, StallCandidate } from '../src/run-stall/run-st
 import type { LifecycleCheckContext } from './account-lifecycle-checks.js';
 import { resolvePersistenceOwner, seedRun } from './persistence-seed.js';
 
-const CYCLE_CHAT = '740000001';
-const STALE_CHAT = '740000002';
-const ROLLBACK_CHAT = '740000003';
-const LATE_CHAT = '740000004';
-const ACTIVE_CHAT = '740000005';
+const CYCLE_CHAT = '750000001';
+const STALE_CHAT = '750000002';
+const ROLLBACK_CHAT = '750000003';
+const LATE_CHAT = '750000004';
+const ACTIVE_CHAT = '750000005';
 const STALLED_SINCE = 1_760_000_900_000;
 const LAST_CANDLE_TIME = 1_760_000_000_000;
 const WAIT_MILLISECONDS = 8_000;
