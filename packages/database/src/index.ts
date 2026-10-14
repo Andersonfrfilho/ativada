@@ -110,6 +110,8 @@ export type {
   TradeTotals,
 } from './run-results/run-chart.types.js';
 export type { RunLogCursor, RunLogEntry } from './run-results/run-log.types.js';
+export { createRunLiveStatusRepository } from './run-results/run-live-status.js';
+export type * from './run-results/run-live-status.types.js';
 export { createRunBatchRepository } from './run-results/run-batch.repository.js';
 export type * from './run-results/run-batch.types.js';
 export { resolveRunOwnerScope } from './runs/run-owner.js';

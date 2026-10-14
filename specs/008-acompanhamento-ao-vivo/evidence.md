@@ -97,3 +97,30 @@ WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
 bun test (frases + T1.1 + paridade + api-openapi + ownership-registry + strategy-engine-boundary + code-size-limits +
 app-import-boundary): 215 pass, 0 fail
 ```
+
+## T1.3 — Leituras do acompanhamento ao vivo (sonnet, 2026-10-14)
+
+- `packages/database/src/run-results/run-live-status.ts` (+ `run-live-status.types.ts`, exportados em `@ativada/database` como
+  `createRunLiveStatusRepository`): `readLatestEquityPoint` (PK, uma linha), `listDecisionRows` (decrescente, `before` exclusivo,
+  `LIMIT limit + 1`, junção `LEFT JOIN candles` pela PK com a corretora/par/timeframe da execução; vela ausente lança, nunca
+  omite a linha), `listPositionsAround` (as abertas e as que cruzam a faixa de velas lida, por `positions_user_id_run_id_idx`,
+  com `LIMIT`) e `listDecisionMarkers` (pontinhos do gráfico, crescente, `LIMIT 501`). O dono vai no tipo como `OwnerScope`
+  (a marca `ownerUserId` do repositório, a mesma convenção das outras leituras) e cada consulta filtra `user_id` nela mesma.
+  Nenhuma migration, nenhum índice novo.
+- Verificação em Postgres real: `packages/database/test-support/run-live-status-checks.ts`, ligada ao `database-test`
+  (`checkLiveStatusReads`): 30 decisões com velas gravadas, duas páginas de 24 + 6 sem repetir (concatenadas = a lista inteira),
+  cursor só quando há mais antigas, junção com o fechamento e o `close_time` certos, posições que cruzam a faixa (fechada que
+  atravessa, aberta e compra e venda na mesma vela), pontinhos em ordem crescente com `LIMIT`; dono alheio recebe vazio nas
+  quatro leituras; decisão sem vela vira erro.
+- Banco usado: `embedded-postgres` do WSL (`~/pg-scratch/data-008`, porta 56436, fora do repositório; nenhum container
+  e nenhum volume do Docker tocado).
+
+```text
+~/pg-scratch/pgctl-008.sh start · bun run --cwd packages/database db:database-test (DATABASE_URL=...:56436)
+database-test: ao vivo: último ponto, 30 decisões em duas páginas decrescentes com junção em candles, posições que cruzam
+  a faixa e pontinhos; dono alheio recebe vazio nas quatro leituras
+database-test: OK
+WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
+bun test (ownership-registry, strategy-engine-boundary, code-size-limits, app-import-boundary, api-openapi, api-runs,
+api-run-chart): 157 pass, 0 fail
+```
