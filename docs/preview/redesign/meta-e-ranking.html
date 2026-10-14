@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meta e ranking · AtivAdA (preview)</title>
+<style>
+/* Tokens: copiados de apps/frontend-ativada/src/styles/global.css + escalas novas propostas (marcadas "novo") */
+:root {
+  --bg: #f2f4f8; --surface: #ffffff; --surface-2: #ebeef4; --line: #d8dee9;
+  --ink: #10162a; --ink-2: #47516c; --ink-3: #5f6b86;
+  --accent: #2541b2; --accent-soft: #e1e7fb; --on-accent: #ffffff;
+  --buy: #087a52; --buy-soft: #dbf2e8; --sell: #c0353d; --sell-soft: #fbe3e4;
+  --warn: #7a4f00; --warn-soft: #fbf0d9; --bench: #66708c;
+  --font-body: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-data: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --gutter: 16px;
+  /* novo: escalas */
+  --text-xs: 12px; --text-sm: 13px; --text-md: 15px; --text-lg: 18px; --text-xl: 22px; --text-2xl: 30px; --text-3xl: 40px;
+  --radius-card: 14px; --radius-control: 10px; --radius-pill: 999px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+  --shadow-card: 0 1px 2px rgb(16 22 42 / 0.04), 0 4px 16px rgb(16 22 42 / 0.04);
+  --motion-fast: 160ms; --motion-base: 240ms; --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0b0f1c; --surface: #131a2c; --surface-2: #1a2238; --line: #262f4b;
+    --ink: #e8ecf6; --ink-2: #a8b1c8; --ink-3: #8a94ad;
+    --accent: #8ea3ff; --accent-soft: #1e2954; --on-accent: #0b0f1c;
+    --buy: #41cc94; --buy-soft: #0e2d23; --sell: #ff7d83; --sell-soft: #3a191e;
+    --warn: #f2c26b; --warn-soft: #33270f; --bench: #8b94ad;
+    --shadow-card: none; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0b0f1c; --surface: #131a2c; --surface-2: #1a2238; --line: #262f4b;
+  --ink: #e8ecf6; --ink-2: #a8b1c8; --ink-3: #8a94ad;
+  --accent: #8ea3ff; --accent-soft: #1e2954; --on-accent: #0b0f1c;
+  --buy: #41cc94; --buy-soft: #0e2d23; --sell: #ff7d83; --sell-soft: #3a191e;
+  --warn: #f2c26b; --warn-soft: #33270f; --bench: #8b94ad;
+  --shadow-card: none; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--font-body); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4, p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 3px; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.muted { color: var(--ink-3); }
+.small { font-size: var(--text-sm); }
+.xs { font-size: var(--text-xs); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+svg.icon { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -3px; }
+svg.icon.sm { width: 14px; height: 14px; vertical-align: -2px; }
+
+/* Faixa de aviso */
+.notice-strip { background: var(--warn-soft); color: var(--warn); font-size: var(--text-xs); text-align: center; padding: 6px var(--gutter); }
+.notice-strip strong { font-weight: 600; }
+
+/* Cabeçalho */
+.topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.topbar-inner { max-width: 1180px; margin: 0 auto; padding: 0 var(--gutter); height: 60px; display: flex; align-items: center; gap: var(--space-4); }
+.brand { font: 700 19px/1 var(--font-display); color: var(--ink); text-decoration: none; letter-spacing: -0.02em; }
+.brand span { color: var(--accent); }
+.nav { display: flex; gap: 2px; flex: 1; min-width: 0; }
+.nav a { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 12px; border-radius: var(--radius-control); color: var(--ink-2); text-decoration: none; font-size: 14.5px; white-space: nowrap; }
+.nav a:hover { background: var(--surface-2); color: var(--ink); }
+.nav a[aria-current='page'] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.top-actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
+.icon-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; height: 44px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); color: var(--ink-2); cursor: pointer; font-size: var(--text-sm); }
+.icon-button:hover { color: var(--ink); border-color: var(--ink-3); }
+.menu-toggle { display: none; }
+.mobile-nav { display: none; }
+@media (max-width: 1023px) {
+  .nav { display: none; }
+  .menu-toggle { display: inline-flex; }
+  .mobile-nav[data-open='true'] { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px var(--gutter) 12px; border-top: 1px solid var(--line); }
+  .mobile-nav a { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: var(--radius-control); color: var(--ink-2); text-decoration: none; }
+  .mobile-nav a[aria-current='page'] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .hide-mobile { display: none; }
+}
+
+/* Página */
+.page { max-width: 1180px; margin: 0 auto; padding: var(--space-6) var(--gutter) 64px; }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-5); }
+.page-head h1 { font: 600 var(--text-2xl)/1.15 var(--font-display); letter-spacing: -0.02em; }
+.page-head .sub { color: var(--ink-3); font-size: var(--text-sm); margin-top: 4px; }
+.crumbs { font-size: var(--text-sm); color: var(--ink-3); margin-bottom: 6px; }
+.crumbs a { color: var(--ink-2); }
+.grid { display: grid; gap: var(--space-4); }
+.grid-2 { grid-template-columns: 1fr; }
+.grid-main { grid-template-columns: 1fr; }
+@media (min-width: 900px) { .grid-2 { grid-template-columns: 1fr 1fr; } .grid-main { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); } }
+.stack { display: grid; gap: var(--space-4); align-content: start; }
+
+/* Cartão */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: var(--space-5); box-shadow: var(--shadow-card); min-width: 0; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap; }
+.card-title { display: flex; align-items: center; gap: 8px; font: 600 var(--text-lg)/1.25 var(--font-display); letter-spacing: -0.01em; }
+.card-title .icon { color: var(--ink-3); }
+.card-kicker { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 600; }
+.card-foot { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; justify-content: space-between; font-size: var(--text-sm); }
+.link-arrow { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; font-weight: 600; text-decoration: none; }
+.link-arrow:hover { text-decoration: underline; }
+
+/* Selos (sempre ícone + palavra + cor) */
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: var(--radius-pill); font-size: var(--text-sm); font-weight: 600; white-space: nowrap; background: var(--surface-2); color: var(--ink-2); }
+.chip.buy { background: var(--buy-soft); color: var(--buy); }
+.chip.sell { background: var(--sell-soft); color: var(--sell); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.info { background: var(--accent-soft); color: var(--accent); }
+.chip.outline { background: transparent; border: 1px solid var(--line); font-weight: 500; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+
+/* Linha de pulso ao vivo */
+.pulse { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 12px 16px; border-radius: var(--radius-card); background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--buy); font-size: var(--text-sm); color: var(--ink-2); margin-bottom: var(--space-4); }
+.pulse-item { display: inline; white-space: nowrap; }
+.pulse-item strong { color: var(--ink); font-weight: 600; }
+.pulse-state { display: inline-flex; align-items: center; gap: 8px; color: var(--buy); font-weight: 700; }
+.live-dot { position: relative; width: 10px; height: 10px; border-radius: 50%; background: var(--buy); }
+.live-dot::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--buy); opacity: 0; }
+.live-dot.blink::after { animation: ping 900ms var(--ease-out) 1; }
+@keyframes ping { from { opacity: 0.8; transform: scale(0.5); } to { opacity: 0; transform: scale(1.5); } }
+.flash { animation: flash 700ms ease-out 1; }
+@keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
+.countdown { font-family: var(--font-data); color: var(--ink); font-weight: 600; }
+.pulse-sep { color: var(--line); }
+@media (max-width: 640px) { .pulse { display: grid; grid-template-columns: 1fr; gap: 4px; } .pulse-sep { display: none; } .pulse-item { white-space: normal; } }
+
+/* Números grandes */
+.kpis { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.kpi { padding: var(--space-4); border-radius: 12px; background: var(--surface-2); min-width: 0; }
+.kpi-label { display: flex; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--ink-2); font-weight: 600; }
+.kpi-value { font: 600 var(--text-xl)/1.2 var(--font-data); margin-top: 6px; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.kpi-value .unit { font: 500 var(--text-sm) var(--font-body); color: var(--ink-3); margin-left: 4px; }
+.kpi-note { font-size: var(--text-sm); color: var(--ink-3); margin-top: 4px; }
+.hero-value { font: 600 var(--text-3xl)/1.05 var(--font-data); letter-spacing: -0.03em; }
+.hero-value .unit { font: 500 var(--text-md) var(--font-body); color: var(--ink-3); margin-left: 6px; letter-spacing: 0; }
+.delta { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; font-family: var(--font-data); }
+.delta.up { color: var(--buy); } .delta.down { color: var(--sell); } .delta.flat { color: var(--ink-2); }
+
+/* Frase-veredito */
+.verdict { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); color: var(--ink); font-size: var(--text-md); }
+.verdict .icon { color: var(--accent); margin-top: 3px; }
+.verdict.warn { background: var(--warn-soft); } .verdict.warn .icon { color: var(--warn); }
+
+/* Barras de progresso com rótulo */
+.meter { display: grid; gap: 6px; }
+.meter-row { display: flex; justify-content: space-between; gap: 8px; font-size: var(--text-sm); color: var(--ink-2); flex-wrap: wrap; }
+.meter-row strong { color: var(--ink); }
+.track { position: relative; height: 10px; border-radius: var(--radius-pill); background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+.track > i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--accent); }
+.track.time > i { background: var(--bench); }
+.track.loss > i { background: var(--warn); }
+
+/* Botões */
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: var(--radius-control); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-weight: 600; cursor: pointer; text-decoration: none; font-size: 15px; }
+.button:hover { border-color: var(--ink-3); }
+.button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.button.danger { color: var(--sell); border-color: color-mix(in srgb, var(--sell) 45%, var(--line)); }
+.button.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+
+/* Tabela que vira lista em 375 px */
+.table-wrap { width: 100%; }
+table.data { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+table.data th { text-align: left; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.data td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+table.data tbody tr:nth-child(even of :not(.detail-row)) td { background: color-mix(in srgb, var(--surface-2) 45%, transparent); }
+table.data .right { text-align: right; }
+@media (max-width: 700px) {
+  table.data.stack-mobile thead { display: none; }
+  table.data.stack-mobile, table.data.stack-mobile tbody, table.data.stack-mobile tr, table.data.stack-mobile td { display: block; width: 100%; }
+  table.data.stack-mobile tr { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  table.data.stack-mobile td { border: 0; padding: 2px 0; background: none !important; }
+  table.data.stack-mobile td[data-label]::before { content: attr(data-label) ' '; color: var(--ink-3); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-right: 6px; }
+  table.data.stack-mobile .right { text-align: left; }
+}
+
+/* Gráfico */
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart .grid-line { stroke: var(--line); stroke-width: 1; }
+.chart .axis-text { fill: var(--ink-3); font: 11px var(--font-data); }
+.chart .series { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .series.bench { stroke: var(--bench); stroke-dasharray: 5 4; }
+.chart .wait-dot { fill: var(--surface); stroke: var(--ink-2); stroke-width: 2; }
+.chart .crosshair { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart .hit { fill: transparent; cursor: crosshair; }
+.chart .direct-label { font: 600 12px var(--font-body); }
+.tooltip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: var(--text-sm); padding: 8px 10px; border-radius: 8px; min-width: 150px; transform: translate(-50%, calc(-100% - 12px)); opacity: 0; transition: opacity var(--motion-fast); z-index: 5; }
+.tooltip[data-show='true'] { opacity: 1; }
+.tooltip strong { display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--text-sm); color: var(--ink-2); margin-top: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch-line { width: 18px; height: 0; border-top: 2px solid var(--accent); }
+.swatch-line.bench { border-top: 2px dashed var(--bench); }
+.swatch-dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--ink-3); background: var(--surface); }
+
+/* "Por que está assim" */
+.why { margin-top: var(--space-8); border: 1px dashed var(--ink-3); border-radius: var(--radius-card); background: var(--surface); }
+.why > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 var(--space-5); font-weight: 600; }
+.why > summary::-webkit-details-marker { display: none; }
+.why > summary .chev { margin-left: auto; transition: transform var(--motion-fast); }
+.why[open] > summary .chev { transform: rotate(180deg); }
+.why-body { padding: 0 var(--space-5) var(--space-5); display: grid; gap: var(--space-3); }
+.why-item { display: grid; gap: 2px; padding: 12px 14px; border-radius: 10px; background: var(--surface-2); font-size: 14.5px; }
+.why-item b { font-size: var(--text-sm); color: var(--accent); }
+.why-item .h { font-size: var(--text-xs); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.anchor-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--accent); color: var(--on-accent); font: 700 11px var(--font-body); vertical-align: 2px; margin-left: 6px; }
+
+/* Seletor de estado do preview (não é do produto) */
+.preview-switch { display: inline-flex; padding: 4px; gap: 4px; border-radius: var(--radius-pill); background: var(--surface-2); border: 1px solid var(--line); }
+.preview-switch button { min-height: 36px; padding: 0 14px; border-radius: var(--radius-pill); border: 0; background: transparent; cursor: pointer; font-size: var(--text-sm); font-weight: 600; color: var(--ink-2); }
+.preview-switch button[aria-pressed='true'] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-card); outline: 1px solid var(--line); }
+.preview-note { font-size: var(--text-xs); color: var(--ink-3); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+@media (max-width: 640px) { .card { padding: var(--space-4); } .hero-value { font-size: 32px; } .page-head h1 { font-size: 24px; } }
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></symbol><symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol><symbol id="i-wallet" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M16 15h2"/></symbol><symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></symbol><symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol><symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></symbol><symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></symbol><symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol><symbol id="i-equal" viewBox="0 0 24 24"><path d="M5 9h14M5 15h14"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 21h20z"/><path d="M12 10v4"/><path d="M12 17.5v.5"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.5v.5"/></symbol><symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol><symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol><symbol id="i-chevright" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol><symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></symbol><symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol><symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-sort" viewBox="0 0 24 24"><path d="M8 4v16"/><path d="m4 16 4 4 4-4"/><path d="M16 20V4"/><path d="m12 8 4-4 4 4"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="m10 8-4 4 4 4"/><path d="M6 12h10"/></symbol><symbol id="i-columns" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></symbol><symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="m12 18 4-6"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol><symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol><symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><path d="M12 17.5v.5"/></symbol><symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></symbol></svg>
+<div class="notice-strip"><strong>Simulação com dinheiro fictício.</strong> Nada aqui é recomendação de investimento.</div>
+<header class="topbar"><div class="topbar-inner">
+  <a class="brand" href="index.html">Ativ<span>AdA</span></a>
+  <nav class="nav" aria-label="Principal"><a href="visao-geral.html"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>Visão geral</a><a href="meta-e-ranking.html" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-target"/></svg>Metas</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Prazos</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-wallet"/></svg>Ativos</a><a href="backtests-lista.html"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>Backtests</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg>Estratégias</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>Alertas</a></nav>
+  <div class="top-actions">
+    <span class="chip buy" title="Os preços chegam da Binance a cada segundo"><span class="live-dot" aria-hidden="true"></span><span>Preços ao vivo</span></span>
+    <button class="icon-button" type="button" data-theme-toggle><svg class="icon" aria-hidden="true"><use href="#i-sun"/></svg><span class="hide-mobile" data-theme-text>automático</span></button>
+    <a class="icon-button hide-mobile" href="#" aria-label="Conta"><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg></a>
+    <button class="icon-button menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="mobile-nav" aria-label="Abrir menu"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+  </div>
+</div>
+<nav class="mobile-nav" id="mobile-nav" data-open="false" aria-label="Principal (celular)"><a href="visao-geral.html"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>Visão geral</a><a href="meta-e-ranking.html" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-target"/></svg>Metas</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Prazos</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-wallet"/></svg>Ativos</a><a href="backtests-lista.html"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>Backtests</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg>Estratégias</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>Alertas</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>Conta</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg>Sair</a></nav>
+</header>
+<style>
+.outcome { display: flex; gap: 2px; height: 12px; border-radius: 4px; overflow: hidden; min-width: 120px; }
+.outcome i { display: block; }
+.o-hit { background: var(--buy); } .o-time { background: var(--surface-2); outline: 1px solid var(--line); outline-offset: -1px; } .o-stop { background: var(--sell); }
+.podiums { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: var(--space-4); }
+.podium { border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: var(--surface); display: grid; gap: 4px; align-content: start; }
+.podium.mine { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.podium-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.rank { font: 700 22px var(--font-display); color: var(--ink-3); }
+.podium h3 { font: 600 17px var(--font-display); }
+.podium-num { font-size: 15px; margin-top: 8px; } .podium-num .num { font-size: 30px; font-weight: 600; margin-right: 4px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-top: var(--space-5); }
+.segmented { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius-control); overflow: hidden; }
+.segmented button { min-height: 40px; padding: 0 14px; border: 0; background: var(--surface); cursor: pointer; font-size: 14px; color: var(--ink-2); }
+.segmented button[aria-pressed='true'] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.sort-button { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; padding: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; min-height: 32px; }
+th[aria-sort='descending'] .sort-button { color: var(--accent); }
+tr.mine-row td { box-shadow: inset 0 1px 0 var(--accent), inset 0 -1px 0 var(--accent); }
+tr.mine-row td:first-child { box-shadow: inset 3px 0 0 var(--accent), inset 0 1px 0 var(--accent), inset 0 -1px 0 var(--accent); }
+.bar-cell { width: 34%; }
+@media (max-width: 700px) {
+  .bar-cell { width: auto; }
+  table.data.rank-table tbody tr:not([hidden]) { display: flex !important; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 12px 0; }
+  .rank-table td { width: auto !important; box-shadow: none !important; }
+  .rank-table td[data-label]::before { content: none !important; }
+  .rank-table td.bar-cell { flex-basis: 100%; }
+  .rank-table td[data-label='Alcançou']::before { content: 'alcançou ' !important; font-family: var(--font-body); font-weight: 400; color: var(--ink-3); }
+  .rank-table td[data-label='Parou na perda']::before { content: 'parou ' !important; font-family: var(--font-body); color: var(--ink-3); }
+  .rank-table td[data-label='Leitura'] { margin-left: auto; }
+  table.data.rank-table tbody tr.mine-row:not([hidden]) { border-left: 3px solid var(--accent); padding-left: 10px; }
+}
+.coin-situation { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.situation { border: 1px solid var(--line); border-radius: 12px; padding: 14px; font-size: 14.5px; }
+.situation .pair { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px; }
+.goal-params { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+</style>
+<main class="page">
+  <p class="crumbs"><a href="#">Metas</a> › LINK/USDT +3% em 7 dias</p>
+  <div class="page-head">
+    <div><h1>Meta: LINK/USDT +3% em 7 dias</h1>
+      <div class="goal-params"><span class="chip buy"><svg class="icon sm" aria-hidden="true"><use href="#i-up"/></svg>alvo +3%</span><span class="chip sell"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>perda máxima −2%</span><span class="chip outline"><svg class="icon sm" aria-hidden="true"><use href="#i-calendar"/></svg>prazo 7 dias</span><span class="chip outline">10.000,00 USDT</span></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="button" href="#">Editar meta</a><a class="button primary" href="#"><svg class="icon sm" aria-hidden="true"><use href="#i-flag"/></svg>Ver o plano de operação</a></div>
+  </div>
+  <section class="pulse" aria-label="Simulação rodando agora">
+  <span class="pulse-state"><span class="live-dot" aria-hidden="true"></span>Rodando</span>
+  <span class="pulse-item">LINK/USDT <strong class="num" data-price>12,707</strong> <span class="muted">ao vivo · <span data-price-age>há 1 s</span></span></span>
+  <span class="pulse-item">Última decisão <strong>10:00</strong>: <strong>esperou</strong></span>
+  <span class="pulse-item">Próxima às <strong>11:00</strong>, em <span class="countdown" data-countdown>23:12</span></span>
+  <span class="pulse-item muted">Simulador ativo · último sinal de vida há <span data-heartbeat>3 s</span></span>
+</section>
+
+  <section class="card" aria-labelledby="active-title">
+    <div class="card-head"><h2 class="card-title" id="active-title"><svg class="icon" aria-hidden="true"><use href="#i-activity"/></svg>Simulação desta meta<span class="anchor-badge">1</span></h2><span class="chip warn"><svg class="icon sm" aria-hidden="true"><use href="#i-alert"/></svg>Abaixo do ritmo</span></div>
+    <div class="kpis">
+      <div class="kpi"><p class="kpi-label">Faltam</p><p class="kpi-value">300,00<span class="unit">USDT (+3,00%)</span></p><p class="kpi-note">para 10.300,00 USDT</p></div>
+      <div class="kpi"><p class="kpi-label">Prazo</p><p class="kpi-value">6<span class="unit">dias e</span> 8<span class="unit">horas</span></p><p class="kpi-note">termina 20/10 às 18:37</p></div>
+      <div class="kpi"><p class="kpi-label">Queda que ainda cabe</p><p class="kpi-value">200,00<span class="unit">USDT</span></p><p class="kpi-note">para no saldo de 9.800,00</p></div>
+    </div>
+    <div class="grid grid-2" style="margin-top:var(--space-4)">
+      <div class="meter"><div class="meter-row"><span>Ganho até agora</span><strong class="num">0,00 de 300,00 USDT · 0%</strong></div><div class="track" role="img" aria-label="0%"><i style="width:0%"></i></div></div>
+      <div class="meter"><div class="meter-row"><span>Tempo usado</span><strong>16 h de 7 dias · 10%</strong></div><div class="track time" role="img" aria-label="10%"><i style="width:10%"></i></div></div>
+    </div>
+    <div class="card-foot"><span class="muted">Rompimento Donchian · vela de 1 h · 16 decisões, todas "esperou"</span><a class="link-arrow" href="simulacao-ao-vivo.html">Abrir o acompanhamento<svg class="icon sm" aria-hidden="true"><use href="#i-chevright"/></svg></a></div>
+  </section>
+
+  <section class="card" style="margin-top:var(--space-4)" aria-labelledby="rank-title">
+    <div class="card-head"><div><p class="card-kicker">Ranking histórico · velas diárias · últimos 2 anos</p><h2 class="card-title" id="rank-title">Qual estratégia teria batido esta meta no passado?<span class="anchor-badge">2</span></h2></div></div>
+    <p style="max-width:70ch;color:var(--ink-2)">Para cada dia dos últimos 2 anos, simulamos começar ali com esta meta e contamos o desfecho: <span style="color:var(--buy);font-weight:600">alcançou +3%</span>, <span class="muted" style="font-weight:600">acabou o prazo</span> ou <span style="color:var(--sell);font-weight:600">parou na perda de 2%</span>. É o que teria acontecido, não uma promessa.</p>
+    <div class="podiums"><article class="podium">
+  <div class="podium-head"><span class="rank">1º</span><span class="chip buy"><svg class="icon sm" aria-hidden="true"><use href="#i-check"/></svg>Favorável</span></div>
+  <h3>Rompimento Donchian</h3><p class="small muted">SOL/USDT · versão 1</p>
+  <p class="podium-num"><span class="num">46%</span> alcançou a meta</p>
+  <p class="small muted">em 333 de 723 começos possíveis</p>
+  <div class="outcome" role="img" aria-label="46% alcançou, 21% parou na perda, 33% terminou no prazo sem alcançar">
+  <i class="o-hit" style="flex:46"></i><i class="o-time" style="flex:33"></i><i class="o-stop" style="flex:21"></i></div>
+  <p class="xs" style="margin-top:6px"><span style="color:var(--buy);font-weight:600">46% alcançou</span> · <span class="muted">33% acabou o prazo</span> · <span style="color:var(--sell);font-weight:600">21% parou na perda</span></p>
+</article><article class="podium">
+  <div class="podium-head"><span class="rank">2º</span><span class="chip buy"><svg class="icon sm" aria-hidden="true"><use href="#i-check"/></svg>Favorável</span></div>
+  <h3>Placar clássico</h3><p class="small muted">PEPE/USDT · versão 1</p>
+  <p class="podium-num"><span class="num">44%</span> alcançou a meta</p>
+  <p class="small muted">em 318 de 723 começos possíveis</p>
+  <div class="outcome" role="img" aria-label="44% alcançou, 27% parou na perda, 29% terminou no prazo sem alcançar">
+  <i class="o-hit" style="flex:44"></i><i class="o-time" style="flex:29"></i><i class="o-stop" style="flex:27"></i></div>
+  <p class="xs" style="margin-top:6px"><span style="color:var(--buy);font-weight:600">44% alcançou</span> · <span class="muted">29% acabou o prazo</span> · <span style="color:var(--sell);font-weight:600">27% parou na perda</span></p>
+</article><article class="podium mine">
+  <div class="podium-head"><span class="rank">3º</span><span class="chip buy"><svg class="icon sm" aria-hidden="true"><use href="#i-check"/></svg>Favorável</span></div>
+  <h3>Rompimento Donchian</h3><p class="small muted">LINK/USDT · versão 1 · <strong style="color:var(--accent)">par da sua meta</strong></p>
+  <p class="podium-num"><span class="num">41%</span> alcançou a meta</p>
+  <p class="small muted">em 296 de 723 começos possíveis</p>
+  <div class="outcome" role="img" aria-label="41% alcançou, 24% parou na perda, 35% terminou no prazo sem alcançar">
+  <i class="o-hit" style="flex:41"></i><i class="o-time" style="flex:35"></i><i class="o-stop" style="flex:24"></i></div>
+  <p class="xs" style="margin-top:6px"><span style="color:var(--buy);font-weight:600">41% alcançou</span> · <span class="muted">35% acabou o prazo</span> · <span style="color:var(--sell);font-weight:600">24% parou na perda</span></p>
+</article></div>
+    <div class="toolbar">
+      <div class="segmented" role="group" aria-label="Quais pares"><button type="button" aria-pressed="true">Todos os 9 pares</button><button type="button" aria-pressed="false">Só LINK/USDT</button></div>
+      <span class="small muted"><svg class="icon sm" aria-hidden="true"><use href="#i-sort"/></svg> Ordenado por <strong>chance de alcançar</strong>, maior primeiro</span>
+    </div>
+    <div class="table-wrap" style="margin-top:8px"><table class="data stack-mobile rank-table">
+      <thead><tr><th>#</th><th>Estratégia e par</th><th>Desfechos (alcançou · prazo · perda)</th><th class="right" aria-sort="descending"><button class="sort-button" type="button">Alcançou <svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg></button></th><th class="right"><button class="sort-button" type="button">Parou na perda</button></th><th>Leitura</th></tr></thead>
+      <tbody><tr>
+  <td data-label="Posição" class="num">1º</td>
+  <td data-label="Combinação"><strong>Rompimento Donchian</strong><br><span class="xs muted">SOL/USDT</span></td>
+  <td data-label="Resultado no histórico" class="bar-cell"><div class="outcome" role="img" aria-label="46% alcançou, 21% parou na perda, 33% terminou no prazo sem alcançar">
+  <i class="o-hit" style="flex:46"></i><i class="o-time" style="flex:33"></i><i class="o-stop" style="flex:21"></i></div></td>
+  <td data-label="Alcançou" class="right num" style="color:var(--buy);font-weight:600">46%</td>
+  <td data-label="Parou na perda" class="right num">21%</td>
+  <td data-label="Leitura"><span class="chip buy"><svg class="icon sm" aria-hidden="true"><use href="#i-check"/></svg>Favorável</span></td>
+</tr><tr>
+  <td data-label="Posição" class="num">2º</td>
+  <td data-label="Combinação"><strong>Placar clássico</strong><br><span class="xs muted">PEPE/USDT</span></td>
+  <td data-label="Resultado no histórico" class="bar-cell"><div class="outcome" role="img" aria-label="44% alcançou, 27% parou na perda, 29% terminou no prazo sem alcançar">
+  <i class="o-hit" style="flex:44"></i><i class="o-time" style="flex:29"></i><i class="o-stop" style="flex:27"></i></div></td>
+  <td data-label="Alcançou" class="right num" style="color:var(--buy);font-weight:600">44%</td>
+  <td data-label="Parou na perda" class="right num">27%</td>
+  <td data-label="Leitura"><span class="chip buy"><svg class="icon sm" aria-hidden="true"><use href="#i-check"/></svg>Favorável</span></td>
+</tr><tr class="mine-row">
+  <td data-label="Posição" class="num">3º</td>
+  <td data-label="Combinação"><strong>Rompimento Donchian</strong><br><span class="xs muted">LINK/USDT</span></td>
+  <td data-label="Resultado no histórico" class="bar-cell"><div class="outcome" role="img" aria-label="41% alcançou, 24% parou na perda, 35% terminou no prazo sem alcançar">
+  <i class="o-hit" style="flex:41"></i><i class="o-time" style="flex:35"></i><i class="o-stop" style="flex:24"></i></div></td>
+  <td data-label="Alcançou" class="right num" style="color:var(--buy);font-weight:600">41%</td>
+  <td data-label="Parou na perda" class="right num">24%</td>
+  <td data-label="Leitura"><span class="chip buy"><svg class="icon sm" aria-hidden="true"><use href="#i-check"/></svg>Favorável</span></td>
+</tr><tr>
+  <td data-label="Posição" class="num">4º</td>
+  <td data-label="Combinação"><strong>Sentimento contrário</strong><br><span class="xs muted">DOGE/USDT</span></td>
+  <td data-label="Resultado no histórico" class="bar-cell"><div class="outcome" role="img" aria-label="37% alcançou, 30% parou na perda, 33% terminou no prazo sem alcançar">
+  <i class="o-hit" style="flex:37"></i><i class="o-time" style="flex:33"></i><i class="o-stop" style="flex:30"></i></div></td>
+  <td data-label="Alcançou" class="right num" style="color:var(--buy);font-weight:600">37%</td>
+  <td data-label="Parou na perda" class="right num">30%</td>
+  <td data-label="Leitura"><span class="chip"><svg class="icon sm" aria-hidden="true"><use href="#i-equal"/></svg>Neutro</span></td>
+</tr><tr class="mine-row">
+  <td data-label="Posição" class="num">5º</td>
+  <td data-label="Combinação"><strong>Placar clássico</strong><br><span class="xs muted">LINK/USDT</span></td>
+  <td data-label="Resultado no histórico" class="bar-cell"><div class="outcome" role="img" aria-label="35% alcançou, 26% parou na perda, 39% terminou no prazo sem alcançar">
+  <i class="o-hit" style="flex:35"></i><i class="o-time" style="flex:39"></i><i class="o-stop" style="flex:26"></i></div></td>
+  <td data-label="Alcançou" class="right num" style="color:var(--buy);font-weight:600">35%</td>
+  <td data-label="Parou na perda" class="right num">26%</td>
+  <td data-label="Leitura"><span class="chip"><svg class="icon sm" aria-hidden="true"><use href="#i-equal"/></svg>Neutro</span></td>
+</tr><tr>
+  <td data-label="Posição" class="num">6º</td>
+  <td data-label="Combinação"><strong>Reversão Bollinger RSI</strong><br><span class="xs muted">ETH/USDT</span></td>
+  <td data-label="Resultado no histórico" class="bar-cell"><div class="outcome" role="img" aria-label="31% alcançou, 22% parou na perda, 47% terminou no prazo sem alcançar">
+  <i class="o-hit" style="flex:31"></i><i class="o-time" style="flex:47"></i><i class="o-stop" style="flex:22"></i></div></td>
+  <td data-label="Alcançou" class="right num" style="color:var(--buy);font-weight:600">31%</td>
+  <td data-label="Parou na perda" class="right num">22%</td>
+  <td data-label="Leitura"><span class="chip"><svg class="icon sm" aria-hidden="true"><use href="#i-equal"/></svg>Neutro</span></td>
+</tr><tr>
+  <td data-label="Posição" class="num">7º</td>
+  <td data-label="Combinação"><strong>Sentimento contrário</strong><br><span class="xs muted">BTC/USDT</span></td>
+  <td data-label="Resultado no histórico" class="bar-cell"><div class="outcome" role="img" aria-label="28% alcançou, 18% parou na perda, 54% terminou no prazo sem alcançar">
+  <i class="o-hit" style="flex:28"></i><i class="o-time" style="flex:54"></i><i class="o-stop" style="flex:18"></i></div></td>
+  <td data-label="Alcançou" class="right num" style="color:var(--buy);font-weight:600">28%</td>
+  <td data-label="Parou na perda" class="right num">18%</td>
+  <td data-label="Leitura"><span class="chip"><svg class="icon sm" aria-hidden="true"><use href="#i-equal"/></svg>Neutro</span></td>
+</tr><tr>
+  <td data-label="Posição" class="num">8º</td>
+  <td data-label="Combinação"><strong>Rompimento Donchian</strong><br><span class="xs muted">BTC/USDT</span></td>
+  <td data-label="Resultado no histórico" class="bar-cell"><div class="outcome" role="img" aria-label="26% alcançou, 20% parou na perda, 54% terminou no prazo sem alcançar">
+  <i class="o-hit" style="flex:26"></i><i class="o-time" style="flex:54"></i><i class="o-stop" style="flex:20"></i></div></td>
+  <td data-label="Alcançou" class="right num" style="color:var(--buy);font-weight:600">26%</td>
+  <td data-label="Parou na perda" class="right num">20%</td>
+  <td data-label="Leitura"><span class="chip"><svg class="icon sm" aria-hidden="true"><use href="#i-equal"/></svg>Neutro</span></td>
+</tr><tr>
+  <td data-label="Posição" class="num">9º</td>
+  <td data-label="Combinação"><strong>Momentum rápido</strong><br><span class="xs muted">XRP/USDT</span></td>
+  <td data-label="Resultado no histórico" class="bar-cell"><div class="outcome" role="img" aria-label="22% alcançou, 41% parou na perda, 37% terminou no prazo sem alcançar">
+  <i class="o-hit" style="flex:22"></i><i class="o-time" style="flex:37"></i><i class="o-stop" style="flex:41"></i></div></td>
+  <td data-label="Alcançou" class="right num" style="color:var(--buy);font-weight:600">22%</td>
+  <td data-label="Parou na perda" class="right num">41%</td>
+  <td data-label="Leitura"><span class="chip sell"><svg class="icon sm" aria-hidden="true"><use href="#i-x"/></svg>Desfavorável</span></td>
+</tr><tr>
+  <td data-label="Posição" class="num">10º</td>
+  <td data-label="Combinação"><strong>Momentum rápido</strong><br><span class="xs muted">SHIB/USDT</span></td>
+  <td data-label="Resultado no histórico" class="bar-cell"><div class="outcome" role="img" aria-label="19% alcançou, 47% parou na perda, 34% terminou no prazo sem alcançar">
+  <i class="o-hit" style="flex:19"></i><i class="o-time" style="flex:34"></i><i class="o-stop" style="flex:47"></i></div></td>
+  <td data-label="Alcançou" class="right num" style="color:var(--buy);font-weight:600">19%</td>
+  <td data-label="Parou na perda" class="right num">47%</td>
+  <td data-label="Leitura"><span class="chip sell"><svg class="icon sm" aria-hidden="true"><use href="#i-x"/></svg>Desfavorável</span></td>
+</tr></tbody>
+    </table></div>
+    <div class="card-foot"><span class="muted">10 de 45 combinações (5 estratégias × 9 pares). Números do preview são ilustrativos.</span><button class="button" type="button">Mostrar as 45</button></div>
+  </section>
+
+  <section class="card" style="margin-top:var(--space-4)" aria-labelledby="sit-title">
+    <div class="card-head"><h2 class="card-title" id="sit-title"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg>Situação das moedas agora<span class="anchor-badge">3</span></h2><span class="muted small">com a estratégia mais bem colocada em cada par</span></div>
+    <div class="coin-situation">
+      <div class="situation"><div class="pair"><span>LINK/USDT</span><span class="num" data-price>12,707</span></div><span class="chip"><svg class="icon sm" aria-hidden="true"><use href="#i-pause"/></svg>Aguardando entrada</span><p class="small" style="margin-top:6px">Compra se fechar acima de <strong class="num">13,10</strong> (falta +3,1%).</p></div>
+      <div class="situation"><div class="pair"><span>SOL/USDT</span><span class="num">105,48</span></div><span class="chip"><svg class="icon sm" aria-hidden="true"><use href="#i-pause"/></svg>Aguardando entrada</span><p class="small" style="margin-top:6px">Compra se fechar acima de <strong class="num">109,20</strong> (falta +3,5%).</p></div>
+      <div class="situation"><div class="pair"><span>PEPE/USDT</span><span class="num">0,00000409</span></div><span class="chip"><svg class="icon sm" aria-hidden="true"><use href="#i-pause"/></svg>Aguardando entrada</span><p class="small" style="margin-top:6px">Faltam 2 pontos no placar; nenhuma regra perto de votar.</p></div>
+    </div>
+  </section>
+
+  <details class="why" id="por-que">
+  <summary><svg class="icon" aria-hidden="true"><use href="#i-help"/></svg>Por que está assim — as decisões de design desta tela<svg class="icon chev" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+  <div class="why-body"><div class="why-item"><span class="h">Hierarquia visual · Nielsen 1</span><b><span class="anchor-badge">1</span> A simulação da meta vem antes do ranking</b><span>Quem abre a meta quer saber "como está indo". Três números com rótulo e unidade (quanto falta, prazo, queda que ainda cabe) e dois medidores rotulados respondem antes de qualquer tabela.</span></div><div class="why-item"><span class="h">Nielsen 8 (minimalismo) · revelação progressiva · dataviz: barra empilhada com legenda e números</span><b><span class="anchor-badge">2</span> Ranking: pódio + tabela, não uma parede de 45 cartões</b><span>A tela antiga empilhava 45 cartões iguais (12.900 px de altura). Agora os 3 primeiros viram cartões com o número grande ("46% alcançou a meta") e a barra de desfechos com legenda em texto; o resto é uma tabela ordenável com o critério de ordenação visível, 10 linhas e "Mostrar as 45". O par da meta fica destacado em azul.</span></div><div class="why-item"><span class="h">Nielsen 2 · evitar leitura como recomendação</span><b><span class="anchor-badge">2</span> Palavras em vez de COMPRAR/SEGURAR/EVITAR</b><span>"Favorável / Neutro / Desfavorável" no histórico, sempre com ícone e palavra. Ver a decisão A/B no índice: manter os rótulos antigos ou adotar estes.</span></div><div class="why-item"><span class="h">Nielsen 6 (reconhecer) · número com referência</span><b><span class="anchor-badge">3</span> Situação das moedas em uma frase cada</b><span>Cada par diz o estado e o que falta, com o preço atual ao lado do preço necessário.</span></div><div class="why-item"><span class="h">Nielsen 3 (controle e liberdade)</span><b><span class="anchor-badge">—</span> Ações claras no topo</b><span>"Editar meta" e "Ver o plano de operação" ficam no cabeçalho; o plano é a ação primária (azul), a edição é secundária.</span></div></div>
+</details>
+</main>
+<script>
+// Comportamento do preview: tema, menu, pulso ao vivo simulado e gráfico com dica.
+(function () {
+  var root = document.documentElement;
+  var THEME_LABEL = { auto: 'Tema automático', light: 'Tema claro', dark: 'Tema escuro' };
+  var order = ['auto', 'light', 'dark'];
+  var stored = 'auto';
+  try { stored = localStorage.getItem('ativada-preview-theme') || 'auto'; } catch (error) { stored = 'auto'; }
+  function applyTheme(theme) {
+    if (theme === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', theme);
+    document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
+      button.setAttribute('aria-label', THEME_LABEL[theme] + ' (trocar)');
+      button.querySelector('[data-theme-text]').textContent = THEME_LABEL[theme].replace('Tema ', '');
+    });
+    try { localStorage.setItem('ativada-preview-theme', theme); } catch (error) { /* sem armazenamento */ }
+    document.dispatchEvent(new Event('themechange'));
+  }
+  var params = new URLSearchParams(location.search);
+  if (params.get('tema')) stored = params.get('tema') === 'escuro' ? 'dark' : 'light';
+  applyTheme(stored);
+  document.addEventListener('click', function (event) {
+    var toggle = event.target.closest('[data-theme-toggle]');
+    if (toggle) { stored = order[(order.indexOf(stored) + 1) % 3]; applyTheme(stored); }
+    var menu = event.target.closest('[data-menu-toggle]');
+    if (menu) {
+      var nav = document.getElementById('mobile-nav');
+      var open = nav.getAttribute('data-open') !== 'true';
+      nav.setAttribute('data-open', String(open));
+      menu.setAttribute('aria-expanded', String(open));
+    }
+    var expand = event.target.closest('[data-expand]');
+    if (expand) {
+      var key = expand.getAttribute('data-expand');
+      var targets = document.querySelectorAll('#' + key + ', [data-expand-member="' + key + '"]');
+      var isOpen = targets[0].hidden;
+      targets.forEach(function (target) { target.hidden = !isOpen; });
+      if (expand.hasAttribute('data-label-open')) expand.textContent = isOpen ? expand.getAttribute('data-label-open') : expand.getAttribute('data-label-closed');
+      expand.setAttribute('aria-expanded', String(isOpen));
+    }
+  });
+
+  // Relógio simulado: começa em 14/10/2026 10:36:48 (GMT-3) e anda em tempo real.
+  var startedAt = Date.now();
+  var BASE = Date.UTC(2026, 9, 14, 13, 36, 48);
+  var NEXT_DECISION = Date.UTC(2026, 9, 14, 14, 0, 0);
+  var price = 12.707;
+  var lastTick = Date.now();
+  var number3 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  function pad(value) { return String(value).padStart(2, '0'); }
+  function nowSimulated() { return BASE + (Date.now() - startedAt); }
+  function updateClock() {
+    var now = nowSimulated();
+    var local = new Date(now - 3 * 3600000);
+    var clock = pad(local.getUTCHours()) + ':' + pad(local.getUTCMinutes()) + ':' + pad(local.getUTCSeconds());
+    document.querySelectorAll('[data-clock]').forEach(function (element) { element.textContent = clock; });
+    var left = Math.max(0, Math.floor((NEXT_DECISION - now) / 1000));
+    var text = left === 0 ? 'decidindo agora…' : pad(Math.floor(left / 60)) + ':' + pad(left % 60);
+    document.querySelectorAll('[data-countdown]').forEach(function (element) { element.textContent = text; });
+    var minutes = Math.ceil(left / 60);
+    document.querySelectorAll('[data-countdown-min]').forEach(function (element) { element.textContent = minutes + ' min'; });
+    var beat = Math.floor((Date.now() - startedAt) / 1000 + 3) % 15;
+    document.querySelectorAll('[data-heartbeat]').forEach(function (element) { element.textContent = beat + ' s'; });
+    var age = Math.floor((Date.now() - lastTick) / 1000);
+    document.querySelectorAll('[data-price-age]').forEach(function (element) { element.textContent = age <= 0 ? 'agora' : 'há ' + age + ' s'; });
+  }
+  function tickPrice() {
+    var step = (Math.round((Math.random() - 0.5) * 6)) / 1000;
+    price = Math.min(12.74, Math.max(12.69, price + step));
+    lastTick = Date.now();
+    document.querySelectorAll('[data-price]').forEach(function (element) {
+      element.textContent = number3.format(price);
+      element.classList.remove('flash'); void element.offsetWidth; element.classList.add('flash');
+    });
+    document.querySelectorAll('.live-dot').forEach(function (dot) {
+      dot.classList.remove('blink'); void dot.offsetWidth; dot.classList.add('blink');
+    });
+    updateClock();
+  }
+  if (!params.get('congelar')) {
+    setInterval(updateClock, 1000);
+    setInterval(tickPrice, 2400);
+  }
+  updateClock();
+
+  // Gráfico de linha à mão, com dica por vela e marcadores.
+  window.drawLineChart = function (host, options) {
+    function render() {
+      var width = Math.max(300, host.clientWidth);
+      var height = options.height || 220;
+      var pad = { top: 18, right: options.rightPad || 64, bottom: 26, left: 52 };
+      if (width < 480) { pad.left = 44; pad.right = options.rightPadMobile || 12; }
+      var all = [];
+      options.series.forEach(function (serie) { all = all.concat(serie.values); });
+      var min = options.min !== undefined ? options.min : Math.min.apply(null, all);
+      var max = options.max !== undefined ? options.max : Math.max.apply(null, all);
+      var count = options.series[0].values.length;
+      var x = function (index) { return pad.left + (index / (count - 1)) * (width - pad.left - pad.right); };
+      var y = function (value) { return pad.top + (1 - (value - min) / (max - min)) * (height - pad.top - pad.bottom); };
+      var parts = ['<svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="' + options.label + '">'];
+      (options.ticks || [min, max]).forEach(function (tick) {
+        parts.push('<line class="grid-line" x1="' + pad.left + '" x2="' + (width - pad.right) + '" y1="' + y(tick) + '" y2="' + y(tick) + '"/>');
+        parts.push('<text class="axis-text" x="' + (pad.left - 8) + '" y="' + (y(tick) + 4) + '" text-anchor="end">' + options.format(tick) + '</text>');
+      });
+      (options.xLabels || []).filter(function (label, position, list) { return width >= 480 || position === 0 || position === list.length - 1; }).forEach(function (label) {
+        parts.push('<text class="axis-text" x="' + x(label.index) + '" y="' + (height - 6) + '" text-anchor="' + (label.anchor || 'middle') + '">' + label.text + '</text>');
+      });
+      options.series.forEach(function (serie) {
+        var path = serie.values.map(function (value, index) { return (index ? 'L' : 'M') + x(index).toFixed(1) + ' ' + y(value).toFixed(1); }).join(' ');
+        parts.push('<path class="series ' + (serie.className || '') + '" d="' + path + '"/>');
+        if (serie.endLabel && width >= 480) {
+          var last = serie.values[serie.values.length - 1];
+          parts.push('<text class="direct-label" fill="' + serie.labelColor + '" x="' + (x(count - 1) + 8) + '" y="' + (y(last) + 4 + (serie.labelOffset || 0)) + '">' + serie.endLabel + '</text>');
+        }
+      });
+      (options.dots || []).forEach(function (index) {
+        parts.push('<circle class="wait-dot" cx="' + x(index) + '" cy="' + y(options.series[0].values[index]) + '" r="4"/>');
+      });
+      (options.markers || []).forEach(function (marker) {
+        var cx = x(marker.index); var cy = y(options.series[0].values[marker.index]);
+        var color = marker.kind === 'buy' ? 'var(--buy)' : 'var(--sell)';
+        var tip = marker.kind === 'buy' ? (cy + 8) : (cy - 8);
+        var base = marker.kind === 'buy' ? (cy + 22) : (cy - 22);
+        parts.push('<path d="M' + (cx - 7) + ' ' + base + ' L' + cx + ' ' + tip + ' L' + (cx + 7) + ' ' + base + ' Z" fill="' + color + '" stroke="var(--surface)" stroke-width="2"/>');
+        parts.push('<text class="direct-label" fill="' + color + '" x="' + cx + '" y="' + (marker.kind === 'buy' ? base + 14 : base - 6) + '" text-anchor="middle">' + marker.text + '</text>');
+      });
+      parts.push('<line class="crosshair" data-cross x1="0" x2="0" y1="' + pad.top + '" y2="' + (height - pad.bottom) + '" visibility="hidden"/>');
+      parts.push('<rect class="hit" x="' + pad.left + '" y="0" width="' + (width - pad.left - pad.right) + '" height="' + height + '"/>');
+      parts.push('</svg><div class="tooltip" role="status"></div>');
+      host.innerHTML = parts.join('');
+      var svg = host.querySelector('svg'); var tooltip = host.querySelector('.tooltip'); var cross = host.querySelector('[data-cross]');
+      function show(clientX) {
+        var box = svg.getBoundingClientRect();
+        var localX = (clientX - box.left) * (width / box.width);
+        var index = Math.round(((localX - pad.left) / (width - pad.left - pad.right)) * (count - 1));
+        index = Math.max(0, Math.min(count - 1, index));
+        var px = x(index);
+        cross.setAttribute('x1', px); cross.setAttribute('x2', px); cross.setAttribute('visibility', 'visible');
+        tooltip.innerHTML = options.tooltip(index);
+        tooltip.style.left = (px / width * 100) + '%';
+        tooltip.style.top = (y(options.series[0].values[index]) / height * box.height) + 'px';
+        tooltip.setAttribute('data-show', 'true');
+      }
+      svg.addEventListener('pointermove', function (event) { show(event.clientX); });
+      svg.addEventListener('pointerleave', function () { tooltip.setAttribute('data-show', 'false'); cross.setAttribute('visibility', 'hidden'); });
+    }
+    render();
+    var lastWidth = host.clientWidth;
+    window.addEventListener('resize', function () { if (host.clientWidth !== lastWidth) { lastWidth = host.clientWidth; render(); } });
+  };
+})();
+
+</script>
+</body>
+</html>
