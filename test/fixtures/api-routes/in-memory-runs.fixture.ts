@@ -18,6 +18,7 @@ import type {
   RunLogCursor,
   RunLogEntry,
   RunRecord,
+  RunLiveStatusRepository,
   RunRepository,
   RunResultRepository,
   RunStatus,
@@ -26,6 +27,7 @@ import type {
   WalkForwardWindowInput,
 } from '../../../packages/database/src/index.js';
 import type { OwnerScope } from '../../../packages/database/src/ownership/owner-scope.js';
+import { createInMemoryLiveStatus } from './in-memory-live-status.fixture.js';
 import {
   referenceFillClusters,
   referencePriceColumns,
@@ -80,6 +82,9 @@ export type InMemoryRuns = {
     | 'listLog'
     | 'listSurvivalPoints'
   >;
+  // As leituras do acompanhamento ao vivo e o nome de cada consulta feita (a harness acrescenta as do pedido).
+  readonly liveStatus: RunLiveStatusRepository;
+  readonly liveCalls: string[];
   // Cada leitura de resultado anota o `limit` pedido: provam que a rota lê por página, nunca a série inteira.
   readonly listCalls: Record<ResultKind | 'log', number[]>;
   // As chaves de posição de cada leitura de preenchimentos: prova que a página inteira vai numa consulta só.
@@ -521,6 +526,14 @@ export function createInMemoryRuns(
     );
   };
 
+  const liveCalls: string[] = [];
+  const liveStatus = createInMemoryLiveStatus({
+    isOwned: (scope, runId) => ownedRun(scope, runId) !== undefined,
+    storeOf,
+    candleSeed,
+    calls: liveCalls,
+  });
+
   const results: InMemoryRuns['results'] = {
     readTradeTotals,
     listPriceColumns,
@@ -562,6 +575,8 @@ export function createInMemoryRuns(
   return {
     repository,
     results,
+    liveStatus,
+    liveCalls,
     listCalls,
     fillLookups,
     chartCalls,

@@ -3,7 +3,9 @@ import {
   createCandleRepository,
   createGoalRepository,
   createRunRepository,
+  type RunRepository,
   createRunQueueRepository,
+  createRunLiveStatusRepository,
   createRunResultRepository,
   createSentimentRepository,
   createStrategyRepository,
@@ -29,6 +31,8 @@ import { createCreateRunUseCase } from '../runs/create-run.use-case.js';
 import { createExportRunCsvUseCase } from '../runs/export-run-csv.use-case.js';
 import type { RunDispatcher } from '../runs/run-dispatcher.js';
 import { createRunChartUseCase } from '../runs/chart/run-chart.use-case.js';
+import { createLiveStatusUseCase } from '../runs/live-status/live-status.use-case.js';
+import { createRunDecisionsUseCase } from '../runs/live-status/run-decisions.use-case.js';
 import { createTradeSummaryUseCase } from '../runs/trade-summary/trade-summary.use-case.js';
 import { createRunSeriesUseCases } from '../runs/run-series.use-cases.js';
 import {
@@ -95,6 +99,23 @@ function createStrategyDependencies(
   };
 }
 
+// O acompanhamento ao vivo (spec 008): as leituras por dono e a versão da estratégia; a hora vem do relógio injetado.
+function createLiveStatusUseCases(
+  params: DomainRouteParams,
+  runs: RunRepository,
+): Pick<RunRoutesBundle, 'liveStatus' | 'decisions'> {
+  const dependencies = {
+    runs,
+    strategies: createStrategyRepository(params.database),
+    live: createRunLiveStatusRepository(params.database),
+    exchange: params.environment.MARKET_EXCHANGE,
+  };
+  return {
+    liveStatus: createLiveStatusUseCase({ ...dependencies, now: params.now }),
+    decisions: createRunDecisionsUseCase(dependencies),
+  };
+}
+
 function createRunDependencies(
   params: DomainRouteParams,
   enabled: MarketRouteDependencies['enabled'],
@@ -132,6 +153,7 @@ function createRunDependencies(
     exportRunCsv: createExportRunCsvUseCase({ results, now: params.now }),
     chart: createRunChartUseCase(shared),
     tradeSummary: createTradeSummaryUseCase({ results }),
+    ...createLiveStatusUseCases(params, shared.runs),
   };
 }
 

@@ -95,6 +95,7 @@ export { createRunResultRepository } from './run-results/run-result.repository.j
 export { RESULT_ORDER } from './run-results/run-result.types.js';
 export type * from './run-results/run-result.types.js';
 export {
+  POSITION_STATUS,
   WALK_FORWARD_WINDOW_STATUS,
   type PositionStatus,
   type WalkForwardWindowStatus,

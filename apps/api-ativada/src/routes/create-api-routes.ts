@@ -18,6 +18,10 @@ import { createProfileRoutes, type ProfileRouteDependencies } from '../profile/p
 import type { Route } from '../router/route.types.js';
 import { createRunChartRoute } from '../runs/chart/run-chart.route.js';
 import type { RunChartUseCase } from '../runs/chart/run-chart.use-case.js';
+import { createLiveStatusRoute } from '../runs/live-status/live-status.route.js';
+import type { LiveStatusUseCase } from '../runs/live-status/live-status.use-case.js';
+import { createRunDecisionsRoute } from '../runs/live-status/run-decisions.route.js';
+import type { RunDecisionsUseCase } from '../runs/live-status/run-decisions.use-case.js';
 import { createTradeSummaryRoute } from '../runs/trade-summary/trade-summary.route.js';
 import type { TradeSummaryUseCase } from '../runs/trade-summary/trade-summary.use-case.js';
 import type { ExportRunCsvUseCase } from '../runs/export-run-csv.use-case.js';
@@ -44,6 +48,8 @@ export type RunRoutesBundle = {
   readonly exportRunCsv: ExportRunCsvUseCase;
   readonly chart: RunChartUseCase;
   readonly tradeSummary: TradeSummaryUseCase;
+  readonly liveStatus: LiveStatusUseCase;
+  readonly decisions: RunDecisionsUseCase;
 };
 
 export type ApiRouteDependencies = HealthRouteDependencies & {
@@ -85,6 +91,8 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     ...createRunSeriesRoutes(dependencies.runs.series),
     createRunChartRoute(dependencies.runs.chart),
     createTradeSummaryRoute(dependencies.runs.tradeSummary),
+    createLiveStatusRoute(dependencies.runs.liveStatus),
+    createRunDecisionsRoute(dependencies.runs.decisions),
     ...createRunExportRoutes(dependencies.runs.exportRunCsv),
   ];
   // A tabela final inclui as próprias rotas de documentação: o documento é gerado depois, dela inteira.

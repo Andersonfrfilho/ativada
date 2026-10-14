@@ -34,6 +34,17 @@ export class RunNotFinishedError extends DomainError {
   }
 }
 
+// O acompanhamento (live-status e decisions) só existe para a simulação ao vivo; backtest e walk-forward têm o resumo da spec 005.
+export class RunNotLiveError extends DomainError {
+  constructor() {
+    super({
+      code: RUN_ERROR_CODE.RUN_NOT_LIVE,
+      message: 'O acompanhamento só existe para simulações ao vivo.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}
+
 export class RunStorageQuotaReachedError extends DomainError {
   constructor() {
     super({

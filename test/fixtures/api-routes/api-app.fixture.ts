@@ -24,6 +24,10 @@ import type * as RunChartUseCaseModule from '../../../apps/api-ativada/src/runs/
 import type * as TradeSummaryRouteModule from '../../../apps/api-ativada/src/runs/trade-summary/trade-summary.route.js';
 import type * as TradeSummaryUseCaseModule from '../../../apps/api-ativada/src/runs/trade-summary/trade-summary.use-case.js';
 import type * as TradeSummaryMessageModule from '../../../apps/api-ativada/src/runs/trade-summary/trade-summary-message.js';
+import type * as LiveStatusRouteModule from '../../../apps/api-ativada/src/runs/live-status/live-status.route.js';
+import type * as LiveStatusUseCaseModule from '../../../apps/api-ativada/src/runs/live-status/live-status.use-case.js';
+import type * as RunDecisionsRouteModule from '../../../apps/api-ativada/src/runs/live-status/run-decisions.route.js';
+import type * as RunDecisionsUseCaseModule from '../../../apps/api-ativada/src/runs/live-status/run-decisions.use-case.js';
 import type * as LiveBalanceModule from '../../../apps/api-ativada/src/runs/live-status/live-balance.js';
 import type * as LiveGoalProgressModule from '../../../apps/api-ativada/src/runs/live-status/live-goal-progress.js';
 import type * as DecisionConditionModule from '../../../apps/api-ativada/src/runs/live-status/decision-condition.js';
@@ -114,6 +118,10 @@ export type ApiApp = {
   readonly tradeSummaryRoute: typeof TradeSummaryRouteModule;
   readonly tradeSummaryUseCase: typeof TradeSummaryUseCaseModule;
   readonly tradeSummaryMessage: typeof TradeSummaryMessageModule;
+  readonly liveStatusRoute: typeof LiveStatusRouteModule;
+  readonly liveStatusUseCase: typeof LiveStatusUseCaseModule;
+  readonly runDecisionsRoute: typeof RunDecisionsRouteModule;
+  readonly runDecisionsUseCase: typeof RunDecisionsUseCaseModule;
   readonly liveBalance: typeof LiveBalanceModule;
   readonly liveGoalProgress: typeof LiveGoalProgressModule;
   readonly storedReadings: typeof StoredReadingsModule;
@@ -209,6 +217,10 @@ export async function loadApiApp(): Promise<ApiApp> {
     tradeSummaryRoute: await load('runs/trade-summary/trade-summary.route'),
     tradeSummaryUseCase: await load('runs/trade-summary/trade-summary.use-case'),
     tradeSummaryMessage: await load('runs/trade-summary/trade-summary-message'),
+    liveStatusRoute: await load('runs/live-status/live-status.route'),
+    liveStatusUseCase: await load('runs/live-status/live-status.use-case'),
+    runDecisionsRoute: await load('runs/live-status/run-decisions.route'),
+    runDecisionsUseCase: await load('runs/live-status/run-decisions.use-case'),
     liveBalance: await load('runs/live-status/live-balance'),
     liveGoalProgress: await load('runs/live-status/live-goal-progress'),
     storedReadings: await load('runs/live-status/stored-readings'),

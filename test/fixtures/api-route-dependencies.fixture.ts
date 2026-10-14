@@ -130,6 +130,8 @@ export function buildApiRouteDependencies(
       exportRunCsv: notUsed,
       chart: notUsed,
       tradeSummary: notUsed,
+      liveStatus: notUsed,
+      decisions: notUsed,
     },
     isDocumentationEnabled,
   };

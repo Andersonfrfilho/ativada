@@ -124,3 +124,31 @@ WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
 bun test (ownership-registry, strategy-engine-boundary, code-size-limits, app-import-boundary, api-openapi, api-runs,
 api-run-chart): 157 pass, 0 fail
 ```
+
+## T1.4 — `GET /v1/runs/:runId/live-status` e `GET /v1/runs/:runId/decisions` (sonnet, 2026-10-14)
+
+- Rotas em `apps/api-ativada/src/runs/live-status/` (`live-status.route.ts`, `run-decisions.route.ts`, `*.docs.ts`, o esquema Zod
+  de saída em `live-status.schema.ts`, os casos de uso `live-status.use-case.ts` e `run-decisions.use-case.ts`, e as peças
+  `live-status-context.ts` / `live-status-sections.ts` / `live-status-triggers.ts` / `decision-view.ts` / `decision-page.ts`).
+  `access: USER`, `documentation` declarada, entrada `z.strictObject` (o `live-status` não aceita nenhum parâmetro; as decisões
+  aceitam `limit` 1 a 100, padrão 24, e `cursor` opaco `encodeTimeCursor`) e política `RUN_LIVE_STATUS` de 60/min por usuário,
+  um balde só para as duas rotas. `409 RUN_NOT_LIVE` (código novo em `RUN_ERROR_CODE`) para backtest e walk-forward do dono;
+  alheia, inexistente, apagada ou malformada = o mesmo `404 RUN_NOT_FOUND`; `400` com todos os erros e sem eco.
+- Custo: o `live-status` faz 5 consultas por chave e com LIMIT (execução, versão da estratégia, último ponto, página de decisões
+  com a junção em candles e posições que cruzam a página); as decisões fazem 4. As três do meio vão em `Promise.all` só depois da
+  execução do dono (sem parte opcional: falha em qualquer uma é 500, por isso não é `allSettled`). Sem cache no servidor.
+- `nextDecisionAt` reusa a vela devida da spec 006 (`findDueAt` de `stall-policy.ts`, agora exportada com parâmetros mínimos).
+- Harness: `loadApiApp()` ganhou as rotas, o repositório em memória das leituras novas (`in-memory-live-status.fixture.ts`) e o
+  contador de consultas por pedido (`harness.queries`); cenários em `test/fixtures/live-status/live-status-scenario.fixture.ts`.
+- Contratos (`test/api-run-live-status.contract.test.ts`, 30 testes): o exemplo da spec sem compra, gatilhos regra por regra,
+  linha por vela com voto e leitura, cursor sem repetir nem perder, `limit` 1/7/100, nenhuma frase com data ou hora, sem vela,
+  aquecendo (Donchian com uma linha), comprada (posição aberta, alvo, stop, comprou/vendeu/esperou comprada), parada, concluída,
+  na fila e com falha, com meta (prazo = início + 7 dias), com desfecho e sem meta, esquema documentado, 5 e 4 consultas, 401,
+  404 idêntico entre usuários/inexistente/malformado/apagado, 409 em backtest e walk-forward, 400 com todos os erros sem eco,
+  429 no 61º pedido (balde compartilhado). `api-openapi` ganhou os dois caminhos no 429 e o par 404/409.
+
+```text
+WSL ~/gates/ativada-spec8b: typecheck verde · lint verde · format:check verde
+bun test (live-status + api-openapi + api-run* + ownership-registry + strategy-engine-boundary + code-size-limits +
+app-import-boundary + frases e contas da T1.1/T1.2): 449 pass, 0 fail
+```

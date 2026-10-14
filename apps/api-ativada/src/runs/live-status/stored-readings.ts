@@ -57,7 +57,7 @@ export function readIndicatorRecord(value: unknown): IndicatorRecord {
 }
 
 // O inverso de `flattenIndicatorValue`: `<id>` é a saída única; `<id>.<saída>` remonta o registro de várias saídas.
-function unflattenIndicator(
+export function unflattenIndicator(
   record: IndicatorRecord,
   indicatorId: string,
 ): IndicatorValue | undefined {

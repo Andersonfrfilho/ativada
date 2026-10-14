@@ -131,6 +131,8 @@ describe('OpenAPI gerado da tabela de rotas', () => {
       '/v1/goals/{goalId}/evaluation',
       '/v1/runs/{runId}/chart',
       '/v1/runs/{runId}/trade-summary',
+      '/v1/runs/{runId}/live-status',
+      '/v1/runs/{runId}/decisions',
     ]) {
       const operation = asRecord(asRecord(paths[path])['get']);
       expect(Object.keys(asRecord(operation['responses']))).toContain('429');
@@ -258,6 +260,13 @@ describe('OpenAPI gerado da tabela de rotas', () => {
     expect(byOperation.get('post /v1/runs/{runId}/stop')?.get('409')).toStrictEqual([
       'RUN_ALREADY_FINISHED',
     ]);
+    for (const operation of [
+      'get /v1/runs/{runId}/live-status',
+      'get /v1/runs/{runId}/decisions',
+    ]) {
+      expect(byOperation.get(operation)?.get('404')).toStrictEqual(['RUN_NOT_FOUND']);
+      expect(byOperation.get(operation)?.get('409')).toStrictEqual(['RUN_NOT_LIVE']);
+    }
     for (const code of [
       'REQUEST_VALIDATION_FAILED',
       'GRID_TOO_LARGE',

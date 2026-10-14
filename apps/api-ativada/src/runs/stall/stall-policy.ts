@@ -18,7 +18,9 @@ export type ComputeStalledSinceParams = {
 };
 
 // Fechamento da vela que o worker ainda deve processar: a seguinte à última passada ou, sem passo, a que estava em curso na criação.
-function findDueAt(params: ComputeStalledSinceParams): number {
+export function findDueAt(
+  params: Pick<ComputeStalledSinceParams, 'timeframe' | 'lastCandleTime' | 'startedAt'>,
+): number {
   const duration = ENGINE_TIMEFRAME_DURATION_MILLISECONDS[params.timeframe];
   const nextOpenTime =
     params.lastCandleTime === undefined

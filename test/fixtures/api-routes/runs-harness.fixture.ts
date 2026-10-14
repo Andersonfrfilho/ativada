@@ -87,6 +87,8 @@ export type RunsHarness = {
   readonly runs: InMemoryRuns;
   readonly candles: InMemoryCandles;
   readonly dispatched: RunDispatchRequest[];
+  // As consultas do acompanhamento ao vivo, na ordem em que foram feitas (esvazie antes do pedido que se quer contar).
+  readonly queries: string[];
   readonly limits: InMemoryRunQueue['limits'];
   readonly dispatch: { shouldFail: boolean };
   readonly failures: { candles: boolean; queuePosition: boolean };
@@ -171,6 +173,27 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     queue: queue.port,
     results: runs.results,
   };
+  // Cada consulta do acompanhamento anota o nome em `queries`: o contrato conta quantas um pedido faz.
+  const liveStatusDeps = {
+    runs: {
+      findRun: (
+        ...args: Parameters<typeof runs.repository.findRun>
+      ): ReturnType<typeof runs.repository.findRun> => {
+        runs.liveCalls.push('findRun');
+        return runs.repository.findRun(...args);
+      },
+    },
+    strategies: {
+      findVersion: (
+        ...args: Parameters<typeof strategies.repository.findVersion>
+      ): ReturnType<typeof strategies.repository.findVersion> => {
+        runs.liveCalls.push('findVersion');
+        return strategies.repository.findVersion(...args);
+      },
+    },
+    live: runs.liveStatus,
+    exchange: EXCHANGE,
+  };
   const series = app.runSeriesUseCases.createRunSeriesUseCases({ results: runs.results });
   const routes: readonly Route[] = [
     ...app.marketRoutes.createMarketRoutes({
@@ -229,6 +252,12 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     app.tradeSummaryRoute.createTradeSummaryRoute(
       app.tradeSummaryUseCase.createTradeSummaryUseCase({ results: runs.results }),
     ),
+    app.liveStatusRoute.createLiveStatusRoute(
+      app.liveStatusUseCase.createLiveStatusUseCase({ ...liveStatusDeps, now: () => clock.now }),
+    ),
+    app.runDecisionsRoute.createRunDecisionsRoute(
+      app.runDecisionsUseCase.createRunDecisionsUseCase(liveStatusDeps),
+    ),
     ...app.runExportRoutes.createRunExportRoutes(
       app.exportCsv.createExportRunCsvUseCase({
         results: runs.results,
@@ -277,6 +306,7 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     runs,
     candles,
     dispatched,
+    queries: runs.liveCalls,
     limits: queue.limits,
     dispatch,
     failures,

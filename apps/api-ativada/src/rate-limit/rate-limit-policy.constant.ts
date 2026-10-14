@@ -85,6 +85,14 @@ export const RATE_LIMIT_POLICY = {
     keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
     maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
+  // O aviso do WebSocket refaz o acompanhamento a cada vela e cada refeita lê 4 ou 5 consultas por chave: 60 por minuto sobram.
+  RUN_LIVE_STATUS: {
+    name: 'run-live-status',
+    limit: 60,
+    windowMilliseconds: ONE_MINUTE_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
+  },
   RUN_TRADE_SUMMARY: {
     name: 'run-trade-summary',
     limit: 30,

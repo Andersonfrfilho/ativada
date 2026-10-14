@@ -53,9 +53,14 @@ export const TRADE_STATUS_FILTER = ['open', 'closed'] as const;
 
 export const RUN_CHART_PATH = '/v1/runs/:runId/chart';
 export const RUN_TRADE_SUMMARY_PATH = '/v1/runs/:runId/trade-summary';
+export const RUN_LIVE_STATUS_PATH = '/v1/runs/:runId/live-status';
+export const RUN_DECISIONS_PATH = '/v1/runs/:runId/decisions';
 
 // Acima disto, o gráfico agrupa os preenchimentos por coluna em vez de mandar cada um (ADR 0002, spec 005, O9).
 export const CHART_MARKER_LIMIT = 500;
 export const CHART_COLUMNS = { MINIMUM: 100, MAXIMUM: 2_000, DEFAULT: 800 } as const;
 // Todas as execuções de uma vez: o walk-forward tem poucas janelas.
 export const CHART_WINDOW_READ_LIMIT = 5_000;
+
+// Acompanhamento da simulação ao vivo (ADR 0002, spec 008, L13): 24 decisões por página (um dia em velas de 1 h), no máximo 100.
+export const LIVE_DECISIONS_PAGE_SIZE = { DEFAULT: 24, MAXIMUM: 100 } as const;
