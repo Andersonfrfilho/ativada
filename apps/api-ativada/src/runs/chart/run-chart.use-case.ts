@@ -11,11 +11,12 @@ import {
 
 import { RunNotFoundError } from '../run.error.js';
 import { CHART_COLUMNS, CHART_MARKER_LIMIT, CHART_WINDOW_READ_LIMIT } from '../runs.constant.js';
+import { readChartDecisions, type ChartDecisionDependencies } from './chart-decisions.js';
 import { toClusterViews, toMarkerView, type ChartView } from './chart-views.js';
 import type { ChartQuery } from './run-chart.schema.js';
 import { clipRange, resolveRunRange } from './run-chart-range.js';
 
-export type RunChartDependencies = {
+export type RunChartDependencies = ChartDecisionDependencies & {
   readonly runs: Pick<RunRepository, 'findRun'>;
   readonly results: Pick<
     RunResultRepository,
@@ -50,6 +51,7 @@ function emptyChart(run: RunRecord): ChartView {
     markers: [],
     clusters: null,
     totals: EMPTY_TOTALS,
+    decisions: run.kind === RUN_KIND.LIVE_PAPER ? [] : null,
   };
 }
 
@@ -98,7 +100,7 @@ async function readFills(
 async function buildChart(dependencies: RunChartDependencies, read: ChartRead): Promise<ChartView> {
   const { results, exchange } = dependencies;
   const { scope, run, range, runRange, columns } = read;
-  const [totals, priceColumns] = await Promise.all([
+  const [totals, priceColumns, decisions] = await Promise.all([
     results.countFillsInRange(scope, run.id, range),
     results.listPriceColumns(scope, run.id, {
       exchange,
@@ -107,6 +109,7 @@ async function buildChart(dependencies: RunChartDependencies, read: ChartRead): 
       range,
       columns,
     }),
+    readChartDecisions(dependencies, { scope, run, range }),
   ]);
   if (totals === undefined || priceColumns === undefined) throw new RunNotFoundError();
   return {
@@ -119,6 +122,7 @@ async function buildChart(dependencies: RunChartDependencies, read: ChartRead): 
     columns: priceColumns,
     ...(await readFills(dependencies, read, totals)),
     totals,
+    decisions,
   };
 }
 

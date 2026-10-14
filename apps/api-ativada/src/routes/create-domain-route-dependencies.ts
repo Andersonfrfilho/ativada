@@ -4,6 +4,7 @@ import {
   createGoalRepository,
   createRunRepository,
   type RunRepository,
+  type RunResultRepository,
   createRunQueueRepository,
   createRunLiveStatusRepository,
   createRunResultRepository,
@@ -99,18 +100,23 @@ function createStrategyDependencies(
   };
 }
 
-// O acompanhamento ao vivo (spec 008): as leituras por dono e a versão da estratégia; a hora vem do relógio injetado.
-function createLiveStatusUseCases(
+// As leituras do acompanhamento ao vivo (spec 008): o gráfico, o live-status e as decisões compartilham o repositório por
+// dono e a versão da estratégia; a hora vem do relógio injetado.
+function createLiveAwareUseCases(
   params: DomainRouteParams,
-  runs: RunRepository,
-): Pick<RunRoutesBundle, 'liveStatus' | 'decisions'> {
-  const dependencies = {
-    runs,
+  shared: {
+    readonly runs: RunRepository;
+    readonly results: RunResultRepository;
+    readonly exchange: string;
+  },
+): Pick<RunRoutesBundle, 'chart' | 'liveStatus' | 'decisions'> {
+  const readers = {
     strategies: createStrategyRepository(params.database),
     live: createRunLiveStatusRepository(params.database),
-    exchange: params.environment.MARKET_EXCHANGE,
   };
+  const dependencies = { ...readers, runs: shared.runs, exchange: shared.exchange };
   return {
+    chart: createRunChartUseCase({ ...shared, ...readers }),
     liveStatus: createLiveStatusUseCase({ ...dependencies, now: params.now }),
     decisions: createRunDecisionsUseCase(dependencies),
   };
@@ -151,9 +157,8 @@ function createRunDependencies(
     routes,
     series: createRunSeriesUseCases({ results }),
     exportRunCsv: createExportRunCsvUseCase({ results, now: params.now }),
-    chart: createRunChartUseCase(shared),
     tradeSummary: createTradeSummaryUseCase({ results }),
-    ...createLiveStatusUseCases(params, shared.runs),
+    ...createLiveAwareUseCases(params, shared),
   };
 }
 

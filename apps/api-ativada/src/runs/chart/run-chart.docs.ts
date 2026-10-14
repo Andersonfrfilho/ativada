@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@ativada/environment';
+import { SIGNAL_ACTION } from '@ativada/strategy-engine';
 
 import type { RouteDocumentation } from '../../openapi/route-documentation.types.js';
 import {
@@ -9,6 +10,7 @@ import {
 } from '../../openapi/schema-primitives.js';
 import { RUN_ERROR_CODE, VALIDATION_ERROR_CODE } from '../../shared/errors/error-code.constant.js';
 import { HTTP_STATUS } from '../../shared/http/http.constant.js';
+import { DECISION_OUTCOME } from '../live-status/live-status.constant.js';
 import { RUN_ID_PARAM } from '../runs.constant.js';
 import { chartQuerySchema } from './run-chart.schema.js';
 
@@ -40,6 +42,15 @@ const CLUSTER_SCHEMA = z.strictObject({
   sells: z.number().int().nonnegative(),
 });
 
+const CHART_DECISION_SCHEMA = z.strictObject({
+  candleTime: epochMillisecondsSchema,
+  closedAt: epochMillisecondsSchema,
+  action: z.enum(SIGNAL_ACTION),
+  outcome: z.enum(DECISION_OUTCOME),
+  score: decimalTextSchema,
+  scoreThreshold: decimalTextSchema,
+});
+
 const CHART_SCHEMA = z.strictObject({
   symbol: z.string(),
   timeframe: z.string(),
@@ -54,6 +65,7 @@ const CHART_SCHEMA = z.strictObject({
     buys: z.number().int().nonnegative(),
     sells: z.number().int().nonnegative(),
   }),
+  decisions: z.array(CHART_DECISION_SCHEMA).nullable(),
 });
 
 export const RUN_CHART_DOCUMENTATION: RouteDocumentation = {
@@ -61,7 +73,8 @@ export const RUN_CHART_DOCUMENTATION: RouteDocumentation = {
     'Preço da moeda reduzido a colunas (primeiro, último, mínima e máxima) e as compras e vendas da faixa. A faixa ' +
     '`[from, to)` (ms UTC) é recortada à da execução (walk-forward: só a parte fora da amostra; ao vivo: até a última ' +
     'vela processada); `runRange` devolve essa faixa efetiva da execução. `columns` vai de 100 a 2.000 (padrão 800). Até 500 preenchimentos vêm em `markers`; acima disso, ' +
-    '`clusters` por coluna (um dos dois é `null`).',
+    '`clusters` por coluna (um dos dois é `null`). `decisions` (só na simulação ao vivo) traz a decisão de cada vela da faixa, esperas ' +
+    'incluídas, para o pontinho do gráfico; é `null` em backtest, walk-forward e com mais de 500 velas na faixa.',
   tag: 'Execuções — séries',
   params: pathIdSchema(RUN_ID_PARAM),
   query: chartQuerySchema,

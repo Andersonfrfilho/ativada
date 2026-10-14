@@ -8,6 +8,7 @@ import {
 } from '@ativada/strategy-engine';
 
 import { formatOptionalDecimal, roundMoneyDown, roundMoneyUp } from '../money-rounding.js';
+import type { ChartDecisionView } from './chart-decisions.js';
 
 export type ChartMarkerView = {
   readonly positionKey: string;
@@ -41,6 +42,8 @@ export type ChartView = {
   readonly markers: readonly ChartMarkerView[] | null;
   readonly clusters: readonly ChartClusterView[] | null;
   readonly totals: { readonly buys: number; readonly sells: number };
+  // As decisões de cada vela da faixa (spec 008, L16): só na simulação ao vivo e com até 500 velas; `null` nos demais casos.
+  readonly decisions: readonly ChartDecisionView[] | null;
 };
 
 function computeAmount(marker: FillMarkerInput): EngineDecimalValue {

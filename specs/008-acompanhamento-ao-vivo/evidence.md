@@ -152,3 +152,22 @@ WSL ~/gates/ativada-spec8b: typecheck verde · lint verde · format:check verde
 bun test (live-status + api-openapi + api-run* + ownership-registry + strategy-engine-boundary + code-size-limits +
 app-import-boundary + frases e contas da T1.1/T1.2): 449 pass, 0 fail
 ```
+
+## T1.5 — `decisions` opcional no `/chart` (sonnet, 2026-10-14)
+
+- `GET /v1/runs/:runId/chart` ganha `decisions: [{ candleTime, closedAt, action, outcome, score, scoreThreshold }] | null`
+  (`chart-decisions.ts`, ADR 0002 L16): só na `live_paper`, uma linha por vela da faixa efetiva `[from, to)`, crescente, esperas
+  incluídas; `null` em backtest, em walk-forward e quando a faixa tem mais de 500 velas. A conta `(to − from) ÷ duração > 500`
+  é feita sem consulta: acima do teto o banco nem é lido. Até 500: uma leitura de `signals` (`LIMIT 501`) e uma das posições que
+  cruzam a faixa, mais a versão da estratégia para o limiar de cada vela (compra livre, venda comprada); a `live_paper` sem
+  vela fechada devolve `[]`. Campos antigos intactos; a política de taxa do `/chart` segue `RUN_CHART` (30/min).
+- Contrato novo `test/api-run-chart-decisions.contract.test.ts` (faixa inteira e recortada, compra/venda/espera comprada com o
+  limiar certo, 500 velas passam, 501 e "500 velas + 1 ms" viram `null`, sem consulta acima do teto, `[]` antes da primeira
+  vela, backtest e walk-forward `null` sem ler as decisões, esquema documentado, 404 entre usuários); o contrato antigo
+  `test/api-run-chart.contract.test.ts` continua verde sem edição.
+
+```text
+WSL ~/gates/ativada-spec8b: typecheck verde · lint verde · format:check verde
+bun test (T1.1 a T1.5 + api-run* + api-openapi + ownership-registry + strategy-engine-boundary + code-size-limits +
+app-import-boundary): 460 pass, 0 fail
+```
