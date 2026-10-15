@@ -18,3 +18,19 @@ export {
   type ComputeMarketReadingsParams,
   type MomentumParams,
 } from './market-readings.js';
+export { auditVotes } from './accuracy-auditor.js';
+export {
+  SPECIALIST_CATALOG,
+  type SpecialistConfig,
+  type SpecialistDefinition,
+} from './specialist-catalog.js';
+export {
+  computeSeriesAnchor,
+  computeVoteSeries,
+  runSpecialistTeam,
+  selectSentiments,
+  SPECIALIST_VERSIONS,
+  type SelectSentimentsParams,
+  type SpecialistTeamParams,
+  type VoteSeriesParams,
+} from './specialist-team.js';

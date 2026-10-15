@@ -39,6 +39,7 @@ export type MarketReadings = {
 
 export type AuditWindow = {
   readonly decisionTime: number;
+  readonly timeframeMilliseconds: number;
   readonly windowCandles: number;
 };
 

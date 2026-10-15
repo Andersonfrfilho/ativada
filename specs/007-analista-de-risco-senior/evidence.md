@@ -196,3 +196,20 @@ bun test (boundary + market-readings)                      → 28 pass / 0 fail
 bun test (+ strategy-engine-boundary, code-size-limits, app-import-boundary, database.contract, wilson-interval,
           projection-rule/messages/summary-oracle, risk-analyst-15m-slice, risk-analyst-auditor-oracle) → 143 pass / 0 fail
 ```
+
+## T1.2 — equipe de especialistas e auditor de acertos (2026-10-15)
+
+- **`specialist-catalog.ts`** (A2): `SPECIALIST_CATALOG`, fechado, igual campo a campo ao catálogo escrito à mão do oráculo (`ORACLE_SPECIALIST_CONFIGS`): uma estratégia de UMA família por especialista (Tendência = EMA 9×21 + MACD 12/26/9 + Donchian 20; Reversão = RSI 14 30/70 + Bollinger 20/2; Volume = OBV EMA 20; Sentimento = Fear & Greed 25/75), regime nenhum, limiar ±1 e o risco do Placar clássico.
+- **`specialist-team.ts`** (A2, A3): `computeVoteSeries` roda o `signalStep` de PRODUÇÃO vela a vela com a lacuna declarada exata (voto = sinal do placar: negativo -1, zero 0, positivo +1; aquecimento = `null`; `isMissing` quando o dado da regra faltou; `atr` = `risk:atr` do próprio sinal via `decimalFromIndicator`); `runSpecialistTeam` roda os quatro; `selectSentiments` usa `selectAvailableSentiment` com o corte de inserção no fechamento da vela (só a fonte da execução, só o disponível e inserido até o fechamento); `computeSeriesAnchor` dá a âncora diária (00:00 UTC do dia de `t − 3.080·d`: de 3.081 a 3.176 velas, 3.168 para 14/10/2026 23:45 UTC). Nenhum indicador reimplementado.
+- **`accuracy-auditor.ts`** (A5 a A7): `auditVotes(série, janela)` conta as previsões `p` com `t − (W + 1)·d < p ≤ t − d` (sem leitura, sem lado, lacuna, empate, acerto, erro), taxas a 4 casas para baixo, veredito e limites pelo `judgeAgainstCoinFlip` de `@ativada/statistics` (o ÚNICO Wilson) e peso `limite inferior − 0,5` só em `above`. A vela `t` nunca conta e nada depois de `t` entra.
+- **Paridade com o oráculo `bigint`** (`test/risk-analyst-accuracy-auditor.contract.test.ts`): `toStrictEqual` do resumo inteiro contra o dourado E contra `summarizeAuditor` em 20 casos dos dois conjuntos reais (2 conjuntos × 5 itens × janelas 2.880 e 96) e em 10 casos do recorte real de 15 min (`btcusdt-15m-3300`, Fear & Greed do banco, 5 itens × 2 janelas). Os votos da equipe também batem com os do oráculo (`buildAuditorSeries` e `buildRealAuditorSeries`), com uma lacuna declarada ao motor e com o corte da série no meio.
+- **Bordas**: 29 acertos em 29 = `too_few` (peso 0), 30 em 30 = `above` com o peso do oráculo; 60 de 100 (limite inferior 0,50198…, peso positivo e < 0,01) prova valor e 59 de 100 não; 21/30 `above`, 20/30 `even`, 9/30 `below`; toda contagem até 40 dá veredito e limites iguais aos do oráculo. Janela de W previsões, lacuna, empate e `t` sem resultado à mão.
+- Catálogo: aquecimento 129/97/97/97 (≤ 200); no recorte, 128 velas sem leitura na Tendência e 96 nas outras; o sentimento do fim do recorte (> 48 h) vota 0 com `isMissing`.
+
+```text
+bun run typecheck    → verde (tsc raiz e painel)
+bun run lint         → verde
+bun run format:check → All matched files use Prettier code style!
+bun test (4 arquivos risk-analyst desta fase + 15m-slice + auditor-oracle + strategy-engine-boundary, code-size-limits,
+          app-import-boundary, database.contract, wilson-interval, projection-rule/messages/summary-oracle) → 239 pass / 0 fail
+```
