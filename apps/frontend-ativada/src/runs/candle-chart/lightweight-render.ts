@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { stamp, type Context, type Render } from './lightweight-context.js';
 import type { SeriesPartialOptionsMap } from './lightweight-surface.js';
+import { pricePriceFormat, SCORE_PRICE_FORMAT } from './surface-format.js';
 import {
   buildCandleColors,
   buildConeEdges,
@@ -27,7 +28,16 @@ function lineOptions(
     lineStyle: look.isDashed ? Dashed : Solid,
     priceLineVisible: false,
     lastValueVisible: false,
+    priceFormat: pricePriceFormat(ctx.state.pricePrecision),
   };
+}
+
+// A grandeza do preço muda as casas do eixo (BTC 2, SHIB 8): as séries de preço trocam o formato de uma vez.
+export function applyPricePrecision(ctx: Context): void {
+  const priceFormat = pricePriceFormat(ctx.state.pricePrecision);
+  [ctx.candles, ctx.forming, ctx.realPrice].forEach((series) =>
+    series.applyOptions({ priceFormat }),
+  );
 }
 
 export const renderLines: Render = (ctx, theme) => {
@@ -51,7 +61,11 @@ export const renderScore: Render = (ctx, theme) => {
   layers.scoreLevels = [];
   if (state.scoreBars.length === 0) return dropScore(ctx);
   if (layers.score === undefined) {
-    layers.score = chart.addSeries(kit.HistogramSeries, { lastValueVisible: false }, PANE_SCORE);
+    layers.score = chart.addSeries(
+      kit.HistogramSeries,
+      { priceFormat: SCORE_PRICE_FORMAT, lastValueVisible: false },
+      PANE_SCORE,
+    );
     chart.panes()[PANE_SCORE]?.setStretchFactor(SCORE_STRETCH);
   }
   const { score } = layers;

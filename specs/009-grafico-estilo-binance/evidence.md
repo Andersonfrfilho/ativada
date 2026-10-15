@@ -550,3 +550,30 @@ plana, a linha do preço real e o resultado da previsão anterior estão desenha
 - O meio-cone no canvas principal tem só uma vela de largura (a previsão é de UMA vela): 160 pixels; só é reconhecível com "Aproximar". O painel "Próxima vela de perto" é a leitura do cone.
 - A captura do elemento mostra o aviso fixo "Simulação com dinheiro fictício…" no meio do cartão (efeito da captura por elemento, não da tela). A 375 px e o tema escuro NÃO foram vistos com o canvas (só por classe, nos contratos).
 - O seed tem só ~30 velas de 1 h e o stop do exemplo é 60.000: as caixas de "Stop e alvo" ficam altas e estreitas; o backtest longo (5.000 velas) não mostra operações dentro da janela inicial de 150 velas.
+
+## T4.1 — Revisão de design contra o preview, canvas real (2026-10-15)
+
+Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; nenhuma dependência nova. App dev reiniciado com `scripts/dev-up.ps1` (containers `ativada-dev-*` intocados), conferido no Edge
+(`playwright-core` + `msedge.exe`) com a simulação ao vivo LINK/USDT 1h do usuário `teste`, a 375 e 1280 px, nos dois temas, **por texto e JavaScript** (contraste dos tokens, caixas dos alvos, foco, rolagem,
+posição dos blocos). Captura única: `capturas/t41-revisao-1280-escuro.png` (1280 px, tema escuro, canvas real).
+
+**Pendências da T3.8 resolvidas**
+
+1. Eixo de preço, placar e volume falam pt-BR: `surface-format.ts` + `priceFormat` personalizado por série (o `localization.priceFormatter` do gráfico também formataria o volume). Preço `61.700,00`, LINK `12,562`, placar
+   `−2` (U+2212) e `4`, volume `37,3 mil`. As casas decimais seguem a grandeza do preço (BTC 2, LINK 3, XRP 4, SHIB 8): antes o eixo de moeda barata ficava `0.00`. `Number` só no adaptador (desenho). Contrato `surface-format`.
+2. Simulação ao vivo sem nenhuma vela: `EmptyChartNotice` ("Ainda não há velas para mostrar." + "Aguardando a primeira vela, que fecha às HH:MM.", o mesmo texto da spec 006) no lugar de "Carregando as velas…"
+   (a API devolve `runRange` vazio). Contrato em `candle-live`.
+3. Meio-cone estreito no canvas principal: explicado no cartão ("A previsão vale para uma vela só, por isso o cone é estreito aqui; a leitura clara está em "Próxima vela de perto"."), sem esticar o cone (seria
+   mostrar horizonte que a previsão não tem).
+4. Aviso fixo de simulação "no meio do cartão": era efeito da captura por elemento. O aviso é `position: sticky; top: 0` e, na captura de viewport, fica no topo (conferido).
+
+**Revisão de design (web.md §15/§16)**: painel "Próxima vela de perto" ao lado do canvas a 1280 px (mesmo topo, 340 px) e embaixo a 375 px, sem rolagem horizontal em nenhum dos quatro casos; contraste dos tokens contra
+`--surface` ≥ 3:1 nos dois temas (claro: compra 5,36, venda 5,50, cone 4,04/4,31/3,68, "esperou" 5,34; escuro: 8,49, 7,03, 6,44/5,39/4,52, 5,71; só a grade, decorativa, fica em 1,9 a 2,2); foco do canvas
+visível (outline sólido de 2 px, 142/163/255 no escuro e 37/65/178 no claro) e uma só parada de Tab; estado = ícone + palavra + cor ("↘ ficar de fora", "Tende a FICAR DE FORA · decidiu", "Errou" com ×);
+alvos de 44 px a 375 px (único abaixo era o crédito do `NOTICE`, agora `min-height: 44px`). Linguagem para leigo: "Tendência, não promessa." e a frase nova "Não é recomendação de compra ou venda."
+
+**Pendências (não quebram nada)**
+
+- Seed de E2E/preview com stop e alvo plausíveis (item 5) NÃO feito: custo não é baixo (o seed e as expectativas da T3.8 dependem dos valores atuais); as caixas do preview seguem altas e estreitas no E2E.
+- Dois links em texto corrido da spec 008 ("Ver o que ela analisou…", "o que falta para comprar…") têm 20 px de altura a 1280 px (43 px a 375 px): isenção de link em parágrafo; não mexidos aqui.
+- A cor da grade do canvas (`--chart-grid`) é decorativa e fica abaixo de 3:1 por escolha.

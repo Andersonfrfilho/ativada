@@ -11,10 +11,12 @@ import type {
   SurfaceTime,
   SurfaceVolumeBar,
 } from './chart-surface.types.js';
+import { DEFAULT_PRECISION } from './surface-format.js';
 
 // O que o adaptador guarda entre chamadas: cada camada refaz o próprio desenho quando o tema muda.
 export type SurfaceState = {
   theme: SurfaceTheme | undefined;
+  pricePrecision: number;
   candles: readonly SurfaceCandle[];
   indexByTime: ReadonlyMap<number, number>;
   volume: readonly SurfaceVolumeBar[];
@@ -31,6 +33,7 @@ export type SurfaceState = {
 export function createSurfaceState(): SurfaceState {
   return {
     theme: undefined,
+    pricePrecision: DEFAULT_PRECISION,
     candles: [],
     indexByTime: new Map(),
     volume: [],

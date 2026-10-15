@@ -206,4 +206,21 @@ describe('vela fechada pelo aviso do stream', () => {
     await waitFor(() => expect(harness.candleCalls().length).toBeGreaterThan(1));
     expect(harness.candleCalls().at(-1)?.query.get('to')).toBe(String(RUN_END));
   });
+
+  test('a live run with no candle processed yet says when the first one closes instead of loading forever', async () => {
+    const periodStart = FIXTURE_FROM + 41 * FIXTURE_DAY;
+    const harness = openLive({
+      runOverrides: { status: 'running', periodStart, lastCandleTime: null, finishedAt: null },
+      build: (overrides) => ({
+        ...buildFixtureChart(overrides),
+        runRange: { from: periodStart, to: periodStart },
+      }),
+    });
+    expect(await screen.findByText('Ainda não há velas para mostrar.')).toBeDefined();
+    expect(
+      await screen.findByText(/Aguardando a primeira vela, que (fecha|fechou) às /),
+    ).toBeDefined();
+    expect(screen.queryByText('Carregando as velas…')).toBeNull();
+    expect(harness.candleCalls()).toHaveLength(0);
+  });
 });

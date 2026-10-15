@@ -2,6 +2,7 @@
 import type { ChartSurface, SurfaceTheme } from './chart-surface.types.js';
 import { paint, stamp, type Context } from './lightweight-context.js';
 import {
+  applyPricePrecision,
   RENDER_ALL,
   renderLevels,
   renderLines,
@@ -11,6 +12,7 @@ import {
   renderScore,
   renderVolume,
 } from './lightweight-render.js';
+import { pricePrecisionFor } from './surface-format.js';
 import type { ChartOptions, DeepPartial } from './lightweight-surface.js';
 
 type SeriesSetters = Pick<
@@ -43,6 +45,12 @@ export function buildSeriesSetters(ctx: Context): SeriesSetters {
       state.candles = candles;
       state.indexByTime = new Map(candles.map((candle, index) => [candle.time, index]));
       ctx.candles.setData(stamp(candles));
+      const precision = pricePrecisionFor(candles.at(-1)?.close ?? 0);
+      if (precision !== state.pricePrecision) {
+        state.pricePrecision = precision;
+        applyPricePrecision(ctx);
+        paint(ctx, renderLines, renderProjection);
+      }
       paint(ctx, renderLive);
     },
     setVolume: (bars): void => {

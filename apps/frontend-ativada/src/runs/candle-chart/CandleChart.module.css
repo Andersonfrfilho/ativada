@@ -125,6 +125,9 @@
 }
 
 .credit a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: var(--accent);
   text-underline-offset: 2px;
 }

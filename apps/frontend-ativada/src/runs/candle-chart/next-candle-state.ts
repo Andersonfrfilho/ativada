@@ -11,7 +11,7 @@ export const NEXT_CANDLE_TEXT = {
   NO_FORECAST: 'Sem previsão agora',
   PROMISE_TITLE: 'Tendência, não promessa.',
   PROMISE_BODY:
-    'Mostra para que lado o placar da estratégia está inclinado. O preço pode ir para o outro lado.',
+    'Mostra para que lado o placar da estratégia está inclinado. O preço pode ir para o outro lado. Não é recomendação de compra ou venda.',
 } as const;
 
 const MILLISECONDS_PER_MINUTE = 60_000;

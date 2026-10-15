@@ -35,6 +35,8 @@ export type CandleCardOptions = {
   readonly extraRoutes?: readonly FakeRoute[];
   // `live_paper` liga a previsão e o "esperou"; o padrão é um backtest.
   readonly kind?: string;
+  // Campos da execução que o teste troca (por exemplo, `status` e `periodStart` de uma simulação sem nenhuma vela).
+  readonly runOverrides?: Record<string, unknown>;
   readonly respondLayers?: (call: RecordedCall) => Response | Promise<Response>;
   readonly respondProjections?: (call: RecordedCall) => Response | Promise<Response>;
   // As operações fechadas que a tabela (e a camada "Stop e alvo") recebem.
@@ -130,6 +132,7 @@ function baseRoutes(options: CandleCardOptions): FakeRoute[] {
             kind: options.kind ?? 'backtest',
             periodStart: FIXTURE_FROM,
             periodEnd: runTo,
+            ...options.runOverrides,
           }),
         ),
     },

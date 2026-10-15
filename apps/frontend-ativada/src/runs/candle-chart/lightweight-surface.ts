@@ -17,6 +17,7 @@ import { toTime, type Context } from './lightweight-context.js';
 import { buildOverlaySetters, buildSeriesSetters } from './lightweight-data.js';
 import { buildEvents, buildView } from './lightweight-view.js';
 import { LevelBoxesPrimitive } from './level-boxes-primitive.js';
+import { DEFAULT_PRECISION, pricePriceFormat, VOLUME_PRICE_FORMAT } from './surface-format.js';
 import { createSurfaceState } from './surface-state.js';
 
 // O ÚNICO arquivo que importa `lightweight-charts` (P14): o resto do painel só conhece a porta `ChartSurface`. Os irmãos
@@ -51,11 +52,20 @@ const PANE = { PRICE: 0, VOLUME: 1 } as const;
 const STRETCH = { PRICE: 5, VOLUME: 1.2 } as const;
 
 function createContext(chart: IChartApi): Context {
-  const candles = chart.addSeries(CandlestickSeries, {}, PANE.PRICE);
-  const volumeOptions = { priceFormat: { type: 'volume' }, lastValueVisible: false } as const;
+  const priceFormat = pricePriceFormat(DEFAULT_PRECISION);
+  const candles = chart.addSeries(CandlestickSeries, { priceFormat }, PANE.PRICE);
+  const volumeOptions = { priceFormat: VOLUME_PRICE_FORMAT, lastValueVisible: false };
   const volume = chart.addSeries(HistogramSeries, volumeOptions, PANE.VOLUME);
-  const forming = chart.addSeries(CandlestickSeries, { lastValueVisible: false }, PANE.PRICE);
-  const realPrice = chart.addSeries(LineSeries, { lineWidth: 2, title: 'agora' }, PANE.PRICE);
+  const forming = chart.addSeries(
+    CandlestickSeries,
+    { priceFormat, lastValueVisible: false },
+    PANE.PRICE,
+  );
+  const realPrice = chart.addSeries(
+    LineSeries,
+    { priceFormat, lineWidth: 2, title: 'agora' },
+    PANE.PRICE,
+  );
   const boxes = new LevelBoxesPrimitive({
     timeToX: (seconds): number | null => chart.timeScale().timeToCoordinate(toTime(seconds)),
     priceToY: (price): number | null => candles.priceToCoordinate(price),
