@@ -14,11 +14,15 @@ import type { Trade } from './run.validation.js';
 import { useChartView } from './useChartView.hook.js';
 import { useTradeSelection } from './useTradeSelection.hook.js';
 
-export type TradeChartCardProps = { readonly runId: string };
+export type TradeChartCardProps = {
+  readonly runId: string;
+  // Na simulação ao vivo o resumo mora no cartão "Acompanhamento".
+  readonly hasSummary?: boolean;
+};
 
 // O cartão "Preço e operações": aviso, resumo, gráfico com controles e a tabela, ligados pela seleção na URL
 // (`?de=&ate=` e `?operacao=`): uma seta seleciona a linha e uma linha seleciona as setas, movendo a faixa se preciso.
-export function TradeChartCard({ runId }: TradeChartCardProps): ReactElement {
+export function TradeChartCard({ runId, hasSummary = true }: TradeChartCardProps): ReactElement {
   const timeZone = useUserTimeZone();
   const selection = useTradeSelection();
   const view = useChartView(runId, selection.range);
@@ -28,7 +32,7 @@ export function TradeChartCard({ runId }: TradeChartCardProps): ReactElement {
   return (
     <Card title="Preço e operações">
       <TradeNotice isLive={view.isLive} />
-      <TradeSummary runId={runId} />
+      {hasSummary ? <TradeSummary runId={runId} /> : null}
       <ChartRangeControls
         extent={view.extent}
         range={view.range}

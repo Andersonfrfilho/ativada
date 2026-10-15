@@ -256,3 +256,16 @@ panel-test: 691 pass, 0 fail (53 arquivos)
 WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
 panel-test: 710 pass, 0 fail (54 arquivos)
 ```
+
+## T3.1 — Cartão "Acompanhamento": saldo, comparação e meta (sonnet, 2026-10-14)
+
+- `src/runs/live-tracking/`: `LiveTrackingSection` (topo do detalhe `live_paper`), `LivePulseLine` (linha de pulso reutilizável: Rodando · preço · última decisão · próxima em mm:ss · "servidor respondeu há N s"), `LiveTrackingCard` com `LiveBalanceBlock` (saldo, resultado com ícone + sinal, comprar e segurar com `Term`, frase do servidor), `LiveTradesState` (estado vazio que ensina no lugar dos zeros; "Aguardando a primeira vela") e `LiveTrackingNotices` (vela, olhar de 1 h, dinheiro fictício); `LiveGoalBlock` + `GoalMeterRows` (alvo, prazo no fuso, quanto falta, ganho/tempo/perda com `<progress>`, selo "Abaixo do ritmo"/"No caminho" com o ritmo linear explicado, desfecho troca o bloco). Contas em `goal-text.ts` só com `BigInt` (ganho e tempo para baixo, perda para cima); o prazo vem de `deadlineAt` e `periodStart` (ADR 0002 L8).
+- Detalhe: `LivePaperBody` (rodando, na fila, parada ou concluída; falha segue como antes); `TradeChartCard` ganhou `hasSummary` (o resumo mora no cartão) e agora aparece também na simulação parada e na concluída. `Card` ganhou `icon`, `aside` e `id`; `Icon` ganhou `size` e os ícones do redesenho; tokens de escala (`--text-*`, `--radius-*`, `--space-*`) em `global.css`.
+- Contratos: `test/live-tracking-card.contract.tsx` (números do fixture, zero cinza com "=", estado vazio sem "Total pago"/"Compras", meta 16 h depois do início com `setSystemTime`, "No caminho", desfecho, sem meta o bloco some, simulação cancelada, nenhum `style=` nos componentes), `contrast` (+ `warn` sobre `surface`, barras sobre `surface-2`) e `touch-targets` (+ `.link`).
+- Limitação registrada: o painel não recebe o batimento do worker; "Simulador ativo · servidor respondeu há N s" usa a última resposta do `GET /v1/runs/:id` (consultado a cada 2 s enquanto roda). Um campo de batimento na API ficaria para uma spec própria.
+- **T3.4 (pontinhos "esperou" e níveis no gráfico) ADIADA para a spec 009 por decisão do usuário; nada dela foi feito aqui.**
+
+```text
+WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
+panel-test: 727 pass, 0 fail (55 arquivos)
+```

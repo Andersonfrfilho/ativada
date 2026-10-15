@@ -8,8 +8,24 @@
   gap: 12px;
 }
 
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
 .title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 16px;
   font-weight: 650;
   color: var(--ink);
+}
+
+.icon {
+  display: inline-flex;
+  color: var(--ink-3);
 }

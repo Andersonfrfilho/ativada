@@ -33,7 +33,7 @@ export const decisionSchema = z.object({
   votes: z.array(decisionVoteSchema),
 });
 
-const ruleTriggerSchema = z.object({
+export const ruleTriggerSchema = z.object({
   ruleId: z.string(),
   label: z.string(),
   kind: z.string(),

@@ -7,6 +7,7 @@ import { ApiError } from '../http/api.error.js';
 import { HTTP_STATUS } from '@ativada/environment';
 import controls from '../styles/Controls.module.css';
 import { RunHeader } from '../runs/RunHeader.component.js';
+import { LiveTrackingSection } from '../runs/live-tracking/LiveTrackingSection.component.js';
 import { RunProgressCard } from '../runs/RunProgressCard.component.js';
 import { TradeChartCard } from '../runs/TradeChartCard.component.js';
 import { FAILURE_TEXT, RUN_KIND, RUN_STATUS } from '../runs/run.constant.js';
@@ -22,19 +23,30 @@ function failureMessage(run: RunDetail): string {
   return FAILURE_TEXT[code] ?? `A execução falhou (${code || 'sem código'}).`;
 }
 
-// A simulação ao vivo rodando já tem operações para mostrar; backtest e walk-forward só depois de concluídos.
-function ActiveRun({ run }: { readonly run: RunDetail }): ReactElement {
-  const hasLiveTrades = run.kind === RUN_KIND.LIVE_PAPER && run.status === RUN_STATUS.RUNNING;
+// A simulação ao vivo (qualquer estado, menos falha) abre pelo acompanhamento: saldo, meta, o que falta e as decisões; o gráfico fica entre eles.
+function LivePaperBody({ run }: { readonly run: RunDetail }): ReactElement {
+  const hasChart = run.status === RUN_STATUS.RUNNING || run.status === RUN_STATUS.CANCELLED;
   return (
     <>
-      <RunProgressCard run={run} />
-      {hasLiveTrades ? <TradeChartCard runId={run.id} /> : null}
+      {run.status === RUN_STATUS.CANCELLED ? (
+        <p role="alert" className={controls.error}>
+          {failureMessage(run)}
+        </p>
+      ) : null}
+      <LiveTrackingSection run={run} />
+      {run.status === RUN_STATUS.COMPLETED ? <CompletedBacktest run={run} /> : null}
+      {hasChart ? <TradeChartCard runId={run.id} hasSummary={false} /> : null}
+      {isActiveRun(run) ? <RunProgressCard run={run} /> : null}
     </>
   );
 }
 
 function RunBody({ run }: { readonly run: RunDetail }): ReactElement {
-  if (isActiveRun(run)) return <ActiveRun run={run} />;
+  if (run.kind === RUN_KIND.LIVE_PAPER && run.status !== RUN_STATUS.FAILED) {
+    return <LivePaperBody run={run} />;
+  }
+  // Backtest e walk-forward só mostram operações depois de concluídos.
+  if (isActiveRun(run)) return <RunProgressCard run={run} />;
   if (run.status !== RUN_STATUS.COMPLETED) {
     return (
       <p role="alert" className={controls.error}>

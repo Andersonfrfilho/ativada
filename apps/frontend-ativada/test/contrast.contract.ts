@@ -71,6 +71,7 @@ const PAIRS: readonly (readonly [string, string])[] = [
   ['ink-3', 'surface-2'],
   ['ink-2', 'warn-soft'],
   ['accent', 'warn-soft'],
+  ['warn', 'surface'],
 ];
 
 // Setas, linha, halo e contorno do gráfico são elementos gráficos (WCAG 1.4.11): 3:1.
@@ -87,6 +88,8 @@ const GRAPHIC_PAIRS: readonly (readonly [string, string])[] = [
   ['bench', 'surface'],
   ['warn', 'surface'],
   ['warn', 'bg'],
+  ['bench', 'surface-2'],
+  ['warn', 'surface-2'],
 ];
 
 for (const [theme, read] of [

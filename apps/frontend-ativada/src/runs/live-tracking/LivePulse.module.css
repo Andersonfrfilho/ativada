@@ -1,0 +1,68 @@
+.pulse {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  padding: 12px 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--buy);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.pulseWarn {
+  border-left-color: var(--warn);
+}
+
+.item {
+  white-space: nowrap;
+}
+
+.item strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--buy);
+  font-weight: 700;
+}
+
+.stateWarn {
+  color: var(--warn);
+}
+
+.liveDot {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.countdown {
+  font-family: var(--font-data);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--ink-3);
+}
+
+@media (max-width: 640px) {
+  .pulse {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .item {
+    white-space: normal;
+  }
+}

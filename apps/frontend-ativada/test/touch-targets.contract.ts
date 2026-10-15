@@ -28,6 +28,7 @@ const TARGETS: readonly (readonly [string, string])[] = [
   ['backtests/Backtests.module.css', '.pick'],
   ['strategies/Strategies.module.css', '.name'],
   ['glossary/Term.module.css', '.trigger'],
+  ['runs/live-tracking/LiveTracking.module.css', '.link'],
 ];
 
 describe('alvos de toque', () => {

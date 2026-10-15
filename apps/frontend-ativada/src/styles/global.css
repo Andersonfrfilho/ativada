@@ -21,6 +21,20 @@
     'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
   --font-data: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   --gutter: 16px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 15px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-3xl: 40px;
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --radius-pill: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
   color-scheme: light;
 }
 
