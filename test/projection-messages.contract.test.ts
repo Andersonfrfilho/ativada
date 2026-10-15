@@ -2,19 +2,17 @@
 import { describe, expect, test } from 'bun:test';
 
 import { COIN_FLIP_VERDICT } from '../packages/statistics/src/index.js';
-import {
-  describeLabel,
-  describeReason,
-  describeSummary,
-  describeUnavailable,
-  describeVerdict,
-} from '../apps/api-ativada/src/runs/projections/projection-messages.js';
+import { loadApiApp } from './fixtures/api-routes/api-app.fixture.js';
 import {
   PROJECTION_SIDE,
   PROJECTION_STANCE,
   PROJECTION_STRENGTH,
   PROJECTION_UNAVAILABLE_REASON,
 } from '../apps/api-ativada/src/runs/projections/projections.constant.js';
+
+const { projectionMessages } = await loadApiApp();
+const { describeLabel, describeReason, describeSummary, describeUnavailable, describeVerdict } =
+  projectionMessages;
 
 describe('frases da previsão (ADR 0002, spec 009, P9)', () => {
   test('rótulo = postura + força, com as quatro posturas e as três forças', () => {

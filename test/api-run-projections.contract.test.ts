@@ -279,6 +279,11 @@ describe('backtest e walk-forward', () => {
     expect(data.items).toHaveLength(6);
   });
 
+  test('um backtest AINDA rodando também não tem tendência atual (só a ao vivo tem)', async () => {
+    const runId = await createRun({ kind: 'backtest', status: 'running' });
+    expect((await projectionsOf(runId)).current).toMatchObject({ reason: 'not_running' });
+  });
+
   test('o walk-forward conta só as janelas de teste que terminaram bem, cada uma com o limiar dela', async () => {
     const versionId = await seedConfiguredStrategy(harness, {
       subject: SUBJECT_A,

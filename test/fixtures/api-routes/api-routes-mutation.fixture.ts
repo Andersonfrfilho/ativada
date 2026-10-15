@@ -188,3 +188,28 @@ export const LIVE_STATUS_MUTANT_TARGET: MutantTarget = {
   sourceVariable: 'API_ROUTES_APP_SOURCE',
   shouldBailOnFirstFailure: true,
 };
+
+// As camadas e a previsão do gráfico (spec 009, Fase 1): as contas da regra `projection-1`, as frases, o resumo, as duas rotas e a
+// montagem das linhas, julgados só pelos contratos deles.
+export const PROJECTIONS_MUTANT_TARGET: MutantTarget = {
+  sourceDirectory: `${REPOSITORY_ROOT}apps/api-ativada/src`,
+  mutantRoot: `${REPOSITORY_ROOT}apps/api-ativada/.mutants`,
+  directoryPrefix: 'projections-',
+  judgeTestFiles: [
+    'test/api-run-projections.contract.test.ts',
+    'test/api-run-strategy-layers.contract.test.ts',
+    'test/projection-rule.contract.test.ts',
+    'test/projection-messages.contract.test.ts',
+    'test/api-openapi.contract.test.ts',
+  ],
+  sourceVariable: 'API_ROUTES_APP_SOURCE',
+};
+
+// O intervalo de Wilson e o veredito contra a moeda ao ar (pacote `@ativada/statistics`), julgados pelo contrato dele.
+export const STATISTICS_MUTANT_TARGET: MutantTarget = {
+  sourceDirectory: `${REPOSITORY_ROOT}packages/statistics/src`,
+  mutantRoot: `${REPOSITORY_ROOT}packages/statistics/.mutants`,
+  directoryPrefix: 'wilson-',
+  judgeTestFiles: ['test/wilson-interval.contract.test.ts'],
+  sourceVariable: 'STATISTICS_SOURCE',
+};

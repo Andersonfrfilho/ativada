@@ -214,3 +214,32 @@ Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; o worker con
 
 Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; 138 testes vizinhos passam (mercado, ticker, pipeline,
 endpoint, ambiente, `code-size-limits`, `app-import-boundary`).
+
+## T1.6 — Mutantes das camadas, da previsão e dos filtros de dono (2026-10-15)
+
+Modelo: `sonnet`.
+
+- **`test/api-run-projections-mutants.contract.test.ts`**: cada mutante copia o `src` da API (alvo `PROJECTIONS_MUTANT_TARGET`) ou o
+  `src` do `@ativada/statistics` (alvo `STATISTICS_MUTANT_TARGET`, que o contrato do Wilson passou a carregar por
+  `STATISTICS_SOURCE`) e os contratos `api-run-projections`, `api-run-strategy-layers`, `projection-rule`, `projection-messages` e
+  `api-openapi` (os de regra e de frases agora carregam por `loadApiApp()`) precisam reprovar. Mortos: dono (execução alheia
+  com resposta diferente), rotas públicas, sem limite de requisições, query frouxa, cursor sem validar, página padrão, limite e cursor
+  ignorados, sem `nextCursor`, teto de 1.000 velas (`>=`, removido, janela padrão pela metade, `to` sem recorte), limiares sem
+  recorte, janela parada contada, limiar-base em toda janela, trecho que não começa uma vela antes, rótulos (papel trocado, vírgula,
+  números no walk-forward), força (`≤` → `<` nas duas bordas), limiar do lado errado, lado do zero, postura sem posição, faixa
+  arredondada para dentro (as duas bordas, e casas a 2), borda dentro da faixa, empate contado, venda julgada como compra, taxa
+  para cima e a 3 casas, `counted` com empates, veredito fixo, ordem da força, pendente × lacuna, tendência fora da ao vivo rodando,
+  horizonte de uma vela, aquecimento × sem vela, página antiga repetindo a tendência, frases (força, lado, sinal `+`, moeda ao ar,
+  histórico) e o Wilson (mínimo 29, z² errado, abaixo como acima, sucessos acima do total): 62 testes, 0 falhas. (A primeira rodada
+  caiu num `ENOENT` porque rodei `format` e `typecheck` no espelho ao mesmo tempo, e o `rsync --delete` apagou a cópia; refeita
+  sozinha, passou.)
+- **`scripts/api-runs-mutants.ts`**: +3 filtros de dono no Postgres real (o pedido era +2; a terceira leitura, `listProjectionItems`,
+  merecia o seu): `PROJECTION_LAYER_ROWS_READ_EVERY_OWNER`, `PROJECTION_SUMMARY_READS_EVERY_OWNER` e
+  `PROJECTION_ITEMS_READ_EVERY_OWNER`. Resultado: `api-runs-mutants: OK - 28 mutantes de filtro de dono reprovados` (rodado com o
+  Postgres embutido do WSL no lugar do Docker de `make api-runs-mutants`).
+- Dois contratos ganharam um caso para matar mutantes: backtest AINDA rodando não tem tendência atual e `to` no futuro é recortado
+  antes de contar as 1.000 velas.
+
+Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; 293 testes vizinhos passam (`api-run-*`, `api-runs`,
+`api-openapi`, `ownership-registry`, `strategy-engine-boundary`, `code-size-limits`, `app-import-boundary`, `database.contract`,
+Wilson, regra, frases e oráculo).

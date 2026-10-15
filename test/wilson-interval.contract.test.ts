@@ -1,13 +1,16 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import {
+import { loadStatistics } from './fixtures/projections/statistics-source.fixture.js';
+import { verdictOf } from './fixtures/projections/projection-summary-oracle.fixture.js';
+
+const { wilson } = await loadStatistics();
+const {
   COIN_FLIP_MINIMUM_COUNTED,
   COIN_FLIP_VERDICT,
   computeWilsonInterval,
   judgeAgainstCoinFlip,
-} from '../packages/statistics/src/index.js';
-import { verdictOf } from './fixtures/projections/projection-summary-oracle.fixture.js';
+} = wilson;
 
 // Contas à mão (z = 1,96): limite = (k + z²/2 ∓ z·√(k(n − k)/n + z²/4)) ÷ (n + z²), com z² = 3,8416.
 describe('intervalo de Wilson de 95% (ADR 0002, spec 009, P5 e P10)', () => {

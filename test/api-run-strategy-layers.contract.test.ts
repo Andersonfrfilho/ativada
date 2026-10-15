@@ -229,6 +229,13 @@ describe('camadas: o teto de 1.000 velas e a faixa', () => {
     expect(tooLong.status).toBe(400);
   });
 
+  test('um to no futuro é recortado ao fim da execução ANTES de contar as 1.000 velas para trás', async () => {
+    const runId = await createLongBacktest();
+    const layers = await layersOf(runId, `?to=${NOW + 99 * HOUR}`);
+    expect(layers.to).toBe(NOW);
+    expect(layers.from).toBe(NOW - 1_000 * HOUR);
+  });
+
   test('a faixa pedida é recortada à da execução; fora dela é 400 from: outside_run', async () => {
     const runId = await createLongBacktest();
     const clipped = await layersOf(runId, `?from=${NOW - 5 * HOUR}&to=${NOW + 99 * HOUR}`);

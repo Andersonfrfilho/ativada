@@ -229,6 +229,30 @@ const MUTANTS: readonly Mutant[] = [
       '        eq(signals.runId, runId),\n        gte(',
     ),
   },
+  {
+    name: 'PROJECTION_LAYER_ROWS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-projections.ts',
+      '        ownerCondition(scope, signals.userId),\n        eq(signals.runId, runId),\n        gte(signals.candleTime, params.range.from),',
+      '        eq(signals.runId, runId),\n        gte(signals.candleTime, params.range.from),',
+    ),
+  },
+  {
+    name: 'PROJECTION_SUMMARY_READS_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-projection-summary.ts',
+      'JOIN signals s ON s.user_id = ${scope.ownerUserId} AND s.run_id = ${runId}',
+      'JOIN signals s ON s.run_id = ${runId}',
+    ),
+  },
+  {
+    name: 'PROJECTION_ITEMS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-projection-items.ts',
+      'JOIN signals s ON s.user_id = ${scope.ownerUserId} AND s.run_id = ${runId}',
+      'JOIN signals s ON s.run_id = ${runId}',
+    ),
+  },
 ];
 
 type Verdict = { readonly name: string; readonly exitCode: number; readonly output: string };

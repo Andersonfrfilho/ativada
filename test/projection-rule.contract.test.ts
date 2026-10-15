@@ -1,17 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import {
-  computeBand,
-  computeMoveRate,
-  computeRate,
-  isInsideBand,
-  judgeMove,
-  readSide,
-  readSideThreshold,
-  readStance,
-  readStrength,
-} from '../apps/api-ativada/src/runs/projections/projection-rule.js';
+import { loadApiApp } from './fixtures/api-routes/api-app.fixture.js';
 import {
   PROJECTION_RESULT,
   PROJECTION_SIDE,
@@ -24,6 +14,18 @@ import {
   strengthOf,
 } from './fixtures/projections/projection-summary-oracle.fixture.js';
 
+const { projectionRule } = await loadApiApp();
+const {
+  computeBand,
+  computeMoveRate,
+  computeRate,
+  isInsideBand,
+  judgeMove,
+  readSide,
+  readSideThreshold,
+  readStance,
+  readStrength,
+} = projectionRule;
 const { BUY, SELL, NONE } = PROJECTION_SIDE;
 const RANDOM_DRAWS = 2_000;
 
