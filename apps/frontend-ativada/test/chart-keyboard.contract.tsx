@@ -29,6 +29,7 @@ afterEach(() => {
 
 const CANDLE_COUNT = 40 * 24;
 const LAST = CANDLE_COUNT - 1;
+const PAGE = 1_000;
 const FIRST_BUY = (fillTime(3) - FIXTURE_FROM) / FIXTURE_HOUR;
 const FIRST_SELL = (fillTime(8) - FIXTURE_FROM) / FIXTURE_HOUR;
 
@@ -92,6 +93,18 @@ describe('setas, Home, End e Esc', () => {
     press(chart, 'ArrowLeft');
     press(chart, 'ArrowRight');
     await waitFor(() => expect(crosshair(surface)).toStrictEqual([LAST, LAST - 1, LAST]));
+  });
+
+  test('the pointed candle stays the same when the previous page is prepended', async () => {
+    const { chart, surface, harness } = await open({ runDays: 100 });
+    press(chart, 'ArrowLeft');
+    press(chart, 'ArrowLeft');
+    await waitFor(() => expect(crosshair(surface).at(-1)).toBe(PAGE - 2));
+    act(() => surface.emitVisibleRange({ from: 5, to: 300 }));
+    await waitFor(() => expect(harness.candleCalls()).toHaveLength(2));
+    await waitFor(() => expect(crosshair(surface).at(-1)).toBe(2 * PAGE - 2));
+    press(chart, 'ArrowRight');
+    await waitFor(() => expect(crosshair(surface).at(-1)).toBe(2 * PAGE - 1));
   });
 
   test('Home goes to the first candle and brings the chart to it when it is out of view', async () => {

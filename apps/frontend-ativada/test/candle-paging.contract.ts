@@ -8,12 +8,27 @@ import {
 } from '../src/runs/candle-chart/candle-chart.constant.js';
 import {
   capCandles,
-  hasMoreHistory,
   mergeCandlePages,
   previousPageRange,
   shouldRequestPreviousPage,
 } from '../src/runs/candle-chart/candle-paging.js';
+import {
+  INITIAL_HISTORY_STATE,
+  reduceHistory,
+} from '../src/runs/candle-chart/candle-history.reducer.js';
+import type { MarketCandle } from '../src/runs/candle-chart/market-candles.validation.js';
 import { HOUR_MILLISECONDS } from './support/candle-chart-fixtures.js';
+
+const CANDLE: MarketCandle = {
+  openTime: 0,
+  closeTime: 1,
+  tradeCount: 1,
+  open: '1',
+  high: '1',
+  low: '1',
+  close: '1',
+  volume: '1',
+};
 
 const FIRST_OPEN_TIME = 5_000 * HOUR_MILLISECONDS;
 
@@ -58,10 +73,46 @@ describe('candle paging', () => {
     expect(previousPageRange({ ...params, earliestTime: FIRST_OPEN_TIME + 1 })).toBeUndefined();
   });
 
-  test('a page shorter than the page size means there is no more history', () => {
-    expect(hasMoreHistory(CANDLE_PAGE_SIZE)).toBe(true);
-    expect(hasMoreHistory(CANDLE_PAGE_SIZE - 1)).toBe(false);
-    expect(hasMoreHistory(0)).toBe(false);
+  test('an empty or short page does not end the history: only the reached edge does', () => {
+    const loaded = reduceHistory(INITIAL_HISTORY_STATE, {
+      type: 'replace',
+      candles: [{ ...CANDLE, openTime: 900 }],
+      timeframe: '1h',
+      paging: { hasMore: true, reachedFrom: 800 },
+    });
+    const afterEmpty = reduceHistory(loaded, {
+      type: 'prepend',
+      candles: [],
+      paging: { hasMore: true, reachedFrom: 500 },
+    });
+    expect(afterEmpty.hasMore).toBe(true);
+    expect(afterEmpty.reachedFrom).toBe(500);
+    expect(afterEmpty.candles).toHaveLength(1);
+    const atStart = reduceHistory(afterEmpty, {
+      type: 'prepend',
+      candles: [{ ...CANDLE, openTime: 400 }],
+      paging: { hasMore: false, reachedFrom: 0 },
+    });
+    expect(atStart.hasMore).toBe(false);
+  });
+
+  test('a failed page keeps hasMore and the candles, and releases the loading flag', () => {
+    const loading = reduceHistory(
+      reduceHistory(INITIAL_HISTORY_STATE, {
+        type: 'replace',
+        candles: [{ ...CANDLE, openTime: 900 }],
+        timeframe: '1h',
+        paging: { hasMore: true, reachedFrom: 800 },
+      }),
+      { type: 'loadingPrevious' },
+    );
+    const failed = reduceHistory(loading, { type: 'failed', scope: 'page' });
+    expect(failed.hasMore).toBe(true);
+    expect(failed.isLoadingPrevious).toBe(false);
+    expect(failed.status).toBe('ready');
+    const seriesFailed = reduceHistory(failed, { type: 'failed', scope: 'series' });
+    expect(seriesFailed.status).toBe('error');
+    expect(reduceHistory(seriesFailed, { type: 'retry' }).status).toBe('loading');
   });
 
   test('merging pages never duplicates a candle and keeps time order', () => {

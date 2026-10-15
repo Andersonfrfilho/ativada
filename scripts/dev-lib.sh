@@ -63,6 +63,7 @@ dev_load_environment() {
   MARKET_SYMBOLS="${shell_symbols:-${MARKET_SYMBOLS:-$DEV_DEFAULT_SYMBOLS}}"
   VITE_MARKET_SYMBOLS="$MARKET_SYMBOLS"
   export MARKET_SYMBOLS VITE_MARKET_SYMBOLS
+  if [ -n "${MARKET_TIMEFRAMES:-}" ]; then export VITE_MARKET_TIMEFRAMES="$MARKET_TIMEFRAMES"; fi
 }
 
 dev_compose() {

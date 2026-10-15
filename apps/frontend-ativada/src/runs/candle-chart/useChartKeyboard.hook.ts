@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 import { toSurfaceTime } from './candle-series.js';
 import { planChartKey, type ChartKeyAction } from './chart-key-plan.js';
@@ -33,6 +33,13 @@ export type ChartKeyboard = {
   // A frase da vela apontada, para a região `aria-live`, já com a espera.
   readonly announcement: string;
 };
+
+// A vela apontada é lembrada pelo instante, não pela posição: a página anterior entra à esquerda e muda todos os índices.
+function buildIndexByOpenTime(candles: readonly MarketCandle[]): ReadonlyMap<number, number> {
+  const indexes = new Map<number, number>();
+  candles.forEach((candle, position) => indexes.set(candle.openTime, position));
+  return indexes;
+}
 
 function useDelayedText(text: string): string {
   const [delayed, setDelayed] = useState(text);
@@ -81,8 +88,12 @@ function runAction(action: ChartKeyAction, { params, index, select }: ActionCont
 // janela e a frase da vela apontada vai para a região `aria-live` depois de uma pequena espera.
 export function useChartKeyboard(params: ChartKeyboardParams): ChartKeyboard {
   const { surface, candles } = params;
-  const [rawIndex, setRawIndex] = useState<number | null>(null);
-  const index = rawIndex !== null && rawIndex < candles.length ? rawIndex : null;
+  const [pointedOpenTime, setPointedOpenTime] = useState<number | null>(null);
+  const indexByOpenTime = useMemo(() => buildIndexByOpenTime(candles), [candles]);
+  const index = pointedOpenTime === null ? null : (indexByOpenTime.get(pointedOpenTime) ?? null);
+  function selectIndex(next: number | null): void {
+    setPointedOpenTime(next === null ? null : (candles[next]?.openTime ?? null));
+  }
   const wasSet = useRef(false);
   useEffect(() => {
     if (index === null && !wasSet.current) return;
@@ -103,7 +114,7 @@ export function useChartKeyboard(params: ChartKeyboardParams): ChartKeyboard {
     });
     if (action === undefined) return;
     event.preventDefault();
-    runAction(action, { params, index, select: setRawIndex });
+    runAction(action, { params, index, select: selectIndex });
   }
   return { index, onKeyDown, announcement };
 }

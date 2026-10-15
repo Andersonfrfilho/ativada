@@ -32,6 +32,7 @@ function CanvasHeader({ chart, view, source, model }: CanvasViewProps): ReactEle
     <>
       <ChartToolbar
         timeframe={source.timeframe}
+        options={source.timeframeOptions}
         runTimeframe={chart.timeframe}
         surface={model.surface}
         onTimeframeChange={model.handleTimeframeChange}
@@ -132,6 +133,8 @@ export function CandleCanvas(props: CandleCanvasInput): ReactElement {
         timeZone={model.timeZone}
         selection={selection}
         reason={SURFACE_FAILED_REASON}
+        onRetry={undefined}
+        onBackToRun={undefined}
       />
     );
   }

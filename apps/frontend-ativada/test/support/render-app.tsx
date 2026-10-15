@@ -33,6 +33,8 @@ export type RenderAppOptions = {
   readonly ownsSessionRoute?: boolean;
   // Só para provar o silêncio por par sem dormir 10 s.
   readonly silenceMilliseconds?: number;
+  // As velas que o ambiente da API tem (a configuração pública do painel); o padrão é não limitar.
+  readonly marketTimeframes?: readonly string[];
   // Para testar um hook ou componente sozinho: renderiza isto dentro dos provedores, no lugar das rotas.
   readonly probe?: ReactElement;
 };
@@ -106,6 +108,9 @@ export function renderApp(options: RenderAppOptions): RenderedApp {
     ...(options.silenceMilliseconds === undefined
       ? {}
       : { silenceMilliseconds: options.silenceMilliseconds }),
+    ...(options.marketTimeframes === undefined
+      ? {}
+      : { marketTimeframes: options.marketTimeframes }),
   };
   const { stream, connect } = createFakeStream();
   const router = createMemoryRouter(createAppRoutes(), { initialEntries: [options.path] });

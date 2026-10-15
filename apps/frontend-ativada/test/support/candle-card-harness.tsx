@@ -43,6 +43,7 @@ export type CandleCardOptions = {
   readonly trades?: readonly unknown[];
   // Só para provar o silêncio da vela em formação sem esperar 10 s.
   readonly silenceMilliseconds?: number;
+  readonly marketTimeframes?: readonly string[];
 };
 
 export const LAYERS_PATH = '/v1/runs/run-1/strategy-layers';
@@ -185,6 +186,9 @@ export function showCandleCard(options: CandleCardOptions = {}): CandleCardHarne
     ...(options.silenceMilliseconds === undefined
       ? {}
       : { silenceMilliseconds: options.silenceMilliseconds }),
+    ...(options.marketTimeframes === undefined
+      ? {}
+      : { marketTimeframes: options.marketTimeframes }),
     probe: (
       <ChartSurfaceLoaderContext value={() => Promise.resolve(factory)}>
         <LiveMarketProvider>

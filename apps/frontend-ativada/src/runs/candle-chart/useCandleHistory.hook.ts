@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { useEffect, useReducer, useRef, type Dispatch } from 'react';
+import { useEffect, useReducer, useRef, useState, type Dispatch } from 'react';
 
 import { useApiClient } from '../../app/useAppContext.hook.js';
 import type { ApiClient } from '../../http/api-client.js';
@@ -8,10 +8,11 @@ import {
   INITIAL_HISTORY_STATE,
   reduceHistory,
   type HistoryAction,
+  type HistoryPaging,
   type HistoryState,
 } from './candle-history.reducer.js';
 import { fetchMarketCandlesPage } from './candle-chart.query.js';
-import { hasMoreHistory, previousPageRange, type PageRange } from './candle-paging.js';
+import { previousPageRange, type PageRange } from './candle-paging.js';
 import type { CandleWindow } from './candle-window.js';
 import type { MarketCandle } from './market-candles.validation.js';
 
@@ -24,10 +25,20 @@ export type CandleHistoryParams = {
   readonly timeframeMilliseconds: number;
 };
 
-export type CandleHistory = HistoryState & { readonly loadPrevious: () => void };
+export type CandleHistory = HistoryState & {
+  readonly loadPrevious: () => void;
+  // Pede de novo a primeira página depois de uma falha.
+  readonly retry: () => void;
+};
 
 type LoadedSeries = { readonly key: string; readonly to: number };
 type LoadedRef = { current: LoadedSeries | undefined };
+type LoaderControl = {
+  readonly dispatch: Dispatch<HistoryAction>;
+  readonly loaded: LoadedRef;
+  // Sobe a cada "tentar de novo": a mesma série que falhou pede outra vez.
+  readonly attempt: number;
+};
 
 type PageRequest = {
   readonly queryClient: QueryClient;
@@ -38,7 +49,7 @@ type PageRequest = {
   readonly earliestTime: number;
 };
 
-type ActionBuilder = (candles: MarketCandle[], hasMore: boolean) => HistoryAction;
+type ActionBuilder = (candles: MarketCandle[], paging: HistoryPaging) => HistoryAction;
 
 // Uma falha vira ação, nunca exceção: a tela decide o que mostrar (a reserva, ou as velas que já tem).
 async function requestPage(request: PageRequest, toAction: ActionBuilder): Promise<HistoryAction> {
@@ -49,9 +60,9 @@ async function requestPage(request: PageRequest, toAction: ActionBuilder): Promi
       timeframe,
       ...page,
     });
-    return toAction(candles, hasMoreHistory(candles.length) && page.from > earliestTime);
+    return toAction(candles, { hasMore: page.from > earliestTime, reachedFrom: page.from });
   } catch {
-    return { type: 'failed' };
+    return { type: 'failed', scope: 'page' };
   }
 }
 
@@ -59,12 +70,29 @@ function seriesKeyOf(params: CandleHistoryParams): string {
   return `${params.symbol}|${params.timeframe}|${params.window.anchor}`;
 }
 
+type SeriesLoad = {
+  readonly request: PageRequest;
+  readonly isTail: boolean;
+  readonly seriesKey: string;
+};
+
+async function loadSeriesPage(
+  { request, isTail, seriesKey }: SeriesLoad,
+  control: Pick<LoaderControl, 'dispatch' | 'loaded'>,
+  isActive: () => boolean,
+): Promise<void> {
+  const { timeframe, page } = request;
+  const action = await requestPage(request, (candles, paging) =>
+    isTail ? { type: 'append', candles } : { type: 'replace', candles, timeframe, paging },
+  );
+  if (!isActive()) return;
+  if (action.type !== 'failed') control.loaded.current = { key: seriesKey, to: page.to };
+  control.dispatch(action.type === 'failed' && !isTail ? { ...action, scope: 'series' } : action);
+}
+
 // A série (par, vela e janela) pede a primeira página; a mesma série com o fim mais adiante pede só a ponta nova.
-function useSeriesLoader(
-  params: CandleHistoryParams,
-  dispatch: Dispatch<HistoryAction>,
-  loaded: LoadedRef,
-): void {
+function useSeriesLoader(params: CandleHistoryParams, control: LoaderControl): void {
+  const { dispatch, loaded, attempt } = control;
   const { symbol, timeframe, window, earliestTime } = params;
   const client = useApiClient();
   const queryClient = useQueryClient();
@@ -78,20 +106,24 @@ function useSeriesLoader(
     const page = isTail && previous !== undefined ? { from: previous.to, to } : { from, to };
     if (page.to <= page.from) return undefined;
     let isActive = true;
-    async function load(): Promise<void> {
-      const request = { queryClient, client, symbol, timeframe, page, earliestTime };
-      const action = await requestPage(request, (candles, hasMore) =>
-        isTail ? { type: 'append', candles } : { type: 'replace', candles, timeframe, hasMore },
-      );
-      if (!isActive) return;
-      if (action.type !== 'failed') loaded.current = { key: seriesKey, to };
-      dispatch(action);
-    }
-    void load();
+    const request = { queryClient, client, symbol, timeframe, page, earliestTime };
+    void loadSeriesPage({ request, isTail, seriesKey }, { dispatch, loaded }, () => isActive);
     return (): void => {
       isActive = false;
     };
-  }, [client, queryClient, symbol, timeframe, seriesKey, from, to, earliestTime, dispatch, loaded]);
+  }, [
+    client,
+    queryClient,
+    symbol,
+    timeframe,
+    seriesKey,
+    from,
+    to,
+    earliestTime,
+    dispatch,
+    loaded,
+    attempt,
+  ]);
 }
 
 // As velas do gráfico: a primeira página, a vela nova que fecha no fim (só a ponta, sem reenquadrar) e as páginas
@@ -103,12 +135,13 @@ export function useCandleHistory(params: CandleHistoryParams): CandleHistory {
   const queryClient = useQueryClient();
   const [state, dispatch] = useReducer(reduceHistory, INITIAL_HISTORY_STATE);
   const loaded = useRef<LoadedSeries | undefined>(undefined);
+  const [attempt, setAttempt] = useState(0);
   const seriesKey = seriesKeyOf(params);
-  useSeriesLoader(params, dispatch, loaded);
+  useSeriesLoader(params, { dispatch, loaded, attempt });
 
   async function loadOlder(page: PageRange): Promise<void> {
     const request = { queryClient, client, symbol, timeframe, page, earliestTime };
-    const toPrepend: ActionBuilder = (candles, hasMore) => ({ type: 'prepend', candles, hasMore });
+    const toPrepend: ActionBuilder = (candles, paging) => ({ type: 'prepend', candles, paging });
     const action = await requestPage(request, toPrepend);
     if (loaded.current?.key === seriesKey) dispatch(action);
   }
@@ -116,12 +149,17 @@ export function useCandleHistory(params: CandleHistoryParams): CandleHistory {
   function loadPrevious(): void {
     const first = state.candles[0];
     if (first === undefined || !state.hasMore || state.isLoadingPrevious) return;
-    const firstOpenTime = first.openTime;
+    const firstOpenTime = Math.min(first.openTime, state.reachedFrom ?? first.openTime);
     const page = previousPageRange({ firstOpenTime, timeframeMilliseconds, earliestTime });
     if (page === undefined) return;
     dispatch({ type: 'loadingPrevious' });
     void loadOlder(page);
   }
 
-  return { ...state, loadPrevious };
+  function retry(): void {
+    dispatch({ type: 'retry' });
+    setAttempt((count) => count + 1);
+  }
+
+  return { ...state, loadPrevious, retry };
 }

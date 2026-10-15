@@ -25,6 +25,7 @@ function Import-DevEnvironment([string]$EnvFile) {
     $symbols = if ($shellSymbols) { $shellSymbols } elseif ($env:MARKET_SYMBOLS) { $env:MARKET_SYMBOLS } else { $script:DevDefaultSymbols }
     $env:MARKET_SYMBOLS = $symbols
     $env:VITE_MARKET_SYMBOLS = $symbols
+    $env:VITE_MARKET_TIMEFRAMES = $env:MARKET_TIMEFRAMES
 }
 
 function Get-DevComposeArguments([string]$EnvFile) {

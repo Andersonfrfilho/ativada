@@ -26,13 +26,14 @@ export function CandleChart({ runId, chart, view, selection }: CandleChartProps)
   const timeZone = useUserTimeZone();
   const source = useCandleSource(chart, view);
   if (!source.isSupported || source.history.status === 'error') {
-    const reason = CANDLES_UNAVAILABLE_REASON;
     return (
       <SimpleChartFallback
         chart={chart}
         timeZone={timeZone}
         selection={selection}
-        reason={reason}
+        reason={CANDLES_UNAVAILABLE_REASON}
+        onRetry={source.isSupported ? source.history.retry : undefined}
+        onBackToRun={source.isRunTimeframe ? undefined : source.backToRunTimeframe}
       />
     );
   }

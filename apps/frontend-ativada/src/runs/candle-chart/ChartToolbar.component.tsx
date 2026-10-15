@@ -2,13 +2,14 @@
 import type { ReactElement } from 'react';
 
 import controls from '../../styles/Controls.module.css';
-import { TIMEFRAMES } from '../run.constant.js';
 import type { ChartSurface } from './chart-surface.types.js';
 import styles from './CandleChart.module.css';
 import type { TimeframeChoice } from './useCandleSource.hook.js';
 
 export type ChartToolbarProps = {
   readonly timeframe: string;
+  // As velas que o ambiente tem; a da execução vem sempre.
+  readonly options: readonly TimeframeChoice[];
   // A vela em que a estratégia decide: vem marcada ao abrir.
   readonly runTimeframe: string;
   readonly onTimeframeChange: (timeframe: TimeframeChoice) => void;
@@ -31,11 +32,11 @@ const ZOOM_BUTTONS: readonly ZoomButton[] = [
 // A vela do gráfico (15m, 1h, 4h, 1d) e os botões de aproximar, afastar, ajustar e ir ao fim: o que a roda e a pinça
 // fazem, sem gesto (RF02 e RF05). Alvos de 44 px.
 export function ChartToolbar(props: ChartToolbarProps): ReactElement {
-  const { timeframe, runTimeframe, onTimeframeChange, surface } = props;
+  const { timeframe, options, runTimeframe, onTimeframeChange, surface } = props;
   return (
     <div className={styles.toolbar}>
       <div className={styles.row} role="group" aria-label="Vela do gráfico">
-        {TIMEFRAMES.map((option) => (
+        {options.map((option) => (
           <button
             key={option}
             type="button"

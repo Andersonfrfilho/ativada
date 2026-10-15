@@ -7,7 +7,12 @@ import { RouterProvider } from 'react-router/dom';
 
 import { AppProviders } from './app/AppProviders.component.js';
 import { createAppRoutes } from './app/createAppRoutes.js';
-import { isProductionBuild, loadEnvironment, readMarketSymbols } from './environment.js';
+import {
+  isProductionBuild,
+  loadEnvironment,
+  readMarketSymbols,
+  readMarketTimeframes,
+} from './environment.js';
 import { createApiClient } from './http/api-client.js';
 import { createStreamConnector } from './live/stream-connector.js';
 import { createSessionService } from './session/session-service.js';
@@ -38,6 +43,7 @@ function start(): void {
     authorizeUrl: environment.VITE_KEYCLOAK_AUTHORIZE_URL,
     clientId: environment.VITE_KEYCLOAK_CLIENT_ID,
     marketSymbols: readMarketSymbols(environment),
+    marketTimeframes: readMarketTimeframes(environment),
   };
   createRoot(container).render(
     <StrictMode>

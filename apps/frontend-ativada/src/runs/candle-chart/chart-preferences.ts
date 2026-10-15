@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@ativada/environment';
 
-import { TIMEFRAMES } from '../run.constant.js';
 import { CHART_PREFERENCES_STORAGE_KEY } from './candle-chart.constant.js';
 
-// Preferência de tela (RF10 e RNF09): só camadas ligadas e a vela escolhida, nada sensível.
+// Preferência de tela (RF10 e RNF09): só as camadas ligadas, nada sensível. A vela escolhida NÃO é lembrada: cada execução
+// abre na própria vela (RF05), e uma escolha guardada valeria para todas e para ambientes com outras velas.
 // Padrões da spec 009 D12 e da spec 008 D6: "Stop e alvo" e "Esperou" começam desligados.
 const DEFAULT_LAYERS = {
   forecast: true,
@@ -24,18 +24,13 @@ const layersSchema = z
   })
   .catch(DEFAULT_LAYERS);
 
-// `timeframe: null` = a vela da própria execução.
-const preferencesSchema = z.object({
-  layers: layersSchema,
-  timeframe: z.enum(TIMEFRAMES).nullable().catch(null),
-});
+const preferencesSchema = z.object({ layers: layersSchema });
 
 export type ChartPreferences = z.infer<typeof preferencesSchema>;
 export type PreferenceStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
 export const DEFAULT_CHART_PREFERENCES: ChartPreferences = {
   layers: DEFAULT_LAYERS,
-  timeframe: null,
 };
 
 // O acesso ao `localStorage` pode lançar (janela privada, dados do site bloqueados): sem ele, vale o padrão.

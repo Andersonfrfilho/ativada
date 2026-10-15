@@ -37,11 +37,6 @@ export function previousPageRange(params: PreviousPageParams): PageRange | undef
   return from < params.firstOpenTime ? { from, to: params.firstOpenTime } : undefined;
 }
 
-// Página menor que o pedido = o par não tem mais velas para trás.
-export function hasMoreHistory(pageLength: number): boolean {
-  return pageLength >= CANDLE_PAGE_SIZE;
-}
-
 // Junta páginas sem repetir vela (a mais nova do mesmo `openTime` vale) e em ordem de tempo.
 export function mergeCandlePages<TCandle extends TimedCandle>(
   current: readonly TCandle[],

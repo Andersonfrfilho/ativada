@@ -32,7 +32,7 @@ const THROWING_STORAGE: PreferenceStorage = {
 };
 
 describe('chart preferences', () => {
-  test('the defaults: stop and target and "esperou" off, the rest on, the run candle size', () => {
+  test('the defaults: stop and target and "esperou" off, the rest on', () => {
     expect(readChartPreferences(memoryStorage())).toStrictEqual({
       layers: {
         forecast: true,
@@ -41,7 +41,6 @@ describe('chart preferences', () => {
         stopTarget: false,
         waited: false,
       },
-      timeframe: null,
     });
     expect(DEFAULT_CHART_PREFERENCES.layers.stopTarget).toBe(false);
   });
@@ -50,7 +49,6 @@ describe('chart preferences', () => {
     const storage = memoryStorage();
     const chosen = {
       layers: { ...DEFAULT_CHART_PREFERENCES.layers, stopTarget: true, forecast: false },
-      timeframe: '4h',
     } as const;
     writeChartPreferences(chosen, storage);
     expect(readChartPreferences(storage)).toStrictEqual(chosen);
@@ -68,7 +66,6 @@ describe('chart preferences', () => {
   test('an invalid field falls back alone; the valid ones are kept', () => {
     const stored = JSON.stringify({
       layers: { forecast: 'yes', stopTarget: true, waited: 1 },
-      timeframe: '2h',
     });
     expect(readChartPreferences(memoryStorage(stored))).toStrictEqual({
       layers: {
@@ -78,15 +75,18 @@ describe('chart preferences', () => {
         stopTarget: true,
         waited: false,
       },
-      timeframe: null,
     });
   });
 
+  test('a candle size saved by an older version is ignored: every run opens on its own candle', () => {
+    const stored = JSON.stringify({ layers: DEFAULT_CHART_PREFERENCES.layers, timeframe: '4h' });
+    expect(readChartPreferences(memoryStorage(stored))).toStrictEqual(DEFAULT_CHART_PREFERENCES);
+  });
+
   test('layers that are not an object fall back to the default layers', () => {
-    const stored = JSON.stringify({ layers: 'all', timeframe: '15m' });
+    const stored = JSON.stringify({ layers: 'all' });
     const read = readChartPreferences(memoryStorage(stored));
     expect(read.layers).toStrictEqual(DEFAULT_CHART_PREFERENCES.layers);
-    expect(read.timeframe).toBe('15m');
   });
 
   test('storage that throws never breaks the screen', () => {

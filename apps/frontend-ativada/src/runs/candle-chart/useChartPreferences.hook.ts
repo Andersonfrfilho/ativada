@@ -10,12 +10,10 @@ import {
 
 export type ChartPreferenceControls = {
   readonly preferences: ChartPreferences;
-  // `null` volta para a vela da própria execução.
-  readonly setTimeframe: (timeframe: ChartPreferences['timeframe']) => void;
   readonly toggleLayer: (layer: ChartLayer) => void;
 };
 
-// A vela e as camadas escolhidas ficam neste navegador (preferência de tela, RF10); sem armazenamento valem só na sessão.
+// As camadas escolhidas ficam neste navegador (preferência de tela, RF10); sem armazenamento valem só na sessão.
 export function useChartPreferences(): ChartPreferenceControls {
   const [preferences, setPreferences] = useState<ChartPreferences>(() => readChartPreferences());
   function save(next: ChartPreferences): void {
@@ -24,7 +22,6 @@ export function useChartPreferences(): ChartPreferenceControls {
   }
   return {
     preferences,
-    setTimeframe: (timeframe): void => save({ ...preferences, timeframe }),
     toggleLayer: (layer): void =>
       save({
         ...preferences,

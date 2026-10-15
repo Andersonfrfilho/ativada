@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 
 import { buildOhlcText } from '../src/runs/candle-chart/ohlc-text.js';
-import { readChartPreferences } from '../src/runs/candle-chart/chart-preferences.js';
+import { CHART_PREFERENCES_STORAGE_KEY } from '../src/runs/candle-chart/candle-chart.constant.js';
 import {
   buildClusteredFixtureChart,
   FIXTURE_CLUSTER,
@@ -12,12 +12,13 @@ import {
   fillTime,
 } from './fixtures/trade-chart.fixture.js';
 import type { FakeChartSurface } from './support/fake-chart-surface.js';
-import { errorResponse } from './support/fake-fetch.js';
+import { dataResponse, errorResponse } from './support/fake-fetch.js';
 import {
   buildCandlesBetween,
   FIXTURE_FROM,
   FIXTURE_HOUR,
   showCandleCard,
+  timeframeStep,
   type CandleCardHarness,
 } from './support/candle-card-harness.js';
 
@@ -197,7 +198,7 @@ describe('CandleChart: troca de vela', () => {
     expect(to).toBeGreaterThan(center);
     await waitFor(() => expect(surface.callsOf('centerOn').at(-1)).toEqual([center / 1_000]));
     expect(screen.getByRole('button', { name: /^4h/ }).getAttribute('aria-pressed')).toBe('true');
-    expect(readChartPreferences().timeframe).toBe('4h');
+    expect(localStorage.getItem(CHART_PREFERENCES_STORAGE_KEY)).toBeNull();
   });
 
   test('outside the candle of the run the notice says the strategy layers are gone, and it leaves when back', async () => {
@@ -258,6 +259,46 @@ describe('CandleChart: botões e seleção', () => {
         encodeURIComponent(new Date(FIXTURE_CLUSTER.startTime).toISOString()),
       ),
     );
+  });
+});
+
+describe('CandleChart: velas do ambiente e saída da reserva', () => {
+  test('offers only the candles the environment has, and the one of the run is always there', async () => {
+    showCandleCard({ marketTimeframes: ['1h', '1d'] });
+    const group = await screen.findByRole('group', { name: 'Vela do gráfico' });
+    const labels = within(group)
+      .getAllByRole('button')
+      .map((button) => button.textContent?.slice(0, 2));
+    expect(labels).toStrictEqual(['1h', '1d']);
+    cleanup();
+    showCandleCard({ marketTimeframes: ['4h', '1d'] });
+    const withRun = await screen.findByRole('group', { name: 'Vela do gráfico' });
+    expect(within(withRun).getAllByRole('button')).toHaveLength(3);
+  });
+
+  test('a candle the API refuses does not trap the user: back to the run candle, or try again', async () => {
+    let isRefusing = true;
+    const harness = showCandleCard({
+      respondCandles: (call) => {
+        const timeframe = call.query.get('timeframe');
+        if (isRefusing && timeframe === '4h') return errorResponse(400, 'VALIDATION_FAILED');
+        const from = Number(call.query.get('from'));
+        const to = Number(call.query.get('to'));
+        return dataResponse(buildCandlesBetween(from, to, timeframeStep(timeframe)));
+      },
+    });
+    await readySurface(harness);
+    fireEvent.click(screen.getByRole('button', { name: /^4h/ }));
+    expect(await screen.findByText(/As velas deste par não estão disponíveis/)).toBeDefined();
+    const retry = screen.getByRole('button', { name: 'Tentar de novo' });
+    const before = harness.candleCalls().length;
+    fireEvent.click(retry);
+    await waitFor(() => expect(harness.candleCalls().length).toBeGreaterThan(before));
+    await screen.findByRole('button', { name: 'Tentar de novo' });
+    isRefusing = false;
+    fireEvent.click(screen.getByRole('button', { name: /Voltar para a vela da execução \(1h\)/ }));
+    expect(await screen.findByRole('group', { name: 'Vela do gráfico' })).toBeDefined();
+    expect(screen.getByRole('button', { name: /^1h/ }).getAttribute('aria-pressed')).toBe('true');
   });
 });
 
