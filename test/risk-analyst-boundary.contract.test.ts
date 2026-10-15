@@ -67,6 +67,15 @@ function findImpurity(text: string): RegExp | undefined {
 
 type Manifest = { readonly dependencies?: Readonly<Record<string, string>> };
 
+// `export default` e `as Tipo` (só `as const` passa), olhando o código: comentário e texto entre aspas ficam de fora.
+function findAssertionOrDefault(text: string): string | undefined {
+  const code = text
+    .replace(/\/\/.*$/gm, '')
+    .replace(/'(?:[^'\\\n]|\\.)*'/g, "''")
+    .replace(/`(?:[^`\\]|\\.)*`/gs, '``');
+  return /\bexport\s+default\b|\bas\s+(?!const\b)\w/.exec(code)?.[0];
+}
+
 async function readSources(): Promise<readonly { path: string; text: string }[]> {
   const sources: { path: string; text: string }[] = [];
   for await (const relativePath of new Bun.Glob('**/*.ts').scan({
@@ -146,11 +155,16 @@ describe('risk analyst boundary', () => {
 
   test('source has no default export and no type assertion other than as const', async () => {
     const offending = (await readSources())
-      .map(({ path, text }) => {
-        const code = text.replace(/\/\/.*$/gm, '');
-        return [path, /\bexport\s+default\b|\bas\s+(?!const\b)\w/.exec(code)?.[0]] as const;
-      })
+      .map(({ path, text }) => [path, findAssertionOrDefault(text)] as const)
       .filter(([, found]) => found !== undefined);
     expect(offending).toStrictEqual([]);
+  });
+
+  test('the assertion net flags `as Type` and `export default`, not `as const` nor the word in a phrase (probe)', () => {
+    expect(findAssertionOrDefault('const value = raw as Foo;')).toBeDefined();
+    expect(findAssertionOrDefault('export default function f() {}')).toBeDefined();
+    expect(findAssertionOrDefault('const table = { a: 1 } as const;')).toBeUndefined();
+    expect(findAssertionOrDefault("const phrase = 'as saídas continuam';")).toBeUndefined();
+    expect(findAssertionOrDefault('// as saídas\nconst a = 1;')).toBeUndefined();
   });
 });

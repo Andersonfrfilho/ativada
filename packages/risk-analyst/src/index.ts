@@ -34,3 +34,40 @@ export {
   type SpecialistTeamParams,
   type VoteSeriesParams,
 } from './specialist-team.js';
+export {
+  toAnalystCommands,
+  type AnalystCommandWallet,
+  type ToAnalystCommandsParams,
+} from './analyst-commands.js';
+export { decideAnalyst } from './analyst-decision.js';
+export type * from './analyst-decision.types.js';
+export * from './analyst-messages.constant.js';
+export {
+  buildCadenceLine,
+  buildGoalProgressMessage,
+  buildLockLines,
+  buildOffCadenceMessage,
+  buildPostureLine,
+  buildReasonMessage,
+  buildTimeExitMessage,
+  type GoalProgressMessageParams,
+} from './analyst-messages.js';
+export {
+  buildAnalystMessages,
+  type AnalystMessages,
+  type BuildAnalystMessagesParams,
+} from './analyst-view-messages.js';
+export { buildSpecialistRow, type SpecialistRow } from './specialist-messages.js';
+export {
+  chooseCadence,
+  choosePosture,
+  detectNoData,
+  isOnCadence,
+  resolveEntryGate,
+  riskScaleOf,
+  type ChoosePostureParams,
+  type DetectNoDataParams,
+} from './posture-policy.js';
+export { computeRiskLocks, type RiskLockContext } from './risk-locks.js';
+export { buildSpecialistViews, type SpecialistViewsParams } from './specialist-views.js';
+export { forecastTeam, type ForecastTeamParams } from './team-forecast.js';
