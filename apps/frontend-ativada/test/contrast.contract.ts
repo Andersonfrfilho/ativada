@@ -117,3 +117,72 @@ for (const [theme, read] of [
     }
   });
 }
+
+// Tokens derivados do gráfico (spec 009, T2.2): `color-mix(in srgb, var(--a) N%, var(--b))` resolvido com a paleta de cada tema.
+const MIX_DECLARATION =
+  /--([a-z0-9-]+):\s*color-mix\(in srgb,\s*var\(--([a-z0-9-]+)\)\s*(\d+)%,\s*var\(--([a-z0-9-]+)\)\)/g;
+const PERCENT_DIVISOR = 100;
+const CONE_TOKENS = ['cone-up', 'cone-down', 'cone-neutral'] as const;
+// A grade só ajuda o olho: o valor está nos rótulos dos eixos (WCAG 1.4.11 não a cobra), então o piso é só "visível".
+const GRID_MINIMUM_RATIO = 1.5;
+
+function mixHex(front: string, percent: number, back: string): string {
+  const weight = percent / PERCENT_DIVISOR;
+  const channels = [1, 3, 5].map((index) => {
+    const frontChannel = Number.parseInt(front.slice(index, index + 2), 16);
+    const backChannel = Number.parseInt(back.slice(index, index + 2), 16);
+    const mixed = Math.round(frontChannel * weight + backChannel * (1 - weight));
+    return mixed.toString(16).padStart(2, '0');
+  });
+  return `#${channels.join('')}`;
+}
+
+function withDerivedTokens(base: Map<string, string>): Map<string, string> {
+  const resolved = new Map(base);
+  for (const [, name = '', front = '', percent = '0', back = ''] of CSS.matchAll(MIX_DECLARATION)) {
+    resolved.set(
+      name,
+      mixHex(base.get(front) ?? '#000000', Number(percent), base.get(back) ?? '#ffffff'),
+    );
+  }
+  return resolved;
+}
+
+describe('chart tokens declared in global.css (spec 009, RF06 e RNF06)', () => {
+  test('the grid and the three cone colors are derived with color-mix from existing tokens', () => {
+    const declared = [...CSS.matchAll(MIX_DECLARATION)].map((match) => match[1]);
+    expect(declared.sort()).toEqual(['chart-grid', ...CONE_TOKENS].sort());
+  });
+});
+
+for (const [theme, read] of [
+  ['light', lightTokens],
+  ['dark', darkTokens],
+] as const) {
+  describe(`${theme} theme chart tokens`, () => {
+    const tokens = withDerivedTokens(read());
+    for (const cone of CONE_TOKENS) {
+      for (const surface of ['surface', 'surface-2'] as const) {
+        test(`graphic ${cone} on ${surface} is at least ${GRAPHIC_MINIMUM_RATIO}:1`, () => {
+          const front = tokens.get(cone);
+          expect(front, cone).toBeDefined();
+          expect(
+            ratio(front ?? '#000000', tokens.get(surface) ?? '#ffffff'),
+          ).toBeGreaterThanOrEqual(GRAPHIC_MINIMUM_RATIO);
+        });
+      }
+    }
+    test(`chart-grid on surface stays visible (at least ${GRID_MINIMUM_RATIO}:1)`, () => {
+      const front = tokens.get('chart-grid');
+      expect(front).toBeDefined();
+      expect(ratio(front ?? '#000000', tokens.get('surface') ?? '#ffffff')).toBeGreaterThanOrEqual(
+        GRID_MINIMUM_RATIO,
+      );
+    });
+    test('the grid is quieter than the cones, so it never competes with the data', () => {
+      const grid = ratio(tokens.get('chart-grid') ?? '#000000', tokens.get('surface') ?? '#ffffff');
+      const cone = ratio(tokens.get('cone-up') ?? '#000000', tokens.get('surface') ?? '#ffffff');
+      expect(grid).toBeLessThan(cone);
+    });
+  });
+}

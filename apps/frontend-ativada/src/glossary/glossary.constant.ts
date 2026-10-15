@@ -12,6 +12,13 @@ export const GLOSSARY_TERM = {
   BUY_AND_HOLD: 'buyAndHold',
   STOP_PRICE: 'stopPrice',
   TARGET_PRICE: 'targetPrice',
+  FORMING_CANDLE: 'formingCandle',
+  VOLUME: 'volume',
+  SCOREBOARD: 'scoreboard',
+  TREND: 'trend',
+  ATR_BAND: 'atrBand',
+  SIDE_HIT_RATE: 'sideHitRate',
+  COIN_FLIP: 'coinFlip',
 } as const;
 
 export type GlossaryTerm = (typeof GLOSSARY_TERM)[keyof typeof GLOSSARY_TERM];
@@ -70,5 +77,36 @@ export const GLOSSARY: Readonly<Record<GlossaryTerm, GlossaryEntry>> = {
   [GLOSSARY_TERM.TARGET_PRICE]: {
     label: 'Alvo',
     phrase: 'O preço de lucro: se o preço subir até ele, a simulação vende e garante o ganho.',
+  },
+  [GLOSSARY_TERM.FORMING_CANDLE]: {
+    label: 'Vela em formação',
+    phrase: 'A vela de agora, que ainda não fechou: os valores mudam até o tempo dela acabar.',
+  },
+  [GLOSSARY_TERM.VOLUME]: {
+    label: 'Volume',
+    phrase: 'Quanto da moeda foi negociado durante a vela. Barra alta quer dizer muita negociação.',
+  },
+  [GLOSSARY_TERM.SCOREBOARD]: {
+    label: 'Placar',
+    phrase:
+      'A pontuação das regras em cada vela: acima de zero puxa para comprar, abaixo, para vender.',
+  },
+  [GLOSSARY_TERM.TREND]: {
+    label: 'Tendência',
+    phrase: 'Para que lado o placar está inclinado agora. Não é promessa nem previsão do preço.',
+  },
+  [GLOSSARY_TERM.ATR_BAND]: {
+    label: 'Faixa (ATR)',
+    phrase:
+      'Quanto o preço costuma andar numa vela, pela média das últimas (ATR). Não é um limite.',
+  },
+  [GLOSSARY_TERM.SIDE_HIT_RATE]: {
+    label: 'Acerto do lado',
+    phrase:
+      'Em quantas previsões o preço fechou, na vela seguinte, do lado que a tendência apontava.',
+  },
+  [GLOSSARY_TERM.COIN_FLIP]: {
+    label: 'Moeda ao ar',
+    phrase: 'A referência de 50%: o acerto esperado de quem escolhe o lado jogando uma moeda.',
   },
 };

@@ -23,6 +23,13 @@ describe('glossary', () => {
         'Comprar e segurar',
         'Stop',
         'Alvo',
+        'Vela em formação',
+        'Volume',
+        'Placar',
+        'Tendência',
+        'Faixa (ATR)',
+        'Acerto do lado',
+        'Moeda ao ar',
       ].sort(),
     );
   });
@@ -70,5 +77,44 @@ describe('glossary', () => {
     expect(GLOSSARY[GLOSSARY_TERM.TARGET_PRICE].phrase).toBe(
       'O preço de lucro: se o preço subir até ele, a simulação vende e garante o ganho.',
     );
+  });
+
+  test('the chart terms (spec 009, RF21) each have one fixed phrase', () => {
+    expect(GLOSSARY[GLOSSARY_TERM.FORMING_CANDLE].phrase).toBe(
+      'A vela de agora, que ainda não fechou: os valores mudam até o tempo dela acabar.',
+    );
+    expect(GLOSSARY[GLOSSARY_TERM.VOLUME].phrase).toBe(
+      'Quanto da moeda foi negociado durante a vela. Barra alta quer dizer muita negociação.',
+    );
+    expect(GLOSSARY[GLOSSARY_TERM.SCOREBOARD].phrase).toBe(
+      'A pontuação das regras em cada vela: acima de zero puxa para comprar, abaixo, para vender.',
+    );
+    expect(GLOSSARY[GLOSSARY_TERM.TREND].phrase).toBe(
+      'Para que lado o placar está inclinado agora. Não é promessa nem previsão do preço.',
+    );
+    expect(GLOSSARY[GLOSSARY_TERM.ATR_BAND].phrase).toBe(
+      'Quanto o preço costuma andar numa vela, pela média das últimas (ATR). Não é um limite.',
+    );
+    expect(GLOSSARY[GLOSSARY_TERM.SIDE_HIT_RATE].phrase).toBe(
+      'Em quantas previsões o preço fechou, na vela seguinte, do lado que a tendência apontava.',
+    );
+    expect(GLOSSARY[GLOSSARY_TERM.COIN_FLIP].phrase).toBe(
+      'A referência de 50%: o acerto esperado de quem escolhe o lado jogando uma moeda.',
+    );
+  });
+
+  test('no chart phrase promises profit or a price', () => {
+    const chartTerms = [
+      GLOSSARY_TERM.FORMING_CANDLE,
+      GLOSSARY_TERM.VOLUME,
+      GLOSSARY_TERM.SCOREBOARD,
+      GLOSSARY_TERM.TREND,
+      GLOSSARY_TERM.ATR_BAND,
+      GLOSSARY_TERM.SIDE_HIT_RATE,
+      GLOSSARY_TERM.COIN_FLIP,
+    ];
+    for (const term of chartTerms) {
+      expect(GLOSSARY[term].phrase).not.toMatch(/lucr|ganh|garant|certeza|vai (subir|cair)/i);
+    }
   });
 });

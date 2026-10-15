@@ -35,6 +35,10 @@
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 20px;
+  --chart-grid: color-mix(in srgb, var(--ink-3) 45%, var(--surface));
+  --cone-up: color-mix(in srgb, var(--buy) 85%, var(--surface));
+  --cone-down: color-mix(in srgb, var(--sell) 85%, var(--surface));
+  --cone-neutral: color-mix(in srgb, var(--bench) 85%, var(--surface));
   color-scheme: light;
 }
 

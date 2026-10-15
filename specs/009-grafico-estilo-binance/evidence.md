@@ -259,3 +259,19 @@ Modelo: `sonnet` (a fase pedia `haiku`; a execução ficou com o mesmo agente da
   chaves começam com `runs`/`markets`; parâmetros enviados na URL; vela em formação entregue só ao `onCandle` e mensagem malformada descartada.
 
 Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` 811 passam, 0 falham.
+
+## T2.2 — Glossário e tokens do gráfico (2026-10-15)
+
+Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados.
+
+- **Glossário** (`src/glossary/glossary.constant.ts`): 7 termos novos, uma frase de uma linha cada (20 a 120 caracteres, sem repetir rótulo nem frase, nenhuma promete lucro ou preço):
+  vela em formação, volume, placar, tendência, faixa (ATR), acerto do lado e moeda ao ar. O `SCORE` antigo ("Pontuação do placar") continua; "Placar" é o termo do painel de pontuação por vela.
+  `test/glossary.contract.ts` prende os rótulos, as 7 frases literais e a ausência de promessa ("lucr", "ganh", "garant", "certeza", "vai subir/cair").
+- **Tokens** (`src/styles/global.css`, no bloco `:root`, sem hexadecimal novo): `--chart-grid`, `--cone-up`, `--cone-down` e `--cone-neutral` por `color-mix(in srgb, …)` sobre `--ink-3`, `--buy`, `--sell`, `--bench` e `--surface`;
+  como a mistura usa `var()`, ela acompanha o tema claro, o escuro (`prefers-color-scheme`) e o `data-theme` sem redeclarar.
+- **Contraste** (`test/contrast.contract.ts`): o teste resolve cada `color-mix` com a paleta do tema e confere os cones contra `--surface` e `--surface-2` a ≥ 3:1 (elemento gráfico, WCAG 1.4.11).
+  Medido (surface / surface-2): claro buy 4,04 / 3,48, sell 4,31 / 3,71, neutro 3,68 / 3,16; escuro buy 6,44 / 5,87, sell 5,39 / 4,91, neutro 4,52 / 4,12.
+- **Desvio declarado:** `--chart-grid` NÃO chega a 3:1 (claro 1,90, escuro 2,19; piso do teste 1,5:1 e "mais discreta que o cone"). A RNF06 lista velas, linhas, cone e setas a 3:1, não a grade, e o valor de cada linha
+  está nos rótulos do eixo; uma grade a 3:1 competiria com as velas. Se o usuário preferir 3:1 também nela, é trocar o 45% do token (≈ 75%) e o piso do teste.
+
+Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` 830 passam, 0 falham.
