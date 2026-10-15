@@ -11,18 +11,23 @@ import { toDecisionViews } from './decision-view.js';
 import type { LiveRunContext } from './live-status-context.js';
 import type { DecisionsPageView } from './live-status-view.js';
 
-// Uma posição por vela no máximo, mais a aberta: o bastante para cobrir a faixa lida.
-const POSITIONS_BEYOND_THE_PAGE = 2;
+// Uma posição por vela no máximo, mais a que vem de antes da faixa, a que abre na vela seguinte e a aberta.
+const POSITIONS_BEYOND_THE_PAGE = 3;
 
-// A faixa de velas da página (da mais antiga à mais recente) para ler só as posições que a cruzam, mais as abertas.
-export function toPositionsParams(rows: readonly DecisionRow[]): ListPositionsAroundParams {
+// A faixa de velas da página (da mais antiga à mais recente, com a vela seguinte à mais nova, onde a compra preenche) para
+// ler só as posições que a cruzam, mais as abertas.
+export function toPositionsParams(params: {
+  readonly rows: readonly DecisionRow[];
+  readonly durationMilliseconds: number;
+}): ListPositionsAroundParams {
+  const { rows } = params;
   const newest = rows[0];
   const oldest = rows.at(-1);
   return {
     span:
       newest === undefined || oldest === undefined
         ? undefined
-        : { from: oldest.candleTime, to: newest.candleTime },
+        : { from: oldest.candleTime, to: newest.candleTime + params.durationMilliseconds },
     limit: rows.length + POSITIONS_BEYOND_THE_PAGE,
   };
 }
@@ -37,6 +42,7 @@ export function toDecisionsPageView(params: {
     items: toDecisionViews({
       config: context.config,
       durationMilliseconds: context.durationMilliseconds,
+      lastCandleTime: context.run.lastCandleTime,
       positions: params.positions,
       rows: page.items,
     }),

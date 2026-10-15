@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test';
 
 import {
   createRunsHarness,
@@ -235,5 +235,43 @@ describe('backtest e walk-forward não mudam', () => {
     harness.queries.length = 0;
     await chartOf(runId);
     expect(harness.queries).not.toContain('listDecisionMarkers');
+  });
+});
+
+describe('compra que não preencheu e saídas sem sinal (L21)', () => {
+  async function createRunWithFlow(): Promise<string> {
+    const runId = await createLiveRun(harness, { subject: SUBJECT_A });
+    const rows = Array.from({ length: 20 }, (_unused, index) => {
+      const votes = index === 3 || index === 19 ? BOUGHT_VOTES : WAITING_VOTES;
+      return { signal: decisionRow(index, votes), equity: equityRow(index, '1000', '1000') };
+    });
+    seedDecisions(harness, runId, rows);
+    harness.runs.seed(runId, 'positions', [
+      positionRow({ key: 'stopped', openedIndex: 10, closedIndex: 14, exitReason: 'stop' }),
+    ]);
+    return runId;
+  }
+
+  test('BUY sem posição na vela seguinte espera; na última vela fica pendente; a saída por stop é "exited"', async () => {
+    const chart = await chartOf(await createRunWithFlow());
+    const byTime = new Map((chart.decisions ?? []).map((item) => [item.candleTime, item]));
+    expect(byTime.get(at(3))).toMatchObject({ action: 'BUY', outcome: 'waited' });
+    expect(byTime.get(at(19))).toMatchObject({ action: 'BUY', outcome: 'buy_pending' });
+    expect(byTime.get(at(14))).toMatchObject({ outcome: 'exited', scoreThreshold: '2' });
+    expect(byTime.get(at(12))).toMatchObject({ outcome: 'waited', scoreThreshold: '-2' });
+  });
+
+  test('falha ao ler as decisões não derruba o gráfico: decisions é null e o resto segue', async () => {
+    const runId = await createRunWithFlow();
+    const failure = spyOn(harness.runs.liveStatus, 'listDecisionMarkers').mockRejectedValue(
+      new Error('falha da leitura'),
+    );
+    try {
+      const chart = await chartOf(runId);
+      expect(chart.decisions).toBeNull();
+      expect(chart.markers).not.toBeUndefined();
+    } finally {
+      failure.mockRestore();
+    }
   });
 });

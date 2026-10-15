@@ -22,7 +22,7 @@ const DECISIONS_ROUTE = `${DIRECTORY}/run-decisions.route.ts`;
 const DECISIONS_DOCS = `${DIRECTORY}/run-decisions.docs.ts`;
 const DECISIONS_USE_CASE = `${DIRECTORY}/run-decisions.use-case.ts`;
 const DECISION_PAGE = `${DIRECTORY}/decision-page.ts`;
-const DECISION_VIEW = `${DIRECTORY}/decision-view.ts`;
+const CANDLE_STATE = `${DIRECTORY}/decision-candle-state.ts`;
 const DECISION_MESSAGES = `${DIRECTORY}/decision-messages.ts`;
 const BALANCE = `${DIRECTORY}/live-balance.ts`;
 const GOAL_PROGRESS = `${DIRECTORY}/live-goal-progress.ts`;
@@ -33,6 +33,7 @@ const SECTIONS = `${DIRECTORY}/live-status-sections.ts`;
 const TRIGGERS = `${DIRECTORY}/live-status-triggers.ts`;
 const STORED_READINGS = `${DIRECTORY}/stored-readings.ts`;
 const CHART_DECISIONS = 'runs/chart/chart-decisions.ts';
+const RUN_CHART = 'runs/chart/run-chart.use-case.ts';
 const PAGE_QUERY = 'shared/pagination/page-query.schema.ts';
 const POLICY = 'rate-limit/rate-limit-policy.constant.ts';
 const USER_ACCESS = 'access: ROUTE_ACCESS.USER,';
@@ -325,9 +326,37 @@ const PHRASES_AND_STATES: readonly SourceMutant[] = [
     ),
   },
   {
+    name: 'SIGNAL_EXIT_COUNTS_AS_AN_EXIT_WITHOUT_SIGNAL',
+    edits: edit(CANDLE_STATE, 'position.exitReason !== EXIT_REASON.SIGNAL', 'true'),
+  },
+  {
+    name: 'BUY_COUNTS_AS_FILLED_WITHOUT_THE_NEXT_CANDLE_POSITION',
+    edits: edit(
+      CANDLE_STATE,
+      'positions.some((position) => position.openedCandleTime === nextOpen)',
+      'true',
+    ),
+  },
+  {
+    name: 'THE_LAST_CANDLE_NEVER_HAS_A_PENDING_BUY',
+    edits: edit(CANDLE_STATE, 'params.lastCandleTime === candleTime', 'false'),
+  },
+  {
+    name: 'DECISION_PAGE_SPAN_ENDS_AT_THE_NEWEST_CANDLE',
+    edits: edit(
+      DECISION_PAGE,
+      'newest.candleTime + params.durationMilliseconds',
+      'newest.candleTime',
+    ),
+  },
+  {
+    name: 'CHART_DECISIONS_FAILURE_BREAKS_THE_CHART',
+    edits: edit(RUN_CHART, '.catch(() => null)', ''),
+  },
+  {
     name: 'HOLDING_STARTS_AFTER_THE_BUY_CANDLE',
     edits: edit(
-      DECISION_VIEW,
+      CANDLE_STATE,
       'position.openedCandleTime <= candleTime &&',
       'position.openedCandleTime < candleTime &&',
     ),
@@ -335,7 +364,7 @@ const PHRASES_AND_STATES: readonly SourceMutant[] = [
   {
     name: 'HOLDING_INCLUDES_THE_EXIT_CANDLE',
     edits: edit(
-      DECISION_VIEW,
+      CANDLE_STATE,
       'position.closedCandleTime > candleTime),',
       'position.closedCandleTime >= candleTime),',
     ),

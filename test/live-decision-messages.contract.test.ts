@@ -2,6 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { DecisionMessageParams } from '../apps/api-ativada/src/runs/live-status/decision-messages.js';
+import type { PositionInput } from '../packages/database/src/index.js';
 import {
   createStrategyVersion,
   type SignalVote,
@@ -61,9 +62,15 @@ function voteOf(
 function messageOf(
   overrides: Partial<DecisionMessageParams> & Pick<DecisionMessageParams, 'config' | 'votes'>,
 ): string {
+  const action = overrides.action ?? 'HOLD';
+  const isHolding = overrides.isHolding ?? false;
+  const outcome =
+    action === 'BUY' && !isHolding ? 'bought' : action === 'SELL' && isHolding ? 'sold' : 'waited';
   return buildDecisionMessage({
-    action: 'HOLD',
-    isHolding: false,
+    action,
+    isHolding,
+    outcome,
+    exit: undefined,
     score: '0',
     indicators: {},
     ...overrides,
@@ -270,16 +277,73 @@ describe('comprou, vendeu e esperou com posição (L14)', () => {
   });
 });
 
-describe('o desfecho da vela para a carteira (L12)', () => {
+const STATE = {
+  isHolding: false,
+  isBuyFilled: false,
+  isLastCandle: false,
+  exit: undefined,
+} as const;
+
+describe('o desfecho da vela para a carteira (L12 e L21)', () => {
   test.each([
-    ['BUY', false, 'bought'],
-    ['BUY', true, 'waited'],
-    ['SELL', true, 'sold'],
-    ['SELL', false, 'waited'],
-    ['HOLD', false, 'waited'],
-    ['HOLD', true, 'waited'],
-  ] as const)('%s com posição=%s é %s', (action, isHolding, outcome) => {
-    expect(resolveDecisionOutcome({ action, isHolding })).toBe(outcome);
+    ['BUY', { isHolding: false, isBuyFilled: true }, 'bought'],
+    ['BUY', { isHolding: true, isBuyFilled: false }, 'waited'],
+    ['BUY', { isHolding: false, isBuyFilled: false, isLastCandle: true }, 'buy_pending'],
+    ['BUY', { isHolding: false, isBuyFilled: false }, 'waited'],
+    ['SELL', { isHolding: true }, 'sold'],
+    ['SELL', { isHolding: false }, 'waited'],
+    ['HOLD', { isHolding: false }, 'waited'],
+    ['HOLD', { isHolding: true }, 'waited'],
+  ] as const)('%s com %o é %s', (action, partial, outcome) => {
+    expect(resolveDecisionOutcome({ action, state: { ...STATE, ...partial } })).toBe(outcome);
+  });
+
+  test('a saída por alvo, stop, lacuna ou comando vence qualquer ação da vela', () => {
+    const exit = positionOf('target');
+    expect(resolveDecisionOutcome({ action: 'HOLD', state: { ...STATE, exit } })).toBe('exited');
+    expect(resolveDecisionOutcome({ action: 'BUY', state: { ...STATE, exit } })).toBe('exited');
+  });
+});
+
+function positionOf(exitReason: PositionInput['exitReason']): PositionInput {
+  return {
+    engineKey: 'p1',
+    status: 'closed',
+    entryPrice: '100',
+    quantity: '1',
+    stopPrice: '95.5',
+    targetPrice: '11800.5',
+    entryFee: '0',
+    exitPrice: '100',
+    exitFee: '0',
+    netProfit: '0',
+    exitReason,
+    openedCandleTime: 0,
+    closedCandleTime: 1,
+  };
+}
+
+describe('a compra que não preencheu e as saídas sem sinal (L21)', () => {
+  const votes = [voteOf('donchian-20', 1), voteOf('macd-12-26-9', 1)];
+  const config = configOf([DONCHIAN, MACD]);
+
+  test('BUY sem preenchimento: pendente na última vela, senão sinal sem execução', () => {
+    const params = { config, action: 'BUY', score: '2', votes } as const;
+    expect(messageOf({ ...params, outcome: 'buy_pending' })).toBe(
+      'Pediu compra: executa na abertura da próxima vela.',
+    );
+    expect(messageOf({ ...params, outcome: 'waited' })).toBe('Sinal de compra sem execução.');
+  });
+
+  test.each([
+    ['target', 'Vendeu no alvo (11.800,50).'],
+    ['stop', 'Vendeu no stop (95,50).'],
+    ['gap', 'Saiu pela lacuna de dados.'],
+    ['command', 'Saiu porque a meta terminou.'],
+  ] as const)('saída por %s', (reason, expected) => {
+    expect(messageOf({ config, votes, outcome: 'exited', exit: positionOf(reason) })).toBe(
+      expected,
+    );
   });
 });
 

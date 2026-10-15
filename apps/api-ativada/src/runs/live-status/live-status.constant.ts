@@ -11,8 +11,15 @@ export const BUY_AND_HOLD_COMPARISON = { ABOVE: 'above', BELOW: 'below', EVEN: '
 export type BuyAndHoldComparison =
   (typeof BUY_AND_HOLD_COMPARISON)[keyof typeof BUY_AND_HOLD_COMPARISON];
 
-// O que a decisão da vela significou para a carteira (ADR 0002, spec 008, L12): BUY livre compra, SELL comprada vende.
-export const DECISION_OUTCOME = { WAITED: 'waited', BOUGHT: 'bought', SOLD: 'sold' } as const;
+// O que a decisão da vela significou para a carteira (ADR 0002, spec 008, L12 e L21): BUY livre compra (se a ordem
+// preencheu; na última vela ainda está pendente), SELL comprada vende e alvo, stop, lacuna ou comando saem sem sinal.
+export const DECISION_OUTCOME = {
+  WAITED: 'waited',
+  BOUGHT: 'bought',
+  BUY_PENDING: 'buy_pending',
+  SOLD: 'sold',
+  EXITED: 'exited',
+} as const;
 export type DecisionOutcome = (typeof DECISION_OUTCOME)[keyof typeof DECISION_OUTCOME];
 
 // Por que não há gatilho (L3), na ordem de precedência.

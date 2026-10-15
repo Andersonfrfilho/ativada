@@ -49,7 +49,7 @@ export function createRunDecisionsUseCase(
     const positions = await dependencies.live.listPositionsAround(
       scope,
       run.id,
-      toPositionsParams(page.items),
+      toPositionsParams({ rows: page.items, durationMilliseconds: context.durationMilliseconds }),
     );
     return { ...toDecisionsPageView({ context, page, positions }), perPage: input.limit };
   };

@@ -12,6 +12,7 @@ import {
   type StrategyConfig,
 } from '@ativada/strategy-engine';
 
+import { readCandleState } from './decision-candle-state.js';
 import { buildDecisionMessage, resolveDecisionOutcome } from './decision-messages.js';
 import type { DecisionView, DecisionVoteView } from './live-status-view.js';
 import {
@@ -33,22 +34,13 @@ const STORED_VOTES_SCHEMA = z.array(
 export type DecisionViewParams = {
   readonly config: StrategyConfig;
   readonly durationMilliseconds: number;
+  readonly lastCandleTime: number | undefined;
   // As posições abertas e as que cruzam a página: o bastante para saber se estava comprada em cada vela.
   readonly positions: readonly PositionInput[];
   readonly rows: readonly DecisionRow[];
 };
 
 const canonical = (text: string): string => formatEngineDecimal(toEngineDecimal(text));
-
-// Comprada ao fechar a vela `candleTime`: a compra preenche na abertura da vela seguinte (`openedCandleTime`) e a saída
-// ocupa a vela em que preenche (`closedCandleTime`), então "aberta antes ou nela e fechada depois dela" (ADR 0002, L12).
-export function isHoldingAt(positions: readonly PositionInput[], candleTime: number): boolean {
-  return positions.some(
-    (position) =>
-      position.openedCandleTime <= candleTime &&
-      (position.closedCandleTime === undefined || position.closedCandleTime > candleTime),
-  );
-}
 
 // A leitura gravada da regra em texto: uma saída vira `{ value }`; várias, uma chave por saída; sem leitura, `null`.
 function readRuleReading(
@@ -88,7 +80,14 @@ function toVoteViews(
 
 function toDecisionView(params: DecisionViewParams, row: DecisionRow): DecisionView {
   const { config } = params;
-  const isHolding = isHoldingAt(params.positions, row.candleTime);
+  const state = readCandleState({
+    positions: params.positions,
+    candleTime: row.candleTime,
+    durationMilliseconds: params.durationMilliseconds,
+    lastCandleTime: params.lastCandleTime,
+  });
+  const { isHolding } = state;
+  const outcome = resolveDecisionOutcome({ action: row.action, state });
   const votes = STORED_VOTES_SCHEMA.parse(row.votes);
   const indicators = readIndicatorRecord(row.indicators);
   const score = canonical(row.score);
@@ -97,7 +96,7 @@ function toDecisionView(params: DecisionViewParams, row: DecisionRow): DecisionV
     closedAt: row.candleTime + params.durationMilliseconds,
     close: canonical(row.close),
     action: row.action,
-    outcome: resolveDecisionOutcome({ action: row.action, isHolding }),
+    outcome,
     score,
     scoreThreshold: canonical(isHolding ? config.thresholds.sell : config.thresholds.buy),
     regime: row.regime,
@@ -105,6 +104,8 @@ function toDecisionView(params: DecisionViewParams, row: DecisionRow): DecisionV
       config,
       action: row.action,
       isHolding,
+      outcome,
+      exit: state.exit,
       score,
       votes,
       indicators,

@@ -44,7 +44,7 @@ export function createLiveStatusUseCase(dependencies: LiveStatusDependencies): L
     const positions = await dependencies.live.listPositionsAround(
       scope,
       run.id,
-      toPositionsParams(page.items),
+      toPositionsParams({ rows: page.items, durationMilliseconds: context.durationMilliseconds }),
     );
     const { balance, view: balanceView } = buildBalanceSection(context, equityPoint);
     const openPosition = buildOpenPosition(positions);

@@ -489,6 +489,61 @@ describe('sem vela, aquecendo, comprada, parada e concluída', () => {
     ]);
   });
 
+  test('compra sem preenchimento e saída por alvo, stop, lacuna e comando têm a frase própria (L21)', async () => {
+    const runId = await createLiveRun(harness, { subject: SUBJECT_A });
+    const buyRow = (index: number): ReturnType<typeof flatRows>[number] => ({
+      signal: decisionRow(index, [1, 1, 1, 0]),
+      equity: equityRow(index, '1000', '1000'),
+    });
+    const rows = flatRows().map((row, index) =>
+      index === 3 || index === 20 || index === DECISIONS - 1 ? buyRow(index) : row,
+    );
+    seedDecisions(harness, runId, rows);
+    harness.runs.seed(runId, 'positions', [
+      positionRow({ key: 'target', openedIndex: 5, closedIndex: 7, exitReason: 'target' }),
+      positionRow({ key: 'stop', openedIndex: 9, closedIndex: 10, exitReason: 'stop' }),
+      positionRow({ key: 'gap', openedIndex: 12, closedIndex: 13, exitReason: 'gap' }),
+      positionRow({ key: 'command', openedIndex: 15, closedIndex: 16, exitReason: 'command' }),
+      positionRow({ key: 'filled', openedIndex: 21, closedIndex: 22 }),
+    ]);
+    const { body } = await readJson(
+      await harness.call({
+        subject: SUBJECT_A,
+        path: `${RUNS}/${runId}${DECISIONS_PATH}?limit=${DECISIONS}`,
+      }),
+    );
+    const byTime = new Map(
+      (body as { data: Decision[] }).data.map((item) => [item.candleTime, item]),
+    );
+    const read = (index: number): [string | undefined, string | undefined] => [
+      byTime.get(at(index))?.outcome,
+      byTime.get(at(index))?.message,
+    ];
+    expect(read(3)).toStrictEqual(['waited', 'Sinal de compra sem execução.']);
+    expect(read(7)).toStrictEqual(['exited', 'Vendeu no alvo (31.500,00).']);
+    expect(read(10)).toStrictEqual(['exited', 'Vendeu no stop (29.000,00).']);
+    expect(read(13)).toStrictEqual(['exited', 'Saiu pela lacuna de dados.']);
+    expect(read(16)).toStrictEqual(['exited', 'Saiu porque a meta terminou.']);
+    expect(read(20)[0]).toBe('bought');
+    expect(read(22)[0]).toBe('waited');
+    const firstPage = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${runId}${DECISIONS_PATH}?limit=9` }),
+    );
+    const cursor = (firstPage.body as { pagination: { nextCursor: string } }).pagination.nextCursor;
+    const secondPage = await readJson(
+      await harness.call({
+        subject: SUBJECT_A,
+        path: `${RUNS}/${runId}${DECISIONS_PATH}?limit=5&cursor=${cursor}`,
+      }),
+    );
+    const olderPage = (secondPage.body as { data: Decision[] }).data;
+    expect(olderPage[0]).toMatchObject({ candleTime: at(20), outcome: 'bought' });
+    expect(read(DECISIONS - 1)).toStrictEqual([
+      'buy_pending',
+      'Pediu compra: executa na abertura da próxima vela.',
+    ]);
+  });
+
   test('parada ou concluída: o saldo continua e os gatilhos dizem por que não há', async () => {
     for (const [status, text] of [
       ['completed', 'foi concluída'],

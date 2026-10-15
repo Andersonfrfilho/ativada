@@ -30,7 +30,7 @@ const DONCHIAN = {
   threshold: '13.1',
   distance: '0.393',
   distanceRate: '0.0309',
-  message: 'o preço precisa fechar acima de 13,10 (hoje 12,707, faltam 3,09%)',
+  message: 'o preço precisa fechar acima de 13,10 (no último fechamento 12,707, faltam 3,09%)',
 };
 
 const EMA = {

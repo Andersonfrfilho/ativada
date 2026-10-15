@@ -8,7 +8,7 @@ import { candles } from '../schema/candles.schema.js';
 import { equityPoints } from '../schema/equity-points.schema.js';
 import { positions } from '../schema/positions.schema.js';
 import { signals } from '../schema/signals.schema.js';
-import { POSITION_STATUS, type SignalAction } from './run-result.constant.js';
+import { POSITION_STATUS, SIGNAL_ACTION, type SignalAction } from './run-result.constant.js';
 import { toPositionInput, toSignalInput } from './run-result-record.mapper.js';
 import type {
   DecisionMarkerRow,
@@ -30,6 +30,13 @@ type ReadRequest = {
   readonly scope: OwnerScope;
   readonly runId: string;
 };
+
+// A ação gravada é texto no banco: valor fora do vocabulário é dado corrompido e vira erro, nunca um pontinho inventado.
+function toSignalAction(value: string): SignalAction {
+  const action = Object.values(SIGNAL_ACTION).find((candidate) => candidate === value);
+  if (action === undefined) throw new Error('Ação de decisão gravada desconhecida.');
+  return action;
+}
 
 function clamp(value: number, maximum: number): number {
   return Math.min(Math.max(Math.trunc(value), 1), maximum);
@@ -122,7 +129,7 @@ export async function listPositionsAround(
         or(eq(positions.status, POSITION_STATUS.OPEN), crossesSpan(params.span)),
       ),
     )
-    .orderBy(asc(positions.openedCandleTime))
+    .orderBy(desc(positions.openedCandleTime))
     .limit(clamp(params.limit, POSITIONS_AROUND_MAXIMUM));
   return rows.map(toPositionInput);
 }
@@ -145,7 +152,7 @@ export async function listDecisionMarkers(
     )
     .orderBy(asc(signals.candleTime))
     .limit(clamp(params.limit, DECISION_MARKERS_MAXIMUM));
-  return rows.map((row) => ({ ...row, action: row.action as SignalAction }));
+  return rows.map((row) => ({ ...row, action: toSignalAction(row.action) }));
 }
 
 export function createRunLiveStatusRepository(handle: DatabaseHandle): RunLiveStatusRepository {

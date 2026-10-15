@@ -97,6 +97,15 @@ async function readFills(
   return { markers: null, clusters: toClusterViews({ buckets, range, columns }) };
 }
 
+// As decisões são refinamento do gráfico: falhar ao lê-las não derruba o preço e as operações (a resposta traz `null`).
+function readDecisionsApart(
+  dependencies: RunChartDependencies,
+  read: ChartRead,
+): Promise<ChartView['decisions']> {
+  const { scope, run, range } = read;
+  return readChartDecisions(dependencies, { scope, run, range }).catch(() => null);
+}
+
 async function buildChart(dependencies: RunChartDependencies, read: ChartRead): Promise<ChartView> {
   const { results, exchange } = dependencies;
   const { scope, run, range, runRange, columns } = read;
@@ -109,7 +118,7 @@ async function buildChart(dependencies: RunChartDependencies, read: ChartRead): 
       range,
       columns,
     }),
-    readChartDecisions(dependencies, { scope, run, range }),
+    readDecisionsApart(dependencies, read),
   ]);
   if (totals === undefined || priceColumns === undefined) throw new RunNotFoundError();
   return {

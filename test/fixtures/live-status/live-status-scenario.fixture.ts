@@ -83,6 +83,7 @@ export function positionRow(params: {
   readonly key: string;
   readonly openedIndex: number;
   readonly closedIndex: number | undefined;
+  readonly exitReason?: PositionInput['exitReason'];
 }): PositionInput {
   const isClosed = params.closedIndex !== undefined;
   return {
@@ -96,7 +97,7 @@ export function positionRow(params: {
     exitPrice: isClosed ? '30500' : undefined,
     exitFee: isClosed ? '1.00' : undefined,
     netProfit: isClosed ? '14.00' : undefined,
-    exitReason: isClosed ? 'signal' : undefined,
+    exitReason: isClosed ? (params.exitReason ?? 'signal') : undefined,
     openedCandleTime: at(params.openedIndex),
     closedCandleTime: params.closedIndex === undefined ? undefined : at(params.closedIndex),
   };

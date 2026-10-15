@@ -58,7 +58,9 @@ describe('o que falta para cada regra votar (L15)', () => {
         },
         'Donchian 20',
       ),
-    ).toBe('Donchian 20: o preço precisa fechar acima de 11,80 (hoje 11,42, faltam 3,33%).');
+    ).toBe(
+      'Donchian 20: o preço precisa fechar acima de 11,80 (no último fechamento 11,42, faltam 3,33%).',
+    );
   });
 
   test('preço: abaixo do limiar, milhar com ponto e distância com uma casa quando não há mais', () => {
@@ -74,7 +76,7 @@ describe('o que falta para cada regra votar (L15)', () => {
         'Bollinger 20/2',
       ),
     ).toBe(
-      'Bollinger 20/2: o preço precisa fechar abaixo de 62.160,50 (hoje 65.432,10, faltam 5%).',
+      'Bollinger 20/2: o preço precisa fechar abaixo de 62.160,50 (no último fechamento 65.432,10, faltam 5%).',
     );
   });
 

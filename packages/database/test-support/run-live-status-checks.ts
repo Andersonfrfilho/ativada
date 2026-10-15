@@ -191,8 +191,16 @@ export async function checkLiveStatusReads(context: LifecycleCheckContext): Prom
   });
   assertCondition(
     crossing.map((position) => position.engineKey).join() ===
-      'closed-across,closed-same-candle,still-open',
-    `ao vivo: posições que cruzam a faixa em ordem de abertura (${crossing.map((p) => p.engineKey).join()})`,
+      'still-open,closed-same-candle,closed-across',
+    `ao vivo: posições que cruzam a faixa da mais nova para a mais antiga (${crossing.map((p) => p.engineKey).join()})`,
+  );
+  const newestFirst = await reads.listPositionsAround(owner.scope, run.id, {
+    span: { from: candleTimeAt(5), to: candleTimeAt(25) },
+    limit: 1,
+  });
+  assertCondition(
+    newestFirst.length === 1 && newestFirst[0]?.engineKey === 'still-open',
+    `ao vivo: o corte do limite descarta as mais antigas, nunca a aberta (${newestFirst.map((p) => p.engineKey).join()})`,
   );
   const narrow = await reads.listPositionsAround(owner.scope, run.id, {
     span: { from: candleTimeAt(8), to: candleTimeAt(11) },

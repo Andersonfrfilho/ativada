@@ -19,7 +19,7 @@ import {
   type StrategyConfig,
 } from '@ativada/strategy-engine';
 
-import { isHoldingAt } from '../live-status/decision-view.js';
+import { readCandleState } from '../live-status/decision-candle-state.js';
 import { resolveDecisionOutcome } from '../live-status/decision-messages.js';
 import type { DecisionOutcome } from '../live-status/live-status.constant.js';
 import { CHART_MARKER_LIMIT } from '../runs.constant.js';
@@ -46,17 +46,23 @@ function toDecisionViews(params: {
   readonly positions: readonly PositionInput[];
   readonly config: StrategyConfig;
   readonly durationMilliseconds: number;
+  readonly lastCandleTime: number | undefined;
 }): readonly ChartDecisionView[] {
   const { config } = params;
   return params.markers.map((marker) => {
-    const isHolding = isHoldingAt(params.positions, marker.candleTime);
+    const state = readCandleState({
+      positions: params.positions,
+      candleTime: marker.candleTime,
+      durationMilliseconds: params.durationMilliseconds,
+      lastCandleTime: params.lastCandleTime,
+    });
     return {
       candleTime: marker.candleTime,
       closedAt: marker.candleTime + params.durationMilliseconds,
       action: marker.action,
-      outcome: resolveDecisionOutcome({ action: marker.action, isHolding }),
+      outcome: resolveDecisionOutcome({ action: marker.action, state }),
       score: canonical(marker.score),
-      scoreThreshold: canonical(isHolding ? config.thresholds.sell : config.thresholds.buy),
+      scoreThreshold: canonical(state.isHolding ? config.thresholds.sell : config.thresholds.buy),
     };
   });
 }
@@ -86,8 +92,8 @@ export async function readChartDecisions(
   const [version, positions] = await Promise.all([
     dependencies.strategies.findVersion(scope, run.strategyVersionId),
     dependencies.live.listPositionsAround(scope, run.id, {
-      span: { from: first.candleTime, to: last.candleTime },
-      limit: markers.length + 2,
+      span: { from: first.candleTime, to: last.candleTime + durationMilliseconds },
+      limit: markers.length + 3,
     }),
   ]);
   if (version === undefined) throw new Error('Versão da estratégia da execução ausente.');
@@ -96,5 +102,6 @@ export async function readChartDecisions(
     positions,
     config: parseStrategyConfig(version.config),
     durationMilliseconds,
+    lastCandleTime: run.lastCandleTime,
   });
 }

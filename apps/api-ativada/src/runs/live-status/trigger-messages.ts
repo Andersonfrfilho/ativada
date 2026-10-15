@@ -52,7 +52,7 @@ function describePrice(rule: RuleTrigger, threshold: string): string {
   const side = describeDirection(rule, 'acima', 'abaixo');
   const lead = `o preço precisa fechar ${side} de ${formatPrice(threshold)}`;
   if (rule.current === null || rule.distanceRate === null) return lead;
-  return `${lead} (hoje ${formatPrice(rule.current)}, faltam ${formatDistancePercent(rule.distanceRate)}%)`;
+  return `${lead} (no último fechamento ${formatPrice(rule.current)}, faltam ${formatDistancePercent(rule.distanceRate)}%)`;
 }
 
 function describeCondition(rule: RuleTrigger, threshold: string): string {

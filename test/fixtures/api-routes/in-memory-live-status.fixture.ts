@@ -82,7 +82,7 @@ export function createInMemoryLiveStatus(
             position.closedCandleTime !== undefined &&
             position.closedCandleTime > span.from),
       )
-      .sort((left, right) => left.openedCandleTime - right.openedCandleTime);
+      .sort((left, right) => right.openedCandleTime - left.openedCandleTime);
     return Promise.resolve(rows.slice(0, request.limit));
   };
 
