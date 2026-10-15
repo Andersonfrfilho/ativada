@@ -2,7 +2,7 @@
 import type { ReactElement } from 'react';
 
 import { useUserTimeZone } from '../../account/useUserTimeZone.hook.js';
-import { formatPrice, formatSymbol } from '../../format/format.js';
+import { formatPrice, formatPriceEdge, formatSymbol } from '../../format/format.js';
 import { formatTimeInZone } from '../../format/zoned-time.js';
 import { Term } from '../../glossary/Term.component.js';
 import { Card } from '../../layout/Card.component.js';
@@ -25,8 +25,15 @@ export const SOURCE_TEXT = {
   TITLE: 'De onde vem a previsão',
   LOADING: 'Carregando de onde vem a previsão…',
   ERROR: 'Não foi possível carregar de onde vem a previsão.',
-  WEAK_NOTE: '"Fraco" quer dizer que só metade do caminho até a compra foi andado.',
+  PROJECTION_ERROR: 'Não foi possível carregar a faixa e o lado da previsão agora.',
 } as const;
+
+const WEAK_TARGET = { buy: 'a compra', sell: 'a venda', both: 'a compra ou a venda' } as const;
+
+// "Fraco" é meio caminho andado até o limite do lado que o placar puxa; sem previsão carregada o lado não é conhecido.
+export function weakNoteFor(side: 'buy' | 'sell' | undefined): string {
+  return `"Fraco" quer dizer que só metade do caminho até ${WEAK_TARGET[side ?? 'both']} foi andado.`;
+}
 
 type Triggers = Extract<LiveStatus['triggers'], { readonly status: 'available' }>;
 
@@ -83,22 +90,29 @@ function BandSentence({ current, symbol, timeframe }: BandProps): ReactElement |
         </strong>{' '}
         numa vela de {phrase} o {formatSymbol(symbol)} costuma andar até{' '}
         <span className={styles.number}>{formatPrice(current.atr)}</span> USDT. Por isso a faixa vai
-        de <span className={styles.number}>{formatPrice(current.bandLow)}</span> a{' '}
-        <span className={styles.number}>{formatPrice(current.bandHigh)}</span>.
+        de <span className={styles.number}>{formatPriceEdge(current.bandLow, 'low')}</span> a{' '}
+        <span className={styles.number}>{formatPriceEdge(current.bandHigh, 'high')}</span>.
       </span>
     </p>
   );
 }
 
-type BodyProps = { readonly status: LiveStatus; readonly current: ProjectionCurrent };
+type BodyProps = {
+  readonly status: LiveStatus;
+  // `undefined` enquanto as projeções carregam ou se elas falharam: a régua e os votos não dependem delas.
+  readonly current: ProjectionCurrent | undefined;
+  readonly hasProjectionError: boolean;
+};
 
-function introOf(current: ProjectionCurrent, timeZone: string): string {
+function introOf(current: ProjectionCurrent | undefined, timeZone: string): string {
+  if (current === undefined)
+    return 'A previsão não é outra conta: é o placar da própria estratégia.';
   if (current.status !== 'available') return current.message;
   const closedAt = formatTimeInZone(current.closedAt, timeZone);
   return `A previsão não é outra conta: é o placar da própria estratégia na vela que fechou às ${closedAt}.`;
 }
 
-function SourceBody({ status, current }: BodyProps): ReactElement {
+function SourceBody({ status, current, hasProjectionError }: BodyProps): ReactElement {
   const timeZone = useUserTimeZone();
   const { triggers, run } = status;
   return (
@@ -109,13 +123,15 @@ function SourceBody({ status, current }: BodyProps): ReactElement {
       ) : (
         <p className={styles.gap}>{triggers.message}</p>
       )}
-      {current.status === 'available' ? (
+      {current?.status === 'available' ? (
         <BandSentence current={current} symbol={run.symbol} timeframe={run.timeframe} />
       ) : null}
+      {hasProjectionError ? <p className={styles.gap}>{SOURCE_TEXT.PROJECTION_ERROR}</p> : null}
       <p className={styles.promise}>
         <Icon name="info" size={14} />
         <span>
-          <strong>{NEXT_CANDLE_TEXT.PROMISE_TITLE}</strong> {SOURCE_TEXT.WEAK_NOTE}
+          <strong>{NEXT_CANDLE_TEXT.PROMISE_TITLE}</strong>{' '}
+          {weakNoteFor(current?.status === 'available' ? current.side : undefined)}
         </span>
       </p>
     </>
@@ -131,12 +147,12 @@ export function ProjectionSourceCard({ runId }: { readonly runId: string }): Rea
   const current = projections.data?.current;
   return (
     <Card title={SOURCE_TEXT.TITLE} icon="activity">
-      {live === undefined || current === undefined ? (
+      {live === undefined ? (
         <p className={controls.muted} role="status">
-          {status.isError || projections.isError ? SOURCE_TEXT.ERROR : SOURCE_TEXT.LOADING}
+          {status.isError ? SOURCE_TEXT.ERROR : SOURCE_TEXT.LOADING}
         </p>
       ) : (
-        <SourceBody status={live} current={current} />
+        <SourceBody status={live} current={current} hasProjectionError={projections.isError} />
       )}
     </Card>
   );

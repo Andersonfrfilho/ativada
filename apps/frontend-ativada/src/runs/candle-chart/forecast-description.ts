@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { formatPrice } from '../../format/format.js';
+import { formatPriceEdge } from '../../format/format.js';
 import { formatMomentSkippingToday } from '../../format/zoned-moment.js';
 import { NEXT_CANDLE_TEXT, type NextCandleState } from './next-candle-state.js';
 import { STRENGTH_WORD } from './projection-text.js';
@@ -20,7 +20,7 @@ export type ForecastDescriptionParams = {
 
 function describeBand(current: AvailableProjection): string {
   if (current.bandLow === null || current.bandHigh === null) return '';
-  return `, faixa de ${formatPrice(current.bandLow)} a ${formatPrice(current.bandHigh)}`;
+  return `, faixa de ${formatPriceEdge(current.bandLow, 'low')} a ${formatPriceEdge(current.bandHigh, 'high')}`;
 }
 
 // A previsão na descrição textual do gráfico (RF20): "Previsão: tende a comprar (fraco) até 05:00, faixa de 12,778 a

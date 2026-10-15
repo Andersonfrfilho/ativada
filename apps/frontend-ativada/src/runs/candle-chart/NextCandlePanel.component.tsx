@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { useId, type ReactElement } from 'react';
 
-import { formatPrice } from '../../format/format.js';
+import { formatPrice, formatPriceEdge } from '../../format/format.js';
 import { Icon, type IconName } from '../../layout/Icon.component.js';
 import controls from '../../styles/Controls.module.css';
 import type { TradeChart } from '../trade-chart.validation.js';
@@ -26,8 +26,8 @@ const RESULT_ICON: Readonly<Record<ResultView['tone'], IconName>> = {
 
 function Tendency({ current }: { readonly current: AvailableProjection }): ReactElement {
   const isBuy = current.side === 'buy';
-  const low = current.bandLow === null ? undefined : formatPrice(current.bandLow);
-  const high = current.bandHigh === null ? undefined : formatPrice(current.bandHigh);
+  const low = current.bandLow === null ? undefined : formatPriceEdge(current.bandLow, 'low');
+  const high = current.bandHigh === null ? undefined : formatPriceEdge(current.bandHigh, 'high');
   return (
     <div className={`${styles.tendency} ${isBuy ? styles.buy : styles.sell}`}>
       <span className={styles.what}>

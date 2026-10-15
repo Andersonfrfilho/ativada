@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { toDrawingNumber } from './candle-series.js';
+import { isRisingCandle, toDrawingNumber } from './candle-series.js';
 import { CONE_STEPS } from './candle-chart.constant.js';
 import type { CandleShape } from './market-candles.validation.js';
 import { buildForming, buildTrail, pointText, round } from './next-candle-line.js';
@@ -58,7 +58,7 @@ function toPanelCandle(candle: CandleShape, x: number, scale: Scale): PanelCandl
     wickBottom: round(scale(toDrawingNumber(candle.low))),
     bodyTop: round(Math.min(open, close)),
     bodyHeight: round(Math.max(1, Math.abs(open - close))),
-    isUp: toDrawingNumber(candle.close) >= toDrawingNumber(candle.open),
+    isUp: isRisingCandle(candle),
   };
 }
 function buildCone(

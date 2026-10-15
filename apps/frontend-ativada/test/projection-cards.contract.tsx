@@ -314,6 +314,25 @@ describe('cartão "De onde vem a previsão"', () => {
     expect(source.textContent).not.toContain('costuma andar até');
   });
 
+  test('the weak note names the side the placar pulls to', async () => {
+    const sell = buildProjectionsResponse();
+    const current = Object.assign({}, sell['current'], { side: 'sell', stance: 'sell' });
+    showCards({ projections: () => dataResponse(buildProjectionsResponse({ current })) });
+    const source = await screen.findByRole('region', { name: 'De onde vem a previsão' });
+    await within(source).findByText(/só metade do caminho até a venda foi andado/);
+  });
+
+  test('the ruler and the votes stay when only the projections fail', async () => {
+    showCards({ projections: () => errorResponse(503, 'UNAVAILABLE') });
+    const source = await screen.findByRole('region', { name: 'De onde vem a previsão' });
+    await within(source).findByText(
+      'Não foi possível carregar a faixa e o lado da previsão agora.',
+    );
+    expect(within(source).getByRole('list', { name: 'Voto de cada regra' })).toBeDefined();
+    expect(within(source).getByRole('img', { name: /Pontuação 1/ })).toBeDefined();
+    expect(source.textContent).toContain('só metade do caminho até a compra ou a venda');
+  });
+
   test('a failed live status says so without hiding the history card', async () => {
     showCards({ live: () => errorResponse(503, 'UNAVAILABLE') });
     expect(

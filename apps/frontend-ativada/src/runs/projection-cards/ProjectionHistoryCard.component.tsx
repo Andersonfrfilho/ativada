@@ -6,7 +6,7 @@ import { Card } from '../../layout/Card.component.js';
 import { Icon } from '../../layout/Icon.component.js';
 import controls from '../../styles/Controls.module.css';
 import { useProjectionsQuery } from '../candle-chart/candle-chart.query.js';
-import { formatRatePercent } from '../candle-chart/projection-text.js';
+import { formatIntervalLimitPercent, formatRatePercent } from '../candle-chart/projection-text.js';
 import type { ProjectionSummary } from '../candle-chart/projections.validation.js';
 import styles from './ProjectionCards.module.css';
 import { ProjectionHistoryTable } from './ProjectionHistoryTable.component.js';
@@ -69,8 +69,9 @@ function Verdict({ summary }: { readonly summary: ProjectionSummary }): ReactEle
       <span>{summary.verdictMessage}</span>
       {interval === null || summary.verdict === 'too_few' ? null : (
         <span className={styles.muted}>
-          Com 95% de confiança, o acerto verdadeiro está entre {formatRatePercent(interval.lower)} e{' '}
-          {formatRatePercent(interval.upper)}.
+          Com 95% de confiança, o acerto verdadeiro está entre{' '}
+          {formatIntervalLimitPercent(interval.lower, 'lower')} e{' '}
+          {formatIntervalLimitPercent(interval.upper, 'upper')}.
         </span>
       )}
     </div>

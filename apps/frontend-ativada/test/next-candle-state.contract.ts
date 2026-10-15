@@ -16,9 +16,11 @@ import {
   extendTrail,
   MAX_TRAIL_POINTS,
 } from '../src/runs/candle-chart/price-trail.js';
+import { formatPriceEdge } from '../src/format/format.js';
 import {
   describeResult,
   findRecentResult,
+  formatIntervalLimitPercent,
   formatRatePercent,
   ratePercentAttribute,
 } from '../src/runs/candle-chart/projection-text.js';
@@ -207,6 +209,15 @@ describe('o resultado da previsão anterior (RF17)', () => {
     ).toMatchObject({ text: 'Errou: o preço caiu 0,27% — ficou fora da faixa.' });
   });
 
+  test('a move too small for the second decimal says so instead of "0,00%"', () => {
+    expect(describeResult(item({ result: 'hit', moveRate: '0.00004', isInside: true }))?.text).toBe(
+      'Acertou: o preço subiu menos de 0,01% — ficou dentro da faixa.',
+    );
+    expect(
+      describeResult(item({ result: 'miss', moveRate: '-0.00004', isInside: false }))?.text,
+    ).toBe('Errou: o preço caiu menos de 0,01% — ficou fora da faixa.');
+  });
+
   test('a tie does not count, and pending, no side and a missing candle show nothing', () => {
     expect(describeResult(item({ result: 'tie', moveRate: '0' }))?.text).toBe(
       'Empatou: o preço fechou igual e esta previsão não conta.',
@@ -225,11 +236,28 @@ describe('o resultado da previsão anterior (RF17)', () => {
   });
 });
 
+describe('borda da faixa', () => {
+  test('the lower edge goes down and the upper edge goes up at the price scale', () => {
+    expect(formatPriceEdge('12.77851', 'low')).toBe('12,7785');
+    expect(formatPriceEdge('12.77851', 'high')).toBe('12,7786');
+    expect(formatPriceEdge('61700.126', 'low')).toBe('61.700,12');
+    expect(formatPriceEdge('61700.121', 'high')).toBe('61.700,13');
+    expect(formatPriceEdge('0.00001234', 'low')).toBe('0,00001234');
+    expect(formatPriceEdge('13.0000', 'high')).toBe('13,00');
+  });
+});
+
 describe('porcentagem do servidor', () => {
   test('a rate moves the comma two places without recomputing it', () => {
     expect(formatRatePercent('0.4942')).toBe('49,42%');
     expect(formatRatePercent('0.5')).toBe('50,00%');
     expect(formatRatePercent(null)).toBe('—');
+    // Os limites de Wilson arredondam para fora: o de baixo desce, o de cima sobe (nunca "50,00%" de um 49,9961).
+    expect(formatIntervalLimitPercent('0.499961', 'lower')).toBe('49,99%');
+    expect(formatIntervalLimitPercent('0.499951', 'upper')).toBe('50,00%');
+    expect(formatIntervalLimitPercent('0.4999', 'lower')).toBe('49,99%');
+    expect(formatIntervalLimitPercent('0.5', 'upper')).toBe('50,00%');
+    expect(formatIntervalLimitPercent('x', 'upper')).toBe('—');
     expect(ratePercentAttribute('0.4942')).toBe('49.42000000');
     expect(ratePercentAttribute(null)).toBe('0');
   });

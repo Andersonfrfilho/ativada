@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { toDrawingNumber } from './candle-series.js';
+import { isRisingCandle, toDrawingNumber } from './candle-series.js';
 import type { Layout, PanelForming, PanelInput, PanelModel, Scale } from './next-candle-model.js';
 
 const PRECISION = 100;
@@ -47,6 +47,6 @@ export function buildForming(
     width: round(Math.max(now.x - layout.split, 1)),
     top: round(high),
     height: round(Math.max(low - high, 1)),
-    isUp: toDrawingNumber(input.forming.close) >= toDrawingNumber(input.forming.open),
+    isUp: isRisingCandle(input.forming),
   };
 }

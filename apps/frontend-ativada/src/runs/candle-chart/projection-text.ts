@@ -1,5 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { formatScaled, parseScaled, toPlainText } from '../../format/decimal.js';
+import {
+  formatScaled,
+  parseScaled,
+  roundScaledDirected,
+  toPlainText,
+} from '../../format/decimal.js';
 import type { ProjectionItem } from './projections.validation.js';
 
 // Palavras da tela para o que o servidor devolve em código. Os números e as frases longas vêm prontos do servidor (P9).
@@ -9,6 +14,9 @@ export const SIDE_WORD = { buy: 'Comprar', sell: 'Vender', none: 'Sem lado' } as
 const PERCENT_FACTOR = 100n;
 const ZERO = 0n;
 const NO_VALUE = '—';
+const ZERO_PERCENT = '0,00';
+// Um movimento que existiu mas some na segunda casa não vira "subiu 0,00%" (parece que o preço ficou parado).
+const TINY_MOVE = 'menos de 0,01%';
 // O que conta como resultado recente: a previsão da vela que acabou de fechar (a primeira da lista é a da vela em curso).
 const RECENT_ITEMS = 2;
 
@@ -17,6 +25,18 @@ export function formatRatePercent(rate: string | null): string {
   const scaled = rate === null ? undefined : parseScaled(rate);
   if (scaled === undefined) return NO_VALUE;
   return `${formatScaled(scaled * PERCENT_FACTOR)}%`;
+}
+
+const PERCENT_PLACES = 2;
+
+// Um limite do intervalo de confiança: o de baixo desce e o de cima sobe na segunda casa, para o intervalo mostrado nunca
+// ser mais estreito (mais confiante) do que o do servidor.
+export function formatIntervalLimitPercent(rate: string, limit: 'lower' | 'upper'): string {
+  const scaled = parseScaled(rate);
+  if (scaled === undefined) return NO_VALUE;
+  const direction = limit === 'lower' ? 'down' : 'up';
+  const percent = roundScaledDirected(scaled * PERCENT_FACTOR, PERCENT_PLACES, direction);
+  return `${formatScaled(percent)}%`;
 }
 
 // O mesmo valor como número de atributo SVG ("49.00000000" para "0.49"); só para a largura de uma barra.
@@ -37,7 +57,9 @@ function describeMove(item: ProjectionItem): string | undefined {
   if (rate === undefined) return undefined;
   const verb = rate < ZERO ? 'caiu' : 'subiu';
   const magnitude = rate < ZERO ? -rate : rate;
-  return `o preço ${verb} ${formatScaled(magnitude * PERCENT_FACTOR)}%`;
+  const percent = formatScaled(magnitude * PERCENT_FACTOR);
+  const isTiny = magnitude > ZERO && percent === ZERO_PERCENT;
+  return `o preço ${verb} ${isTiny ? TINY_MOVE : `${percent}%`}`;
 }
 
 function describeBand(item: ProjectionItem): string | undefined {

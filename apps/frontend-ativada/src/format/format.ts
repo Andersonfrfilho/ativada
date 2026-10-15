@@ -1,5 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { formatDecimalText, isPlainDecimal } from './decimal.js';
+import {
+  formatDecimalText,
+  isPlainDecimal,
+  parseScaled,
+  roundScaledDirected,
+  toPlainText,
+} from './decimal.js';
 
 const LOCALE = 'pt-BR';
 const QUOTE_ASSET = 'USDT';
@@ -45,6 +51,20 @@ export function formatPrice(decimalText: string): string {
   return formatDecimalText(decimalText, {
     minimumFraction: FRACTION_DIGITS,
     maximumFraction: tier?.[1] ?? PRICE_MAXIMUM_FRACTION,
+  });
+}
+
+// Uma borda de faixa na escala do preço, arredondada para FORA: a de baixo desce e a de cima sobe, então a faixa mostrada
+// nunca é mais estreita do que a do servidor.
+export function formatPriceEdge(decimalText: string, edge: 'low' | 'high'): string {
+  const scaled = parseScaled(decimalText);
+  if (scaled === undefined) return formatPrice(decimalText);
+  const tier = PRICE_TIERS.find(([floor]) => Math.abs(Number(decimalText)) >= floor);
+  const places = tier?.[1] ?? PRICE_MAXIMUM_FRACTION;
+  const rounded = roundScaledDirected(scaled, places, edge === 'low' ? 'down' : 'up');
+  return formatDecimalText(toPlainText(rounded), {
+    minimumFraction: FRACTION_DIGITS,
+    maximumFraction: places,
   });
 }
 

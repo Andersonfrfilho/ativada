@@ -1,5 +1,4 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { toDrawingNumber } from './candle-series.js';
 import type { SurfaceTheme } from './chart-surface.types.js';
 
 // Cada cor do gráfico é um token de `global.css`; nenhum hexadecimal mora no código (RNF07).
@@ -34,17 +33,12 @@ export function buildSurfaceTheme(resolve: ColorResolver): SurfaceTheme {
 const RGB_PATTERN = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/;
 const HEX_PATTERN = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i;
 
-const hexChannel = (pair: string | undefined): number => toDrawingNumber(`0x${pair ?? '00'}`);
+// Os canais seguem como texto decimal (nada de número para uma cor): o valor só é escrito de volta em `rgba(...)`.
+const hexChannel = (pair: string | undefined): string => BigInt(`0x${pair ?? '00'}`).toString();
 
-function toChannels(color: string): readonly [number, number, number] | undefined {
+function toChannels(color: string): readonly [string, string, string] | undefined {
   const rgb = RGB_PATTERN.exec(color);
-  if (rgb !== null) {
-    return [
-      toDrawingNumber(rgb[1] ?? '0'),
-      toDrawingNumber(rgb[2] ?? '0'),
-      toDrawingNumber(rgb[3] ?? '0'),
-    ];
-  }
+  if (rgb !== null) return [rgb[1] ?? '0', rgb[2] ?? '0', rgb[3] ?? '0'];
   const hex = HEX_PATTERN.exec(color);
   if (hex === null) return undefined;
   return [hexChannel(hex[1]), hexChannel(hex[2]), hexChannel(hex[3])];
