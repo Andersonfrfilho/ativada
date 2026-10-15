@@ -14,6 +14,7 @@ import { describeLookup, lookupVersion } from '../strategies/version-index.js';
 import { useVersionIndexQuery } from '../strategies/strategy.query.js';
 import controls from '../styles/Controls.module.css';
 import styles from './Backtests.module.css';
+import { GroupedRunList } from './GroupedRunList.component.js';
 
 export type RunSelection = {
   readonly selected: readonly string[];
@@ -77,6 +78,8 @@ export function RunListCard({ kind, title, moreLabel, selection }: RunListCardPr
           isError={runs.isError}
           emptyText="Nada por aqui ainda."
         />
+      ) : selection !== undefined ? (
+        <GroupedRunList runs={items} selection={selection} />
       ) : (
         <ul className={styles.list}>
           {items.map((run) => (

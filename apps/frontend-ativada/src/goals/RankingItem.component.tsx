@@ -5,7 +5,8 @@ import { Link } from 'react-router';
 import { ROUTE_PATH } from '../app/app.constant.js';
 import { formatSymbol } from '../format/format.js';
 import controls from '../styles/Controls.module.css';
-import { VERDICT_HINT, VERDICT_PLAIN } from './goal.constant.js';
+import { Icon } from '../layout/Icon.component.js';
+import { VERDICT_HINT, VERDICT_ICON, VERDICT_LABEL, VERDICT_PLAIN } from './goal.constant.js';
 import type { Combination } from './goal.validation.js';
 import styles from './Goals.module.css';
 import { computeOutcomeSegments } from './outcome-bar.js';
@@ -32,6 +33,11 @@ function verdictClass(verdict: string): string {
   if (verdict === 'COMPRAR') return styles.verdictBuy ?? '';
   if (verdict === 'EVITAR') return styles.verdictAvoid ?? '';
   return styles.verdictHold ?? '';
+}
+
+function verdictIcon(verdict: string): 'arrowUp' | 'arrowDown' | 'equal' {
+  if (verdict === 'COMPRAR') return VERDICT_ICON.COMPRAR;
+  return verdict === 'EVITAR' ? VERDICT_ICON.EVITAR : VERDICT_ICON.SEGURAR;
 }
 
 function DuplicateNotice({ runId }: { readonly runId: string | undefined }): ReactElement | null {
@@ -105,7 +111,8 @@ export function RankingItem(props: RankingItemProps): ReactElement {
           className={`${styles.verdict} ${verdictClass(evaluation.verdict)}`}
           title={VERDICT_HINT[evaluation.verdict]}
         >
-          {evaluation.verdict}
+          <Icon name={verdictIcon(evaluation.verdict)} size={14} />
+          {VERDICT_LABEL[evaluation.verdict] ?? evaluation.verdict}
         </span>
       </div>
       <p className={styles.plainVerdict}>{VERDICT_PLAIN[evaluation.verdict]}</p>

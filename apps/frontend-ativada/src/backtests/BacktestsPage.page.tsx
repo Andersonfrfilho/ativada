@@ -7,6 +7,7 @@ import { RUN_KIND } from '../runs/run.constant.js';
 import runStyles from '../runs/Runs.module.css';
 import controls from '../styles/Controls.module.css';
 import styles from './Backtests.module.css';
+import { LiveRunCard } from './LiveRunCard.component.js';
 import { NewBacktestCard } from './NewBacktestCard.component.js';
 import { RunListCard } from './RunListCard.component.js';
 
@@ -27,6 +28,7 @@ export function BacktestsPage(): ReactElement {
   return (
     <div className={runStyles.page}>
       <h1 className={runStyles.title}>Backtests</h1>
+      <LiveRunCard />
       <NewBacktestCard />
       <div className={styles.compareBar}>
         {first !== undefined && second !== undefined ? (

@@ -26,6 +26,8 @@ const TARGETS: readonly (readonly [string, string])[] = [
   ['goals/Goals.module.css', '.checkbox'],
   ['backtests/Backtests.module.css', '.link'],
   ['backtests/Backtests.module.css', '.pick'],
+  ['backtests/BacktestGroups.module.css', '.pick'],
+  ['backtests/BacktestGroups.module.css', '.pairLink'],
   ['strategies/Strategies.module.css', '.name'],
   ['glossary/Term.module.css', '.trigger'],
   ['runs/live-tracking/Decisions.module.css', '.expand'],

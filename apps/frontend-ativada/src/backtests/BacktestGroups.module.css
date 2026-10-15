@@ -1,0 +1,209 @@
+.groups {
+  display: grid;
+  gap: 10px;
+}
+
+.group {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.groupSummary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  min-height: 56px;
+  background: var(--surface-2);
+}
+
+.groupSummary::-webkit-details-marker {
+  display: none;
+}
+
+.groupTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.group[open] .groupTitle svg {
+  transform: rotate(90deg);
+}
+
+.groupStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.muted {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.groupTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14.5px;
+}
+
+.groupTable th {
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+  font-weight: 600;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.groupTable td {
+  padding: 2px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.pickCell {
+  width: 56px;
+  padding: 0;
+}
+
+.pick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
+}
+
+.pairLink {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.period {
+  font-size: 13px;
+}
+
+.resultCell {
+  width: 44%;
+}
+
+.result {
+  display: grid;
+  grid-template-columns: 1fr 104px;
+  gap: 12px;
+  align-items: center;
+}
+
+.resultTrack {
+  display: block;
+  width: 100%;
+  height: 14px;
+}
+
+.zeroLine {
+  stroke: var(--ink-3);
+  stroke-width: 1;
+}
+
+.barGain {
+  fill: var(--buy);
+}
+
+.barLoss {
+  fill: var(--sell);
+}
+
+.delta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-weight: 600;
+  font-family: var(--font-data);
+  white-space: nowrap;
+}
+
+.up {
+  color: var(--buy);
+}
+
+.down {
+  color: var(--sell);
+}
+
+.flat {
+  color: var(--ink-2);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.liveRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (max-width: 700px) {
+  .groupTable thead {
+    display: none;
+  }
+
+  .groupTable,
+  .groupTable tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .groupTable tr {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    column-gap: 4px;
+    padding: 4px 12px 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .groupTable td {
+    border: 0;
+    padding: 0 0 0 4px;
+  }
+
+  .groupTable td.pickCell {
+    grid-row: 1 / span 3;
+    width: auto;
+    padding: 0;
+  }
+
+  .resultCell {
+    width: auto;
+  }
+
+  .hideSmall {
+    display: none;
+  }
+}

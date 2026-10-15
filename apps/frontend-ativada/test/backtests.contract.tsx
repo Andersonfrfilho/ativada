@@ -154,7 +154,7 @@ describe('backtest list', () => {
     ];
     renderApp({ path: '/backtests', isAuthenticated: true, routes });
     expect(await screen.findByText('Rodando')).toBeDefined();
-    expect(await screen.findByText('Concluída')).toBeDefined();
+    expect(await screen.findByText('+4,20%')).toBeDefined();
     expect(await screen.findByRole('checkbox', { name: /Comparar/ })).toBeDefined();
   });
 

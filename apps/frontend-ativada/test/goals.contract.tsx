@@ -230,9 +230,9 @@ describe('goal ranking', () => {
     expect(first?.textContent).toContain('parou na perda máxima em 15,00%');
     expect(first?.textContent).toContain('tempo típico 9 dias');
     expect(first?.textContent).toContain('comprar e segurar: 40,00%');
-    expect(first?.textContent).toContain('COMPRAR');
+    expect(first?.textContent).toContain('Favorável no histórico');
     const second = within(list).getAllByRole('listitem')[1];
-    expect(second?.textContent).toContain('EVITAR');
+    expect(second?.textContent).toContain('Desfavorável no histórico');
     expect(second?.textContent).toContain('sem tempo típico');
   });
 
@@ -467,7 +467,7 @@ describe('what the engine leaves empty', () => {
     expect(list.textContent).toContain('histórico curto demais');
     expect(list.textContent).toContain('comprar e segurar: indisponível');
     expect(list.textContent).not.toContain('— chegaram ao alvo');
-    expect(list.textContent).toContain('SEGURAR');
+    expect(list.textContent).toContain('Neutro no histórico');
   });
 
   test('of several rules in a family it shows the nearest one that has not voted yet', async () => {

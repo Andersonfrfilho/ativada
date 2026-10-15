@@ -300,3 +300,15 @@ panel-test: 751 pass, 0 fail (57 arquivos)
 WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
 panel-test: 752 pass, 0 fail (57 arquivos)
 ```
+
+## T3.5b — Decisões do redesenho fora do tasks.md: veredito, lista agrupada e cartão ao vivo (sonnet, 2026-10-14)
+
+- Veredito do ranking: a tela escreve "Favorável/Neutro/Desfavorável no histórico" com ícone (seta para cima, igual, seta para baixo) no lugar de COMPRAR/SEGURAR/EVITAR; o valor da API não mudou (`VERDICT_LABEL` em `goal.constant.ts`); explicações e o fluxo E2E de metas acompanham.
+- Backtests: `LiveRunCard` no topo (simulação rodando, linha de pulso e "Acompanhar" até `#acompanhamento`); a lista de backtests virou grupos recolhíveis (`<details>`) por versão da estratégia (`GroupedRunList`, `run-groups.ts`) com resumo ("1 de 3 positivos", mediana, melhor e pior par), caixa de seleção em coluna própria de 44 px e resultado como barra a partir do zero (SVG, escala de −20% a +20%) + seta + sinal; zero é cinza com "=". Linha de pulso também na tela da meta, quando há simulação ativa dela.
+- **Limitação registrada:** a lista é paginada (20 por vez); o agrupamento e o resumo valem para o que está carregado ("Carregar mais" acrescenta). Os filtros por estratégia e a ordenação clicável do redesenho NÃO foram feitos (não estavam no `tasks.md`); a Visão geral manteve o desenho dela (sem as barras de comparação) além da linha de pulso, da última decisão e da meta do servidor.
+- Contratos: `test/backtests-groups.contract.tsx` (agrupar, resumir, lista agrupada, cartão ao vivo), `backtests.contract.tsx` e `goals.contract.tsx` ajustados; `touch-targets` (+ `.pick` e `.pairLink` do grupo).
+
+```text
+WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
+panel-test: 758 pass, 0 fail (58 arquivos)
+```

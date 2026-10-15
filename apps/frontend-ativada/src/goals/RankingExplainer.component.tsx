@@ -23,7 +23,8 @@ export function RankingExplainer(): ReactElement {
           fizer melhor que isso.
         </li>
         <li>
-          COMPRAR, SEGURAR e EVITAR descrevem o que o histórico mostrou. Não preveem o futuro.
+          Favorável, neutro e desfavorável descrevem o que o histórico mostrou. Não preveem o futuro
+          nem são ordem de compra ou venda.
         </li>
       </ul>
     </details>

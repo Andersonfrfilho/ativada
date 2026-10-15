@@ -53,6 +53,19 @@ export const GOAL_OUTCOME_TEXT: Readonly<Record<string, string>> = {
   goal_expired: 'Prazo encerrado sem atingir a meta',
 };
 
+// O valor da API segue COMPRAR/SEGURAR/EVITAR; na tela o veredito é do histórico, nunca uma ordem (redesenho aprovado).
+export const VERDICT_LABEL: Readonly<Record<string, string>> = {
+  COMPRAR: 'Favorável no histórico',
+  SEGURAR: 'Neutro no histórico',
+  EVITAR: 'Desfavorável no histórico',
+};
+
+export const VERDICT_ICON = {
+  COMPRAR: 'arrowUp',
+  SEGURAR: 'equal',
+  EVITAR: 'arrowDown',
+} as const;
+
 export const VERDICT_PLAIN: Readonly<Record<string, string>> = {
   COMPRAR: 'Boa opção no passado: chegou ao alvo na maior parte das tentativas.',
   SEGURAR: 'Resultado no meio do caminho: não dá para dizer que foi bom nem ruim.',

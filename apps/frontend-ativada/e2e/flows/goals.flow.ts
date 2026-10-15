@@ -18,7 +18,9 @@ export async function declareGoalRankAndSimulate(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/metas\/[0-9a-f-]+$/);
   const ranking = page.getByRole('list', { name: 'Ranking de estratégias por moeda' });
   await expect(ranking).toContainText(STRATEGY_NAME, { timeout: EVALUATION_TIMEOUT_MILLISECONDS });
-  await expect(ranking).toContainText(/COMPRAR|SEGURAR|EVITAR/);
+  await expect(ranking).toContainText(
+    /Favorável no histórico|Neutro no histórico|Desfavorável no histórico/,
+  );
   await expect(page.getByRole('note', { name: 'Leia com cuidado' })).toContainText('histórico');
   const situations = page.getByRole('region', { name: 'Moedas: situação e próximo gatilho' });
   await expect(situations.getByRole('article', { name: 'BTC/USDT' })).toBeVisible();

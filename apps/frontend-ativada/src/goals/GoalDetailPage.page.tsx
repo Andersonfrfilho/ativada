@@ -6,9 +6,11 @@ import { formatChangePercent, formatPercent, formatSymbol } from '../format/form
 import runStyles from '../runs/Runs.module.css';
 import controls from '../styles/Controls.module.css';
 import { HistoryNote } from '../layout/HistoryNote.component.js';
+import { LivePulseLine } from '../runs/live-tracking/LivePulseLine.component.js';
 import { CompareHorizonsLink } from './CompareHorizonsLink.component.js';
 import { CoinsSituationCard } from './CoinsSituationCard.component.js';
 import { useGoalEvaluationQuery, useGoalQuery } from './goal.query.js';
+import { useGoalRunQuery } from './goal-run.query.js';
 import { RankingCard } from './RankingCard.component.js';
 
 export function GoalDetailPage(): ReactElement {
@@ -16,6 +18,7 @@ export function GoalDetailPage(): ReactElement {
   const goal = useGoalQuery(goalId);
   const evaluation = useGoalEvaluationQuery(goalId);
   const data = goal.data;
+  const goalRun = useGoalRunQuery().data;
   return (
     <div className={runStyles.page}>
       <h1 className={runStyles.title}>
@@ -28,8 +31,11 @@ export function GoalDetailPage(): ReactElement {
           Perda máxima aceita: {formatPercent(Number(data.maxLossRate))}.
         </p>
       )}
+      {goalRun?.goalId === goalId && ['running', 'queued'].includes(goalRun.status) ? (
+        <LivePulseLine runId={goalRun.id} symbol={goalRun.symbol} />
+      ) : null}
       {data === undefined ? null : <CompareHorizonsLink symbol={data.symbol} />}
-      <HistoryNote extra="COMPRAR, SEGURAR e EVITAR descrevem o que o histórico mostrou." />
+      <HistoryNote extra="Favorável, neutro e desfavorável descrevem o que o histórico mostrou." />
       {goal.isError || evaluation.isError ? (
         <p role="alert" className={controls.error}>
           Não foi possível carregar a meta. Tente novamente em instantes.
