@@ -31,6 +31,16 @@ export const chartClusterSchema = z.object({
   sells: z.number(),
 });
 
+// Uma linha por vela da faixa (só na simulação ao vivo, até 500 velas): a espera é o que vira pontinho no gráfico.
+export const chartDecisionSchema = z.object({
+  candleTime: z.number(),
+  closedAt: z.number(),
+  action: z.enum(['BUY', 'SELL', 'HOLD']),
+  outcome: z.enum(['waited', 'bought', 'sold']),
+  score: decimalText,
+  scoreThreshold: decimalText,
+});
+
 // Acima do limite de marcadores a API manda os agrupamentos no lugar (um dos dois vem nulo).
 export const tradeChartSchema = z.object({
   symbol: z.string(),
@@ -43,9 +53,12 @@ export const tradeChartSchema = z.object({
   markers: z.array(chartMarkerSchema).nullable(),
   clusters: z.array(chartClusterSchema).nullable(),
   totals: z.object({ buys: z.number(), sells: z.number() }),
+  // `null` fora da simulação ao vivo e acima do teto de velas; ausente (API antiga) também vale como `null`.
+  decisions: z.array(chartDecisionSchema).nullable().default(null),
 });
 
 export type PriceColumn = z.infer<typeof priceColumnSchema>;
 export type ChartMarker = z.infer<typeof chartMarkerSchema>;
 export type ChartCluster = z.infer<typeof chartClusterSchema>;
+export type ChartDecision = z.infer<typeof chartDecisionSchema>;
 export type TradeChart = z.infer<typeof tradeChartSchema>;

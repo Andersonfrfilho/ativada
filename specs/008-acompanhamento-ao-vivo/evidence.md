@@ -204,3 +204,23 @@ WSL ~/gates/ativada-spec8b: typecheck verde · lint verde · format:check verde
 bun test (live-status, chart-decisions, api-run*, api-openapi, database.contract, ownership-registry, strategy-engine-boundary,
 code-size-limits, app-import-boundary, frases e contas, mutantes do acompanhamento e do gráfico): 566 pass, 0 fail
 ```
+
+## T2.1 — Zod espelhado e consultas do acompanhamento (haiku, 2026-10-14)
+
+- `apps/frontend-ativada/src/runs/live-tracking/live-status.validation.ts`: `liveStatusSchema`, `decisionSchema` e os tipos
+  (`Decision`, `DecisionVote`, `RuleTrigger`, `LiveGoal`, `LiveStatus`) espelham o `live-status.schema.ts` da API (ADR 0002 L4 a
+  L13): dinheiro e taxa só em `decimalText` (número, `NaN` e notação científica reprovam), `triggers` em união por `status`
+  (`available` / `unavailable`), voto só `-1 | 0 | 1`, desfecho, ação e comparação em enums fechados.
+- `live-status.query.ts`: `useLiveStatusQuery` (`['runs', runId, 'live-status']`) e `useDecisionsQuery` (`['runs', runId, 'decisions']`,
+  `useInfiniteQuery` com `limit=24` e cursor); as duas sob a raiz `runs`, então o aviso do stream as refaz.
+- `trade-chart.validation.ts`: `chartDecisionSchema` e `decisions` no `tradeChartSchema` (`nullable().default(null)`: resposta de
+  API sem o campo vale como `null`, os contratos antigos do gráfico seguem sem edição).
+- Contrato `test/live-status-queries.contract.tsx` (na lista explícita do `package.json`, fixtures em
+  `test/support/live-status-fixtures.ts`): formato do servidor com e sem meta/posição, variante `unavailable`, rejeições (dinheiro
+  número, `NaN`, `1e5`, voto 2, desfecho inventado, `status` desconhecido), resposta inválida acaba em erro e nada é desenhado,
+  chaves começam com `runs`, 24 por página sem cursor na primeira.
+
+```text
+WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
+panel-test: 690 pass, 0 fail (53 arquivos)
+```
