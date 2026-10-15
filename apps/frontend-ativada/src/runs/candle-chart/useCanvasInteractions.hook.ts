@@ -23,6 +23,8 @@ export type CanvasInteractions = {
   readonly centerTime: () => number | undefined;
   // O começo do bloco em que está o centro visível; `undefined` até o primeiro enquadramento.
   readonly blockTime: number | undefined;
+  // A vela de índice dado está na janela visível? Antes do primeiro enquadramento, sim (nada a deslocar).
+  readonly isVisible: (candleIndex: number) => boolean;
 };
 
 function candleTimeAtCenter(
@@ -68,5 +70,9 @@ export function useCanvasInteractions(params: CanvasInteractionsParams): CanvasI
     if (range === undefined) return history.candles.at(-1)?.openTime;
     return candleTimeAtCenter(history, range);
   };
-  return { hoverIndex, centerTime, blockTime };
+  const isVisible = (candleIndex: number): boolean => {
+    const range = visible.current;
+    return range === undefined || (candleIndex >= range.from && candleIndex <= range.to);
+  };
+  return { hoverIndex, centerTime, blockTime, isVisible };
 }

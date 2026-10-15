@@ -469,3 +469,29 @@ Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; nenhuma depe
 Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` verde.
 - **Achado no caminho:** como o cartão de histórico (backtest também) e a camada "Previsão" compartilham a MESMA consulta `projections`, o cache chegava ao gráfico de um backtest e desenharia o cone onde não há "próxima vela".
   `useChartLayers` agora só entrega `projection`/`projections` quando a camada está habilitada (ao vivo, vela da execução, camada ligada); o contrato `candle-layers` prova que o backtest não desenha nada na superfície.
+
+## T3.7 — Teclado e leitor de tela (2026-10-15)
+
+Modelo: `sonnet` (a fase pedia `haiku`; mesmo agente das três tasks). Sem migration; motor e `run-recording` intocados; nenhuma dependência nova; nenhuma mudança na API.
+
+- **Uma parada de Tab** (D6): o contêiner do canvas é `role="img"` + `aria-roledescription="gráfico de velas"` + `tabindex="0"`, descrito por `aria-describedby` com a ajuda de teclado (texto fixo) e a descrição textual.
+  O plano de cada tecla é puro (`chart-key-plan.ts`): **←/→** andam uma vela (a primeira tecla cai na vela mais nova), **Shift+←/→** pulam para a compra/venda anterior/seguinte (`listEventIndexes`, só com eventos
+  individuais; agrupados pelo servidor não há pulo), **+ / =** aproximam e **− / -** afastam (`surface.zoom`), **Home/End** vão às pontas, **Esc** limpa a cruz e **Enter** seleciona a operação da vela (a mesma
+  `?operacao=` do clique, spec 005 RF10). A cruz é o índice da vela no estado do React (`useChartKeyboard`), espelhada em `surface.setCrosshair(índice)`; a vela fora da janela visível é trazida com `centerOn`
+  (`useCanvasInteractions.isVisible`); a legenda OHLC acompanha o teclado como acompanha o mouse. Tecla que não é do gráfico (Tab, letras) segue para o navegador; as do gráfico chamam `preventDefault` (a página não rola).
+- **Anúncio `aria-live`** (`role="status"`, polido): a frase `describeCandleForSpeech` ("31/03 às 21:00: abertura …, máxima …, mínima …, fechamento …, variação …; compra") vai para a região **400 ms depois da última
+  tecla** (rajada de setas fala uma vez), com o rótulo "compra", "venda" ou "compra e venda" quando a vela tem operação; Esc esvazia a região.
+- **Descrição textual com a previsão** (`describeChart` ganhou `forecast`; `describeForecast` puro): "Previsão: tende a comprar (fraco) até 05:00, faixa de 12,778 a 13,032." (postura em palavras, força, hora no fuso do
+  usuário, faixa gravada) ou "Sem previsão agora: <motivo do servidor>" (inclui "troque para 1h" em outra vela e o preço parado); carregando ou com erro, nada; backtest e camada desligada não acrescentam frase.
+- **Contratos** (`chart-key-plan`, 16 testes puros: cada tecla, bordas, pulo entre eventos, índices e rótulos de compra/venda, a frase da previsão e a descrição; `chart-keyboard`, 11 testes de componente com a
+  superfície falsa e o harness do cartão: uma parada de Tab com ajuda e descrição, setas e a primeira tecla, Home/End com `centerOn` só fora da janela, Esc, zoom e `preventDefault`, Shift+seta de compra para venda e de volta,
+  Enter selecionando `?operacao=p1`, anúncio só depois da pausa e igual à frase literal da vela 0 (`America/Sao_Paulo`), legenda seguindo o teclado e a descrição com a previsão ao vivo).
+
+Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` verde.
+
+### Pendências para a T3.8 (E2E) e a T4.1 (design)
+
+Nada desta fase foi visto com canvas ou navegador real (sem Chromium no WSL; instalar é proibido). Para o E2E/design confirmar: (1) o painel "Próxima vela de perto" a 1.280 px ao lado do canvas e a 375 px embaixo, nos dois
+temas, com o cone, a linha plana, a vela em formação ampliada e a linha do preço real legíveis (contraste do cone a 3:1 já provado nos tokens); (2) a tabela do histórico dentro do `overflow-x: auto` sem rolagem horizontal da página
+a 375 px; (3) o foco visível do canvas (`.canvas:focus-visible`) e a ordem de Tab (um só foco no gráfico); (4) o `aria-live` realmente falando a vela com um leitor de tela, e Shift+seta entre compras e vendas no canvas real;
+(5) o painel e os cartões com a previsão ao vivo (`POST /tick` e a kline falsa) mudando sem recarregar.

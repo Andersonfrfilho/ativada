@@ -9,12 +9,15 @@ import type { ChartView } from '../useChartView.hook.js';
 import type { TradeSelection } from '../useTradeSelection.hook.js';
 import { CHART_LAYER, INITIAL_VISIBLE_BARS, type ChartLayer } from './candle-chart.constant.js';
 import { toSurfaceTime } from './candle-series.js';
+import { describeForecast } from './forecast-description.js';
+import { judgeNextCandle } from './next-candle-state.js';
 import type { ChartSurface } from './chart-surface.types.js';
 import { LAYERS_BLOCK_BARS } from './layer-series.js';
 import { buildLegendText } from './legend-text.js';
 import { findPositionKeyAt } from './marker-series.js';
 import type { OhlcText } from './ohlc-text.js';
 import { useCanvasInteractions } from './useCanvasInteractions.hook.js';
+import { useChartKeyboard, type ChartKeyboard } from './useChartKeyboard.hook.js';
 import type { CandleSource, TimeframeChoice } from './useCandleSource.hook.js';
 import { useChartLayers, type ChartLayerData } from './useChartLayers.hook.js';
 import { useChartSurface } from './useChartSurface.hook.js';
@@ -41,6 +44,9 @@ export type CandleCanvasModel = {
   readonly layerData: ChartLayerData;
   readonly isLayerOn: (layer: ChartLayer) => boolean;
   readonly handleTimeframeChange: (next: TimeframeChoice) => void;
+  readonly keyboard: ChartKeyboard;
+  // A frase da previsão para a descrição textual (RF20); `undefined` sem camada de previsão ou sem resposta.
+  readonly forecastText: string | undefined;
 };
 
 type CanvasBase = Pick<CandleCanvasModel, 'timeZone' | 'containerRef' | 'surface' | 'hasFailed'>;
@@ -97,25 +103,31 @@ function legendFor(input: CandleCanvasInput, context: LegendContext): OhlcText |
   });
 }
 
-// Tudo o que o gráfico precisa ligar: a superfície e seu tema, os dados, a cruz, o clique, a página anterior, o
-// reenquadramento, as camadas e a vela em formação. O componente só desenha o resultado.
-export function useCandleCanvasModel(input: CandleCanvasInput): CandleCanvasModel {
+function forecastTextFor(
+  runTimeframe: string,
+  layers: LayerModel,
+  timeZone: string,
+): string | undefined {
+  const state = judgeNextCandle({
+    isStrategyTimeframe: layers.layerData.isStrategyTimeframe,
+    runTimeframe,
+    projection: layers.layerData.projection,
+    isError: layers.layerData.isProjectionError,
+    live: layers.live,
+  });
+  return describeForecast({ state, now: Date.now(), timeZone });
+}
+
+type LayerModel = Pick<CandleCanvasModel, 'layerData' | 'isLayerOn' | 'live'>;
+
+// As camadas da estratégia na superfície e a vela em formação.
+function useLayerModel(
+  input: CandleCanvasInput,
+  base: CanvasBase,
+  blockTime: number | undefined,
+): LayerModel {
   const { runId, chart, view, source } = input;
-  const base = useCanvasBase(input);
-  const interactions = useCanvasInteractions({
-    surface: base.surface,
-    history: source.history,
-    onPick: (index) => selectOperationAt(index, input),
-    onReframe: () => reframe(base.surface, input),
-    blockMilliseconds: LAYERS_BLOCK_BARS * source.durationMilliseconds,
-  });
-  const layerData = useChartLayers({
-    runId,
-    chart,
-    view,
-    source,
-    centerTime: interactions.blockTime,
-  });
+  const layerData = useChartLayers({ runId, chart, view, source, centerTime: blockTime });
   const isLayerOn = (layer: ChartLayer): boolean => source.preferences.preferences.layers[layer];
   useLayerSurface(base.surface, { data: layerData, decisions: chart.decisions, isOn: isLayerOn });
   const live = useFormingCandle(base.surface, {
@@ -123,16 +135,41 @@ export function useCandleCanvasModel(input: CandleCanvasInput): CandleCanvasMode
     timeframe: source.timeframe,
     isFollowing: view.isLive && view.range === undefined,
   });
+  return { layerData, isLayerOn, live };
+}
+
+// Tudo o que o gráfico precisa ligar: a superfície e seu tema, os dados, a cruz (mouse e teclado), o clique, a página
+// anterior, o reenquadramento, as camadas e a vela em formação. O componente só desenha o resultado.
+export function useCandleCanvasModel(input: CandleCanvasInput): CandleCanvasModel {
+  const { chart, source } = input;
+  const base = useCanvasBase(input);
+  const pick = (index: number): void => selectOperationAt(index, input);
+  const interactions = useCanvasInteractions({
+    surface: base.surface,
+    history: source.history,
+    onPick: pick,
+    onReframe: () => reframe(base.surface, input),
+    blockMilliseconds: LAYERS_BLOCK_BARS * source.durationMilliseconds,
+  });
+  const layers = useLayerModel(input, base, interactions.blockTime);
+  const keyboard = useChartKeyboard({
+    surface: base.surface,
+    candles: source.history.candles,
+    markers: chart.markers,
+    durationMilliseconds: source.durationMilliseconds,
+    symbol: formatSymbol(chart.symbol),
+    timeframe: source.timeframe,
+    timeZone: base.timeZone,
+    isVisible: interactions.isVisible,
+    onPick: pick,
+  });
+  const pointed = interactions.hoverIndex ?? keyboard.index;
   return {
     ...base,
-    layerData,
-    isLayerOn,
-    live,
-    legend: legendFor(input, {
-      hoverIndex: interactions.hoverIndex,
-      live,
-      timeZone: base.timeZone,
-    }),
+    ...layers,
+    keyboard,
+    forecastText: forecastTextFor(chart.timeframe, layers, base.timeZone),
+    legend: legendFor(input, { hoverIndex: pointed, live: layers.live, timeZone: base.timeZone }),
     handleTimeframeChange: (next): void => {
       const center = interactions.centerTime();
       if (center !== undefined) source.changeTimeframe(next, center);

@@ -40,3 +40,33 @@ export function findPositionKeyAt(
   );
   return match?.positionKey;
 }
+
+type CandleOpening = { readonly openTime: number };
+
+// Os índices (na lista de velas carregada) das velas com compra ou venda, em ordem: o pulo do Shift+seta (RF20).
+// `null` = eventos agrupados pelo servidor: sem setas, sem pulo.
+export function listEventIndexes(
+  candles: readonly CandleOpening[],
+  markers: readonly MarkerSource[] | null,
+  timeframeMilliseconds: number,
+): number[] {
+  if (markers === null || timeframeMilliseconds <= 0) return [];
+  const times = new Set(markers.map((m) => snapToCandle(m.candleTime, timeframeMilliseconds)));
+  return candles.flatMap((candle, index) => (times.has(candle.openTime) ? [index] : []));
+}
+
+// "compra", "venda" ou "compra e venda" para a vela de abertura dada; `undefined` sem operação.
+export function describeEventsAt(
+  markers: readonly MarkerSource[] | null,
+  candleOpenTime: number,
+  timeframeMilliseconds: number,
+): string | undefined {
+  const here = (markers ?? []).filter(
+    (marker) => snapToCandle(marker.candleTime, timeframeMilliseconds) === candleOpenTime,
+  );
+  const hasBuy = here.some((marker) => marker.side === 'buy');
+  const hasSell = here.some((marker) => marker.side === 'sell');
+  if (hasBuy && hasSell) return 'compra e venda';
+  if (hasBuy) return 'compra';
+  return hasSell ? 'venda' : undefined;
+}

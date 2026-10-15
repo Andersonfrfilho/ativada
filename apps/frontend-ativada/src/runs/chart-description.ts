@@ -13,6 +13,8 @@ const YEAR_SEPARATOR_INDEX = 6;
 export type ChartDescriptionParams = {
   readonly chart: TradeChart;
   readonly timeZone: string;
+  // A frase da previsão (spec 009, RF20), quando a camada está à vista; `undefined` não acrescenta nada.
+  readonly forecast?: string | undefined;
 };
 
 function priceText(price: string): string {
@@ -51,11 +53,12 @@ function describeCounts(chart: TradeChart): string {
     : `${counts} As operações estão agrupadas: aproxime o período para ver cada uma.`;
 }
 
-// O resumo de leitor de tela: moeda, faixa, preço inicial e final, mínima, máxima e quantas compras e vendas.
-// A tabela de operações é a alternativa acessível completa.
-export function describeChart({ chart, timeZone }: ChartDescriptionParams): string {
+// O resumo de leitor de tela: moeda, faixa, preço inicial e final, mínima, máxima, quantas compras e vendas e, na simulação
+// ao vivo, a previsão. A tabela de operações é a alternativa acessível completa.
+export function describeChart({ chart, timeZone, forecast }: ChartDescriptionParams): string {
   const heading = `Preço de ${formatSymbol(chart.symbol)} ${describePeriod(chart, timeZone)}.`;
-  return [heading, describePrices(chart), describeCounts(chart)].join(' ');
+  const parts = [heading, describePrices(chart), describeCounts(chart)];
+  return (forecast === undefined ? parts : [...parts, forecast]).join(' ');
 }
 
 // A frase do marcador é a dica inteira: título e cada campo, na mesma ordem.

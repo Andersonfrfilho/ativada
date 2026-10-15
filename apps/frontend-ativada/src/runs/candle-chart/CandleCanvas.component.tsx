@@ -5,6 +5,7 @@ import { formatSymbol } from '../../format/format.js';
 import { describeChart } from '../chart-description.js';
 import styles from './CandleChart.module.css';
 import { CHART_LAYER } from './candle-chart.constant.js';
+import { CHART_KEYBOARD_HELP } from './chart-key-plan.js';
 import { ChartCredit } from './ChartCredit.component.js';
 import { ChartToolbar } from './ChartToolbar.component.js';
 import { ClusterButtons } from './ClusterButtons.component.js';
@@ -48,20 +49,48 @@ function CanvasHeader({ chart, view, source, model }: CanvasViewProps): ReactEle
   );
 }
 
+type DescriptionIds = { readonly help: string; readonly caption: string };
+
+// O gráfico é UMA parada de Tab (RF20): setas, Shift+seta, mais e menos, Home, End, Esc e Enter agem na cruz; a ajuda de
+// teclado e a descrição textual são lidas pelo leitor de tela ao chegar nele.
+function SurfaceBox({
+  chart,
+  model,
+  ids,
+}: CanvasViewProps & { readonly ids: DescriptionIds }): ReactElement {
+  return (
+    <div
+      ref={model.containerRef}
+      className={styles.canvas}
+      role="img"
+      aria-roledescription="gráfico de velas"
+      aria-label={`Gráfico de velas de ${formatSymbol(chart.symbol)}`}
+      aria-describedby={`${ids.help} ${ids.caption}`}
+      tabIndex={0}
+      onKeyDown={model.keyboard.onKeyDown}
+    />
+  );
+}
+
+function ChartCaption(props: CanvasViewProps & { readonly id: string }): ReactElement {
+  const { chart, view, model, id } = props;
+  const forecast =
+    view.isLive && model.isLayerOn(CHART_LAYER.FORECAST) ? model.forecastText : undefined;
+  return (
+    <figcaption id={id} className={styles.caption}>
+      {describeChart({ chart, timeZone: model.timeZone, forecast })}
+    </figcaption>
+  );
+}
+
 function CanvasView(props: CanvasViewProps): ReactElement {
   const { chart, view, selection, model } = props;
-  const captionId = useId();
+  const ids: DescriptionIds = { help: useId(), caption: useId() };
   return (
     <figure className={styles.wrapper}>
       <CanvasHeader {...props} />
       <div className={styles.chartLayout}>
-        <div
-          ref={model.containerRef}
-          className={styles.canvas}
-          role="img"
-          aria-label={`Gráfico de velas de ${formatSymbol(chart.symbol)}`}
-          aria-describedby={captionId}
-        />
+        <SurfaceBox {...props} ids={ids} />
         {view.isLive && model.isLayerOn(CHART_LAYER.FORECAST) ? (
           <NextCandlePanel chart={chart} layerData={model.layerData} />
         ) : null}
@@ -79,9 +108,13 @@ function CanvasView(props: CanvasViewProps): ReactElement {
           onZoom={selection.setRange}
         />
       )}
-      <figcaption id={captionId} className={styles.caption}>
-        {describeChart({ chart, timeZone: model.timeZone })}
-      </figcaption>
+      <ChartCaption {...props} id={ids.caption} />
+      <p id={ids.help} className={styles.visuallyHidden}>
+        {CHART_KEYBOARD_HELP}
+      </p>
+      <p role="status" aria-live="polite" className={styles.visuallyHidden}>
+        {model.keyboard.announcement}
+      </p>
       <ChartCredit />
     </figure>
   );
