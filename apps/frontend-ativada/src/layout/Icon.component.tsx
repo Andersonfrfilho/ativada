@@ -24,6 +24,7 @@ export const ICON_PATHS = {
   activity: 'M3 12h4l3-8 4 16 3-8h4',
   wallet: 'M3 6h18v14H3zM3 10h18M16 15h2',
   check: 'M5 12l5 5 9-10',
+  stop: 'M7 6h10a1 1 0 011 1v10a1 1 0 01-1 1H7a1 1 0 01-1-1V7a1 1 0 011-1z',
   chevronRight: 'M9 6l6 6-6 6',
 } as const;
 

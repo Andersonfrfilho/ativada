@@ -7,12 +7,13 @@ import { Card } from '../layout/Card.component.js';
 import { LastDecisionLine } from '../runs/live-tracking/LastDecisionLine.component.js';
 import { LiveRunStatus } from '../runs/LiveRunStatus.component.js';
 import controls from '../styles/Controls.module.css';
+import { ComparisonBars } from './ComparisonBars.component.js';
 import { EquitySparkline } from './EquitySparkline.component.js';
 import styles from './Overview.module.css';
 import { RUN_STATUS } from './overview.constant.js';
 import type { RunDetail } from '../runs/run.validation.js';
 import type { EquityPoint, Signal } from './overview.validation.js';
-import { computeChangeRatio, formatChangePercent, formatDecimal } from '../format/format.js';
+import { formatDecimal } from '../format/format.js';
 
 export type BalanceCardProps = {
   readonly run: RunDetail;
@@ -26,15 +27,6 @@ function describeState(run: RunDetail): string {
   return run.status === RUN_STATUS.RUNNING ? 'Rodando' : 'Na fila';
 }
 
-function Change({ ratio }: { readonly ratio: number | undefined }): ReactElement {
-  if (ratio === undefined) return <span>—</span>;
-  return (
-    <span className={ratio >= 0 ? styles.positive : styles.negative}>
-      {formatChangePercent(ratio)}
-    </span>
-  );
-}
-
 function BalanceFacts({
   run,
   latest,
@@ -43,27 +35,12 @@ function BalanceFacts({
   readonly latest: EquityPoint;
 }): ReactElement {
   const initial = run.survival?.initialBalance;
-  const ratioOf = (value: string): number | undefined =>
-    initial === undefined ? undefined : computeChangeRatio(value, initial);
+  if (initial === undefined) return <p className={controls.muted}>Saldo inicial indisponível.</p>;
   return (
-    <dl className={styles.facts}>
-      <div>
-        <dt>Inicial</dt>
-        <dd>{initial === undefined ? '—' : formatDecimal(initial)}</dd>
-      </div>
-      <div>
-        <dt>Resultado</dt>
-        <dd>
-          <Change ratio={ratioOf(latest.equity)} />
-        </dd>
-      </div>
-      <div>
-        <dt>Comprar e segurar</dt>
-        <dd>
-          <Change ratio={ratioOf(latest.benchmark)} />
-        </dd>
-      </div>
-    </dl>
+    <>
+      <p className={controls.muted}>Começou com {formatDecimal(initial)} USDT.</p>
+      <ComparisonBars initial={initial} equity={latest.equity} benchmark={latest.benchmark} />
+    </>
   );
 }
 

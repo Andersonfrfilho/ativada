@@ -169,7 +169,7 @@ describe('which strategy a run came from', () => {
     });
     const region = await backtestsRegion();
     await waitFor(() =>
-      expect(within(region).queryByText(/Placar clássico · versão 1/)).not.toBeNull(),
+      expect(within(region).queryAllByText(/Placar clássico · versão 1/).length).toBeGreaterThan(0),
     );
   });
 

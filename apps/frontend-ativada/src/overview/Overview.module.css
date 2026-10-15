@@ -147,3 +147,48 @@
 .markerSell {
   fill: var(--sell);
 }
+
+.compare {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.compareRow {
+  display: grid;
+  grid-template-columns: minmax(0, 170px) 1fr;
+  gap: 12px;
+  align-items: center;
+  font-size: var(--text-sm);
+}
+
+.compareName {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.compareName small {
+  display: block;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.compareScale {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0 116px 0 182px;
+  font: 11px var(--font-data);
+  color: var(--ink-3);
+}
+
+@media (max-width: 520px) {
+  .compareRow {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .compareScale {
+    padding-left: 0;
+  }
+}

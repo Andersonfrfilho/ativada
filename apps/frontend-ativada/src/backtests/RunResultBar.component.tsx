@@ -5,8 +5,8 @@ import { formatSignedScaledPercent } from '../format/decimal.js';
 import { Icon, type IconName } from '../layout/Icon.component.js';
 import styles from './BacktestGroups.module.css';
 
-// A barra vai de −20% a +20% (o redesenho aprovado); acima disso ela encosta na borda.
-const SCALE_LIMIT = 20_000_000n;
+// A barra vai de −20% a +20% por padrão (o redesenho aprovado); acima do limite ela encosta na borda.
+export const DEFAULT_SCALE_LIMIT = 20_000_000n;
 const HALF_TRACK_BASIS_POINTS = 5_000n;
 const BASIS_POINTS_PER_PERCENT = 100;
 const ZERO = 0n;
@@ -26,17 +26,23 @@ function lookOf(result: bigint): Look {
     : { icon: 'arrowDown', className: styles.down, text };
 }
 
-function halfWidthPercent(result: bigint): number {
+function halfWidthPercent(result: bigint, scaleLimit: bigint): number {
   const magnitude = result < ZERO ? -result : result;
-  const basisPoints = (magnitude * HALF_TRACK_BASIS_POINTS) / SCALE_LIMIT;
+  const basisPoints = (magnitude * HALF_TRACK_BASIS_POINTS) / scaleLimit;
   const capped = basisPoints > HALF_TRACK_BASIS_POINTS ? HALF_TRACK_BASIS_POINTS : basisPoints;
   return Number(capped) / BASIS_POINTS_PER_PERCENT;
 }
 
 // Resultado = barra a partir do zero + seta + sinal: a cor nunca fala sozinha.
-export function RunResultBar({ result }: { readonly result: bigint }): ReactElement {
+export function RunResultBar({
+  result,
+  scaleLimit = DEFAULT_SCALE_LIMIT,
+}: {
+  readonly result: bigint;
+  readonly scaleLimit?: bigint;
+}): ReactElement {
   const look = lookOf(result);
-  const width = halfWidthPercent(result);
+  const width = halfWidthPercent(result, scaleLimit);
   const isGain = result > ZERO;
   return (
     <div className={styles.result}>

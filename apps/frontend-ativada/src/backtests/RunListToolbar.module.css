@@ -1,0 +1,38 @@
+.toolbar {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 13.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-3);
+}

@@ -152,6 +152,31 @@
   color: var(--ink-2);
 }
 
+.sortCell {
+  white-space: nowrap;
+}
+
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--accent);
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.scaleNote {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .visuallyHidden {
   position: absolute;
   width: 1px;
@@ -170,8 +195,21 @@
 }
 
 @media (max-width: 700px) {
-  .groupTable thead {
+  .groupTable thead,
+  .groupTable thead tr {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+  }
+
+  .groupTable thead th:not(.sortCell) {
     display: none;
+  }
+
+  .groupTable thead th {
+    display: block;
+    text-align: right;
   }
 
   .groupTable,

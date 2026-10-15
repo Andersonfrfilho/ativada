@@ -15,9 +15,18 @@ import type { Run } from '../runs/run.validation.js';
 import { useVersionIndexQuery } from '../strategies/strategy.query.js';
 import { describeLookup, lookupVersion } from '../strategies/version-index.js';
 import styles from './BacktestGroups.module.css';
-import { groupRuns, summarizeGroup, type GroupedRun, type RunGroup } from './run-groups.js';
+import {
+  groupRuns,
+  summarizeGroup,
+  type GroupedRun,
+  type ResultOrder,
+  type RunGroup,
+} from './run-groups.js';
 import type { RunSelection } from './RunListCard.component.js';
+import { ResultSortHeader } from './ResultSortHeader.component.js';
+import { RunListToolbar } from './RunListToolbar.component.js';
 import { RunResultBar } from './RunResultBar.component.js';
+import { useRunListView } from './useRunListView.hook.js';
 
 const MAX_PICKED = 2;
 const MINUS = '−';
@@ -98,9 +107,14 @@ function GroupSummaryLine({ group }: { readonly group: RunGroup }): ReactElement
   );
 }
 
-type GroupBlockProps = { readonly group: RunGroup; readonly selection: RunSelection };
+type GroupBlockProps = {
+  readonly group: RunGroup;
+  readonly selection: RunSelection;
+  readonly order: ResultOrder;
+  readonly onCycleOrder: () => void;
+};
 
-function GroupBlock({ group, selection }: GroupBlockProps): ReactElement {
+function GroupBlock({ group, selection, order, onCycleOrder }: GroupBlockProps): ReactElement {
   const index = useVersionIndexQuery();
   const first = group.runs[0]?.run;
   const label =
@@ -123,7 +137,7 @@ function GroupBlock({ group, selection }: GroupBlockProps): ReactElement {
             </th>
             <th scope="col">Par</th>
             <th scope="col">Período</th>
-            <th scope="col">Resultado (barra de −20% a +20%)</th>
+            <ResultSortHeader order={order} onCycle={onCycleOrder} />
           </tr>
         </thead>
         <tbody>
@@ -143,11 +157,32 @@ export type GroupedRunListProps = {
 
 // A lista de backtests agrupada por estratégia (só o que já está carregado: "Carregar mais" traz outras páginas).
 export function GroupedRunList({ runs, selection }: GroupedRunListProps): ReactElement {
+  const view = useRunListView();
+  const groups = groupRuns(runs, view.order);
+  const allKeys = groups.map((group) => group.key);
+  const known = view.strategies.filter((key) => allKeys.includes(key));
+  const selected = new Set(known.length === 0 ? allKeys : known);
   return (
-    <div className={styles.groups}>
-      {groupRuns(runs).map((group) => (
-        <GroupBlock key={group.key} group={group} selection={selection} />
-      ))}
-    </div>
+    <>
+      <RunListToolbar
+        groups={groups}
+        selected={selected}
+        order={view.order}
+        onToggle={(key) => view.toggleStrategy(key, allKeys)}
+      />
+      <div className={styles.groups}>
+        {groups
+          .filter((group) => selected.has(group.key))
+          .map((group) => (
+            <GroupBlock
+              key={group.key}
+              group={group}
+              selection={selection}
+              order={view.order}
+              onCycleOrder={view.cycleOrder}
+            />
+          ))}
+      </div>
+    </>
   );
 }
