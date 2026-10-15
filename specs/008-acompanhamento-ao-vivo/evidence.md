@@ -224,3 +224,16 @@ code-size-limits, app-import-boundary, frases e contas, mutantes do acompanhamen
 WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
 panel-test: 690 pass, 0 fail (53 arquivos)
 ```
+
+## T2.2 — Glossário do acompanhamento (haiku, 2026-10-14)
+
+- `src/glossary/glossary.constant.ts` ganha seis termos do catálogo fechado: `candle` (Vela), `score` (Pontuação do placar),
+  `threshold` (Limiar), `buyAndHold` (Comprar e segurar), `stopPrice` (Stop) e `targetPrice` (Alvo), cada um com UMA frase de uma
+  linha em português simples (≤ 120 caracteres, termina em ponto).
+- `test/glossary.contract.ts` (já na lista do `package.json`): os rótulos agora são os doze, as frases continuam de uma linha, sem
+  quebra, sem rótulo nem frase repetidos, e um teste novo fixa o texto literal dos seis termos novos.
+
+```text
+WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
+panel-test: 691 pass, 0 fail (53 arquivos)
+```
