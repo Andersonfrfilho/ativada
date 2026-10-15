@@ -28,6 +28,9 @@ export async function watchLiveFillsAppearOnTheChart(page: Page, control: Contro
 
   await sendFill(control, 'sell');
   await expect(arrows).toHaveCount(2);
-  await expect(card).toContainText(/Você pagou 613,12 USDT em 1 compra e recebeu 614,38 USDT/);
+  // O resumo das operações mora no cartão Acompanhamento (spec 008), não mais no cartão do gráfico.
+  await expect(page.getByRole('region', { name: 'Acompanhamento', exact: true })).toContainText(
+    /Você pagou 613,12 USDT em 1 compra e recebeu 614,38 USDT/,
+  );
   await expect(card).toContainText('Acompanhando o fim da simulação');
 }

@@ -20,3 +20,9 @@ export async function sendStall(control: Control, action: 'stall' | 'resume'): P
   const response = await control.request.post(`${control.url}/stall`, { data: { action } });
   expect(response.ok()).toBe(true);
 }
+
+// A decisão de esperar entra pelo banco e pelo NOTIFY reais (servidor de controle no papel do worker): sinal HOLD + ponto de patrimônio.
+export async function sendDecision(control: Control): Promise<void> {
+  const response = await control.request.post(`${control.url}/decision`);
+  expect(response.ok()).toBe(true);
+}

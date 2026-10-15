@@ -13,6 +13,7 @@ import {
 } from './flows/backtest.flow.js';
 import { declareGoalRankAndSimulate, openPlanOfTheFirstGoal } from './flows/goals.flow.js';
 import { dropTheSocketAndComeBack } from './flows/live.flow.js';
+import { watchTheTrackingGetANewDecision } from './flows/live-tracking.flow.js';
 import { watchLiveFillsAppearOnTheChart } from './flows/live-trades.flow.js';
 import { alertOnTheTargetAndLetTheTickFireIt } from './flows/plan-alert.flow.js';
 import { watchTheStalledBannerComeAndGo } from './flows/stall.flow.js';
@@ -171,7 +172,18 @@ test('alertas: sinal e alerta de preço chegam pelo WebSocket e aparecem sem rec
 });
 
 test('simulação ao vivo: pela Visão geral até o gráfico, e a compra e a venda gravadas aparecem como setas sem recarregar', async () => {
+  // Cada página da simulação ao vivo faz mais consultas (spec 008): sem a pausa o limite de 120 por minuto devolve 429.
+  await page.waitForTimeout(RATE_WINDOW_PAUSE_MILLISECONDS);
   await watchLiveFillsAppearOnTheChart(page, {
+    request: page.request,
+    url: environment.controlUrl,
+  });
+});
+
+test('acompanhamento: uma decisão de esperar gravada pelo servidor de controle traz a linha "Esperou" e o saldo novo, sem recarregar', async () => {
+  // As rodadas anteriores esgotam o limite de 120 requisições por minuto (um 429 deixaria o saldo velho na tela).
+  await page.waitForTimeout(RATE_WINDOW_PAUSE_MILLISECONDS);
+  await watchTheTrackingGetANewDecision(page, {
     request: page.request,
     url: environment.controlUrl,
   });

@@ -23,6 +23,7 @@ import {
   loadClassicRunParameters,
   loadClassicScoreboard,
 } from '../../test/fixtures/strategy-engine/engine-scenarios.fixture.js';
+import { DECISION_INDICATORS, votesFor } from './panel-e2e-decision.constant.js';
 import {
   BASE_PRICE,
   EQUITY_HOURS,
@@ -142,8 +143,8 @@ async function seedResults(params: SeedParams, runId: string, firstOpen: number)
     action,
     score: action === 'BUY' ? '3' : '-3',
     regime: 'trending',
-    votes: parseJsonContainer('{}'),
-    indicators: parseJsonContainer('{}'),
+    votes: parseJsonContainer(JSON.stringify(votesFor(action === 'BUY' ? 1 : -1))),
+    indicators: parseJsonContainer(JSON.stringify(DECISION_INDICATORS)),
     sentimentObservation: undefined,
     reason,
   });

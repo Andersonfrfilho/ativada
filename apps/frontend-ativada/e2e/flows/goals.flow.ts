@@ -3,8 +3,6 @@ import { expect, type Page } from '@playwright/test';
 
 const STRATEGY_NAME = 'Minha estratégia ao vivo';
 const EVALUATION_TIMEOUT_MILLISECONDS = 60_000;
-const WAITING_FIRST_CANDLE =
-  /Aguardando a primeira vela, que fecha às \d{2}:\d{2} de (hoje|amanhã)\./;
 
 export async function openMainLink(page: Page, name: string): Promise<void> {
   await page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name }).click();
@@ -32,11 +30,10 @@ export async function declareGoalRankAndSimulate(page: Page): Promise<void> {
   await expect(picker).toContainText('O ranking desta meta é calculado com velas diárias');
   await page.getByRole('button', { name: `Simular esta meta com ${STRATEGY_NAME}` }).click();
   await expect(page).toHaveURL(/\/$/);
-  const card = page.getByRole('region', { name: 'Meta ativa' });
-  await expect(card).toContainText('alvo +3,00%');
-  await expect(card).toContainText('perda máxima 5,00%');
-  // Sem worker no harness a simulação não dá passo: o painel diz quando a primeira vela de 1 hora fecha.
-  await expect(card).toContainText(WAITING_FIRST_CANDLE);
+  // A meta vem do servidor (spec 008): alvo, perda máxima e o que falta.
+  const card = page.getByRole('region', { name: /^Meta: \+3% em \d+ dias$/ });
+  await expect(card).toContainText('Para bater a meta faltam');
+  await expect(card).toContainText('Perda máxima aceita (−5%');
 }
 
 export async function openPlanOfTheFirstGoal(page: Page): Promise<void> {

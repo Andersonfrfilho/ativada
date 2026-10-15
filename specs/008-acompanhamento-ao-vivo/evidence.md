@@ -312,3 +312,15 @@ panel-test: 752 pass, 0 fail (57 arquivos)
 WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
 panel-test: 758 pass, 0 fail (58 arquivos)
 ```
+
+## T3.6 — E2E do acompanhamento (haiku → feito em sonnet, 2026-10-15)
+
+- Servidor de controle (`scripts/panel-e2e/control-server.ts`): rota nova `/decision` grava, no papel do worker, a vela (com "agora" adiantado no repositório, a rota de decisões lê o fechamento pela chave), o ponto de patrimônio (10.500,00), um sinal HOLD com votos e leituras reais do Placar clássico e dá o `pg_notify` de `signal` e `balance`. O seed e o `/signal` antigos gravavam `votes: {}` e `indicators: {}`; a rota nova leu isso como dado inválido (500) e como "vela ausente", então agora gravam votos em lista, leituras por saída (`rule:ema-9-21.fast`, `regime:adx.adx`…) e a vela da hora (`panel-e2e-decision.constant.ts`).
+- Teste novo em `e2e/panel.e2e.ts` + `flows/live-tracking.flow.ts`: Visão geral → "Ver o acompanhamento" (`#acompanhamento`) → saldo sem 10.500,00 → `/decision` → o saldo e a primeira linha da tabela mudam sozinhos ("Esperou", "0 de +2"), a linha de pulso diz "Última decisão" e "ver votos" abre os votos e o "Detalhe técnico". Dois fluxos antigos acompanharam a tela: o resumo das operações agora é lido no cartão "Acompanhamento" e a meta ativa é o cartão "Meta: +3% em N dias" (sem o texto de primeira vela, coberto no contrato do painel).
+- Limite de 120 requisições por minuto: a tela ao vivo faz mais consultas e o teste de setas e o novo ganharam a pausa de 50 s que os outros já tinham (sem ela o `429` deixa a seta e o saldo velhos).
+- Rodada: containers de TESTE (`ativada-test-*`, `docker compose --env-file envs/env.test`) subidos e derrubados com `--volumes` ao fim (conferido: só `ativada-dev-*` seguem de pé, intocados); `bun` do WSL rodando `scripts/panel-e2e.ts` com o Edge (`PANEL_E2E_BROWSER_CHANNEL=msedge`, `PANEL_E2E_PLAYWRIGHT_BIN` = `playwright.exe`, shim de `vite`, como na rodada de Docker real da spec 006; o `make` não existe no Windows).
+
+```text
+panel-e2e: OK — 22 passed (3.7m), incluindo "celular: sem rolagem horizontal em nenhuma tela do painel"
+WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde · panel-test: 758 pass, 0 fail
+```

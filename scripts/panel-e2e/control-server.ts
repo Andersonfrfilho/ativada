@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
+  createCandleRepository,
   createPriceAlertRepository,
   createRunResultRepository,
   type DatabaseHandle,
@@ -7,7 +8,8 @@ import {
 } from '../../packages/database/src/index.js';
 import type { FakeBinanceStreamServer } from '../../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 import { parseJsonContainer } from '../../packages/run-recording/src/index.js';
-import { HOUR_MILLISECONDS } from './panel-e2e.constant.js';
+import { EXCHANGE, HOUR_MILLISECONDS, SYMBOLS } from './panel-e2e.constant.js';
+import { DECISION_INDICATORS, DECISION_VOTES, votesFor } from './panel-e2e-decision.constant.js';
 
 // O mesmo canal por onde o worker avisa a API (ADR 0001 §r): o aviso é só um ponteiro, o dado vai para o banco antes.
 const RUN_EVENTS_CHANNEL = 'run_events';
@@ -22,6 +24,8 @@ const FILL_SELL_PRICE = '61500';
 const FILL_BUY_FEE = '0.6125';
 const FILL_SELL_FEE = '0.615';
 const FILL_NET_PROFIT = '1.2725';
+// As decisões de esperar ficam 10 velas à frente dos sinais de compra, para nunca dividirem a mesma vela.
+const DECISION_OFFSET_HOURS = 10;
 const STALL_AGE_MILLISECONDS = 20 * 60_000;
 
 export type ControlParams = {
@@ -40,17 +44,41 @@ async function notify(sql: Bun.SQL, payload: Readonly<Record<string, string>>): 
   await sql`SELECT pg_notify(${RUN_EVENTS_CHANNEL}, ${JSON.stringify(payload)})`;
 }
 
+// A rota de decisões lê o fechamento da vela pela chave (par, vela, abertura): uma vela depois do relógio de verdade só entra
+// com um "agora" adiantado no repositório.
+async function upsertHourCandle(params: ControlParams, candleTime: number): Promise<void> {
+  const close = '61500.00';
+  await createCandleRepository(params.handle, {
+    now: () => candleTime + 2 * HOUR_MILLISECONDS,
+  }).upsertCandles([
+    {
+      exchange: EXCHANGE,
+      symbol: SYMBOLS[0],
+      timeframe: '1h' as const,
+      openTime: candleTime,
+      closeTime: candleTime + HOUR_MILLISECONDS - 1,
+      open: close,
+      high: close,
+      low: close,
+      close,
+      volume: '10.00',
+      tradeCount: 1,
+    },
+  ]);
+}
+
 // Faz o papel do worker: grava um sinal novo da simulação ao vivo e avisa a API pelo NOTIFY real.
 async function pushSignal(params: ControlParams, sequence: number): Promise<void> {
   const candleTime = params.lastOpenTime + sequence * HOUR_MILLISECONDS;
+  await upsertHourCandle(params, candleTime);
   await createRunResultRepository(params.handle).appendSignals(params.scope, params.runId, [
     {
       candleTime,
       action: 'BUY',
       score: '4',
       regime: 'trending',
-      votes: parseJsonContainer('{}'),
-      indicators: parseJsonContainer('{}'),
+      votes: parseJsonContainer(JSON.stringify(votesFor(1))),
+      indicators: parseJsonContainer(JSON.stringify(DECISION_INDICATORS)),
       sentimentObservation: undefined,
       reason: 'Compra 4/4: sinal chegado ao vivo',
     },
@@ -71,6 +99,33 @@ async function pushPriceAlert(params: ControlParams): Promise<void> {
   const alertId = created.alert.id;
   await params.sql`UPDATE price_alerts SET is_enabled = false, triggered_at = now() WHERE id = ${alertId}`;
   await notify(params.sql, { kind: 'price_alert', alertId });
+}
+
+// Uma decisão de ESPERAR (HOLD) nova, no papel do worker: a vela fechada, o sinal com os votos, o ponto de patrimônio e o aviso.
+// O saldo sobe para 10.500,00 (o acompanhamento mostra o saldo do último ponto); a vela vem depois do relógio de verdade, então o
+// repositório recebe um "agora" adiantado só para aceitá-la.
+async function pushDecision(params: ControlParams, sequence: number): Promise<void> {
+  const candleTime = params.lastOpenTime + (DECISION_OFFSET_HOURS + sequence) * HOUR_MILLISECONDS;
+  await upsertHourCandle(params, candleTime);
+  const results = createRunResultRepository(params.handle);
+  await results.appendEquityPoints(params.scope, params.runId, [
+    { candleTime, equity: '10500.00', equityAtLow: '10500.00', benchmark: '10110.00' },
+  ]);
+  await results.appendSignals(params.scope, params.runId, [
+    {
+      candleTime,
+      action: 'HOLD',
+      score: '0',
+      regime: 'ranging',
+      votes: parseJsonContainer(JSON.stringify(DECISION_VOTES)),
+      indicators: parseJsonContainer(JSON.stringify(DECISION_INDICATORS)),
+      sentimentObservation: undefined,
+      reason: 'Espera 0/4: nenhuma regra a favor',
+    },
+  ]);
+  await params.sql`UPDATE runs SET last_candle_time = GREATEST(COALESCE(last_candle_time, 0), ${candleTime}) WHERE id = ${params.runId}`;
+  await notify(params.sql, { runId: params.runId, kind: 'signal', eventId: String(candleTime) });
+  await notify(params.sql, { runId: params.runId, kind: 'balance', eventId: String(candleTime) });
 }
 
 type FillSide = 'buy' | 'sell';
@@ -189,6 +244,7 @@ async function readFillSide(request: Request): Promise<FillSide> {
 
 export function startControlServer(params: ControlParams): ControlServer {
   let signals = 0;
+  let decisions = 0;
   const server = Bun.serve({
     hostname: '127.0.0.1',
     port: 0,
@@ -196,6 +252,7 @@ export function startControlServer(params: ControlParams): ControlServer {
       const { pathname } = new URL(request.url);
       if (request.method !== 'POST') return new Response(null, { status: 405 });
       if (pathname === '/signal') await pushSignal(params, (signals += 1));
+      else if (pathname === '/decision') await pushDecision(params, (decisions += 1));
       else if (pathname === '/price-alert') await pushPriceAlert(params);
       else if (pathname === '/tick') await pushTick(params, request);
       else if (pathname === '/fill') await pushFill(params, await readFillSide(request));
