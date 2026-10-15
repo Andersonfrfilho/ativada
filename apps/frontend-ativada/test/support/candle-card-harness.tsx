@@ -2,6 +2,7 @@
 import { createMemoryRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 
+import { LiveMarketProvider } from '../../src/live/LiveMarketProvider.component.js';
 import { ChartSurfaceLoaderContext } from '../../src/runs/candle-chart/chart-surface-loader.js';
 import { TradeChartCard } from '../../src/runs/TradeChartCard.component.js';
 import {
@@ -38,6 +39,8 @@ export type CandleCardOptions = {
   readonly respondProjections?: (call: RecordedCall) => Response | Promise<Response>;
   // As operações fechadas que a tabela (e a camada "Stop e alvo") recebem.
   readonly trades?: readonly unknown[];
+  // Só para provar o silêncio da vela em formação sem esperar 10 s.
+  readonly silenceMilliseconds?: number;
 };
 
 export const LAYERS_PATH = '/v1/runs/run-1/strategy-layers';
@@ -176,9 +179,14 @@ export function showCandleCard(options: CandleCardOptions = {}): CandleCardHarne
     path: '/',
     isAuthenticated: true,
     routes: [...baseRoutes(options), candlesRoute(options), ...(options.extraRoutes ?? [])],
+    ...(options.silenceMilliseconds === undefined
+      ? {}
+      : { silenceMilliseconds: options.silenceMilliseconds }),
     probe: (
       <ChartSurfaceLoaderContext value={() => Promise.resolve(factory)}>
-        <RouterProvider router={router} />
+        <LiveMarketProvider>
+          <RouterProvider router={router} />
+        </LiveMarketProvider>
       </ChartSurfaceLoaderContext>
     ),
   });

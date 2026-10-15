@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { CandleStore } from './candle-store.js';
 import { STREAM_STATUS, type StreamStatus } from './stream.constant.js';
 import type { MarketTick } from './stream-client.js';
 
@@ -32,8 +33,12 @@ function toRatio(percentText: string | null): number | undefined {
 export class MarketStore {
   private prices: ReadonlyMap<string, LivePrice> = new Map();
   private readonly listeners = new Set<() => void>();
+  // A vela em formação mora ao lado do preço, com assinatura própria (spec 009, D9).
+  readonly candles: CandleStore;
 
-  constructor(private readonly now: () => number) {}
+  constructor(private readonly now: () => number) {
+    this.candles = new CandleStore(now);
+  }
 
   readonly getSnapshot = (): ReadonlyMap<string, LivePrice> => this.prices;
 
@@ -53,7 +58,10 @@ export class MarketStore {
     this.publish(next);
   };
 
-  readonly clear = (): void => this.publish(new Map());
+  readonly clear = (): void => {
+    this.publish(new Map());
+    this.candles.clear();
+  };
 
   private publish(next: ReadonlyMap<string, LivePrice>): void {
     this.prices = next;

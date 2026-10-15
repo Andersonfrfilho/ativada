@@ -11,6 +11,7 @@ import { AppProviders } from '../../src/app/AppProviders.component.js';
 import { createAppRoutes } from '../../src/app/createAppRoutes.js';
 import type { StreamConnector, StreamHandlers } from '../../src/live/stream-connector.js';
 import type { MarketTick, StreamMessage, StreamStatus } from '../../src/live/stream-client.js';
+import type { StreamCandle } from '../../src/live/stream.validation.js';
 import { createApiClient } from '../../src/http/api-client.js';
 import { createSessionService, type SessionService } from '../../src/session/session-service.js';
 import {
@@ -39,6 +40,7 @@ export type RenderAppOptions = {
 export type FakeStream = {
   readonly emit: (message: StreamMessage) => void;
   readonly tick: (tick: MarketTick) => void;
+  readonly candle: (candle: StreamCandle) => void;
   readonly setStatus: (status: StreamStatus) => void;
   readonly resync: (reason?: string) => void;
   readonly connections: () => number;
@@ -79,6 +81,7 @@ function createFakeStream(): { readonly stream: FakeStream; readonly connect: St
     stream: {
       emit: (message) => current?.onMessage(message),
       tick: (tick) => current?.onTick(tick),
+      candle: (candle) => current?.onCandle?.(candle),
       setStatus: (status) => current?.onStatus(status),
       resync: (reason = 'listener_lost') => current?.onResync(reason),
       connections: () => connections,

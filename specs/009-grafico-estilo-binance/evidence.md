@@ -385,3 +385,38 @@ Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; nenhuma depe
   e aberta), pontinhos de "esperou", previsão ligada e desligada e backtest que nunca pede a previsão; puros: janela, caixas, pontinhos e rótulo do placar.
 
 Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` 928 passam, 0 falham (74 arquivos).
+
+## T3.4 — Ao vivo: vela em formação e preço real (2026-10-15)
+
+Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; nenhuma dependência nova; nenhuma mudança na API.
+
+- **Ligação do stream** (`src/live/`): `CandleStore` guarda só a vela ABERTA de cada par e vela (chave `par|vela`), fora do React e separada do preço (a mensagem `candle`
+  chega a 1 por segundo; só quem desenha a vela re-renderiza). Mensagem de vela mais velha, ou mais velha da mesma vela, não desfaz a atual; a mensagem
+  `closed: true` tira a vela do armazém (a fechada de verdade chega por REST, depois do aviso `runs`). `MarketStore` expõe `candles` e o `clear` limpa os dois.
+  `StreamHandlers` ganhou `onCandle` (opcional), `useLiveStream` o liga a `store.candles.apply` e a `FakeStream` dos testes ganhou `candle()`.
+- **`useLiveCandle(symbol, timeframe)`** + `judgeLiveCandle` (puro): a vela é `forming` com o socket no ar e mensagem dentro do limite de silêncio do painel (10 s,
+  o mesmo do selo de preço); passando do limite, ou com o socket fora do ar, vira `no_data` com os segundos. Fora do provedor do mercado não há vela nem erro.
+- **No gráfico** (`useFormingCandle`): só na `live_paper` que acompanha o fim (sem faixa na URL; com faixa fixa o gráfico não anda). A vela entra por `setLiveCandle`,
+  sem tocar nas velas fechadas, no placar nem nas linhas (a decisão é sempre da vela fechada). A legenda mostra a vela em formação, com a palavra "em formação" e o
+  volume, quando a cruz não aponta outra. A superfície desenha a vela em formação só com contorno e pavio na cor da direção (a biblioteca não tem contorno tracejado)
+  e a linha contínua do preço real do último fechamento até o fechamento parcial. Parou de chegar: a vela sai e aparece "Sem dados ao vivo há N s: a vela em
+  formação volta quando o preço voltar a chegar."
+- **Vela fechada pelo aviso `runs`**: o aviso refaz o `/chart`, o período da execução ganha a vela que fechou e a série (âncora estável) pede só a ponta nova
+  (`[fim anterior, fim novo)`), juntando ao fim sem reenquadrar o gráfico; com faixa fixa o aviso "Há velas novas — ir para o fim" aparece e leva de volta ao fim.
+- **Contratos** (`candle-live`, 8 testes, com a superfície falsa e o stream falso; `live-candle`, 7 puros): a mensagem `candle` atualiza só a vela aberta (as velas
+  fechadas e o placar não são redesenhados), a legenda diz "em formação", outro par, outra vela e mensagem atrasada são ignorados, a mensagem fechada tira a vela,
+  backtest e faixa fixa nunca desenham a vela, o silêncio vira "sem dados" e a volta reaparece, o aviso refaz a ponta com a vela que fechou (960 → 961 velas) e a
+  garantia do aviso "Há velas novas" com o gráfico novo; puros: armazém (ordem, par, vela, relógio do navegador, ouvintes) e o julgamento forma/sem dados.
+
+Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` 943 passam, 0 falham (76 arquivos); `vite build` com o pedaço `lightweight-surface`
+à parte (185 KB, 60 KB gzip) e o principal em 216,8 KB gzip.
+
+## Resumo da execução T3.1 a T3.4 (para a T3.5 em diante)
+
+- Pendências visuais para a T3.8 e a T4.1 (nada disto foi exercitado com canvas real: sem Chromium no WSL e instalar é proibido): aparência do adaptador
+  (`lightweight-surface.ts`), caixas de "Stop e alvo" (primitivo `level-boxes-primitive.ts`), meio-cone e linha plana (linhas de 2 pontos, sem a curva de √ do
+  `buildProjectionCone`, porque a biblioteca espaça por vela e não por tempo), vela em formação oca (sem contorno tracejado), contraste dos pontinhos de "esperou"
+  e dos rótulos "alvo"/"stop" a 3:1, e os 60 quadros/s ao arrastar 5.000 velas (RNF02).
+- A `NextCandlePanel` (T3.5) pode ler `useProjectionsQuery` e `useLiveCandle` sem mudar o que existe; `ChartLayerData.projection` já carrega o `current`.
+- O teclado e o anúncio (T3.7) entram em `useCanvasInteractions` (índice da cruz) e no contêiner `role="img"` do `CandleCanvas`, que hoje só tem `aria-label` e a
+  descrição textual (`describeChart`, sem a previsão ainda).

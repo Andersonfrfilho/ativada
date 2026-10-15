@@ -9,6 +9,7 @@ import { ChartToolbar } from './ChartToolbar.component.js';
 import { ClusterButtons } from './ClusterButtons.component.js';
 import { LayerBar } from './LayerBar.component.js';
 import { LayerNotices } from './LayerNotices.component.js';
+import { LiveCandleNotice } from './LiveCandleNotice.component.js';
 import { OhlcLegend } from './OhlcLegend.component.js';
 import { SimpleChartFallback } from './SimpleChartFallback.component.js';
 import { TimeframeNotice } from './TimeframeNotice.component.js';
@@ -39,6 +40,7 @@ function CanvasHeader({ chart, view, source, model }: CanvasViewProps): ReactEle
         onToggle={source.preferences.toggleLayer}
       />
       <TimeframeNotice timeframe={source.timeframe} runTimeframe={chart.timeframe} />
+      <LiveCandleNotice live={model.live} />
       {model.legend === undefined ? null : <OhlcLegend text={model.legend} />}
     </>
   );

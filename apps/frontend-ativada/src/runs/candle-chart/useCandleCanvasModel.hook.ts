@@ -3,6 +3,7 @@ import type { RefObject } from 'react';
 
 import { useUserTimeZone } from '../../account/useUserTimeZone.hook.js';
 import { formatSymbol } from '../../format/format.js';
+import type { LiveCandleView } from '../../live/live-candle.js';
 import type { TradeChart } from '../trade-chart.validation.js';
 import type { ChartView } from '../useChartView.hook.js';
 import type { TradeSelection } from '../useTradeSelection.hook.js';
@@ -10,12 +11,14 @@ import { CHART_LAYER, INITIAL_VISIBLE_BARS, type ChartLayer } from './candle-cha
 import { toSurfaceTime } from './candle-series.js';
 import type { ChartSurface } from './chart-surface.types.js';
 import { LAYERS_BLOCK_BARS } from './layer-series.js';
+import { buildLegendText } from './legend-text.js';
 import { findPositionKeyAt } from './marker-series.js';
-import { buildOhlcText, type OhlcText } from './ohlc-text.js';
+import type { OhlcText } from './ohlc-text.js';
 import { useCanvasInteractions } from './useCanvasInteractions.hook.js';
 import type { CandleSource, TimeframeChoice } from './useCandleSource.hook.js';
 import { useChartLayers, type ChartLayerData } from './useChartLayers.hook.js';
 import { useChartSurface } from './useChartSurface.hook.js';
+import { useFormingCandle } from './useFormingCandle.hook.js';
 import { useLayerSurface } from './useLayerSurface.hook.js';
 import { useSurfaceData } from './useSurfaceData.hook.js';
 import { useSurfaceTheme } from './useSurfaceTheme.hook.js';
@@ -34,6 +37,7 @@ export type CandleCanvasModel = {
   readonly surface: ChartSurface | undefined;
   readonly hasFailed: boolean;
   readonly legend: OhlcText | undefined;
+  readonly live: LiveCandleView | undefined;
   readonly layerData: ChartLayerData;
   readonly isLayerOn: (layer: ChartLayer) => boolean;
   readonly handleTimeframeChange: (next: TimeframeChoice) => void;
@@ -75,27 +79,26 @@ function selectOperationAt(index: number, input: CandleCanvasInput): void {
   if (key !== undefined) selection.select({ key, range: undefined });
 }
 
-function buildLegend(
-  input: CandleCanvasInput,
-  index: number,
-  timeZone: string,
-): OhlcText | undefined {
+type LegendContext = {
+  readonly hoverIndex: number | null;
+  readonly live: LiveCandleView | undefined;
+  readonly timeZone: string;
+};
+
+function legendFor(input: CandleCanvasInput, context: LegendContext): OhlcText | undefined {
   const { chart, source } = input;
-  const { candles } = source.history;
-  const candle = candles[index];
-  if (candle === undefined) return undefined;
-  return buildOhlcText({
-    candle,
-    previousClose: candles[index - 1]?.close,
+  return buildLegendText({
+    closed: source.history.candles,
+    index: context.hoverIndex,
+    forming: context.live?.status === 'forming' ? context.live.candle : undefined,
     symbol: formatSymbol(chart.symbol),
     timeframe: source.timeframe,
-    timeZone,
-    isForming: false,
+    timeZone: context.timeZone,
   });
 }
 
 // Tudo o que o gráfico precisa ligar: a superfície e seu tema, os dados, a cruz, o clique, a página anterior, o
-// reenquadramento e as camadas. O componente só desenha o resultado.
+// reenquadramento, as camadas e a vela em formação. O componente só desenha o resultado.
 export function useCandleCanvasModel(input: CandleCanvasInput): CandleCanvasModel {
   const { runId, chart, view, source } = input;
   const base = useCanvasBase(input);
@@ -115,12 +118,21 @@ export function useCandleCanvasModel(input: CandleCanvasInput): CandleCanvasMode
   });
   const isLayerOn = (layer: ChartLayer): boolean => source.preferences.preferences.layers[layer];
   useLayerSurface(base.surface, { data: layerData, decisions: chart.decisions, isOn: isLayerOn });
-  const index = interactions.hoverIndex ?? source.history.candles.length - 1;
+  const live = useFormingCandle(base.surface, {
+    symbol: chart.symbol,
+    timeframe: source.timeframe,
+    isFollowing: view.isLive && view.range === undefined,
+  });
   return {
     ...base,
     layerData,
     isLayerOn,
-    legend: buildLegend(input, index, base.timeZone),
+    live,
+    legend: legendFor(input, {
+      hoverIndex: interactions.hoverIndex,
+      live,
+      timeZone: base.timeZone,
+    }),
     handleTimeframeChange: (next): void => {
       const center = interactions.centerTime();
       if (center !== undefined) source.changeTimeframe(next, center);
