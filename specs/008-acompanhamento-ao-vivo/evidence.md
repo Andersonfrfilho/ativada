@@ -280,3 +280,13 @@ panel-test: 727 pass, 0 fail (55 arquivos)
 WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
 panel-test: 738 pass, 0 fail (56 arquivos)
 ```
+
+## T3.3 — "O que falta para comprar agora" e estados (sonnet, 2026-10-14)
+
+- `NextTriggersBlock`: título "o que falta para comprar/vender agora" conforme a carteira, régua do placar em SVG (`ScoreboardRuler`, `scoreboard-scale.ts` puro: de −limite a +limite, no mínimo ±4, até a soma dos pesos), a frase do servidor e, por regra, valor de hoje, o que precisa ("fechar acima de 13,10") e a distância em % marcada "exata" ou "aproximada" (`trigger-text.ts`), com o voto de hoje por ícone + sinal + palavra; indisponível (`no_candle`, `warming_up`, `not_running`) mostra a frase do porquê, sem tabela. Texto fixo "Isto não é previsão: o preço pode nunca chegar lá…". Termos do glossário (`Term`) em "pontuação do placar" e "limiar". Estado vazio e avisos já estavam na T3.1; nenhum "0,00" aparece sem a frase ao lado (teste).
+- Contrato `test/live-next-triggers.contract.tsx`: régua (valores do redesenho 18,75% e 75%), contagem regressiva e idade, textos de condição e distância, os estados aguardando entrada/comprada/sem vela/parada/aquecendo e a linha de pulso (rodando, última decisão, próxima, parada sem relógio).
+
+```text
+WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
+panel-test: 751 pass, 0 fail (57 arquivos)
+```

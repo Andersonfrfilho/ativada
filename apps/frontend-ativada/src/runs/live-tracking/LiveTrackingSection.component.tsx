@@ -9,6 +9,7 @@ import { LivePulseLine } from './LivePulseLine.component.js';
 import { LiveTrackingCard } from './LiveTrackingCard.component.js';
 import styles from './LiveTracking.module.css';
 import { useLiveStatusQuery } from './live-status.query.js';
+import { NextTriggersBlock } from './NextTriggersBlock.component.js';
 
 export type LiveTrackingSectionProps = { readonly run: RunDetail };
 
@@ -28,6 +29,7 @@ export function LiveTrackingSection({ run }: LiveTrackingSectionProps): ReactEle
       <LivePulseLine runId={run.id} symbol={run.symbol} />
       <LiveTrackingCard run={run} status={status.data} />
       <div className={status.data.goal === null ? styles.stack : styles.grid}>
+        <NextTriggersBlock status={status.data} />
         <LiveGoalBlock status={status.data} goalId={run.goalId} />
       </div>
     </>
