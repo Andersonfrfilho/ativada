@@ -584,3 +584,23 @@ Modelo: `sonnet`. O arquivo NÃO estava com conteúdo duplicado (um só `# CLAUD
 O diff é só acréscimo: 1 frase no "Estado" e 2 itens novos (API do gráfico e da previsão; painel do gráfico), cobrindo as rotas `strategy-layers` e `projections`, a mensagem `candle` e `TICKER_KLINE_ENABLED`,
 a biblioteca `lightweight-charts` com a porta `ChartSurface` e a superfície falsa, a regra `projection-1`, `@ativada/statistics` (Wilson), o glossário novo, o painel "Próxima vela de perto", os cartões de acertos,
 o crédito do `NOTICE` e o E2E no Edge.
+
+## Correções da revisão final (2026-10-15)
+
+Modelo: `sonnet` (correções guiadas pela revisão opus; o contrato aditivo está no ADR 0002, "Correções da revisão final (spec 009)", R1 a R9). Um commit por grupo, todos com os gates da lista abaixo.
+
+| Item | Commit | O que mudou | Prova |
+|---|---|---|---|
+| ALTO teclado depois da página anterior + M8 paginação + M1 vela escolhida | `ed777c8` | `useChartKeyboard` guarda o `openTime` e deriva o índice por `Map`; `hasMore = page.from > earliestTime`, `reachedFrom`, falha não zera `hasMore`; vela escolhida só em memória; `VITE_MARKET_TIMEFRAMES`; gráfico simples com "Tentar de novo" e "Voltar para a vela da execução" | `chart-keyboard` (caso de `prepend`: a vela do índice 998 passa a 1998 e a seta seguinte vai a 1999), `candle-paging` (página vazia avança, falha mantém `hasMore`), `candle-chart` (velas do ambiente, 400 e saída), `chart-preferences` (vela antiga ignorada) |
+| M2 vela por chave + M3 preço parado | `aa2d89d` | `candleAt`/`priceAt` com `useSyncExternalStore`; `judgeLiveCandle` usa o tick sem kline; `env.dev` com `TICKER_STREAM_ENABLED=true`; runbook §7 | `live-candle` (referência estável por chave, tick velho, stale e socket fora) |
+| M4 Wilson + baixos 2, 3, 4, 5, 12 | `53a7136` | `formatIntervalLimitPercent` (0,499961 vira 49,99%; 0,499951 vira 50,00%), `formatPriceEdge`, "menos de 0,01%", `isRisingCandle` em BigInt, cor sem `toDrawingNumber`, "fraco" por lado, cartão de origem sem depender das projeções | `next-candle-state`, `projection-cards` |
+| M6 + M7 + baixo 11, API | `aa25354` | motivos `stalled`, `waiting_for_data`, `read_failed`; `current`/`summary` só na primeira página; leitura das posições isolada | `api-run-projections` (parada, espera, falha da leitura, página por cursor com 3 consultas), 5 mutantes novos em `api-run-projections-mutants` |
+| M6 + M7, painel | `22180c7` | previsão velha (`now > horizonEndsAt + 2 min`), Zod dos motivos, esquema e consulta das páginas por cursor, `refetchType: 'none'` nelas | `next-candle-state`, `next-candle-panel`, `candle-chart-queries`, `live-status-queries` |
+
+Gates de cada commit: `prettier --write`, `typecheck`, `lint`, `format`, `panel-test` (1.042 testes no último), `dev-scripts`, `code-size-limits`, `app-import-boundary`, `ownership-registry`, `api-run-projections*`, `api-run-strategy-layers`, `api-run-live-status` e `api-openapi`. Nenhum arquivo de teste novo (todos já estavam na lista do `package.json`). Sem migration; `packages/strategy-engine` e `packages/run-recording` intocados.
+
+**Não feito (desvio):** M5 (faixa visível em `?de=&ate=` ao arrastar). Registrado como R7 no ADR: gravar a faixa a cada gesto reenquadra a série e pode estourar o `RUN_CHART`; fica para a próxima spec do gráfico.
+
+**E2E no Edge:** não rodado. M1 e a correção do teclado são provados por contrato com a superfície falsa (a vela escolhida e o teclado não dependem do desenho real) e M5 não foi implementado.
+
+**Pendências sem mudar comportamento** (ADR, última nota): `candle-window` com relógio, kline de fechamento descartada, camadas no balde `RUN_CHART`, `role` do canvas, ordem de limpeza na desmontagem e caixas de stop/alvo só das operações carregadas. Também ficou sem "Tentar de novo" o gráfico simples que entra por falha do DESENHO (superfície que não carregou): recarregar a página é o caminho.
