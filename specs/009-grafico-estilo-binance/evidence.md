@@ -81,3 +81,28 @@ autorizada pelo usuário (D1-A). Decisões P12 a P14 no ADR 0002.
 Gates (WSL, espelho `~/gates/ativada-spec9`): `bun run typecheck` ok; `bun run lint` ok (a primeira rodada reprovou 4
 tipos de retorno ausentes nos testes novos; corrigido); `bun run format:check` ok; `bun run --cwd apps/frontend-ativada
 test` 795 pass, 0 fail.
+
+## T1.1 — Regra `projection-1`, frases e Wilson (2026-10-15)
+
+Modelo: `sonnet` (a recomendação era `haiku`; executado junto com o resto da Fase 1). Sem migration e sem mudança em
+`packages/strategy-engine` ou `packages/run-recording`.
+
+- **Pacote novo `@ativada/statistics`** (`packages/statistics/`, P10): `wilson-interval.ts` exporta `WILSON_Z_SQUARED`
+  (`2401/625`), `COIN_FLIP_MINIMUM_COUNTED` (30), `COIN_FLIP_VERDICT`, `computeWilsonInterval` (inferior para baixo e
+  superior para cima na 12ª casa, presos a `[0, 1]`; contagem inválida lança `RangeError`) e `judgeAgainstCoinFlip` (o
+  veredito é a desigualdade inteira exata em `bigint`, não os limites exibidos). Depende só de `@ativada/strategy-engine`
+  (para o `EngineDecimal`). A spec 007 importa daqui. O `bun.lock` ganhou só as 3 linhas do pacote novo e a dependência
+  no `apps/api-ativada`; `bun install --frozen-lockfile` no espelho com o lockfile do repo: "no changes".
+- **`apps/api-ativada/src/runs/projections/`**: `projections.constant.ts` (versão, vocabulários, tetos),
+  `projection-rule.ts` (puro: lado, limiar do lado, força sem divisão, postura, faixa que nunca encolhe, acerto, variação
+  a 4 casas para baixo, taxa a 4 casas para baixo) e `projection-messages.ts` (catálogo fechado de P9; o acerto em
+  porcentagem ao lado dos 50%).
+- **Contratos** (`test/wilson-interval`, `projection-rule`, `projection-messages`): contas à mão nas bordas (29/29 =
+  `too_few`, 30/30 = `above`, 21 de 30 é o primeiro `above` com inferior 0,5212, 9 de 30 o primeiro `below`, 171 de 346
+  `even`), veredito igual ao oráculo `bigint` em todas as contagens até 400, limites exibidos coerentes com o veredito de 30
+  a 150, 2.000 sorteios (faixa nunca encolhe, força e taxa iguais às do oráculo, taxa nunca acima da fração exata) e as
+  frases literais de P9.
+
+Gates (WSL, espelho `~/gates/ativada-spec9`): `typecheck`, `lint` e `format:check` limpos; 131 testes passam (os 3 novos e
+os vizinhos: oráculo, `code-size-limits`, `app-import-boundary`, `strategy-engine-boundary`, `ownership-registry`,
+`database.contract`, `test-support-boundary`).

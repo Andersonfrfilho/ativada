@@ -22,6 +22,7 @@
         "@ativada/identity-admin": "workspace:*",
         "@ativada/market-data-crypto": "workspace:*",
         "@ativada/run-recording": "workspace:*",
+        "@ativada/statistics": "workspace:*",
         "@ativada/strategy-engine": "workspace:*",
         "jose": "6.2.12",
       },
@@ -110,6 +111,13 @@
         "@ativada/strategy-engine": "workspace:*",
       },
     },
+    "packages/statistics": {
+      "name": "@ativada/statistics",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ativada/strategy-engine": "workspace:*",
+      },
+    },
     "packages/strategy-engine": {
       "name": "@ativada/strategy-engine",
       "version": "0.0.0",
@@ -148,6 +156,8 @@
     "@ativada/market-data-crypto": ["@ativada/market-data-crypto@workspace:packages/market-data-crypto"],
 
     "@ativada/run-recording": ["@ativada/run-recording@workspace:packages/run-recording"],
+
+    "@ativada/statistics": ["@ativada/statistics@workspace:packages/statistics"],
 
     "@ativada/strategy-engine": ["@ativada/strategy-engine@workspace:packages/strategy-engine"],
 
