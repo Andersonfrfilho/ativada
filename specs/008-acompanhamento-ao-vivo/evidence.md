@@ -360,3 +360,35 @@ panel-test: 775 pass, 0 fail (61 arquivos)
 prettier --check CLAUDE.md: verde
 git diff CLAUDE.md: +5 −341 (as 5 são os bullets e frases novos; as 341 são a cópia repetida e as linhas reescritas)
 ```
+
+## Correções da revisão final (sonnet, 2026-10-15)
+
+Aplicadas as correções da revisão final (opus) em dois commits (API e banco; painel) mais este de documentação. Nada em `packages/strategy-engine` nem `packages/run-recording`; sem migration.
+
+**API e banco (commit `fix(api)`).**
+- **A1 [ALTO] saída por alvo, stop, lacuna e comando.** O `outcome` ganhou `exited`: vale a vela em que uma posição fechou (`closed_candle_time = t`) com `exit_reason` diferente de `signal`, lido de `PositionInput.exitReason`, que já estava em memória (nenhuma consulta nova). Frases fechadas, com teste literal: "Vendeu no alvo (11.800,50).", "Vendeu no stop (95,50).", "Saiu pela lacuna de dados.", "Saiu porque a meta terminou.". O `/chart` e o Zod do `live-status` (`z.enum(DECISION_OUTCOME)`) herdam o valor; o Zod do painel foi espelhado. Módulo novo `decision-candle-state.ts` (`readCandleState`, `isHoldingAt`).
+- **M1 "Comprou" sem preenchimento.** BUY na vela `t` só é `bought` se existe posição com `opened_candle_time = t + duração`; na última vela decidida é `buy_pending` ("Pediu compra: executa na abertura da próxima vela."); senão `waited` com "Sinal de compra sem execução.". Para a posição que abre na vela seguinte não ficar de fora da leitura, a faixa de `listPositionsAround` passou a ir até `mais nova + duração` (decisões e `/chart`; teste com a página seguinte por cursor). A contradição do estado vazio do painel ("Nenhuma compra ainda" com pedido pendente) está no commit do painel.
+- **M4 §15.** `readChartDecisions` saiu do `Promise.all` do caminho crítico (`run-chart.use-case.ts`): falha vira `decisions: null`, sem log (sem PII); contrato novo em `api-run-chart-decisions` (spy em `listDecisionMarkers`).
+- **Baixos da API.** Posições lidas da MAIS NOVA para a mais antiga (`ORDER BY opened_candle_time DESC`: o corte do `LIMIT` nunca descarta a aberta; `POSITIONS_BEYOND_THE_PAGE` 2 → 3; teste no Postgres em `run-live-status-checks.ts`); `row.action` validada por guarda (`toSignalAction`, sem `as`); ramo morto do `holder.vote.vote === 1` trocado por um type guard; gatilho de preço diz "no último fechamento" em vez de "hoje" (o `current` é o fechamento, não o preço de agora). ADR 0002 ganhou a linha L21.
+- 6 mutantes novos em `api-run-live-status-mutants` (saída por sinal contada como saída, compra sempre preenchida, última vela nunca pendente, faixa sem a vela seguinte, falha das decisões derrubando o gráfico; os dois de `holding` foram para `decision-candle-state.ts`).
+
+**Painel (commit `fix(painel)`).**
+- **A1/M1:** `OUTCOME_LOOK`/`OUTCOME_WORD` com "Pediu compra" e "Saiu"; `LiveTradesState` troca o título para "Compra pedida: executa na abertura da próxima vela" quando a decisão mais nova está pendente; o `live-status` mais novo agora vence a página antiga em cache na junção (`mergeDecisions([older, status])`).
+- **M2:** `roundRateDownToPercent`/`formatSignedPercentDown` (`roundScaledDirected(rate × 100, 2, 'down')`); `RunResultBar` escolhe seta, cor e texto pelo valor já arredondado (zero vira "= 0,00%"), e `GroupedRunList` e `ComparisonBars` herdam. Os outros usos de `formatSignedScaledPercent` (ativos, marcadores) não mudaram.
+- **M3:** `StaleDataNotice` ("Não foi possível atualizar agora; dados de há N s."): com dado em cache e `isError`, `LiveTrackingSection` e `ActiveGoalCard` mantêm a tela; o erro cheio só aparece sem dado.
+- **M5:** "Painel atualizado há N s" (sem afirmar que o simulador está ativo); o nome da região da linha de pulso acompanha o estado (rodando, parada, aguardando dados, na fila).
+- **M6:** `createRefetchScheduler` (`src/live/refetch-scheduler.ts`): avisos do mesmo assunto viram UMA rebusca 500 ms depois do último, e as páginas de `['runs', id, 'decisions']` só ficam obsoletas (`refetchType: 'none'`).
+- **Baixos do painel:** `DecisionRunGroup` mostra dia e hora (`formatRelativeMoment`); "Abaixo do ritmo" só depois da primeira vela fechada (`balance.observedAt`) e com tolerância (ganho < 90% do esperado em linha reta); voto de peso 0 diz "fora (filtro de tendência)"; `formatDirectedPercent` usa o sinal "−"; "Processando a vela…" quando `agora ≥ nextDecisionAt` (no lugar de 00:00); `aria-controls` no botão do grupo (ids das linhas); "1 decisão mostrada"; cancelamento pelo usuário com `role="status"` e estilo neutro (falha segue `alert`); "teria hoje" para baixo (`formatDirectedMoney(…, 'down')`); `run-groups.ts` com `push` no array do Map.
+
+**Questões abertas, sem mudar o comportamento além do citado.**
+1. Vela ausente para uma decisão gravada continua sendo 500 (L12): é estado impossível, e omitir a linha esconderia o defeito.
+2. Limiar de venda/compra com muitas casas: `formatPoints` mostra o número exato; limitar as casas não foi feito (mudaria a frase literal de L14 e não há limite de casas no `thresholds`). Fica para quando a validação da estratégia fixar um teto.
+3. "desde" no cartão usa `periodStart` (a abertura da vela em curso na criação), não `started_at`: é a base do prazo da meta (L8), então os dois textos concordam; a diferença é de até uma vela.
+4. A saída `command` diz "Saiu porque a meta terminou." também quando o comando foi `user_stop` ou `kill_switch` (a frase é a pedida na revisão; `PositionInput` só guarda `exitReason = command`, não o motivo do comando). Se isso incomodar, a correção é gravar o motivo ou ler `run_commands` (consulta nova), fora desta correção.
+
+```text
+WSL ~/gates/ativada-spec8 (espelho): typecheck verde · lint (meus arquivos) verde · format:check verde
+API: live-decision-messages, api-run-live-status, api-run-live-status-mutants (+6), api-run-chart-decisions, api-run-chart*, api-openapi, ownership-registry, code-size-limits, live-trigger-messages, live-stored-readings-parity: verdes
+database-test (Postgres embutido do WSL, porta 56436): OK
+panel-test: 791 pass, 0 fail (61 arquivos)
+```
