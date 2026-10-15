@@ -137,7 +137,7 @@ describe('geometria do painel da próxima vela', () => {
     expect(model.now?.x).toBe(RIGHT);
     expect(model.now?.y).toBe(lastPoint(model.trail ?? '')[1]);
     expect(model.forming?.x).toBe(model.split);
-    expect(model.forming?.width).toBe(RIGHT - model.split);
+    expect(model.forming?.width).toBeCloseTo(RIGHT - model.split, 6);
   });
 
   test('without messages there is no real line, no marker and no enlarged candle', () => {

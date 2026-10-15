@@ -6,7 +6,7 @@ import type { AvailableProjection } from './projections.validation.js';
 // O modelo do painel "Próxima vela de perto" (D13): coordenadas de um SVG pequeno, sem biblioteca.
 export const PANEL_WIDTH = 320;
 export const PANEL_HEIGHT = 210;
-export const PANEL_AXIS_WIDTH = 56;
+export const PANEL_AXIS_WIDTH = 76;
 export const PANEL_TOP = 12;
 export const PANEL_PLOT_HEIGHT = 170;
 export const PAST_CANDLE_COUNT = 5;

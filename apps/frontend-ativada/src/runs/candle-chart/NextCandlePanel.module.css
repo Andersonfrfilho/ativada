@@ -106,14 +106,21 @@
   fill: var(--cone-down);
 }
 
+.arrowBuy,
+.arrowSell {
+  font-weight: 700;
+  /* Halo da cor do fundo: o rótulo cai em cima do meio-cone e sem ele some no vermelho ou no verde. */
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 3px;
+}
+
 .arrowBuy {
   fill: var(--buy);
-  font-weight: 700;
 }
 
 .arrowSell {
   fill: var(--sell);
-  font-weight: 700;
 }
 
 .base {
