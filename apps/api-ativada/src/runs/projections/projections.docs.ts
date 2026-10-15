@@ -10,11 +10,11 @@ export const PROJECTIONS_DOCUMENTATION: RouteDocumentation = {
   summary:
     'Tendência do placar e histórico de acertos (regra `projection-1`). `current` é a tendência da última vela decidida da ' +
     'simulação ao vivo rodando (lado, força, postura, faixa de ±1 ATR e a frase pronta) ou o motivo de não haver ' +
-    '(`not_running`, `no_candle`, `warming_up`, `neutral`). A previsão é a TENDÊNCIA do placar, nunca um preço-alvo. ' +
+    '(`not_running`, `stalled`, `waiting_for_data`, `no_candle`, `warming_up`, `neutral`, `read_failed`). A previsão é a TENDÊNCIA do placar, nunca um preço-alvo. ' +
     '`summary` conta a execução inteira (no walk-forward, só as janelas de teste que terminaram bem): acerto do lado, ' +
     '"sempre sobe", dentro da faixa, acerto por força, intervalo de Wilson de 95% e o veredito contra a moeda ao ar, com ' +
     'as frases prontas. `items` traz as previsões da mais recente para a mais antiga, por cursor (padrão 24, máximo 100), ' +
-    'cada uma com o resultado na vela seguinte. Nada é recalculado pelo motor: tudo vem de `signals` e `candles`. ' +
+    'cada uma com o resultado na vela seguinte. `current` e `summary` só vão na primeira página (sem `cursor`). Nada é recalculado pelo motor: tudo vem de `signals` e `candles`. ' +
     'Qualquer tipo de execução responde.',
   tag: 'Execuções — acompanhamento',
   params: pathIdSchema(RUN_ID_PARAM),

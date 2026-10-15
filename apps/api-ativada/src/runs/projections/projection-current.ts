@@ -66,6 +66,15 @@ export function unavailable(
   return { status: 'unavailable', reason, message: describeUnavailable({ reason, isLive }) };
 }
 
+// Simulação rodando que não anda: a previsão da última vela ficou velha e o motivo vem antes de qualquer tendência (M6).
+export function readHaltReason(
+  run: Pick<RunRecord, 'stalledSince' | 'waitingSince'>,
+): ProjectionUnavailableReason | undefined {
+  if (run.stalledSince !== undefined) return PROJECTION_UNAVAILABLE_REASON.STALLED;
+  if (run.waitingSince !== undefined) return PROJECTION_UNAVAILABLE_REASON.WAITING_FOR_DATA;
+  return undefined;
+}
+
 // Sem nenhuma linha em `signals`: sem vela nenhuma fechada ou ainda juntando velas para as regras.
 export function unavailableWithoutRows(
   run: Pick<RunRecord, 'lastCandleTime'>,
@@ -109,6 +118,23 @@ function toAvailable(params: AvailableParams): CurrentProjectionView {
   };
 }
 
+// A leitura das posições é só o refinamento da postura: se ela falha, a previsão degrada para `unavailable` e o resumo e as
+// páginas (que não dependem dela) seguem respondendo (§15 do code-standart).
+async function readPositions(params: {
+  readonly live: CurrentReader;
+  readonly scope: OwnerScope;
+  readonly run: RunRecord;
+}): Promise<readonly PositionInput[] | undefined> {
+  try {
+    return await params.live.listPositionsAround(params.scope, params.run.id, {
+      span: undefined,
+      limit: 2,
+    });
+  } catch {
+    return undefined;
+  }
+}
+
 // A tendência da última vela decidida: o lado do placar, a força pela fração do limiar do lado e a postura pela carteira
 // (comprada = `holding(t)` de L12, lida das posições abertas).
 export async function buildCurrent(params: {
@@ -118,16 +144,13 @@ export async function buildCurrent(params: {
   readonly row: ProjectionItemRow;
   readonly durationMilliseconds: number;
 }): Promise<CurrentProjectionView> {
-  const { row, run } = params;
+  const { row } = params;
   const side = readSide(row.score);
   if (side === PROJECTION_SIDE.NONE) {
     return unavailable(PROJECTION_UNAVAILABLE_REASON.NEUTRAL, true);
   }
-  const positions: readonly PositionInput[] = await params.live.listPositionsAround(
-    params.scope,
-    run.id,
-    { span: undefined, limit: 2 },
-  );
+  const positions = await readPositions(params);
+  if (positions === undefined) return unavailable(PROJECTION_UNAVAILABLE_REASON.READ_FAILED, true);
   const stance = readStance({ side, isHolding: isHoldingAt(positions, row.candleTime) });
   if (stance === undefined) return unavailable(PROJECTION_UNAVAILABLE_REASON.NEUTRAL, true);
   return toAvailable({ row, side, stance, durationMilliseconds: params.durationMilliseconds });

@@ -259,6 +259,54 @@ describe('simulação ao vivo rodando: a tendência, o resumo e as previsões', 
     });
   });
 
+  test('simulação parada ou esperando dado não mostra a tendência da última vela, e o motivo é aditivo', async () => {
+    const stalled = await createRun({});
+    harness.runs.updateRun(stalled, { stalledSince: at(7) });
+    const stalledView = await projectionsOf(stalled);
+    expect(stalledView.current).toStrictEqual({
+      status: 'unavailable',
+      reason: 'stalled',
+      message:
+        'A simulação está parada: a última previsão ficou velha e a próxima só volta quando ela voltar.',
+    });
+    expect(stalledView.summary.counted).toBeGreaterThan(0);
+    expect(stalledView.items.length).toBeGreaterThan(0);
+    const waiting = await createRun({});
+    harness.runs.updateRun(waiting, { waitingSince: at(7), waitingOpenTime: at(6) });
+    expect((await projectionsOf(waiting)).current).toStrictEqual({
+      status: 'unavailable',
+      reason: 'waiting_for_data',
+      message:
+        'A simulação espera os dados do mercado: a previsão volta quando as velas que faltam chegarem.',
+    });
+    const bothStalledAndStopped = await createRun({ status: 'completed' });
+    harness.runs.updateRun(bothStalledAndStopped, { stalledSince: at(7) });
+    expect((await projectionsOf(bothStalledAndStopped)).current).toMatchObject({
+      reason: 'not_running',
+    });
+  });
+
+  test('a leitura das posições que falha degrada só a tendência: o resumo e as previsões seguem', async () => {
+    const runId = await createRun({});
+    const original = harness.runs.liveStatus.listPositionsAround;
+    Object.assign(harness.runs.liveStatus, {
+      listPositionsAround: () => Promise.reject(new Error('banco indisponível')),
+    });
+    try {
+      const view = await projectionsOf(runId);
+      expect(view.current).toStrictEqual({
+        status: 'unavailable',
+        reason: 'read_failed',
+        message: 'Não foi possível ler a posição agora: a tendência volta no próximo pedido.',
+      });
+      expect(view.summary.counted).toBeGreaterThan(0);
+      expect(view.items.length).toBeGreaterThan(0);
+      expect(harness.reportedErrors).toHaveLength(0);
+    } finally {
+      Object.assign(harness.runs.liveStatus, { listPositionsAround: original });
+    }
+  });
+
   test('a precedência: parada vence placar neutro', async () => {
     const runId = await createRun({ scores: ['1', '0'], status: 'completed' });
     expect((await projectionsOf(runId)).current).toMatchObject({ reason: 'not_running' });
@@ -337,7 +385,7 @@ describe('vela seguinte ausente e paginação', () => {
     }
   });
 
-  test('páginas por cursor concatenam a lista inteira, sem repetir; o resumo e a tendência vêm em todas', async () => {
+  test('páginas por cursor concatenam a lista inteira, sem repetir; o resumo e a tendência vêm só na primeira', async () => {
     const runId = await createRun({});
     const first = await projectionsOf(runId, '?limit=4');
     expect(first.items).toHaveLength(4);
@@ -348,8 +396,10 @@ describe('vela seguinte ausente e paginação', () => {
     expect([...first.items, ...second.items].map((item) => item.candleTime)).toStrictEqual(
       [5, 4, 3, 2, 1, 0].map((index) => at(index)),
     );
-    expect(second.summary).toStrictEqual(first.summary);
-    expect(second.current).toStrictEqual(first.current);
+    expect(first.summary).toBeDefined();
+    expect(first.current).toBeDefined();
+    expect(second.summary).toBeUndefined();
+    expect(second.current).toBeUndefined();
   });
 
   test('a primeira página tem 24 previsões por padrão', async () => {
@@ -360,7 +410,7 @@ describe('vela seguinte ausente e paginação', () => {
     expect(page.nextCursor).not.toBeNull();
   });
 
-  test('no máximo 6 consultas, todas por chave, e a tendência da página mais antiga lê a linha mais nova', async () => {
+  test('a primeira página faz 5 consultas por chave; a página por cursor não refaz o resumo nem a tendência', async () => {
     const runId = await createRun({});
     harness.queries.length = 0;
     await projectionsOf(runId);
@@ -374,8 +424,7 @@ describe('vela seguinte ausente e paginação', () => {
     const { nextCursor } = await projectionsOf(runId, '?limit=2');
     harness.queries.length = 0;
     await projectionsOf(runId, `?limit=2&cursor=${nextCursor}`);
-    expect(harness.queries.length).toBeLessThanOrEqual(6);
-    expect(harness.queries).toHaveLength(6);
+    expect(harness.queries).toStrictEqual(['findRun', 'findVersion', 'listProjectionItems']);
   });
 });
 

@@ -88,8 +88,8 @@ const SUMMARY_SCHEMA = z.strictObject({
 export const PROJECTIONS_SCHEMA = z.strictObject({
   version: z.literal(PROJECTION_RULE_VERSION),
   timeframe: z.string(),
-  current: CURRENT_SCHEMA,
-  summary: SUMMARY_SCHEMA,
+  current: CURRENT_SCHEMA.optional(),
+  summary: SUMMARY_SCHEMA.optional(),
   items: z.array(ITEM_SCHEMA),
   nextCursor: z.string().nullable(),
 });

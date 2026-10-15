@@ -37,8 +37,12 @@ export const PROJECTION_RESULT = {
 export type ProjectionResult = (typeof PROJECTION_RESULT)[keyof typeof PROJECTION_RESULT];
 
 // Por que não há tendência agora, na ordem de precedência (ADR 0002, spec 009, P7).
+// `stalled`, `waiting_for_data` e `read_failed` são aditivos (revisão final da spec 009, M6 e baixo 11).
 export const PROJECTION_UNAVAILABLE_REASON = {
   NOT_RUNNING: 'not_running',
+  STALLED: 'stalled',
+  WAITING_FOR_DATA: 'waiting_for_data',
+  READ_FAILED: 'read_failed',
   NO_CANDLE: 'no_candle',
   WARMING_UP: 'warming_up',
   NEUTRAL: 'neutral',

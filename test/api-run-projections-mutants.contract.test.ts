@@ -366,12 +366,40 @@ const SUMMARY_ITEMS_AND_CURRENT: readonly SourceMutant[] = [
     ),
   },
   {
-    name: 'OLDER_PAGE_REPEATS_THE_CURRENT_OF_ITS_OWN_ROWS',
+    name: 'OLDER_PAGE_REDOES_THE_SUMMARY_AND_THE_CURRENT',
     edits: edit(
       PROJECTIONS_USE_CASE,
-      'input.before === undefined\n      ? params.page.items[0]',
-      'true\n      ? params.page.items[0]',
+      'const isFirstPage = input.before === undefined;',
+      'const isFirstPage = true;',
     ),
+  },
+  {
+    name: 'STALLED_RUN_KEEPS_THE_OLD_TREND',
+    edits: edit(
+      CURRENT,
+      'if (run.stalledSince !== undefined) return',
+      'if (run.stalledSince === undefined) return',
+    ),
+  },
+  {
+    name: 'WAITING_RUN_KEEPS_THE_OLD_TREND',
+    edits: edit(
+      CURRENT,
+      'if (run.waitingSince !== undefined) return',
+      'if (run.waitingSince === undefined) return',
+    ),
+  },
+  {
+    name: 'HALT_REASON_IS_IGNORED_BY_THE_USE_CASE',
+    edits: edit(
+      PROJECTIONS_USE_CASE,
+      'if (halt !== undefined) return unavailable(halt, true);',
+      'if (halt === undefined) return unavailable(halt, true);',
+    ),
+  },
+  {
+    name: 'POSITIONS_FAILURE_BREAKS_THE_WHOLE_RESPONSE',
+    edits: edit(CURRENT, '} catch {\n    return undefined;', '} catch (error) {\n    throw error;'),
   },
 ];
 

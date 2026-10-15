@@ -40,6 +40,12 @@ const UNAVAILABLE_MESSAGE: Readonly<Record<ProjectionUnavailableReason, string>>
   [PROJECTION_UNAVAILABLE_REASON.NO_CANDLE]: 'Aguardando a primeira vela fechar.',
   [PROJECTION_UNAVAILABLE_REASON.NOT_RUNNING]:
     'A simulação não está rodando: não há próxima decisão.',
+  [PROJECTION_UNAVAILABLE_REASON.STALLED]:
+    'A simulação está parada: a última previsão ficou velha e a próxima só volta quando ela voltar.',
+  [PROJECTION_UNAVAILABLE_REASON.WAITING_FOR_DATA]:
+    'A simulação espera os dados do mercado: a previsão volta quando as velas que faltam chegarem.',
+  [PROJECTION_UNAVAILABLE_REASON.READ_FAILED]:
+    'Não foi possível ler a posição agora: a tendência volta no próximo pedido.',
 };
 
 const HISTORY_NOT_RUNNING_MESSAGE =
