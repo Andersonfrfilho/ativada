@@ -577,3 +577,10 @@ alvos de 44 px a 375 px (único abaixo era o crédito do `NOTICE`, agora `min-he
 - Seed de E2E/preview com stop e alvo plausíveis (item 5) NÃO feito: custo não é baixo (o seed e as expectativas da T3.8 dependem dos valores atuais); as caixas do preview seguem altas e estreitas no E2E.
 - Dois links em texto corrido da spec 008 ("Ver o que ela analisou…", "o que falta para comprar…") têm 20 px de altura a 1280 px (43 px a 375 px): isenção de link em parágrafo; não mexidos aqui.
 - A cor da grade do canvas (`--chart-grid`) é decorativa e fica abaixo de 3:1 por escolha.
+
+## T4.2 — `CLAUDE.md` (2026-10-15)
+
+Modelo: `sonnet`. O arquivo NÃO estava com conteúdo duplicado (um só `# CLAUDE.md`, uma só seção "Regras que não se negociam"; a cópia citada na task já tinha sido removida antes), então nada foi apagado.
+O diff é só acréscimo: 1 frase no "Estado" e 2 itens novos (API do gráfico e da previsão; painel do gráfico), cobrindo as rotas `strategy-layers` e `projections`, a mensagem `candle` e `TICKER_KLINE_ENABLED`,
+a biblioteca `lightweight-charts` com a porta `ChartSurface` e a superfície falsa, a regra `projection-1`, `@ativada/statistics` (Wilson), o glossário novo, o painel "Próxima vela de perto", os cartões de acertos,
+o crédito do `NOTICE` e o E2E no Edge.
