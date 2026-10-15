@@ -25,7 +25,11 @@ export function buildEvents(ctx: Context): EventSubscriptions {
     onCrosshairMove: (listener): (() => void) => {
       const handler = (params: MouseEventParams<Time>): void => listener(indexOfEvent(ctx, params));
       chart.subscribeCrosshairMove(handler);
-      return () => chart.unsubscribeCrosshairMove(handler);
+      ctx.crosshairListeners.add(listener);
+      return () => {
+        chart.unsubscribeCrosshairMove(handler);
+        ctx.crosshairListeners.delete(listener);
+      };
     },
     onClick: (listener): (() => void) => {
       const handler = (params: MouseEventParams<Time>): void => listener(indexOfEvent(ctx, params));
@@ -54,8 +58,20 @@ type ViewControls = Pick<
   | 'destroy'
 >;
 
+// A biblioteca avisa os ouvintes quando a cruz é posta por código, mas não quando é apagada: o adaptador avisa `null`, senão a
+// legenda fica presa na vela que o teclado apontou por último.
+function placeCrosshair(ctx: Context, index: number | null): void {
+  const candle = index === null ? undefined : ctx.state.candles[index];
+  if (candle !== undefined) {
+    ctx.chart.setCrosshairPosition(candle.close, toTime(candle.time), ctx.candles);
+    return;
+  }
+  ctx.chart.clearCrosshairPosition();
+  ctx.crosshairListeners.forEach((listener) => listener(null));
+}
+
 export function buildView(ctx: Context): ViewControls {
-  const { chart, candles, kit } = ctx;
+  const { chart, kit } = ctx;
   const scale = chart.timeScale();
   const showRange = (center: number, width: number): void => {
     const half = Math.max(width, MIN_VISIBLE_BARS) / 2;
@@ -78,11 +94,7 @@ export function buildView(ctx: Context): ViewControls {
       const index = scale.timeToIndex(toTime(time), true);
       if (range !== null && index !== null) showRange(index, range.to - range.from);
     },
-    setCrosshair: (index): void => {
-      const candle = index === null ? undefined : ctx.state.candles[index];
-      if (candle === undefined) chart.clearCrosshairPosition();
-      else chart.setCrosshairPosition(candle.close, toTime(candle.time), candles);
-    },
+    setCrosshair: (index): void => placeCrosshair(ctx, index),
     setTimeLabels: (labels): void =>
       chart.applyOptions({
         localization: { timeFormatter: (time: Time) => labels.full(toSeconds(time)) },

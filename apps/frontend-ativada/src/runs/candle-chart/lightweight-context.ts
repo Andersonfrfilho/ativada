@@ -32,6 +32,8 @@ export type Context = {
   readonly boxes: LevelBoxesPrimitive;
   readonly state: SurfaceState;
   readonly layers: Layers;
+  // Quem escuta a cruz (ver `placeCrosshair`).
+  readonly crosshairListeners: Set<(index: number | null) => void>;
 };
 
 export type Render = (ctx: Context, theme: SurfaceTheme) => void;
