@@ -10,6 +10,7 @@ import type {
   MarketPublisherSettings,
   PairState,
 } from './market-context.js';
+import { createCandleIntake } from './candle-intake.js';
 import { publishAggregated, sweepStale } from './market-publishing.js';
 import { createMarketPubSub, marketTopic } from './market-pubsub.js';
 import { createMarketSubscriptions } from './market-subscriptions.js';
@@ -35,6 +36,18 @@ function createContext<TTimer>(settings: MarketPublisherSettings<TTimer>): Marke
   };
 }
 
+// Tick recebido: o par está em dia (a aferição do selo de dado velho recomeça).
+function markReceived(context: MarketContext, symbol: string): void {
+  const state = context.states.get(symbol) ?? {
+    aggregated: undefined,
+    lastReceivedAt: 0,
+    isStaleSent: false,
+  };
+  state.lastReceivedAt = context.now();
+  state.isStaleSent = false;
+  context.states.set(symbol, state);
+}
+
 // Ticker público -> no máximo 1 publicação por segundo por par -> assinantes do tópico `market:<PAR>` e ouvintes da Fase 4b.
 export function createMarketPublisher<TTimer>(
   settings: MarketPublisherSettings<TTimer>,
@@ -47,18 +60,13 @@ export function createMarketPublisher<TTimer>(
     publish: (raw) => publishAggregated(context, raw),
     reportError: settings.reportError,
   });
+  const candleIntake = createCandleIntake(context, settings);
   return {
     subscriptions: createMarketSubscriptions(context),
+    handleRawCandle: candleIntake.handle,
     handleRawTick: (tick): void => {
       if (context.isClosed || !context.pairs.has(tick.symbol)) return;
-      const state = context.states.get(tick.symbol) ?? {
-        aggregated: undefined,
-        lastReceivedAt: 0,
-        isStaleSent: false,
-      };
-      state.lastReceivedAt = context.now();
-      state.isStaleSent = false;
-      context.states.set(tick.symbol, state);
+      markReceived(context, tick.symbol);
       aggregator.push(tick);
     },
     addListener: (listener): (() => void) => {
@@ -70,6 +78,7 @@ export function createMarketPublisher<TTimer>(
     close: (): void => {
       context.isClosed = true;
       aggregator.close();
+      candleIntake.close();
       context.listeners.clear();
     },
   };

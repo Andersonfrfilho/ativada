@@ -6,7 +6,8 @@ import { MALFORMED_REASON } from '../kline-stream.constant.js';
 import type { MalformedReason } from '../kline-stream.types.js';
 import { SYMBOL_PATTERN } from '../market-data.constant.js';
 import { MINI_TICKER_EVENT_TYPE, MINI_TICKER_STREAM_SUFFIX } from './ticker.constant.js';
-import type { RawTick } from './ticker.types.js';
+import { parseCandleEnvelope } from './ticker-candle.schema.js';
+import type { RawCandle, RawTick } from './ticker.types.js';
 
 // Campos documentados do `24hrMiniTicker` da Binance; o que não é usado aqui é descartado.
 const envelopeSchema = z.object({
@@ -22,6 +23,7 @@ const envelopeSchema = z.object({
 
 export type TickerMessage =
   | { readonly kind: 'tick'; readonly tick: RawTick }
+  | { readonly kind: 'candle'; readonly candle: RawCandle }
   | { readonly kind: 'malformed'; readonly reason: MalformedReason };
 
 function parseJson(text: string): { readonly isValid: boolean; readonly value: unknown } {
@@ -36,6 +38,8 @@ function parseJson(text: string): { readonly isValid: boolean; readonly value: u
 export function parseTickerMessage(text: string): TickerMessage {
   const json = parseJson(text);
   if (!json.isValid) return { kind: 'malformed', reason: MALFORMED_REASON.INVALID_JSON };
+  const candle = parseCandleEnvelope(json.value);
+  if (candle !== undefined) return { kind: 'candle', candle };
   const parsed = envelopeSchema.safeParse(json.value);
   const isSameStream =
     parsed.success &&

@@ -16,6 +16,8 @@ import { STALE_SWEEP_INTERVAL_MILLISECONDS } from './market-stream.constant.js';
 export type MarketEnvironment = Pick<
   Environment,
   | 'MARKET_SYMBOLS'
+  | 'MARKET_TIMEFRAMES'
+  | 'TICKER_KLINE_ENABLED'
   | 'BINANCE_BASE_URL'
   | 'BINANCE_STREAM_URL'
   | 'TICKER_STALE_SECONDS'
@@ -60,7 +62,9 @@ function openTicker(
 ): TickerStream {
   return createTickerStream({
     symbols: params.environment.MARKET_SYMBOLS,
+    timeframes: params.environment.TICKER_KLINE_ENABLED ? params.environment.MARKET_TIMEFRAMES : [],
     baseUrl: params.environment.BINANCE_STREAM_URL,
+    onCandle: (candle) => publisher.handleRawCandle(candle),
     onTick: (tick) => {
       void serverClock.refreshIfStale();
       publisher.handleRawTick(tick);

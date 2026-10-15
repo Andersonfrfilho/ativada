@@ -13,6 +13,8 @@ export const TICKER_MUTANT_TARGET: MutantTarget = {
   judgeTestFiles: [
     'test/percent-change.contract.test.ts',
     'test/tick-aggregator.contract.test.ts',
+    'test/candle-aggregator.contract.test.ts',
+    'test/ticker-kline-stream.contract.test.ts',
     'test/ticker-stream.contract.test.ts',
   ],
   sourceVariable: TICKER_SOURCE_VARIABLE,

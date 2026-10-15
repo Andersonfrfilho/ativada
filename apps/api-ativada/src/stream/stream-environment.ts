@@ -77,6 +77,11 @@ export const streamEnvironmentShape = {
     .enum(['true', 'false'], { error: TICKER_FLAG_EXPECTATION })
     .default('false')
     .transform((value) => value === 'true'),
+  // A vela em formação do gráfico (spec 009): assina também `<par>@kline_<vela>` e entrega `candle` aos sockets. Só vale com o ticker ligado.
+  TICKER_KLINE_ENABLED: z
+    .enum(['true', 'false'], { error: TICKER_FLAG_EXPECTATION })
+    .default('false')
+    .transform((value) => value === 'true'),
 } as const;
 
 export type StreamEnvironmentValues = {
@@ -88,6 +93,7 @@ export type StreamEnvironmentValues = {
   readonly STREAM_MAX_PAIRS_PER_SOCKET: number;
   readonly TICKER_STALE_SECONDS: number;
   readonly TICKER_STREAM_ENABLED: boolean;
+  readonly TICKER_KLINE_ENABLED: boolean;
 };
 
 export function isPongTimeoutAfterPingInterval(values: StreamEnvironmentValues): boolean {

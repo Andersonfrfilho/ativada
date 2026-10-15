@@ -50,7 +50,11 @@ const MUTANTS: readonly DatabaseMutant[] = [
   },
   {
     name: 'LISTENER_DROPS_THE_PAYLOAD_VALIDATION',
-    edits: edit('src/run-events/run-event.schema.ts', 'z.strictObject({', 'z.object({'),
+    edits: edit(
+      'src/run-events/run-event.schema.ts',
+      'const runEventSchema = z.strictObject({',
+      'const runEventSchema = z.object({',
+    ),
   },
 ];
 

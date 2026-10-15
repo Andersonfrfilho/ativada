@@ -5,6 +5,7 @@ export const MAX_PAIRS_PER_MESSAGE = 50;
 
 export const MARKET_SERVER_MESSAGE_TYPE = {
   TICK: 'tick',
+  CANDLE: 'candle',
   SUBSCRIBED: 'subscribed',
 } as const;
 

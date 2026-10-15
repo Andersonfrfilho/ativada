@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
+  KLINE_STREAM_SUFFIX,
   MAX_STREAMS_PER_CONNECTION,
   STREAM_NAME_SEPARATOR,
   STREAM_PATH,
@@ -14,6 +15,7 @@ import type { TickerStreamSettings } from './ticker.types.js';
 export type ResolvedTickerSettings = {
   readonly url: string;
   readonly symbols: ReadonlySet<string>;
+  readonly timeframes: ReadonlySet<string>;
   readonly staleAfterMilliseconds: number;
   readonly reconnectBaseMilliseconds: number;
   readonly reconnectMaxMilliseconds: number;
@@ -27,7 +29,16 @@ export function resolveTickerSettings(settings: TickerStreamSettings): ResolvedT
       'symbols deve ter símbolos em letras maiúsculas e dígitos.',
     );
   }
-  if (symbols.size > MAX_STREAMS_PER_CONNECTION) {
+  const timeframes = new Set(settings.timeframes ?? []);
+  const names = [
+    ...[...symbols].map((symbol) => `${symbol.toLowerCase()}${MINI_TICKER_STREAM_SUFFIX}`),
+    ...[...symbols].flatMap((symbol) =>
+      [...timeframes].map(
+        (timeframe) => `${symbol.toLowerCase()}${KLINE_STREAM_SUFFIX}${timeframe}`,
+      ),
+    ),
+  ];
+  if (names.length > MAX_STREAMS_PER_CONNECTION) {
     throw new MarketDataInvalidRequestError(
       `No máximo ${MAX_STREAMS_PER_CONNECTION} streams por conexão.`,
     );
@@ -43,7 +54,6 @@ export function resolveTickerSettings(settings: TickerStreamSettings): ResolvedT
   };
   for (const [name, value] of Object.entries(numbers)) assertPositive(name, value);
   const baseUrl = assertBaseUrl(settings.baseUrl ?? BINANCE_STREAM_BASE_URL);
-  const names = [...symbols].map((symbol) => `${symbol.toLowerCase()}${MINI_TICKER_STREAM_SUFFIX}`);
   const url = `${baseUrl}${STREAM_PATH}${STREAMS_QUERY_PREFIX}${names.join(STREAM_NAME_SEPARATOR)}`;
-  return { url, symbols, ...numbers };
+  return { url, symbols, timeframes, ...numbers };
 }

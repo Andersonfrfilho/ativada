@@ -184,3 +184,33 @@ Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados.
 
 Gates (WSL, espelho): `typecheck`, `lint`, `format:check` limpos; 223 testes passam (os 26 novos mais `api-openapi`,
 `api-docs-page`, `api-run-*`, `api-runs`, `admin-boundary-routes`, `code-size-limits`, `app-import-boundary`).
+
+## T1.5 — Vela em formação no `/v1/stream` (2026-10-15)
+
+Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; o worker continua gravando só vela fechada (`x` verdadeiro).
+
+- **Pacote de mercado**: o ticker (`createTickerStream`) aceita `timeframes` e assina `<par>@kline_<tf>` na MESMA conexão do
+  `miniTicker` (`btcusdt@miniTicker/…/btcusdt@kline_1h/…`; o teto de 1.024 streams vale pelo total); `ticker-candle.schema.ts` lê a
+  kline ABERTA e a fechada (nome do stream conferido com o par e a vela do próprio payload, preço e volume em texto decimal) e
+  `onCandle` recebe `RawCandle`; vela de par ou tamanho não assinado é descartada como `unsubscribed`. `candle-aggregator.ts`
+  agrega no máximo 1 por segundo por (par, vela), a última, ignorando evento igual ou mais velho.
+- **API**: `TICKER_KLINE_ENABLED` (padrão `false`; `true` em `envs/env.dev`, `false` em `env.test` e `env.live72`; só vale com o
+  ticker ligado). O publicador ganhou `handleRawCandle` (`candle-intake.ts`) e entrega `{ type: 'candle', symbol, timeframe,
+  openTime, open, high, low, close, volume, closed, at }` ao tópico do par: só os sockets que assinaram o par (mesma assinatura do
+  ticker e o mesmo teto de pares por socket).
+- **Contratos**: `candle-aggregator` (agregação e leitura do kline), `ticker-kline-stream` (nomes na conexão única, vela
+  aberta e fechada, tamanho e par não assinados), `market-candle-stream` (50 eventos = 1 mensagem com a forma documentada, isolamento
+  por par e por usuário), pipeline completo com a Binance falsa (flag ligada e desligada) e o ambiente. 11 mutantes novos em
+  `ticker-mutants` (agregador, chave por vela, reentrega, nome do stream, par, flag `closed`, tamanho e par não assinados, nome da
+  assinatura): todos reprovados (38 testes do arquivo passam).
+- **`stream-api-test`**: caso novo "vela em formação": 40 eventos de kline da Binance falsa viram 1 mensagem `candle` com os
+  mesmos bytes para os dois usuários e o par não assinado (ETHUSDT) não chega.
+- **`stream-mutants`**: o mutante `LISTENER_DROPS_THE_PAYLOAD_VALIDATION` já falhava ANTES desta task (o `find` `z.strictObject({`
+  passou a aparecer 2x em `run-event.schema.ts` desde os alertas de preço, T4b.7); o `find` agora é
+  `const runEventSchema = z.strictObject({` e os 8 mutantes são reprovados.
+- **Desvio de ambiente**: `make stream-api-test` e `make stream-mutants` sobem o Docker de teste; rodaram os MESMOS scripts
+  (`scripts/stream-api-test.ts` e `scripts/stream-mutants.ts`) com o `env.test` apontando para o Postgres embutido do WSL
+  (porta 56437). Resultado: `stream-api-test: OK` e `stream-mutants: OK - 8 mutantes reprovados`.
+
+Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; 138 testes vizinhos passam (mercado, ticker, pipeline,
+endpoint, ambiente, `code-size-limits`, `app-import-boundary`).

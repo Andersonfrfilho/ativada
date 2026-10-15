@@ -50,6 +50,17 @@ describe('stream environment — the WebSocket ceilings', () => {
     expect(environment.TICKER_STALE_SECONDS).toBe(10);
   });
 
+  test('the forming candle is off by default, turned on only with the text true', async () => {
+    const base = withoutKeys(await readEnvironmentFile('env.test'), ['TICKER_KLINE_ENABLED']);
+    expect(parseEnvironment(environmentSchema, base).TICKER_KLINE_ENABLED).toBe(false);
+    expect(
+      parseEnvironment(environmentSchema, { ...base, TICKER_KLINE_ENABLED: 'true' })
+        .TICKER_KLINE_ENABLED,
+    ).toBe(true);
+    expect(await issuesOf({ TICKER_KLINE_ENABLED: 'sim' })).toContain('TICKER_KLINE_ENABLED');
+    expect(await issuesOf({ TICKER_KLINE_ENABLED: '1' })).toContain('TICKER_KLINE_ENABLED');
+  });
+
   test('the public ticker is turned on with the text true, and only with it', async () => {
     const base = await readEnvironmentFile('env.test');
     expect(

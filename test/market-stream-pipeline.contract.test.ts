@@ -38,10 +38,15 @@ function silentLogger(): Logger {
 }
 
 // O pipeline de produção inteiro: ticker real -> agregação -> publicação -> assinante, contra uma Binance falsa.
-function startPipeline(): { readonly received: Received[]; readonly subscriber: FakeStreamSocket } {
+function startPipeline(isKlineEnabled = false): {
+  readonly received: Received[];
+  readonly subscriber: FakeStreamSocket;
+} {
   const stream = applicationMarket.createApplicationMarketStream({
     environment: {
       MARKET_SYMBOLS: ['BTCUSDT', 'ETHUSDT'],
+      MARKET_TIMEFRAMES: ['1h'],
+      TICKER_KLINE_ENABLED: isKlineEnabled,
       BINANCE_BASE_URL: server.restUrl,
       BINANCE_STREAM_URL: server.streamUrl,
       TICKER_STALE_SECONDS: STALE_SECONDS,
@@ -78,6 +83,46 @@ function percentile(values: readonly number[], fraction: number): number {
 async function waitConnected(): Promise<void> {
   await waitFor(() => server.openConnectionCount() === 1, 'ticker conectado', 5_000);
 }
+
+describe('forming candle through the same pipeline', () => {
+  const OPEN_TIME = 1_759_968_000_000;
+
+  test('with the flag on, 30 kline events become ONE candle message; with it off, none and no kline subscription', async () => {
+    const { received } = startPipeline(true);
+    await waitConnected();
+    expect(server.requestedStreams()).toStrictEqual([
+      'btcusdt@miniTicker/ethusdt@miniTicker/btcusdt@kline_1h/ethusdt@kline_1h',
+    ]);
+    for (let index = 0; index < 30; index += 1) {
+      server.sendEvent({
+        symbol: 'BTCUSDT',
+        timeframe: '1h',
+        openTime: OPEN_TIME,
+        isClosed: false,
+      });
+    }
+    await waitFor(
+      () => received.some((item) => item.message['type'] === 'candle'),
+      'vela publicada',
+      4_000,
+    );
+    await Bun.sleep(1_300);
+    const candles = received.filter((item) => item.message['type'] === 'candle');
+    expect(candles).toHaveLength(1);
+    expect(candles[0]?.message).toMatchObject({
+      symbol: 'BTCUSDT',
+      timeframe: '1h',
+      openTime: OPEN_TIME,
+      closed: false,
+    });
+  });
+
+  test('with the flag off the kline streams are not even subscribed', async () => {
+    startPipeline(false);
+    await waitConnected();
+    expect(server.requestedStreams()).toStrictEqual(['btcusdt@miniTicker/ethusdt@miniTicker']);
+  });
+});
 
 describe('public ticker pipeline against a fake Binance', () => {
   test('100 ticks in about a second become ONE publication, the last', async () => {

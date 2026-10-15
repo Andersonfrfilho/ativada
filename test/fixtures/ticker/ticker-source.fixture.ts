@@ -1,5 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type * as AggregatorModule from '../../../packages/market-data-crypto/src/ticker/tick-aggregator.js';
+import type * as CandleAggregatorModule from '../../../packages/market-data-crypto/src/ticker/candle-aggregator.js';
+import type * as CandleSchemaModule from '../../../packages/market-data-crypto/src/ticker/ticker-candle.schema.js';
 import type * as PercentModule from '../../../packages/market-data-crypto/src/ticker/percent-change.js';
 import type * as SchemaModule from '../../../packages/market-data-crypto/src/ticker/ticker-stream.schema.js';
 import type * as StreamModule from '../../../packages/market-data-crypto/src/ticker/create-ticker-stream.js';
@@ -14,6 +16,8 @@ export const TICKER_SOURCE_VARIABLE = 'MARKET_TICKER_SOURCE';
 export type TickerApi = {
   readonly aggregator: typeof AggregatorModule;
   readonly percent: typeof PercentModule;
+  readonly candleAggregator: typeof CandleAggregatorModule;
+  readonly candleSchema: typeof CandleSchemaModule;
   readonly schema: typeof SchemaModule;
   readonly stream: typeof StreamModule;
 };
@@ -31,6 +35,8 @@ export async function loadTickerApi(): Promise<TickerApi> {
   return {
     aggregator: await load('ticker/tick-aggregator'),
     percent: await load('ticker/percent-change'),
+    candleAggregator: await load('ticker/candle-aggregator'),
+    candleSchema: await load('ticker/ticker-candle.schema'),
     schema: await load('ticker/ticker-stream.schema'),
     stream: await load('ticker/create-ticker-stream'),
   };
