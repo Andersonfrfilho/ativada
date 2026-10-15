@@ -54,6 +54,7 @@ import {
 } from './run-chart-checks.js';
 import { checkChartIsolation } from './run-chart-isolation-checks.js';
 import { checkLiveStatusReads } from './run-live-status-checks.js';
+import { checkProjectionReads } from './run-projection-checks.js';
 import { checkSurvivalPoints } from './run-survival-checks.js';
 import {
   checkCommandsAndForeignKey,
@@ -152,6 +153,7 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkTradeTotals(context);
   await checkChartIsolation(context);
   await checkLiveStatusReads(context);
+  await checkProjectionReads(context);
   await checkOversizedOrderBatch(context);
   await checkBatchIsAtomic(context);
   await checkOrderMonotonicity(context);

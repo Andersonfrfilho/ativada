@@ -113,6 +113,8 @@ export type {
 export type { RunLogCursor, RunLogEntry } from './run-results/run-log.types.js';
 export { createRunLiveStatusRepository } from './run-results/run-live-status.js';
 export type * from './run-results/run-live-status.types.js';
+export { createRunProjectionRepository } from './run-results/run-projections.js';
+export type * from './run-results/run-projections.types.js';
 export { createRunBatchRepository } from './run-results/run-batch.repository.js';
 export type * from './run-results/run-batch.types.js';
 export { resolveRunOwnerScope } from './runs/run-owner.js';

@@ -66,6 +66,7 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'createRunEventListener',
   'createRunLiveStatusRepository',
   'createRunMetricsRepository',
+  'createRunProjectionRepository',
   'createRunQueueRepository',
   'createRunRepository',
   'createRunResultRepository',

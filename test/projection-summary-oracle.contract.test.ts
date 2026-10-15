@@ -2,92 +2,34 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
-  createStrategySignalState,
-  createStrategyVersion,
-  EngineDecimal,
-  signalStep,
-  type StrategyVersion,
-} from '../packages/strategy-engine/src/index.js';
-import {
   PROJECTION_SUMMARY_GOLDEN,
   type ProjectionGoldenKey,
 } from './fixtures/projections/projection-summary-golden.fixture.js';
+import {
+  buildOraclePredictions,
+  PROJECTION_DATASET_KEYS,
+  PROJECTION_STRATEGIES,
+} from './fixtures/projections/projection-dataset.fixture.js';
 import {
   isInsideBand,
   rateOf,
   strengthOf,
   summarizeOracle,
   verdictOf,
-  type OraclePrediction,
 } from './fixtures/projections/projection-summary-oracle.fixture.js';
-import {
-  CLASSIC_STRATEGY,
-  REAL_DATASETS,
-  type RealDataset,
-} from './fixtures/strategy-engine/signal/classic-signals.fixture.js';
+import { REAL_DATASETS } from './fixtures/strategy-engine/signal/classic-signals.fixture.js';
 
 // T0.1 da spec 009 (ADR 0002, "Gráfico estilo Binance (spec 009)"): o oráculo do resumo de acertos e o resultado dele
-// nos dois conjuntos reais, com o Placar clássico e o Donchian + MACD. A T1.2 compara a consulta SQL com estes números.
-
-const DONCHIAN_MACD_STRATEGY: StrategyVersion = createStrategyVersion({
-  schemaVersion: 1,
-  rules: [
-    { id: 'donchian-20', kind: 'donchian_breakout', period: 20 },
-    { id: 'macd-12-26-9', kind: 'macd', fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 },
-  ],
-  thresholds: { buy: '2', sell: '-2' },
-  risk: {
-    atrPeriod: 14,
-    stopAtrMultiple: '2',
-    targetAtrMultiple: '3',
-    riskPerTrade: '0.01',
-    maxExposureRate: '1',
-  },
-});
-
-const STRATEGIES = [
-  ['classic', CLASSIC_STRATEGY],
-  ['donchian-macd', DONCHIAN_MACD_STRATEGY],
-] as const;
-const DATASET_KEYS = ['btcusdt-1h-500', 'ethusdt-1d-400'] as const;
-
-// O `jsonb` guarda o número como `numeric` e o devolve sem expoente: a mesma grafia aqui.
-function numericText(value: unknown): string | null {
-  return typeof value === 'number' && Number.isFinite(value)
-    ? new EngineDecimal(String(value)).toFixed()
-    : null;
-}
-
-function buildPredictions(dataset: RealDataset, strategy: StrategyVersion): OraclePrediction[] {
-  let state = createStrategySignalState(strategy.config);
-  const predictions: OraclePrediction[] = [];
-  for (const [index, candle] of dataset.candles.entries()) {
-    const stepped = signalStep({ strategy, market: dataset.market, state, candle });
-    state = stepped.state;
-    if (stepped.signal === null) continue;
-    const next = dataset.candles[index + 1];
-    const isContiguous = next !== undefined && next.openTime === candle.closeTime + 1;
-    predictions.push({
-      candleTime: candle.openTime,
-      score: stepped.signal.score,
-      close: candle.close,
-      atr: numericText(stepped.signal.indicators['risk:atr']),
-      nextClose: isContiguous ? next.close : undefined,
-      buyThreshold: strategy.config.thresholds.buy,
-      sellThreshold: strategy.config.thresholds.sell,
-    });
-  }
-  return predictions;
-}
+// nos dois conjuntos reais, com o Placar clássico e o Donchian + MACD. A consulta SQL (T1.2) tem de devolver os mesmos números.
 
 describe('oráculo do resumo nos conjuntos reais (dourado)', () => {
   for (const [datasetIndex, dataset] of REAL_DATASETS.entries()) {
-    const datasetKey = DATASET_KEYS[datasetIndex];
+    const datasetKey = PROJECTION_DATASET_KEYS[datasetIndex];
     if (datasetKey === undefined) throw new Error('conjunto real sem chave no dourado');
-    for (const [strategyName, strategy] of STRATEGIES) {
+    for (const [strategyName, strategy] of PROJECTION_STRATEGIES) {
       test(`${dataset.name} · ${strategyName}`, () => {
         const key: ProjectionGoldenKey = `${datasetKey}:${strategyName}`;
-        const summary = summarizeOracle(buildPredictions(dataset, strategy));
+        const summary = summarizeOracle(buildOraclePredictions(dataset, strategy));
         expect(summary.counted).toBe(summary.hits + summary.misses);
         expect(summary).toStrictEqual(PROJECTION_SUMMARY_GOLDEN[key]);
       });

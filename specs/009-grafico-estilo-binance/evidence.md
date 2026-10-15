@@ -106,3 +106,33 @@ Modelo: `sonnet` (a recomendação era `haiku`; executado junto com o resto da F
 Gates (WSL, espelho `~/gates/ativada-spec9`): `typecheck`, `lint` e `format:check` limpos; 131 testes passam (os 3 novos e
 os vizinhos: oráculo, `code-size-limits`, `app-import-boundary`, `strategy-engine-boundary`, `ownership-registry`,
 `database.contract`, `test-support-boundary`).
+
+## T1.2 — Leituras das camadas e das previsões no banco (2026-10-15)
+
+Modelo: `sonnet`. Sem migration e sem índice novo (os três já usados são os do ADR, P-medição da T0.1).
+
+- **`packages/database/src/run-results/run-projections.ts`** (+ `run-projections.types.ts`, `run-projection-summary.ts`,
+  `run-projection-items.ts`, `run-projection-sql.ts`): `createRunProjectionRepository` com `listLayerRows`,
+  `summarizeProjections` e `listProjectionItems`, todas com `OwnerScope` no tipo e o filtro de dono nelas mesmas.
+  `summarizeProjections` é UMA consulta (`LEAD` sobre a faixa de velas, vela seguinte exigida contígua e antes do fim da
+  faixa, junção com os `signals` do dono, `count(*) FILTER`, comparação em `numeric`, faixa de ±ATR com a borda de baixo
+  para baixo e a de cima para cima a 8 casas); os trechos de limiar viajam como UM parâmetro (`jsonb_to_recordset`), sem
+  `sql.raw`. `listProjectionItems` lê por cursor (`candle_time` decrescente, `LIMIT + 1`), com o fechamento da vela e da
+  seguinte por igualdade na PK; só entram as velas dos trechos pedidos (no walk-forward, as janelas de teste que
+  terminaram bem: a janela parada fica fora, o chamador é quem monta os trechos). O banco não importa o motor.
+- **Checks no Postgres real** (`packages/database/test-support/run-projection-checks.ts`, ligado ao `database-test` e ao
+  `route-isolation-test`, que é o que o `api-runs-mutants` roda): o resumo SQL é IGUAL ao oráculo e ao dourado nos dois
+  conjuntos reais × Placar clássico e Donchian + MACD (velas e sinais gravados como o backtest grava, o motor roda o
+  `signalStep` de verdade); as páginas de itens batem com o oráculo (vela, ATR e fechamento seguinte); cenário sintético
+  com lacuna de vela e fim da faixa (pendentes), empate, dois limiares por trecho e trecho parado fora, igual ao oráculo;
+  páginas de 7 concatenadas = lista inteira decrescente; dono alheio recebe contagens zeradas e listas vazias nas três
+  leituras. O fixture `test/fixtures/projections/projection-dataset.fixture.ts` passou a ser a fonte única das previsões
+  do oráculo (o contrato do oráculo da T0.1 o importa; os números do dourado não mudaram).
+- **Desvio de ambiente.** `make database-test` sobe o Docker de teste; aqui rodou o MESMO script
+  (`bun run --cwd packages/database db:database-test`) contra o Postgres embutido do WSL (`~/pg-scratch/data-009`, porta
+  56437, fora do repo, Postgres 18): "database-test: OK" em 23 s, com os checks novos. Os containers `ativada-dev-*` não
+  foram tocados.
+
+Gates (WSL, espelho `~/gates/ativada-spec9`): `typecheck`, `lint` e `format:check` limpos; `database-test` OK;
+`route-isolation-test` OK; 102 testes vizinhos passam (oráculo, `database.contract`, `ownership-registry`,
+`code-size-limits`, `app-import-boundary`, `strategy-engine-boundary`, `test-support-boundary`).
