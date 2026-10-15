@@ -7,12 +7,13 @@ import type { ChartView } from './useChartView.hook.js';
 import type { TradeSelection } from './useTradeSelection.hook.js';
 
 export type TradeChartBodyProps = {
+  readonly runId: string;
   readonly view: ChartView;
   readonly selection: TradeSelection;
 };
 
 // O gráfico de velas, ou o motivo de ele ainda não estar na tela.
-export function TradeChartBody({ view, selection }: TradeChartBodyProps): ReactElement {
+export function TradeChartBody({ runId, view, selection }: TradeChartBodyProps): ReactElement {
   const { chart } = view;
   if (chart.data === undefined) {
     return (
@@ -21,5 +22,5 @@ export function TradeChartBody({ view, selection }: TradeChartBodyProps): ReactE
       </p>
     );
   }
-  return <CandleChart chart={chart.data} view={view} selection={selection} />;
+  return <CandleChart runId={runId} chart={chart.data} view={view} selection={selection} />;
 }

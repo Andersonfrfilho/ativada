@@ -10,7 +10,13 @@ import {
   FIXTURE_HOUR,
   FIXTURE_TO,
 } from '../fixtures/trade-chart.fixture.js';
-import { dataResponse, pageResponse, type FakeRoute, type RecordedCall } from './fake-fetch.js';
+import {
+  dataResponse,
+  errorResponse,
+  pageResponse,
+  type FakeRoute,
+  type RecordedCall,
+} from './fake-fetch.js';
 import { createFakeSurfaceFactory, type FakeChartSurface } from './fake-chart-surface.js';
 import { renderApp, type RenderedApp } from './render-app.js';
 import { buildRun } from './run-fixtures.js';
@@ -26,7 +32,16 @@ export type CandleCardOptions = {
   readonly respondCandles?: (call: RecordedCall) => Response | Promise<Response>;
   readonly respondChart?: (call: RecordedCall) => Response | Promise<Response>;
   readonly extraRoutes?: readonly FakeRoute[];
+  // `live_paper` liga a previsão e o "esperou"; o padrão é um backtest.
+  readonly kind?: string;
+  readonly respondLayers?: (call: RecordedCall) => Response | Promise<Response>;
+  readonly respondProjections?: (call: RecordedCall) => Response | Promise<Response>;
+  // As operações fechadas que a tabela (e a camada "Stop e alvo") recebem.
+  readonly trades?: readonly unknown[];
 };
+
+export const LAYERS_PATH = '/v1/runs/run-1/strategy-layers';
+export const PROJECTIONS_PATH = '/v1/runs/run-1/projections';
 
 export type CandleCardHarness = {
   readonly app: RenderedApp;
@@ -34,6 +49,7 @@ export type CandleCardHarness = {
   readonly surfaces: FakeChartSurface[];
   readonly candleCalls: () => RecordedCall[];
   readonly chartCalls: () => RecordedCall[];
+  readonly layersCalls: () => RecordedCall[];
 };
 
 // Velas de 1 h geradas para o pedido `[from, to)`: o preço anda devagar e o volume cresce com o tempo.
@@ -108,6 +124,7 @@ function baseRoutes(options: CandleCardOptions): FakeRoute[] {
           buildRun({
             symbol: 'BNBUSDT',
             timeframe: '1h',
+            kind: options.kind ?? 'backtest',
             periodStart: FIXTURE_FROM,
             periodEnd: runTo,
           }),
@@ -128,7 +145,24 @@ function baseRoutes(options: CandleCardOptions): FakeRoute[] {
       path: '/v1/runs/run-1/trade-summary',
       respond: (): Response => dataResponse(buildSummaryResponse()),
     },
-    { method: 'GET', path: '/v1/runs/run-1/trades', respond: (): Response => pageResponse([]) },
+    {
+      method: 'GET',
+      path: '/v1/runs/run-1/trades',
+      respond: (call): Response =>
+        pageResponse(call.query.get('status') === 'closed' ? (options.trades ?? []) : []),
+    },
+    {
+      method: 'GET',
+      path: LAYERS_PATH,
+      respond: (call): Response | Promise<Response> =>
+        options.respondLayers?.(call) ?? errorResponse(404, 'LAYERS_NOT_FAKED'),
+    },
+    {
+      method: 'GET',
+      path: PROJECTIONS_PATH,
+      respond: (call): Response | Promise<Response> =>
+        options.respondProjections?.(call) ?? errorResponse(404, 'PROJECTIONS_NOT_FAKED'),
+    },
   ];
 }
 
@@ -154,6 +188,7 @@ export function showCandleCard(options: CandleCardOptions = {}): CandleCardHarne
     surfaces: created,
     candleCalls: () => app.fake.callsTo('GET', CANDLES_PATH),
     chartCalls: () => app.fake.callsTo('GET', '/v1/runs/run-1/chart'),
+    layersCalls: () => app.fake.callsTo('GET', LAYERS_PATH),
   };
 }
 

@@ -11,6 +11,7 @@ import { SimpleChartFallback } from './SimpleChartFallback.component.js';
 import { useCandleSource } from './useCandleSource.hook.js';
 
 export type CandleChartProps = {
+  readonly runId: string;
   readonly chart: TradeChart;
   readonly view: ChartView;
   readonly selection: TradeSelection;
@@ -21,7 +22,7 @@ const CANDLES_UNAVAILABLE_REASON =
 
 // O cartão "Preço e operações" como na corretora: velas, volume e as operações. Quem decide o que mostrar é o histórico
 // de velas: sem elas (par fora da lista atual, erro) a reserva é o gráfico simples da spec 005.
-export function CandleChart({ chart, view, selection }: CandleChartProps): ReactElement {
+export function CandleChart({ runId, chart, view, selection }: CandleChartProps): ReactElement {
   const timeZone = useUserTimeZone();
   const source = useCandleSource(chart, view);
   if (!source.isSupported || source.history.status === 'error') {
@@ -38,5 +39,7 @@ export function CandleChart({ chart, view, selection }: CandleChartProps): React
   if (source.history.status === 'loading') {
     return <p className={controls.muted}>Carregando as velas…</p>;
   }
-  return <CandleCanvas chart={chart} view={view} selection={selection} source={source} />;
+  return (
+    <CandleCanvas runId={runId} chart={chart} view={view} selection={selection} source={source} />
+  );
 }

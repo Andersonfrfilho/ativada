@@ -7,6 +7,8 @@ import styles from './CandleChart.module.css';
 import { ChartCredit } from './ChartCredit.component.js';
 import { ChartToolbar } from './ChartToolbar.component.js';
 import { ClusterButtons } from './ClusterButtons.component.js';
+import { LayerBar } from './LayerBar.component.js';
+import { LayerNotices } from './LayerNotices.component.js';
 import { OhlcLegend } from './OhlcLegend.component.js';
 import { SimpleChartFallback } from './SimpleChartFallback.component.js';
 import { TimeframeNotice } from './TimeframeNotice.component.js';
@@ -21,25 +23,45 @@ const SURFACE_FAILED_REASON =
 
 type CanvasViewProps = CandleCanvasInput & { readonly model: CandleCanvasModel };
 
-function CanvasView({ chart, selection, source, model }: CanvasViewProps): ReactElement {
-  const captionId = useId();
-  const symbol = formatSymbol(chart.symbol);
+function CanvasHeader({ chart, view, source, model }: CanvasViewProps): ReactElement {
   return (
-    <figure className={styles.wrapper}>
+    <>
       <ChartToolbar
         timeframe={source.timeframe}
         runTimeframe={chart.timeframe}
         surface={model.surface}
         onTimeframeChange={model.handleTimeframeChange}
       />
+      <LayerBar
+        layers={source.preferences.preferences.layers}
+        isLive={view.isLive}
+        isStrategyTimeframe={model.layerData.isStrategyTimeframe}
+        onToggle={source.preferences.toggleLayer}
+      />
       <TimeframeNotice timeframe={source.timeframe} runTimeframe={chart.timeframe} />
       {model.legend === undefined ? null : <OhlcLegend text={model.legend} />}
+    </>
+  );
+}
+
+function CanvasView(props: CanvasViewProps): ReactElement {
+  const { chart, view, selection, model } = props;
+  const captionId = useId();
+  return (
+    <figure className={styles.wrapper}>
+      <CanvasHeader {...props} />
       <div
         ref={model.containerRef}
         className={styles.canvas}
         role="img"
-        aria-label={`Gráfico de velas de ${symbol}`}
+        aria-label={`Gráfico de velas de ${formatSymbol(chart.symbol)}`}
         aria-describedby={captionId}
+      />
+      <LayerNotices
+        data={model.layerData}
+        decisions={chart.decisions}
+        isOn={model.isLayerOn}
+        isLive={view.isLive}
       />
       {chart.clusters === null ? null : (
         <ClusterButtons
@@ -56,17 +78,16 @@ function CanvasView({ chart, selection, source, model }: CanvasViewProps): React
   );
 }
 
-// O gráfico de velas: a superfície de desenho recebe as velas, o volume e as setas; a legenda, os botões e o texto para
-// leitor de tela ficam em HTML por cima e por baixo do canvas.
+// O gráfico de velas: a superfície de desenho recebe as velas, o volume, as setas e as camadas; a legenda, os botões e o
+// texto para leitor de tela ficam em HTML por cima e por baixo do canvas.
 export function CandleCanvas(props: CandleCanvasInput): ReactElement {
   const model = useCandleCanvasModel(props);
   if (model.hasFailed) {
     const { chart, selection } = props;
-    const { timeZone } = model;
     return (
       <SimpleChartFallback
         chart={chart}
-        timeZone={timeZone}
+        timeZone={model.timeZone}
         selection={selection}
         reason={SURFACE_FAILED_REASON}
       />

@@ -122,8 +122,50 @@
   text-underline-offset: 2px;
 }
 
+.layerBar {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.layerList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* A alternância das camadas só existe no celular; no desktop a lista fica sempre à mostra. */
+.layerBar .layersToggle {
+  display: none;
+}
+
+.notices {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lineLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
 @media (max-width: 639px) {
   .canvas {
     height: 360px;
+  }
+
+  .layerBar .layersToggle {
+    display: inline-flex;
+  }
+
+  .layersClosed {
+    display: none;
   }
 }

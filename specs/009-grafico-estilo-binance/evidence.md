@@ -356,3 +356,32 @@ Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; nenhuma depe
   do período, troca de vela mantendo o centro (pedido em volta do instante e `centerOn`), aviso fora da vela da execução, seleção por clique, agrupamentos e a reserva.
 
 Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` 906 passam, 0 falham (72 arquivos).
+
+## T3.3 — Camadas do gráfico (2026-10-15)
+
+Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; nenhuma dependência nova.
+
+- **Barra de camadas** (`LayerBar`): "Previsão", "Compras e vendas", "Linhas da estratégia", "Stop e alvo" e "Esperou", cada uma um botão com caixa marcada (☑/☐), palavra,
+  `aria-pressed` e 44 px; padrões da spec §5 D12 e da spec 008 D6: previsão, compras e vendas e linhas ligadas, **"Stop e alvo" e "Esperou" desligadas**
+  (preferência no `localStorage`, que já guardava os cinco campos). Previsão e "Esperou" só existem na simulação ao vivo (`isLive`); previsão, linhas e "Esperou"
+  ficam desabilitadas fora da vela da execução (RF05); compras, vendas e "Stop e alvo" valem em qualquer vela. No celular a lista fica recolhida atrás do botão
+  "Camadas do gráfico" (`aria-expanded`, classe `layersClosed` escondida por `@media (max-width: 639px)`; no desktop o botão some e a lista fica à mostra).
+- **Linhas e placar** (`useChartLayers`, `useLayerSurface`): `GET /v1/runs/:id/strategy-layers` pela janela visível (no máximo 1.000 velas, o teto da API, andando em
+  blocos de 250 velas em volta do centro visível, sempre dentro do período da execução: `computeLayersWindow`, puro); as linhas são as de `signals.indicators`
+  (um rótulo de texto cada, ou "Esta estratégia não usa linhas sobre o preço"), as barras do placar vão ao painel de baixo com as linhas tracejadas de compra e
+  venda do último trecho de limiar e o rótulo "Placar da estratégia — compra em +2, venda em −2" (sinal de menos verdadeiro, vírgula decimal).
+- **Isolamento de erro (§15)**: cada camada tem a própria consulta (`strategy-layers`, `projections`, a lista de operações já compartilhada com a tabela); nenhuma vai
+  num `Promise.all`. A falha das camadas mostra "Não foi possível carregar o placar e as linhas da estratégia; as velas e as operações continuam." e as velas, as
+  setas e a tabela seguem (contrato com `strategy-layers` respondendo 500).
+- **Compras e vendas**: a camada desliga as setas; acima de 500 eventos os botões de agrupamento da T3.2 continuam. **"Stop e alvo"**: caixa verde (entrada → alvo)
+  e vermelha (entrada → stop) de cada operação, da compra à venda, e a aberta vai até a ponta direita; `tradeSchema` ganhou `stopPrice` e `targetPrice` opcionais
+  (a API já os devolvia em `/trades`) e as caixas usam a mesma lista de operações da tabela (sem pedido novo). **"Esperou"**: um pontinho pequeno e discreto em cada
+  vela de espera (`/chart.decisions`, só `live_paper` com até 500 velas); sem decisões a tela diz "Aproxime o gráfico para ver cada decisão".
+  **Previsão**: `toSurfaceProjection` leva a tendência e a faixa gravada de ±1 ATR à superfície (meio-cone colorido do lado da tendência e linha plana no preço de
+  partida); nunca um preço-alvo; só na simulação ao vivo, com a camada ligada e na vela da execução.
+- **Contratos** (`candle-layers`, 14 testes; `layer-series`, 8): janela das camadas pedida (≤ 1.000 velas, dentro do período), linhas e barras do placar na superfície, rótulos
+  em texto, estratégia sem linhas, falha isolada, padrões ligados e desligados em backtest e na ao vivo, desligar apaga na superfície e a escolha é lembrada,
+  fora da vela da execução as camadas de estratégia somem e nem são pedidas, recolhimento no celular por classe (CSS e `aria-expanded`), caixas de stop e alvo (fechada
+  e aberta), pontinhos de "esperou", previsão ligada e desligada e backtest que nunca pede a previsão; puros: janela, caixas, pontinhos e rótulo do placar.
+
+Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` 928 passam, 0 falham (74 arquivos).

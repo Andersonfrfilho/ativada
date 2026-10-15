@@ -18,6 +18,8 @@ export type CandleSource = {
   readonly timeframe: string;
   // `false` quando a vela da execução não é uma das que o painel conhece: o gráfico simples assume.
   readonly isSupported: boolean;
+  // A duração da vela mostrada em milissegundos (0 quando não é uma que o painel conhece).
+  readonly durationMilliseconds: number;
   // O instante que a pessoa quer no centro depois de trocar a vela; some quando ela escolhe outra faixa.
   readonly focus: number | undefined;
   readonly changeTimeframe: (next: TimeframeChoice, centerTime: number) => void;
@@ -55,6 +57,7 @@ export function useCandleSource(chart: TradeChart, view: ChartView): CandleSourc
     preferences,
     timeframe,
     isSupported: duration !== undefined,
+    durationMilliseconds: duration ?? 0,
     focus,
     changeTimeframe: (next, centerTime): void => {
       setFocusState({ time: centerTime, rangeKey });

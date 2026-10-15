@@ -90,6 +90,9 @@ export const tradeSchema = z.object({
   status: z.enum(['open', 'closed']),
   entryPrice: decimalText,
   quantity: decimalText,
+  // Stop e alvo da operação (a camada "Stop e alvo" do gráfico, spec 009); ausentes em respostas antigas.
+  stopPrice: decimalText.optional(),
+  targetPrice: decimalText.optional(),
   exitPrice: decimalText.optional(),
   netProfit: decimalText.optional(),
   exitReason: z.string().optional(),
