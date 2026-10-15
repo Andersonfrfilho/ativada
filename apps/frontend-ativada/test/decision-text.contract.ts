@@ -52,14 +52,15 @@ describe('formatClosingMoment', () => {
 
 describe('formatScoreOfThreshold', () => {
   test('writes the score against the threshold in pt-BR', () => {
-    expect(formatScoreOfThreshold('1', '2')).toBe('1 de 2');
-    expect(formatScoreOfThreshold('-2.5', '2')).toBe('-2,5 de 2');
-    expect(formatScoreOfThreshold('0.50000000', '2.00000000')).toBe('0,5 de 2');
-    expect(formatScoreOfThreshold('0', '2.5')).toBe('0 de 2,5');
+    expect(formatScoreOfThreshold('1', '2')).toBe('+1 de +2');
+    expect(formatScoreOfThreshold('-2.5', '2')).toBe('−2,5 de +2');
+    expect(formatScoreOfThreshold('0.50000000', '2.00000000')).toBe('+0,5 de +2');
+    expect(formatScoreOfThreshold('0', '2.5')).toBe('0 de +2,5');
+    expect(formatScoreOfThreshold('-1', '-2')).toBe('−1 de −2');
   });
 
   test('keeps at most two decimals and rounds half up on the text', () => {
-    expect(formatScoreOfThreshold('0.125', '2.004')).toBe('0,13 de 2');
+    expect(formatScoreOfThreshold('0.125', '2.004')).toBe('+0,13 de +2');
   });
 });
 

@@ -10,6 +10,8 @@ import { formatRelativeMoment, type MomentContext } from '../../format/zoned-mom
 import { formatDirectedMoney, type RoundingDirection } from '../directed-money.js';
 
 const MISSING_TEXT = '—';
+const MINUS_SIGN = '−';
+const ZERO_SCORE = '0';
 const CENTS = 2;
 const QUOTE_CURRENCY = 'USDT';
 const SCORE_FORMAT = { minimumFraction: 0, maximumFraction: 2 } as const;
@@ -29,11 +31,15 @@ export function formatClosingMoment(closedAt: number, context: MomentContext): s
   return formatRelativeMoment(closedAt, context);
 }
 
-// "1 de 2": a pontuação da vela contra o limiar que ela precisava alcançar (vírgula pt-BR, no máximo 2 casas).
+function formatSignedScore(text: string): string {
+  const formatted = formatDecimalText(text, SCORE_FORMAT);
+  if (formatted === ZERO_SCORE) return formatted;
+  return formatted.startsWith('-') ? `${MINUS_SIGN}${formatted.slice(1)}` : `+${formatted}`;
+}
+
+// "+1 de +2" e "−2,5 de +2": a pontuação da vela contra o limiar que ela precisava alcançar (sinal explícito, vírgula pt-BR, até 2 casas).
 export function formatScoreOfThreshold(score: string, threshold: string): string {
-  const scoreText = formatDecimalText(score, SCORE_FORMAT);
-  const thresholdText = formatDecimalText(threshold, SCORE_FORMAT);
-  return `${scoreText} de ${thresholdText}`;
+  return `${formatSignedScore(score)} de ${formatSignedScore(threshold)}`;
 }
 
 // '12.345,67 USDT': saldo, resultado e "ainda cabe" descem; perda e "falta" sobem (a direção é a do campo no servidor).

@@ -7,7 +7,10 @@ import { ApiError } from '../http/api.error.js';
 import { HTTP_STATUS } from '@ativada/environment';
 import controls from '../styles/Controls.module.css';
 import { RunHeader } from '../runs/RunHeader.component.js';
-import { LiveTrackingSection } from '../runs/live-tracking/LiveTrackingSection.component.js';
+import {
+  LiveDecisionsSection,
+  LiveTrackingSection,
+} from '../runs/live-tracking/LiveTrackingSection.component.js';
 import { RunProgressCard } from '../runs/RunProgressCard.component.js';
 import { TradeChartCard } from '../runs/TradeChartCard.component.js';
 import { FAILURE_TEXT, RUN_KIND, RUN_STATUS } from '../runs/run.constant.js';
@@ -36,6 +39,7 @@ function LivePaperBody({ run }: { readonly run: RunDetail }): ReactElement {
       <LiveTrackingSection run={run} />
       {run.status === RUN_STATUS.COMPLETED ? <CompletedBacktest run={run} /> : null}
       {hasChart ? <TradeChartCard runId={run.id} hasSummary={false} /> : null}
+      <LiveDecisionsSection run={run} />
       {isActiveRun(run) ? <RunProgressCard run={run} /> : null}
     </>
   );

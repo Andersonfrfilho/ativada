@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 
 import type { RunDetail } from '../run.validation.js';
 import controls from '../../styles/Controls.module.css';
+import { DecisionsTable } from './DecisionsTable.component.js';
 import { LiveGoalBlock } from './LiveGoalBlock.component.js';
 import { LivePulseLine } from './LivePulseLine.component.js';
 import { LiveTrackingCard } from './LiveTrackingCard.component.js';
@@ -31,4 +32,10 @@ export function LiveTrackingSection({ run }: LiveTrackingSectionProps): ReactEle
       </div>
     </>
   );
+}
+
+// A tabela "O que a estratégia decidiu", depois do gráfico (mesma consulta do topo: o aviso do stream refaz as duas).
+export function LiveDecisionsSection({ run }: LiveTrackingSectionProps): ReactElement | null {
+  const status = useLiveStatusQuery(run.id, true).data;
+  return status === undefined ? null : <DecisionsTable runId={run.id} status={status} />;
 }

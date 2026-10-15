@@ -19,6 +19,8 @@ import {
 } from './live-status.validation.js';
 
 export const DECISIONS_PAGE_SIZE = 24;
+// As 24 mais novas já vêm no live-status: o primeiro pedido das anteriores traz as 24 seguintes junto (e refaz sem buraco a cada vela).
+export const DECISIONS_FIRST_PAGE_SIZE = DECISIONS_PAGE_SIZE * 2;
 const FIRST_PAGE: string | null = null;
 
 // Sob a raiz `runs`: o aviso do stream ao vivo invalida o acompanhamento junto com a execução, sem cache próprio.
@@ -43,7 +45,8 @@ export function useDecisionsQuery(
     enabled: isEnabled,
     initialPageParam: FIRST_PAGE,
     queryFn: ({ pageParam }) => {
-      const query = new URLSearchParams({ limit: String(DECISIONS_PAGE_SIZE) });
+      const limit = pageParam === null ? DECISIONS_FIRST_PAGE_SIZE : DECISIONS_PAGE_SIZE;
+      const query = new URLSearchParams({ limit: String(limit) });
       if (pageParam !== null) query.set('cursor', pageParam);
       return client.requestPage({
         path: `${API_PATH.RUNS}/${runId}/decisions?${query.toString()}`,

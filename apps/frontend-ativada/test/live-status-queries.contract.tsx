@@ -165,7 +165,7 @@ describe('live status queries', () => {
     expect(screen.queryByText(/saldo:/)).toBeNull();
   });
 
-  test('the decisions query asks for 24 per page and its key starts with "runs"', async () => {
+  test('the decisions query asks for 48 on the first page (the 24 newest are already in live-status) and 24 after, and its key starts with "runs"', async () => {
     const routes: readonly FakeRoute[] = [
       {
         method: 'GET',
@@ -181,7 +181,7 @@ describe('live status queries', () => {
     });
     expect(await screen.findByText('decisoes:1|runs')).toBeDefined();
     const query = fake.callsTo('GET', '/v1/runs/run-1/decisions')[0]?.query;
-    expect([query?.get('limit'), query?.get('cursor')]).toEqual(['24', null]);
+    expect([query?.get('limit'), query?.get('cursor')]).toEqual(['48', null]);
   });
 
   test('an invalid decision page ends in error', async () => {

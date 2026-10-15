@@ -269,3 +269,14 @@ panel-test: 710 pass, 0 fail (54 arquivos)
 WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
 panel-test: 727 pass, 0 fail (55 arquivos)
 ```
+
+## T3.2 — Tabela "O que a estratégia decidiu" (sonnet, 2026-10-14)
+
+- `DecisionsTable` (uma `<table>` com `<caption>`, cabeçalho com o fuso, empilhada por CSS abaixo de 700 px como no redesenho), `DecisionRow` (hora do fechamento com "hoje"/"ontem", preço, selo ícone + palavra "Esperou"/"Comprou"/"Vendeu", pontuação "−2,5 de +2", frase do servidor), `DecisionVotes` (botão "ver votos" com `aria-expanded`; cada regra com sinal, palavra "a favor"/"contra"/"neutra" e leitura; "Detalhe técnico" recolhido com o `reason` do motor) e `DecisionRunGroup` (velas seguidas iguais agrupadas: "Mostrar 13 horas iguais"). `decision-groups.ts` agrupa e junta páginas sem repetir vela.
+- "Ver decisões anteriores": o `live-status` traz as 24 mais novas; o primeiro pedido das anteriores (`useDecisionsQuery`) leva 48 (as 24 já mostradas mais 24 novas) e os seguintes 24 pelo cursor. Assim a consulta refeita pelo aviso do stream percorre as páginas do começo e nunca deixa buraco. `formatScoreOfThreshold` passou a escrever sinal explícito ("+1 de +2", "−2,5 de +2", venda "−1 de −2"), como no redesenho (teste da T2.3 atualizado).
+- Contrato `test/live-decisions-table.contract.tsx`: ordem e frases, teclado/`aria-expanded`, votos com sinal e palavra, agrupamento, paginação por cursor (limites 48 e 24, botão some no fim), aviso do stream acrescenta a linha do topo; `touch-targets` (+ `.expand`, `.more`). Limitação: a tabela empilhada a 375 px é conferida por CSS (classe) e na rodada final no navegador; o happy-dom não calcula media query.
+
+```text
+WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
+panel-test: 738 pass, 0 fail (56 arquivos)
+```
