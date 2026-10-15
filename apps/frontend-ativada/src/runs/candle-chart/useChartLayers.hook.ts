@@ -55,18 +55,18 @@ export function useChartLayers(input: ChartLayersInput): ChartLayerData {
     isEnabled: window !== undefined,
   });
   const isForecastOn = source.preferences.preferences.layers[CHART_LAYER.FORECAST];
-  const projections = useProjectionsQuery({
-    runId,
-    isEnabled: isStrategyTimeframe && view.isLive && isForecastOn,
-  });
+  const isForecastEnabled = isStrategyTimeframe && view.isLive && isForecastOn;
+  const projections = useProjectionsQuery({ runId, isEnabled: isForecastEnabled });
+  // A consulta é a mesma do cartão de histórico (backtest também a pede): sem a camada ligada, o cache não vira previsão.
+  const forecast = isForecastEnabled ? projections.data : undefined;
   const rows = useTradeRows(runId, view.queryRange);
   return {
     isStrategyTimeframe,
     layers: window === undefined ? undefined : layersQuery.data,
     hasLayersFailed: window !== undefined && layersQuery.isError,
-    projection: projections.data?.current,
-    projections: projections.data,
-    isProjectionError: projections.isError,
+    projection: forecast?.current,
+    projections: forecast,
+    isProjectionError: isForecastEnabled && projections.isError,
     trades: rows.items,
   };
 }

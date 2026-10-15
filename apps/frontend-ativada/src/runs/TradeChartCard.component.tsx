@@ -5,6 +5,7 @@ import { useUserTimeZone } from '../account/useUserTimeZone.hook.js';
 import { Card } from '../layout/Card.component.js';
 import { ChartRangeControls } from './ChartRangeControls.component.js';
 import { LiveChartStatus } from './LiveChartStatus.component.js';
+import { ProjectionCards } from './projection-cards/ProjectionCards.component.js';
 import { planTradeSelection } from './trade-selection.js';
 import { TradeChartBody } from './TradeChartBody.component.js';
 import { TradeNotice } from './TradeNotice.component.js';
@@ -30,24 +31,27 @@ export function TradeChartCard({ runId, hasSummary = true }: TradeChartCardProps
     selection.select(planTradeSelection({ trade, range: view.range, extent: view.extent }));
   }
   return (
-    <Card title="Preço e operações">
-      <TradeNotice isLive={view.isLive} />
-      {hasSummary ? <TradeSummary runId={runId} /> : null}
-      <ChartRangeControls
-        extent={view.extent}
-        range={view.range}
-        shown={view.shown}
-        onRangeChange={selection.setRange}
-      />
-      <LiveChartStatus view={view} selection={selection} timeZone={timeZone} />
-      <TradeChartBody runId={runId} view={view} selection={selection} />
-      <TradesTable
-        runId={runId}
-        range={view.queryRange}
-        timeZone={timeZone}
-        selectedKey={selection.selectedKey}
-        onSelectTrade={handleSelectTrade}
-      />
-    </Card>
+    <>
+      <Card title="Preço e operações">
+        <TradeNotice isLive={view.isLive} />
+        {hasSummary ? <TradeSummary runId={runId} /> : null}
+        <ChartRangeControls
+          extent={view.extent}
+          range={view.range}
+          shown={view.shown}
+          onRangeChange={selection.setRange}
+        />
+        <LiveChartStatus view={view} selection={selection} timeZone={timeZone} />
+        <TradeChartBody runId={runId} view={view} selection={selection} />
+        <TradesTable
+          runId={runId}
+          range={view.queryRange}
+          timeZone={timeZone}
+          selectedKey={selection.selectedKey}
+          onSelectTrade={handleSelectTrade}
+        />
+      </Card>
+      <ProjectionCards runId={runId} isLive={view.isLive} />
+    </>
   );
 }

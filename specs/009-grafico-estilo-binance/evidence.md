@@ -446,3 +446,26 @@ Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; nenhuma depe
   camada desligada). O teste de geometria pegou um bug real (`reverse()` no lugar mutava a borda de baixo do meio-cone de venda); corrigido antes do commit.
 
 Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` verde.
+
+## T3.6 — Cartões "De onde vem a previsão" e "Histórico de acertos" (2026-10-15)
+
+Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; nenhuma dependência nova; nenhuma mudança na API.
+
+- **`ProjectionHistoryCard`** (`src/runs/projection-cards/`, no detalhe de TODA execução, D15): a frase do servidor ("Acertou o lado em 49,42% (171 de 346). Moeda ao ar: 50%. …") e três indicadores —
+  **Acertou o lado 49,42% · 171 de 346 previsões** ao lado da **Moeda ao ar 50,00% · "sempre sobe": 50,58%** e **Dentro da faixa 90,85% · 318 de 350 velas** —, o veredito de Wilson do servidor
+  como ícone + palavra + cor ("Acima / Igual à / Abaixo da moeda ao ar" ou "Poucas previsões" abaixo de 30 contadas) com a frase longa do servidor e, fora de `too_few`, o intervalo de 95%
+  ("entre 44,20% e 54,67%"), barras de acerto por força (a marca de 50% em cada uma, e o mesmo número em palavras) e a tabela das últimas previsões (vela que fechou no fuso do usuário, tendência com
+  força, partida, preço da vela seguinte, resultado e "na faixa"/"fora da faixa") com **"Ver mais previsões" por cursor** (cada página é a consulta `projections?cursor=`; a primeira é a mesma do painel da
+  próxima vela, então o aviso do stream refaz as duas de uma vez). **Nenhuma conta local**: a porcentagem só desloca a vírgula do texto do servidor em BigInt (`formatRatePercent`); o contrato prova com taxas que
+  NÃO batem com as contagens (12,34% para 1 de 100) que a tela mostra o que o servidor mandou.
+- **`ProjectionSourceCard`** (só na simulação ao vivo): a régua do placar (`ScoreboardRuler` da spec 008), o voto de cada regra em palavras ("MACD: +1 a favor", com `VoteLabel`), "O que falta:" com a frase do
+  servidor da spec 008 (`live-status.triggers.message`, nada duplicado), a faixa em palavras ("numa vela de 1 h o BTC/USDT costuma andar até 0,127 USDT. Por isso a faixa vai de 12,778 a 13,032.", ATR e preços do servidor)
+  e o texto fixo "Tendência, não promessa. "Fraco" quer dizer que só metade do caminho até a compra foi andado." Sem tendência, a introdução é a frase do servidor e nenhuma faixa é escrita.
+- **Montagem**: `TradeChartCard` devolve o cartão "Preço e operações" e, logo abaixo, `ProjectionCards` (lado a lado a partir de 1.024 px na ao vivo; só o histórico em backtest e walk-forward). O contrato antigo
+  "backtest nunca pede a previsão" (`candle-layers`) passou a dizer o que continua valendo: o gráfico nunca desenha a previsão num backtest e só o cartão do histórico pede `projections` (sem cursor).
+- **Contratos** (`projection-cards`, 17 testes, na lista explícita do `package.json`): números e frases do exemplo do spec, números exibidos como o servidor mandou, os quatro vereditos e o `too_few` com 29 contadas,
+  barras de força, tabela, "Ver mais" pelo cursor, erro e vazio, backtest só com o histórico, e o cartão de origem com a régua, os votos, o que falta, a faixa, sem tendência e com o `live-status` falhando.
+
+Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` verde.
+- **Achado no caminho:** como o cartão de histórico (backtest também) e a camada "Previsão" compartilham a MESMA consulta `projections`, o cache chegava ao gráfico de um backtest e desenharia o cone onde não há "próxima vela".
+  `useChartLayers` agora só entrega `projection`/`projections` quando a camada está habilitada (ao vivo, vela da execução, camada ligada); o contrato `candle-layers` prova que o backtest não desenha nada na superfície.

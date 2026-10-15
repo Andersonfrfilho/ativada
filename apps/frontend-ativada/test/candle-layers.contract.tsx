@@ -340,12 +340,15 @@ describe('camada "Esperou" e previsão (simulação ao vivo)', () => {
     await waitFor(() => expect(surface.callsOf('setProjection').at(-1)?.[0]).toBeNull());
   });
 
-  test('a backtest never asks for the forecast', async () => {
+  test('a backtest never draws the forecast: only the history card asks for the projections', async () => {
     const harness = show({ respondProjections: () => dataResponse(buildProjectionsResponse()) });
-    await ready(harness);
+    const surface = await ready(harness);
     await act(async () => {
       await Promise.resolve();
     });
-    expect(harness.app.fake.callsTo('GET', '/v1/runs/run-1/projections')).toHaveLength(0);
+    expect(surface.callsOf('setProjection').every((call) => call[0] === null)).toBe(true);
+    expect(screen.queryByRole('complementary', { name: 'Próxima vela de perto' })).toBeNull();
+    const calls = harness.app.fake.callsTo('GET', '/v1/runs/run-1/projections');
+    expect(calls.every((call) => call.query.get('cursor') === null)).toBe(true);
   });
 });
