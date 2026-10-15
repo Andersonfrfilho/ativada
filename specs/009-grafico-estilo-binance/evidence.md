@@ -39,3 +39,45 @@ esperados das Fases 1 a 3). Sem migration e sem índice novo.
 
 Gates (WSL, espelho `~/gates/ativada-spec9`): `bun run typecheck` ok; `bun run lint` ok; `bun run format:check` ok;
 `bun test test/projection-summary-oracle.contract.test.ts` 9 pass, 0 fail (33 `expect`).
+
+## T0.2 — Spike da biblioteca `lightweight-charts@5.2.1` (2026-10-15)
+
+Modelo: `sonnet` na recomendação; executado nesta sessão (`opus`) junto com a T0.1, a pedido do orquestrador. Instalação
+autorizada pelo usuário (D1-A). Decisões P12 a P14 no ADR 0002.
+
+- **Instalação**: `"lightweight-charts": "5.2.1"` (exato) em `apps/frontend-ativada/package.json`; `bun install` rodado
+  SÓ no espelho Linux (`~/gates/ativada-spec9`, Bun 1.4.3), nunca em `/mnt/c`; o `node_modules` do Windows não foi tocado.
+  O `bun.lock` do repo recebeu só as 3 linhas novas (a dependência no workspace do painel, `fancy-canvas@2.1.0` e
+  `lightweight-charts@5.2.1`, com os `sha512`); o bun do espelho reordenava 5 entradas antigas, e essa reordenação ficou de
+  fora. `bun install --frozen-lockfile` no espelho com o lockfile do repo: "no changes".
+- **Licença**: `lightweight-charts` Apache-2.0 (arquivo `LICENSE`, "Copyright 2023 TradingView, Inc."); `fancy-canvas` MIT.
+  O pacote npm **não traz o `NOTICE`**; o da tag `v5.2.1` no GitHub diz "TradingView Lightweight Charts™ / Copyright (с)
+  2025 TradingView, Inc. https://www.tradingview.com/". O `README` exige esse aviso e um link para tradingview.com na página
+  (P13: rodapé do cartão, T3.1).
+- **`bun audit`**: 1 vulnerabilidade moderada já existente (`esbuild` ≤ 0.24.2 por `drizzle-kit` e `vite > tsx`, servidor
+  de desenvolvimento); **nenhuma** em `lightweight-charts` nem `fancy-canvas`.
+- **CSP sem afrouxar** (spike fora do repo, `vite build` + `vite preview` com `PANEL_CONTENT_SECURITY_POLICY_DIRECTIVES` no
+  `<meta>` e `PANEL_SECURITY_HEADERS` no cabeçalho, conferido por `curl`; página com 20.000 velas de 15 min, 3 painéis —
+  velas, volume, placar —, linha de canal tracejada, 400 marcadores "Compra"/"Venda" e o cone de uma vela à frente com a
+  linha plana; aberta no navegador do app):
+  - `attributionLogo: false`: **0 violação** (`securitypolicyviolation`), console vazio, 15 canvas, 3 painéis, nenhum
+    `<style>` criado; os 45 elementos com `style` recebem o estilo por CSSOM, que a CSP permite.
+  - `attributionLogo: true` (padrão da v5): **4 violações `style-src-elem`** (o `<style>` em linha do logotipo) e o
+    logotipo sem posição. Por isso P12: logotipo desligado e crédito no rodapé. **Nenhuma diretiva precisou mudar.**
+- **Bundle**: o pedaço do spike (biblioteca com velas, histograma, linha e marcadores + ~1 KB de página) tem **179,6 KB,
+  58,4 KB gzip**; o JS do painel hoje tem 670,4 KB, 207,2 KB gzip. Somado ao pedaço principal seria +28%; a T3.1 carrega o
+  adaptador por `import()` dinâmico (P14).
+- **Desempenho**: o painel de navegador do app ficou oculto (viewport 0, `requestAnimationFrame` parado) e o WSL não tem o
+  Chromium do Playwright (baixar exigiria autorização): **quadros/s ao arrastar não foram medidos**. Medida substituta:
+  redesenho completo forçado (`chart.takeScreenshot()`, que pinta os 3 painéis e ainda compõe uma imagem) com 5.000 velas
+  visíveis, deslocando a faixa a cada passo, 120 vezes: mediana **15,8 ms**, p95 31,3 ms (a primeira, fria, 311 ms). O quadro
+  normal não compõe a imagem, então fica abaixo disso. A medida de 60 quadros/s ao arrastar 5.000 velas (RNF02) passa para o
+  E2E da T3.8, com o Chromium que o `make panel-e2e` já usa.
+- **Porta e superfície falsa** (no repo): `src/runs/candle-chart/chart-surface.types.ts` (a porta `ChartSurface` do plan
+  D1), `test/support/fake-chart-surface.ts` e `test/chart-surface.contract.tsx` (na lista do script `test` do painel):
+  happy-dom sem canvas, StrictMode monta duas vezes sem deixar superfície viva, eventos e `destroy`, e só o adaptador
+  importa a biblioteca.
+
+Gates (WSL, espelho `~/gates/ativada-spec9`): `bun run typecheck` ok; `bun run lint` ok (a primeira rodada reprovou 4
+tipos de retorno ausentes nos testes novos; corrigido); `bun run format:check` ok; `bun run --cwd apps/frontend-ativada
+test` 795 pass, 0 fail.

@@ -2012,3 +2012,12 @@ Bordas do Wilson à mão: 29 de 29 dá `too_few`; 30 de 30, `above`; com 30 cont
 - Mutantes (T1.6): filtro de dono (API e Postgres), `LEAD` trocado por `LAG`, contiguidade removida, empate contado como
   acerto, limiar do lado errado, `≤` → `<` na força, faixa arredondada para dentro, taxa para cima, `30` → `29`, janela parada
   contada.
+
+**Biblioteca de gráfico (spike da T0.2).** `lightweight-charts@5.2.1` (Apache-2.0, dependência única `fancy-canvas@2.1.0`,
+MIT) instalada exata no painel, com o `bun.lock` mudando só as três linhas dela.
+
+| # | Decisão | Motivo |
+|---|---|---|
+| P12 | **`layout.attributionLogo: false`, sempre.** Com o logotipo ligado (o padrão da v5) a biblioteca cria um `<style>` em linha para posicioná-lo, e a CSP do painel (`style-src 'self'`) o bloqueia: 4 violações `style-src-elem` no spike e o logotipo sem posição. Sem ele, **zero** violação: o resto do estilo é por CSSOM (`element.style.x = …`, que a CSP não bloqueia); não há `eval`, `new Function` nem `setAttribute('style')`. **A CSP não muda.** | O `README` da biblioteca exige o aviso do `NOTICE` e um link para tradingview.com na página; o logotipo é só UMA das formas de cumprir o link |
+| P13 | **Crédito no rodapé do cartão do gráfico** (RF22, T3.1), texto do `NOTICE` da tag `v5.2.1` (o pacote npm não traz o arquivo): "TradingView Lightweight Charts™ — Copyright (c) 2025 TradingView, Inc." com link `https://www.tradingview.com/` (`rel="noreferrer"`, `target="_blank"`). Um contrato do painel prende o texto e o link | Cumpre a licença sem afrouxar a CSP |
+| P14 | **Um só arquivo importa a biblioteca**: `src/runs/candle-chart/lightweight-surface.ts`, atrás da porta `ChartSurface` (`chart-surface.types.ts`); os contratos usam `test/support/fake-chart-surface.ts`. `test/chart-surface.contract.tsx` prova o padrão (StrictMode monta duas vezes e só a última superfície fica viva) e reprova outro arquivo de `src` que importe `lightweight-charts`. A T3.1 carrega o adaptador por `import()` dinâmico (pedaço próprio do build): a biblioteca soma ~58 KB gzip a um painel de ~207 KB gzip e só a tela de detalhe precisa dela | happy-dom não tem canvas (`getContext('2d')` é `null`); o resto do painel não paga o peso do gráfico |
