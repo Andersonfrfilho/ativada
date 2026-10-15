@@ -40,13 +40,7 @@ export function TradeChartCard({ runId, hasSummary = true }: TradeChartCardProps
         onRangeChange={selection.setRange}
       />
       <LiveChartStatus view={view} selection={selection} timeZone={timeZone} />
-      <TradeChartBody
-        chart={view.chart}
-        timeZone={timeZone}
-        selectedKey={selection.selectedKey}
-        onRangeChange={selection.setRange}
-        onSelectKey={(key) => selection.select({ key, range: undefined })}
-      />
+      <TradeChartBody view={view} selection={selection} />
       <TradesTable
         runId={runId}
         range={view.queryRange}

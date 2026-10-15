@@ -28,3 +28,15 @@ export function toSurfaceMarkers(
     }))
     .sort((left, right) => left.time - right.time);
 }
+
+// A compra ou a venda que cai na vela de abertura dada (a seta que a pessoa clicou); a primeira, se forem duas.
+export function findPositionKeyAt(
+  markers: readonly MarkerSource[] | null,
+  candleOpenTime: number,
+  timeframeMilliseconds: number,
+): string | undefined {
+  const match = markers?.find(
+    (marker) => snapToCandle(marker.candleTime, timeframeMilliseconds) === candleOpenTime,
+  );
+  return match?.positionKey;
+}

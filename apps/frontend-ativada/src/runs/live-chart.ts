@@ -11,6 +11,11 @@ const TIMEFRAME_MILLISECONDS: Readonly<Record<string, number>> = {
   '1d': 24 * HOUR_MILLISECONDS,
 };
 
+// A duração de uma vela em milissegundos; vela que o painel não conhece não tem duração (nada é inventado).
+export function timeframeMilliseconds(timeframe: string): number | undefined {
+  return TIMEFRAME_MILLISECONDS[timeframe];
+}
+
 export type LastClosedParams = {
   readonly timeframe: string;
   readonly lastClosedCandleTime: number | null;

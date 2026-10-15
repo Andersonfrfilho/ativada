@@ -1,3 +1,116 @@
+.wrapper {
+  margin: 0;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.toolbar {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pressed {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.hint {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.canvas {
+  width: 100%;
+  min-width: 0;
+  height: 460px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.canvas:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.legend {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.legendTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.forming {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px dashed var(--ink-3);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.legendValues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  font: 13px var(--font-data);
+}
+
+.legendItem {
+  display: flex;
+  gap: 6px;
+}
+
+.legendItem dt {
+  color: var(--ink-3);
+}
+
+.legendItem dd {
+  margin: 0;
+  color: var(--ink);
+}
+
+.up dd,
+.up dt {
+  color: var(--buy);
+}
+
+.down dd,
+.down dt {
+  color: var(--sell);
+}
+
+.clusters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.caption {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
 .credit {
   margin: 0;
   font-size: 12px;
@@ -7,4 +120,10 @@
 .credit a {
   color: var(--accent);
   text-underline-offset: 2px;
+}
+
+@media (max-width: 639px) {
+  .canvas {
+    height: 360px;
+  }
 }

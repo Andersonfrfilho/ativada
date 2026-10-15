@@ -324,3 +324,35 @@ Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; nenhuma depe
   para a conferência da T3.8 (E2E com canvas) e da T4.1.
 
 Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` 888 passam, 0 falham (70 arquivos).
+
+## T3.2 — `CandleChart` no `TradeChartCard` (2026-10-15)
+
+Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; nenhuma dependência nova.
+
+- **Cartão**: `TradeChartBody` passou a receber `view` e `selection` e entrega `CandleChart` (`src/runs/candle-chart/`). O aviso, o resumo, os atalhos e
+  campos de data (`ChartRangeControls`), o `LiveChartStatus` e a tabela de operações continuam como estavam; a faixa `?de=&ate=` continua sendo a única fonte
+  da faixa e agora decide a janela de velas. O `/chart` segue servindo `symbol`, `timeframe`, `runRange`, as setas e os agrupamentos.
+- **Velas**: `useCandleHistory` (reducer em `candle-history.reducer.ts`) pede a primeira página por `GET /v1/markets/candles` (as últimas 1.000 velas da faixa ou do
+  período, ou 1.000 em volta do instante em foco: `candle-window.ts`, puro), junta a vela nova que fecha no fim sem reenquadrar (a série tem uma âncora estável;
+  só o fim cresce), e pede a página anterior quando a janela chega a 50 velas da borda esquerda, uma por vez, sem repetir vela e parando no começo do período.
+  Trocar par, vela ou faixa troca a série sem esvaziar a tela. Chave das páginas sob `markets`, cache sem fim (vela fechada é imutável).
+- **Tela**: seletor 15m · 1h · 4h · 1d (a vela da execução vem marcada "da execução", `aria-pressed`), botões Afastar, Aproximar, Ajustar e Agora (44 px), legenda
+  OHLC (`OhlcLegend`: par, vela, data e hora no fuso, A/M/m/F, variação com seta e sinal, volume; a última vela sem cruz, a apontada com ela), volume, setas de
+  compra e venda, cruz e clique (clicar numa vela com seta seleciona a operação em `?operacao=`, sem mexer na faixa), botões de agrupamento acima de 500 eventos
+  e o texto para leitor de tela (`describeChart`). O gráfico acompanhando o fim abre nas últimas 150 velas; com faixa na URL, ajustado a ela.
+- **Troca de vela mantém o centro**: o instante da vela central visível vira "foco"; a janela nova sai em volta dele e o gráfico é centralizado nele
+  (`centerOn`); o foco some quando a pessoa escolhe outra faixa. Fora da vela da execução aparece "Previsão, placar, canal e "esperou" só aparecem na vela de 1 h,
+  que é a que a estratégia usa." Compras e vendas aparecem em qualquer vela.
+- **Reserva**: sem velas públicas do par (404, erro, vela que o painel não conhece) ou com o desenho que não carregou, entra o gráfico SVG da spec 005
+  (`SimpleChartFallback`) com uma frase do motivo; operações, faixa e seleção continuam valendo. O adaptador é carregado por `import()` dinâmico: o `vite build`
+  gerou o pedaço `lightweight-surface` (185 KB, 60 KB gzip) à parte; o pedaço principal passou de 207,8 KB para 214,2 KB gzip.
+- **Testes antigos do SVG**: os contratos `trade-chart-card`, `trade-selection`, `live-trade-chart`, `trade-chart-markers` e `price-chart` não mudaram e continuam
+  verdes porque, sem rota de velas no `fetch` falso, o cartão cai na reserva SVG; eles seguem provando URL, seleção, tabela, aviso de vela nova e as setas do
+  gráfico simples. As mesmas garantias com o `CandleChart` estão em `candle-chart.contract.tsx` (URL → janela de velas, clique → `?operacao=`, agrupamentos →
+  faixa na URL); o aviso "há velas novas" e a seleção linha → setas com o gráfico novo entram com a T3.4/T3.3. O contraste não mudou (cores só por tokens).
+- **Contratos** (`candle-chart`, 12 testes com a superfície falsa e velas geradas pelo pedido; `candle-window`, 6): dados certos à superfície (primeira vela, volume,
+  setas com palavra e tempo da vela que contém o preenchimento, rótulos de hora), janela da primeira página e da URL, abertura nas últimas 150 velas ou ajustada,
+  legenda da última vela e da apontada, página anterior pedida uma vez perto da borda (`to` = primeira vela, 2.000 velas sem repetir, em ordem), parada no começo
+  do período, troca de vela mantendo o centro (pedido em volta do instante e `centerOn`), aviso fora da vela da execução, seleção por clique, agrupamentos e a reserva.
+
+Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` 906 passam, 0 falham (72 arquivos).

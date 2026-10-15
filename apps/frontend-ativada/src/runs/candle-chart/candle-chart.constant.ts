@@ -7,6 +7,9 @@ export const MAX_CANDLES_IN_MEMORY = 20_000;
 // Faltando menos que isto de velas à esquerda da janela visível, a página anterior é pedida.
 export const PAGING_EDGE_BARS = 50;
 
+// A abertura do gráfico que acompanha o fim mostra só as últimas velas, como a corretora.
+export const INITIAL_VISIBLE_BARS = 150;
+
 // Pontos do cone: a largura cresce com √fração do caminho até o fechamento (plan D1).
 export const CONE_STEPS = 12;
 
@@ -23,3 +26,11 @@ export type ChartLayer = (typeof CHART_LAYER)[keyof typeof CHART_LAYER];
 export const MARKER_LABEL = { buy: 'Compra', sell: 'Venda' } as const;
 
 export const CHART_PREFERENCES_STORAGE_KEY = 'ativada.chart-preferences';
+
+// Como a vela aparece em frase ("na vela de 1 h").
+export const TIMEFRAME_PHRASE: Readonly<Record<string, string>> = {
+  '15m': '15 min',
+  '1h': '1 h',
+  '4h': '4 h',
+  '1d': '1 dia',
+};

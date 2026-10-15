@@ -69,6 +69,7 @@ export function createFakeChartSurface(container: HTMLElement): FakeChartSurface
     centerOn: record('centerOn'),
     zoom: record('zoom'),
     fit: record('fit'),
+    showLast: record('showLast'),
     scrollToEnd: record('scrollToEnd'),
     onCrosshairMove: (listener) => subscribe(listeners.crosshair, listener),
     onClick: (listener) => subscribe(listeners.click, listener),

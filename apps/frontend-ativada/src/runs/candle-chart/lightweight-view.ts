@@ -7,6 +7,7 @@ import type { MouseEventParams, Time, TickMarkType } from './lightweight-surface
 const toSeconds = (time: Time): number => (typeof time === 'number' ? time : 0);
 const ZOOM_BASE = 0.75;
 const MIN_VISIBLE_BARS = 5;
+const RIGHT_MARGIN_BARS = 6;
 
 function indexOfEvent(ctx: Context, params: MouseEventParams<Time>): number | null {
   const { time } = params;
@@ -43,7 +44,14 @@ export function buildEvents(ctx: Context): EventSubscriptions {
 
 type ViewControls = Pick<
   ChartSurface,
-  'zoom' | 'fit' | 'scrollToEnd' | 'centerOn' | 'setCrosshair' | 'setTimeLabels' | 'destroy'
+  | 'zoom'
+  | 'fit'
+  | 'showLast'
+  | 'scrollToEnd'
+  | 'centerOn'
+  | 'setCrosshair'
+  | 'setTimeLabels'
+  | 'destroy'
 >;
 
 export function buildView(ctx: Context): ViewControls {
@@ -62,6 +70,8 @@ export function buildView(ctx: Context): ViewControls {
       showRange((range.from + range.to) / 2, (range.to - range.from) * ZOOM_BASE ** step);
     },
     fit: (): void => scale.fitContent(),
+    showLast: (bars): void =>
+      showRange(ctx.state.candles.length - 1 - bars / 2 + RIGHT_MARGIN_BARS, bars),
     scrollToEnd: (): void => scale.scrollToRealTime(),
     centerOn: (time): void => {
       const range = scale.getVisibleLogicalRange();

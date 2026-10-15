@@ -121,6 +121,8 @@ export type ChartSurface = {
   readonly centerOn: (time: SurfaceTime) => void;
   readonly zoom: (step: number) => void;
   readonly fit: () => void;
+  // Mostra só as últimas N velas, com a ponta direita à vista (abertura padrão quando o gráfico acompanha o fim).
+  readonly showLast: (bars: number) => void;
   readonly scrollToEnd: () => void;
   readonly destroy: () => void;
 };

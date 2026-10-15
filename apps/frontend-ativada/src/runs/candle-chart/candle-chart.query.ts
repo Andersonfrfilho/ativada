@@ -1,8 +1,14 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  type QueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 
 import { API_PATH } from '../../app/app.constant.js';
 import { useApiClient } from '../../app/useAppContext.hook.js';
+import type { ApiClient } from '../../http/api-client.js';
 import { RUN_QUERY_ROOT } from '../runs.query.js';
 import { marketCandleSchema, type MarketCandle } from './market-candles.validation.js';
 import { projectionsSchema, type Projections } from './projections.validation.js';
@@ -84,28 +90,44 @@ export function useProjectionsQuery(params: ProjectionsParams): UseQueryResult<P
   });
 }
 
+function marketCandlesKey(params: MarketCandlesParams): readonly unknown[] {
+  return [MARKET_QUERY_ROOT, params.symbol, params.timeframe, 'candles', params.from, params.to];
+}
+
+function requestMarketCandles(
+  client: ApiClient,
+  params: MarketCandlesParams,
+): Promise<MarketCandle[]> {
+  return client.request({
+    path: withQuery(API_PATH.CANDLES, {
+      symbol: params.symbol,
+      timeframe: params.timeframe,
+      from: String(params.from),
+      to: String(params.to),
+    }),
+    schema: marketCandleSchema.array(),
+  });
+}
+
 export function useMarketCandlesQuery(params: MarketCandlesParams): UseQueryResult<MarketCandle[]> {
   const client = useApiClient();
   return useQuery({
-    queryKey: [
-      MARKET_QUERY_ROOT,
-      params.symbol,
-      params.timeframe,
-      'candles',
-      params.from,
-      params.to,
-    ],
+    queryKey: marketCandlesKey(params),
     enabled: params.isEnabled ?? true,
     placeholderData: keepPreviousData,
-    queryFn: () =>
-      client.request({
-        path: withQuery(API_PATH.CANDLES, {
-          symbol: params.symbol,
-          timeframe: params.timeframe,
-          from: String(params.from),
-          to: String(params.to),
-        }),
-        schema: marketCandleSchema.array(),
-      }),
+    queryFn: () => requestMarketCandles(client, params),
+  });
+}
+
+// Uma página de velas FECHADAS é imutável para o par de limites que a pediu: pode ficar no cache para sempre.
+export function fetchMarketCandlesPage(
+  queryClient: QueryClient,
+  client: ApiClient,
+  params: MarketCandlesParams,
+): Promise<MarketCandle[]> {
+  return queryClient.fetchQuery({
+    queryKey: marketCandlesKey(params),
+    staleTime: Infinity,
+    queryFn: () => requestMarketCandles(client, params),
   });
 }
