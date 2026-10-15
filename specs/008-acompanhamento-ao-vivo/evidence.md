@@ -237,3 +237,22 @@ panel-test: 690 pass, 0 fail (53 arquivos)
 WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
 panel-test: 691 pass, 0 fail (53 arquivos)
 ```
+
+## T2.3 — Texto das decisões (sonnet, 2026-10-14)
+
+- `apps/frontend-ativada/src/runs/live-tracking/decision-text.ts` (puro, `BigInt`, sem `Number`): `formatClosingMoment` (hora do
+  FECHAMENTO no fuso do usuário, "08:00 de hoje" / "23:00 de ontem" / data completa, pelo `formatRelativeMoment` do painel),
+  `formatScoreOfThreshold` ("1 de 2", vírgula pt-BR, até 2 casas), `formatUsdt` (dinheiro na direção do campo no servidor: saldo,
+  resultado e "ainda cabe" descem; perda e "falta" sobem), `formatDirectedPercent` (taxa de 12 casas do servidor vira % de 2 casas
+  arredondada para baixo ou para cima, em `BigInt`) e `describeLiveResult` (resultado desce sempre; zero exato sai "= 0,00 (0,00%)"
+  com tendência `flat`, o cinza do redesenho aprovado).
+- Contrato `test/decision-text.contract.ts` (na lista explícita do `package.json`): `America/Sao_Paulo` e `America/New_York`
+  (a mesma vela é "ontem" num fuso e "hoje" no outro), virada do dia às 00:00 local (23:59 x 00:00), data completa acima de
+  ontem, pontuação "1 de 2" com negativo e arredondamento, dinheiro com 16 dígitos inteiros (acima de 2^53), as duas direções de
+  arredondamento (ganho, perda, centésimo de ponto percentual), texto que não é decimal vira "—", e uma varredura do código-fonte
+  que reprova `Number(`, `parseFloat`, `parseInt`, `toFixed` e `Math.`.
+
+```text
+WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
+panel-test: 710 pass, 0 fail (54 arquivos)
+```
