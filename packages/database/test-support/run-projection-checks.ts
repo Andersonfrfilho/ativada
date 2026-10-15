@@ -6,10 +6,10 @@ import {
   numericText,
   runDecidedCandles,
 } from '../../../test/fixtures/projections/projection-dataset.fixture.js';
+import { toProjectionCounts } from '../../../test/fixtures/projections/projection-counts.fixture.js';
 import {
   summarizeOracle,
   type OraclePrediction,
-  type OracleSummary,
 } from '../../../test/fixtures/projections/projection-summary-oracle.fixture.js';
 import { REAL_DATASETS } from '../../../test/fixtures/strategy-engine/signal/classic-signals.fixture.js';
 import type { EngineCandle } from '../../strategy-engine/src/index.js';
@@ -90,28 +90,6 @@ async function seedRunWithSignals(params: {
   return run.id;
 }
 
-function expectedCounts(summary: OracleSummary): ProjectionCounts {
-  const strength = (name: 'weak' | 'strong' | 'decided'): { hits: number; misses: number } => ({
-    hits: summary.byStrength[name].hits,
-    misses: summary.byStrength[name].counted - summary.byStrength[name].hits,
-  });
-  return {
-    noSide: summary.noSide,
-    pending: summary.pending,
-    hits: summary.hits,
-    misses: summary.misses,
-    ties: summary.ties,
-    upMoves: summary.upMoves,
-    banded: summary.banded,
-    inside: summary.inside,
-    byStrength: {
-      weak: strength('weak'),
-      strong: strength('strong'),
-      decided: strength('decided'),
-    },
-  };
-}
-
 function assertSameCounts(
   context: LifecycleCheckContext,
   params: {
@@ -167,7 +145,7 @@ async function checkRealDatasets(context: LifecycleCheckContext): Promise<void> 
       const counts = await reads.summarizeProjections(owner.scope, runId, params);
       assertSameCounts(context, {
         actual: counts,
-        expected: expectedCounts(golden),
+        expected: toProjectionCounts(golden),
         label: `${dataset.name} · ${strategyName}`,
       });
       await checkItemsAgainstOracle({ context, reads, owner, runId, params, decided });
@@ -367,7 +345,7 @@ async function checkSyntheticSummary(context: LifecycleCheckContext): Promise<Se
   const oracle = summarizeOracle(buildSyntheticPredictions());
   assertSameCounts(context, {
     actual: counts,
-    expected: expectedCounts(oracle),
+    expected: toProjectionCounts(oracle),
     label: 'sintético: lacuna, fim da faixa, dois limiares e janela parada fora',
   });
   context.assertCondition(

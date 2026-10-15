@@ -132,6 +132,7 @@ export function buildApiRouteDependencies(
       tradeSummary: notUsed,
       liveStatus: notUsed,
       decisions: notUsed,
+      strategyLayers: notUsed,
     },
     isDocumentationEnabled,
   };

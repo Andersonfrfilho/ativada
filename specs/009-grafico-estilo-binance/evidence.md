@@ -136,3 +136,29 @@ Modelo: `sonnet`. Sem migration e sem índice novo (os três já usados são os 
 Gates (WSL, espelho `~/gates/ativada-spec9`): `typecheck`, `lint` e `format:check` limpos; `database-test` OK;
 `route-isolation-test` OK; 102 testes vizinhos passam (oráculo, `database.contract`, `ownership-registry`,
 `code-size-limits`, `app-import-boundary`, `strategy-engine-boundary`, `test-support-boundary`).
+
+## T1.3 — `GET /v1/runs/:runId/strategy-layers` (2026-10-15)
+
+Modelo: `sonnet`. Sem migration; `packages/strategy-engine` e `packages/run-recording` intocados.
+
+- **Rota** (`apps/api-ativada/src/runs/projections/strategy-layers.{route,docs,schema,use-case}.ts`): `access: USER`,
+  `documentation` com o esquema Zod de saída, query estrita (`from`/`to`, `to ≤ from` é `to: must_be_after_from`), política
+  `RUN_CHART` (o mesmo balde de 30/min do `/chart`). Resposta em colunas (`layers-1`): `candleTimes`, `score`, `actions`, `atr`,
+  `lines` (uma por saída das regras de PREÇO: Donchian, cruzamento de EMA, Bollinger, na ordem das regras; rótulo do servidor com
+  o período e a vírgula decimal) e `thresholds` por trecho. Sem `to`: fim da faixa da execução; sem `from`: 1.000 velas para
+  trás; recorte à faixa da execução (fora dela: `from: outside_run`); mais de 1.000 velas: `to: range_too_large` SEM consultar o
+  banco. Fila ou ao vivo sem vela: listas vazias. Estratégia sem regra de preço: `lines: []`.
+- **Walk-forward**: um trecho de limiar por janela de teste que terminou bem (a combinação sai de `best_params` por
+  `deriveStrategyConfig`, só leitura de configuração); a janela parada não tem limiar, mas as barras do placar dela aparecem; o
+  rótulo perde os números quando o período da regra muda entre janelas.
+- **No máximo 4 consultas**: execução, versão, janelas (só walk-forward) e as linhas da faixa (`projection-context.ts` é a
+  leitura única que a rota das previsões, T1.4, também usa). Ligado em `create-api-routes.ts` e
+  `create-domain-route-dependencies.ts`.
+- **Contratos** (`test/api-run-strategy-layers.contract.test.ts`, `loadApiApp()`): formato em colunas, as 7 linhas e os rótulos,
+  valores em texto decimal e `null`, limiares recortados, `lines: []`, fila vazia, teto de 1.000 velas (1.000 passa, 1.001 é 400
+  sem consulta), recorte e `outside_run`, walk-forward com dois limiares e janela parada, 401, 404 igual (alheia, inexistente,
+  malformada, apagada), 400 com todos os erros e sem eco, esquema Zod da resposta, 3 ou 4 consultas e o 31º pedido é 429. O
+  repositório em memória (`in-memory-projections.fixture.ts`) conta o resumo pelo ORÁCULO independente.
+
+Gates (WSL, espelho `~/gates/ativada-spec9`): `typecheck`, `lint` e `format:check` limpos; 151 testes passam (os 25 novos e os
+vizinhos `api-openapi`, `api-docs-page`, `api-run-chart`, `api-run-live-status`, `api-runs`, `admin-boundary-routes`).

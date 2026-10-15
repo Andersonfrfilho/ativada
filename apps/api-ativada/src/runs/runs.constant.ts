@@ -55,6 +55,8 @@ export const RUN_CHART_PATH = '/v1/runs/:runId/chart';
 export const RUN_TRADE_SUMMARY_PATH = '/v1/runs/:runId/trade-summary';
 export const RUN_LIVE_STATUS_PATH = '/v1/runs/:runId/live-status';
 export const RUN_DECISIONS_PATH = '/v1/runs/:runId/decisions';
+export const RUN_STRATEGY_LAYERS_PATH = '/v1/runs/:runId/strategy-layers';
+export const RUN_PROJECTIONS_PATH = '/v1/runs/:runId/projections';
 
 // Acima disto, o gráfico agrupa os preenchimentos por coluna em vez de mandar cada um (ADR 0002, spec 005, O9).
 export const CHART_MARKER_LIMIT = 500;

@@ -21,6 +21,8 @@ import type { RunChartUseCase } from '../runs/chart/run-chart.use-case.js';
 import { createLiveStatusRoute } from '../runs/live-status/live-status.route.js';
 import type { LiveStatusUseCase } from '../runs/live-status/live-status.use-case.js';
 import { createRunDecisionsRoute } from '../runs/live-status/run-decisions.route.js';
+import { createStrategyLayersRoute } from '../runs/projections/strategy-layers.route.js';
+import type { StrategyLayersUseCase } from '../runs/projections/strategy-layers.use-case.js';
 import type { RunDecisionsUseCase } from '../runs/live-status/run-decisions.use-case.js';
 import { createTradeSummaryRoute } from '../runs/trade-summary/trade-summary.route.js';
 import type { TradeSummaryUseCase } from '../runs/trade-summary/trade-summary.use-case.js';
@@ -50,6 +52,7 @@ export type RunRoutesBundle = {
   readonly tradeSummary: TradeSummaryUseCase;
   readonly liveStatus: LiveStatusUseCase;
   readonly decisions: RunDecisionsUseCase;
+  readonly strategyLayers: StrategyLayersUseCase;
 };
 
 export type ApiRouteDependencies = HealthRouteDependencies & {
@@ -93,6 +96,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     createTradeSummaryRoute(dependencies.runs.tradeSummary),
     createLiveStatusRoute(dependencies.runs.liveStatus),
     createRunDecisionsRoute(dependencies.runs.decisions),
+    createStrategyLayersRoute(dependencies.runs.strategyLayers),
     ...createRunExportRoutes(dependencies.runs.exportRunCsv),
   ];
   // A tabela final inclui as próprias rotas de documentação: o documento é gerado depois, dela inteira.

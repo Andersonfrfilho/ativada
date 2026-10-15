@@ -194,6 +194,19 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     live: runs.liveStatus,
     exchange: EXCHANGE,
   };
+  // As camadas e as previsões (spec 009): as mesmas consultas anotadas em `queries`, mais as das janelas.
+  const projectionDeps = {
+    ...liveStatusDeps,
+    results: {
+      listWindows: (
+        ...args: Parameters<typeof runs.results.listWindows>
+      ): ReturnType<typeof runs.results.listWindows> => {
+        runs.liveCalls.push('listWindows');
+        return runs.results.listWindows(...args);
+      },
+    },
+    projections: runs.projections,
+  };
   const series = app.runSeriesUseCases.createRunSeriesUseCases({ results: runs.results });
   const routes: readonly Route[] = [
     ...app.marketRoutes.createMarketRoutes({
@@ -259,6 +272,9 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     ),
     app.runDecisionsRoute.createRunDecisionsRoute(
       app.runDecisionsUseCase.createRunDecisionsUseCase(liveStatusDeps),
+    ),
+    app.strategyLayersRoute.createStrategyLayersRoute(
+      app.strategyLayersUseCase.createStrategyLayersUseCase(projectionDeps),
     ),
     ...app.runExportRoutes.createRunExportRoutes(
       app.exportCsv.createExportRunCsvUseCase({

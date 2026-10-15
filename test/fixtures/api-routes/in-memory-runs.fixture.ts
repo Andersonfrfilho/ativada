@@ -19,6 +19,7 @@ import type {
   RunLogEntry,
   RunRecord,
   RunLiveStatusRepository,
+  RunProjectionRepository,
   RunRepository,
   RunResultRepository,
   RunStatus,
@@ -28,6 +29,7 @@ import type {
 } from '../../../packages/database/src/index.js';
 import type { OwnerScope } from '../../../packages/database/src/ownership/owner-scope.js';
 import { createInMemoryLiveStatus } from './in-memory-live-status.fixture.js';
+import { createInMemoryProjections } from './in-memory-projections.fixture.js';
 import {
   referenceFillClusters,
   referencePriceColumns,
@@ -84,6 +86,8 @@ export type InMemoryRuns = {
   >;
   // As leituras do acompanhamento ao vivo e o nome de cada consulta feita (a harness acrescenta as do pedido).
   readonly liveStatus: RunLiveStatusRepository;
+  // As leituras da previsão e das camadas (spec 009): anotam o nome em `liveCalls` como as do acompanhamento.
+  readonly projections: RunProjectionRepository;
   readonly liveCalls: string[];
   // Cada leitura de resultado anota o `limit` pedido: provam que a rota lê por página, nunca a série inteira.
   readonly listCalls: Record<ResultKind | 'log', number[]>;
@@ -534,6 +538,13 @@ export function createInMemoryRuns(
     calls: liveCalls,
   });
 
+  const projections = createInMemoryProjections({
+    isOwned: (scope, runId) => ownedRun(scope, runId) !== undefined,
+    storeOf,
+    candleSeed,
+    calls: liveCalls,
+  });
+
   const results: InMemoryRuns['results'] = {
     readTradeTotals,
     listPriceColumns,
@@ -576,6 +587,7 @@ export function createInMemoryRuns(
     repository,
     results,
     liveStatus,
+    projections,
     liveCalls,
     listCalls,
     fillLookups,

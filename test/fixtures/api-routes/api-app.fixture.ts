@@ -28,6 +28,10 @@ import type * as LiveStatusRouteModule from '../../../apps/api-ativada/src/runs/
 import type * as LiveStatusUseCaseModule from '../../../apps/api-ativada/src/runs/live-status/live-status.use-case.js';
 import type * as RunDecisionsRouteModule from '../../../apps/api-ativada/src/runs/live-status/run-decisions.route.js';
 import type * as RunDecisionsUseCaseModule from '../../../apps/api-ativada/src/runs/live-status/run-decisions.use-case.js';
+import type * as StrategyLayersRouteModule from '../../../apps/api-ativada/src/runs/projections/strategy-layers.route.js';
+import type * as StrategyLayersUseCaseModule from '../../../apps/api-ativada/src/runs/projections/strategy-layers.use-case.js';
+import type * as ProjectionRuleModule from '../../../apps/api-ativada/src/runs/projections/projection-rule.js';
+import type * as ProjectionMessagesModule from '../../../apps/api-ativada/src/runs/projections/projection-messages.js';
 import type * as LiveBalanceModule from '../../../apps/api-ativada/src/runs/live-status/live-balance.js';
 import type * as LiveGoalProgressModule from '../../../apps/api-ativada/src/runs/live-status/live-goal-progress.js';
 import type * as DecisionConditionModule from '../../../apps/api-ativada/src/runs/live-status/decision-condition.js';
@@ -122,6 +126,10 @@ export type ApiApp = {
   readonly liveStatusUseCase: typeof LiveStatusUseCaseModule;
   readonly runDecisionsRoute: typeof RunDecisionsRouteModule;
   readonly runDecisionsUseCase: typeof RunDecisionsUseCaseModule;
+  readonly strategyLayersRoute: typeof StrategyLayersRouteModule;
+  readonly strategyLayersUseCase: typeof StrategyLayersUseCaseModule;
+  readonly projectionRule: typeof ProjectionRuleModule;
+  readonly projectionMessages: typeof ProjectionMessagesModule;
   readonly liveBalance: typeof LiveBalanceModule;
   readonly liveGoalProgress: typeof LiveGoalProgressModule;
   readonly storedReadings: typeof StoredReadingsModule;
@@ -221,6 +229,10 @@ export async function loadApiApp(): Promise<ApiApp> {
     liveStatusUseCase: await load('runs/live-status/live-status.use-case'),
     runDecisionsRoute: await load('runs/live-status/run-decisions.route'),
     runDecisionsUseCase: await load('runs/live-status/run-decisions.use-case'),
+    strategyLayersRoute: await load('runs/projections/strategy-layers.route'),
+    strategyLayersUseCase: await load('runs/projections/strategy-layers.use-case'),
+    projectionRule: await load('runs/projections/projection-rule'),
+    projectionMessages: await load('runs/projections/projection-messages'),
     liveBalance: await load('runs/live-status/live-balance'),
     liveGoalProgress: await load('runs/live-status/live-goal-progress'),
     storedReadings: await load('runs/live-status/stored-readings'),
