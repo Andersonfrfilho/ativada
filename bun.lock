@@ -103,6 +103,14 @@
         "@ativada/environment": "workspace:*",
       },
     },
+    "packages/risk-analyst": {
+      "name": "@ativada/risk-analyst",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ativada/statistics": "workspace:*",
+        "@ativada/strategy-engine": "workspace:*",
+      },
+    },
     "packages/run-recording": {
       "name": "@ativada/run-recording",
       "version": "0.0.0",
@@ -154,6 +162,8 @@
     "@ativada/identity-admin": ["@ativada/identity-admin@workspace:packages/identity-admin"],
 
     "@ativada/market-data-crypto": ["@ativada/market-data-crypto@workspace:packages/market-data-crypto"],
+
+    "@ativada/risk-analyst": ["@ativada/risk-analyst@workspace:packages/risk-analyst"],
 
     "@ativada/run-recording": ["@ativada/run-recording@workspace:packages/run-recording"],
 

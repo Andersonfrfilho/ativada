@@ -180,3 +180,19 @@ bun run format:check → All matched files use Prettier code style!
 bun test test/risk-analyst-15m-slice.contract.test.ts test/risk-analyst-auditor-oracle.contract.test.ts
  40 pass / 0 fail / 21424 expect() calls
 ```
+
+## T1.1 — pacote `packages/risk-analyst` e leituras de mercado (2026-10-15)
+
+- **Pacote novo** `@ativada/risk-analyst` (workspace, `tsconfig` que estende a base, `main`/`exports` em `src/index.ts`). Só duas dependências, ambas do workspace: `@ativada/strategy-engine` (indicadores, `signalStep`, `EngineDecimal`) e `@ativada/statistics` (o ÚNICO Wilson; consumido na T1.2). Nenhuma dependência nova, nada baixado da internet. `bun.lock` editado só nas linhas do pacote (o bloco `packages/risk-analyst` e a linha `@ativada/risk-analyst@workspace`); no espelho WSL `bun install --frozen-lockfile` aceitou o lock sem mudança ("no changes") e criou os links `packages/risk-analyst/node_modules/@ativada/{statistics,strategy-engine}`. Nenhum `bun install` em `/mnt/c` nem no `node_modules` do Windows; a junção no Windows (Edge) não foi necessária porque nada do painel importa o pacote ainda.
+- **`analyst.constant.ts`**: `ANALYST_VERSION = 'analyst-1'`, os vocabulários fechados (especialista, postura, trava, motivos, porta, comandos) e `ANALYST_RULES` com TODOS os números da A9. O mínimo de 30 contadas não é redeclarado (vem de `@ativada/statistics`).
+- **`market-readings.ts`** (A8): volume relativo (vela ÷ média das 96 anteriores, a vela `t` fora da média; soma zero = `'0'`; falta de vela = `null`), `atrRate` (ATR do `signalStep` ÷ fechamento), percentis 90/95 nearest-rank (posição `⌈p·N ÷ 100⌉` sobre as velas com leitura em `(t − 2.880·d, t]`, `null` abaixo de 96 amostras), momentum de 4 e 16 velas, custo de ida e volta `2 × (taxa + slippage)` exato e razão movimento ÷ custo. Divisão a 12 casas para BAIXO; tudo em texto decimal (`EngineDecimal`), nenhum float. Velas depois de `t` nunca entram (sem lookahead).
+- **Contratos** (`test/risk-analyst-boundary.contract.test.ts`, 7; `test/risk-analyst-market-readings.contract.test.ts`, 21): fronteira (manifesto exato, só imports relativos e os dois pacotes, rede de impurezas com sonda, nada de Wilson reescrito, sem `default export` nem `as`), contas à mão de cada leitura nas bordas (96/95 amostras, 29/30 não se aplicam aqui, `t − 2.880·d` fora e `t` dentro, arredondamento do negativo para baixo, custo zero) e corte da série dando a MESMA leitura. Os testes carregam o código por `loadRiskAnalystApi()` (`test/fixtures/risk-analyst/risk-analyst-api.fixture.ts`, variável `RISK_ANALYST_SOURCE`), para os mutantes da T1.4 entrarem.
+
+```text
+bun run typecheck    → verde (tsc raiz e painel)
+bun run lint         → verde
+bun run format:check → All matched files use Prettier code style!
+bun test (boundary + market-readings)                      → 28 pass / 0 fail
+bun test (+ strategy-engine-boundary, code-size-limits, app-import-boundary, database.contract, wilson-interval,
+          projection-rule/messages/summary-oracle, risk-analyst-15m-slice, risk-analyst-auditor-oracle) → 143 pass / 0 fail
+```
