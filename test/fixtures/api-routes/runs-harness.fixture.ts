@@ -276,6 +276,9 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     app.strategyLayersRoute.createStrategyLayersRoute(
       app.strategyLayersUseCase.createStrategyLayersUseCase(projectionDeps),
     ),
+    app.projectionsRoute.createProjectionsRoute(
+      app.projectionsUseCase.createProjectionsUseCase(projectionDeps),
+    ),
     ...app.runExportRoutes.createRunExportRoutes(
       app.exportCsv.createExportRunCsvUseCase({
         results: runs.results,

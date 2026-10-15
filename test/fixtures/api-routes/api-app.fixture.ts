@@ -30,6 +30,8 @@ import type * as RunDecisionsRouteModule from '../../../apps/api-ativada/src/run
 import type * as RunDecisionsUseCaseModule from '../../../apps/api-ativada/src/runs/live-status/run-decisions.use-case.js';
 import type * as StrategyLayersRouteModule from '../../../apps/api-ativada/src/runs/projections/strategy-layers.route.js';
 import type * as StrategyLayersUseCaseModule from '../../../apps/api-ativada/src/runs/projections/strategy-layers.use-case.js';
+import type * as ProjectionsRouteModule from '../../../apps/api-ativada/src/runs/projections/projections.route.js';
+import type * as ProjectionsUseCaseModule from '../../../apps/api-ativada/src/runs/projections/projections.use-case.js';
 import type * as ProjectionRuleModule from '../../../apps/api-ativada/src/runs/projections/projection-rule.js';
 import type * as ProjectionMessagesModule from '../../../apps/api-ativada/src/runs/projections/projection-messages.js';
 import type * as LiveBalanceModule from '../../../apps/api-ativada/src/runs/live-status/live-balance.js';
@@ -128,6 +130,8 @@ export type ApiApp = {
   readonly runDecisionsUseCase: typeof RunDecisionsUseCaseModule;
   readonly strategyLayersRoute: typeof StrategyLayersRouteModule;
   readonly strategyLayersUseCase: typeof StrategyLayersUseCaseModule;
+  readonly projectionsRoute: typeof ProjectionsRouteModule;
+  readonly projectionsUseCase: typeof ProjectionsUseCaseModule;
   readonly projectionRule: typeof ProjectionRuleModule;
   readonly projectionMessages: typeof ProjectionMessagesModule;
   readonly liveBalance: typeof LiveBalanceModule;
@@ -231,6 +235,8 @@ export async function loadApiApp(): Promise<ApiApp> {
     runDecisionsUseCase: await load('runs/live-status/run-decisions.use-case'),
     strategyLayersRoute: await load('runs/projections/strategy-layers.route'),
     strategyLayersUseCase: await load('runs/projections/strategy-layers.use-case'),
+    projectionsRoute: await load('runs/projections/projections.route'),
+    projectionsUseCase: await load('runs/projections/projections.use-case'),
     projectionRule: await load('runs/projections/projection-rule'),
     projectionMessages: await load('runs/projections/projection-messages'),
     liveBalance: await load('runs/live-status/live-balance'),

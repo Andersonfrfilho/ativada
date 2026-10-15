@@ -133,6 +133,7 @@ export function buildApiRouteDependencies(
       liveStatus: notUsed,
       decisions: notUsed,
       strategyLayers: notUsed,
+      projections: notUsed,
     },
     isDocumentationEnabled,
   };

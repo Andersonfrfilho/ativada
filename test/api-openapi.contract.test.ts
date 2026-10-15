@@ -133,6 +133,8 @@ describe('OpenAPI gerado da tabela de rotas', () => {
       '/v1/runs/{runId}/trade-summary',
       '/v1/runs/{runId}/live-status',
       '/v1/runs/{runId}/decisions',
+      '/v1/runs/{runId}/strategy-layers',
+      '/v1/runs/{runId}/projections',
     ]) {
       const operation = asRecord(asRecord(paths[path])['get']);
       expect(Object.keys(asRecord(operation['responses']))).toContain('429');
@@ -266,6 +268,14 @@ describe('OpenAPI gerado da tabela de rotas', () => {
     ]) {
       expect(byOperation.get(operation)?.get('404')).toStrictEqual(['RUN_NOT_FOUND']);
       expect(byOperation.get(operation)?.get('409')).toStrictEqual(['RUN_NOT_LIVE']);
+    }
+    for (const operation of [
+      'get /v1/runs/{runId}/strategy-layers',
+      'get /v1/runs/{runId}/projections',
+    ]) {
+      expect(byOperation.get(operation)?.get('404')).toStrictEqual(['RUN_NOT_FOUND']);
+      expect(byOperation.get(operation)?.get('400')).toStrictEqual(['REQUEST_VALIDATION_FAILED']);
+      expect(byOperation.get(operation)?.has('409')).toBe(false);
     }
     for (const code of [
       'REQUEST_VALIDATION_FAILED',

@@ -162,3 +162,25 @@ Modelo: `sonnet`. Sem migration; `packages/strategy-engine` e `packages/run-reco
 
 Gates (WSL, espelho `~/gates/ativada-spec9`): `typecheck`, `lint` e `format:check` limpos; 151 testes passam (os 25 novos e os
 vizinhos `api-openapi`, `api-docs-page`, `api-run-chart`, `api-run-live-status`, `api-runs`, `admin-boundary-routes`).
+
+## T1.4 — `GET /v1/runs/:runId/projections` (2026-10-15)
+
+Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados.
+
+- **Rota** (`apps/api-ativada/src/runs/projections/projections.{route,docs,schema,use-case}.ts`, mais `projection-items.ts`,
+  `projection-summary.ts`, `projection-current.ts`): `access: USER`, `documentation`, política `RUN_LIVE_STATUS` (o balde de 60/min,
+  agora com três rotas), `limit` 1 a 100 (padrão 24) e `cursor` = `encodeTimeCursor`. Resposta `{ version: 'projection-1',
+  timeframe, current, summary, items, nextCursor }`. `current` só para a `live_paper` rodando (lado, força, postura pelas posições
+  abertas, faixa de ±ATR, frase pronta) ou `unavailable` com `not_running` > `no_candle` > `warming_up` > `neutral`; o resumo vem da
+  consulta única da T1.2 e as taxas, o Wilson e as frases saem em TypeScript; `items` com `pending` (fora da faixa) e `gap`
+  (dentro da faixa e ausente em `candles`). Qualquer tipo de execução responde (sem 409).
+- **No máximo 6 consultas**: execução, versão, janelas (só walk-forward), resumo e página (juntos), a linha mais nova (só em página
+  mais antiga da ao vivo) e as posições (só quando há tendência).
+- **Contratos** (`test/api-run-projections.contract.test.ts`, 26 testes): resumo e itens com contas à mão (acerto, erro, empate,
+  sem lado, pendente, faixa, variação a 4 casas para baixo), tendência com e sem posição, cada motivo de "sem previsão" e a
+  precedência, backtest sem `current`, walk-forward só com a janela de teste que terminou bem e o limiar dela, lacuna, cursor
+  (páginas concatenadas = lista), 24 por padrão, 5 e 6 consultas, 401, 404 igual, 400 sem eco e o 61º pedido é 429. O contrato
+  `api-openapi` ganhou as duas rotas (429 e códigos de erro).
+
+Gates (WSL, espelho): `typecheck`, `lint`, `format:check` limpos; 223 testes passam (os 26 novos mais `api-openapi`,
+`api-docs-page`, `api-run-*`, `api-runs`, `admin-boundary-routes`, `code-size-limits`, `app-import-boundary`).
