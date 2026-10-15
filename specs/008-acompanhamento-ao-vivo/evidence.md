@@ -324,3 +324,7 @@ panel-test: 758 pass, 0 fail (58 arquivos)
 panel-e2e: OK — 22 passed (3.7m), incluindo "celular: sem rolagem horizontal em nenhuma tela do painel"
 WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde · panel-test: 758 pass, 0 fail
 ```
+
+## Conferência final da Fase 3 no app dev (2026-10-15)
+
+API dev reiniciada (a que rodava era anterior às rotas `live-status` e `decisions`; só o processo da API, nenhum container) e painel dev no ar em `http://127.0.0.1:56100`, usuário de teste local. Verificado por texto no Edge: detalhe da simulação LINK/USDT (linha de pulso, Acompanhamento, o que falta, meta com ritmo, gráfico, tabela com grupos "Mostrar N horas iguais" e "Ver decisões anteriores"), Visão geral (pulso, "Última decisão: esperou às …", "Ver o acompanhamento") e lista de Backtests (cartão ao vivo, grupos com "N de M positivos"). Sem rolagem horizontal a 375 px e a 1280 px (`scrollWidth` = largura da janela). Captura única: `specs/008-acompanhamento-ao-vivo/capturas/fase3-detalhe-1280-claro.png`. A conferência a 375 px no tema escuro e a revisão de design completa ficam na T4.1.
