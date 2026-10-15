@@ -275,3 +275,19 @@ Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados.
   está nos rótulos do eixo; uma grade a 3:1 competiria com as velas. Se o usuário preferir 3:1 também nela, é trocar o 45% do token (≈ 75%) e o piso do teste.
 
 Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` 830 passam, 0 falham.
+
+## T2.3 — Puros do gráfico (2026-10-15)
+
+Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados. Nada de React: só funções puras e uma preferência de tela.
+
+- **`src/runs/candle-chart/`**: `candle-series.ts` (a ÚNICA conversão texto→`number`, `toDrawingNumber`, mais segundos UTC, velas, barras de volume com a cor decidida por comparação exata em `BigInt`),
+  `strategy-line-series.ts` (vela sem valor vira lacuna, nunca zero), `score-series.ts` (barras do placar e trechos de limiar), `marker-series.ts` (a seta cai na vela que contém o preenchimento em qualquer vela da tela;
+  `null` = agrupado = sem setas), `projection-cone.ts` (`toSurfaceProjection` e `buildProjectionCone`: abertura por √fração, nunca encolhe nem sai da faixa gravada, metade colorida do lado da tendência; sem tendência ou sem faixa, sem cone),
+  `candle-paging.ts` (quando pedir a página anterior, o intervalo `[from, to)` terminando na primeira vela que já existe, junção sem repetir vela, teto de 20.000 que descarta as mais distantes do foco),
+  `ohlc-text.ts` (legenda A/M/m/F com as mesmas casas, variação sobre o fechamento anterior em `BigInt` para baixo, volume compacto "23,9 mil", frase do `aria-live`) e `chart-preferences.ts`
+  (`localStorage` com `try/catch`, Zod com `.catch` por campo; "Stop e alvo" e "Esperou" desligados). Constantes em `candle-chart.constant.ts`. A previsão é só a tendência do placar com a faixa gravada; nenhuma função devolve preço-alvo.
+- **Contratos** (5 arquivos novos, 42 testes, todos na lista explícita do `package.json`): `chart-series` (inclui a guarda de que NENHUM outro arquivo da pasta chama `Number(`, `parseFloat` ou `parseInt`), `projection-cone`, `candle-paging`
+  (cinco páginas de 1.000 viram exatamente 5.000 sem repetir; a vela mais nova do mesmo `openTime` vale), `ohlc-text` (fusos `America/Sao_Paulo` e `America/New_York`: 03:00 e 02:00 para a mesma vela, e a data muda na virada do dia; variação "-0,20%" conferida à mão)
+  e `chart-preferences` (JSON quebrado, valor estranho, campo inválido cai sozinho, armazenamento que lança).
+
+Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` 872 passam, 0 falham (68 arquivos).
