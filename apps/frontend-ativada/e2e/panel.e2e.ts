@@ -12,6 +12,22 @@ import {
   runBacktestThroughTheScreen,
 } from './flows/backtest.flow.js';
 import { declareGoalRankAndSimulate, openPlanOfTheFirstGoal } from './flows/goals.flow.js';
+import {
+  dragBackThroughTheWholePeriod,
+  measureDragWithLoadedHistory,
+  openLongBacktest,
+  recordCandlePages,
+} from './flows/chart-paging.flow.js';
+import {
+  captureTheChartCard,
+  expectCanvasDrawn,
+  expectFormingCandleFollowsTheStream,
+  expectLegendOnTheFormingCandle,
+  expectKeyboardAnnouncements,
+  expectServerTexts,
+  openLiveRunWithProjections,
+  toggleLayerAndCountPixels,
+} from './flows/chart-live.flow.js';
 import { dropTheSocketAndComeBack } from './flows/live.flow.js';
 import { watchTheTrackingGetANewDecision } from './flows/live-tracking.flow.js';
 import { watchLiveFillsAppearOnTheChart } from './flows/live-trades.flow.js';
@@ -27,6 +43,7 @@ const DIST_INDEX = new URL('../dist/index.html', import.meta.url);
 const ROUND_PAUSE_MILLISECONDS = 6_000;
 const RATE_WINDOW_PAUSE_MILLISECONDS = 50_000;
 const consoleProblems: string[] = [];
+const cspViolations: string[] = [];
 let page: Page;
 
 test.describe.configure({ mode: 'serial' });
@@ -34,6 +51,7 @@ test.describe.configure({ mode: 'serial' });
 test.beforeAll(async ({ browser }) => {
   page = await (await browser.newContext()).newPage();
   page.on('console', (message) => {
+    if (message.text().includes('Content Security Policy')) cspViolations.push(message.text());
     const isFailedRequest = message.text().startsWith('Failed to load resource');
     if (message.type() === 'error' && !isFailedRequest) consoleProblems.push(message.text());
   });
@@ -48,6 +66,14 @@ async function expectNotice(): Promise<void> {
   await expect(page.getByRole('note', { name: 'Aviso de simulação' })).toContainText(NOTICE);
 }
 
+async function signInThroughKeycloak(): Promise<void> {
+  await page.getByRole('button', { name: 'Entrar com Keycloak' }).click();
+  await page.locator('#username').fill(environment.username);
+  await page.locator('#password').fill(environment.password);
+  await page.locator('#kc-login').click();
+  await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible();
+}
+
 test('rota protegida sem sessão leva ao login, com o aviso de simulação', async () => {
   await page.goto('/');
   await expect(page).toHaveURL(/\/login$/);
@@ -56,11 +82,7 @@ test('rota protegida sem sessão leva ao login, com o aviso de simulação', asy
 });
 
 test('login pelo Keycloak com PKCE volta ao painel e guarda o refresh só em cookie HttpOnly', async () => {
-  await page.getByRole('button', { name: 'Entrar com Keycloak' }).click();
-  await page.locator('#username').fill(environment.username);
-  await page.locator('#password').fill(environment.password);
-  await page.locator('#kc-login').click();
-  await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible();
+  await signInThroughKeycloak();
   await expectNotice();
   const cookies = await page.context().cookies();
   const refresh = cookies.find((cookie) => cookie.name === REFRESH_COOKIE);
@@ -180,6 +202,22 @@ test('simulação ao vivo: pela Visão geral até o gráfico, e a compra e a ven
   });
 });
 
+test('gráfico de velas: canvas com pixels, teclado, vela em formação pela kline falsa, previsão e cartões do servidor, sem violação de CSP', async () => {
+  await page.waitForTimeout(RATE_WINDOW_PAUSE_MILLISECONDS);
+  const control = { request: page.request, url: environment.controlUrl };
+  const projections = await openLiveRunWithProjections(page);
+  await expectCanvasDrawn(page);
+  await expectServerTexts(page, projections);
+  await expectFormingCandleFollowsTheStream(page, control);
+  await expectKeyboardAnnouncements(page);
+  await expectLegendOnTheFormingCandle(page, control);
+  for (const layer of ['Previsão', 'Stop e alvo', 'Linhas da estratégia']) {
+    console.log(`camada ${layer}: ${await toggleLayerAndCountPixels(page, layer)} pixels mudaram`);
+  }
+  await captureTheChartCard(page, control, environment.capturePath);
+  expect(cspViolations).toEqual([]);
+});
+
 test('acompanhamento: uma decisão de esperar gravada pelo servidor de controle traz a linha "Esperou" e o saldo novo, sem recarregar', async () => {
   // As rodadas anteriores esgotam o limite de 120 requisições por minuto (um 429 deixaria o saldo velho na tela).
   await page.waitForTimeout(RATE_WINDOW_PAUSE_MILLISECONDS);
@@ -187,6 +225,34 @@ test('acompanhamento: uma decisão de esperar gravada pelo servidor de controle 
     request: page.request,
     url: environment.controlUrl,
   });
+});
+
+test('gráfico de velas: com a decisão de esperar a camada "Esperou" desenha e a previsão fica neutra', async () => {
+  await page.waitForTimeout(RATE_WINDOW_PAUSE_MILLISECONDS);
+  const control = { request: page.request, url: environment.controlUrl };
+  const projections = await openLiveRunWithProjections(page);
+  await expectCanvasDrawn(page);
+  // Sem preço fresco a tela diz "o preço parou de chegar" no lugar da previsão (decisão de design); a vela aberta o refaz.
+  await expectLegendOnTheFormingCandle(page, control);
+  await expectServerTexts(page, projections);
+  console.log(`camada Esperou: ${await toggleLayerAndCountPixels(page, 'Esperou')} pixels mudaram`);
+  expect(cspViolations).toEqual([]);
+});
+
+test('gráfico de velas: arrastar pede a página anterior de velas e mede os quadros por segundo com 5.000 velas', async () => {
+  await page.waitForTimeout(RATE_WINDOW_PAUSE_MILLISECONDS);
+  const pages = recordCandlePages(page);
+  await openLongBacktest(page, { request: page.request, url: environment.controlUrl });
+  expect(pages).toHaveLength(1);
+  const first = pages[0];
+  const loading = await dragBackThroughTheWholePeriod(page, pages);
+  expect(pages.length).toBeGreaterThanOrEqual(2);
+  expect(pages[1]?.to).toBe(first?.from);
+  const loaded = await measureDragWithLoadedHistory(page);
+  console.log(`FPS ${JSON.stringify(loading)}`);
+  loaded.forEach((report) => console.log(`FPS ${JSON.stringify(report)} páginas=${pages.length}`));
+  await expectCanvasDrawn(page);
+  expect(cspViolations).toEqual([]);
 });
 
 test('metas: declarar a meta, ver o ranking estratégia x moeda e simular, com o cartão de meta ativa no painel', async () => {
@@ -281,6 +347,10 @@ test('exportar meus dados baixa o arquivo da API com o e-mail do usuário', asyn
 });
 
 test('apagar a conta pede o e-mail, encerra a sessão e leva ao login', async () => {
+  // A confirmação de apagar vale por 5 minutos após o login e a suíte já passou disso: entra de novo antes.
+  await page.getByRole('button', { name: 'Sair' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await signInThroughKeycloak();
   await page.goto('/conta');
   const button = page.getByRole('button', { name: 'Apagar minha conta' });
   await expect(button).toBeDisabled();
@@ -295,4 +365,5 @@ test('apagar a conta pede o e-mail, encerra a sessão e leva ao login', async ()
 
 test('nenhum erro de console nem violação de CSP durante todo o fluxo', () => {
   expect(consoleProblems).toEqual([]);
+  expect(cspViolations).toEqual([]);
 });

@@ -8,6 +8,7 @@ import {
 } from '../../packages/database/src/index.js';
 import type { FakeBinanceStreamServer } from '../../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 import { parseJsonContainer } from '../../packages/run-recording/src/index.js';
+import { createLongBacktest } from './long-run.js';
 import { EXCHANGE, HOUR_MILLISECONDS, SYMBOLS } from './panel-e2e.constant.js';
 import { DECISION_INDICATORS, DECISION_VOTES, votesFor } from './panel-e2e-decision.constant.js';
 
@@ -234,6 +235,36 @@ async function pushTick(params: ControlParams, request: Request): Promise<void> 
   });
 }
 
+type KlineBody = {
+  readonly open: string;
+  readonly high: string;
+  readonly low: string;
+  readonly close: string;
+};
+
+function isKlineBody(value: unknown): value is KlineBody {
+  if (typeof value !== 'object' || value === null) return false;
+  return ['open', 'high', 'low', 'close'].every(
+    (key) => typeof Reflect.get(value, key) === 'string',
+  );
+}
+
+// Faz o papel da Binance: a vela de 1 h em formação (a hora que vem depois da última vela do seed), aberta, com os preços dados.
+// O resto (agregador de 1 por segundo, mensagem candle, WebSocket e painel) é o caminho de produção.
+async function pushKline(params: ControlParams, request: Request): Promise<void> {
+  const body: unknown = await request.json();
+  if (!isKlineBody(body)) throw new Error('corpo do /kline inválido');
+  await waitForTickerConnection(params.binance);
+  params.binance.sendEvent({
+    symbol: SYMBOLS[0],
+    timeframe: '1h',
+    openTime: params.lastOpenTime + HOUR_MILLISECONDS,
+    isClosed: false,
+    prices: body,
+    eventTime: Date.now(),
+  });
+}
+
 async function readFillSide(request: Request): Promise<FillSide> {
   const body: unknown = await request.json();
   const side: unknown =
@@ -242,9 +273,19 @@ async function readFillSide(request: Request): Promise<FillSide> {
   return side;
 }
 
+async function createLongRun(params: ControlParams): Promise<string> {
+  return createLongBacktest({
+    handle: params.handle,
+    sql: params.sql,
+    scope: params.scope,
+    lastOpenTime: params.lastOpenTime,
+  });
+}
+
 export function startControlServer(params: ControlParams): ControlServer {
   let signals = 0;
   let decisions = 0;
+  let longRun: Promise<string> | undefined;
   const server = Bun.serve({
     hostname: '127.0.0.1',
     port: 0,
@@ -256,6 +297,9 @@ export function startControlServer(params: ControlParams): ControlServer {
       else if (pathname === '/price-alert') await pushPriceAlert(params);
       else if (pathname === '/tick') await pushTick(params, request);
       else if (pathname === '/fill') await pushFill(params, await readFillSide(request));
+      else if (pathname === '/kline') await pushKline(params, request);
+      else if (pathname === '/long-run')
+        return Response.json({ runId: await (longRun ??= createLongRun(params)) });
       else if (pathname === '/stall') await pushStall(params, await readStallAction(request));
       else return new Response(null, { status: 404 });
       return Response.json({ ok: true });

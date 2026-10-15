@@ -44,22 +44,22 @@ export async function compareTheTwoBacktests(page: Page): Promise<void> {
   );
 }
 
-// O cartão "Preço e operações" do backtest real: resumo, controles, gráfico e tabela. As setas dependem do que a estratégia
-// decide nos candles do seed; havendo setas, clicar numa seleciona a linha da tabela, e não havendo, o cartão diz que não há.
+// O cartão "Preço e operações" do backtest real: resumo, controles, gráfico e tabela. As operações dependem do que a estratégia
+// decide nos candles do seed; havendo operações, clicar numa linha a seleciona na URL, e não havendo, o cartão diz que não há.
 async function expectTradesOnTheChart(page: Page): Promise<void> {
   const card = page.getByRole('region', { name: 'Preço e operações', exact: true });
   await expect(card).toBeVisible();
   await expect(card.getByRole('region', { name: 'Resumo das operações' })).toBeVisible();
   await expect(card.getByRole('group', { name: 'Período do gráfico' })).toBeVisible();
-  await expect(card.getByRole('group', { name: 'Preço e operações' })).toBeVisible();
+  await expect(card.getByRole('figure')).toBeVisible();
   const table = card.getByRole('region', { name: 'Tabela de operações' });
   await expect(table).toBeVisible();
-  const arrows = card.locator('[data-chart-item]');
-  if ((await arrows.count()) === 0) {
-    await expect(table).toContainText('Nenhuma operação no período.');
+  // As setas são marcadores do canvas; a tabela é a alternativa acessível e se seleciona com a mesma chave (`?operacao=`).
+  if ((await table.getByText('Nenhuma operação no período.').count()) > 0) {
+    await expect(card.getByRole('figure')).toHaveAccessibleName(/Nenhuma operação neste período./);
     return;
   }
-  await arrows.first().click();
+  await table.locator('tbody tr').first().click();
   await expect(table.locator('tr[aria-current="true"]')).toHaveCount(1);
   await expect(page).toHaveURL(/[?&]operacao=/);
 }

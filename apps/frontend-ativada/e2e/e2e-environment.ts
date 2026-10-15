@@ -21,6 +21,8 @@ export type E2eEnvironment = {
   readonly controlUrl: string;
   // Só para investigar corrida: repete o ciclo de estratégias na mesma sessão (padrão 1).
   readonly strategyRepeat: number;
+  // Opcional: onde gravar a captura do gráfico de velas (a captura final da spec 009); sem isto nada é gravado.
+  readonly capturePath: string | undefined;
   readonly expected: ExpectedDisplay;
 };
 
@@ -59,6 +61,7 @@ export function readE2eEnvironment(): E2eEnvironment {
     telegramChatId: readRequired('PANEL_E2E_TELEGRAM_CHAT_ID'),
     controlUrl: readRequired('PANEL_E2E_CONTROL_URL'),
     strategyRepeat: Number(process.env['PANEL_E2E_STRATEGY_REPEAT'] ?? '1'),
+    capturePath: process.env['PANEL_E2E_CAPTURE_PATH'],
     expected,
   };
 }

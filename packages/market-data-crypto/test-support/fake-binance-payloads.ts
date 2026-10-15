@@ -4,11 +4,22 @@ import { TIMEFRAME_DURATION_MILLISECONDS, type Timeframe } from '../src/index.js
 const DEFAULT_PAGE_LIMIT = 500;
 const PRICE_CYCLE = 50;
 
+export type KlinePrices = {
+  readonly open: string;
+  readonly high: string;
+  readonly low: string;
+  readonly close: string;
+};
+
 export type KlineEventParams = {
   readonly symbol: string;
   readonly timeframe: Timeframe;
   readonly openTime: number;
   readonly isClosed: boolean;
+  // Sem isto os quatro preços são o preço determinístico da abertura.
+  readonly prices?: KlinePrices;
+  // Sem isto o instante do evento é fixo por vela; o agregador da API descarta evento que não seja mais novo que o anterior.
+  readonly eventTime?: number;
 };
 
 export type MiniTickerEventParams = {
@@ -57,12 +68,18 @@ export function buildFakePrice(params: {
 
 export function buildKlineEvent(params: KlineEventParams): Readonly<Record<string, unknown>> {
   const duration = TIMEFRAME_DURATION_MILLISECONDS[params.timeframe];
-  const price = buildFakePrice(params);
+  const fallback = buildFakePrice(params);
+  const prices = params.prices ?? {
+    open: fallback,
+    high: fallback,
+    low: fallback,
+    close: fallback,
+  };
   return {
     stream: `${params.symbol.toLowerCase()}@kline_${params.timeframe}`,
     data: {
       e: 'kline',
-      E: params.openTime + duration + 5,
+      E: params.eventTime ?? params.openTime + duration + 5,
       s: params.symbol,
       k: {
         t: params.openTime,
@@ -71,10 +88,10 @@ export function buildKlineEvent(params: KlineEventParams): Readonly<Record<strin
         i: params.timeframe,
         f: 100,
         L: 200,
-        o: price,
-        c: price,
-        h: price,
-        l: price,
+        o: prices.open,
+        c: prices.close,
+        h: prices.high,
+        l: prices.low,
         v: '12.50000000',
         n: 7,
         x: params.isClosed,

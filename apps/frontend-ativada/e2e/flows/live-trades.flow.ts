@@ -17,17 +17,18 @@ export async function watchLiveFillsAppearOnTheChart(page: Page, control: Contro
   await expect(page).toHaveURL(/\/backtests\/[0-9a-f-]{36}$/);
 
   const card = page.getByRole('region', CARD);
-  const arrows = card.locator('[data-chart-item]');
+  // As setas são marcadores do canvas: o que a tela diz delas é a descrição do gráfico (o nome da figura).
+  const figure = card.getByRole('figure');
   await expect(card).toContainText('Acompanhando o fim da simulação');
-  await expect(arrows).toHaveCount(0);
+  // Sem nenhuma vela processada ainda o gráfico de velas nem aparece; a primeira operação o traz.
 
   await sendFill(control, 'buy');
-  await expect(arrows).toHaveCount(1);
+  await expect(figure).toHaveAccessibleName(/1 compra e 0 vendas./);
   await expect(card).toContainText(/última vela fechada às \d{2}:\d{2}/);
   await expect(card.getByRole('region', { name: 'Tabela de operações' })).toContainText('aberta');
 
   await sendFill(control, 'sell');
-  await expect(arrows).toHaveCount(2);
+  await expect(figure).toHaveAccessibleName(/1 compra e 1 venda./);
   // O resumo das operações mora no cartão Acompanhamento (spec 008), não mais no cartão do gráfico.
   await expect(page.getByRole('region', { name: 'Acompanhamento', exact: true })).toContainText(
     /Você pagou 613,12 USDT em 1 compra e recebeu 614,38 USDT/,

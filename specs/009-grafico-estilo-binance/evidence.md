@@ -495,3 +495,58 @@ Nada desta fase foi visto com canvas ou navegador real (sem Chromium no WSL; ins
 temas, com o cone, a linha plana, a vela em formação ampliada e a linha do preço real legíveis (contraste do cone a 3:1 já provado nos tokens); (2) a tabela do histórico dentro do `overflow-x: auto` sem rolagem horizontal da página
 a 375 px; (3) o foco visível do canvas (`.canvas:focus-visible`) e a ordem de Tab (um só foco no gráfico); (4) o `aria-live` realmente falando a vela com um leitor de tela, e Shift+seta entre compras e vendas no canvas real;
 (5) o painel e os cartões com a previsão ao vivo (`POST /tick` e a kline falsa) mudando sem recarregar.
+
+## T3.8 — E2E do painel com o canvas real (2026-10-15)
+
+Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; nenhuma dependência nova.
+
+**Como rodou** (o `make` não existe no Windows): containers de TESTE (`ativada-test-*`, `docker compose --env-file envs/env.test`) subidos e derrubados com
+`--volumes` ao fim de cada rodada (conferido: só `ativada-dev-*` seguem de pé, intocados); `bun` do WSL no `scripts/panel-e2e.ts`; `vite build`/`preview` pelo `bun.exe` do
+Windows (shim de `vite`); `playwright.exe` abrindo o Microsoft Edge (`PANEL_E2E_BROWSER_CHANNEL=msedge`, `PANEL_E2E_PLAYWRIGHT_BIN`); pausas de 50 s contra o limite de 120
+req/min. Dois ajustes do `node_modules` do Windows, sem baixar nada: junções `@ativada/statistics` (pacote novo da T1.1; o `bun install` do Windows é anterior a ele) e a
+cópia de `lightweight-charts@5.2.1` + `fancy-canvas@2.1.0` (as versões do `bun.lock`, vindas do espelho do WSL, onde as tasks anteriores já as tinham).
+
+**Resultado final: `panel-e2e: OK`, 25 de 25 (7,0 min)** — os 22 testes anteriores (com as correções de seletor abaixo) e 3 novos:
+
+| Teste novo | O que prova (tudo no Edge, canvas de verdade) |
+|---|---|
+| gráfico de velas: canvas com pixels, teclado, vela em formação pela kline falsa, previsão e cartões do servidor, sem violação de CSP | Canvas composto com mais de 2.000 pixels fora do fundo e mais de 6 cores; "Próxima vela de perto", "Histórico de acertos" e "De onde vem a previsão" com o `label`, a `message`, o `summary.message` e o `verdictMessage` EXATOS da resposta de `GET /projections` (interceptada na própria tela); a seta esquerda muda o `aria-live` ("abertura … fechamento …") e Esc o esvazia; a kline aberta que a Binance falsa manda (ticker real, agregador de 1/s, mensagem `candle`, WebSocket) muda a legenda (61.560 para 61.700, "em formação") e os pixels; cada camada muda pixels do canvas ao ligar ou desligar: Previsão 160, Stop e alvo 635, Linhas da estratégia 146; **zero** mensagens `Content Security Policy` no console |
+| gráfico de velas: com a decisão de esperar a camada "Esperou" desenha e a previsão fica neutra | A camada "Esperou" muda 194 pixels e o painel mostra a frase neutra do servidor |
+| gráfico de velas: arrastar pede a página anterior de velas e mede os quadros por segundo com 5.000 velas | Backtest de 1 h com 5.000 velas rodado de verdade pela fila e pelo despachante da API (`scripts/panel-e2e/long-run.ts`): o arrasto pede a página anterior (o `to` da 2ª página é o `from` da 1ª) até as 5 páginas de 1.000 velas; mede os quadros |
+
+O teste final "nenhum erro de console nem violação de CSP durante todo o fluxo" agora também falha em qualquer mensagem de console com `Content Security Policy`
+(o `style-src 'self'` segue valendo e a biblioteca não violou nada).
+
+**RNF02 — quadros por segundo ao arrastar ~5.000 velas** (`requestAnimationFrame` durante o arrasto, só os quadros com o botão do mouse apertado; Edge sem tela):
+
+| Cenário | Quadros | Mediana | p5 (quadro lento) | Pior quadro |
+|---|---|---|---|---|
+| arrastando até carregar as 5.000 velas (janela de ~150 velas) | 3.771 | 238,1 fps | 232,6 fps | 80 fps |
+| 5.000 velas carregadas, janela de ~150 velas | 984 | 238,1 fps | 232,6 fps | 122 fps |
+| 5.000 velas carregadas, todas à vista ("Ajustar") | 1.230 | 238,1 fps | 232,6 fps | 119 fps |
+
+**Ressalva honesta:** o Edge sem tela não limita o `requestAnimationFrame` a 60 Hz (o quadro sai a cada ~4,2 ms), então a mediana e o p5 são o teto do ritmo do navegador, não
+o que um monitor de 60 Hz mostra; o que o número prova é que o desenho do arrasto não segura o quadro: o PIOR quadro de todas as rodadas (quatro rodadas completas, de 59,9 a 122 fps)
+ficou acima de 30 fps. Nenhum cenário abaixo de 30 fps; não foi medido em máquina fraca nem com tela real.
+
+**Conferência visual com o canvas real** (captura única: `specs/009-grafico-estilo-binance/capturas/grafico-estilo-binance.png`, 1280 px, tema claro): as caixas de "Stop e alvo"
+(verde da entrada ao alvo, vermelha da entrada ao stop), a vela em formação oca (contorno e pavio, linha do preço real até "agora"), os rótulos "Compra", "Venda" e "alvo", a legenda
+OHLC com "em formação", o volume, o placar com as linhas de compra e venda, e o painel "Próxima vela de perto" com o meio-cone vermelho (tendência de ficar de fora, decidida), a linha
+plana, a linha do preço real e o resultado da previsão anterior estão desenhados e legíveis. O foco e o teclado foram provados por texto (`aria-live`), não por imagem.
+
+**Bugs achados e corrigidos** (commits separados):
+
+1. `8e27ccf` — depois do Esc a legenda ficava presa na vela que o teclado apontou (a biblioteca não avisa a cruz apagada por código; `hoverIndex ?? keyboard.index`). O adaptador avisa `null`.
+2. `84a914f` — no SVG real os preços do eixo de "Próxima vela de perto" saíam cortados na borda ("61.320,0") e o rótulo "Ficar de fora" sumia no vermelho do meio-cone (eixo de 56 para 76 unidades; halo da cor do fundo).
+3. Neste commit (testes e harness, não é código de produto): (a) os E2E antigos procuravam as setas SVG (`[data-chart-item]`, `group "Preço e operações"`): agora leem a descrição do gráfico ("1 compra e 0 vendas.") e a
+   tabela; (b) a Binance falsa mandava `E` fixo por vela e o agregador da API descarta evento que não seja mais novo (agora `eventTime`); (c) o ticker da API trata 30 s de silêncio como conexão morta e reconecta com espera de
+   até 60 s: com a suíte mais longa o `/tick` esperava mais que os 15 s do harness, então a Binance falsa manda um quadro sem dado a cada 10 s (`keepAlive`); (d) "apagar a conta" exige login de até 5 minutos e a suíte passou de 7 min:
+   o teste sai e entra de novo antes; (e) o backtest longo, rodado em processo pelo teste, disputava com o despachante da API (`RUN_NOT_RUNNABLE`, intermitente): agora só entra na fila e o teste espera a API rodá-lo.
+
+**Pendências (nada disto quebra; para a T4.1):**
+
+- O eixo de preço do canvas usa o formato da biblioteca (`61700.00`, ponto decimal) enquanto a legenda e o resto da tela usam `61.700,00`; o rótulo "−2" do placar sai com hífen no eixo e com sinal de menos no texto.
+- Simulação ao vivo SEM nenhuma vela processada ainda: o cartão "Preço e operações" ficou em "Carregando as velas…" durante todo o tempo observado (90 s), sem o desenho nem uma frase de "aguardando a primeira vela" (o cartão "Acompanhamento" e o de origem da previsão já dizem isso).
+- O meio-cone no canvas principal tem só uma vela de largura (a previsão é de UMA vela): 160 pixels; só é reconhecível com "Aproximar". O painel "Próxima vela de perto" é a leitura do cone.
+- A captura do elemento mostra o aviso fixo "Simulação com dinheiro fictício…" no meio do cartão (efeito da captura por elemento, não da tela). A 375 px e o tema escuro NÃO foram vistos com o canvas (só por classe, nos contratos).
+- O seed tem só ~30 velas de 1 h e o stop do exemplo é 60.000: as caixas de "Stop e alvo" ficam altas e estreitas; o backtest longo (5.000 velas) não mostra operações dentro da janela inicial de 150 velas.
