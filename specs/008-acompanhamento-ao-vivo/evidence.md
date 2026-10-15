@@ -350,3 +350,13 @@ Painel real conferido contra `docs/preview/redesign/` por texto (Playwright + Ed
 WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
 panel-test: 775 pass, 0 fail (61 arquivos)
 ```
+
+## T4.2 — CLAUDE.md (sonnet, 2026-10-15)
+
+- **Bloco duplicado removido.** O arquivo tinha 678 linhas: a partir da linha 340 o texto inteiro vinha colado de novo, no meio do item (6) da spec 006 ("…sem `source`, então `" seguido de "# CLAUDE.md"). Conferido por comparação de texto antes de apagar: as 339 primeiras linhas eram um prefixo EXATO da segunda cópia, exceto por dois pontos no item (6) da spec 006. A primeira cópia trazia a frase "quem loga é cada laço pela guarda `createDatabaseOutageGuard`…" (que a segunda perdera) e a segunda trazia o fim do item e as frases "(2)" a "(7)" (que a primeira cortava); o trecho "`dev-down` nunca apaga volume … então `$`" só existia na primeira. Ficou UMA cópia (343 linhas), a segunda completa mais a frase da primeira e o trecho do item (6) reconstituído. Causa provável: um `String.replace` com texto contendo "$`", que o JavaScript expande para "tudo o que veio antes".
+- **Atualizado:** parágrafo "Estado" (spec 008 e a T3.4 que passou para a spec 009); na seção do painel, o bullet "Acompanhamento ao vivo" (linha de pulso, cartão "Acompanhamento", "o que falta", meta do servidor, tabela de decisões, saída do `goal-progress.ts`, glossário de 12 termos, Visão geral com barras de comparação, lista de backtests agrupada com filtro e ordenação na URL, revisão de design e E2E); nas regras, o bullet da API (`GET /v1/runs/:runId/live-status`, `/decisions`, campo `decisions` do `/chart`, de onde vêm os dados, paridade, frases do servidor, arredondamento, ≤ 5 consultas, mutantes); o veredito do ranking agora é Favorável / Neutro / Desfavorável "no histórico".
+
+```text
+prettier --check CLAUDE.md: verde
+git diff CLAUDE.md: +5 −341 (as 5 são os bullets e frases novos; as 341 são a cópia repetida e as linhas reescritas)
+```
