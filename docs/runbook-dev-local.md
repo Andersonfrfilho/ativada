@@ -134,3 +134,12 @@ Para mudar, do mais forte ao mais fraco:
 Só entra par com filtro de preço e passo conhecido em `packages/market-data-crypto/src/symbol-filters.constant.ts`
 (BTCUSDT e ETHUSDT são o padrão do motor); par sem filtro reprova o boot. Depois de mudar, rode `dev-down` e `dev-up`.
 Pares novos precisam de candles: o `backfill-candles` do cron (`CRON_TASKS=backfill-candles`) os baixa.
+
+## 7. Preço ao vivo e vela em formação no gráfico
+
+- `TICKER_STREAM_ENABLED=true` liga o ticker da API, que lê SÓ preços públicos da Binance (sem chave nem conta); o `env.dev` já vem assim.
+- `TICKER_KLINE_ENABLED=true` (vela em formação no gráfico) **exige** `TICKER_STREAM_ENABLED=true`: a vela viaja pela mesma
+  conexão do preço. Sozinho, ele não faz nada, e o gráfico nunca recebe a mensagem `candle`.
+- Sem kline, o painel avalia "preço parado" pelo último tick do par (janela de 10 s); com kline, pela vela em formação.
+- As velas que o gráfico oferece vêm de `MARKET_TIMEFRAMES` (o `dev-up` repassa como `VITE_MARKET_TIMEFRAMES`). A vela
+  escolhida na tela não é lembrada entre execuções: cada execução abre na própria vela.

@@ -41,6 +41,19 @@ describe('CandleStore: só a vela aberta de cada par e vela', () => {
     });
   });
 
+  test('the reading of one key keeps the same reference while only other pairs and candles change', () => {
+    const store = new CandleStore(() => 1);
+    store.apply(candle());
+    const key = candleKey('LINKUSDT', '1h');
+    const before = store.candleAt(key);
+    store.apply(candle({ symbol: 'BTCUSDT', close: '99', at: 6_000 }));
+    store.apply(candle({ timeframe: '4h', close: '98', at: 6_001 }));
+    expect(store.candleAt(key)).toBe(before);
+    store.apply(candle({ close: '13', at: 7_000 }));
+    expect(store.candleAt(key)).not.toBe(before);
+    expect(store.candleAt(candleKey('NOPE', '1h'))).toBeUndefined();
+  });
+
   test('a late message of an older candle, or an older message of the same one, does not undo the current', () => {
     const store = new CandleStore(() => 1);
     store.apply(candle({ openTime: 2_000, close: '14', at: 9_000 }));
@@ -76,7 +89,12 @@ describe('CandleStore: só a vela aberta de cada par e vela', () => {
 
 describe('judgeLiveCandle: forma ou sem dados', () => {
   const stored = { candle: candle(), receivedAt: 1_000 };
-  const base = { stored, streamStatus: STREAM_STATUS.LIVE, silenceMilliseconds: 10_000 };
+  const base = {
+    stored,
+    tick: undefined,
+    streamStatus: STREAM_STATUS.LIVE,
+    silenceMilliseconds: 10_000,
+  };
 
   test('an up-to-date candle on a live socket is forming', () => {
     expect(judgeLiveCandle({ ...base, now: 11_000 })).toEqual({
@@ -98,7 +116,24 @@ describe('judgeLiveCandle: forma ou sem dados', () => {
     });
   });
 
-  test('without a known candle there is nothing to say', () => {
+  test('without a known candle and without a tick there is nothing to say', () => {
     expect(judgeLiveCandle({ ...base, stored: undefined, now: 1 })).toBeUndefined();
+  });
+
+  test('without a candle (no kline) the tick tells whether the price stopped', () => {
+    const tick = { price: '12.5', change24h: undefined, receivedAt: 1_000, isStale: false };
+    const noCandle = { ...base, stored: undefined, tick };
+    expect(judgeLiveCandle({ ...noCandle, now: 11_000 })).toBeUndefined();
+    expect(judgeLiveCandle({ ...noCandle, now: 12_500 })).toEqual({
+      status: 'no_data',
+      secondsWithoutData: 11,
+    });
+    expect(
+      judgeLiveCandle({ ...noCandle, streamStatus: STREAM_STATUS.RECONNECTING, now: 2_000 }),
+    ).toEqual({ status: 'no_data', secondsWithoutData: 1 });
+    expect(judgeLiveCandle({ ...noCandle, tick: { ...tick, isStale: true }, now: 2_000 })).toEqual({
+      status: 'no_data',
+      secondsWithoutData: 1,
+    });
   });
 });

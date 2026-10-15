@@ -42,6 +42,9 @@ export class MarketStore {
 
   readonly getSnapshot = (): ReadonlyMap<string, LivePrice> => this.prices;
 
+  // O preço de UM par: a mesma referência até o próximo tick dele (quem lê um par não acorda com os outros).
+  readonly priceAt = (symbol: string): LivePrice | undefined => this.prices.get(symbol);
+
   readonly subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
     return () => void this.listeners.delete(listener);

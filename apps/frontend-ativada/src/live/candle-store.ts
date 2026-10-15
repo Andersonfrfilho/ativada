@@ -22,6 +22,10 @@ export class CandleStore {
 
   readonly getSnapshot = (): ReadonlyMap<string, FormingCandle> => this.forming;
 
+  // A vela de UMA chave: a mesma referência enquanto só outro par ou vela muda, então quem lê uma chave não re-renderiza
+  // a cada mensagem das outras.
+  readonly candleAt = (key: string): FormingCandle | undefined => this.forming.get(key);
+
   readonly subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
     return () => void this.listeners.delete(listener);
