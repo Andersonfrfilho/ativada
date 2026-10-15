@@ -18,12 +18,14 @@ export type FakeChartSurface = ChartSurface & {
   readonly container: HTMLElement;
   readonly isDestroyed: () => boolean;
   readonly emitCrosshair: (index: number | null) => void;
+  readonly emitClick: (index: number | null) => void;
   readonly emitVisibleRange: (range: SurfaceLogicalRange) => void;
   readonly callsOf: (method: keyof ChartSurface) => readonly (readonly unknown[])[];
 };
 
 type Listeners = {
   readonly crosshair: Set<(index: number | null) => void>;
+  readonly click: Set<(index: number | null) => void>;
   readonly range: Set<(range: SurfaceLogicalRange) => void>;
 };
 
@@ -36,7 +38,7 @@ function subscribe<TListener>(set: Set<TListener>, listener: TListener): () => v
 
 export function createFakeChartSurface(container: HTMLElement): FakeChartSurface {
   const calls: SurfaceCall[] = [];
-  const listeners: Listeners = { crosshair: new Set(), range: new Set() };
+  const listeners: Listeners = { crosshair: new Set(), click: new Set(), range: new Set() };
   let destroyed = false;
   const record =
     (method: keyof ChartSurface) =>
@@ -50,24 +52,31 @@ export function createFakeChartSurface(container: HTMLElement): FakeChartSurface
     isDestroyed: () => destroyed,
     callsOf: (method) => calls.filter((call) => call.method === method).map((call) => call.args),
     emitCrosshair: (index) => listeners.crosshair.forEach((listener) => listener(index)),
+    emitClick: (index) => listeners.click.forEach((listener) => listener(index)),
     emitVisibleRange: (range) => listeners.range.forEach((listener) => listener(range)),
     setCandles: record('setCandles'),
     setVolume: record('setVolume'),
     setLines: record('setLines'),
     setScore: record('setScore'),
     setMarkers: record('setMarkers'),
+    setLevels: record('setLevels'),
+    setWaited: record('setWaited'),
     setProjection: record('setProjection'),
     setLiveCandle: record('setLiveCandle'),
     setCrosshair: record('setCrosshair'),
     setTheme: record('setTheme'),
+    setTimeLabels: record('setTimeLabels'),
+    centerOn: record('centerOn'),
     zoom: record('zoom'),
     fit: record('fit'),
     scrollToEnd: record('scrollToEnd'),
     onCrosshairMove: (listener) => subscribe(listeners.crosshair, listener),
+    onClick: (listener) => subscribe(listeners.click, listener),
     onVisibleRangeChange: (listener) => subscribe(listeners.range, listener),
     destroy: (): void => {
       destroyed = true;
       listeners.crosshair.clear();
+      listeners.click.clear();
       listeners.range.clear();
     },
   };

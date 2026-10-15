@@ -15,6 +15,7 @@ function snapToCandle(candleTime: number, timeframeMilliseconds: number): number
 export function toSurfaceMarkers(
   markers: readonly MarkerSource[] | null,
   timeframeMilliseconds: number,
+  selectedKey?: string,
 ): SurfaceMarker[] {
   if (markers === null) return [];
   return markers
@@ -23,6 +24,7 @@ export function toSurfaceMarkers(
       time: toSurfaceTime(snapToCandle(marker.candleTime, timeframeMilliseconds)),
       side: marker.side,
       label: MARKER_LABEL[marker.side],
+      isSelected: marker.positionKey === selectedKey,
     }))
     .sort((left, right) => left.time - right.time);
 }

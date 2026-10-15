@@ -291,3 +291,36 @@ Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados. Nada de Reac
   e `chart-preferences` (JSON quebrado, valor estranho, campo inválido cai sozinho, armazenamento que lança).
 
 Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` 872 passam, 0 falham (68 arquivos).
+
+## T3.1 — Adaptador da biblioteca, tema e crédito (2026-10-15)
+
+Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; nenhuma dependência nova (a `lightweight-charts@5.2.1` já estava instalada).
+
+- **Adaptador** (`src/runs/candle-chart/lightweight-surface.ts`, `createLightweightSurface`): o ÚNICO arquivo que importa `lightweight-charts`
+  (P14). O limite de 200 linhas por arquivo obrigou a repartir o adaptador em irmãos `lightweight-*.ts` (`-context`, `-render`, `-data`,
+  `-view`) que NÃO importam o pacote: recebem os valores por `kit` (as séries, `LineStyle`, `ColorType`, `TickMarkType`) e os tipos por
+  reexportações de `lightweight-surface.ts` (só tipos, apagadas no build). As decisões de cor, traço e forma moram em `surface-style.ts`
+  (puro, com contrato), e as caixas de "Stop e alvo" são um primitivo da série em `level-boxes-primitive.ts` (também sem importar o
+  pacote). `chart-theme.ts` mapeia cada cor a um token de `global.css` (`SURFACE_THEME_TOKENS`) e `chart-theme-dom.ts` resolve o token
+  pelo navegador e o converte em `rgb()` por um pixel de canvas (a biblioteca não lê `color-mix()`).
+- **Painéis**: preço (velas, linhas da estratégia, marcadores, cone da previsão, vela em formação e linha do preço real), volume e
+  placar (só existe enquanto há barras de placar). `attributionLogo: false` sempre (P12); crédito do `NOTICE` em `ChartCredit`
+  (P13: "TradingView Lightweight Charts™" com link `https://www.tradingview.com/`, `rel="noreferrer"`, e "Copyright (c) 2025 TradingView, Inc.").
+- **Carregamento**: `chart-surface-loader.ts` faz `await import('./lightweight-surface.js')` e o `ChartSurfaceLoaderContext` deixa os testes
+  trocarem o carregador pela superfície falsa; um contrato prova que nenhum outro arquivo importa o adaptador de forma estática.
+- **Ciclo de vida** (`useChartSurface`): cria no `useEffect`, destrói na saída e descarta a criação que termina depois da saída; falha ao
+  carregar vira `hasFailed`, nunca exceção. **Tema** (`useSurfaceTheme`): lê os tokens quando a superfície nasce e a cada troca de tema (a
+  escolha do usuário ou o esquema do sistema).
+- **Porta estendida** (aditivo, antes da primeira ligação real): `setLevels`, `setWaited`, `setTimeLabels`, `onClick`, `centerOn` e
+  `isSelected` no marcador; a superfície falsa ganhou os mesmos métodos.
+- **Contratos** (`chart-surface-lifecycle`, 8 testes; `surface-style`, 7): criar e destruir, StrictMode (monta duas vezes e só a última fica
+  viva), criação tardia depois da saída, falha de carga, troca de tema reaplica as cores do mesmo objeto, crédito, tokens pedidos ao
+  resolvedor, `withAlpha`, cores do volume e do placar, marcadores (setas, pontinho de "esperou", ordem), linhas por papel e as metades do
+  cone. O guarda "nenhuma outra conversão texto→número" da T2.3 passou a valer também para os arquivos novos (a leitura de canal de cor
+  usa `toDrawingNumber`).
+- **Limite honesto**: o desenho real (canvas) NÃO foi exercido aqui: o happy-dom não tem canvas, o WSL não tem o Chromium do Playwright e instalar
+  é proibido. O adaptador passa no typecheck contra os tipos reais da biblioteca e no lint; o desenho, a vela em formação sem contorno
+  tracejado (a biblioteca não tem contorno tracejado de vela: ela fica oca, só contorno e pavio) e as caixas de "Stop e alvo" ficam
+  para a conferência da T3.8 (E2E com canvas) e da T4.1.
+
+Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` 888 passam, 0 falham (70 arquivos).

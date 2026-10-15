@@ -126,14 +126,27 @@ describe('marker series', () => {
 
   test('keeps the position key and side, labels in words and orders by time', () => {
     expect(toSurfaceMarkers(sources, HOUR_MILLISECONDS)).toStrictEqual([
-      { key: 'p1:buy', time: FIRST_SECOND, side: 'buy', label: 'Compra' },
-      { key: 'p2:sell', time: FIRST_SECOND + 7_200, side: 'sell', label: 'Venda' },
+      { key: 'p1:buy', time: FIRST_SECOND, side: 'buy', label: 'Compra', isSelected: false },
+      {
+        key: 'p2:sell',
+        time: FIRST_SECOND + 7_200,
+        side: 'sell',
+        label: 'Venda',
+        isSelected: false,
+      },
     ]);
   });
 
   test('puts the arrow on the candle that contains the fill, whatever the candle size', () => {
     const [marker] = toSurfaceMarkers(sources.slice(1), 4 * HOUR_MILLISECONDS);
     expect(marker?.time).toBe(Date.UTC(2026, 9, 15, 4) / 1_000);
+  });
+
+  test('marks the arrows of the selected operation (both sides share the position key)', () => {
+    const marked = toSurfaceMarkers(sources, HOUR_MILLISECONDS, 'p2').map(
+      (marker) => marker.isSelected,
+    );
+    expect(marked).toStrictEqual([false, true]);
   });
 
   test('grouped events (null) draw no arrows', () => {

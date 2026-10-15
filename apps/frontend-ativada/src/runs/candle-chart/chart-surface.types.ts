@@ -53,6 +53,24 @@ export type SurfaceMarker = {
   readonly time: SurfaceTime;
   readonly side: 'buy' | 'sell';
   readonly label: string;
+  readonly isSelected: boolean;
+};
+
+// Caixas "Stop e alvo": da entrada ao alvo e da entrada ao stop; `exitTime` nulo = posição aberta (vai até a ponta).
+export type SurfaceLevelBox = {
+  readonly key: string;
+  readonly entryTime: SurfaceTime;
+  readonly exitTime: SurfaceTime | null;
+  readonly entry: number;
+  readonly stop: number;
+  readonly target: number;
+};
+
+// Rótulos do eixo e da dica no fuso do usuário: a biblioteca desenha em UTC e só chama estas funções (segundos UTC).
+export type SurfaceTimeLabels = {
+  readonly time: (seconds: SurfaceTime) => string;
+  readonly day: (seconds: SurfaceTime) => string;
+  readonly full: (seconds: SurfaceTime) => string;
 };
 
 export type SurfaceProjection = {
@@ -88,12 +106,19 @@ export type ChartSurface = {
     thresholds: readonly SurfaceThreshold[],
   ) => void;
   readonly setMarkers: (markers: readonly SurfaceMarker[]) => void;
+  readonly setLevels: (boxes: readonly SurfaceLevelBox[]) => void;
+  // Pontinhos discretos de "esperou" (camada desligada por padrão).
+  readonly setWaited: (times: readonly SurfaceTime[]) => void;
   readonly setProjection: (projection: SurfaceProjection | null) => void;
   readonly setLiveCandle: (candle: SurfaceCandle | null) => void;
   readonly setCrosshair: (index: number | null) => void;
   readonly onCrosshairMove: (listener: (index: number | null) => void) => () => void;
   readonly onVisibleRangeChange: (listener: (range: SurfaceLogicalRange) => void) => () => void;
   readonly setTheme: (theme: SurfaceTheme) => void;
+  readonly setTimeLabels: (labels: SurfaceTimeLabels) => void;
+  readonly onClick: (listener: (index: number | null) => void) => () => void;
+  // Mantém a largura visível (em velas) e põe o instante no centro; usado ao trocar a vela do gráfico.
+  readonly centerOn: (time: SurfaceTime) => void;
   readonly zoom: (step: number) => void;
   readonly fit: () => void;
   readonly scrollToEnd: () => void;
