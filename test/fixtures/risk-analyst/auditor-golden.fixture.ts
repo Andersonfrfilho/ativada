@@ -60,6 +60,11 @@ function integerAt(fields: readonly string[], index: number): number {
   return value;
 }
 
+function nullableAt(fields: readonly string[], index: number): string | null {
+  const value = textAt(fields, index);
+  return value === 'null' ? null : value;
+}
+
 function textAt(fields: readonly string[], index: number): string {
   const value = fields[index];
   if (value === undefined) throw new Error(`campo ${index} ausente no dourado`);
@@ -83,11 +88,11 @@ export function parseAuditorGolden(line: string): AuditorSummary {
     ties: integerAt(fields, 6),
     upMoves: integerAt(fields, 7),
     counted: hits + misses,
-    hitRate: textAt(fields, 8),
-    upRate: textAt(fields, 9),
+    hitRate: nullableAt(fields, 8),
+    upRate: nullableAt(fields, 9),
     verdict,
-    lower: textAt(fields, 11),
-    upper: textAt(fields, 12),
+    lower: nullableAt(fields, 11),
+    upper: nullableAt(fields, 12),
     weight: textAt(fields, 13),
   };
 }

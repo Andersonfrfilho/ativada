@@ -8,3 +8,4 @@ coverage
 realm
 .omc
 test/fixtures/strategy-engine/market
+test/fixtures/risk-analyst/market

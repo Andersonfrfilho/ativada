@@ -31,7 +31,7 @@ export function specialistVersion(key: OracleSpecialistKey): StrategyVersion {
   return createStrategyVersion(ORACLE_SPECIALIST_CONFIGS[key]);
 }
 
-function auditedVersion(key: AuditedKey): StrategyVersion {
+export function auditedVersion(key: AuditedKey): StrategyVersion {
   return key === 'strategy' ? CLASSIC_STRATEGY : specialistVersion(key);
 }
 
