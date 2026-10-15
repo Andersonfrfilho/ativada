@@ -11,6 +11,7 @@ import {
   type StreamMessage,
   type StreamStatus,
 } from '../src/live/stream-client.js';
+import type { StreamCandle } from '../src/live/stream.validation.js';
 
 class FakeSocket implements SocketLike {
   readonly sent: string[] = [];
@@ -139,6 +140,52 @@ describe('stream client', () => {
       { type: 'event', runId: 'r1', kind: 'signal', eventId: 'e1', at: 1 },
       { type: 'price_alert', alertId: 'a1', at: 2 },
     ]);
+  });
+
+  test('delivers the forming candle to its own handler and drops a malformed one (spec 009)', async () => {
+    const candles: StreamCandle[] = [];
+    const harness = createHarness({ onCandle: (candle) => void candles.push(candle) });
+    const socket = await openFirst(harness);
+    const candle: StreamCandle = {
+      type: 'candle',
+      symbol: 'LINKUSDT',
+      timeframe: '1h',
+      openTime: 1_000,
+      open: '12.93',
+      high: '12.985',
+      low: '12.872',
+      close: '12.905',
+      volume: '23900.5',
+      closed: false,
+      at: 2_000,
+    };
+    socket.serverSends(candle);
+    socket.serverSends({ ...candle, close: 'NaN' });
+    socket.serverSends({ ...candle, closed: 'no' });
+    socket.serverSends({ ...candle, volume: 1e21 });
+    expect(candles).toStrictEqual([candle]);
+    expect(harness.messages).toStrictEqual([]);
+    expect(harness.ticks).toStrictEqual([]);
+  });
+
+  test('a candle without a handler is ignored without breaking the stream', async () => {
+    const harness = createHarness();
+    const socket = await openFirst(harness);
+    socket.serverSends({
+      type: 'candle',
+      symbol: 'LINKUSDT',
+      timeframe: '1h',
+      openTime: 1,
+      open: '1',
+      high: '1',
+      low: '1',
+      close: '1',
+      volume: '1',
+      closed: true,
+      at: 2,
+    });
+    expect(harness.messages).toStrictEqual([]);
+    expect(harness.statuses).toStrictEqual(['connecting', 'live']);
   });
 
   test('subscribes the configured pairs on every open, also after a reconnect', async () => {

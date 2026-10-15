@@ -243,3 +243,19 @@ Modelo: `sonnet`.
 Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; 293 testes vizinhos passam (`api-run-*`, `api-runs`,
 `api-openapi`, `ownership-registry`, `strategy-engine-boundary`, `code-size-limits`, `app-import-boundary`, `database.contract`,
 Wilson, regra, frases e oráculo).
+
+## T2.1 — Esquemas espelhados e consultas do gráfico (2026-10-15)
+
+Modelo: `sonnet` (a fase pedia `haiku`; a execução ficou com o mesmo agente das três tasks). Sem migration; motor e `run-recording` intocados.
+
+- **Esquemas Zod do painel** (`apps/frontend-ativada/src/runs/candle-chart/`): `strategy-layers.validation.ts` (versão `layers-1`, as 7 funções de linha, colunas com o mesmo
+  tamanho de `candleTimes`, limiares em texto decimal), `projections.validation.ts` (versão `projection-1`, `current` com `available` ou `unavailable` e o motivo, resumo,
+  veredito, itens com o resultado `gap`) e `market-candles.validation.ts` (velas públicas, preço e volume em texto). A mensagem `candle` do `/v1/stream` entrou em
+  `src/live/stream.validation.ts` (OHLCV em texto decimal, `closed`, `at`); o `StreamClient` ganhou o `onCandle` opcional (a T3.4 liga o `MarketStore`).
+- **Consultas** (`candle-chart.query.ts`): `useStrategyLayersQuery` e `useProjectionsQuery` sob a chave raiz `runs` (o aviso do stream as refaz) e
+  `useMarketCandlesQuery` sob `markets` (`MARKET_QUERY_ROOT`). Resposta fora do contrato vira `error` e nada é entregue ao componente.
+- **Contratos** (`test/candle-chart-queries.contract.tsx`, 14 testes; `stream-client.contract.ts` +2): aceita o formato do servidor e cada motivo de "sem previsão";
+  recusa outra versão, número no lugar de texto, coluna de outro tamanho, papel de linha desconhecido, limiar em notação científica, veredito e resultado desconhecidos;
+  chaves começam com `runs`/`markets`; parâmetros enviados na URL; vela em formação entregue só ao `onCandle` e mensagem malformada descartada.
+
+Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` 811 passam, 0 falham.
