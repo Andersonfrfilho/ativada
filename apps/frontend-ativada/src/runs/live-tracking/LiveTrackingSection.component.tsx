@@ -10,13 +10,14 @@ import { LiveTrackingCard } from './LiveTrackingCard.component.js';
 import styles from './LiveTracking.module.css';
 import { useLiveStatusQuery } from './live-status.query.js';
 import { NextTriggersBlock } from './NextTriggersBlock.component.js';
+import { StaleDataNotice } from './StaleDataNotice.component.js';
 
 export type LiveTrackingSectionProps = { readonly run: RunDetail };
 
 // Linha de pulso, cartão "Acompanhamento", o que falta para comprar e a meta: o topo do detalhe da simulação ao vivo.
 export function LiveTrackingSection({ run }: LiveTrackingSectionProps): ReactElement {
   const status = useLiveStatusQuery(run.id, true);
-  if (status.isError) {
+  if (status.data === undefined && status.isError) {
     return (
       <p role="alert" className={controls.error}>
         Não foi possível carregar o acompanhamento. Tente novamente em instantes.
@@ -26,6 +27,7 @@ export function LiveTrackingSection({ run }: LiveTrackingSectionProps): ReactEle
   if (status.data === undefined) return <p role="status">Carregando o acompanhamento…</p>;
   return (
     <>
+      {status.isError ? <StaleDataNotice updatedAt={status.dataUpdatedAt} /> : null}
       <LivePulseLine runId={run.id} symbol={run.symbol} />
       <LiveTrackingCard run={run} status={status.data} />
       <div className={status.data.goal === null ? styles.stack : styles.grid}>

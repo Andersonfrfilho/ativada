@@ -56,6 +56,12 @@ describe('agrupar decisões iguais', () => {
     expect(groups.map((group) => group.hidden.length)).toEqual([0, 0, 0, 0, 0]);
   });
 
+  test('the fresh live-status line wins over the same candle kept in an older page', () => {
+    const stale = parse(weak(0, { outcome: 'buy_pending', message: 'Pediu compra.' }));
+    const fresh = parse(weak(0, { outcome: 'bought', message: 'Comprou.' }));
+    expect(mergeDecisions([[stale], [fresh]])[0]?.outcome).toBe('bought');
+  });
+
   test('merging drops a repeated candle and keeps the newest first', () => {
     const first = [parse(weak(0)), parse(weak(1))];
     const second = [parse(weak(1)), parse(weak(2))];
@@ -91,6 +97,49 @@ describe('tabela "O que a estratégia decidiu" (T3.2)', () => {
     expect(within(rows[1] as HTMLElement).getByText('Comprou')).toBeDefined();
     expect(within(rows[1] as HTMLElement).getByText('+2,5 de +2')).toBeDefined();
     expect(within(card).getByText(/horários|GMT/)).toBeDefined();
+  });
+
+  test('a pending buy and an exit have their own word, and one decision is singular', async () => {
+    const harness = liveWith(
+      [buildDecisionAt(0, { outcome: 'buy_pending', action: 'BUY', message: 'Pediu compra.' })],
+      null,
+    );
+    openLiveDetail(harness);
+    const card = await screen.findByRole('region', TABLE_CARD);
+    expect(within(card).getByText('Pediu compra')).toBeDefined();
+    expect(within(card).getByText(/^1 decisão mostrada/)).toBeDefined();
+    expect(within(card).queryByText(/1 decisões/)).toBeNull();
+  });
+
+  test('an exit shows "Saiu" with the sentence of the server', async () => {
+    openLiveDetail(
+      liveWith(
+        [buildDecisionAt(0, { outcome: 'exited', message: 'Vendeu no stop (95,50).' })],
+        null,
+      ),
+    );
+    const card = await screen.findByRole('region', TABLE_CARD);
+    expect(within(card).getByText('Saiu')).toBeDefined();
+    expect(within(card).getByText('Vendeu no stop (95,50).')).toBeDefined();
+  });
+
+  test('a vote with weight zero says it is out because of the trend filter', async () => {
+    const votes = [
+      {
+        ruleId: 'b',
+        label: 'Bollinger',
+        kind: 'bollinger',
+        vote: -1,
+        weight: '0',
+        isMissing: false,
+        reading: null,
+      },
+    ];
+    openLiveDetail(liveWith([buildDecisionAt(0, { votes })], null));
+    const card = await screen.findByRole('region', TABLE_CARD);
+    fireEvent.click(within(card).getByRole('button', { name: 'ver votos' }));
+    expect(within(card).getByText('fora (filtro de tendência)')).toBeDefined();
+    expect(within(card).queryByText(/contra/)).toBeNull();
   });
 
   test('"ver votos" opens the rules by button with aria-expanded and shows the technical detail folded', async () => {
@@ -145,8 +194,19 @@ describe('tabela "O que a estratégia decidiu" (T3.2)', () => {
     expect(within(card).getAllByRole('row')).toHaveLength(3);
     const toggle = within(card).getByRole('button', { name: 'Mostrar 4 horas iguais' });
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle.getAttribute('aria-controls')).toBeNull();
+    const rangeText = within(card).getByText(/mesma decisão e mesmo motivo/).textContent ?? '';
+    expect(rangeText).toMatch(
+      /de \d{2}\/\d{2}\/\d{4} \d{2}:\d{2} a \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:/,
+    );
     fireEvent.click(toggle);
     expect(within(card).getAllByRole('row')).toHaveLength(7);
+    const controlled = within(card)
+      .getByRole('button', { name: 'Esconder' })
+      .getAttribute('aria-controls')
+      ?.split(' ');
+    expect(controlled).toHaveLength(4);
+    for (const id of controlled ?? []) expect(card.querySelector(`[id="${id}"]`)).not.toBeNull();
     expect(
       within(card).getByRole('button', { name: 'Esconder' }).getAttribute('aria-expanded'),
     ).toBe('true');

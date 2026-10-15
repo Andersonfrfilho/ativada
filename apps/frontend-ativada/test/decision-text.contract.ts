@@ -90,8 +90,8 @@ describe('formatDirectedPercent', () => {
   });
 
   test('a negative rate keeps its sign and rounds toward the correct side', () => {
-    expect(formatDirectedPercent('-0.012301', 'down')).toBe('-1,24%');
-    expect(formatDirectedPercent('-0.012301', 'up')).toBe('-1,23%');
+    expect(formatDirectedPercent('-0.012301', 'down')).toBe('−1,24%');
+    expect(formatDirectedPercent('-0.012301', 'up')).toBe('−1,23%');
   });
 
   test('zero has no sign, and a tiny gain rounded down is zero', () => {
@@ -122,7 +122,7 @@ describe('describeLiveResult', () => {
 
   test('a loss rounds down too (the loss never looks smaller)', () => {
     expect(describeLiveResult('-12.341', '-0.012341')).toEqual({
-      text: '-12,35 (-1,24%)',
+      text: '-12,35 (−1,24%)',
       trend: 'loss',
     });
   });

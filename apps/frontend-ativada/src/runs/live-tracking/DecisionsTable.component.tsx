@@ -42,7 +42,7 @@ function useOlderDecisions(runId: string, status: LiveStatus): OlderDecisions {
     else setIsRequested(true);
   }
   return {
-    decisions: mergeDecisions([status.decisions.items, olderItems]),
+    decisions: mergeDecisions([olderItems, status.decisions.items]),
     hasMore,
     isLoading: isRequested && (older.isPending || older.isFetchingNextPage),
     loadMore,
@@ -105,7 +105,8 @@ function TableFooter({ count, nextDecisionAt, now, timeZone }: FooterProps): Rea
   return (
     <div className={styles.footer}>
       <span className={styles.muted}>
-        {count} decisões mostradas · velas seguidas iguais ficam agrupadas.
+        {count === 1 ? '1 decisão mostrada' : `${count} decisões mostradas`} · velas seguidas iguais
+        ficam agrupadas.
       </span>
       {nextDecisionAt === null ? null : (
         <span className={styles.muted}>

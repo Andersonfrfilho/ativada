@@ -20,10 +20,15 @@ type VoteLook = {
   readonly text: string;
 };
 
+const isZeroWeight = (weight: string): boolean => formatDecimalText(weight, WEIGHT_FORMAT) === '0';
+
 // Voto nunca é só cor: sinal, palavra ("a favor", "contra", "neutra") e ícone.
 function lookOf({ vote, weight, isMissing }: VoteLabelProps): VoteLook {
   const amount = formatDecimalText(weight, WEIGHT_FORMAT);
   if (isMissing) return { icon: 'equal', className: styles.voteNeutral, text: 'sem dado' };
+  if (isZeroWeight(weight)) {
+    return { icon: 'equal', className: styles.voteNeutral, text: 'fora (filtro de tendência)' };
+  }
   if (vote === 1)
     return { icon: 'arrowUp', className: styles.voteFavor, text: `+${amount} a favor` };
   if (vote === -1) {

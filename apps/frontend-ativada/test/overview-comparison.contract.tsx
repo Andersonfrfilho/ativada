@@ -31,6 +31,14 @@ describe('barras de comparação com comprar e segurar', () => {
     expect(within(group()).getAllByText(/%/).length).toBeGreaterThan(2);
   });
 
+  test('the percent rounds down and the arrow follows the rounded value', () => {
+    render(<ComparisonBars initial="10000.00" equity="10000.90" benchmark="9999.95" />);
+    const text = group().textContent ?? '';
+    expect(text).toContain('= 0,00%');
+    expect(text).not.toContain('+0,01%');
+    expect(text).toContain('−0,01%');
+  });
+
   test('without a usable starting balance nothing is drawn', () => {
     const { container } = render(<ComparisonBars initial="0" equity="1" benchmark="1" />);
     expect(container.textContent).toBe('');

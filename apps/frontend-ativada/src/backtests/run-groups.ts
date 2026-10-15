@@ -56,7 +56,9 @@ export function groupRuns(
   const groups = new Map<string, GroupedRun[]>();
   for (const run of runs) {
     const entry: GroupedRun = { run, result: readResult(run) };
-    groups.set(run.strategyVersionId, [...(groups.get(run.strategyVersionId) ?? []), entry]);
+    const group = groups.get(run.strategyVersionId);
+    if (group === undefined) groups.set(run.strategyVersionId, [entry]);
+    else group.push(entry);
   }
   return [...groups.entries()].map(([key, items]) => ({
     key,

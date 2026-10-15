@@ -71,7 +71,8 @@ export function formatDirectedPercent(rate: string, direction: RoundingDirection
       ? floorDivide(scaledRate, HUNDREDTH_OF_PERCENT)
       : -floorDivide(-scaledRate, HUNDREDTH_OF_PERCENT);
   const sign = hundredths > ZERO ? '+' : '';
-  return `${sign}${formatScaled(hundredths * HUNDREDTH_TO_SCALED_PERCENT)}%`;
+  const text = formatScaled(hundredths * HUNDREDTH_TO_SCALED_PERCENT).replace('-', MINUS_SIGN);
+  return `${sign}${text}%`;
 }
 
 // O resultado desce sempre (ganho menor, perda maior). Zero exato aparece como "= 0,00", sem sinal de ganho nem de perda.

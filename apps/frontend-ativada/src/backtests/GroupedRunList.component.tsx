@@ -2,7 +2,7 @@
 import type { ReactElement } from 'react';
 import { Link } from 'react-router';
 
-import { formatSignedScaledPercent } from '../format/decimal.js';
+import { formatSignedPercentDown } from '../format/decimal.js';
 import { formatDate, formatSymbol } from '../format/format.js';
 import { Icon } from '../layout/Icon.component.js';
 import {
@@ -83,7 +83,7 @@ function summaryTone(positive: number, measured: number): SummaryTone {
 }
 
 function formatPercent(value: bigint): string {
-  return formatSignedScaledPercent(value).replace('-', MINUS);
+  return formatSignedPercentDown(value).replace('-', MINUS);
 }
 
 function GroupSummaryLine({ group }: { readonly group: RunGroup }): ReactElement | null {

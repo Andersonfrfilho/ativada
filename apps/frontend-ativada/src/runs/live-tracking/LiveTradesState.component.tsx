@@ -17,6 +17,9 @@ import styles from './LiveTracking.module.css';
 export const DECISIONS_ANCHOR = 'decisoes';
 export const TRIGGERS_ANCHOR = 'falta';
 
+const NO_BUY_TITLE = 'Nenhuma compra ainda: a estratégia está esperando';
+const PENDING_BUY_TITLE = 'Compra pedida: executa na abertura da próxima vela';
+
 type EmptyStateProps = {
   readonly icon: IconName;
   readonly title: string;
@@ -76,8 +79,9 @@ export function LiveTradesState({ run, status }: LiveTradesStateProps): ReactEle
   }
   if (summary === undefined) return null;
   if (summary.closedTrades + summary.openTrades > 0) return <TradeSummary runId={run.id} />;
+  const hasPendingBuy = status.decisions.items[0]?.outcome === 'buy_pending';
   return (
-    <EmptyState icon="pause" title="Nenhuma compra ainda: a estratégia está esperando" hasLinks>
+    <EmptyState icon="pause" title={hasPendingBuy ? PENDING_BUY_TITLE : NO_BUY_TITLE} hasLinks>
       {describeAnalysis(status)}
     </EmptyState>
   );

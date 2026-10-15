@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 
 import { RunResultBar } from '../backtests/RunResultBar.component.js';
 import { divideFloor, parseScaled } from '../format/decimal.js';
-import { formatDecimal } from '../format/format.js';
+import { formatDirectedMoney } from '../runs/directed-money.js';
 import styles from './Overview.module.css';
 
 const PERCENT_SCALE = 1_000_000n;
@@ -83,7 +83,7 @@ export function ComparisonBars({
       />
       <ComparisonRow
         name="Comprar e segurar"
-        note={`teria hoje ${formatDecimal(benchmark)} USDT`}
+        note={`teria hoje ${formatDirectedMoney(benchmark, 'down')} USDT`}
         rate={held}
         scaleLimit={scaleLimit}
       />

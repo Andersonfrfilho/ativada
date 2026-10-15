@@ -36,7 +36,7 @@ export const chartDecisionSchema = z.object({
   candleTime: z.number(),
   closedAt: z.number(),
   action: z.enum(['BUY', 'SELL', 'HOLD']),
-  outcome: z.enum(['waited', 'bought', 'sold']),
+  outcome: z.enum(['waited', 'bought', 'buy_pending', 'sold', 'exited']),
   score: decimalText,
   scoreThreshold: decimalText,
 });

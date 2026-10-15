@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, setSystemTime, test } from 'bun:test';
 
 import { screen, within } from '@testing-library/react';
 
@@ -7,7 +7,7 @@ import { ruleTriggerSchema } from '../src/runs/live-tracking/live-status.validat
 import { buildScoreScale } from '../src/runs/live-tracking/scoreboard-scale.js';
 import { formatCountdown, formatAge } from '../src/runs/live-tracking/live-pulse.js';
 import { describeNeed, describeDistance } from '../src/runs/live-tracking/trigger-text.js';
-import { buildLiveStatusResponse } from './support/live-status-fixtures.js';
+import { buildLiveStatusResponse, FIXTURE_CANDLE_TIME } from './support/live-status-fixtures.js';
 import {
   buildRunSection,
   createLiveHarness,
@@ -161,7 +161,12 @@ describe('"O que falta para comprar agora" (T3.3)', () => {
 });
 
 describe('linha de pulso', () => {
+  afterEach(() => {
+    setSystemTime();
+  });
+
   test('says running, the last decision and the countdown to the next one', async () => {
+    setSystemTime(new Date(FIXTURE_CANDLE_TIME + 1.5 * HOUR));
     const harness = createLiveHarness();
     openLiveDetail(harness);
     const pulse = await screen.findByRole('region', { name: 'Simulação rodando agora' });
@@ -169,8 +174,33 @@ describe('linha de pulso', () => {
     expect(within(pulse).getByText(/Última decisão/)).toBeDefined();
     expect(within(pulse).getByText('esperou')).toBeDefined();
     expect(within(pulse).getByText(/Próxima às/)).toBeDefined();
-    expect(within(pulse).getByText(/^\d{2}:\d{2}$|^\d+:\d{2}:\d{2}$/)).toBeDefined();
-    expect(within(pulse).getByText(/Simulador ativo · servidor respondeu há \d+ s/)).toBeDefined();
+    expect(pulse.querySelector('.countdown')?.textContent).toBe('30:00');
+    expect(within(pulse).getByText(/Painel atualizado há \d+ s/)).toBeDefined();
+    expect(within(pulse).queryByText(/Simulador ativo/)).toBeNull();
+  });
+
+  test('past the expected close it says the candle is being processed, not a 00:00 countdown', async () => {
+    setSystemTime(new Date(FIXTURE_CANDLE_TIME + 2 * HOUR + 60_000));
+    openLiveDetail(createLiveHarness());
+    const pulse = await screen.findByRole('region', { name: 'Simulação rodando agora' });
+    expect(within(pulse).getByText('Processando a vela…')).toBeDefined();
+    expect(within(pulse).queryByText(/Próxima às/)).toBeNull();
+  });
+
+  test('the region name follows the state: queued and waiting for data are not "rodando agora"', async () => {
+    openLiveDetail(
+      createLiveHarness({
+        liveStatus: buildLiveStatusResponse({
+          run: buildRunSection({
+            waitingForData: { since: LIVE_PERIOD_START, openTime: LIVE_PERIOD_START },
+          }),
+        }),
+      }),
+    );
+    const pulse = await screen.findByRole('region', {
+      name: 'Simulação aguardando dados do mercado',
+    });
+    expect(within(pulse).getByText('Aguardando dados do mercado')).toBeDefined();
   });
 
   test('a stalled simulation says "Parada" with an icon and no countdown', async () => {
@@ -180,7 +210,7 @@ describe('linha de pulso', () => {
       }),
     });
     openLiveDetail(harness);
-    const pulse = await screen.findByRole('region', { name: 'Simulação rodando agora' });
+    const pulse = await screen.findByRole('region', { name: 'Simulação parada' });
     expect(within(pulse).getByText('Parada')).toBeDefined();
     expect(within(pulse).queryByText(/Próxima às/)).toBeNull();
   });

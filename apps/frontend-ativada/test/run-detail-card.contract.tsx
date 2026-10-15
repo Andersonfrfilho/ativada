@@ -105,7 +105,12 @@ describe('rota do detalhe: cartão "Preço e operações"', () => {
 
   test.each(['failed', 'cancelled'])('does not appear when the run %s', async (status) => {
     const app = open(buildRun({ id: 'run-1', status, metrics: null, errorCode: 'NO_CANDLES' }));
-    expect(await screen.findByRole('alert')).toBeDefined();
+    if (status === 'cancelled') {
+      const notice = await screen.findByText('Execução cancelada.');
+      expect(notice.getAttribute('role')).toBe('status');
+    } else {
+      expect(await screen.findByRole('alert')).toBeDefined();
+    }
     expect(screen.queryByRole('region', CARD)).toBeNull();
     expect(callsToTradeRoutes(app, 'run-1')).toBe(0);
   });

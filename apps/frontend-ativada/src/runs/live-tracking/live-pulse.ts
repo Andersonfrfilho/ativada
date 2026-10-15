@@ -9,7 +9,9 @@ const TWO_DIGITS = 2;
 export const OUTCOME_WORD: Readonly<Record<Decision['outcome'], string>> = {
   waited: 'esperou',
   bought: 'comprou',
+  buy_pending: 'pediu compra',
   sold: 'vendeu',
+  exited: 'saiu',
 };
 
 function pad(value: number): string {

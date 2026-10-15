@@ -11,6 +11,8 @@ const FULL = 100n;
 const ZERO = 0n;
 const CENTS = 2;
 const DAY_AND_MONTH_LENGTH = 5;
+// "Abaixo do ritmo" só quando o ganho está abaixo de 90% do esperado em linha reta: um pouco atrás ainda é "No caminho".
+const PACE_TOLERANCE_PERCENT = 90n;
 
 export type GoalMeters = {
   readonly gain: bigint;
@@ -70,6 +72,18 @@ function readScaled(params: GoalMeterParams): Scaled | undefined {
   return { initial, current, target, floor };
 }
 
+type PaceCheck = {
+  readonly scaled: Scaled;
+  readonly expectedGain: bigint;
+  readonly hasDecidedCandle: boolean;
+};
+
+// Sem vela fechada o saldo ainda não se mexeu: não há ritmo para comparar (e 1 centavo atrás não é estar atrás).
+function isBehind({ scaled, expectedGain, hasDecidedCandle }: PaceCheck): boolean {
+  if (!hasDecidedCandle) return false;
+  return (scaled.current - scaled.initial) * FULL < expectedGain * PACE_TOLERANCE_PERCENT;
+}
+
 // Ganho, perda e tempo da meta em BigInt: ganho e tempo arredondam para baixo, a perda para cima (contra o usuário).
 export function computeGoalMeters(params: GoalMeterParams): GoalMeters | undefined {
   const scaled = readScaled(params);
@@ -92,7 +106,11 @@ export function computeGoalMeters(params: GoalMeterParams): GoalMeters | undefin
     totalMilliseconds: total,
     timePercent: percentOf(BigInt(elapsed), BigInt(total), 'down'),
     expectedGain,
-    isBehindPace: scaled.current - scaled.initial < expectedGain,
+    isBehindPace: isBehind({
+      scaled,
+      expectedGain,
+      hasDecidedCandle: params.balance.observedAt !== null,
+    }),
   };
 }
 

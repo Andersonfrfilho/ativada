@@ -87,6 +87,7 @@ function PulseNext({
   timeZone,
 }: { readonly run: PulseRun } & Omit<DecisionPulseProps, 'decision'>): ReactElement | null {
   if (run.nextDecisionAt === null || run.stalledSince !== undefined) return null;
+  if (now >= run.nextDecisionAt) return <span className={styles.item}>Processando a vela…</span>;
   return (
     <span className={styles.item}>
       Próxima às <strong>{formatMomentSkippingToday(run.nextDecisionAt, { now, timeZone })}</strong>
@@ -95,7 +96,22 @@ function PulseNext({
   );
 }
 
-// "Simulador ativo": o servidor respondeu há poucos segundos (o detalhe da execução é consultado a cada 2 s enquanto roda).
+const PULSE_LABEL = {
+  STALLED: 'Simulação parada',
+  WAITING: 'Simulação aguardando dados do mercado',
+  QUEUED: 'Simulação na fila',
+  RUNNING: 'Simulação rodando agora',
+} as const;
+
+// O nome da região acompanha o estado mostrado: "rodando agora" não pode rotular uma simulação parada.
+function describePulse(run: PulseRun): string {
+  if (run.stalledSince !== undefined) return PULSE_LABEL.STALLED;
+  if (run.waitingForData !== null) return PULSE_LABEL.WAITING;
+  return run.status === RUN_STATUS.QUEUED ? PULSE_LABEL.QUEUED : PULSE_LABEL.RUNNING;
+}
+
+// "Painel atualizado há N s": a última resposta do servidor ao painel (o detalhe da execução é consultado a cada 2 s enquanto roda);
+// não afirma que o simulador está ativo.
 function PulseHeartbeat({
   answeredAt,
   now,
@@ -106,7 +122,7 @@ function PulseHeartbeat({
   if (answeredAt === 0) return null;
   return (
     <span className={`${styles.item} ${styles.muted}`}>
-      Simulador ativo · servidor respondeu {formatAge(now - answeredAt)}
+      Painel atualizado {formatAge(now - answeredAt)}
     </span>
   );
 }
@@ -124,7 +140,7 @@ export function LivePulseLine({ runId, symbol }: LivePulseLineProps): ReactEleme
   return (
     <section
       className={isHealthy ? styles.pulse : `${styles.pulse} ${styles.pulseWarn}`}
-      aria-label="Simulação rodando agora"
+      aria-label={describePulse(run)}
     >
       <PulseState run={run} />
       <PulsePrice symbol={symbol} />

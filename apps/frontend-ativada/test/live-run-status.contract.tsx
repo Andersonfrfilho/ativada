@@ -310,7 +310,7 @@ describe('on the active goal card', () => {
       isAuthenticated: true,
       routes: overviewRoutes(() => ({ stalledSince }), 'goal-1'),
     });
-    const pulse = await screen.findByRole('region', { name: 'Simulação rodando agora' });
+    const pulse = await screen.findByRole('region', { name: 'Simulação parada' });
     expect(within(pulse).getByText('Parada')).toBeDefined();
     await waitFor(() => expect(screen.getAllByText(STALLED)).toHaveLength(1));
     const balance = screen.getByRole('region', { name: 'Saldo da simulação' });

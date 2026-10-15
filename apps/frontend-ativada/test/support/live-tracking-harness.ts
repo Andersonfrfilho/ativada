@@ -1,6 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { buildChartResponse, buildSummaryResponse } from './trade-chart-fixtures.js';
-import { dataResponse, pageResponse, type FakeRoute, type RecordedCall } from './fake-fetch.js';
+import {
+  dataResponse,
+  errorResponse,
+  pageResponse,
+  type FakeRoute,
+  type RecordedCall,
+} from './fake-fetch.js';
 import { FIXTURE_CANDLE_TIME, buildLiveStatusResponse } from './live-status-fixtures.js';
 import { renderApp, type RenderedApp } from './render-app.js';
 import { buildRun, buildStrategy, buildVersion } from './run-fixtures.js';
@@ -31,6 +37,8 @@ export function buildRunSection(overrides: Record<string, unknown> = {}): Record
 export type LiveHarness = {
   // O que o servidor responde agora; o teste troca o valor e dispara o aviso do stream.
   liveStatus: Record<string, unknown>;
+  // Liga a falha do servidor no live-status (a tela já carregada deve continuar de pé).
+  isLiveStatusFailing: boolean;
   decisionPages: Array<{ items: unknown[]; nextCursor: string | null }>;
   tradeSummary: Record<string, unknown>;
   run: Record<string, unknown>;
@@ -39,6 +47,7 @@ export type LiveHarness = {
 export function createLiveHarness(overrides: Partial<LiveHarness> = {}): LiveHarness {
   return {
     liveStatus: buildLiveStatusResponse(),
+    isLiveStatusFailing: false,
     decisionPages: [],
     tradeSummary: buildSummaryResponse({
       closedTrades: 0,
@@ -112,7 +121,10 @@ export function liveRoutes(harness: LiveHarness): readonly FakeRoute[] {
     {
       method: 'GET',
       path: `${LIVE_BASE}/live-status`,
-      respond: (): Response => dataResponse(harness.liveStatus),
+      respond: (): Response =>
+        harness.isLiveStatusFailing
+          ? errorResponse(503, 'UNAVAILABLE')
+          : dataResponse(harness.liveStatus),
     },
     {
       method: 'GET',

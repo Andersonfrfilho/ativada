@@ -16,11 +16,14 @@ type OutcomeLook = { readonly tone: ChipTone; readonly icon: IconName; readonly 
 const OUTCOME_LOOK: Readonly<Record<Decision['outcome'], OutcomeLook>> = {
   waited: { tone: CHIP_TONE.NEUTRAL, icon: 'pause', word: 'Esperou' },
   bought: { tone: CHIP_TONE.BUY, icon: 'arrowUp', word: 'Comprou' },
+  buy_pending: { tone: CHIP_TONE.NEUTRAL, icon: 'pause', word: 'Pediu compra' },
   sold: { tone: CHIP_TONE.SELL, icon: 'arrowDown', word: 'Vendeu' },
+  exited: { tone: CHIP_TONE.SELL, icon: 'arrowDown', word: 'Saiu' },
 };
 
 export type DecisionRowProps = {
   readonly decision: Decision;
+  readonly rowId?: string;
   readonly now: number;
   readonly timeZone: string;
 };
@@ -58,14 +61,14 @@ function VotesToggle({ isOpen, detailId, onToggle }: VotesToggleProps): ReactEle
 }
 
 // Uma vela decidida (RF05). "Ver votos" abre o detalhe por botão (teclado e aria-expanded).
-export function DecisionRow({ decision, now, timeZone }: DecisionRowProps): ReactElement {
+export function DecisionRow({ decision, rowId, now, timeZone }: DecisionRowProps): ReactElement {
   const [isOpen, setIsOpen] = useState(false);
   const detailId = useId();
   const look = OUTCOME_LOOK[decision.outcome];
   const closedAt = formatClosingMoment(decision.closedAt, { now, timeZone });
   return (
     <>
-      <tr>
+      <tr id={rowId}>
         <td>
           <span className={styles.cellLabel}>Fechou</span>
           <ClosingMoment text={closedAt} />

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
-import { formatSignedScaledPercent } from '../format/decimal.js';
+import { formatSignedPercentDown, roundRateDownToPercent } from '../format/decimal.js';
 import { Icon, type IconName } from '../layout/Icon.component.js';
 import styles from './BacktestGroups.module.css';
 
@@ -18,10 +18,12 @@ type Look = {
   readonly text: string;
 };
 
+// Seta e cor seguem o valor já arredondado: -0,004% aparece como "−0,01%" (para baixo) e 0,004% como "= 0,00%".
 function lookOf(result: bigint): Look {
-  if (result === ZERO) return { icon: 'equal', className: styles.flat, text: '= 0,00%' };
-  const text = formatSignedScaledPercent(result).replace('-', MINUS);
-  return result > ZERO
+  const rounded = roundRateDownToPercent(result);
+  if (rounded === ZERO) return { icon: 'equal', className: styles.flat, text: '= 0,00%' };
+  const text = formatSignedPercentDown(result).replace('-', MINUS);
+  return rounded > ZERO
     ? { icon: 'arrowUp', className: styles.up, text }
     : { icon: 'arrowDown', className: styles.down, text };
 }

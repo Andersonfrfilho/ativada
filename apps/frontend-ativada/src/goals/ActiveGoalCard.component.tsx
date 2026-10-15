@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 
 import { LiveGoalBlock } from '../runs/live-tracking/LiveGoalBlock.component.js';
 import { useLiveStatusQuery } from '../runs/live-tracking/live-status.query.js';
+import { StaleDataNotice } from '../runs/live-tracking/StaleDataNotice.component.js';
 import controls from '../styles/Controls.module.css';
 import { useGoalRunQuery } from './goal-run.query.js';
 
@@ -14,7 +15,7 @@ function ActiveGoal({
   readonly goalId: string;
 }): ReactElement {
   const status = useLiveStatusQuery(runId, true);
-  if (status.isError) {
+  if (status.data === undefined && status.isError) {
     return (
       <p role="alert" className={controls.error}>
         Não foi possível carregar a meta. Tente novamente em instantes.
@@ -22,7 +23,12 @@ function ActiveGoal({
     );
   }
   if (status.data === undefined) return <p role="status">Carregando a meta…</p>;
-  return <LiveGoalBlock status={status.data} goalId={goalId} />;
+  return (
+    <>
+      {status.isError ? <StaleDataNotice updatedAt={status.dataUpdatedAt} /> : null}
+      <LiveGoalBlock status={status.data} goalId={goalId} />
+    </>
+  );
 }
 
 // A meta da simulação com os números do servidor (um cálculo só, em decimal): alvo, prazo, ganho, perda e ritmo.

@@ -1,10 +1,15 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { useQueryClient } from '@tanstack/react-query';
+import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 
+import {
+  createRefetchScheduler,
+  isDecisionsKey,
+  REFETCH_DEBOUNCE_MILLISECONDS,
+} from '../src/live/refetch-scheduler.js';
 import {
   useDecisionsQuery,
   useLiveStatusQuery,
@@ -130,6 +135,14 @@ describe('chart decisions', () => {
     expect(tradeChartSchema.parse(buildChartResponse()).decisions).toBeNull();
   });
 
+  test('the chart and the table accept the pending buy and the exit outcomes', () => {
+    for (const outcome of ['buy_pending', 'exited'] as const) {
+      const chart = buildChartResponse({ decisions: [{ ...decision, outcome }] });
+      expect(tradeChartSchema.safeParse(chart).success).toBe(true);
+      expect(decisionSchema.safeParse(buildDecisionResponse({ outcome })).success).toBe(true);
+    }
+  });
+
   test('the chart refuses a decision with a bad outcome or a numeric score', () => {
     const badOutcome = [{ ...decision, outcome: 'x' }];
     const badScore = [{ ...decision, score: 1 }];
@@ -139,6 +152,54 @@ describe('chart decisions', () => {
     expect(tradeChartSchema.safeParse(buildChartResponse({ decisions: badScore })).success).toBe(
       false,
     );
+  });
+});
+
+describe('o aviso do stream vira uma rebusca só', () => {
+  function createSpiedClient(): { client: QueryClient; calls: unknown[] } {
+    const client = new QueryClient();
+    const calls: unknown[] = [];
+    const original = client.invalidateQueries.bind(client);
+    client.invalidateQueries = (filters, options): Promise<void> => {
+      calls.push(filters);
+      return original(filters, options);
+    };
+    return { client, calls };
+  }
+
+  test('a burst of notices of the same subject is one invalidation, 500 ms after the last', async () => {
+    const { client, calls } = createSpiedClient();
+    const scheduler = createRefetchScheduler(client);
+    scheduler.schedule('runs');
+    scheduler.schedule('runs');
+    scheduler.schedule('runs');
+    expect(calls).toHaveLength(0);
+    await new Promise((resolve) => setTimeout(resolve, REFETCH_DEBOUNCE_MILLISECONDS + 100));
+    expect(calls).toHaveLength(2);
+    scheduler.cancel();
+  });
+
+  test('old pages of decisions are only marked stale, never refetched', async () => {
+    const { client, calls } = createSpiedClient();
+    const scheduler = createRefetchScheduler(client);
+    scheduler.schedule('runs');
+    await new Promise((resolve) => setTimeout(resolve, REFETCH_DEBOUNCE_MILLISECONDS + 100));
+    const [others, decisions] = calls as { refetchType?: string }[];
+    expect(others?.refetchType).toBeUndefined();
+    expect(decisions?.refetchType).toBe('none');
+    expect(isDecisionsKey(['runs', 'run-1', 'decisions'])).toBe(true);
+    expect(isDecisionsKey(['runs', 'run-1', 'live-status'])).toBe(false);
+    expect(isDecisionsKey(['runs'])).toBe(false);
+    scheduler.cancel();
+  });
+
+  test('cancel drops the pending refetch', async () => {
+    const { client, calls } = createSpiedClient();
+    const scheduler = createRefetchScheduler(client);
+    scheduler.schedule('runs');
+    scheduler.cancel();
+    await new Promise((resolve) => setTimeout(resolve, REFETCH_DEBOUNCE_MILLISECONDS + 100));
+    expect(calls).toHaveLength(0);
   });
 });
 

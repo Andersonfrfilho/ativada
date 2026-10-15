@@ -3,16 +3,18 @@ import { readdirSync, readFileSync } from 'node:fs';
 
 import { afterEach, describe, expect, setSystemTime, test } from 'bun:test';
 
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 
 import { buildSummaryResponse } from './support/trade-chart-fixtures.js';
 import { buildLiveStatusResponse } from './support/live-status-fixtures.js';
 import {
+  buildDecisionAt,
   buildRunSection,
   createLiveHarness,
   DAY,
   HOUR,
   LIVE_PERIOD_START,
+  LIVE_RUN_ID,
   openLiveDetail,
 } from './support/live-tracking-harness.js';
 
@@ -90,6 +92,48 @@ describe('cartão "Acompanhamento" (T3.1)', () => {
     expect(screen.queryByText('Compras')).toBeNull();
   });
 
+  test('a pending buy changes the empty state: the order is asked, not absent', async () => {
+    const harness = createLiveHarness({
+      liveStatus: buildLiveStatusResponse({
+        balance: flatBalance(),
+        decisions: {
+          items: [
+            buildDecisionAt(0, {
+              action: 'BUY',
+              outcome: 'buy_pending',
+              message: 'Pediu compra: executa na abertura da próxima vela.',
+            }),
+          ],
+          nextCursor: null,
+        },
+      }),
+    });
+    openLiveDetail(harness);
+    const card = await screen.findByRole('region', TRACKING);
+    expect(
+      await within(card).findByRole('heading', {
+        name: 'Compra pedida: executa na abertura da próxima vela',
+      }),
+    ).toBeDefined();
+    expect(within(card).queryByText(/Nenhuma compra ainda/)).toBeNull();
+  });
+
+  test('a failed refresh keeps the card on screen and only warns how old the data is', async () => {
+    const harness = createLiveHarness();
+    const app = openLiveDetail(harness);
+    const card = await screen.findByRole('region', TRACKING);
+    expect(await within(card).findByText('1.030,50')).toBeDefined();
+    harness.isLiveStatusFailing = true;
+    act(() =>
+      app.stream.emit({ type: 'event', runId: LIVE_RUN_ID, kind: 'fill', eventId: 'e1', at: 1 }),
+    );
+    expect(
+      await screen.findByText(/Não foi possível atualizar agora; dados de há \d+ s/),
+    ).toBeDefined();
+    expect(screen.getByRole('region', TRACKING)).toBeDefined();
+    expect(screen.queryByText(/Não foi possível carregar o acompanhamento/)).toBeNull();
+  });
+
   test('a running simulation with no closed candle says when the first one closes', async () => {
     const harness = createLiveHarness({
       liveStatus: buildLiveStatusResponse({
@@ -154,6 +198,26 @@ describe('bloco da meta (T3.1)', () => {
     expect(within(region).queryByText('Abaixo do ritmo')).toBeNull();
   });
 
+  test('a small delay against the linear pace is still "No caminho"', async () => {
+    setSystemTime(SIXTEEN_HOURS_IN);
+    const balance = { ...flatBalance(), current: '1002.7', result: '2.7', resultRate: '0.0027' };
+    openLiveDetail(
+      createLiveHarness({ liveStatus: buildLiveStatusResponse({ balance, goal: goalOf() }) }),
+    );
+    const region = await screen.findByRole('region', { name: 'Meta: +3% em 7 dias' });
+    expect(within(region).getAllByText('No caminho').length).toBeGreaterThan(0);
+  });
+
+  test('before the first closed candle there is no pace to be behind of', async () => {
+    setSystemTime(SIXTEEN_HOURS_IN);
+    const balance = { ...flatBalance(), observedAt: null };
+    openLiveDetail(
+      createLiveHarness({ liveStatus: buildLiveStatusResponse({ balance, goal: goalOf() }) }),
+    );
+    const region = await screen.findByRole('region', { name: 'Meta: +3% em 7 dias' });
+    expect(within(region).queryByText('Abaixo do ritmo')).toBeNull();
+  });
+
   test('a recorded outcome replaces the meters with its own sentence', async () => {
     const harness = createLiveHarness({
       liveStatus: buildLiveStatusResponse({
@@ -183,7 +247,8 @@ describe('estados da simulação', () => {
     openLiveDetail(harness);
     expect(await screen.findByRole('region', TRACKING)).toBeDefined();
     expect(await screen.findByRole('region', { name: 'Preço e operações' })).toBeDefined();
-    expect(screen.getByRole('alert').textContent).toBe('Execução cancelada.');
+    expect(screen.getByText('Execução cancelada.').getAttribute('role')).toBe('status');
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 

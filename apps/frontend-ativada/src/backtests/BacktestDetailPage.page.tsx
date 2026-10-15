@@ -32,7 +32,7 @@ function LivePaperBody({ run }: { readonly run: RunDetail }): ReactElement {
   return (
     <>
       {run.status === RUN_STATUS.CANCELLED ? (
-        <p role="alert" className={controls.error}>
+        <p role="status" className={controls.muted}>
           {failureMessage(run)}
         </p>
       ) : null}
@@ -52,8 +52,12 @@ function RunBody({ run }: { readonly run: RunDetail }): ReactElement {
   // Backtest e walk-forward só mostram operações depois de concluídos.
   if (isActiveRun(run)) return <RunProgressCard run={run} />;
   if (run.status !== RUN_STATUS.COMPLETED) {
+    const isCancelled = run.status === RUN_STATUS.CANCELLED;
     return (
-      <p role="alert" className={controls.error}>
+      <p
+        role={isCancelled ? 'status' : 'alert'}
+        className={isCancelled ? controls.muted : controls.error}
+      >
         {failureMessage(run)}
       </p>
     );

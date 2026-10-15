@@ -24,7 +24,7 @@ export const decisionSchema = z.object({
   closedAt: instant,
   close: decimalText,
   action: z.enum(['BUY', 'SELL', 'HOLD']),
-  outcome: z.enum(['waited', 'bought', 'sold']),
+  outcome: z.enum(['waited', 'bought', 'buy_pending', 'sold', 'exited']),
   score: decimalText,
   scoreThreshold: decimalText,
   regime: z.enum(['trending', 'ranging', 'none']),

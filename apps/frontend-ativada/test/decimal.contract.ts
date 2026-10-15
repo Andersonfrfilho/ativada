@@ -4,9 +4,11 @@ import { describe, expect, test } from 'bun:test';
 import {
   divideFloor,
   formatDecimalText,
+  formatSignedPercentDown,
   multiplyDown,
   multiplyUp,
   parseScaled,
+  roundRateDownToPercent,
   roundScaledDirected,
   roundScaledHalfUp,
   toPlainText,
@@ -109,4 +111,14 @@ describe('price formatting by magnitude', () => {
       expect(formatPrice(text)).toBe(expected);
     });
   }
+});
+
+describe('the rate as a percent rounded down', () => {
+  test('a gain never rounds up and a loss never rounds toward zero', () => {
+    expect(roundRateDownToPercent(parseScaled('0.00009') ?? 0n)).toBe(0n);
+    expect(formatSignedPercentDown(parseScaled('0.00009') ?? 0n)).toBe('0,00%');
+    expect(formatSignedPercentDown(parseScaled('0.00019') ?? 0n)).toBe('+0,01%');
+    expect(formatSignedPercentDown(parseScaled('-0.000001') ?? 0n)).toBe('-0,01%');
+    expect(formatSignedPercentDown(parseScaled('0.0333') ?? 0n)).toBe('+3,33%');
+  });
 });
