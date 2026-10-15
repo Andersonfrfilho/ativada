@@ -420,3 +420,29 @@ Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` 
 - A `NextCandlePanel` (T3.5) pode ler `useProjectionsQuery` e `useLiveCandle` sem mudar o que existe; `ChartLayerData.projection` já carrega o `current`.
 - O teclado e o anúncio (T3.7) entram em `useCanvasInteractions` (índice da cruz) e no contêiner `role="img"` do `CandleCanvas`, que hoje só tem `aria-label` e a
   descrição textual (`describeChart`, sem a previsão ainda).
+
+## T3.5 — `NextCandlePanel`: a próxima vela de perto (2026-10-15)
+
+Modelo: `sonnet`. Sem migration; motor e `run-recording` intocados; nenhuma dependência nova; nenhuma mudança na API.
+
+- **Painel** (`NextCandlePanel`, ao lado do canvas a partir de 1.024 px e embaixo no celular; só na simulação ao vivo com a camada "Previsão" ligada): SVG pequeno à mão
+  (`NextCandleChart`, viewBox 320×210, cores só por classes do módulo e tokens `--cone-*`, `--buy`, `--sell`, sem estilo em linha e sem animação) com as 5 últimas velas fechadas,
+  a vela em formação ampliada (caixa tracejada do que ela já andou, esticada pelo tempo da vela), o **meio-cone** do lado da tendência (a metade colorida do lado da tendência, a outra
+  neutra; abre por √fração como `buildProjectionCone`), a linha plana tracejada no preço de partida, a **linha do preço real** (um ponto por mensagem da vela em formação, `usePriceTrail`)
+  com o marcador "agora" e o rótulo da tendência. Nada de preço-alvo: o cone é a faixa gravada de ±1 ATR.
+- **Texto**: "Próximos 15 min (até a decisão das 05:00)" (o tempo que falta vem de `horizonEndsAt` do servidor e do relógio de 5 s do painel; depois do fechamento, "Fechando agora"),
+  `label` ("Tende a COMPRAR · fraco") e `message` ("Placar +1 de +2 para comprar.") **do servidor**, "Faixa típica: 12,778 a 13,032." (preços do servidor só formatados), e o texto fixo
+  "Tendência, não promessa." Estado = ícone + palavra + cor (seta para cima/baixo, "Sem previsão agora" com `=`, aviso `!` para o preço parado).
+- **Resultado ao fechar** (`findRecentResult`, olha só as duas previsões mais novas): "Acertou: o preço subiu 0,27% — ficou dentro da faixa." / "Errou: o preço caiu 0,27% — ficou fora da faixa." /
+  "Empatou: o preço fechou igual e esta previsão não conta." (a porcentagem é a `moveRate` do servidor com a vírgula deslocada em BigInt; pendente, sem lado e vela ausente não mostram nada).
+- **Todos os estados sem previsão (RF16)**, com o texto literal e **sem faixa**: `neutral`, `warming_up`, `no_candle` e `not_running` com a frase do servidor; `other_timeframe` ("A estratégia decide em velas de 1 h;
+  troque para 1h para ver a previsão.") e preço parado ("O preço ao vivo parou de chegar; a previsão volta quando ele voltar.", que vence a tendência e o motivo do servidor); carregando e erro
+  ("Não foi possível carregar a previsão; o gráfico e as operações continuam.") sem derrubar o gráfico.
+- **Velas recentes do painel** vêm de uma consulta própria sob `markets` (as 5 anteriores a `closedAt`, ou à vela do relógio sem previsão), independente da faixa da URL e do timeframe escolhido no gráfico.
+  `ChartLayerData` ganhou `projections` e `isProjectionError`. O ícone `close` entrou em `Icon`.
+- **Contratos** (3 arquivos, 39 testes, todos na lista explícita do `package.json`): `next-candle-state` (precedência dos estados, frases literais, tempo restante em fusos `America/Sao_Paulo` e `America/New_York`, janela,
+  trilha do preço real, resultado, porcentagem), `next-candle-geometry` (velas na ordem e alinhadas ao divisor, meio-cone de compra e de venda fechando na linha plana, sem tendência sem cone, linha real que parte do preço-base,
+  cresce com o tempo e para na borda direita) e `next-candle-panel` (componente com a superfície falsa: compra, venda, cada motivo, outra vela, preço parado, erro, linha real e "agora", resultado, backtest sem painel,
+  camada desligada). O teste de geometria pegou um bug real (`reverse()` no lugar mutava a borda de baixo do meio-cone de venda); corrigido antes do commit.
+
+Gates (WSL, espelho): `typecheck`, `lint` e `format:check` limpos; `panel-test` verde.

@@ -6,7 +6,7 @@ import { useTradeRows } from '../useTradeRows.hook.js';
 import { CHART_LAYER } from './candle-chart.constant.js';
 import { useProjectionsQuery, useStrategyLayersQuery } from './candle-chart.query.js';
 import { computeLayersWindow } from './layer-series.js';
-import type { ProjectionCurrent } from './projections.validation.js';
+import type { ProjectionCurrent, Projections } from './projections.validation.js';
 import type { StrategyLayers } from './strategy-layers.validation.js';
 import type { CandleSource } from './useCandleSource.hook.js';
 
@@ -26,6 +26,9 @@ export type ChartLayerData = {
   // As camadas da estratégia falharam; as velas e as operações seguem na tela (cada consulta é independente).
   readonly hasLayersFailed: boolean;
   readonly projection: ProjectionCurrent | undefined;
+  // A resposta inteira da previsão (tendência, resumo e últimas previsões) e se o pedido falhou: o painel precisa dos dois.
+  readonly projections: Projections | undefined;
+  readonly isProjectionError: boolean;
   readonly trades: readonly Trade[];
 };
 
@@ -62,6 +65,8 @@ export function useChartLayers(input: ChartLayersInput): ChartLayerData {
     layers: window === undefined ? undefined : layersQuery.data,
     hasLayersFailed: window !== undefined && layersQuery.isError,
     projection: projections.data?.current,
+    projections: projections.data,
+    isProjectionError: projections.isError,
     trades: rows.items,
   };
 }

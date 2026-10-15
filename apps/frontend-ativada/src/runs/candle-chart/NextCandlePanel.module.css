@@ -1,0 +1,216 @@
+/* Painel "Próxima vela de perto" (spec 009, D13): fiel ao preview aprovado em docs/preview/grafico-binance. */
+.panel {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.horizon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.number {
+  font-family: var(--font-data);
+  color: var(--ink);
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.svg text {
+  font: 11px var(--font-data);
+}
+
+.axisText,
+.timeText {
+  fill: var(--ink-2);
+}
+
+.baseText,
+.nowText {
+  fill: var(--ink);
+  font-weight: 700;
+}
+
+.up line,
+.up rect {
+  fill: var(--buy);
+  stroke: var(--buy);
+}
+
+.down line,
+.down rect {
+  fill: var(--sell);
+  stroke: var(--sell);
+}
+
+.future {
+  fill: var(--surface-2);
+  opacity: 0.6;
+}
+
+.divider {
+  stroke: var(--ink-2);
+  stroke-width: 1.5;
+}
+
+.forming {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.edgeBuy {
+  stroke: var(--buy);
+}
+
+.edgeSell {
+  stroke: var(--sell);
+}
+
+.coneNeutral {
+  fill: var(--cone-neutral);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+
+.coneBuy {
+  fill: var(--cone-up);
+}
+
+.coneSell {
+  fill: var(--cone-down);
+}
+
+.arrowBuy {
+  fill: var(--buy);
+  font-weight: 700;
+}
+
+.arrowSell {
+  fill: var(--sell);
+  font-weight: 700;
+}
+
+.base {
+  stroke: var(--ink-2);
+  stroke-dasharray: 4 3;
+}
+
+.trail {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+}
+
+.nowLine {
+  stroke: var(--ink-3);
+  stroke-dasharray: 2 3;
+}
+
+.nowDot {
+  fill: var(--ink);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.tendency {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.tendency.buy {
+  background: var(--buy-soft);
+  border-color: var(--buy);
+}
+
+.tendency.sell {
+  background: var(--sell-soft);
+  border-color: var(--sell);
+}
+
+.tendency.warn {
+  background: var(--warn-soft);
+  border-color: var(--warn);
+}
+
+.what {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.buy .what {
+  color: var(--buy);
+}
+
+.sell .what {
+  color: var(--sell);
+}
+
+.warn .what {
+  color: var(--warn);
+}
+
+.why {
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.result.hit {
+  color: var(--buy);
+}
+
+.result.miss {
+  color: var(--sell);
+}
+
+.promise {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+}

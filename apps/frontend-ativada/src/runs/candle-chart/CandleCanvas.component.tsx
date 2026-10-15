@@ -4,12 +4,14 @@ import { useId, type ReactElement } from 'react';
 import { formatSymbol } from '../../format/format.js';
 import { describeChart } from '../chart-description.js';
 import styles from './CandleChart.module.css';
+import { CHART_LAYER } from './candle-chart.constant.js';
 import { ChartCredit } from './ChartCredit.component.js';
 import { ChartToolbar } from './ChartToolbar.component.js';
 import { ClusterButtons } from './ClusterButtons.component.js';
 import { LayerBar } from './LayerBar.component.js';
 import { LayerNotices } from './LayerNotices.component.js';
 import { LiveCandleNotice } from './LiveCandleNotice.component.js';
+import { NextCandlePanel } from './NextCandlePanel.component.js';
 import { OhlcLegend } from './OhlcLegend.component.js';
 import { SimpleChartFallback } from './SimpleChartFallback.component.js';
 import { TimeframeNotice } from './TimeframeNotice.component.js';
@@ -52,13 +54,18 @@ function CanvasView(props: CanvasViewProps): ReactElement {
   return (
     <figure className={styles.wrapper}>
       <CanvasHeader {...props} />
-      <div
-        ref={model.containerRef}
-        className={styles.canvas}
-        role="img"
-        aria-label={`Gráfico de velas de ${formatSymbol(chart.symbol)}`}
-        aria-describedby={captionId}
-      />
+      <div className={styles.chartLayout}>
+        <div
+          ref={model.containerRef}
+          className={styles.canvas}
+          role="img"
+          aria-label={`Gráfico de velas de ${formatSymbol(chart.symbol)}`}
+          aria-describedby={captionId}
+        />
+        {view.isLive && model.isLayerOn(CHART_LAYER.FORECAST) ? (
+          <NextCandlePanel chart={chart} layerData={model.layerData} />
+        ) : null}
+      </div>
       <LayerNotices
         data={model.layerData}
         decisions={chart.decisions}

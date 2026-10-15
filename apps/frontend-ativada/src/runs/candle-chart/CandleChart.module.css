@@ -29,6 +29,13 @@
   color: var(--ink-2);
 }
 
+/* O painel da próxima vela fica ao lado do gráfico e desce para baixo dele no celular. */
+.chartLayout {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
 .canvas {
   width: 100%;
   min-width: 0;
@@ -154,6 +161,13 @@
   list-style: none;
   font-size: 13px;
   color: var(--ink-2);
+}
+
+@media (min-width: 1024px) {
+  .chartLayout {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+  }
 }
 
 @media (max-width: 639px) {
