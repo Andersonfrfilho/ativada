@@ -7,7 +7,10 @@ import { formatInZone } from '../../format/zoned-time.js';
 import { Icon, type IconName } from '../../layout/Icon.component.js';
 import controls from '../../styles/Controls.module.css';
 import { TIMEFRAME_PHRASE } from '../candle-chart/candle-chart.constant.js';
-import { useProjectionsQuery } from '../candle-chart/candle-chart.query.js';
+import {
+  useProjectionsPageQuery,
+  useProjectionsQuery,
+} from '../candle-chart/candle-chart.query.js';
 import { SIDE_WORD, STRENGTH_WORD } from '../candle-chart/projection-text.js';
 import type { ProjectionItem } from '../candle-chart/projections.validation.js';
 import styles from './ProjectionCards.module.css';
@@ -75,7 +78,12 @@ type PageProps = { readonly runId: string; readonly cursor: string | undefined }
 function HistoryPage({ runId, cursor }: PageProps): ReactElement | null {
   const timeZone = useUserTimeZone();
   const [isExpanded, setIsExpanded] = useState(false);
-  const page = useProjectionsQuery({ runId, ...(cursor === undefined ? {} : { cursor }) });
+  const first = useProjectionsQuery({ runId, isEnabled: cursor === undefined });
+  const later = useProjectionsPageQuery({
+    runId,
+    ...(cursor === undefined ? { isEnabled: false } : { cursor }),
+  });
+  const page = cursor === undefined ? first : later;
   if (page.data === undefined) {
     return page.isError ? (
       <tbody>

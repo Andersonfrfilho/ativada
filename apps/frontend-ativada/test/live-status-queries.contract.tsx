@@ -8,6 +8,7 @@ import type { ReactElement } from 'react';
 import {
   createRefetchScheduler,
   isDecisionsKey,
+  isProjectionsPageKey,
   REFETCH_DEBOUNCE_MILLISECONDS,
 } from '../src/live/refetch-scheduler.js';
 import {
@@ -190,6 +191,12 @@ describe('o aviso do stream vira uma rebusca só', () => {
     expect(isDecisionsKey(['runs', 'run-1', 'decisions'])).toBe(true);
     expect(isDecisionsKey(['runs', 'run-1', 'live-status'])).toBe(false);
     expect(isDecisionsKey(['runs'])).toBe(false);
+    // As páginas por cursor das previsões seguem a mesma regra; a primeira página (sem cursor) é refeita.
+    expect(isProjectionsPageKey(['runs', 'run-1', 'projections', 'c1', undefined])).toBe(true);
+    expect(isProjectionsPageKey(['runs', 'run-1', 'projections', undefined, undefined])).toBe(
+      false,
+    );
+    expect(isProjectionsPageKey(['runs', 'run-1', 'live-status', 'c1'])).toBe(false);
     scheduler.cancel();
   });
 

@@ -108,14 +108,16 @@ function forecastTextFor(
   layers: LayerModel,
   timeZone: string,
 ): string | undefined {
+  const now = Date.now();
   const state = judgeNextCandle({
     isStrategyTimeframe: layers.layerData.isStrategyTimeframe,
     runTimeframe,
     projection: layers.layerData.projection,
     isError: layers.layerData.isProjectionError,
     live: layers.live,
+    now,
   });
-  return describeForecast({ state, now: Date.now(), timeZone });
+  return describeForecast({ state, now, timeZone });
 }
 
 type LayerModel = Pick<CandleCanvasModel, 'layerData' | 'isLayerOn' | 'live'>;

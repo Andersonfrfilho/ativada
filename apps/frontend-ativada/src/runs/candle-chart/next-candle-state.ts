@@ -4,8 +4,12 @@ import { formatMomentSkippingToday } from '../../format/zoned-moment.js';
 import { TIMEFRAME_PHRASE } from './candle-chart.constant.js';
 import type { AvailableProjection, ProjectionCurrent } from './projections.validation.js';
 
+type ProjectionUnavailable = Extract<ProjectionCurrent, { status: 'unavailable' }>;
+
 export const NEXT_CANDLE_TEXT = {
   PRICE_STALLED: 'O preço ao vivo parou de chegar; a previsão volta quando ele voltar.',
+  STALE_FORECAST:
+    'A previsão ficou velha: a vela que ela previa já fechou e a nova ainda não chegou.',
   LOADING: 'Carregando a previsão…',
   ERROR: 'Não foi possível carregar a previsão; o gráfico e as operações continuam.',
   NO_FORECAST: 'Sem previsão agora',
@@ -15,10 +19,12 @@ export const NEXT_CANDLE_TEXT = {
 } as const;
 
 const MILLISECONDS_PER_MINUTE = 60_000;
+// Passado o fim do horizonte da previsão, o worker tem este tempo para trazer a seguinte; depois disso ela vale como velha.
+export const STALE_FORECAST_GRACE_MILLISECONDS = 2 * MILLISECONDS_PER_MINUTE;
 const MINUTES_PER_HOUR = 60;
 
 export type UnavailableReason =
-  'not_running' | 'no_candle' | 'warming_up' | 'neutral' | 'other_timeframe' | 'price_stalled';
+  ProjectionUnavailable['reason'] | 'other_timeframe' | 'price_stalled' | 'stale_forecast';
 
 export type NextCandleState =
   | { readonly kind: 'loading' }
@@ -33,6 +39,8 @@ export type JudgeNextCandleParams = {
   readonly projection: ProjectionCurrent | undefined;
   readonly isError: boolean;
   readonly live: LiveCandleView | undefined;
+  // O relógio deste navegador: uma previsão que passou do horizonte sem outra chegar não vale mais.
+  readonly now: number;
 };
 
 function otherTimeframeMessage(runTimeframe: string): string {
@@ -41,7 +49,7 @@ function otherTimeframeMessage(runTimeframe: string): string {
 }
 
 // Por que o painel mostra (ou não) a tendência, nesta ordem (RF16): outra vela na tela, erro, carregando, preço parado, o
-// motivo que o servidor deu e, só então, a tendência. Nunca uma faixa sem tendência por trás.
+// motivo que o servidor deu, previsão velha e, só então, a tendência. Nunca uma faixa sem tendência por trás.
 export function judgeNextCandle(params: JudgeNextCandleParams): NextCandleState {
   const { projection, live } = params;
   if (!params.isStrategyTimeframe) {
@@ -58,6 +66,10 @@ export function judgeNextCandle(params: JudgeNextCandleParams): NextCandleState 
   }
   if (projection.status === 'unavailable') {
     return { kind: 'unavailable', reason: projection.reason, message: projection.message };
+  }
+  if (params.now > projection.horizonEndsAt + STALE_FORECAST_GRACE_MILLISECONDS) {
+    const message = NEXT_CANDLE_TEXT.STALE_FORECAST;
+    return { kind: 'unavailable', reason: 'stale_forecast', message };
   }
   return { kind: 'available', current: projection };
 }

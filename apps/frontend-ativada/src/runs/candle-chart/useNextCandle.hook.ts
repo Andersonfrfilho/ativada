@@ -91,6 +91,7 @@ export function useNextCandle({ chart, layerData }: NextCandleInput): NextCandle
     projection: layerData.projection,
     isError: layerData.isProjectionError,
     live,
+    now,
   });
   const duration = timeframeMilliseconds(chart.timeframe) ?? 0;
   const window = isPanelDrawable(state) ? computePanelWindow(state, duration, now) : undefined;

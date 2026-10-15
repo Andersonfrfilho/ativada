@@ -148,6 +148,7 @@ describe('descrição textual com a previsão (RF20)', () => {
       projection,
       isError: false,
       live: undefined,
+      now,
     });
   }
 

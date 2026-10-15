@@ -11,7 +11,12 @@ import { useApiClient } from '../../app/useAppContext.hook.js';
 import type { ApiClient } from '../../http/api-client.js';
 import { RUN_QUERY_ROOT } from '../runs.query.js';
 import { marketCandleSchema, type MarketCandle } from './market-candles.validation.js';
-import { projectionsSchema, type Projections } from './projections.validation.js';
+import {
+  projectionsPageSchema,
+  projectionsSchema,
+  type Projections,
+  type ProjectionsPage,
+} from './projections.validation.js';
 import { strategyLayersSchema, type StrategyLayers } from './strategy-layers.validation.js';
 
 // Velas são públicas: ficam sob a raiz `markets`, fora do aviso `runs` (a vela fechada chega pelo stream).
@@ -72,21 +77,34 @@ export function useStrategyLayersQuery(
   });
 }
 
-// Sem cursor: a página mais nova, com a tendência atual e o resumo. Com cursor: o "Ver mais" da tabela de previsões.
+function projectionsPath(params: ProjectionsParams): string {
+  return withQuery(`${API_PATH.RUNS}/${params.runId}/projections`, {
+    cursor: params.cursor,
+    limit: textOf(params.limit),
+  });
+}
+
+// A primeira página: a mais nova, com a tendência atual e o resumo.
 export function useProjectionsQuery(params: ProjectionsParams): UseQueryResult<Projections> {
   const client = useApiClient();
   return useQuery({
     queryKey: [RUN_QUERY_ROOT, params.runId, 'projections', params.cursor, params.limit],
     enabled: params.isEnabled ?? true,
     placeholderData: keepPreviousData,
-    queryFn: () =>
-      client.request({
-        path: withQuery(`${API_PATH.RUNS}/${params.runId}/projections`, {
-          cursor: params.cursor,
-          limit: textOf(params.limit),
-        }),
-        schema: projectionsSchema,
-      }),
+    queryFn: () => client.request({ path: projectionsPath(params), schema: projectionsSchema }),
+  });
+}
+
+// As páginas por cursor (o "Ver mais" da tabela): só as previsões, sem tendência nem resumo.
+export function useProjectionsPageQuery(
+  params: ProjectionsParams,
+): UseQueryResult<ProjectionsPage> {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: [RUN_QUERY_ROOT, params.runId, 'projections', params.cursor, params.limit],
+    enabled: params.isEnabled ?? true,
+    placeholderData: keepPreviousData,
+    queryFn: () => client.request({ path: projectionsPath(params), schema: projectionsPageSchema }),
   });
 }
 

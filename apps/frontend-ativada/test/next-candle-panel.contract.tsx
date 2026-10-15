@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { afterEach, describe, expect, setSystemTime, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 
@@ -18,14 +18,19 @@ import {
   HOUR_MILLISECONDS,
 } from './support/candle-chart-fixtures.js';
 
+const DECISION_AT = FIRST_CANDLE_TIME + 2 * HOUR_MILLISECONDS;
+const FIFTEEN_MINUTES_BEFORE = DECISION_AT - 15 * 60_000;
+
+// A previsão do fixture vale até DECISION_AT: o relógio padrão dos testes fica dentro do horizonte (fora dele ela é velha).
+beforeEach(() => {
+  setSystemTime(new Date(FIFTEEN_MINUTES_BEFORE));
+});
+
 afterEach(() => {
   setSystemTime();
   cleanup();
   localStorage.clear();
 });
-
-const DECISION_AT = FIRST_CANDLE_TIME + 2 * HOUR_MILLISECONDS;
-const FIFTEEN_MINUTES_BEFORE = DECISION_AT - 15 * 60_000;
 
 function current(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return Object.assign({}, buildProjectionsResponse()['current'], overrides);
@@ -145,10 +150,21 @@ describe('painel sem previsão (RF16)', () => {
     expect(within(panel()).queryByRole('img')).toBeNull();
   });
 
+  test('a forecast past its horizon with no newer one says it is old and draws no cone', async () => {
+    setSystemTime(new Date(DECISION_AT + 3 * 60_000));
+    const harness = openPanel();
+    await ready(harness);
+    await within(panel()).findByText(
+      'A previsão ficou velha: a vela que ela previa já fechou e a nova ainda não chegou.',
+    );
+    expect(panel().querySelector('[data-part="cone"]')).toBeNull();
+  });
+
   test('a stopped price replaces the trend with the sentence and a warning word', async () => {
     const harness = openPanel(undefined, { silenceMilliseconds: 50 });
     await ready(harness);
     await within(panel()).findByText('Tende a COMPRAR · fraco');
+    setSystemTime(); // o relógio congelado não deixaria o silêncio passar
     act(() => harness.app.stream.candle(formingCandle()));
     expect(
       await within(panel()).findByText(

@@ -47,7 +47,15 @@ const currentSchema = z.discriminatedUnion('status', [
   }),
   z.object({
     status: z.literal('unavailable'),
-    reason: z.enum(['not_running', 'no_candle', 'warming_up', 'neutral']),
+    reason: z.enum([
+      'not_running',
+      'stalled',
+      'waiting_for_data',
+      'read_failed',
+      'no_candle',
+      'warming_up',
+      'neutral',
+    ]),
     message: z.string(),
   }),
 ]);
@@ -74,15 +82,20 @@ const summarySchema = z.object({
   verdictMessage: z.string(),
 });
 
-export const projectionsSchema = z.object({
+// Uma página por cursor traz só as previsões: a tendência e o resumo vão apenas na primeira página (aditivo no servidor).
+export const projectionsPageSchema = z.object({
   version: z.literal(PROJECTION_VERSION),
   timeframe: z.string(),
-  current: currentSchema,
-  summary: summarySchema,
   items: z.array(itemSchema),
   nextCursor: z.string().nullable(),
 });
 
+export const projectionsSchema = projectionsPageSchema.extend({
+  current: currentSchema,
+  summary: summarySchema,
+});
+
+export type ProjectionsPage = z.infer<typeof projectionsPageSchema>;
 export type Projections = z.infer<typeof projectionsSchema>;
 export type ProjectionCurrent = Projections['current'];
 export type AvailableProjection = Extract<ProjectionCurrent, { status: 'available' }>;

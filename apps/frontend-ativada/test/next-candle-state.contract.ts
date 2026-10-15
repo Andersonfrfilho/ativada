@@ -8,6 +8,7 @@ import {
   isPanelDrawable,
   judgeNextCandle,
   NEXT_CANDLE_TEXT,
+  STALE_FORECAST_GRACE_MILLISECONDS,
   type JudgeNextCandleParams,
   type NextCandleState,
 } from '../src/runs/candle-chart/next-candle-state.js';
@@ -50,6 +51,7 @@ function judge(overrides: Partial<JudgeNextCandleParams> = {}): NextCandleState 
     projection: currentOf(),
     isError: false,
     live: undefined,
+    now: FIRST_CANDLE_TIME + HOUR_MILLISECONDS,
     ...overrides,
   });
 }
@@ -59,6 +61,35 @@ describe('estado do painel da próxima vela (RF16)', () => {
     const state = judge();
     expect(state.kind).toBe('available');
     expect(state.kind === 'available' ? state.current.label : '').toBe('Tende a COMPRAR · fraco');
+  });
+
+  test('a forecast past its horizon with no newer one stops counting after the grace period', () => {
+    const horizonEnd = FIRST_CANDLE_TIME + 2 * HOUR_MILLISECONDS;
+    expect(judge({ now: horizonEnd + STALE_FORECAST_GRACE_MILLISECONDS }).kind).toBe('available');
+    const stale = judge({ now: horizonEnd + STALE_FORECAST_GRACE_MILLISECONDS + 1 });
+    expect(stale).toStrictEqual({
+      kind: 'unavailable',
+      reason: 'stale_forecast',
+      message: NEXT_CANDLE_TEXT.STALE_FORECAST,
+    });
+    expect(isPanelDrawable(stale)).toBe(true);
+  });
+
+  test('the server reasons for a halted simulation reach the panel with the server sentence', () => {
+    for (const reason of ['stalled', 'waiting_for_data', 'read_failed']) {
+      const state = judge({
+        projection: currentOf({
+          status: 'unavailable',
+          reason,
+          message: `Sem previsão: ${reason}`,
+        }),
+      });
+      expect(state).toMatchObject({
+        kind: 'unavailable',
+        reason,
+        message: `Sem previsão: ${reason}`,
+      });
+    }
   });
 
   test('another candle on screen explains it with the literal sentence, before anything else', () => {

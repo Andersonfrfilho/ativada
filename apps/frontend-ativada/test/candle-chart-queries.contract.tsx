@@ -7,11 +7,14 @@ import type { ReactElement } from 'react';
 
 import {
   useMarketCandlesQuery,
-  useProjectionsQuery,
+  useProjectionsPageQuery,
   useStrategyLayersQuery,
 } from '../src/runs/candle-chart/candle-chart.query.js';
 import { marketCandleSchema } from '../src/runs/candle-chart/market-candles.validation.js';
-import { projectionsSchema } from '../src/runs/candle-chart/projections.validation.js';
+import {
+  projectionsPageSchema,
+  projectionsSchema,
+} from '../src/runs/candle-chart/projections.validation.js';
 import { strategyLayersSchema } from '../src/runs/candle-chart/strategy-layers.validation.js';
 import { parseServerMessage } from '../src/live/stream.validation.js';
 import {
@@ -45,9 +48,11 @@ function LayersProbe(): ReactElement {
 }
 
 function ProjectionsProbe(): ReactElement {
-  const projections = useProjectionsQuery({ runId: 'run-1', cursor: 'c1', limit: 12 });
+  const projections = useProjectionsPageQuery({ runId: 'run-1', cursor: 'c1', limit: 12 });
   const roots = rootsOf(useQueryClient());
-  const label = projections.isSuccess ? projections.data.summary.verdict : projections.status;
+  const label = projections.isSuccess
+    ? `page:${projections.data.items.length}`
+    : projections.status;
   return (
     <p>
       {label}|{roots}
@@ -107,7 +112,8 @@ describe('strategy layers schema', () => {
 describe('projections schema', () => {
   test('accepts the available and each unavailable current', () => {
     expect(projectionsSchema.safeParse(buildProjectionsResponse()).success).toBe(true);
-    for (const reason of ['not_running', 'no_candle', 'warming_up', 'neutral']) {
+    const reasons = ['not_running', 'stalled', 'waiting_for_data', 'read_failed'];
+    for (const reason of [...reasons, 'no_candle', 'warming_up', 'neutral']) {
       const current = { status: 'unavailable', reason, message: 'Sem previsão.' };
       expect(projectionsSchema.safeParse(buildProjectionsResponse({ current })).success).toBe(true);
     }
@@ -122,6 +128,14 @@ describe('projections schema', () => {
     expect(parse({ current: { status: 'unavailable', reason: 'stopped', message: 'x' } })).toBe(
       false,
     );
+  });
+
+  test('a page by cursor carries only the predictions: no current and no summary', () => {
+    const { current, summary, ...page } = buildProjectionsResponse();
+    expect(current).toBeDefined();
+    expect(summary).toBeDefined();
+    expect(projectionsPageSchema.safeParse(page).success).toBe(true);
+    expect(projectionsSchema.safeParse(page).success).toBe(false);
   });
 
   test('rejects a percentage that is not decimal text', () => {
@@ -182,19 +196,17 @@ describe('candle chart queries', () => {
       routes,
       probe: <ProjectionsProbe />,
     });
-    expect(await screen.findByText(/^even\|runs$/)).toBeDefined();
+    expect(await screen.findByText(/^page:\d+\|runs$/)).toBeDefined();
     const query = fake.callsTo('GET', '/v1/runs/run-1/projections')[0]?.query;
     expect([query?.get('cursor'), query?.get('limit')]).toEqual(['c1', '12']);
   });
 
   test('an invalid projections response ends in error with nothing rendered', async () => {
-    const bad = buildProjectionsResponse({
-      summary: buildProjectionsSummary({ verdict: 'great' }),
-    });
+    const bad = buildProjectionsResponse({ items: [buildProjectionItem({ result: 'win' })] });
     const routes = route('/v1/runs/run-1/projections', bad);
     renderApp({ path: '/', isAuthenticated: true, routes, probe: <ProjectionsProbe /> });
     expect(await screen.findByText(/^error/)).toBeDefined();
-    expect(screen.queryByText(/^even/)).toBeNull();
+    expect(screen.queryByText(/^page:/)).toBeNull();
   });
 
   test('the public candles query sends symbol, timeframe and range and its key starts with "markets"', async () => {
