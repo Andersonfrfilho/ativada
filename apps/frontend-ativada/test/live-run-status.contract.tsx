@@ -8,6 +8,8 @@ import { dataResponse, pageResponse, type FakeRoute } from './support/fake-fetch
 import { buildGoal } from './support/goal-fixtures.js';
 import { renderApp } from './support/render-app.js';
 import { buildEquityCsv, buildRun, buildStrategy, buildVersion } from './support/run-fixtures.js';
+import { buildLiveStatusResponse } from './support/live-status-fixtures.js';
+import { buildRunSection } from './support/live-tracking-harness.js';
 import { buildChartResponse, buildSummaryResponse } from './support/trade-chart-fixtures.js';
 
 // 17:20 UTC = 14:20 em São Paulo (UTC−3).
@@ -16,7 +18,6 @@ const SAO_PAULO = { now: NOW, timeZone: 'America/Sao_Paulo' };
 const FIRST_CANDLE = 'Aguardando a primeira vela, que fecha às 15:00 de hoje.';
 const RUNNING =
   'Olha o mercado a cada 1 hora. Última decisão às 14:00 de hoje · próxima às 15:00 de hoje.';
-const STALLED_REFERENCE = 'Esta simulação está parada: veja o aviso acima.';
 const STALLED =
   'Sua simulação está parada desde 13:15. O sistema está tentando retomar; nenhuma operação foi perdida.';
 
@@ -150,6 +151,21 @@ function detail(overrides: Record<string, unknown>): Record<string, unknown> {
   });
 }
 
+const GOAL_SECTION = {
+  targetRate: '0.03',
+  targetAmount: '10300',
+  remainingAmount: '300',
+  remainingRate: '0.03',
+  deadlineAt: Date.parse('2026-10-20T17:00:00.000Z'),
+  remainingMilliseconds: 0,
+  maxLossRate: '0.05',
+  floorAmount: '9500',
+  lossRoomAmount: '500',
+  outcome: null,
+  outcomeAt: null,
+  message: 'Meta.',
+};
+
 function overviewRoutes(
   fields: () => Record<string, unknown>,
   goalId: string | null = null,
@@ -168,6 +184,20 @@ function overviewRoutes(
     },
     { method: 'GET', path: '/v1/runs/run-live/equity', respond: (): Response => pageResponse([]) },
     { method: 'GET', path: '/v1/runs/run-live/signals', respond: (): Response => pageResponse([]) },
+    {
+      method: 'GET',
+      path: '/v1/runs/run-live/live-status',
+      respond: (): Response =>
+        dataResponse(
+          buildLiveStatusResponse({
+            run: buildRunSection({
+              periodStart: Date.parse('2026-10-13T17:00:00.000Z'),
+              ...fields(),
+            }),
+            goal: goalId === null ? null : GOAL_SECTION,
+          }),
+        ),
+    },
     { method: 'GET', path: '/v1/markets/candles', respond: (): Response => dataResponse([]) },
     { method: 'GET', path: '/v1/goals/goal-1', respond: (): Response => dataResponse(buildGoal()) },
   ];
@@ -181,6 +211,19 @@ describe('on the overview balance card', () => {
     expect(card.textContent).toContain('Horários em GMT−3.');
     expect(card.textContent).toContain('O saldo aparece quando a primeira vela fechar.');
     expect(card.textContent).not.toMatch(/primeiro[ ]candle/);
+  });
+
+  test('shows the last decision in one sentence and links to the full tracking', async () => {
+    renderApp({ path: '/', isAuthenticated: true, routes: overviewRoutes(() => ({})) });
+    const card = await screen.findByRole('region', { name: 'Saldo da simulação' });
+    await waitFor(() =>
+      expect(card.textContent).toContain(
+        'Última decisão: esperou às 31/12/2025 22:00. Faltou 1 ponto: o RSI (55) está entre 30 e 70.',
+      ),
+    );
+    const link = within(card).getByRole('link', { name: 'Ver o acompanhamento' });
+    expect(link.getAttribute('href')).toBe('/backtests/run-live#acompanhamento');
+    expect(screen.getByRole('region', { name: 'Simulação rodando agora' })).toBeDefined();
   });
 
   test('running: last and next decision', async () => {
@@ -206,7 +249,7 @@ describe('on the overview balance card', () => {
     });
     const card = await screen.findByRole('region', { name: 'Saldo da simulação' });
     await waitFor(() => expect(card.textContent).toContain(FIRST_CANDLE));
-    expect(card.textContent).not.toContain('Última decisão');
+    expect(card.textContent).not.toContain('Última decisão às');
   });
 
   test('waiting for data keeps its text', async () => {
@@ -216,7 +259,7 @@ describe('on the overview balance card', () => {
       isAuthenticated: true,
       routes: overviewRoutes(() => ({ waitingForData })),
     });
-    expect(await screen.findByText('Aguardando dados do mercado')).toBeDefined();
+    expect((await screen.findAllByText('Aguardando dados do mercado')).length).toBe(2);
     const card = screen.getByRole('region', { name: 'Saldo da simulação' });
     expect(card.textContent).toContain('desde 13/10/2026 13:30');
   });
@@ -253,26 +296,25 @@ describe('on the overview balance card', () => {
 });
 
 describe('on the active goal card', () => {
-  test('without any equity it waits for the first candle instead of the old phrase', async () => {
+  test('before any closed candle the goal still shows its target and deadline', async () => {
     renderApp({ path: '/', isAuthenticated: true, routes: overviewRoutes(() => ({}), 'goal-1') });
-    const card = await screen.findByRole('region', { name: 'Meta ativa' });
-    await waitFor(() => expect(card.textContent).toContain(FIRST_CANDLE));
+    const card = await screen.findByRole('region', { name: 'Meta: +3% em 7 dias' });
+    await waitFor(() => expect(card.textContent).toContain('Para bater a meta faltam'));
     expect(card.textContent).not.toMatch(/primeiro[ ]candle/);
   });
 
-  test('the same stalled simulation shows the banner ONCE (balance card) and only a short reference here', async () => {
+  test('the stalled simulation shows the banner ONCE (balance card); the pulse line says Parada', async () => {
     const stalledSince = Date.parse('2026-10-13T16:15:00.000Z');
     renderApp({
       path: '/',
       isAuthenticated: true,
       routes: overviewRoutes(() => ({ stalledSince }), 'goal-1'),
     });
-    const goalCard = await screen.findByRole('region', { name: 'Meta ativa' });
-    await waitFor(() => expect(goalCard.textContent).toContain(STALLED_REFERENCE));
-    expect(screen.getAllByText(STALLED)).toHaveLength(1);
+    const pulse = await screen.findByRole('region', { name: 'Simulação rodando agora' });
+    expect(within(pulse).getByText('Parada')).toBeDefined();
+    await waitFor(() => expect(screen.getAllByText(STALLED)).toHaveLength(1));
     const balance = screen.getByRole('region', { name: 'Saldo da simulação' });
     expect(within(balance).getByText(STALLED)).toBeDefined();
-    expect(goalCard.textContent).not.toContain(STALLED);
   });
 });
 

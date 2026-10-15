@@ -290,3 +290,13 @@ panel-test: 738 pass, 0 fail (56 arquivos)
 WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
 panel-test: 751 pass, 0 fail (57 arquivos)
 ```
+
+## T3.5 — Visão geral com a última decisão e a meta do servidor (sonnet, 2026-10-14)
+
+- `BalanceCard` ganhou `LastDecisionLine`: "Última decisão: esperou às 10:00. <frase do servidor>" e o link "Ver o acompanhamento" (`/backtests/:runId#acompanhamento`); a Visão geral abre com a `LivePulseLine`. `ActiveGoalCard` agora só pede o `live-status` e mostra o `LiveGoalBlock` (título "Meta: +3% em 7 dias", selo "Abaixo do ritmo"/"No caminho", ritmo linear explicado); a faixa de parada completa continua só no cartão de saldo e a linha de pulso diz "Parada".
+- `src/goals/goal-progress.ts` (cálculo em `Number`) saiu do código; nenhum teste dele existia à parte. `goals.contract.tsx` e `live-run-status.contract.tsx` foram reescritos para a meta do servidor (66% de ganho com saldo de 10.200 e meta de 300; "No caminho"/"Abaixo do ritmo"; desfecho "Meta alcançada"; antes da primeira vela a meta ainda mostra o que falta) e ganharam o teste da linha "Última decisão".
+
+```text
+WSL ~/gates/ativada-spec8: typecheck verde · lint verde · format:check verde
+panel-test: 752 pass, 0 fail (57 arquivos)
+```

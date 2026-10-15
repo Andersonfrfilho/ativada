@@ -2,6 +2,7 @@
 import type { ReactElement } from 'react';
 
 import { ActiveGoalCard } from '../goals/ActiveGoalCard.component.js';
+import { LivePulseLine } from '../runs/live-tracking/LivePulseLine.component.js';
 import { useRunDetailQuery } from '../runs/runs.query.js';
 import { useAppConfig } from '../app/useAppContext.hook.js';
 import { Card } from '../layout/Card.component.js';
@@ -62,9 +63,12 @@ export function OverviewPage(): ReactElement {
         </Card>
       ) : null}
       {activeRun.data === undefined || activeRun.data === null ? null : (
-        <ActiveSimulation run={activeRun.data} />
+        <>
+          <LivePulseLine runId={activeRun.data.id} symbol={activeRun.data.symbol} />
+          <ActiveSimulation run={activeRun.data} />
+        </>
       )}
-      <ActiveGoalCard balanceRunId={activeRun.data?.id} />
+      <ActiveGoalCard />
       <div className={styles.marketBar}>
         <MarketStatusBadge />
       </div>

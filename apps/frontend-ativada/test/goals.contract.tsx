@@ -13,6 +13,7 @@ import {
   type FakeRoute,
 } from './support/fake-fetch.js';
 import { buildCombination, buildEvaluation, buildGoal } from './support/goal-fixtures.js';
+import { buildLiveStatusResponse } from './support/live-status-fixtures.js';
 import { renderApp } from './support/render-app.js';
 import { buildRun } from './support/run-fixtures.js';
 
@@ -330,6 +331,54 @@ describe('goal ranking', () => {
   });
 });
 
+const DAY_MS = 86_400_000;
+
+// A meta de 3% em 30 dias com perda máxima de 5%, como o servidor a manda, para o saldo pedido.
+function liveStatusOf(
+  equity: string,
+  outcome: string | null = null,
+  hasCandle: boolean = true,
+): Record<string, unknown> {
+  const gain = Number(equity) - 10000;
+  const remaining = Math.max(0, 300 - gain);
+  const periodStart = Date.now() - 10 * DAY_MS;
+  return buildLiveStatusResponse({
+    run: {
+      id: 'run-goal',
+      status: 'running',
+      symbol: 'BTCUSDT',
+      timeframe: '1d',
+      periodStart,
+      lastCandleTime: null,
+      lastDecisionAt: null,
+      nextDecisionAt: null,
+      waitingForData: null,
+    },
+    balance: {
+      initial: '10000',
+      current: equity,
+      result: String(gain),
+      resultRate: String(gain / 10000),
+      observedAt: hasCandle ? Date.now() : null,
+      message: 'Saldo.',
+    },
+    goal: {
+      targetRate: '0.03',
+      targetAmount: '10300',
+      remainingAmount: String(remaining),
+      remainingRate: String(remaining / 10000),
+      deadlineAt: periodStart + 30 * DAY_MS,
+      remainingMilliseconds: 20 * DAY_MS,
+      maxLossRate: '0.05',
+      floorAmount: '9500',
+      lossRoomAmount: String(Math.max(0, Number(equity) - 9500)),
+      outcome,
+      outcomeAt: outcome === null ? null : Date.now(),
+      message: 'Meta.',
+    },
+  });
+}
+
 describe('simulating from the goal screen', () => {
   test('the overview shows the new "Meta ativa" even though it had been loaded empty a moment before', async () => {
     let created = false;
@@ -373,15 +422,20 @@ describe('simulating from the goal screen', () => {
           path: '/v1/runs/run-live/signals',
           respond: (): Response => pageResponse([]),
         },
+        {
+          method: 'GET',
+          path: '/v1/runs/run-live/live-status',
+          respond: (): Response => dataResponse(liveStatusOf('10000')),
+        },
       ]),
     });
     await screen.findByRole('heading', { name: 'Visão geral' });
-    expect(screen.queryByRole('region', { name: 'Meta ativa' })).toBeNull();
+    expect(screen.queryByRole('region', { name: /^Meta:/ })).toBeNull();
     void router.navigate('/metas/goal-1');
     fireEvent.click(
       await screen.findByRole('button', { name: 'Simular esta meta com Placar clássico' }),
     );
-    expect(await screen.findByRole('region', { name: 'Meta ativa' })).toBeDefined();
+    expect(await screen.findByRole('region', { name: /^Meta:/ })).toBeDefined();
   });
 });
 
@@ -537,52 +591,52 @@ describe('active goal on the overview', () => {
         path: '/v1/runs/run-goal/signals',
         respond: (): Response => pageResponse([]),
       },
+      {
+        method: 'GET',
+        path: '/v1/runs/run-goal/live-status',
+        respond: (): Response =>
+          dataResponse(
+            liveStatusOf(
+              equity,
+              run['goalOutcome'] === 'goal_reached' ? 'goal_reached' : null,
+              run['status'] !== 'queued',
+            ),
+          ),
+      },
       { method: 'GET', path: '/v1/markets/candles', respond: (): Response => dataResponse([]) },
     ]);
   }
 
   test('shows the goal, the progress toward target and stop, the deadline and the pace', async () => {
     renderApp({ path: '/', isAuthenticated: true, routes: overviewRoutes(goalRun, '10200') });
-    const card = await screen.findByRole('region', { name: 'Meta ativa' });
-    await waitFor(() => expect(card.textContent).toContain('+2,00%'));
-    expect(card.textContent).toContain('alvo +3,00%');
-    expect(card.textContent).toContain('perda máxima 5,00%');
-    expect(card.textContent).toContain('restam 20 dias');
-    expect(card.textContent).toContain('No ritmo');
-    const bar = within(card).getByRole('progressbar', { name: 'Progresso até o alvo' });
-    expect(bar.getAttribute('aria-valuenow')).toBe('67');
+    const card = await screen.findByRole('region', { name: 'Meta: +3% em 30 dias' });
+    await waitFor(() => expect(card.textContent).toContain('faltam 20 dias'));
+    expect(card.textContent).toContain('200,00 de 300,00 USDT · 66%');
+    expect(card.textContent).toContain('Perda máxima aceita (−5% = 9.500,00)');
+    expect(card.textContent).toContain('No caminho');
+    const bar = within(card).getByRole('progressbar', { name: 'Ganho até agora: 66%' });
+    expect(bar.getAttribute('value')).toBe('66');
   });
 
   test('below the pace says so', async () => {
     renderApp({ path: '/', isAuthenticated: true, routes: overviewRoutes(goalRun, '10010') });
-    const card = await screen.findByRole('region', { name: 'Meta ativa' });
+    const card = await screen.findByRole('region', { name: 'Meta: +3% em 30 dias' });
     await waitFor(() => expect(card.textContent).toContain('Abaixo do ritmo'));
   });
 
   test('a finished goal shows its outcome in words', async () => {
     const reached = { ...goalRun, status: 'completed', goalOutcome: 'goal_reached' };
     renderApp({ path: '/', isAuthenticated: true, routes: overviewRoutes(reached, '10310') });
-    const card = await screen.findByRole('region', { name: 'Meta ativa' });
-    await waitFor(() => expect(card.textContent).toContain('Meta atingida'));
+    const card = await screen.findByRole('region', { name: 'Meta: +3% em 30 dias' });
+    await waitFor(() => expect(card.textContent).toContain('Meta alcançada'));
   });
 
-  test('without equity yet it waits for the first candle', async () => {
+  test('before the first candle the goal still shows the target to reach', async () => {
     const queued = { ...goalRun, status: 'queued' };
-    renderApp({
-      path: '/',
-      isAuthenticated: true,
-      routes: [
-        ...overviewRoutes(queued, '10000').filter((route) => !route.path.endsWith('/equity')),
-        {
-          method: 'GET',
-          path: '/v1/runs/run-goal/equity',
-          respond: (): Response => pageResponse([]),
-        },
-      ],
-    });
-    const card = await screen.findByRole('region', { name: 'Meta ativa' });
-    await waitFor(() => expect(card.textContent).toContain('Aguardando a primeira vela'));
-    expect(card.textContent).not.toMatch(/primeiro[ ]candle/);
+    renderApp({ path: '/', isAuthenticated: true, routes: overviewRoutes(queued, '10000') });
+    const card = await screen.findByRole('region', { name: 'Meta: +3% em 30 dias' });
+    await waitFor(() => expect(card.textContent).toContain('Para bater a meta faltam'));
+    expect(card.textContent).toContain('300,00 USDT');
   });
 
   test('no goal simulation means no card', async () => {
@@ -592,6 +646,6 @@ describe('active goal on the overview', () => {
       routes: [{ method: 'GET', path: '/v1/runs', respond: (): Response => pageResponse([]) }],
     });
     await screen.findByRole('heading', { name: 'Visão geral' });
-    expect(screen.queryByRole('region', { name: 'Meta ativa' })).toBeNull();
+    expect(screen.queryByRole('region', { name: /^Meta:/ })).toBeNull();
   });
 });
