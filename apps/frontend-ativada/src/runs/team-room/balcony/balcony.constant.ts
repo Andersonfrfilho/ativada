@@ -94,4 +94,12 @@ export const BALCONY_TEXT = {
   SHEET_TOGGLE: 'Lousa da equipe: proteções e ranking',
   CLOSE_SHEET: 'Fechar a ficha',
   LIST_SUMMARY: 'Equipe em texto',
+  NET_WORD: 'líquido',
+  PROTECTION_TITLE: 'PROTEÇÃO CONTRA QUEDA',
+  TARGET_TITLE: 'Alvo de ganho',
+  NOT_AN_ORDER: 'É a regra da simulação, não uma ordem.',
+  NO_POSITION: 'Sem operação aberta: a proteção contra queda aparece quando a simulação comprar.',
+  PLAQUES_TITLE: 'Plaquinhas da operação',
+  PLAQUES_NOTE:
+    'Porcentagens já descontam taxa e deslizamento. Simulação com dinheiro fictício · tendência, não promessa.',
 } as const;

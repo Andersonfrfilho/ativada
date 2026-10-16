@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { ProjectionCards } from '../projection-cards/ProjectionCards.component.js';
 import { TradeChartCard } from '../TradeChartCard.component.js';
 import { renderCompactTeam } from './RunTeamAside.component.js';
+import { TradePlaques } from './balcony/TradePlaques.component.js';
 import { TeamAsideProvider } from './TeamAside.context.js';
 import { TeamRoomSection } from './TeamRoomSection.component.js';
 import { TEAM_LAYOUT } from './team-room-preference.js';
@@ -37,6 +38,7 @@ export function LiveChartArea({ runId, hasChart, children }: LiveChartAreaProps)
   return (
     <TeamAsideProvider aside={aside}>
       {isRoomLayout ? room : chart}
+      {hasChart ? <TradePlaques runId={runId} /> : null}
       {children}
       {hasChart ? <ProjectionCards runId={runId} isLive /> : null}
       {isRoomLayout ? null : room}
