@@ -38,6 +38,27 @@ export type NoticeSourceRow = {
   readonly entryPrice: string | undefined;
   readonly stopPrice: string | undefined;
   readonly initialBalance: string | undefined;
+  // O que a ficha "Operar à mão" precisa e o motor já gravou (RF27 a RF31): decisão, notional e os parâmetros da simulação.
+  readonly createdCandleTime: number | undefined;
+  readonly notional: string | undefined;
+  readonly feeRate: string | undefined;
+  readonly slippageRate: string | undefined;
+  readonly tickSize: string | undefined;
+  readonly quantityStep: string | undefined;
+  readonly strategyVersionId: string | undefined;
+};
+
+// Onde o histórico procura: o último backtest ou walk-forward concluído da mesma versão, par e vela (RF32).
+export type NoticeHistoryKey = {
+  readonly strategyVersionId: string;
+  readonly symbol: string;
+  readonly timeframe: string;
+};
+
+export type NoticeHistory = NoticeHistoryKey & {
+  readonly kind: string;
+  readonly elapsedMilliseconds: number;
+  readonly totalReturn: string;
 };
 
 // Quais origens a consulta lê: as da simulação, as do alerta de preço, ou todas.
@@ -66,4 +87,8 @@ export type NoticeFeedRepository = {
     scope: OwnerScope,
     params: ListNoticeSourcesParams,
   ) => Promise<readonly NoticeSourceRow[]>;
+  readonly listNoticeHistories: (
+    scope: OwnerScope,
+    keys: readonly NoticeHistoryKey[],
+  ) => Promise<readonly NoticeHistory[]>;
 };

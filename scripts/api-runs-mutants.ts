@@ -299,16 +299,24 @@ const MUTANTS: readonly Mutant[] = [
   {
     name: 'NOTICE_RESUMES_READ_EVERY_OWNER',
     edit: WITHOUT(
-      'src/notices/notice-feed-sql.ts',
+      'src/notices/notice-feed-run-sql.ts',
       'WHERE a.user_id = ${owner} AND a.side',
       'WHERE a.side',
     ),
     also: WITHOUT('src/notices/notice-feed-sql.ts', 'r.user_id = ${owner} AND r.kind', 'r.kind'),
   },
   {
+    name: 'NOTICE_HISTORY_READS_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/notices/notice-history.ts',
+      'WHERE r.user_id = ${scope.ownerUserId} AND r.deleted_at IS NULL',
+      'WHERE r.deleted_at IS NULL',
+    ),
+  },
+  {
     name: 'NOTICE_PRICE_ALERTS_READ_EVERY_OWNER',
     edit: WITHOUT(
-      'src/notices/notice-feed-sql.ts',
+      'src/notices/notice-feed-run-sql.ts',
       'WHERE pa.user_id = ${owner} AND pa.last_fired_at',
       'WHERE pa.last_fired_at',
     ),

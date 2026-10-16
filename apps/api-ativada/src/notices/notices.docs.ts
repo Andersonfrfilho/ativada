@@ -32,6 +32,32 @@ export const noticesQuerySchema = z.strictObject({
   scope: z.enum(NOTICE_SCOPE_QUERY).optional(),
 });
 
+const MANUAL_SCHEMA = z.strictObject({
+  orderType: z.string().nullable(),
+  decidedAt: isoDateTimeSchema.nullable(),
+  referencePrice: decimalTextSchema,
+  quantity: decimalTextSchema.nullable(),
+  runBalance: decimalTextSchema.nullable(),
+  notional: decimalTextSchema.nullable(),
+  targetPrice: decimalTextSchema,
+  stopPrice: decimalTextSchema,
+  tickSize: decimalTextSchema.nullable(),
+  quantityStep: decimalTextSchema.nullable(),
+  costRate: decimalTextSchema.nullable(),
+  netGainRate: decimalTextSchema.nullable(),
+  netLossRate: decimalTextSchema.nullable(),
+  netRatio: decimalTextSchema.nullable(),
+  breakEvenEntry: decimalTextSchema.nullable(),
+  history: z.strictObject({ days: z.number().int(), netReturnRate: decimalTextSchema }).nullable(),
+  how: z.string().nullable(),
+  quantityText: z.string().nullable(),
+  costText: z.string().nullable(),
+  netText: z.string().nullable(),
+  giveUpText: z.string().nullable(),
+  historyText: z.string(),
+  honesty: z.string(),
+});
+
 export const NOTICE_VIEW_SCHEMA = z.strictObject({
   noticeId: z.string(),
   runId: resourceIdSchema.nullable(),
@@ -55,6 +81,7 @@ export const NOTICE_VIEW_SCHEMA = z.strictObject({
   title: z.string(),
   message: z.string(),
   detail: z.string().nullable(),
+  manual: MANUAL_SCHEMA.nullable(),
 });
 
 export const NOTICES_DOCUMENTATION: RouteDocumentation = {
@@ -65,7 +92,8 @@ export const NOTICES_DOCUMENTATION: RouteDocumentation = {
     'fechado do servidor, sem data nem hora (a marca `{abre}`, `{fecha}`, `{validade}` ou `{hora}` é trocada pelo painel ' +
     'no fuso do usuário). `cursor` pagina para os avisos anteriores; `after` devolve só os avisos MAIS NOVOS que o ' +
     'cursor (o resumo ao voltar); `scope` recorta as simulações (`runs`), os alertas de preço (`price-alerts`) ou tudo ' +
-    '(`all`). Só leitura, só do dono, dos últimos 30 dias; é simulação com dinheiro fictício, não recomendação.',
+    '(`all`). Na compra executada e na venda vem o bloco `manual` ("Operar à mão": como a simulação executou, quantidade, ' +
+    'custo e líquido, ponto de equilíbrio, histórico). Só leitura, só do dono, dos últimos 30 dias; é simulação com dinheiro fictício, não recomendação.',
   tag: 'Avisos',
   query: noticesQuerySchema,
   successes: [

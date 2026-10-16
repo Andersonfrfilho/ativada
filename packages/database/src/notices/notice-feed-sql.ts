@@ -2,7 +2,6 @@
 import { sql, type SQL } from 'drizzle-orm';
 
 import { CANDLE_TIMEFRAME_DURATION_MILLISECONDS } from '../candles/candle.constant.js';
-import { ALERT_SIDE } from '../alerts/alert.constant.js';
 import type { UserId } from '../ownership/user-id.js';
 import { ORDER_PURPOSE, ORDER_SIDE, POSITION_STATUS } from '../run-results/run-result.constant.js';
 import { RUN_KIND } from '../runs/run.constant.js';
@@ -29,7 +28,14 @@ type NoticeColumn =
   | 'target_price'
   | 'entry_price'
   | 'stop_price'
-  | 'initial_balance';
+  | 'initial_balance'
+  | 'created_candle_time'
+  | 'notional'
+  | 'fee_rate'
+  | 'slippage_rate'
+  | 'tick_size'
+  | 'quantity_step'
+  | 'strategy_version_id';
 
 export const NOTICE_COLUMNS: readonly NoticeColumn[] = [
   'notice_id',
@@ -53,18 +59,26 @@ export const NOTICE_COLUMNS: readonly NoticeColumn[] = [
   'entry_price',
   'stop_price',
   'initial_balance',
+  'created_candle_time',
+  'notional',
+  'fee_rate',
+  'slippage_rate',
+  'tick_size',
+  'quantity_step',
+  'strategy_version_id',
 ];
 
 const BIGINT_COLUMNS: ReadonlySet<NoticeColumn> = new Set([
   'occurred_at',
   'candle_time',
   'expires_candle_time',
+  'created_candle_time',
 ]);
 
-type NoticeFields = Partial<Record<NoticeColumn, SQL>>;
+export type NoticeFields = Partial<Record<NoticeColumn, SQL>>;
 
 // Todas as ramas do UNION ALL têm de ter as MESMAS colunas e tipos: o que a origem não tem vira NULL tipado.
-function selectList(fields: NoticeFields): SQL {
+export function selectList(fields: NoticeFields): SQL {
   const columns = NOTICE_COLUMNS.map((column) => {
     const fallback = BIGINT_COLUMNS.has(column) ? sql`NULL::bigint` : sql`NULL::text`;
     return sql`${fields[column] ?? fallback} AS ${sql.raw(column)}`;
@@ -73,7 +87,7 @@ function selectList(fields: NoticeFields): SQL {
 }
 
 // A duração da vela como CASE sobre o texto do timeframe da execução (os valores são constantes do código, nunca do usuário).
-const CANDLE_DURATION: SQL = sql.raw(
+export const CANDLE_DURATION: SQL = sql.raw(
   `(CASE r.timeframe ${Object.entries(CANDLE_TIMEFRAME_DURATION_MILLISECONDS)
     .map(([timeframe, milliseconds]) => `WHEN '${timeframe}' THEN ${milliseconds}::bigint`)
     .join(' ')} END)`,
@@ -81,7 +95,7 @@ const CANDLE_DURATION: SQL = sql.raw(
 
 const INITIAL_BALANCE: SQL = sql`(r.run_parameters->>'initialBalance')`;
 
-function runFields(source: NoticeSource, noticeId: SQL): NoticeFields {
+export function runFields(source: NoticeSource, noticeId: SQL): NoticeFields {
   return {
     notice_id: noticeId,
     source: sql`${source}::text`,
@@ -89,10 +103,15 @@ function runFields(source: NoticeSource, noticeId: SQL): NoticeFields {
     symbol: sql`r.symbol`,
     timeframe: sql`r.timeframe`,
     initial_balance: INITIAL_BALANCE,
+    fee_rate: sql`(r.run_parameters->>'feeRate')`,
+    slippage_rate: sql`(r.run_parameters->>'slippageRate')`,
+    tick_size: sql`(r.run_parameters->>'tickSize')`,
+    quantity_step: sql`(r.run_parameters->>'quantityStep')`,
+    strategy_version_id: sql`r.strategy_version_id::text`,
   };
 }
 
-function liveRunFilter(owner: UserId): SQL {
+export function liveRunFilter(owner: UserId): SQL {
   return sql`r.user_id = ${owner} AND r.kind = ${RUN_KIND.LIVE_PAPER} AND r.deleted_at IS NULL`;
 }
 
@@ -102,6 +121,8 @@ export function entryOrderNotices(owner: UserId): SQL {
     occurred_at: sql`o.last_event_candle_time + ${CANDLE_DURATION}`,
     candle_time: sql`o.last_event_candle_time`,
     expires_candle_time: sql`o.expires_candle_time`,
+    created_candle_time: sql`o.created_candle_time`,
+    notional: sql`f.notional::text`,
     order_type: sql`o.type`,
     operation_key: sql`p.engine_key`,
     state: sql`o.status`,
@@ -142,65 +163,4 @@ export function exitPositionNotices(owner: UserId): SQL {
   return sql`SELECT ${selectList(fields)} FROM positions p
     JOIN runs r ON r.id = p.run_id AND ${liveRunFilter(owner)}
     WHERE p.user_id = ${owner} AND p.status = ${POSITION_STATUS.CLOSED}`;
-}
-
-export function stalledRunNotices(owner: UserId): SQL {
-  const fields = {
-    ...runFields(
-      NOTICE_SOURCE.RUN_STALLED,
-      sql`'stalled:' || r.id::text || ':' || r.stalled_since::text`,
-    ),
-    occurred_at: sql`r.stalled_since`,
-  };
-  return sql`SELECT ${selectList(fields)} FROM runs r WHERE ${liveRunFilter(owner)} AND r.stalled_since IS NOT NULL`;
-}
-
-export function waitingRunNotices(owner: UserId): SQL {
-  const fields = {
-    ...runFields(
-      NOTICE_SOURCE.RUN_WAITING,
-      sql`'waiting:' || r.id::text || ':' || r.waiting_since::text`,
-    ),
-    occurred_at: sql`r.waiting_since`,
-    candle_time: sql`r.waiting_open_time`,
-  };
-  return sql`SELECT ${selectList(fields)} FROM runs r WHERE ${liveRunFilter(owner)} AND r.waiting_since IS NOT NULL`;
-}
-
-export function goalRunNotices(owner: UserId): SQL {
-  const fields = {
-    ...runFields(NOTICE_SOURCE.RUN_GOAL, sql`'goal:' || r.id::text`),
-    occurred_at: sql`r.goal_outcome_candle_time + ${CANDLE_DURATION}`,
-    candle_time: sql`r.goal_outcome_candle_time`,
-    state: sql`r.goal_outcome`,
-  };
-  return sql`SELECT ${selectList(fields)} FROM runs r WHERE ${liveRunFilter(owner)} AND r.goal_outcome IS NOT NULL`;
-}
-
-// A volta do ritmo só existe como aviso gravado (`alerts`, lado RESUME): o `candle_time` é o início do episódio.
-export function resumedRunNotices(owner: UserId): SQL {
-  const fields = {
-    ...runFields(
-      NOTICE_SOURCE.RUN_RESUMED,
-      sql`'resumed:' || r.id::text || ':' || a.candle_time::text`,
-    ),
-    occurred_at: sql`(EXTRACT(EPOCH FROM a.created_at) * 1000)::bigint`,
-    candle_time: sql`a.candle_time`,
-  };
-  return sql`SELECT ${selectList(fields)} FROM alerts a
-    JOIN runs r ON r.id = a.run_id AND ${liveRunFilter(owner)}
-    WHERE a.user_id = ${owner} AND a.side = ${ALERT_SIDE.RESUME}`;
-}
-
-export function firedPriceAlertNotices(owner: UserId): SQL {
-  const fields = {
-    notice_id: sql`'price_alert:' || pa.id::text || ':' || (EXTRACT(EPOCH FROM pa.last_fired_at) * 1000)::bigint::text`,
-    source: sql`${NOTICE_SOURCE.PRICE_ALERT}::text`,
-    occurred_at: sql`(EXTRACT(EPOCH FROM pa.last_fired_at) * 1000)::bigint`,
-    symbol: sql`pa.symbol`,
-    reason: sql`pa.direction`,
-    price: sql`pa.value::text`,
-  };
-  return sql`SELECT ${selectList(fields)} FROM price_alerts pa
-    WHERE pa.user_id = ${owner} AND pa.last_fired_at IS NOT NULL`;
 }

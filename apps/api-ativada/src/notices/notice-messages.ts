@@ -7,6 +7,8 @@ export const NOTICE_TIME_TOKEN = {
   CLOSES: '{fecha}',
   EXPIRES: '{validade}',
   AT: '{hora}',
+  DECIDED: '{decisao}',
+  CONFIRMED: '{confirmacao}',
 } as const;
 
 export const NOTICE_CODE = {

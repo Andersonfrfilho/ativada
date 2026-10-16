@@ -2,6 +2,7 @@
 import { NOTICE_FEED_SCOPE } from '../../../packages/database/src/notices/notice-feed.types.js';
 import type {
   ListNoticeSourcesParams,
+  NoticeHistory,
   NoticeFeedRepository,
   NoticeSourceRow,
 } from '../../../packages/database/src/notices/notice-feed.types.js';
@@ -14,6 +15,8 @@ export type InMemoryNotices = {
   // Grava (ou troca, pelo `noticeId`) um aviso do dono: é assim que a ordem muda de estado.
   readonly put: (userId: UserId, row: NoticeSourceRow) => void;
   readonly lastParams: () => ListNoticeSourcesParams | undefined;
+  // O histórico que o último backtest da versão, par e vela devolveria (RF32).
+  readonly putHistory: (history: NoticeHistory) => void;
 };
 
 const PRICE_ALERT_SOURCE = 'price_alert';
@@ -35,6 +38,7 @@ function byNewest(left: NoticeSourceRow, right: NoticeSourceRow): number {
 export function createInMemoryNotices(): InMemoryNotices {
   const stored: Stored[] = [];
   let last: ListNoticeSourcesParams | undefined;
+  const histories: NoticeHistory[] = [];
   const repository: NoticeFeedRepository = {
     listNoticeSources: (scope, params) => {
       last = params;
@@ -52,6 +56,17 @@ export function createInMemoryNotices(): InMemoryNotices {
         .sort(byNewest);
       return Promise.resolve(rows.slice(0, params.limit));
     },
+    listNoticeHistories: (_scope, keys) =>
+      Promise.resolve(
+        histories.filter((history) =>
+          keys.some(
+            (key) =>
+              key.strategyVersionId === history.strategyVersionId &&
+              key.symbol === history.symbol &&
+              key.timeframe === history.timeframe,
+          ),
+        ),
+      ),
   };
   return {
     repository,
@@ -63,5 +78,6 @@ export function createInMemoryNotices(): InMemoryNotices {
       else found.row = row;
     },
     lastParams: () => last,
+    putHistory: (history): void => void histories.push(history),
   };
 }

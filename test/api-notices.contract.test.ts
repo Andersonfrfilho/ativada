@@ -19,12 +19,15 @@ import {
 
 const PATH = '/v1/notices';
 const RUN_ID = '0192f3a1-7c4e-7b2a-9d3f-5e6a7b8c0001';
+const VERSION_ID = '0192f3a1-7c4e-7b2a-9d3f-5e6a7b8c00aa';
 const MINUTE = 60_000;
 const FIFTEEN_MINUTES = 15 * MINUTE;
 const OWNER = userIdFromDatabase(USER_A_ID);
 const STRANGER = userIdFromDatabase(USER_B_ID);
 
+type ManualData = Record<string, unknown>;
 type NoticeData = {
+  manual: ManualData | null;
   noticeId: string;
   runId: string | null;
   kind: string;
@@ -82,6 +85,13 @@ function row(overrides: Partial<NoticeSourceRow>): NoticeSourceRow {
     entryPrice: undefined,
     stopPrice: undefined,
     initialBalance: '10000',
+    createdCandleTime: NOW - HOUR - 2 * FIFTEEN_MINUTES,
+    notional: undefined,
+    feeRate: '0.001',
+    slippageRate: '0.0005',
+    tickSize: '0.001',
+    quantityStep: '0.01',
+    strategyVersionId: VERSION_ID,
     ...overrides,
   };
 }
@@ -98,6 +108,7 @@ const FILLED = row({
   price: '12.45800000',
   fee: '0.01250000',
   quantity: '113.50000000',
+  notional: '1414.00300000',
   targetPrice: '12.59000000',
   entryPrice: '12.45800000',
   stopPrice: '12.37900000',
@@ -382,6 +393,161 @@ describe('parada, volta, espera, meta e alerta de preço', () => {
     expect(byId.get('price_alert:1')?.runId).toBeNull();
     expect(byId.get('price_alert:2')?.message).toBe('LINK/USDT caiu abaixo de 12,000.');
     expect(byId.get('price_alert:1')?.kind).toBe('price_alert');
+  });
+});
+
+describe('Operar à mão: o bloco manual (RF27 a RF34)', () => {
+  const HISTORY = {
+    strategyVersionId: VERSION_ID,
+    symbol: 'LINKUSDT',
+    timeframe: '15m',
+    kind: 'backtest',
+    elapsedMilliseconds: 183 * 86_400_000,
+    totalReturn: '-0.143',
+  };
+
+  async function manualOf(noticeId: string): Promise<Record<string, unknown> | null | undefined> {
+    const found = (await list('?limit=50')).data.find((entry) => entry.noticeId === noticeId);
+    return found?.manual;
+  }
+
+  test('as contas à mão do exemplo: 113,50 LINK, custo 0,30%, líquido, 0,8 : 1 e equilíbrio 12,447', async () => {
+    harness.notices.put(OWNER, row({ ...FILLED, noticeId: 'order:run:manual' }));
+    harness.notices.putHistory(HISTORY);
+    const manual = await manualOf('order:run:manual');
+    expect(manual).toMatchObject({
+      orderType: 'market',
+      referencePrice: '12.45800000',
+      quantity: '113.50000000',
+      runBalance: '10000',
+      notional: '1414.00300000',
+      targetPrice: '12.59000000',
+      stopPrice: '12.37900000',
+      tickSize: '0.001',
+      quantityStep: '0.01',
+      costRate: '0.003',
+      netGainRate: '0.007595',
+      netLossRate: '-0.009342',
+      netRatio: '0.8',
+      breakEvenEntry: '12.447',
+      history: { days: 183, netReturnRate: '-0.143' },
+    });
+    expect(manual?.['decidedAt']).toBe(
+      new Date(NOW - HOUR - 2 * FIFTEEN_MINUTES + FIFTEEN_MINUTES).toISOString(),
+    );
+  });
+
+  test('as frases do catálogo, contra o usuário: o ganho desce, a perda cresce, o equilíbrio vai para baixo no tick', async () => {
+    const manual = await manualOf('order:run:manual');
+    expect(manual?.['how']).toBe(
+      'Ordem a mercado. Decidiu no fechamento das {decisao} e comprou pelo preço de abertura da vela das {decisao} (confirmado às {confirmacao}). Preço de referência: 12,458.',
+    );
+    expect(manual?.['quantityText']).toBe(
+      'A simulação comprou 113,50 LINK (≈ 1.414,00 USDT) com saldo de 10.000,00 USDT. A quantidade real depende do seu saldo e da sua corretora.',
+    );
+    expect(manual?.['costText']).toBe(
+      'Custo estimado ida e volta: 0,30% (taxa 0,1% + deslizamento 0,05% por lado, os da simulação).',
+    );
+    expect(manual?.['netText']).toBe(
+      'Ganho possível depois do custo: +0,75% · perda possível depois do custo: −0,94% · ganho ÷ perda 0,8 : 1.',
+    );
+    expect(manual?.['giveUpText']).toBe(
+      'A simulação compra a mercado e não desiste pelo preço. Para quem opera à mão: acima de 12,447 o ganho depois do custo já fica menor que a perda (este sinal entrou acima disso). Não é regra da simulação.',
+    );
+    expect(manual?.['historyText']).toBe('Últimos 183 dias, LINK/USDT 15 min, com taxas: −14,30%.');
+    expect(manual?.['honesty']).toBe(
+      'A simulação executa sem atraso e sem a oscilação de preço real. À mão haverá diferença (deslizamento e atraso) e você pode perder dinheiro. O AtivAdA não envia ordens e não tem chave da sua corretora.',
+    );
+  });
+
+  test('par sem backtest: history nulo e a frase manda rodar um backtest', async () => {
+    harness.notices.put(
+      OWNER,
+      row({
+        ...FILLED,
+        noticeId: 'order:run:other-pair',
+        symbol: 'SOLUSDT',
+        strategyVersionId: VERSION_ID,
+      }),
+    );
+    const manual = await manualOf('order:run:other-pair');
+    expect(manual?.['history']).toBeNull();
+    expect(manual?.['historyText']).toBe('Sem histórico deste par. Rode um backtest em Backtests.');
+  });
+
+  test('a saída também traz o bloco, sem a frase da quantidade comprada', async () => {
+    harness.notices.put(
+      OWNER,
+      row({
+        ...FILLED,
+        noticeId: 'exit:run:manual',
+        source: 'exit_position',
+        state: undefined,
+        reason: 'target',
+        netProfit: '106.00000000',
+        price: '12.59000000',
+        orderType: undefined,
+      }),
+    );
+    const manual = await manualOf('exit:run:manual');
+    expect(manual?.['referencePrice']).toBe('12.45800000');
+    expect(manual?.['quantityText']).toBeNull();
+    expect(manual?.['how']).toBeNull();
+    expect(manual?.['breakEvenEntry']).toBe('12.447');
+  });
+
+  test('limitada: a frase diz o limite; sem taxa gravada, sem conta de custo', async () => {
+    harness.notices.put(
+      OWNER,
+      row({
+        ...FILLED,
+        noticeId: 'order:run:limit-manual',
+        orderType: 'limit',
+        feeRate: undefined,
+      }),
+    );
+    const manual = await manualOf('order:run:limit-manual');
+    expect(String(manual?.['how'])).toContain('Ordem limitada em 12,458.');
+    expect(manual?.['costRate']).toBeNull();
+    expect(manual?.['costText']).toBeNull();
+    expect(manual?.['netText']).toBeNull();
+  });
+
+  test('pedida, cancelada e os avisos de parada não levam o bloco', async () => {
+    harness.notices.put(OWNER, row({ noticeId: 'order:run:pending-manual' }));
+    harness.notices.put(OWNER, row({ noticeId: 'stalled:manual', source: 'run_stalled' }));
+    expect(await manualOf('order:run:pending-manual')).toBeNull();
+    expect(await manualOf('stalled:manual')).toBeNull();
+  });
+
+  test('as frases do bloco passam na varredura de palavras proibidas e não levam horário', async () => {
+    const manual = await manualOf('order:run:manual');
+    const phrases = [
+      'how',
+      'quantityText',
+      'costText',
+      'netText',
+      'giveUpText',
+      'historyText',
+      'honesty',
+    ];
+    const texts = phrases.map((key) => String(manual?.[key]));
+    const forbidden = [
+      'você deve',
+      'compre agora',
+      'venda agora',
+      'garant',
+      'oportunidade',
+      'lucro certo',
+      'recomend',
+      'certeza',
+      'ATR',
+      'stop',
+    ];
+    for (const text of texts) {
+      expect(/\b\d{1,2}:\d{2}\b/.test(text)).toBe(false);
+      for (const word of forbidden) expect(text.includes(word)).toBe(false);
+    }
   });
 });
 

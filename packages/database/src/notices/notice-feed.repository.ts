@@ -5,6 +5,7 @@ import type { DatabaseExecutor } from '../database-executor.js';
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import type { OwnerScope } from '../ownership/owner-scope.js';
 import { NOTICE_FEED_MAXIMUM_LIMIT } from './notice-feed.constant.js';
+import { listNoticeHistories } from './notice-history.js';
 import type { UserId } from '../ownership/user-id.js';
 import {
   NOTICE_FEED_SCOPE,
@@ -15,15 +16,14 @@ import {
   type NoticeSource,
   type NoticeSourceRow,
 } from './notice-feed.types.js';
+import { entryOrderNotices, exitPositionNotices } from './notice-feed-sql.js';
 import {
-  entryOrderNotices,
   firedPriceAlertNotices,
   goalRunNotices,
   resumedRunNotices,
   stalledRunNotices,
   waitingRunNotices,
-  exitPositionNotices,
-} from './notice-feed-sql.js';
+} from './notice-feed-run-sql.js';
 
 type RawRow = Readonly<Record<string, unknown>>;
 
@@ -68,6 +68,13 @@ function toNoticeRow(row: RawRow): NoticeSourceRow {
     entryPrice: readText(row, 'entry_price'),
     stopPrice: readText(row, 'stop_price'),
     initialBalance: readText(row, 'initial_balance'),
+    createdCandleTime: readMilliseconds(row, 'created_candle_time'),
+    notional: readText(row, 'notional'),
+    feeRate: readText(row, 'fee_rate'),
+    slippageRate: readText(row, 'slippage_rate'),
+    tickSize: readText(row, 'tick_size'),
+    quantityStep: readText(row, 'quantity_step'),
+    strategyVersionId: readText(row, 'strategy_version_id'),
   };
 }
 
@@ -120,5 +127,8 @@ export async function listNoticeSources(
 
 export function createNoticeFeedRepository(handle: DatabaseHandle): NoticeFeedRepository {
   const { database } = readOpenDatabase(handle);
-  return { listNoticeSources: (scope, params) => listNoticeSources(database, scope, params) };
+  return {
+    listNoticeSources: (scope, params) => listNoticeSources(database, scope, params),
+    listNoticeHistories: (scope, keys) => listNoticeHistories(database, scope, keys),
+  };
 }

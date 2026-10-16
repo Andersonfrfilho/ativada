@@ -10,15 +10,17 @@ import {
   POSITION_STATUS,
 } from '../src/run-results/run-result.constant.js';
 import type { OrderInput } from '../src/run-results/run-result.types.js';
+import { createRunRepository } from '../src/runs/run.repository.js';
 import { RUN_KIND } from '../src/runs/run.constant.js';
 import type { LifecycleCheckContext } from './account-lifecycle-checks.js';
 import {
   buildFills,
+  buildRunParams,
   buildOrders,
   buildPositions,
   candleTimeAt,
   resolvePersistenceOwner,
-  seedRun,
+  seedStrategyVersion,
   SYNTHETIC_CANDLE_MILLISECONDS,
 } from './persistence-seed.js';
 
@@ -58,8 +60,15 @@ export async function checkNoticeFeed(context: LifecycleCheckContext): Promise<v
   const { handle, client, assertCondition, reportCheck } = context;
   const owner = await resolvePersistenceOwner(handle, 'subject-notice-feed');
   const stranger = await resolvePersistenceOwner(handle, 'subject-notice-feed-other');
-  const live = await seedRun(handle, owner, { kind: RUN_KIND.LIVE_PAPER, periodEnd: undefined });
-  const backtest = await seedRun(handle, owner);
+  const version = await seedStrategyVersion(handle, owner);
+  const runs = createRunRepository(handle);
+  const live = await runs.createRun(
+    owner.scope,
+    buildRunParams(version.id, { kind: RUN_KIND.LIVE_PAPER, periodEnd: undefined }),
+  );
+  const backtest = await runs.createRun(owner.scope, buildRunParams(version.id));
+  if (live === undefined || backtest === undefined)
+    throw new Error('execuções de semente ausentes');
   await createRunBatchRepository(handle).runInBatch(owner.scope, live.id, (writer) =>
     writer.appendResults({
       signals: [],
@@ -89,6 +98,9 @@ export async function checkNoticeFeed(context: LifecycleCheckContext): Promise<v
     VALUES (${crypto.randomUUID()}, ${owner.userId}, ${live.id}, ${candleTimeAt(30)}, 'RESUME', 'telegram', '{}'::jsonb)`;
   await client`INSERT INTO price_alerts (id, user_id, symbol, direction, value, origin, last_fired_at)
     VALUES (${crypto.randomUUID()}, ${owner.userId}, 'BTCUSDT', 'above', '70000', 'manual', now())`;
+  await client`UPDATE runs SET status = 'completed', started_at = now(), finished_at = now(), progress = 100,
+      metrics = '{"totalReturn":{"value":"-0.143","reason":null},"period":{"elapsedMilliseconds":15811200000}}'::jsonb
+    WHERE id = ${backtest.id}`;
   const feed = createNoticeFeedRepository(handle);
   const base = {
     since: SINCE,
@@ -132,6 +144,30 @@ export async function checkNoticeFeed(context: LifecycleCheckContext): Promise<v
       exit.netProfit === '6.59000000' &&
       exit.initialBalance === '10000',
     'avisos: a saída não trouxe motivo, resultado e saldo inicial',
+  );
+  assertCondition(
+    entry?.createdCandleTime === candleTimeAt(0) &&
+      entry.notional === '450.00000000' &&
+      entry.quantity === '0.01500000' &&
+      entry.strategyVersionId === version.id,
+    'avisos: a compra executada não trouxe decisão, notional, quantidade, versão e parâmetros da simulação',
+  );
+  const histories = await feed.listNoticeHistories(owner.scope, [
+    { strategyVersionId: version.id, symbol: 'BTCUSDT', timeframe: '1h' },
+  ]);
+  assertCondition(
+    histories.length === 1 &&
+      histories[0]?.totalReturn === '-0.143' &&
+      histories[0].elapsedMilliseconds === 15_811_200_000 &&
+      histories[0].kind === RUN_KIND.BACKTEST,
+    `avisos: o histórico não trouxe o último backtest concluído da versão, par e vela (${JSON.stringify(histories)})`,
+  );
+  const foreignHistories = await feed.listNoticeHistories(stranger.scope, [
+    { strategyVersionId: version.id, symbol: 'BTCUSDT', timeframe: '1h' },
+  ]);
+  assertCondition(
+    foreignHistories.length === 0,
+    'avisos: outro dono leu o histórico de backtests alheio',
   );
   reportCheck('avisos: ciclo da ordem, saída e parada no mesmo fluxo OK');
 

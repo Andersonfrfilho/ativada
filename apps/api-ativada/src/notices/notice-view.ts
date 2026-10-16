@@ -1,8 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { NOTICE_SOURCE, type NoticeSourceRow } from '@ativada/database';
+import { NOTICE_SOURCE, type NoticeHistory, type NoticeSourceRow } from '@ativada/database';
 
 import { NOTICE_KIND, NOTICE_STATE, type NoticeKind, type NoticeState } from './notice.constant.js';
 import { resolveNoticeContent } from './notice-content.js';
+import { buildNoticeManual, type NoticeManual } from './notice-manual.js';
 import { addDuration, toIsoInstant } from './notice-timing.js';
 
 export type NoticeView = {
@@ -28,6 +29,8 @@ export type NoticeView = {
   readonly title: string;
   readonly message: string;
   readonly detail: string | null;
+  // "Operar à mão" (RF27 a RF33): só na compra executada e na venda.
+  readonly manual: NoticeManual | null;
 };
 
 const KIND_BY_SOURCE: Readonly<Record<string, NoticeKind>> = {
@@ -81,7 +84,7 @@ function toPendingTimes(row: NoticeSourceRow): {
 }
 
 // Uma linha crua do banco vira o aviso: a frase vem do catálogo fechado e nenhum horário entra nela.
-export function toNoticeView(row: NoticeSourceRow): NoticeView {
+export function toNoticeView(row: NoticeSourceRow, history?: NoticeHistory): NoticeView {
   const content = resolveNoticeContent(row);
   return {
     noticeId: row.noticeId,
@@ -105,5 +108,6 @@ export function toNoticeView(row: NoticeSourceRow): NoticeView {
     title: content.text.title,
     message: content.text.message,
     detail: content.text.detail,
+    manual: buildNoticeManual(row, history) ?? null,
   };
 }
