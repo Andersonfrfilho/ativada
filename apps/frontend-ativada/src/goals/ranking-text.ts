@@ -13,7 +13,7 @@ export function formatDays(text: string | null): string {
   return `tempo típico ${shown} ${days === 1 ? 'dia' : 'dias'}`;
 }
 
-function formatRate(rate: string | null): string {
+export function formatRate(rate: string | null): string {
   return rate === null ? '—' : formatPercent(Number(rate));
 }
 

@@ -17,6 +17,9 @@ import {
 import { useGoalSimulation, type GoalSimulation } from './useGoalSimulation.hook.js';
 import { useLiveRunSlots, type LiveRunSlots } from './useLiveRunSlots.hook.js';
 
+const PODIUM_SIZE = 3;
+const COLLAPSED_COUNT = 10;
+
 export type RankingCardProps = { readonly goalId: string; readonly evaluation: GoalEvaluation };
 
 function UnavailableList({
@@ -57,8 +60,9 @@ function RankingList({
 }: RankingListProps): ReactElement {
   return (
     <ol className={styles.ranking} aria-label="Ranking de estratégias por moeda">
-      {combinations.map((combination) => (
+      {combinations.map((combination, index) => (
         <RankingItem
+          variant={index < PODIUM_SIZE ? 'podium' : 'row'}
           goalId={goalId}
           key={`${combination.strategy.id}:${combination.symbol}`}
           combination={combination}
@@ -94,14 +98,40 @@ function GoalOnlyToggle({
   );
 }
 
+type ExpandFooterProps = {
+  readonly total: number;
+  readonly isExpanded: boolean;
+  readonly onToggle: () => void;
+};
+
+function ExpandFooter({ total, isExpanded, onToggle }: ExpandFooterProps): ReactElement | null {
+  if (total <= COLLAPSED_COUNT) return null;
+  return (
+    <div className={styles.rankingFoot}>
+      <span className={controls.muted}>
+        {isExpanded ? total : COLLAPSED_COUNT} de {total} combinações de estratégia e moeda.
+      </span>
+      <button type="button" className={controls.button} onClick={onToggle}>
+        {isExpanded ? `Mostrar só as ${COLLAPSED_COUNT}` : `Mostrar as ${total}`}
+      </button>
+    </div>
+  );
+}
+
+function orderByRank(combinations: readonly Combination[], isGoalOnly: boolean): Combination[] {
+  return combinations
+    .filter((item) => !isGoalOnly || item.isGoalSymbol)
+    .sort((first, second) => first.rank - second.rank);
+}
+
 export function RankingCard({ goalId, evaluation }: RankingCardProps): ReactElement {
   const [timeframe, setTimeframe] = useState<SimulationTimeframe>(DEFAULT_SIMULATION_TIMEFRAME);
   const simulation = useGoalSimulation(goalId, timeframe);
   const slots = useLiveRunSlots();
   const [isGoalOnly, setIsGoalOnly] = useState(false);
-  const shown = [...evaluation.combinations]
-    .filter((item) => !isGoalOnly || item.isGoalSymbol)
-    .sort((first, second) => first.rank - second.rank);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const ordered = orderByRank(evaluation.combinations, isGoalOnly);
+  const shown = isExpanded ? ordered : ordered.slice(0, COLLAPSED_COUNT);
   return (
     <Card title="Estratégia × moeda">
       <RankingExplainer />
@@ -118,6 +148,11 @@ export function RankingCard({ goalId, evaluation }: RankingCardProps): ReactElem
         simulation={simulation}
         slots={slots}
         timeframe={timeframe}
+      />
+      <ExpandFooter
+        total={ordered.length}
+        isExpanded={isExpanded}
+        onToggle={() => setIsExpanded((current) => !current)}
       />
       <UnavailableList evaluation={evaluation} />
       {simulation.message === undefined ? null : (

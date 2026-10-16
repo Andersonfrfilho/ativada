@@ -11,7 +11,7 @@ import type { Combination } from './goal.validation.js';
 import styles from './Goals.module.css';
 import { computeOutcomeSegments } from './outcome-bar.js';
 import { OutcomeBar } from './OutcomeBar.component.js';
-import { describeBenchmark, describeOutcomes } from './ranking-text.js';
+import { describeBenchmark, describeOutcomes, formatRate } from './ranking-text.js';
 import { buildLiveRunLimitText, DUPLICATE_RUN_TEXT } from './simulation-timeframe.constant.js';
 
 export type SimulationAvailability = {
@@ -22,7 +22,10 @@ export type SimulationAvailability = {
   readonly duplicateRunId: string | undefined;
 };
 
+export type RankingVariant = 'podium' | 'row';
+
 export type RankingItemProps = {
+  readonly variant: RankingVariant;
   readonly goalId: string;
   readonly combination: Combination;
   readonly availability: SimulationAvailability;
@@ -93,33 +96,74 @@ function RankingActions({
   );
 }
 
-export function RankingItem(props: RankingItemProps): ReactElement {
-  const { combination } = props;
+function RankingHead({ combination }: { readonly combination: Combination }): ReactElement {
   const { strategy, evaluation } = combination;
-  const segments = computeOutcomeSegments(evaluation.reachRate, evaluation.stopRate);
   return (
-    <li className={styles.combination}>
-      <div className={styles.combinationHead}>
-        <span className={styles.rank} aria-label={`Posição ${combination.rank}`}>
-          {combination.rank}º
-        </span>
-        <strong>
-          {strategy.name} · versão {strategy.version}
-        </strong>
-        <span className={styles.symbol}>{formatSymbol(combination.symbol)}</span>
-        <span
-          className={`${styles.verdict} ${verdictClass(evaluation.verdict)}`}
-          title={VERDICT_HINT[evaluation.verdict]}
-        >
-          <Icon name={verdictIcon(evaluation.verdict)} size={14} />
-          {VERDICT_LABEL[evaluation.verdict] ?? evaluation.verdict}
-        </span>
-      </div>
+    <div className={styles.combinationHead}>
+      <span className={styles.rank} aria-label={`Posição ${combination.rank}`}>
+        {combination.rank}º
+      </span>
+      <strong>
+        {strategy.name} · versão {strategy.version}
+      </strong>
+      <span className={styles.symbol}>{formatSymbol(combination.symbol)}</span>
+      {combination.isGoalSymbol ? <span className={styles.mine}>par da sua meta</span> : null}
+      <span
+        className={`${styles.verdict} ${verdictClass(evaluation.verdict)}`}
+        title={VERDICT_HINT[evaluation.verdict]}
+      >
+        <Icon name={verdictIcon(evaluation.verdict)} size={14} />
+        {VERDICT_LABEL[evaluation.verdict] ?? evaluation.verdict}
+      </span>
+    </div>
+  );
+}
+
+// O pódio já abre o porquê; nas linhas ele fica recolhido para a lista caber numa tela.
+function RankingDetails({
+  combination,
+  isOpen,
+}: {
+  readonly combination: Combination;
+  readonly isOpen: boolean;
+}): ReactElement {
+  const { evaluation } = combination;
+  return (
+    <details className={styles.details} open={isOpen}>
+      <summary>Como foi no histórico</summary>
       <p className={styles.plainVerdict}>{VERDICT_PLAIN[evaluation.verdict]}</p>
-      {evaluation.windowCount === 0 ? null : <OutcomeBar segments={segments} />}
       <p>No histórico: {describeOutcomes(combination)}</p>
       <p className={controls.muted}>{describeBenchmark(combination)}</p>
+    </details>
+  );
+}
+
+export function RankingItem(props: RankingItemProps): ReactElement {
+  const { combination, variant } = props;
+  const { evaluation } = combination;
+  const isPodium = variant === 'podium';
+  const segments = computeOutcomeSegments(evaluation.reachRate, evaluation.stopRate);
+  return (
+    <li className={isPodium ? styles.podiumCard : styles.rowCard}>
+      <RankingHead combination={combination} />
+      {isPodium ? (
+        <p className={styles.bigRate}>
+          {formatRate(evaluation.reachRate)} <span>alcançou a meta</span>
+        </p>
+      ) : null}
+      {evaluation.windowCount === 0 ? null : (
+        <div>
+          <OutcomeBar segments={segments} />
+          {isPodium ? null : (
+            <p className={styles.rowRates}>
+              {formatRate(evaluation.reachRate)} alcançou · {formatRate(evaluation.stopRate)} parou
+              na perda
+            </p>
+          )}
+        </div>
+      )}
       <RankingActions {...props} />
+      <RankingDetails combination={combination} isOpen={isPodium} />
     </li>
   );
 }

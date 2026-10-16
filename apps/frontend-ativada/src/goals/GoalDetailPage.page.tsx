@@ -11,6 +11,7 @@ import { CompareHorizonsLink } from './CompareHorizonsLink.component.js';
 import { CoinsSituationCard } from './CoinsSituationCard.component.js';
 import { useGoalEvaluationQuery, useGoalQuery } from './goal.query.js';
 import { useGoalRunQuery } from './goal-run.query.js';
+import { GoalSimulationCard } from './GoalSimulationCard.component.js';
 import { RankingCard } from './RankingCard.component.js';
 
 export function GoalDetailPage(): ReactElement {
@@ -41,6 +42,7 @@ export function GoalDetailPage(): ReactElement {
           Não foi possível carregar a meta. Tente novamente em instantes.
         </p>
       ) : null}
+      <GoalSimulationCard goalId={goalId} />
       {evaluation.data === undefined ? (
         <p role="status">Calculando o histórico…</p>
       ) : (
