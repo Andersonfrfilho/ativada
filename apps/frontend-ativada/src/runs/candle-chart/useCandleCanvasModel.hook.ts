@@ -140,7 +140,12 @@ function useLayerModel(
   const { runId, chart, view, source } = input;
   const layerData = useChartLayers({ runId, chart, view, source, centerTime: blockTime });
   const isLayerOn = (layer: ChartLayer): boolean => source.preferences.preferences.layers[layer];
-  useLayerSurface(base.surface, { data: layerData, decisions: chart.decisions, isOn: isLayerOn });
+  useLayerSurface(base.surface, {
+    data: layerData,
+    decisions: chart.decisions,
+    isOn: isLayerOn,
+    displayMapping: source.displayMapping,
+  });
   const live = useFormingCandle(base.surface, {
     symbol: chart.symbol,
     timeframe: source.timeframe,

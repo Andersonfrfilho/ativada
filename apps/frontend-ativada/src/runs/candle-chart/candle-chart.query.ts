@@ -6,6 +6,8 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 
+import { z } from '@ativada/environment';
+
 import { API_PATH } from '../../app/app.constant.js';
 import { useApiClient } from '../../app/useAppContext.hook.js';
 import type { ApiClient } from '../../http/api-client.js';
@@ -112,11 +114,19 @@ function marketCandlesKey(params: MarketCandlesParams): readonly unknown[] {
   return [MARKET_QUERY_ROOT, params.symbol, params.timeframe, 'candles', params.from, params.to];
 }
 
-function requestMarketCandles(
+// `retentionStart` só vem nas velas de exibição: a abertura da primeira vela que a retenção ainda guarda (spec 017).
+const retentionMetaSchema = z.object({ retentionStart: z.number() });
+
+export type MarketCandlesPage = {
+  readonly candles: MarketCandle[];
+  readonly retentionStart: number | undefined;
+};
+
+async function requestMarketCandles(
   client: ApiClient,
   params: MarketCandlesParams,
-): Promise<MarketCandle[]> {
-  return client.request({
+): Promise<MarketCandlesPage> {
+  const { data, meta } = await client.requestWithMeta({
     path: withQuery(API_PATH.CANDLES, {
       symbol: params.symbol,
       timeframe: params.timeframe,
@@ -124,7 +134,9 @@ function requestMarketCandles(
       to: String(params.to),
     }),
     schema: marketCandleSchema.array(),
+    metaSchema: retentionMetaSchema,
   });
+  return { candles: data, retentionStart: meta?.retentionStart };
 }
 
 export function useMarketCandlesQuery(params: MarketCandlesParams): UseQueryResult<MarketCandle[]> {
@@ -134,6 +146,7 @@ export function useMarketCandlesQuery(params: MarketCandlesParams): UseQueryResu
     enabled: params.isEnabled ?? true,
     placeholderData: keepPreviousData,
     queryFn: () => requestMarketCandles(client, params),
+    select: (page) => page.candles,
   });
 }
 
@@ -143,14 +156,14 @@ export async function fetchMarketCandlesPage(
   queryClient: QueryClient,
   client: ApiClient,
   params: MarketCandlesParams,
-): Promise<MarketCandle[]> {
-  const candles = await queryClient.fetchQuery({
+): Promise<MarketCandlesPage> {
+  const page = await queryClient.fetchQuery({
     queryKey: marketCandlesKey(params),
     staleTime: Infinity,
     // Quem repete é o histórico (com aviso e contagem); a repetição escondida do cliente deixaria o gráfico em "Carregando".
     retry: false,
     queryFn: () => requestMarketCandles(client, params),
   });
-  if (candles.length === 0) queryClient.removeQueries({ queryKey: marketCandlesKey(params) });
-  return candles;
+  if (page.candles.length === 0) queryClient.removeQueries({ queryKey: marketCandlesKey(params) });
+  return page;
 }

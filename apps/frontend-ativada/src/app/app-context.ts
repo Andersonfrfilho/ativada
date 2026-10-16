@@ -10,6 +10,8 @@ export type AppConfig = LoginConfig & {
   readonly marketSymbols: readonly string[];
   // As velas habilitadas no ambiente da API (o gráfico só oferece estas); sem a lista, todas as que o painel conhece.
   readonly marketTimeframes?: readonly string[];
+  // As velas só de exibição (3m) que o ambiente grava; o gráfico só as oferece sobre execuções de 15 min.
+  readonly marketDisplayTimeframes?: readonly string[];
   // Só os testes encurtam: padrão de 2 s para acompanhar execução na fila ou rodando.
   readonly runPollMilliseconds?: number;
   // Polling de reserva dos preços quando o socket está fora (RF16: 15 s).

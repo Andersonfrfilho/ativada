@@ -10,6 +10,7 @@ import { createAppRoutes } from './app/createAppRoutes.js';
 import {
   isProductionBuild,
   loadEnvironment,
+  readMarketDisplayTimeframes,
   readMarketSymbols,
   readMarketTimeframes,
 } from './environment.js';
@@ -52,6 +53,7 @@ function start(): void {
     clientId: environment.VITE_KEYCLOAK_CLIENT_ID,
     marketSymbols: readMarketSymbols(environment),
     marketTimeframes: readMarketTimeframes(environment),
+    marketDisplayTimeframes: readMarketDisplayTimeframes(environment),
   };
   createRoot(container).render(
     <StrictMode>

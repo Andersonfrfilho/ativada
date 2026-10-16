@@ -48,7 +48,14 @@ function CanvasHeader({ chart, view, source, model }: CanvasViewProps): ReactEle
         isStrategyTimeframe={model.layerData.isStrategyTimeframe}
         onToggle={source.preferences.toggleLayer}
       />
-      <TimeframeNotice timeframe={source.timeframe} runTimeframe={chart.timeframe} />
+      <TimeframeNotice
+        timeframe={source.timeframe}
+        runTimeframe={chart.timeframe}
+        displayMapping={source.displayMapping}
+        hasRetentionCut={
+          source.retentionStart !== undefined && chart.runRange.from < source.retentionStart
+        }
+      />
       <LiveCandleNotice live={model.live} />
       {model.legend === undefined ? null : (
         <OhlcLegend text={model.legend} tradeText={model.tradeText} />

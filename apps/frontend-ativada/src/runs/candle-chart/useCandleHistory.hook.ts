@@ -56,12 +56,18 @@ type ActionBuilder = (candles: MarketCandle[], paging: HistoryPaging) => History
 async function requestPage(request: PageRequest, toAction: ActionBuilder): Promise<HistoryAction> {
   const { queryClient, client, symbol, timeframe, page, earliestTime } = request;
   try {
-    const candles = await fetchMarketCandlesPage(queryClient, client, {
+    const { candles, retentionStart } = await fetchMarketCandlesPage(queryClient, client, {
       symbol,
       timeframe,
       ...page,
     });
-    return toAction(candles, { hasMore: page.from > earliestTime, reachedFrom: page.from });
+    // Velas de exibição não existem antes do corte da retenção: a página para ali, sem pedir o que não há.
+    const floor = Math.max(earliestTime, retentionStart ?? earliestTime);
+    return toAction(candles, {
+      hasMore: page.from > floor,
+      reachedFrom: page.from,
+      retentionStart,
+    });
   } catch (error) {
     const rateLimit = isRateLimitError(error)
       ? { retryAfterSeconds: error.retryAfterSeconds, now: Date.now() }

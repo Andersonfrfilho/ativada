@@ -23,9 +23,15 @@ export type HistoryState = {
   readonly reachedFrom: number | undefined;
   readonly isLoadingPrevious: boolean;
   readonly rateLimit: RateLimitState | undefined;
+  // O corte da retenção das velas de exibição (spec 017); `undefined` nas velas da execução.
+  readonly retentionStart: number | undefined;
 };
 
-export type HistoryPaging = { readonly hasMore: boolean; readonly reachedFrom: number };
+export type HistoryPaging = {
+  readonly hasMore: boolean;
+  readonly reachedFrom: number;
+  readonly retentionStart?: number | undefined;
+};
 
 export type HistoryAction =
   | {
@@ -58,6 +64,7 @@ export const INITIAL_HISTORY_STATE: HistoryState = {
   reachedFrom: undefined,
   isLoadingPrevious: false,
   rateLimit: undefined,
+  retentionStart: undefined,
 };
 
 function nextRateLimit(
@@ -82,6 +89,7 @@ export function reduceHistory(state: HistoryState, action: HistoryAction): Histo
       reachedFrom: action.paging.reachedFrom,
       isLoadingPrevious: false,
       rateLimit: undefined,
+      retentionStart: action.paging.retentionStart,
     };
   }
   if (action.type === 'append') {
@@ -90,8 +98,8 @@ export function reduceHistory(state: HistoryState, action: HistoryAction): Histo
   if (action.type === 'prepend') {
     const merged = mergeCandlePages(action.candles, state.candles);
     const candles = capCandles(merged, state.candles[0]?.openTime ?? 0);
-    const { hasMore, reachedFrom } = action.paging;
-    return { ...state, candles, hasMore, reachedFrom, isLoadingPrevious: false };
+    const { hasMore, reachedFrom, retentionStart } = action.paging;
+    return { ...state, candles, hasMore, reachedFrom, retentionStart, isLoadingPrevious: false };
   }
   if (action.type === 'loadingPrevious') return { ...state, isLoadingPrevious: true };
   if (action.type === 'retry') {

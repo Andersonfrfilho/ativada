@@ -6,6 +6,7 @@ import { ApiError, ResponseShapeError } from './api.error.js';
 import {
   dataEnvelopeSchema,
   errorEnvelopeSchema,
+  metaEnvelopeSchema,
   pageEnvelopeSchema,
 } from './envelope.validation.js';
 import {
@@ -32,12 +33,21 @@ export type EmptyRequestOptions = {
   readonly body?: unknown;
 };
 
+export type MetaRequestOptions<TData, TMeta> = RequestOptions<TData> & {
+  readonly metaSchema: z.ZodType<TMeta>;
+};
+
+export type WithMeta<TData, TMeta> = { readonly data: TData; readonly meta: TMeta | undefined };
+
 export type Page<TItem> = { readonly items: TItem[]; readonly nextCursor: string | null };
 
 export type DownloadedFile = { readonly blob: Blob; readonly fileName: string };
 
 export type ApiClient = {
   readonly request: <TData>(options: RequestOptions<TData>) => Promise<TData>;
+  readonly requestWithMeta: <TData, TMeta>(
+    options: MetaRequestOptions<TData, TMeta>,
+  ) => Promise<WithMeta<TData, TMeta>>;
   readonly requestPage: <TItem>(options: RequestOptions<TItem>) => Promise<Page<TItem>>;
   readonly requestEmpty: (options: EmptyRequestOptions) => Promise<void>;
   readonly download: (path: string) => Promise<DownloadedFile>;
@@ -102,6 +112,16 @@ class AuthenticatedApiClient implements ApiClient {
     );
     if (!parsed.success) throw new ResponseShapeError(options.path);
     return parsed.data.data;
+  };
+
+  readonly requestWithMeta = async <TData, TMeta>(
+    options: MetaRequestOptions<TData, TMeta>,
+  ): Promise<WithMeta<TData, TMeta>> => {
+    const response = await this.send({ path: options.path, method: HTTP_METHOD.GET });
+    const schema = metaEnvelopeSchema(options.schema, options.metaSchema);
+    const parsed = schema.safeParse(await response.json().catch(() => undefined));
+    if (!parsed.success) throw new ResponseShapeError(options.path);
+    return { data: parsed.data.data, meta: parsed.data.meta };
   };
 
   readonly requestPage = async <TItem>(options: RequestOptions<TItem>): Promise<Page<TItem>> => {

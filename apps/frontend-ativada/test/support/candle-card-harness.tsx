@@ -17,6 +17,7 @@ import {
 } from '../fixtures/trade-chart.fixture.js';
 import {
   dataResponse,
+  jsonResponse,
   errorResponse,
   pageResponse,
   type FakeRoute,
@@ -48,6 +49,9 @@ export type CandleCardOptions = {
   // Só para provar o silêncio da vela em formação sem esperar 10 s.
   readonly silenceMilliseconds?: number;
   readonly marketTimeframes?: readonly string[];
+  readonly marketDisplayTimeframes?: readonly string[];
+  // O corte da retenção das velas de exibição que a rota devolve em `meta` (ms); sem ele, a resposta é a antiga.
+  readonly retentionStart?: number;
   // A equipe que a simulação ao vivo cola no gráfico (recebe a vela apontada).
   readonly aside?: TeamAsideRenderer;
 };
@@ -92,6 +96,7 @@ export function timeframeStep(timeframe: string | null): number {
   if (timeframe === '4h') return 4 * FIXTURE_HOUR;
   if (timeframe === '1d') return 24 * FIXTURE_HOUR;
   if (timeframe === '15m') return FIXTURE_HOUR / 4;
+  if (timeframe === '3m') return FIXTURE_HOUR / 20;
   return FIXTURE_HOUR;
 }
 
@@ -104,7 +109,10 @@ function candlesRoute(options: CandleCardOptions): FakeRoute {
       const step = timeframeStep(call.query.get('timeframe'));
       const from = Number(call.query.get('from'));
       const to = Number(call.query.get('to'));
-      return dataResponse(buildCandlesBetween(from, to, step));
+      const cut = call.query.get('timeframe') === '3m' ? options.retentionStart : undefined;
+      const candles = buildCandlesBetween(Math.max(from, cut ?? from), to, step);
+      if (cut === undefined) return dataResponse(candles);
+      return jsonResponse({ data: candles, meta: { retentionStart: cut } });
     },
   };
 }
@@ -195,6 +203,9 @@ export function showCandleCard(options: CandleCardOptions = {}): CandleCardHarne
     ...(options.marketTimeframes === undefined
       ? {}
       : { marketTimeframes: options.marketTimeframes }),
+    ...(options.marketDisplayTimeframes === undefined
+      ? {}
+      : { marketDisplayTimeframes: options.marketDisplayTimeframes }),
     probe: (
       <ChartSurfaceLoaderContext value={() => Promise.resolve(factory)}>
         <LiveMarketProvider>

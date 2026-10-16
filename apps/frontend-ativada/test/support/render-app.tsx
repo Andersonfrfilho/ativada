@@ -39,6 +39,8 @@ export type RenderAppOptions = {
   readonly noticeConnectionMilliseconds?: number;
   // As velas que o ambiente da API tem (a configuração pública do painel); o padrão é não limitar.
   readonly marketTimeframes?: readonly string[];
+  // As velas só de exibição que o ambiente grava (3m).
+  readonly marketDisplayTimeframes?: readonly string[];
   // Para testar um hook ou componente sozinho: renderiza isto dentro dos provedores, no lugar das rotas.
   readonly probe?: ReactElement;
 };
@@ -121,6 +123,9 @@ export function renderApp(options: RenderAppOptions): RenderedApp {
     ...(options.marketTimeframes === undefined
       ? {}
       : { marketTimeframes: options.marketTimeframes }),
+    ...(options.marketDisplayTimeframes === undefined
+      ? {}
+      : { marketDisplayTimeframes: options.marketDisplayTimeframes }),
   };
   const { stream, connect } = createFakeStream();
   const router = createMemoryRouter(createAppRoutes(), { initialEntries: [options.path] });

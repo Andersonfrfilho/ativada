@@ -4,6 +4,7 @@ import { useEffect, useEffectEvent } from 'react';
 import type { TradeChart } from '../trade-chart.validation.js';
 import { CHART_LAYER, type ChartLayer } from './candle-chart.constant.js';
 import type { ChartSurface } from './chart-surface.types.js';
+import type { DisplayMapping } from './display-mapping.js';
 import { toLevelBoxes, toWaitedTimes } from './layer-series.js';
 import { toSurfaceProjection } from './projection-cone.js';
 import { toScoreBars, toThresholdSegments } from './score-series.js';
@@ -14,12 +15,13 @@ export type LayerSurfaceInput = {
   readonly data: ChartLayerData;
   readonly decisions: TradeChart['decisions'];
   readonly isOn: (layer: ChartLayer) => boolean;
+  readonly displayMapping: DisplayMapping | undefined;
 };
 
 // Empurra as camadas para a superfície. Camada desligada, ou fora da vela da execução, entrega lista vazia: a superfície
 // apaga o que desenhou. O placar não tem botão (é parte das camadas da estratégia) e some junto com elas.
 export function useLayerSurface(surface: ChartSurface | undefined, input: LayerSurfaceInput): void {
-  const { data, decisions, isOn } = input;
+  const { data, decisions, isOn, displayMapping } = input;
   const { layers, projection, trades } = data;
   const isLinesOn = isOn(CHART_LAYER.STRATEGY_LINES);
   const isForecastOn = isOn(CHART_LAYER.FORECAST) && data.isStrategyTimeframe;
@@ -38,8 +40,8 @@ export function useLayerSurface(surface: ChartSurface | undefined, input: LayerS
     );
   }, [surface, projection, isForecastOn]);
   useEffect(() => {
-    surface?.setWaited(isWaitedOn ? toWaitedTimes(decisions) : []);
-  }, [surface, decisions, isWaitedOn]);
+    surface?.setWaited(isWaitedOn ? toWaitedTimes(decisions, displayMapping) : []);
+  }, [surface, decisions, isWaitedOn, displayMapping]);
   const pushLevels = useEffectEvent((): void => {
     surface?.setLevels(isLevelsOn ? toLevelBoxes(trades) : []);
   });

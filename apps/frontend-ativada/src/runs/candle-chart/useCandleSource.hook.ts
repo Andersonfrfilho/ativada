@@ -5,7 +5,9 @@ import { useAppConfig } from '../../app/useAppContext.hook.js';
 import { timeframeMilliseconds } from '../live-chart.js';
 import type { TradeChart } from '../trade-chart.validation.js';
 import type { ChartView } from '../useChartView.hook.js';
+import { DISPLAY_TIMEFRAMES } from './candle-chart.constant.js';
 import { computeCandleWindow, withLeadingContext } from './candle-window.js';
+import { createDisplayMapping, type DisplayMapping } from './display-mapping.js';
 import { useCandleHistory, type CandleHistory } from './useCandleHistory.hook.js';
 import { useChartPreferences, type ChartPreferenceControls } from './useChartPreferences.hook.js';
 import { TIMEFRAMES } from '../run.constant.js';
@@ -28,6 +30,10 @@ export type CandleSource = {
   readonly isRunTimeframe: boolean;
   // `false` quando a vela da execução não é uma das que o painel conhece: o gráfico simples assume.
   readonly isSupported: boolean;
+  // Vela de exibição menor que a da execução (3 min sobre 15 min): a estratégia segue decidindo na da execução (spec 017).
+  readonly displayMapping: DisplayMapping | undefined;
+  // O corte da retenção das velas de exibição; `undefined` nas velas da execução.
+  readonly retentionStart: number | undefined;
   // A duração da vela mostrada em milissegundos (0 quando não é uma que o painel conhece).
   readonly durationMilliseconds: number;
   // O instante que a pessoa quer no centro depois de trocar a vela; some quando ela escolhe outra faixa.
@@ -39,26 +45,48 @@ export type CandleSource = {
 
 type FocusState = { readonly time: number; readonly rangeKey: string };
 
-function offeredTimeframes(
-  runTimeframe: string,
-  enabled: readonly string[] | undefined,
-): readonly TimeframeChoice[] {
-  return TIMEFRAMES.filter(
+type OfferParams = {
+  readonly runTimeframe: string;
+  readonly enabled: readonly string[] | undefined;
+  readonly enabledDisplay: readonly string[] | undefined;
+};
+
+// Velas de exibição (só as que o ambiente grava e que dividem a da execução) e depois as da execução (spec 017, RF02).
+function offeredTimeframes(params: OfferParams): readonly TimeframeChoice[] {
+  const { runTimeframe, enabled, enabledDisplay } = params;
+  const runMilliseconds = timeframeMilliseconds(runTimeframe);
+  const displayed = DISPLAY_TIMEFRAMES.filter(
+    (option) =>
+      (enabledDisplay ?? []).includes(option) &&
+      createDisplayMapping(runMilliseconds, timeframeMilliseconds(option)) !== undefined,
+  );
+  const executed = TIMEFRAMES.filter(
     (option) => option === runTimeframe || (enabled ?? TIMEFRAMES).includes(option),
   );
+  return [...displayed, ...executed];
 }
 
-// A vela mostrada e as oferecidas: as do ambiente, e sempre a da própria execução.
-function useRunTimeframe(chart: TradeChart): {
+// A vela mostrada e as oferecidas: as do ambiente, e sempre a da própria execução. A simulação ao vivo de 15 min abre em 3 min.
+function useRunTimeframe(
+  chart: TradeChart,
+  isLive: boolean,
+): {
   readonly choice: TimeframeChoiceState;
   readonly timeframeOptions: readonly TimeframeChoice[];
 } {
-  const { marketTimeframes } = useAppConfig();
-  const timeframeOptions = offeredTimeframes(chart.timeframe, marketTimeframes);
+  const { marketTimeframes, marketDisplayTimeframes } = useAppConfig();
+  const timeframeOptions = offeredTimeframes({
+    runTimeframe: chart.timeframe,
+    enabled: marketTimeframes,
+    enabledDisplay: marketDisplayTimeframes,
+  });
+  const preferred = isLive && chart.timeframe === '15m' ? timeframeOptions[0] : undefined;
+  const isDisplayFirst = DISPLAY_TIMEFRAMES.some((option) => option === preferred);
   const choice = useTimeframeChoice({
     owner: `${chart.symbol}|${chart.timeframe}`,
     runTimeframe: chart.timeframe,
     offered: timeframeOptions,
+    preferred: isDisplayFirst ? preferred : undefined,
   });
   return { choice, timeframeOptions };
 }
@@ -70,7 +98,7 @@ function keyOfRange(range: ChartView['range']): string {
 // De onde vêm as velas: a vela escolhida (ou a da execução), a janela da primeira página e o histórico para a esquerda.
 export function useCandleSource(chart: TradeChart, view: ChartView): CandleSource {
   const preferences = useChartPreferences();
-  const { choice, timeframeOptions } = useRunTimeframe(chart);
+  const { choice, timeframeOptions } = useRunTimeframe(chart, view.isLive);
   const [focusState, setFocusState] = useState<FocusState | undefined>(undefined);
   const { timeframe } = choice;
   const duration = timeframeMilliseconds(timeframe);
@@ -97,6 +125,8 @@ export function useCandleSource(chart: TradeChart, view: ChartView): CandleSourc
     timeframeOptions,
     isRunTimeframe: timeframe === chart.timeframe,
     isSupported: duration !== undefined,
+    displayMapping: createDisplayMapping(timeframeMilliseconds(chart.timeframe), duration),
+    retentionStart: history.retentionStart,
     durationMilliseconds: duration ?? 0,
     focus,
     changeTimeframe: (next, centerTime): void => {

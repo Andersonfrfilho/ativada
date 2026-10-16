@@ -3,6 +3,7 @@ import { formatDecimalText, parseScaled } from '../../format/decimal.js';
 import type { ChartDecision } from '../trade-chart.validation.js';
 import type { Trade } from '../run.validation.js';
 import { CANDLE_PAGE_SIZE } from './candle-chart.constant.js';
+import { waitedOpens, type DisplayMapping } from './display-mapping.js';
 import { toDrawingNumber, toSurfaceTime } from './candle-series.js';
 import type { PageRange } from './candle-paging.js';
 import type { SurfaceLevelBox, SurfaceTime } from './chart-surface.types.js';
@@ -50,12 +51,17 @@ export function toLevelBoxes(trades: readonly Trade[]): SurfaceLevelBox[] {
   });
 }
 
-// Os pontinhos de "esperou": uma vela por decisão de esperar (só a simulação ao vivo, até 500 velas na faixa).
-export function toWaitedTimes(decisions: readonly ChartDecision[] | null): SurfaceTime[] {
+// Os pontinhos de "esperou": uma vela por decisão de esperar (só a simulação ao vivo, até 500 velas na faixa). Numa vela de
+// exibição o ponto cai na primeira vela em que a decisão já existia (spec 017).
+export function toWaitedTimes(
+  decisions: readonly ChartDecision[] | null,
+  mapping?: DisplayMapping,
+): SurfaceTime[] {
   if (decisions === null) return [];
-  return decisions
+  const opens = decisions
     .filter((decision) => decision.outcome === 'waited')
-    .map((decision) => toSurfaceTime(decision.candleTime));
+    .map((decision) => decision.candleTime);
+  return (mapping === undefined ? opens : waitedOpens(opens, mapping)).map(toSurfaceTime);
 }
 
 // "+2" ou "−2" (sinal de menos de verdade), com vírgula decimal; limiar ilegível não vira número inventado.

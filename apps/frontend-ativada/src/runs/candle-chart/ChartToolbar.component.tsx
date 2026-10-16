@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 import controls from '../../styles/Controls.module.css';
 import type { ChartSurface } from './chart-surface.types.js';
 import styles from './CandleChart.module.css';
+import { DISPLAY_TIMEFRAMES } from './candle-chart.constant.js';
 import type { TimeframeChoice } from './useCandleSource.hook.js';
 
 export type ChartToolbarProps = {
@@ -46,6 +47,9 @@ export function ChartToolbar(props: ChartToolbarProps): ReactElement {
           >
             {option}
             {option === runTimeframe ? <span className={styles.hint}>da execução</span> : null}
+            {DISPLAY_TIMEFRAMES.some((display) => display === option) ? (
+              <span className={styles.hint}>só exibição</span>
+            ) : null}
           </button>
         ))}
       </div>
