@@ -22,6 +22,13 @@ export const GLOSSARY_TERM = {
   TEAM: 'team',
   SPECIALIST: 'specialist',
   AUDITOR: 'auditor',
+  ANALYST: 'analyst',
+  POSTURE: 'posture',
+  CADENCE: 'cadence',
+  CONFIDENCE_INTERVAL: 'confidenceInterval',
+  NO_FORECAST: 'noForecast',
+  LOCK: 'lock',
+  SHADOW_MODE: 'shadowMode',
 } as const;
 
 export type GlossaryTerm = (typeof GLOSSARY_TERM)[keyof typeof GLOSSARY_TERM];
@@ -120,11 +127,45 @@ export const GLOSSARY: Readonly<Record<GlossaryTerm, GlossaryEntry>> = {
   [GLOSSARY_TERM.SPECIALIST]: {
     label: 'Especialista',
     phrase:
-      'Uma família de regras da estratégia. Vota a favor, contra ou fica neutra; não prevê o preço.',
+      'Uma família de indicadores (tendência, reversão, volume ou sentimento). Vota a favor, contra ou fica neutra.',
   },
   [GLOSSARY_TERM.AUDITOR]: {
     label: 'Auditor',
     phrase:
-      'Confere em quantas velas a estratégia acertou o lado e compara com a moeda ao ar (50%).',
+      'Confere em quantas velas cada especialista acertou o lado e compara com a moeda ao ar (50%).',
+  },
+  [GLOSSARY_TERM.ANALYST]: {
+    label: 'Analista de risco',
+    phrase:
+      'Uma regra automática que só tira risco: pausa as entradas e reduz o tamanho; nunca compra por conta própria.',
+  },
+  [GLOSSARY_TERM.POSTURE]: {
+    label: 'Postura',
+    phrase: 'O quanto o analista libera a simulação agora: pausa, cautela, moderada ou liberada.',
+  },
+  [GLOSSARY_TERM.CADENCE]: {
+    label: 'Ritmo',
+    phrase:
+      'De quanto em quanto tempo o analista aceita uma entrada nova: a cada 15 min, 1 hora ou 4 horas.',
+  },
+  [GLOSSARY_TERM.CONFIDENCE_INTERVAL]: {
+    label: 'Intervalo de confiança',
+    phrase:
+      'A faixa em que o acerto verdadeiro provavelmente está, com 95% de confiança; poucas previsões deixam a faixa larga.',
+  },
+  [GLOSSARY_TERM.NO_FORECAST]: {
+    label: 'Sem previsão',
+    phrase:
+      'Quando os especialistas que provaram valor não apontam um lado, o analista não opina sobre a próxima vela.',
+  },
+  [GLOSSARY_TERM.LOCK]: {
+    label: 'Trava',
+    phrase:
+      'Um freio automático das entradas: perda do dia, perdas seguidas, excesso de operações, pouca folga ou taxas altas.',
+  },
+  [GLOSSARY_TERM.SHADOW_MODE]: {
+    label: 'Modo sombra',
+    phrase:
+      'O analista só observa e mostra o que faria; a simulação segue a estratégia sem nenhuma mudança.',
   },
 };

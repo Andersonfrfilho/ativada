@@ -33,6 +33,13 @@ describe('glossary', () => {
         'Equipe',
         'Especialista',
         'Auditor',
+        'Analista de risco',
+        'Postura',
+        'Ritmo',
+        'Intervalo de confiança',
+        'Sem previsão',
+        'Trava',
+        'Modo sombra',
       ].sort(),
     );
   });
@@ -104,6 +111,53 @@ describe('glossary', () => {
     expect(GLOSSARY[GLOSSARY_TERM.COIN_FLIP].phrase).toBe(
       'A referência de 50%: o acerto esperado de quem escolhe o lado jogando uma moeda.',
     );
+  });
+
+  test('the analyst terms (spec 007, T3.2) each have one fixed phrase', () => {
+    expect(GLOSSARY[GLOSSARY_TERM.ANALYST].phrase).toBe(
+      'Uma regra automática que só tira risco: pausa as entradas e reduz o tamanho; nunca compra por conta própria.',
+    );
+    expect(GLOSSARY[GLOSSARY_TERM.POSTURE].phrase).toBe(
+      'O quanto o analista libera a simulação agora: pausa, cautela, moderada ou liberada.',
+    );
+    expect(GLOSSARY[GLOSSARY_TERM.CADENCE].phrase).toBe(
+      'De quanto em quanto tempo o analista aceita uma entrada nova: a cada 15 min, 1 hora ou 4 horas.',
+    );
+    expect(GLOSSARY[GLOSSARY_TERM.CONFIDENCE_INTERVAL].phrase).toBe(
+      'A faixa em que o acerto verdadeiro provavelmente está, com 95% de confiança; poucas previsões deixam a faixa larga.',
+    );
+    expect(GLOSSARY[GLOSSARY_TERM.NO_FORECAST].phrase).toBe(
+      'Quando os especialistas que provaram valor não apontam um lado, o analista não opina sobre a próxima vela.',
+    );
+    expect(GLOSSARY[GLOSSARY_TERM.LOCK].phrase).toBe(
+      'Um freio automático das entradas: perda do dia, perdas seguidas, excesso de operações, pouca folga ou taxas altas.',
+    );
+    expect(GLOSSARY[GLOSSARY_TERM.SHADOW_MODE].phrase).toBe(
+      'O analista só observa e mostra o que faria; a simulação segue a estratégia sem nenhuma mudança.',
+    );
+    expect(GLOSSARY[GLOSSARY_TERM.SPECIALIST].phrase).toBe(
+      'Uma família de indicadores (tendência, reversão, volume ou sentimento). Vota a favor, contra ou fica neutra.',
+    );
+    expect(GLOSSARY[GLOSSARY_TERM.AUDITOR].phrase).toBe(
+      'Confere em quantas velas cada especialista acertou o lado e compara com a moeda ao ar (50%).',
+    );
+  });
+
+  test('no analyst phrase promises profit, a price or an order', () => {
+    const analystTerms = [
+      GLOSSARY_TERM.ANALYST,
+      GLOSSARY_TERM.POSTURE,
+      GLOSSARY_TERM.CADENCE,
+      GLOSSARY_TERM.CONFIDENCE_INTERVAL,
+      GLOSSARY_TERM.NO_FORECAST,
+      GLOSSARY_TERM.LOCK,
+      GLOSSARY_TERM.SHADOW_MODE,
+    ];
+    for (const term of analystTerms) {
+      expect(GLOSSARY[term].phrase).not.toMatch(
+        /lucr|ganh|garant|certeza|vai (subir|cair)|recomend|compre|confiante/i,
+      );
+    }
   });
 
   test('no chart phrase promises profit or a price', () => {

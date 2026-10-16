@@ -427,3 +427,26 @@ test/risk-analyst-mutants.contract.test.ts → 60 pass / 0 fail (58 mutantes mor
 db:database-test + route-isolation-test (Postgres embutido) → OK
 scripts/api-runs-mutants.ts → OK - 30 mutantes de filtro de dono reprovados
 ```
+
+## T3.2 — contrato espelhado, consultas e glossário do painel (2026-10-16)
+
+- **Zod espelhado** (`apps/frontend-ativada/src/runs/analyst/analyst.validation.ts`): `analystSchema` (resposta do `/analyst`) e `analystDecisionSchema`
+  (itens do histórico: decidida ou falha), com os vocabulários fechados repetidos (o painel não importa código de outra app); valor fora do contrato
+  (postura desconhecida, `NaN`, motivo de indisponibilidade novo, status novo) reprova e nada é desenhado.
+- **Consultas sob a raiz `runs`** (`analyst.query.ts`): `['runs', runId, 'analyst']` e `['runs', runId, 'analyst-decisions']` (infinita por cursor, 24 por página),
+  então o aviso `analyst` do stream as refaz junto com o acompanhamento, sem cache próprio. `409 ANALYST_NOT_ENABLED` (e `404`) vira `isEnabled: false`: a
+  simulação sem analista não mostra cartão nem erro e não pede as decisões; falha de verdade (503) segue como erro.
+- **Glossário** (`glossary.constant.ts`): 7 termos novos, uma frase de uma linha cada: Analista de risco, Postura, Ritmo, Intervalo de confiança, Sem
+  previsão, Trava e Modo sombra; Especialista e Auditor tiveram a frase ajustada para valer também para a equipe do analista (uma entrada por termo). Contrato
+  `glossary.contract.ts`: rótulos, frases literais, uma linha, até 120 caracteres, sem prometer resultado.
+- **Tokens e contraste:** nenhum token novo. O analista usa só os tons que já existem (`buy`, `warn`, `info`/`accent`, neutro) sobre `surface`, `surface-2`,
+  `warn-soft` e `accent-soft`, todos já cobertos por `contrast.contract.ts` (≥ 4,5:1 nos dois temas).
+- **Contrato** (`test/analyst-queries.contract.tsx`, 7 testes): o espelho aceita/recusa, as chaves moram sob `runs`, 409 vira desligado, 503 vira erro, o aviso do
+  stream refaz o analista e as decisões sem recarregar, e as decisões seguintes saem com o cursor da página anterior.
+
+```text
+bun run typecheck    → verde (tsc raiz e painel)
+bun run lint         → verde
+bun run format:check → All matched files use Prettier code style!
+bun run --cwd apps/frontend-ativada test → 1167 pass / 0 fail (com os testes da T3.3 já no lugar)
+```
