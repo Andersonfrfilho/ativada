@@ -55,6 +55,7 @@ describe('a varanda: a equipe em pé acima do gráfico (spec 011, escritório)',
     expect(text).toContain('contra');
     expect(text).toContain('Cruzamento de médias 55');
     expect(text).toMatch(/vale até [0-9]{2}:[0-9]{2}/);
+    expect(text).toMatch(/opiniões valem até [0-9]{2}:[0-9]{2}/);
   });
 
   test('an agent with no vote on the scoreboard says "não vota" and is crossed out on the board notes', async () => {
@@ -84,6 +85,15 @@ describe('a varanda: a equipe em pé acima do gráfico (spec 011, escritório)',
     expect(tip?.getAttribute('role')).toBe('tooltip');
     expect(tip?.textContent).toContain('Mede, de 0 a 100');
     expect(tip?.textContent).toContain('Exemplo:');
+  });
+
+  test('the model agents are marked as models, coming soon, and never speak or vote', async () => {
+    const team = await openBalcony();
+    expect(team.textContent).toContain('MODELOS · em breve');
+    fireEvent.click(screen.getByRole('button', { name: /^Nina, Notícias, modelo, em breve/ }));
+    const sheet = screen.getByRole('group', { name: 'Ficha de Nina' });
+    expect(sheet.textContent).toContain('ainda não existe');
+    expect(sheet.textContent).toContain('Custo estimado por dia: —');
   });
 
   test('the board opens on the protections tab and says why when there is no open position', async () => {

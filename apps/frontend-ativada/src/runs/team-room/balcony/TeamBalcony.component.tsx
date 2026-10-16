@@ -63,12 +63,21 @@ function BalconyFrame({ children }: { readonly children: ReactNode }): ReactElem
   );
 }
 
-function BalconyHeader({ model }: { readonly model: CompactTeamModel }): ReactElement {
+function BalconyHeader({
+  model,
+  horizon,
+}: {
+  readonly model: CompactTeamModel;
+  readonly horizon: string | undefined;
+}): ReactElement {
   return (
     <div className={styles.header}>
       <p className={model.isPointed ? `${styles.moment} ${styles.pointed}` : styles.moment}>
         {model.isPointed ? <Icon name="flag" size={14} /> : null}
         {momentText(model)}
+        {horizon === undefined || model.isPointed
+          ? null
+          : ` · opiniões ${horizon.replace('vale', 'valem')}`}
       </p>
       <p className={styles.legend}>
         <span>
@@ -102,7 +111,7 @@ function LoadedBalcony(props: LoadedProps): ReactElement {
   const isAnnounced = props.shouldAnnounce === true && model.isAnnounced;
   return (
     <>
-      <BalconyHeader model={model} />
+      <BalconyHeader model={model} horizon={horizonOf(model, props.status, timeZone)} />
       {view === undefined ? null : (
         <BalconyCrew
           runId={props.runId}

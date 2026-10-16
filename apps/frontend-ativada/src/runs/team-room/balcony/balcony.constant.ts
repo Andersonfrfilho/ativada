@@ -75,6 +75,15 @@ export const BALCONY_AGENTS: readonly BalconyAgentDefinition[] = [
   },
 ];
 
+export type BalconyModel = { readonly name: string; readonly role: string };
+
+// Agentes de modelo que ainda não existem: aparecem marcados e apagados, sem voto nem fala.
+export const BALCONY_MODELS: readonly BalconyModel[] = [
+  { name: 'Nina', role: 'Notícias' },
+  { name: 'Lucas', role: 'Estatístico' },
+  { name: 'Clara', role: 'Repórter' },
+];
+
 export const BALCONY_TEXT = {
   KIND_RULE: 'Regra',
   KIND_RULE_MARK: '●',
@@ -97,6 +106,7 @@ export const BALCONY_TEXT = {
   COMPACT: 'Compacto',
   COMFORTABLE: 'Confortável',
   EXPAND: 'Expandir equipe',
+  MODEL_NOT_YET: 'Agente de modelo: ainda não existe. Não fala nem vota.',
   NET_WORD: 'líquido',
   PROTECTION_TITLE: 'PROTEÇÃO CONTRA QUEDA',
   TARGET_TITLE: 'Alvo de ganho',

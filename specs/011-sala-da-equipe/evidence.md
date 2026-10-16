@@ -369,3 +369,11 @@ Crachás 6/6 e balão ativo dentro do viewport em todos; a lousa fica fora na va
   queda, Líquido, Ganho ÷ risco, Faixas de compra/venda/proteção, Agente de regra/modelo, Em observação, Peso): uma frase (≤ 120) mais um exemplo com número de tela. `Term` mostra frase + exemplo.
 - Usados: leitura do balão (termo da regra pela `kind`), ficha ("Regra"), lousa (proteção contra queda, alvo, moeda ao ar), plaquinha ("líquido") e a linha de faixas do gráfico.
 - Pendente: termos dentro das frases longas do servidor (viram texto simples) e "Trava"/"Teto de risco" nos post-its (a lousa ainda não os traz).
+
+### Bloco 2 (E, F): agentes de modelo e horizonte
+
+- **◆ Modelos** (`BalconyModels`): Nina (Notícias), Lucas (Estatístico) e Clara (Repórter) na ponta esquerda da varanda, apagados, com moldura tracejada roxa, cantos
+  assimétricos, losango com chip, a palavra "MODELOS · em breve" e `--model`; ficha com tipo, "ainda não existe, não fala nem vota" e "—" para onde roda, custo, última chamada
+  e falha (sem dado). Escondidos na varanda recolhida e no celular (a legenda "● Regra ◆ Modelo" segue). Ícone `chip` novo. Teste no `team-balcony.contract.tsx`.
+- **Horizonte:** o balão ("vale até HH:MM"), a ficha e agora o cabeçalho da varanda ("opiniões valem até HH:MM"); ao apontar uma vela, "vela das …".
+  **Pendente:** a coluna sombreada da vela em formação no gráfico e a "janela de acerto" do Otávio (o servidor não devolve a janela).

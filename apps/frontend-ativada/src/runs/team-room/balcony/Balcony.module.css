@@ -79,7 +79,7 @@
   position: relative;
   display: grid;
   flex-basis: 100%;
-  grid-template-columns: minmax(0, 1fr) clamp(280px, 27%, 380px);
+  grid-template-columns: 96px minmax(0, 1fr) clamp(280px, 27%, 380px);
   gap: var(--space-3);
   padding: var(--space-2) var(--space-2) 0;
   border-radius: var(--radius-control);
@@ -625,4 +625,104 @@
 
 .frame[data-density='collapsed'] .crew {
   padding-bottom: 0;
+}
+
+/* Agentes de modelo: forma (cantos assimétricos e moldura tracejada), ícone (losango com chip), palavra e cor própria. */
+.models {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.modelsHead {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  color: var(--model);
+}
+
+.modelList {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.modelRoot {
+  position: relative;
+}
+
+.modelButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: 2px 4px;
+  border: 1.5px dashed var(--model);
+  border-radius: 4px 14px 4px 14px;
+  background: var(--model-soft);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 11px;
+  line-height: 14px;
+  text-align: left;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.modelButton:focus-visible {
+  outline: 2px solid var(--model);
+  outline-offset: 2px;
+}
+
+.diamond {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  transform: rotate(45deg);
+  border: 1.5px solid var(--model);
+  background: var(--surface);
+  color: var(--model);
+}
+
+.diamond > svg {
+  transform: rotate(-45deg);
+}
+
+.modelText {
+  display: grid;
+  min-width: 0;
+}
+
+.modelText strong {
+  color: var(--ink);
+}
+
+@media (max-width: 699px) {
+  .models {
+    display: none;
+  }
+}
+
+.frame[data-density='collapsed'] .models {
+  display: none;
+}
+
+.frame[data-density='collapsed'] .balcony {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.frame[data-density='compact'] .modelButton {
+  min-height: 28px;
+}
+
+.frame[data-density='compact'] .modelText span {
+  display: none;
 }
