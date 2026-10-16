@@ -253,3 +253,16 @@
     transition: none;
   }
 }
+
+:global([data-viewport='short']) .bar {
+  margin-bottom: 0;
+}
+
+:global([data-viewport='short']) .trigger {
+  min-height: 44px;
+  padding-block: 2px;
+}
+
+:global([data-viewport='short']) .triggerLabel {
+  display: none;
+}

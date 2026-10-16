@@ -29,3 +29,12 @@
   display: inline-flex;
   color: var(--ink-3);
 }
+
+:global([data-viewport='short']) .card {
+  padding: 8px 12px;
+  gap: 4px;
+}
+
+:global([data-viewport='short']) .card {
+  padding-block: 4px;
+}

@@ -1,0 +1,9 @@
+/* Janela baixa: o cartão do gráfico perde o título e a linha de status para o gráfico caber; o conteúdo segue no DOM. */
+.card {
+  display: contents;
+}
+
+:global([data-viewport='short']) .card > section > div:first-child,
+:global([data-viewport='short']) .status {
+  display: none;
+}

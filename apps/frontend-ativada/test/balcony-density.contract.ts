@@ -15,17 +15,17 @@ function css(path: string): string {
 }
 
 describe('densidade da varanda por medida da janela', () => {
-  test('automatic: comfortable from 800 px of height, compact from 640 px, collapsed below', () => {
+  test('automatic: comfortable from 800 px of height, compact from 740 px, collapsed below', () => {
     expect(resolveDensity('auto', 1080)).toBe(DENSITY.COMFORTABLE);
     expect(resolveDensity('auto', 800)).toBe(DENSITY.COMFORTABLE);
     expect(resolveDensity('auto', 768)).toBe(DENSITY.COMPACT);
-    expect(resolveDensity('auto', 640)).toBe(DENSITY.COMPACT);
-    expect(resolveDensity('auto', 600)).toBe(DENSITY.COLLAPSED);
+    expect(resolveDensity('auto', 740)).toBe(DENSITY.COMPACT);
+    expect(resolveDensity('auto', 730)).toBe(DENSITY.COLLAPSED);
   });
 
   test('the choice of the person wins, but a very short window still collapses the team', () => {
     expect(resolveDensity(DENSITY.COMPACT, 1080)).toBe(DENSITY.COMPACT);
-    expect(resolveDensity(DENSITY.COMFORTABLE, 700)).toBe(DENSITY.COMFORTABLE);
+    expect(resolveDensity(DENSITY.COMFORTABLE, 760)).toBe(DENSITY.COMFORTABLE);
     expect(resolveDensity(DENSITY.COMFORTABLE, 500)).toBe(DENSITY.COLLAPSED);
   });
 
@@ -48,6 +48,6 @@ describe('densidade da varanda por medida da janela', () => {
     expect(balcony).toContain("[data-density='collapsed']");
     const chart = css('../src/runs/candle-chart/CandleChart.module.css');
     expect(chart).toContain('clamp(320px, calc(100dvh - 440px), 640px)');
-    expect(chart).toContain('clamp(320px, calc(100dvh - 330px), 640px)');
+    expect(chart).toContain('clamp(320px, calc(100dvh - 415px), 640px)');
   });
 });

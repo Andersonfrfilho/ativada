@@ -601,3 +601,28 @@
 .frame[data-density='collapsed'] .fixedLine {
   display: none;
 }
+
+/* Janela baixa: crachá numa linha só (nome e selo), botão de densidade fino. */
+.frame[data-density='compact'] .role,
+.frame[data-density='collapsed'] .role {
+  display: none;
+}
+
+.frame[data-density='compact'] .badge,
+.frame[data-density='collapsed'] .badge {
+  min-height: 36px;
+}
+
+.frame[data-density='compact'] .densityButton,
+.frame[data-density='collapsed'] .densityButton {
+  min-height: 36px;
+}
+
+.frame[data-density='compact'],
+.frame[data-density='collapsed'] {
+  padding-block: 4px;
+}
+
+.frame[data-density='collapsed'] .crew {
+  padding-bottom: 0;
+}

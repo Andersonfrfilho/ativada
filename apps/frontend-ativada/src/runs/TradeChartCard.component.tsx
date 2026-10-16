@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 import { useUserTimeZone } from '../account/useUserTimeZone.hook.js';
 import { Card } from '../layout/Card.component.js';
 import { ChartRangeControls } from './ChartRangeControls.component.js';
+import compact from './ChartCardCompact.module.css';
 import { LiveChartStatus } from './LiveChartStatus.component.js';
 import { ProjectionCards } from './projection-cards/ProjectionCards.component.js';
 import { planTradeSelection } from './trade-selection.js';
@@ -64,19 +65,23 @@ export function TradeChartCard({
   );
   return (
     <>
-      <Card title="Preço e operações">
-        {view.isLive ? null : details}
-        <LiveChartStatus view={view} selection={selection} timeZone={timeZone} />
-        <TradeChartBody runId={runId} view={view} selection={selection} />
-        {view.isLive ? details : null}
-        <TradesTable
-          runId={runId}
-          range={view.queryRange}
-          timeZone={timeZone}
-          selectedKey={selection.selectedKey}
-          onSelectTrade={handleSelectTrade}
-        />
-      </Card>
+      <div className={compact.card}>
+        <Card title="Preço e operações">
+          {view.isLive ? null : details}
+          <div className={compact.status}>
+            <LiveChartStatus view={view} selection={selection} timeZone={timeZone} />
+          </div>
+          <TradeChartBody runId={runId} view={view} selection={selection} />
+          {view.isLive ? details : null}
+          <TradesTable
+            runId={runId}
+            range={view.queryRange}
+            timeZone={timeZone}
+            selectedKey={selection.selectedKey}
+            onSelectTrade={handleSelectTrade}
+          />
+        </Card>
+      </div>
       {hasProjections ? <ProjectionCards runId={runId} isLive={view.isLive} /> : null}
     </>
   );

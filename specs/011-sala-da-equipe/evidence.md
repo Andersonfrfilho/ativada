@@ -328,3 +328,24 @@ outras frentes em andamento (notices, overview, varanda).
   acima da varanda ficam ~296 px (aviso 38, cabeçalho 61, troca de execução 59, título e status do cartão ~100) e abaixo dela ~170 px de barras do gráfico
   (tempo/zoom, camadas, legenda), então o gráfico começa em ~640 a 730 px. A varanda é `sticky`: ao rolar, equipe e gráfico ficam juntos em tela.
   Fechar essa conta exige compactar o cabeçalho do app, a troca de execução e as barras do gráfico (arquivos de outras specs); proposta na pendência.
+
+### Bloco 2 (A): gráfico inteiro sem rolar
+
+Modo `short` (altura < 800 px): `useViewportDensity` marca `data-viewport` na raiz e os módulos reagem com `:global([data-viewport='short'])`: aviso de simulação, cabeçalho
+do app e troca de execução em ~120 px (eram ~200), cartão do gráfico sem título nem linha de status, vela + zoom + camadas (atrás de "Camadas do gráfico") +
+legenda numa faixa fina, crachás de uma linha, e o cabeçalho a 1100–1279 px sem rolagem horizontal. Varanda recolhida abaixo de 740 px de altura. Alvos de 36 px
+(não 44) nessas barras finas, em janela baixa.
+
+| Viewport (CSS px) | Densidade | Gráfico (topo → base) | Dentro do viewport, scrollY = 0 |
+|---|---|---|---|
+| 1366 × 650 | recolhida | 315 → 640 (325 px) | sim |
+| 1366 × 768 | compacta | 400 → 753 (353 px) | sim |
+| 1536 × 730 | recolhida | 315 → 720 (405 px) | sim |
+| 1440 × 700 | recolhida | 315 → 690 (375 px) | sim |
+| 1280 × 720 | recolhida | 315 → 710 (395 px) | sim |
+| 1280 × 600 | recolhida | 315 → 570 (255 px) | sim (abaixo de 320 px por falta de altura) |
+| 1136 × 600 (zoom 110%) | recolhida | 315 → 570 (255 px) | sim |
+| 1024 × 540 (zoom 125%) | recolhida | 328 → 568 (240 px) | NÃO (base 28 px abaixo) |
+| 853 × 480 (zoom 150%) | recolhida | 395 → 635 (240 px) | NÃO |
+
+Crachás 6/6 e balão ativo dentro do viewport em todos; a lousa fica fora na varanda recolhida (abre pelo botão "Confortável"/folha).

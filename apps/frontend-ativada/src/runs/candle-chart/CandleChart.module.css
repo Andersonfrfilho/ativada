@@ -233,6 +233,75 @@
 /* Janela baixa: a varanda compacta devolve altura ao gráfico, que mantém o mínimo útil de 320 px. */
 @media (min-width: 1100px) and (max-height: 799px) {
   .canvas {
-    height: clamp(320px, calc(100dvh - 330px), 640px);
+    height: clamp(320px, calc(100dvh - 415px), 640px);
+  }
+}
+
+/* Janela baixa: barras do gráfico (vela, zoom, camadas) numa faixa fina. */
+:global([data-viewport='short']) .toolbar,
+:global([data-viewport='short']) .layerBar {
+  gap: 4px;
+}
+
+:global([data-viewport='short']) .wrapper {
+  gap: 4px;
+}
+
+:global([data-viewport='short']) .row button,
+:global([data-viewport='short']) .layerList button {
+  min-height: 36px;
+  padding-block: 0;
+}
+
+@media (min-width: 1100px) and (max-height: 739px) {
+  .canvas {
+    height: clamp(320px, calc(100dvh - 325px), 640px);
+  }
+}
+
+/* Janela baixa: vela, zoom, camadas e legenda dividem UMA faixa fina acima do gráfico. */
+:global([data-viewport='short']) .wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+:global([data-viewport='short']) .wrapper > * {
+  flex: 1 1 100%;
+}
+
+:global([data-viewport='short']) .wrapper > .toolbar,
+:global([data-viewport='short']) .wrapper > .layerBar,
+:global([data-viewport='short']) .wrapper > .legend {
+  flex: 0 1 auto;
+}
+
+:global([data-viewport='short']) .toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+/* Janela baixa: as camadas ficam atrás de "Camadas do gráfico", como no celular. */
+:global([data-viewport='short']) .layerBar .layersToggle {
+  display: inline-flex;
+}
+
+:global([data-viewport='short']) .layersClosed {
+  display: none;
+}
+
+:global([data-viewport='short']) .legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 12px;
+}
+
+/* Janela muito baixa (zoom alto): o gráfico cede até 240 px, o mínimo que ainda se lê. */
+@media (min-width: 1px) and (max-height: 649px) {
+  .canvas {
+    height: clamp(240px, calc(100dvh - 345px), 640px);
   }
 }
