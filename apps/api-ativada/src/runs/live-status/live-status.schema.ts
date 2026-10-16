@@ -62,6 +62,7 @@ const RULE_TRIGGER_SCHEMA = z.strictObject({
   distance: nullableDecimal,
   distanceRate: nullableDecimal,
   message: z.string(),
+  completesScore: z.boolean(),
 });
 
 const TRIGGERS_SCHEMA = z.discriminatedUnion('status', [

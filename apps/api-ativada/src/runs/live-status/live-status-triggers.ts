@@ -18,6 +18,7 @@ import {
   buildTriggersMessage,
   buildTriggersUnavailableMessage,
 } from './trigger-messages.js';
+import { completesScore } from './rule-completes-score.js';
 import { computeStoredTriggers, STORED_READINGS_STATUS } from './stored-readings.js';
 
 export type LiveTriggersParams = {
@@ -59,6 +60,11 @@ function toRuleViews(context: LiveRunContext, triggers: NextTriggers): readonly 
         distance: trigger.distance,
         distanceRate: trigger.distanceRate,
         message: buildTriggerRuleMessage({ rule: trigger, label, state: triggers.state }),
+        completesScore: completesScore({
+          state: triggers.state,
+          scoreGap: triggers.scoreGap,
+          rule: trigger,
+        }),
       },
     ];
   });

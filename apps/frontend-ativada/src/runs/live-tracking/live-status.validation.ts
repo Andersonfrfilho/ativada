@@ -48,6 +48,8 @@ export const ruleTriggerSchema = z.object({
   distance: nullableDecimal,
   distanceRate: nullableDecimal,
   message: z.string(),
+  // Aditivo (spec 014, T1.3): esta regra sozinha completa o placar; o painel de avisos o usa no "perto de comprar".
+  completesScore: z.boolean().optional(),
 });
 
 const triggersSchema = z.discriminatedUnion('status', [

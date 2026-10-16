@@ -75,6 +75,8 @@ export type OpenPositionView = {
 export type RuleTriggerView = Omit<RuleTrigger, 'family'> & {
   readonly label: string;
   readonly message: string;
+  // Aditivo (spec 014): esta regra sozinha completa o placar (peso a favor >= o que falta).
+  readonly completesScore: boolean;
 };
 
 export type TriggersView =

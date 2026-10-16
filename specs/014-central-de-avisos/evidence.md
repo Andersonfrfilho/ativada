@@ -171,3 +171,16 @@ código e a varredura de palavras proibidas e de horas estão em `test/api-notic
   10.000 dão 22,70 LINK; `manual-trade.ts` não usa `Number`, provado por teste).
 - Gates: painel `typecheck`/`lint`/`format` limpos nos arquivos da task; `manual-trade.contract.ts` (13) e `notices-center`
   com 5 testes novos (fatos, link, proporção e armazenamento, cópia com clipboard falso e anúncio, botão do aviso).
+
+### T1.3 — `completesScore` em `triggers.rules[]` do `live-status` (campo aditivo da spec 008)
+
+- `rule-completes-score.ts` (puro, decimal exato): a regra ainda não atendida, com voto para o lado que a carteira espera
+  (comprar sem posição, vender com posição) e peso maior ou igual ao que falta (`scoreGap`), completa o placar sozinha. Entra
+  em `RuleTriggerView`, no Zod da rota (`live-status.schema.ts`) e, como opcional, no Zod do painel. Os arquivos da spec 008
+  tocados são só esses quatro e não havia outro executor neles (o `git status` do dia só tinha mudanças alheias em
+  `decision-page.ts`, `live-status-context.ts` e `run-decisions.*`).
+- Prova: `test/live-rule-completes-score.contract.test.ts` (5 casos à mão: a favor e cobre, peso igual ao que falta,
+  atendida, lado contrário, comprado vende, placar já feito); `api-run-live-status` e a paridade com `computeLatestTriggers`
+  (`live-stored-readings-parity`) seguem verdes (50 testes); painel de acompanhamento 57 testes.
+- Observação: `test/api-run-live-status-mutants.contract.test.ts` falha hoje por uma mudança alheia em
+  `live-status-context.ts` (o texto-alvo do mutante `LIVE_STATUS_OF_FOREIGN_RUN_IS_A_409` agora aparece 2x); não é desta task.
