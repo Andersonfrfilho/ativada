@@ -16,6 +16,15 @@ describe('axis price format', () => {
     expect(formatAxisPrice(0.00000812, 8)).toBe('0,00000812');
   });
 
+  test('a PEPE price of the order of 4e-6 keeps its digits and the library move does not collapse', () => {
+    const precision = pricePrecisionFor(0.0000041);
+    expect(precision).toBe(8);
+    expect(formatAxisPrice(0.0000041, precision)).toBe('0,00000410');
+    expect(formatAxisPrice(0.0000039, precision)).toBe('0,00000390');
+    expect(pricePriceFormat(precision).minMove).toBeGreaterThan(0);
+    expect(pricePriceFormat(precision).formatter(0.00000412)).toBe('0,00000412');
+  });
+
   test('negative prices and scores use the true minus sign, never the hyphen', () => {
     expect(formatAxisPrice(-1.5, 2)).toBe('−1,50');
     expect(formatAxisScore(-2)).toBe('−2');

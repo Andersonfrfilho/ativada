@@ -12,7 +12,10 @@ export function EmptyChartNotice({ runId }: EmptyChartNoticeProps): ReactElement
   const run = useRunDetailQuery(runId);
   return (
     <div role="status">
-      <p className={controls.muted}>Ainda não há velas para mostrar.</p>
+      <p className={controls.muted}>
+        A simulação ainda não processou nenhuma vela; as velas abaixo são só o contexto de antes do
+        início.
+      </p>
       {run.data === undefined ? null : <LiveRunStatus run={run.data} />}
     </div>
   );

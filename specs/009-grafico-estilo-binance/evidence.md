@@ -622,3 +622,15 @@ Relato: "nosso gráfico está desde as 2 da manhã", "o histórico dele é até 
 **Recuperação de aba antiga:** o aviso `runs` do stream já refaz o fim, e o cliente reconecta com espera crescente (`StreamClient`); não foi preciso mudar nada. Aba aberta há horas: recarregar (F5) resolve.
 
 Pendência de outro agente: 4 testes de "backtest list/filtro por moeda" falham no painel por mudança em andamento de `src/runs/runs.query.ts` (fora desta correção).
+
+## Gráfico da simulação recém-criada
+
+Relato: "você quebrou a parte de gráfico" na PEPE/USDT ao vivo, 15m, recém-criada (`01a14542-4ac2-7646-aeb4-6482ce19c3d7`), 0 velas processadas.
+
+**O que foi medido (Edge + Playwright, 16/10/2026, usuário local `teste`):** com a execução sem vela processada a API devolve `emptyChart` (`runRange = { from: periodStart, to: periodStart }`); `TradeChartBody` tratava `runRange.to <= runRange.from` como "sem gráfico" e mostrava só o aviso, sem o canvas e SEM pedir `/v1/markets/candles`. O `withLeadingContext` da correção anterior nunca era chamado nesse caso.
+
+**Causa (hipótese a):** o ramo de faixa vazia saía antes do `CandleChart`. As hipóteses (b) preço minúsculo (`pricePrecisionFor(4,1e-6)` = 8, formatador e `minMove` íntegros; contrato novo em `surface-format.contract.ts`), (c) layout (a coluna da equipe aparece uma vez só) e (d) camada que derruba o canvas (as camadas já são independentes) não se confirmaram.
+
+**Correção:** `TradeChartBody` desenha o `CandleChart` também com a faixa vazia, e o aviso "A simulação ainda não processou nenhuma vela; as velas abaixo são só o contexto de antes do início" (com a hora da primeira vela) fica acima dele. `withLeadingContext` com faixa vazia entrega as últimas ~150 velas do par antes do início. Contratos: `candle-live` (aviso + canvas + pedido de velas com `to <= periodStart`), `team-always-beside-chart` (canvas e UMA coluna da equipe) e `surface-format` (PEPE 4e-6).
+
+**Conferido no app dev real:** PEPE agora pede `/v1/markets/candles?symbol=PEPEUSDT&timeframe=15m&from=…&to=<periodStart>`, desenha os canvases (670x377 de preço) e mantém a equipe ao lado; DOGE e LINK seguem com velas, equipe e camadas (200 em candles, strategy-layers e projections). Aba aberta: recarregar com Ctrl+F5.

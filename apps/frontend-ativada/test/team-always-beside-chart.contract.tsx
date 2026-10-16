@@ -90,7 +90,7 @@ describe('o gráfico reserva a coluna da equipe em todo estado', () => {
     expect(team.textContent).toContain('compras e vendas estão marcadas no gráfico');
   });
 
-  test('a run with no candle yet keeps the team beside the empty-chart notice', async () => {
+  test('a run with no candle yet keeps the team beside the chart drawn with context candles', async () => {
     showCandleCard({
       kind: 'live_paper',
       aside,
@@ -99,8 +99,9 @@ describe('o gráfico reserva a coluna da equipe em todo estado', () => {
         runRange: { from: 1, to: 1 },
       }),
     });
-    expect(await screen.findByText('Ainda não há velas para mostrar.')).toBeDefined();
-    expect(await screen.findByTestId('team')).toBeDefined();
+    expect(await screen.findByText(/A simulação ainda não processou nenhuma vela/)).toBeDefined();
+    expect(await screen.findByRole('img', { name: /Gráfico de velas de / })).toBeDefined();
+    expect(await screen.findAllByTestId('team')).toHaveLength(1);
   });
 
   test('when the public candles are missing the simple chart still has the team beside it', async () => {

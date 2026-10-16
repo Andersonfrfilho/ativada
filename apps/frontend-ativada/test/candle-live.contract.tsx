@@ -207,7 +207,7 @@ describe('vela fechada pelo aviso do stream', () => {
     expect(harness.candleCalls().at(-1)?.query.get('to')).toBe(String(RUN_END));
   });
 
-  test('a live run with no candle processed yet says when the first one closes instead of loading forever', async () => {
+  test('a live run with no candle processed yet says when the first one closes and still draws the pair candles as context', async () => {
     const periodStart = FIXTURE_FROM + 41 * FIXTURE_DAY;
     const harness = openLive({
       runOverrides: { status: 'running', periodStart, lastCandleTime: null, finishedAt: null },
@@ -216,11 +216,14 @@ describe('vela fechada pelo aviso do stream', () => {
         runRange: { from: periodStart, to: periodStart },
       }),
     });
-    expect(await screen.findByText('Ainda não há velas para mostrar.')).toBeDefined();
+    expect(await screen.findByText(/A simulação ainda não processou nenhuma vela/)).toBeDefined();
     expect(
       await screen.findByText(/Aguardando a primeira vela, que (fecha|fechou) às /),
     ).toBeDefined();
-    expect(screen.queryByText('Carregando as velas…')).toBeNull();
-    expect(harness.candleCalls()).toHaveLength(0);
+    expect(await screen.findByRole('img', { name: /Gráfico de velas de / })).toBeDefined();
+    await waitFor(() => expect(harness.candleCalls().length).toBeGreaterThan(0));
+    const call = harness.candleCalls()[0];
+    expect(Number(call?.query.get('to'))).toBeLessThanOrEqual(periodStart);
+    expect(Number(call?.query.get('from'))).toBeLessThan(periodStart);
   });
 });

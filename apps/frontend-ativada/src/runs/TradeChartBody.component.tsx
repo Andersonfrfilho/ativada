@@ -14,7 +14,7 @@ export type TradeChartBodyProps = {
   readonly selection: TradeSelection;
 };
 
-// O gráfico de velas, ou o motivo de ele ainda não estar na tela.
+// O gráfico de velas; sem vela processada ele abre com as do par como contexto, sob o aviso da espera.
 export function TradeChartBody({ runId, view, selection }: TradeChartBodyProps): ReactElement {
   const { chart } = view;
   if (chart.data === undefined) {
@@ -27,12 +27,14 @@ export function TradeChartBody({ runId, view, selection }: TradeChartBodyProps):
     );
   }
   const { runRange } = chart.data;
-  if (runRange.to <= runRange.from) {
-    return (
-      <BesideTeam>
-        <EmptyChartNotice runId={runId} />
-      </BesideTeam>
-    );
-  }
-  return <CandleChart runId={runId} chart={chart.data} view={view} selection={selection} />;
+  const candleChart = (
+    <CandleChart runId={runId} chart={chart.data} view={view} selection={selection} />
+  );
+  if (runRange.to > runRange.from) return candleChart;
+  return (
+    <>
+      <EmptyChartNotice runId={runId} />
+      {candleChart}
+    </>
+  );
 }
