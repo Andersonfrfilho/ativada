@@ -60,6 +60,7 @@ function toRequest(body: CreateRunBody, goal: GoalRecord | undefined): CreateRun
   if (body.walkForward !== undefined) return parseJsonContainer(JSON.stringify(body.walkForward));
   const request = {
     ...(body.survival === undefined ? {} : { survival: body.survival }),
+    ...(body.analyst === undefined ? {} : { analyst: body.analyst }),
     ...(goal === undefined
       ? {}
       : {

@@ -272,3 +272,19 @@ db:database-test     → OK (inclui as 3 verificações analyst_decisions e a ex
 bun test (ownership-registry, database.contract, strategy-persistence-schema, code-size-limits,
           app-import-boundary, strategy-engine-boundary) → 140 pass / 0 fail
 ```
+
+## T2.2 — `runs.request.analyst` no `POST /v1/runs` (2026-10-15)
+
+- **Corpo**: `analyst: { mode: 'shadow' | 'govern' }` (opcional, `z.strictObject`; `apps/api-ativada/src/runs/run-analyst-request.ts`). Aceito só em `live_paper` com `timeframe` `15m`; grava em `runs.request.analyst = { version: 'analyst-1', mode: 'shadow' }` (convive com `survival` e `goal` no mesmo pedido). Sem `analyst` nada muda (o pedido sai sem a chave).
+- **Recusas `400` (todas no envelope de validação, com `details[{ field, reason }]` e sem eco do valor)**: outro tipo (`backtest`, `walk_forward`) = `analyst` / `not_allowed_for_kind`; vela que não é 15m = `analyst` / `analyst_requires_15m_timeframe` (a "mensagem" do motivo, estável como os demais motivos de validação do repo); `mode: 'govern'` = `analyst.mode` / `govern_not_available` (até a Fase 4); modo inválido, ausente ou campo desconhecido = os motivos do Zod. Nenhuma execução é criada nas recusas.
+- **Desvios**: (1) `ANALYST_REQUEST_VERSION`/`ANALYST_REQUIRED_TIMEFRAME` são constantes da API (a API não depende de `@ativada/risk-analyst`; adicionar a dependência mexeria no `bun.lock`); o contrato confere que seguem `ANALYST_VERSION` e `ANALYST_RULES.baseTimeframe` do pacote puro. (2) Para caber nos limites do lint (função ≤ 40, arquivo ≤ 200), `runParameters` e `RunSetup` saíram de `create-run-request.schema.ts` para `create-run-setup.ts` (movimento sem mudança de comportamento).
+- **OpenAPI**: o corpo documentado é o próprio Zod (`documentation.body`), então `analyst` entra no documento; o resumo da rota ganhou a frase do analista. `api-openapi` verde.
+- **Contratos** (`test/api-run-analyst-request.contract.test.ts`, 9 testes com `loadApiApp()` via `createRunsHarness`): 15m em sombra aceita e guarda o pedido; convive com piso/dobro; 1h = 400 com o motivo e nada criado; backtest e walk-forward = 400; sem analista nada muda (1h e 15m); `govern` = 400; modo inválido/ausente/campo desconhecido/texto solto sem eco do valor; versão e vela base iguais às do pacote puro. Nada em `packages/strategy-engine`, `packages/run-recording`, worker ou painel foi tocado.
+
+```text
+bun run typecheck → verde
+eslint (apps/api-ativada/src/runs, test, packages/database) → limpo; `bun run lint` do repo inteiro e `format:check` só acusam arquivos de OUTRO executor em andamento (apps/frontend-ativada: team-room, glossário, global.css), nenhum meu
+prettier --check (apps/api-ativada, test, packages/database, specs, docs) → All matched files use Prettier code style!
+bun test (api-run-analyst-request, api-runs*, api-run-admission/queue/symbol/delete/export, api-openapi, code-size-limits,
+          app-import-boundary, strategy-engine-boundary, ownership-registry, database.contract, strategy-persistence-schema) → verde
+```

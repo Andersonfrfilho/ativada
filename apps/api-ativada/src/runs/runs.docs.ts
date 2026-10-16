@@ -30,7 +30,7 @@ const RUN_NOT_FOUND = {
 export const RUN_DOCUMENTATION = {
   create: {
     summary:
-      'Cria uma execução (backtest, walk-forward ou simulação ao vivo) e responde 202 com o id. Backtest e walk-forward entram na fila do usuário, que é limitada (429 `RUN_QUEUE_FULL`). `live_paper` não leva período (começa no candle corrente e não tem fim), fica `queued` até um worker reivindicá-la e responde 409 `LIVE_RUN_LIMIT_REACHED` acima do teto de ativas. `survival` (opcional, só no ao vivo) ajusta o piso (padrão 0,8 do saldo inicial) e a meta de dobro (padrão 2). `goalId` (opcional, só no ao vivo) atrela a simulação a uma meta ligada do usuário, do mesmo par: ela vende no alvo, encerra na perda máxima ou no prazo e grava o desfecho em `goalOutcome`.',
+      'Cria uma execução (backtest, walk-forward ou simulação ao vivo) e responde 202 com o id. Backtest e walk-forward entram na fila do usuário, que é limitada (429 `RUN_QUEUE_FULL`). `live_paper` não leva período (começa no candle corrente e não tem fim), fica `queued` até um worker reivindicá-la e responde 409 `LIVE_RUN_LIMIT_REACHED` acima do teto de ativas. `survival` (opcional, só no ao vivo) ajusta o piso (padrão 0,8 do saldo inicial) e a meta de dobro (padrão 2). `goalId` (opcional, só no ao vivo) atrela a simulação a uma meta ligada do usuário, do mesmo par: ela vende no alvo, encerra na perda máxima ou no prazo e grava o desfecho em `goalOutcome`. `analyst` (opcional, só no ao vivo e só com `timeframe` 15m) liga o analista de risco: `{ "mode": "shadow" }` calcula a postura, o ritmo e o tamanho a cada vela e só mostra, sem mexer na simulação; `govern` ainda não existe e responde 400.',
     tag: TAG,
     successes: [
       {

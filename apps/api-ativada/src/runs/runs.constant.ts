@@ -27,6 +27,8 @@ export const RUN_FIELD = {
   WINDOWS: 'windows',
   PERIOD_END: 'periodEnd',
   GOAL_ID: 'goalId',
+  ANALYST: 'analyst',
+  MODE: 'mode',
 } as const;
 
 export const RUN_REASON = {
@@ -38,6 +40,8 @@ export const RUN_REASON = {
   NOT_ALLOWED_FOR_KIND: 'not_allowed_for_kind',
   UNKNOWN_FIELD: 'unknown_field',
   GOAL_SYMBOL_MISMATCH: 'goal_symbol_mismatch',
+  ANALYST_REQUIRES_15M: 'analyst_requires_15m_timeframe',
+  GOVERN_NOT_AVAILABLE: 'govern_not_available',
 } as const;
 
 export const INVALID_GRID_MESSAGE =
