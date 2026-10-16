@@ -723,6 +723,11 @@
   .models {
     display: none;
   }
+
+  .modelsSummary {
+    display: block;
+    padding-bottom: 4px;
+  }
 }
 
 .frame[data-density='collapsed'] .models {
@@ -768,4 +773,9 @@
 
 .rankingTable tbody tr {
   border-top: 1px solid var(--line);
+}
+
+.modelsSummary {
+  display: none;
+  position: relative;
 }

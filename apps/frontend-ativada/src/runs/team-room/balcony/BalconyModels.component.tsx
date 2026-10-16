@@ -74,18 +74,59 @@ function ModelChip({ model }: { readonly model: BalconyModel }): ReactElement {
   );
 }
 
+// No celular os três viram um chip só: "◆ 3 em breve", com a lista na ficha.
+function ModelsSummary(): ReactElement {
+  const sheetId = useId();
+  const sheet = useBadgeSheet();
+  return (
+    <div ref={sheet.rootRef} className={styles.modelsSummary}>
+      <button
+        ref={sheet.buttonRef}
+        type="button"
+        className={styles.modelButton}
+        aria-expanded={sheet.isOpen}
+        aria-controls={sheetId}
+        onClick={sheet.toggle}
+      >
+        <span aria-hidden="true">{BALCONY_TEXT.KIND_MODEL_MARK}</span> {BALCONY_MODELS.length} em
+        breve
+      </button>
+      <div
+        id={sheetId}
+        role="group"
+        aria-label="Agentes de modelo"
+        hidden={!sheet.isOpen}
+        className={styles.sheet}
+      >
+        <strong>{BALCONY_TEXT.KIND_MODEL_MARK} MODELOS · em breve</strong>
+        <ul>
+          {BALCONY_MODELS.map((model) => (
+            <li key={model.name}>
+              {model.name}, {model.role}
+            </li>
+          ))}
+          <li>{BALCONY_TEXT.MODEL_NOT_YET}</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 // Os agentes de MODELO (◆): apagados, com moldura tracejada roxa, losango com chip e a palavra "em breve". Nunca falam nem votam.
 export function BalconyModels(): ReactElement {
   return (
-    <div className={styles.models}>
-      <p className={styles.modelsHead}>
-        <span aria-hidden="true">{BALCONY_TEXT.KIND_MODEL_MARK}</span> MODELOS · em breve
-      </p>
-      <ul className={styles.modelList}>
-        {BALCONY_MODELS.map((model) => (
-          <ModelChip key={model.name} model={model} />
-        ))}
-      </ul>
-    </div>
+    <>
+      <ModelsSummary />
+      <div className={styles.models}>
+        <p className={styles.modelsHead}>
+          <span aria-hidden="true">{BALCONY_TEXT.KIND_MODEL_MARK}</span> MODELOS · em breve
+        </p>
+        <ul className={styles.modelList}>
+          {BALCONY_MODELS.map((model) => (
+            <ModelChip key={model.name} model={model} />
+          ))}
+        </ul>
+      </div>
+    </>
   );
 }
