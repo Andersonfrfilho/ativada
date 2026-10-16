@@ -60,3 +60,19 @@ cartão-herói, "Últimas decisões" na Visão geral, "Situação das moedas ago
 | C10 | Checar 429 na renovação (mobile) e nav a 375 px; recapturar as 6 telas e comparar com os previews | `session/*`, `layout/*` | sonnet |
 
 Gates por task: `tsc --noEmit`, `bun run --cwd apps/frontend-ativada test`, `make check`, commit isolado. Screenshot lado a lado só ao fim.
+
+## Depois das correções (2026-10-15, painel dev 127.0.0.1:56100)
+
+Capturas lado a lado (preview | real) em `capturas/fidelidade-*.png`; o que bate e o que ainda falta, por tela.
+
+| Tela | Antes | Depois | O que mudou / o que ainda falta |
+|---|---|---|---|
+| Visão geral | 4 | 8 | Cartão-herói (saldo grande, "Rodando há N h", chip "= 0,00 USDT (0,00%) desde o início", frase de contexto, legenda azul de pontos acima/abaixo de comprar e segurar), gráfico "Saldo a cada 15 min" com maior e menor valor, começo e "agora" e legenda, "Últimas decisões" com os "Esperou", duas colunas e "Preços agora" em cartão. Falta: coluna de preços com "na simulação" destacado e o recolhível "Por que está assim". |
+| Cabeçalho (todas) | 3 | 8 | Uma linha a 1280 px (61 px de altura contra 114), página de 1200 px; abaixo de 1100 px vira o botão Menu (fecha ao navegar). Falta o ícone de usuário no lugar do "Sair". |
+| Gráfico de velas | 5 | 7 | Com 23 velas a janela agora enche o canvas (antes ~75% vazio), painel "Próxima vela de perto" de 250 a 310 px (era 340), canvas de 560 px (canal, volume e placar legíveis), tabela de operações sem corte lateral. Falta: a cor do rótulo "Placar" do canal e o cone mais largo do preview. |
+| Meta (detalhe) | 3 | 7 | Pódio de 3 cartões, linhas compactas com barra e % alcançou/parou, "Mostrar as N" (13.000 px viraram ~3.600 px), "Simulação desta meta" (Faltam, Prazo, Queda que ainda cabe) e "Situação das moedas agora" com preço e selo. Falta: tabela com cabeçalho de colunas fixo e o filtro em abas ("Todos os 9 pares | Só LINK/USDT"). |
+| Simulação ao vivo | 6 | 7 | Decisões antes de sala e histórico e só as 8 mais novas ("Ver mais N decisões"), um aviso só no lugar de três, régua do placar com zona hachurada, totais em cartões. Falta: o resumo de totais da caixa tracejada do preview e encurtar o histórico de acertos (20 linhas). |
+| Metas (lista) | 3 | 6 | "Apagar" virou ícone com dica (segundo clique confirma) e a meta com simulação rodando ganha o selo. Falta: mostrar o resultado atual da simulação na linha. |
+| Backtests (lista) | 7 | 7 | Só ganhou o cabeçalho de uma linha; o cabeçalho de seção e a grade do formulário seguem pendentes. |
+
+**C10 (erro "Não foi possível carregar" na Visão geral).** Com sessão válida, 25 s na Visão geral não geraram 429 nem erro. Três consultas (simulação ativa, meta ativa e lista de metas) pediam o mesmo `GET /v1/runs?kind=live_paper&limit=100` com chaves diferentes (2 pedidos por carga na Visão geral); agora dividem UMA chave (`['runs','live-page']`) e cada tela escolhe a sua simulação por `select`. O erro real continua aparecendo (`role="alert"`). A causa mais provável dos dois erros da captura antiga é o limite de 10 renovações de sessão por minuto, estourado pelos logins repetidos do meu script de captura, e não o painel.

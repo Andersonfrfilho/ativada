@@ -392,3 +392,26 @@ API: live-decision-messages, api-run-live-status, api-run-live-status-mutants (+
 database-test (Postgres embutido do WSL, porta 56436): OK
 panel-test: 791 pass, 0 fail (61 arquivos)
 ```
+
+## Correções de fidelidade
+
+Data: 2026-10-15. Plano C1 a C10 de `comparacao-preview-vs-real.md`; painel dev real (Edge via Playwright, login Keycloak do usuário local, uma sessão por rodada), 1280 px claro e 375 px escuro. Notas antes e depois estão no fim do `comparacao-preview-vs-real.md`; capturas lado a lado (preview | real) em `capturas/fidelidade-*.png` (uma por tela principal).
+
+| Task | Commit | Resultado |
+|---|---|---|
+| C1 grade e cabeçalho | `feat(painel): cabeçalho numa linha…` | `--page-width` 1200 px; `HeaderMenu` (botão Menu com `aria-expanded`, fecha ao navegar) abaixo de 1100 px; 61 px de altura do cabeçalho a 1280 px. Teste `header-menu.contract.tsx`. |
+| C2 a C4 e C10 Visão geral | `feat(painel): Visão geral com cartão-herói…` | `BalanceHero`, `BalanceChart` (eixos, começo, "agora", legenda), `LatestDecisionsCard` (substitui `SignalsCard`, mostra "Esperou"), duas colunas; `running-for.ts` e `balance-axis.ts` puros com `balance-text.contract.ts`; pedido único de `GET /v1/runs` (teste: 1 chamada) |
+| C5 gráfico | `feat(painel): gráfico de velas ajusta o zoom…` | `computeLastBarsWidth` (`visible-bars.contract.ts`); painel lateral `clamp(250px, 26%, 310px)`; canvas 560 px; tabela de operações com quebra de linha |
+| C6 meta | `feat(painel): meta com pódio de 3…` | `RankingItem` pódio/linha, "Mostrar as N", `GoalSimulationCard`, situação das moedas |
+| C7 metas | `feat(painel): lista de metas com apagar discreto…` | ícone `trash` com dica (`data-tip`, mesmo texto do `aria-label`), selo "Simulação rodando"; testes de pódio, expansão, simulação da meta e lista em `goals.contract.tsx` |
+| C8 e C9 simulação | `feat(painel): simulação ao vivo mais curta…` | decisões antes da sala; 8 linhas iniciais e "Ver mais N decisões"; nota única (`role="note"`); régua com `<pattern>` hachurado |
+
+```text
+Gates (espelho WSL ~/gates/ativada-spec9): tsc do painel verde · eslint do painel verde (0 erros em apps/frontend-ativada)
+prettier: arquivos do painel e da spec 008 sem aviso (os avisos restantes são de arquivos da spec 007, que não toquei)
+panel-test: 1099 pass, 0 fail (88 arquivos); 2 arquivos de teste novos na lista explícita do script `test`
+`bun run typecheck` da raiz e `bun run lint` da raiz falham só em arquivos da spec 007 (worker, packages/database, packages/risk-analyst, fixtures de teste); nenhum erro nos meus arquivos
+Rede (Visão geral, 25 s): 1 GET /v1/runs?kind&limit (eram 2), sem 429, sem alerta de erro; 375 px sem overflow horizontal
+```
+
+Pendências: ver "O que ainda falta" por tela no `comparacao-preview-vs-real.md`; "Por que está assim" (recolhível de decisões de design), ícone de usuário no cabeçalho, abas do filtro do ranking e resumo em caixa tracejada da simulação ficam para uma próxima rodada.
