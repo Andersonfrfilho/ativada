@@ -7,7 +7,9 @@ import { CHART_LAYER, type ChartLayer } from './candle-chart.constant.js';
 import styles from './CandleChart.module.css';
 import { describeScorePanel } from './layer-series.js';
 import { LEVELS_NOTICE } from './strategy-levels.js';
-import { ZONES_NOTICE, type StrategyZones } from './strategy-zones.js';
+import { GLOSSARY_TERM } from '../../glossary/glossary.constant.js';
+import { Term } from '../../glossary/Term.component.js';
+import { ZONES_LEAD, type StrategyZones } from './strategy-zones.js';
 import type { ChartLayerData } from './useChartLayers.hook.js';
 
 export type LayerNoticesProps = {
@@ -34,7 +36,14 @@ function isWaitedWithoutData({ data, decisions, isOn, isLive }: LayerNoticesProp
 }
 
 function ZonesNotice({ zones }: { readonly zones: StrategyZones }): ReactElement {
-  return <p className={controls.muted}>{zones.reason ?? ZONES_NOTICE}</p>;
+  if (zones.reason !== undefined) return <p className={controls.muted}>{zones.reason}</p>;
+  return (
+    <p className={controls.muted}>
+      {ZONES_LEAD} Faixas: <Term term={GLOSSARY_TERM.BUY_BAND}>compra</Term> ·{' '}
+      <Term term={GLOSSARY_TERM.SELL_BAND}>venda</Term> ·{' '}
+      <Term term={GLOSSARY_TERM.PROTECTION_BAND}>proteção</Term>.
+    </p>
+  );
 }
 
 export function LayerNotices(props: LayerNoticesProps): ReactElement {

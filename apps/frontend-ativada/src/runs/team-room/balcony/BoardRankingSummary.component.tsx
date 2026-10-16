@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import { GLOSSARY_TERM } from '../../../glossary/glossary.constant.js';
+import { Term } from '../../../glossary/Term.component.js';
 import { StatusChip } from '../../live-tracking/StatusChip.component.js';
 import type { AuditorView } from '../team-room.types.js';
 import styles from './Balcony.module.css';
@@ -19,7 +21,8 @@ export function BoardRankingSummary({
         <StatusChip tone={auditor.look.tone} icon={auditor.look.icon}>
           {auditor.look.word}
         </StatusChip>{' '}
-        {auditor.rateText} · moeda ao ar {auditor.coinText}
+        {auditor.rateText} · <Term term={GLOSSARY_TERM.COIN_FLIP}>moeda ao ar</Term>{' '}
+        {auditor.coinText}
       </li>
       {auditor.intervalText === undefined ? null : <li>{auditor.intervalText}</li>}
       <li>{BALCONY_TEXT.NO_MEASURE_NOTE}</li>

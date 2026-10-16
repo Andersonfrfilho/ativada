@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { OFFICE_ENTRIES, OFFICE_TERM, type GlossaryEntry } from './glossary-office.constant.js';
+
 export const GLOSSARY_TERM = {
   SHARPE: 'sharpe',
   SORTINO: 'sortino',
@@ -29,11 +31,12 @@ export const GLOSSARY_TERM = {
   NO_FORECAST: 'noForecast',
   LOCK: 'lock',
   SHADOW_MODE: 'shadowMode',
+  ...OFFICE_TERM,
 } as const;
 
 export type GlossaryTerm = (typeof GLOSSARY_TERM)[keyof typeof GLOSSARY_TERM];
 
-export type GlossaryEntry = { readonly label: string; readonly phrase: string };
+export type { GlossaryEntry };
 
 // Fonte única das dicas (spec 005, RF13): a mesma palavra tem a mesma frase em toda tela.
 export const GLOSSARY: Readonly<Record<GlossaryTerm, GlossaryEntry>> = {
@@ -168,4 +171,5 @@ export const GLOSSARY: Readonly<Record<GlossaryTerm, GlossaryEntry>> = {
     phrase:
       'O analista só observa e mostra o que faria; a simulação segue a estratégia sem nenhuma mudança.',
   },
+  ...OFFICE_ENTRIES,
 };

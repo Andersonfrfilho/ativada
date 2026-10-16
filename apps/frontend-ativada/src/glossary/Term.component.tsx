@@ -31,7 +31,7 @@ export function Term({ term, children }: TermProps): ReactElement {
         </span>
       </button>
       <span id={phraseId} role="tooltip" className={styles.phrase} hidden={!isOpen}>
-        {entry.phrase}
+        {entry.example === undefined ? entry.phrase : `${entry.phrase} ${entry.example}`}
       </span>
     </span>
   );

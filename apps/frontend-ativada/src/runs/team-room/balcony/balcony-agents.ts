@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { GLOSSARY_TERM, type GlossaryTerm } from '../../../glossary/glossary.constant.js';
 import type { IconName } from '../../../layout/Icon.component.js';
 import { VOTE_LOOK } from '../team-room-view.js';
 import type { FigureRole } from '../TeamFigure.component.js';
@@ -23,6 +24,8 @@ export type BalconyAgent = {
   readonly vote: SeatLook | undefined;
   // O número que o agente olha, vindo da leitura gravada pelo servidor; sem leitura, a frase do servidor.
   readonly line: string | undefined;
+  // O termo técnico da leitura (RSI, EMA...), para a dica no balão.
+  readonly lineTerm: GlossaryTerm | undefined;
   readonly horizon: string | undefined;
   // A ficha: frases do servidor e fatos da tela, uma por linha.
   readonly facts: readonly string[];
@@ -36,6 +39,21 @@ export type BalconyInput = {
 };
 
 const NOT_VOTING_LOOK: SeatLook = { tone: 'neutral', icon: 'pause', word: BALCONY_TEXT.NOT_VOTING };
+
+const TERM_BY_KIND: Readonly<Record<string, GlossaryTerm>> = {
+  rsi: GLOSSARY_TERM.RSI,
+  bollinger: GLOSSARY_TERM.BOLLINGER,
+  ema_cross: GLOSSARY_TERM.EMA,
+  macd: GLOSSARY_TERM.MACD,
+  donchian_breakout: GLOSSARY_TERM.DONCHIAN,
+  obv_trend: GLOSSARY_TERM.OBV,
+  fear_greed: GLOSSARY_TERM.FEAR_GREED,
+};
+
+function termOf(specialist: SpecialistView | undefined): GlossaryTerm | undefined {
+  const rule = specialist?.rules.find((item) => ruleLineOf(item) !== undefined);
+  return rule?.kind === undefined ? undefined : TERM_BY_KIND[rule.kind];
+}
 
 function ruleLineOf(rule: RuleLine): string | undefined {
   if (rule.reading !== undefined) return `${rule.label} ${rule.reading}`;
@@ -76,6 +94,7 @@ function specialistAgent(
     seal,
     vote: specialist === undefined ? NOT_VOTING_LOOK : voteOf(specialist),
     line: rules.map(ruleLineOf).find((text) => text !== undefined),
+    lineTerm: termOf(specialist),
     horizon,
     facts: specialist === undefined ? [BALCONY_TEXT.NO_MEASURE_NOTE] : specialistFacts(specialist),
     ariaLabel: ariaOf(definition.name, definition.roleFull, seal.word),
@@ -96,6 +115,7 @@ function aliceAgent(
     seal,
     vote: riskAnalyst?.look ?? analyst.outcome,
     line: riskAnalyst === undefined ? `pontuação ${analyst.scoreText}` : lines[0],
+    lineTerm: undefined,
     horizon,
     facts: lines,
     ariaLabel: ariaOf(definition.name, definition.roleFull, seal.word),
@@ -116,6 +136,7 @@ function auditorAgent(
       auditor === undefined
         ? BALCONY_TEXT.MEASURING
         : `${auditor.rateText} · moeda ${auditor.coinText}`,
+    lineTerm: undefined,
     horizon: undefined,
     facts: auditor === undefined ? [] : [auditor.lead, auditor.verdictMessage],
     ariaLabel: ariaOf(definition.name, definition.roleFull, seal.word),

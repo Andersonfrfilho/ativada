@@ -10,7 +10,7 @@ import {
 } from '../src/runs/live-tracking/live-status.validation.js';
 import {
   buildStrategyZones,
-  ZONES_NOTICE,
+  ZONES_LEAD,
   ZONES_WAITING,
 } from '../src/runs/candle-chart/strategy-zones.js';
 import type { FakeChartSurface } from './support/fake-chart-surface.js';
@@ -102,8 +102,7 @@ describe('faixas da estratégia nesta simulação', () => {
   });
 
   test('the notice says it is the rule of the simulation, not a recommendation to operate', () => {
-    expect(ZONES_NOTICE).toContain('não é recomendação para você operar');
-    expect(ZONES_NOTICE).toContain('compra · venda · proteção');
+    expect(ZONES_LEAD).toContain('não é recomendação para você operar');
   });
 });
 
@@ -132,7 +131,7 @@ describe('faixas na superfície do gráfico', () => {
   test('the zones reach the surface with the right prices and the notice names the rule of the simulation', async () => {
     const surface = await open({ openPosition: OPEN_POSITION });
     await waitFor(() => expect(surface.callsOf('setZones').at(-1)?.[0]).toHaveLength(2));
-    expect(await screen.findByText(ZONES_NOTICE)).toBeDefined();
+    expect(await screen.findByText(new RegExp(ZONES_LEAD))).toBeDefined();
   });
 
   test('with no reading the surface gets no zone and the screen says why', async () => {

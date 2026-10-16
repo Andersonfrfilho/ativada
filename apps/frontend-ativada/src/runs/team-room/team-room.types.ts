@@ -16,6 +16,8 @@ export type SeatTone = 'voter' | 'normal' | 'quiet';
 
 export type RuleLine = {
   readonly ruleId: string;
+  // O tipo da regra no motor (rsi, bollinger, ema_cross...); a varanda o usa para ligar a leitura ao termo do glossário.
+  readonly kind?: string;
   readonly label: string;
   readonly voteKind: VoteKind;
   readonly weightText: string;

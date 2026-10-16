@@ -2,6 +2,8 @@
 import type { ReactElement } from 'react';
 
 import { useUserTimeZone } from '../../../account/useUserTimeZone.hook.js';
+import { GLOSSARY_TERM } from '../../../glossary/glossary.constant.js';
+import { Term } from '../../../glossary/Term.component.js';
 import { Icon } from '../../../layout/Icon.component.js';
 import { useShownPrice } from '../../../live/useShownPrice.hook.js';
 import { useRunDetailQuery, useTradesQuery } from '../../runs.query.js';
@@ -19,7 +21,10 @@ function Plaque({ plaque }: { readonly plaque: PlaqueView }): ReactElement {
         <span className={styles.price}>{plaque.priceText}</span>
       </p>
       <p className={styles.percent}>
-        {plaque.percent} <span className={styles.net}>{BALCONY_TEXT.NET_WORD}</span>
+        {plaque.percent}{' '}
+        <span className={styles.net}>
+          <Term term={GLOSSARY_TERM.NET}>{BALCONY_TEXT.NET_WORD}</Term>
+        </span>
       </p>
       <ul className={styles.lines}>
         {plaque.lines.map((line) => (

@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { useId, type ReactElement } from 'react';
 
+import { GLOSSARY_TERM } from '../../../glossary/glossary.constant.js';
+import { Term } from '../../../glossary/Term.component.js';
 import { Icon } from '../../../layout/Icon.component.js';
 import { StatusChip } from '../../live-tracking/StatusChip.component.js';
 import type { SeatState } from '../team-room-sequence.js';
@@ -29,7 +31,11 @@ function Bubble({ agent }: { readonly agent: BalconyAgent }): ReactElement {
           {vote.word}
         </StatusChip>
       )}
-      {line === undefined ? null : <span className={styles.bubbleLine}>{line}</span>}
+      {line === undefined ? null : (
+        <span className={styles.bubbleLine}>
+          {agent.lineTerm === undefined ? line : <Term term={agent.lineTerm}>{line}</Term>}
+        </span>
+      )}
       {horizon === undefined ? null : <span className={styles.bubbleHorizon}>{horizon}</span>}
     </div>
   );
@@ -53,7 +59,8 @@ function Sheet({
       className={styles.sheet}
     >
       <strong>
-        {BALCONY_TEXT.KIND_RULE_MARK} {BALCONY_TEXT.KIND_RULE} · {agent.roleFull}
+        {BALCONY_TEXT.KIND_RULE_MARK}{' '}
+        <Term term={GLOSSARY_TERM.RULE_AGENT}>{BALCONY_TEXT.KIND_RULE}</Term> · {agent.roleFull}
       </strong>
       <ul>
         {agent.facts.map((fact) => (

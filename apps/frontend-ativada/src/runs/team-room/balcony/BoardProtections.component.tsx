@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import { GLOSSARY_TERM } from '../../../glossary/glossary.constant.js';
+import { Term } from '../../../glossary/Term.component.js';
 import { Icon, type IconName } from '../../../layout/Icon.component.js';
 import { useShownPrice } from '../../../live/useShownPrice.hook.js';
 import type { LiveStatus } from '../../live-tracking/live-status.validation.js';
@@ -44,7 +46,8 @@ function ProtectionBody({ view }: { readonly view: ProtectionView }): ReactEleme
     <ul className={styles.boardList}>
       <li className={styles.protectionLine}>
         <strong>
-          <Icon name="shield" size={14} /> {BALCONY_TEXT.PROTECTION_TITLE}
+          <Icon name="shield" size={14} />{' '}
+          <Term term={GLOSSARY_TERM.PROTECTION}>{BALCONY_TEXT.PROTECTION_TITLE}</Term>
         </strong>{' '}
         {view.stopPrice} · {netText(view.stopNet)}
         <span className={styles.boardNote}>
@@ -56,7 +59,10 @@ function ProtectionBody({ view }: { readonly view: ProtectionView }): ReactEleme
         {`Faixa de venda: ${view.entryPrice}–${view.targetPrice} · Faixa de proteção: ${view.stopPrice}–${view.entryPrice}. ${BALCONY_TEXT.BAND_NOTE}`}
       </li>
       <li>
-        <strong>{BALCONY_TEXT.TARGET_TITLE}</strong> {view.targetPrice} · {netText(view.targetNet)}
+        <strong>
+          <Term term={GLOSSARY_TERM.TARGET_PRICE}>{BALCONY_TEXT.TARGET_TITLE}</Term>
+        </strong>{' '}
+        {view.targetPrice} · {netText(view.targetNet)}
       </li>
     </ul>
   );

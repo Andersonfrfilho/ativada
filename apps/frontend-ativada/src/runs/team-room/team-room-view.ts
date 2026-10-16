@@ -63,6 +63,7 @@ function motiveOf(ruleId: string, triggers: Triggers | undefined): string | unde
 function lineOf(vote: DecisionVote, triggers: Triggers | undefined): RuleLine {
   return {
     ruleId: vote.ruleId,
+    kind: vote.kind,
     label: vote.label,
     voteKind: voteKindOf(vote),
     weightText: formatDecimalText(vote.weight, WEIGHT_FORMAT),

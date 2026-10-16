@@ -5,8 +5,8 @@ import type { LiveStatus } from '../live-tracking/live-status.validation.js';
 import { toDrawingNumber } from './candle-series.js';
 import type { SurfaceZone } from './chart-surface.types.js';
 
-export const ZONES_NOTICE =
-  'Faixa da estratégia nesta simulação — não é recomendação para você operar. Faixas: compra · venda · proteção.';
+export const ZONES_LEAD =
+  'Faixa da estratégia nesta simulação — não é recomendação para você operar.';
 export const ZONES_WAITING = 'A faixa aparece quando a estratégia tiver leitura.';
 
 export type StrategyZones = {

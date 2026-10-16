@@ -77,6 +77,15 @@ describe('a varanda: a equipe em pé acima do gráfico (spec 011, escritório)',
     expect(document.activeElement).toBe(badge);
   });
 
+  test('a technical term in a bubble has a tip with the plain phrase and a screen-numbers example', async () => {
+    await openBalcony();
+    const button = screen.getByRole('button', { name: 'O que é RSI?' });
+    const tip = document.getElementById(button.getAttribute('aria-describedby') ?? '');
+    expect(tip?.getAttribute('role')).toBe('tooltip');
+    expect(tip?.textContent).toContain('Mede, de 0 a 100');
+    expect(tip?.textContent).toContain('Exemplo:');
+  });
+
   test('the board opens on the protections tab and says why when there is no open position', async () => {
     const team = await openBalcony();
     expect(within(team).getByRole('tab', { name: 'Proteções', selected: true })).toBeDefined();

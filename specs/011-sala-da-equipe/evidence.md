@@ -362,3 +362,10 @@ Crachás 6/6 e balão ativo dentro do viewport em todos; a lousa fica fora na va
 - App real (Edge, `live-status` interceptado com posição aberta, dev): faixas verde e vermelha desenhadas no canvas com os rótulos (`capturas/faixas-no-app-1366x768-claro.png`);
   sem interceptar, a execução de teste está sem leitura e mostra a frase honesta.
 - **Pendente:** `Term` com dica para cada faixa (item D do bloco 2) e a mesma faixa na régua da ficha do sinal (spec 014).
+
+### Bloco 2 (D): dicas em todo termo técnico
+
+- Glossário ganhou `example` (opcional) e 17 termos do escritório em `glossary-office.constant.ts` (RSI, Banda de Bollinger, EMA, MACD, Donchian, OBV, Medo e Ganância, Proteção contra
+  queda, Líquido, Ganho ÷ risco, Faixas de compra/venda/proteção, Agente de regra/modelo, Em observação, Peso): uma frase (≤ 120) mais um exemplo com número de tela. `Term` mostra frase + exemplo.
+- Usados: leitura do balão (termo da regra pela `kind`), ficha ("Regra"), lousa (proteção contra queda, alvo, moeda ao ar), plaquinha ("líquido") e a linha de faixas do gráfico.
+- Pendente: termos dentro das frases longas do servidor (viram texto simples) e "Trava"/"Teto de risco" nos post-its (a lousa ainda não os traz).
