@@ -108,6 +108,7 @@ export const BALCONY_TEXT = {
   MEASURES: 'Mede',
   MEASURING: 'Medindo…',
   VALID_UNTIL: 'vale até',
+  OPINIONS_VALID_UNTIL: 'opiniões valem até',
   CLOSED_AT: 'vela das',
   BOARD_TITLE: 'Lousa da equipe',
   SHEET_TOGGLE: 'Lousa da equipe: proteções e ranking',

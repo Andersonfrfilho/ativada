@@ -26,9 +26,20 @@ function spotOf(ctx: Context, kind: SurfaceAnchorKind): Spot | undefined {
   return point === undefined ? undefined : { time: point.time, price: point.value };
 }
 
+// As bordas da coluna da vela em formação: o centro da vela de agora menos ou mais meio espaçamento entre barras.
+function formingEdgeOf(ctx: Context, kind: 'forming_left' | 'forming_right'): SurfaceAnchor | null {
+  const { live } = ctx.state;
+  if (live === null) return null;
+  const x = ctx.chart.timeScale().timeToCoordinate(toTime(live.time));
+  if (x === null) return null;
+  const half = ctx.chart.timeScale().options().barSpacing / 2;
+  return { x: kind === 'forming_left' ? x - half : x + half, y: 0 };
+}
+
 export function buildAnchors(ctx: Context): Pick<ChartSurface, 'anchorOf'> {
   return {
     anchorOf: (kind): SurfaceAnchor | null => {
+      if (kind === 'forming_left' || kind === 'forming_right') return formingEdgeOf(ctx, kind);
       const spot = spotOf(ctx, kind);
       if (spot === undefined) return null;
       const x = ctx.chart.timeScale().timeToCoordinate(toTime(spot.time));

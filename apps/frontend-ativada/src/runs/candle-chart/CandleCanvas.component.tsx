@@ -12,6 +12,7 @@ import { ClusterButtons } from './ClusterButtons.component.js';
 import { LayerBar } from './LayerBar.component.js';
 import { BesideTeam } from '../team-room/BesideTeam.component.js';
 import { LeaderFocusProvider } from '../team-room/balcony/leader-focus.context.js';
+import { FormingBand } from '../team-room/balcony/FormingBand.component.js';
 import { LeaderOverlay } from '../team-room/balcony/LeaderOverlay.component.js';
 import { TeamAside } from '../team-room/TeamAside.context.js';
 import { LayerNotices } from './LayerNotices.component.js';
@@ -145,6 +146,13 @@ function CanvasView(props: CanvasViewProps): ReactElement {
           zones={model.zones}
         />
         <CanvasFooter {...props} ids={ids} />
+        <FormingBand
+          runId={props.runId}
+          isLive={view.isLive}
+          surface={model.surface}
+          canvasRef={model.containerRef}
+          figureRef={figureRef}
+        />
         <LeaderOverlay
           surface={model.surface}
           canvasRef={model.containerRef}

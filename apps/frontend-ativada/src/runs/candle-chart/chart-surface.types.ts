@@ -116,7 +116,8 @@ export type SurfaceTheme = {
 };
 
 // O ponto do gráfico que um agente comenta, em pixels do contêiner do gráfico (só desenho).
-export type SurfaceAnchorKind = 'band_lower' | 'ema_fast' | 'volume' | 'protection';
+export type SurfaceAnchorKind =
+  'band_lower' | 'ema_fast' | 'volume' | 'protection' | 'forming_left' | 'forming_right';
 export type SurfaceAnchor = { readonly x: number; readonly y: number };
 
 export type SurfaceLogicalRange = { readonly from: number; readonly to: number };

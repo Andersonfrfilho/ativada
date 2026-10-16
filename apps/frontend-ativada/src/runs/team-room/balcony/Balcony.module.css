@@ -804,3 +804,24 @@
 :global([data-viewport='short']) .leader {
   display: none;
 }
+
+/* Coluna sombreada da vela em formação (escritório F2): sobre o canvas, atributos SVG, sem interceptar o mouse. */
+.bandRect {
+  fill: color-mix(in srgb, var(--accent) 12%, transparent);
+  stroke: color-mix(in srgb, var(--accent) 45%, transparent);
+  stroke-dasharray: 3 3;
+}
+
+.bandLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 3px;
+  fill: var(--ink);
+}
+
+:global([data-viewport='short']) .leader[data-forming-band] {
+  display: block;
+}
