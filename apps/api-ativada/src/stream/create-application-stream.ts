@@ -88,7 +88,10 @@ function createEndpoint(
     trustedProxyHops: environment.TRUSTED_PROXY_HOPS,
     limits: toStreamLimits(environment),
     ticketStore: params.ticketStore,
-    rateLimiter: createRateLimiter({ now: () => Date.now() }),
+    rateLimiter: createRateLimiter({
+      now: () => Date.now(),
+      limitMultiplier: environment.RATE_LIMIT_MULTIPLIER,
+    }),
     resolveUser: (subject) => resolveUserBySubject(database, subject),
     now: () => Date.now(),
     log: (fields) => logger.info(STREAM_LOG_MESSAGE, fields),

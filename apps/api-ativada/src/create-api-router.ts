@@ -124,7 +124,10 @@ function assembleRouteDependencies(assembly: RouteAssemblyParams): ApiRouteDepen
 
 export function createApiRouter(params: ApiRouterParams): Router {
   const { environment, logger, database, verifyAccessToken } = params;
-  const rateLimiter = createRateLimiter({ now: () => Date.now() });
+  const rateLimiter = createRateLimiter({
+    now: () => Date.now(),
+    limitMultiplier: environment.RATE_LIMIT_MULTIPLIER,
+  });
   const outage = createApiOutageReporter({ database, logger });
   const domain = createDomainRouteDependencies({
     environment,

@@ -9,7 +9,9 @@ import { DecisionsTable } from './DecisionsTable.component.js';
 import { LiveGoalBlock } from './LiveGoalBlock.component.js';
 import { LivePulseLine } from './LivePulseLine.component.js';
 import { LiveSummaryStrip } from './LiveSummaryStrip.component.js';
-import { LiveTrackingCard } from './LiveTrackingCard.component.js';
+import { LiveSectionPlaceholder } from './LiveSectionPlaceholder.component.js';
+import { LiveTrackingCard, TRACKING_ANCHOR } from './LiveTrackingCard.component.js';
+import { DECISIONS_ANCHOR } from './LiveTradesState.component.js';
 import styles from './LiveTracking.module.css';
 import { useLiveStatusQuery } from './live-status.query.js';
 import { NextTriggersBlock } from './NextTriggersBlock.component.js';
@@ -25,9 +27,14 @@ export function LiveSummarySection({ run }: LiveTrackingSectionProps): ReactElem
   }
   if (status.data === undefined && status.isError) {
     return (
-      <p role="alert" className={controls.error}>
-        Não foi possível carregar o acompanhamento. Tente novamente em instantes.
-      </p>
+      <div role="alert">
+        <p className={controls.error}>
+          Não foi possível carregar o acompanhamento. Tente novamente em instantes.
+        </p>
+        <button type="button" className={controls.button} onClick={() => void status.refetch()}>
+          Tentar de novo
+        </button>
+      </div>
     );
   }
   if (status.data === undefined) return <p role="status">Carregando o acompanhamento…</p>;
@@ -41,9 +48,19 @@ export function LiveSummarySection({ run }: LiveTrackingSectionProps): ReactElem
 }
 
 // Cartão "Acompanhamento", o que falta para comprar e a meta: o detalhe, depois do gráfico e das decisões.
-export function LiveTrackingSection({ run }: LiveTrackingSectionProps): ReactElement | null {
-  const status = useLiveStatusQuery(run.id, true).data;
-  if (status === undefined) return null;
+export function LiveTrackingSection({ run }: LiveTrackingSectionProps): ReactElement {
+  const query = useLiveStatusQuery(run.id, true);
+  const status = query.data;
+  if (status === undefined) {
+    return (
+      <LiveSectionPlaceholder
+        id={TRACKING_ANCHOR}
+        title="Acompanhamento"
+        icon="activity"
+        query={query}
+      />
+    );
+  }
   return (
     <>
       <LiveTrackingCard run={run} status={status} />
@@ -56,7 +73,17 @@ export function LiveTrackingSection({ run }: LiveTrackingSectionProps): ReactEle
 }
 
 // A tabela "O que a estratégia decidiu", logo depois do gráfico (mesma consulta do topo: o aviso do stream refaz as duas).
-export function LiveDecisionsSection({ run }: LiveTrackingSectionProps): ReactElement | null {
-  const status = useLiveStatusQuery(run.id, true).data;
-  return status === undefined ? null : <DecisionsTable runId={run.id} status={status} />;
+export function LiveDecisionsSection({ run }: LiveTrackingSectionProps): ReactElement {
+  const query = useLiveStatusQuery(run.id, true);
+  if (query.data === undefined) {
+    return (
+      <LiveSectionPlaceholder
+        id={DECISIONS_ANCHOR}
+        title="O que a estratégia decidiu"
+        icon="list"
+        query={query}
+      />
+    );
+  }
+  return <DecisionsTable runId={run.id} status={query.data} />;
 }

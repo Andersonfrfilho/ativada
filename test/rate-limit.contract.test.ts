@@ -6,7 +6,10 @@ import {
   RATE_LIMIT_POLICY,
   type RateLimitPolicy,
 } from '../apps/api-ativada/src/rate-limit/rate-limit-policy.constant.js';
-import { createRateLimiter } from '../apps/api-ativada/src/rate-limit/rate-limiter.js';
+import {
+  createRateLimiter,
+  type RateLimiterOptions,
+} from '../apps/api-ativada/src/rate-limit/rate-limiter.js';
 import {
   resolveClientAddress,
   toRateLimitAddressKey,
@@ -42,6 +45,31 @@ async function exhaust(send: () => Promise<Response>, count: number): Promise<vo
     expect((await send()).status).toBe(200);
   }
 }
+
+describe('dev limit multiplier', () => {
+  test('multiplies the allowance of every policy and defaults to 1', () => {
+    const policy = RATE_LIMIT_POLICY.CANDLE_QUERY;
+    const countAllowed = (options: RateLimiterOptions): number => {
+      const limiter = createRateLimiter(options);
+      let allowed = 0;
+      while (limiter.consume({ policy, key: 'a' }).isAllowed) allowed += 1;
+      return allowed;
+    };
+    expect(countAllowed({ now: () => 0 })).toBe(policy.limit);
+    expect(countAllowed({ now: () => 0, limitMultiplier: 1 })).toBe(policy.limit);
+    expect(countAllowed({ now: () => 0, limitMultiplier: 4 })).toBe(policy.limit * 4);
+  });
+
+  test('peek sees the scaled allowance too', () => {
+    const policy = RATE_LIMIT_POLICY.ACCOUNT_EXPORT;
+    const limiter = createRateLimiter({ now: () => 0, limitMultiplier: 3 });
+    for (let attempt = 0; attempt < 3; attempt += 1) limiter.consume({ policy, key: 'a' });
+    expect(limiter.peek({ policy, key: 'a' }).isAllowed).toBe(false);
+    const wider = createRateLimiter({ now: () => 0, limitMultiplier: 3 });
+    for (let attempt = 0; attempt < 2; attempt += 1) wider.consume({ policy, key: 'a' });
+    expect(wider.peek({ policy, key: 'a' }).isAllowed).toBe(true);
+  });
+});
 
 describe('token bucket', () => {
   test('allows the limit, then denies with a positive retry-after, then refills', () => {

@@ -24,6 +24,7 @@ import {
 } from './run-queue-environment.js';
 import { goalEvaluationEnvironmentShape } from './goals/goal-evaluation-environment.js';
 import { stallEnvironmentShape } from './runs/stall/stall-environment.js';
+import { checkRateLimit, rateLimitEnvironmentShape } from './rate-limit/rate-limit-environment.js';
 import { userLimitsEnvironmentShape } from './user-limits-environment.js';
 import {
   runExecutionEnvironmentShape,
@@ -150,6 +151,7 @@ export const environmentSchema = z
     ...runExecutionEnvironmentShape,
     ...streamEnvironmentShape,
     ...userLimitsEnvironmentShape,
+    ...rateLimitEnvironmentShape,
     ...stallEnvironmentShape,
     ...goalEvaluationEnvironmentShape,
     // O ticker público da Binance (T4.7): a hora do servidor (REST) e o stream de `<par>@miniTicker` (WebSocket).
@@ -171,6 +173,7 @@ export const environmentSchema = z
   })
   .superRefine((values, context) => {
     checkProductionRules(values, PRODUCTION_PROFILE, context);
+    checkRateLimit(values, context);
     const isHopsMissing = values.TRUSTED_PROXY_HOPS === undefined;
     if (values.ENV === PRODUCTION_ENVIRONMENT && isHopsMissing) {
       context.addIssue({

@@ -9,6 +9,7 @@ import { useProjectionsQuery } from '../candle-chart/candle-chart.query.js';
 import { formatIntervalLimitPercent, formatRatePercent } from '../candle-chart/projection-text.js';
 import type { ProjectionSummary } from '../candle-chart/projections.validation.js';
 import styles from './ProjectionCards.module.css';
+import { HITS_ANCHOR } from '../live-tracking/live-anchors.js';
 import { ProjectionHistoryTable } from './ProjectionHistoryTable.component.js';
 import { COIN_FLIP_PERCENT, VERDICT_LOOK } from './projection-verdict.js';
 import { StrengthBars } from './StrengthBars.component.js';
@@ -84,7 +85,7 @@ export function ProjectionHistoryCard({ runId }: { readonly runId: string }): Re
   const query = useProjectionsQuery({ runId });
   const data = query.data;
   return (
-    <Card title={HISTORY_TEXT.TITLE} icon="check">
+    <Card id={HITS_ANCHOR} title={HISTORY_TEXT.TITLE} icon="check">
       {data === undefined ? (
         <p className={controls.muted} role="status">
           {query.isError ? HISTORY_TEXT.ERROR : HISTORY_TEXT.LOADING}

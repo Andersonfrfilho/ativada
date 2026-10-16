@@ -190,4 +190,37 @@ describe('api-ativada environment (authentication, CORS and proxies)', () => {
       expect(values['TELEGRAM_API_BASE_URL']?.startsWith('http://127.0.0.1:')).toBe(true);
     }
   });
+
+  test('RATE_LIMIT_MULTIPLIER defaults to 1 and only ENV=dev may raise it', async () => {
+    const base = await readEnvironmentFile('env.test');
+    expect(parseEnvironment(environmentSchema, base).RATE_LIMIT_MULTIPLIER).toBe(1);
+    const devValues = { ...base, ENV: 'dev', RATE_LIMIT_MULTIPLIER: '4' };
+    expect(parseEnvironment(environmentSchema, devValues).RATE_LIMIT_MULTIPLIER).toBe(4);
+    for (const environmentName of ['test', 'production']) {
+      expect(
+        parseEnvironment.bind(undefined, environmentSchema, {
+          ...base,
+          ENV: environmentName,
+          RATE_LIMIT_MULTIPLIER: '4',
+        }),
+      ).toThrow(EnvironmentError);
+    }
+  });
+
+  test.each(['0', '21', '1.5', 'many'])('rejects RATE_LIMIT_MULTIPLIER=%p', async (value) => {
+    const base = await readEnvironmentFile('env.test');
+    expect(
+      parseEnvironment.bind(undefined, environmentSchema, {
+        ...base,
+        RATE_LIMIT_MULTIPLIER: value,
+      }),
+    ).toThrow(EnvironmentError);
+  });
+
+  test('the committed dev file raises the multiplier and the test file leaves it alone', async () => {
+    const dev = parseEnvironment(environmentSchema, await readEnvironmentFile('env.dev'));
+    const test = parseEnvironment(environmentSchema, await readEnvironmentFile('env.test'));
+    expect(dev.RATE_LIMIT_MULTIPLIER).toBe(4);
+    expect(test.RATE_LIMIT_MULTIPLIER).toBe(1);
+  });
 });

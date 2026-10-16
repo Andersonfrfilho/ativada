@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 
 import { afterEach, describe, expect, setSystemTime, test } from 'bun:test';
 
-import { act, screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 
 import { buildSummaryResponse } from './support/trade-chart-fixtures.js';
 import { buildLiveStatusResponse } from './support/live-status-fixtures.js';
@@ -19,6 +19,19 @@ import {
 } from './support/live-tracking-harness.js';
 
 const TRACKING = { name: 'Acompanhamento' } as const;
+const LOAD_TIMEOUT_MILLISECONDS = 3_000;
+
+// O cartão já mostra o lugar dele antes do live-status chegar: o teste espera o cartão de verdade (o "desde …" do título).
+async function findLoadedCard(): Promise<HTMLElement> {
+  return waitFor(
+    () => {
+      const card = screen.getByRole('region', TRACKING);
+      expect(within(card).queryByText(/^desde /)).not.toBeNull();
+      return card;
+    },
+    { timeout: LOAD_TIMEOUT_MILLISECONDS },
+  );
+}
 // 16 h depois do início da simulação: 2026-01-01T15:00Z (12:00 em Brasília).
 const SIXTEEN_HOURS_IN = new Date(LIVE_PERIOD_START + 16 * HOUR);
 
@@ -59,7 +72,7 @@ describe('cartão "Acompanhamento" (T3.1)', () => {
   test('shows balance, result, buy and hold and the verdict with the fixture numbers', async () => {
     const harness = createLiveHarness({ tradeSummary: buildSummaryResponse() });
     openLiveDetail(harness);
-    const card = await screen.findByRole('region', TRACKING);
+    const card = await findLoadedCard();
     expect(await within(card).findByText('1.030,50')).toBeDefined();
     expect(within(card).getByText('começou com 1.000,00')).toBeDefined();
     expect(within(card).getByText('+30,50')).toBeDefined();
@@ -79,7 +92,7 @@ describe('cartão "Acompanhamento" (T3.1)', () => {
       liveStatus: buildLiveStatusResponse({ balance: flatBalance() }),
     });
     openLiveDetail(harness);
-    const card = await screen.findByRole('region', TRACKING);
+    const card = await findLoadedCard();
     expect(await within(card).findByText('= 0,00')).toBeDefined();
     expect(within(card).getByText('igual ao início')).toBeDefined();
     expect(
@@ -109,7 +122,7 @@ describe('cartão "Acompanhamento" (T3.1)', () => {
       }),
     });
     openLiveDetail(harness);
-    const card = await screen.findByRole('region', TRACKING);
+    const card = await findLoadedCard();
     expect(
       await within(card).findByRole('heading', {
         name: 'Compra pedida: executa na abertura da próxima vela',
@@ -121,7 +134,7 @@ describe('cartão "Acompanhamento" (T3.1)', () => {
   test('a failed refresh keeps the card on screen and only warns how old the data is', async () => {
     const harness = createLiveHarness();
     const app = openLiveDetail(harness);
-    const card = await screen.findByRole('region', TRACKING);
+    const card = await findLoadedCard();
     expect(await within(card).findByText('1.030,50')).toBeDefined();
     harness.isLiveStatusFailing = true;
     act(() =>
@@ -147,14 +160,14 @@ describe('cartão "Acompanhamento" (T3.1)', () => {
       }),
     });
     openLiveDetail(harness);
-    const card = await screen.findByRole('region', TRACKING);
+    const card = await findLoadedCard();
     expect(await within(card).findByText(/Aguardando a primeira vela, que /)).toBeDefined();
     expect(within(card).getByText('Ainda sem vela fechada.')).toBeDefined();
   });
 
   test('the card keeps the notices in a single short note: candle, every hour and play money', async () => {
     openLiveDetail(createLiveHarness());
-    const card = await screen.findByRole('region', TRACKING);
+    const card = await findLoadedCard();
     const notices = await within(card).findByRole('note', { name: 'Avisos sobre a simulação' });
     expect(within(notices).getByText(/o resumo do preço em 1 hora/)).toBeDefined();
     expect(

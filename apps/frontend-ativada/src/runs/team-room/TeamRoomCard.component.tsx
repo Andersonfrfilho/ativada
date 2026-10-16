@@ -5,6 +5,7 @@ import { Term } from '../../glossary/Term.component.js';
 import { Card } from '../../layout/Card.component.js';
 import { Icon } from '../../layout/Icon.component.js';
 import styles from './TeamRoomCard.module.css';
+import { OFFICE_ANCHOR } from '../live-tracking/live-anchors.js';
 import { TeamRoomControls, type TeamRoomControlsProps } from './TeamRoomControls.component.js';
 import { TeamRoomLines } from './TeamRoomLines.component.js';
 import { TeamRoomNavigator, type TeamRoomNavigatorProps } from './TeamRoomNavigator.component.js';
@@ -107,6 +108,7 @@ export function TeamRoomCard(props: TeamRoomCardProps): ReactElement {
   return (
     <>
       <Card
+        id={OFFICE_ANCHOR}
         title={TEAM_ROOM_TEXT.TITLE}
         icon="team"
         aside={<TeamRoomControls {...props.controls} />}

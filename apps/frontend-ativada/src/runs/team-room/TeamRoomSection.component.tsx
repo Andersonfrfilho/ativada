@@ -3,6 +3,7 @@ import type { ReactElement, ReactNode } from 'react';
 
 import { Card } from '../../layout/Card.component.js';
 import controls from '../../styles/Controls.module.css';
+import { OFFICE_ANCHOR } from '../live-tracking/live-anchors.js';
 import { useLiveStatusQuery } from '../live-tracking/live-status.query.js';
 import type { LiveStatus } from '../live-tracking/live-status.validation.js';
 import { TeamRoomCard } from './TeamRoomCard.component.js';
@@ -20,6 +21,7 @@ function RoomPlaceholder(props: PlaceholderProps): ReactElement {
   return (
     <>
       <Card
+        id={OFFICE_ANCHOR}
         title={TEAM_ROOM_TEXT.TITLE}
         icon="team"
         aside={<LayoutSwitch preference={preference} onChange={onPreferenceChange} />}
@@ -65,6 +67,11 @@ export function TeamRoomSection(props: TeamRoomSectionProps): ReactElement {
         >
           {status.isError ? TEAM_ROOM_TEXT.ERROR : TEAM_ROOM_TEXT.LOADING}
         </p>
+        {status.isError ? (
+          <button type="button" className={controls.button} onClick={() => void status.refetch()}>
+            Tentar de novo
+          </button>
+        ) : null}
       </RoomPlaceholder>
     );
   }

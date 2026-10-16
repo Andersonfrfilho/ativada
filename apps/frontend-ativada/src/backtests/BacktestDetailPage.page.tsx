@@ -12,6 +12,7 @@ import {
   LiveSummarySection,
   LiveTrackingSection,
 } from '../runs/live-tracking/LiveTrackingSection.component.js';
+import { LiveSectionIndex } from '../runs/live-tracking/LiveSectionIndex.component.js';
 import { CarriedTimeframeProvider } from '../runs/candle-chart/CarriedTimeframe.context.js';
 import { AnalystSection } from '../runs/analyst/AnalystSection.component.js';
 import { RunProgressCard } from '../runs/RunProgressCard.component.js';
@@ -37,6 +38,7 @@ function LivePaperBody({ run }: { readonly run: RunDetail }): ReactElement {
   return (
     <>
       <LiveChartArea runId={run.id} hasChart={hasChart}>
+        <LiveSectionIndex run={run} />
         <RunHeader run={run} />
         {run.status === RUN_STATUS.CANCELLED ? (
           <p role="status" className={controls.muted}>
