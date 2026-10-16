@@ -108,6 +108,7 @@ export const BALCONY_TEXT = {
   EXPAND: 'Expandir equipe',
   MODEL_NOT_YET: 'Agente de modelo: ainda não existe. Não fala nem vota.',
   RANKING_FOOTER: 'Ranking é desempenho passado, não garantia.',
+  RANKING_WINDOW: 'Janela: os últimos 30 dias, medidos pelo auditor do analista.',
   RANKING_UNMEASURED:
     'O servidor ainda não mede o acerto por especialista: sem número, sem posição.',
   RANKING_MODELS: 'Nina, Lucas e Clara: os agentes de modelo ainda não existem.',

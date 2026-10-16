@@ -4,6 +4,7 @@ import {
   formatIntervalLimitPercent,
   formatRatePercent,
 } from '../../candle-chart/projection-text.js';
+import type { AnalystSpecialist } from '../../analyst/analyst.validation.js';
 import type { ProjectionSummary } from '../../candle-chart/projections.validation.js';
 
 export type RankingRow = {
@@ -77,4 +78,32 @@ export function rankRows(rows: readonly RankingRow[]): {
 // A coroa só vai para quem está acima da moeda ao ar, mesmo no pior caso.
 export function hasCrown(row: RankingRow): boolean {
   return row.verdict === 'above';
+}
+
+const AGENT_BY_KEY: Readonly<Record<string, string>> = {
+  trend: 'Tiago',
+  reversion: 'Renata',
+  volume: 'Vitor',
+  sentiment: 'Sofia',
+};
+
+// O especialista como o auditor do analista o mediu (últimos 30 dias): N de M, taxa, intervalo de Wilson, veredito e peso do servidor.
+export function buildSpecialistRow(specialist: AnalystSpecialist): RankingRow | undefined {
+  const name = AGENT_BY_KEY[specialist.key];
+  if (name === undefined) return undefined;
+  const isMeasured =
+    specialist.verdict !== 'too_few' && specialist.lower !== null && specialist.upper !== null;
+  return {
+    key: specialist.key,
+    name,
+    hitsText: `${groupedCount(specialist.hits)} de ${groupedCount(specialist.counted)}`,
+    rateText: isMeasured ? formatRatePercent(specialist.hitRate) : NO_VALUE,
+    intervalText:
+      isMeasured && specialist.lower !== null && specialist.upper !== null
+        ? `${formatIntervalLimitPercent(specialist.lower, 'lower')} a ${formatIntervalLimitPercent(specialist.upper, 'upper')}`
+        : NO_VALUE,
+    verdict: specialist.verdict,
+    weightText: specialist.weightText,
+    lowerBound: isMeasured && specialist.lower !== null ? parseScaled(specialist.lower) : undefined,
+  };
 }

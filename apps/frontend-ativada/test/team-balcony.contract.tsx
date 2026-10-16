@@ -8,6 +8,7 @@ import { TeamBalcony } from '../src/runs/team-room/balcony/TeamBalcony.component
 import { findLoadedTeam } from './support/loaded-team.js';
 import { LIVE_RUN_ID } from './support/live-tracking-harness.js';
 import { renderApp } from './support/render-app.js';
+import { analystRoutes, createAnalystHarness } from './support/analyst-fixtures.js';
 import { createRoomHarness, roomRoutes } from './support/team-room-fixtures.js';
 
 afterEach(() => {
@@ -101,6 +102,24 @@ describe('a varanda: a equipe em pé acima do gráfico (spec 011, escritório)',
     fireEvent.click(within(team).getByRole('button', { name: 'Pausar animação' }));
     expect(within(team).getByRole('button', { name: 'Continuar animação' })).toBeDefined();
     expect(localStorage.getItem('ativada.team-room')).toContain('"isAnimationOn":false');
+  });
+
+  test('with an analyst the ranking measures each specialist (Wilson, N of M) and names the 30-day window', async () => {
+    renderApp({
+      path: '/',
+      isAuthenticated: true,
+      routes: [...roomRoutes(createRoomHarness()), ...analystRoutes(createAnalystHarness())],
+      probe: (
+        <LiveMarketProvider>
+          <TeamBalcony runId={LIVE_RUN_ID} />
+        </LiveMarketProvider>
+      ),
+    });
+    const team = await findLoadedTeam();
+    fireEvent.click(within(team).getByRole('tab', { name: 'Ranking' }));
+    await waitFor(() => expect(team.textContent).toContain('908 de 1.881'));
+    expect(team.textContent).toContain('Janela: os últimos 30 dias');
+    expect(team.textContent).not.toContain('sem número, sem posição');
   });
 
   test('the board opens on the protections tab and says why when there is no open position', async () => {
