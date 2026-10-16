@@ -22,6 +22,7 @@ export type NoticeView = {
   readonly fee: string | null;
   readonly resultRate: string | null;
   readonly targetPrice: string | null;
+  readonly entryPrice: string | null;
   readonly stopPrice: string | null;
   readonly reasonCode: string;
   readonly title: string;
@@ -98,6 +99,7 @@ export function toNoticeView(row: NoticeSourceRow): NoticeView {
     fee: orNull(row.fee),
     resultRate: orNull(content.resultRate),
     targetPrice: orNull(row.targetPrice),
+    entryPrice: orNull(row.entryPrice),
     stopPrice: orNull(row.stopPrice),
     reasonCode: content.code,
     title: content.text.title,

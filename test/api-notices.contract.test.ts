@@ -79,6 +79,7 @@ function row(overrides: Partial<NoticeSourceRow>): NoticeSourceRow {
     quantity: undefined,
     netProfit: undefined,
     targetPrice: undefined,
+    entryPrice: undefined,
     stopPrice: undefined,
     initialBalance: '10000',
     ...overrides,
@@ -98,6 +99,7 @@ const FILLED = row({
   fee: '0.01250000',
   quantity: '113.50000000',
   targetPrice: '12.59000000',
+  entryPrice: '12.45800000',
   stopPrice: '12.37900000',
 });
 

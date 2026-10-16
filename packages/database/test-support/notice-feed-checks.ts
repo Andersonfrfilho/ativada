@@ -117,6 +117,7 @@ export async function checkNoticeFeed(context: LifecycleCheckContext): Promise<v
       entry.price === '30000.00000000' &&
       entry.targetPrice === '31000.00000000' &&
       entry.stopPrice === '29000.00000000' &&
+      entry.entryPrice === '30000.00000000' &&
       entry.fee === '0.45000000',
     'avisos: a ordem executada não trouxe preço, taxa, alvo e proteção da posição',
   );

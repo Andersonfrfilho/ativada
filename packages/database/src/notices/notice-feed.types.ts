@@ -35,6 +35,7 @@ export type NoticeSourceRow = {
   readonly quantity: string | undefined;
   readonly netProfit: string | undefined;
   readonly targetPrice: string | undefined;
+  readonly entryPrice: string | undefined;
   readonly stopPrice: string | undefined;
   readonly initialBalance: string | undefined;
 };

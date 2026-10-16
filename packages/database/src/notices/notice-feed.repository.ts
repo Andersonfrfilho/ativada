@@ -65,6 +65,7 @@ function toNoticeRow(row: RawRow): NoticeSourceRow {
     quantity: readText(row, 'quantity'),
     netProfit: readText(row, 'net_profit'),
     targetPrice: readText(row, 'target_price'),
+    entryPrice: readText(row, 'entry_price'),
     stopPrice: readText(row, 'stop_price'),
     initialBalance: readText(row, 'initial_balance'),
   };

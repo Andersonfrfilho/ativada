@@ -27,6 +27,7 @@ type NoticeColumn =
   | 'quantity'
   | 'net_profit'
   | 'target_price'
+  | 'entry_price'
   | 'stop_price'
   | 'initial_balance';
 
@@ -49,6 +50,7 @@ export const NOTICE_COLUMNS: readonly NoticeColumn[] = [
   'quantity',
   'net_profit',
   'target_price',
+  'entry_price',
   'stop_price',
   'initial_balance',
 ];
@@ -109,6 +111,7 @@ export function entryOrderNotices(owner: UserId): SQL {
     fee: sql`f.fee::text`,
     quantity: sql`f.quantity::text`,
     target_price: sql`p.target_price::text`,
+    entry_price: sql`p.entry_price::text`,
     stop_price: sql`p.stop_price::text`,
   };
   return sql`SELECT ${selectList(fields)} FROM orders o
@@ -133,6 +136,7 @@ export function exitPositionNotices(owner: UserId): SQL {
     quantity: sql`p.quantity::text`,
     net_profit: sql`p.net_profit::text`,
     target_price: sql`p.target_price::text`,
+    entry_price: sql`p.entry_price::text`,
     stop_price: sql`p.stop_price::text`,
   };
   return sql`SELECT ${selectList(fields)} FROM positions p

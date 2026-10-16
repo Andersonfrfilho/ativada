@@ -49,6 +49,7 @@ export const NOTICE_VIEW_SCHEMA = z.strictObject({
   fee: decimalTextSchema.nullable(),
   resultRate: decimalTextSchema.nullable(),
   targetPrice: decimalTextSchema.nullable(),
+  entryPrice: decimalTextSchema.nullable(),
   stopPrice: decimalTextSchema.nullable(),
   reasonCode: z.string(),
   title: z.string(),
