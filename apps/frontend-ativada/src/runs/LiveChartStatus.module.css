@@ -1,6 +1,8 @@
 .status {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 8px;
   min-width: 0;
 }
 
