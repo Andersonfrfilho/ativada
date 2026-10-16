@@ -36,6 +36,13 @@
   min-width: 0;
 }
 
+.side {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+
 .canvas {
   width: 100%;
   min-width: 0;

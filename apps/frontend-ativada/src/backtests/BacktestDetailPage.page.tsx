@@ -12,7 +12,7 @@ import {
   LiveTrackingSection,
 } from '../runs/live-tracking/LiveTrackingSection.component.js';
 import { RunProgressCard } from '../runs/RunProgressCard.component.js';
-import { TradeChartCard } from '../runs/TradeChartCard.component.js';
+import { LiveChartArea } from '../runs/team-room/LiveChartArea.component.js';
 import { FAILURE_TEXT, RUN_KIND, RUN_STATUS } from '../runs/run.constant.js';
 import runStyles from '../runs/Runs.module.css';
 import { isActiveRun, type RunDetail } from '../runs/run.validation.js';
@@ -38,7 +38,7 @@ function LivePaperBody({ run }: { readonly run: RunDetail }): ReactElement {
       ) : null}
       <LiveTrackingSection run={run} />
       {run.status === RUN_STATUS.COMPLETED ? <CompletedBacktest run={run} /> : null}
-      {hasChart ? <TradeChartCard runId={run.id} hasSummary={false} /> : null}
+      <LiveChartArea runId={run.id} hasChart={hasChart} />
       <LiveDecisionsSection run={run} />
       {isActiveRun(run) ? <RunProgressCard run={run} /> : null}
     </>

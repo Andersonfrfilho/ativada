@@ -10,6 +10,7 @@ import { ChartCredit } from './ChartCredit.component.js';
 import { ChartToolbar } from './ChartToolbar.component.js';
 import { ClusterButtons } from './ClusterButtons.component.js';
 import { LayerBar } from './LayerBar.component.js';
+import { TeamAside } from '../team-room/TeamAside.context.js';
 import { LayerNotices } from './LayerNotices.component.js';
 import { LiveCandleNotice } from './LiveCandleNotice.component.js';
 import { NextCandlePanel } from './NextCandlePanel.component.js';
@@ -93,7 +94,10 @@ function CanvasView(props: CanvasViewProps): ReactElement {
       <div className={styles.chartLayout}>
         <SurfaceBox {...props} ids={ids} />
         {view.isLive && model.isLayerOn(CHART_LAYER.FORECAST) ? (
-          <NextCandlePanel chart={chart} layerData={model.layerData} />
+          <div className={styles.side}>
+            <NextCandlePanel chart={chart} layerData={model.layerData} />
+            <TeamAside />
+          </div>
         ) : null}
       </div>
       <LayerNotices
