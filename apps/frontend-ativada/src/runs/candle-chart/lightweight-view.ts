@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ChartSurface } from './chart-surface.types.js';
 import { toTime, type Context } from './lightweight-context.js';
+import { computeLastBarsWidth } from './visible-bars.js';
 import type { MouseEventParams, Time, TickMarkType } from './lightweight-surface.js';
 
 // O tempo desta biblioteca é sempre o inteiro em segundos que o adaptador deu; outro formato não existe aqui.
@@ -70,6 +71,22 @@ function placeCrosshair(ctx: Context, index: number | null): void {
   ctx.crosshairListeners.forEach((listener) => listener(null));
 }
 
+type ShowLastParams = {
+  readonly ctx: Context;
+  readonly bars: number;
+  readonly showRange: (center: number, width: number) => void;
+};
+
+function showLastBars({ ctx, bars, showRange }: ShowLastParams): void {
+  const count = ctx.state.candles.length;
+  const width = computeLastBarsWidth({
+    candleCount: count,
+    bars,
+    rightMarginBars: RIGHT_MARGIN_BARS,
+  });
+  showRange(count - 1 - width / 2 + RIGHT_MARGIN_BARS, width);
+}
+
 export function buildView(ctx: Context): ViewControls {
   const { chart, kit } = ctx;
   const scale = chart.timeScale();
@@ -86,8 +103,7 @@ export function buildView(ctx: Context): ViewControls {
       showRange((range.from + range.to) / 2, (range.to - range.from) * ZOOM_BASE ** step);
     },
     fit: (): void => scale.fitContent(),
-    showLast: (bars): void =>
-      showRange(ctx.state.candles.length - 1 - bars / 2 + RIGHT_MARGIN_BARS, bars),
+    showLast: (bars): void => showLastBars({ ctx, bars, showRange }),
     scrollToEnd: (): void => scale.scrollToRealTime(),
     centerOn: (time): void => {
       const range = scale.getVisibleLogicalRange();

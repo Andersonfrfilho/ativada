@@ -46,7 +46,7 @@
 .canvas {
   width: 100%;
   min-width: 0;
-  height: 460px;
+  height: 560px;
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
   overflow: hidden;
@@ -175,7 +175,7 @@
 
 @media (min-width: 1024px) {
   .chartLayout {
-    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-columns: minmax(0, 1fr) clamp(250px, 26%, 310px);
     align-items: start;
   }
 }
