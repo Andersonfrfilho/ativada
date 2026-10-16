@@ -7,6 +7,7 @@ import type { CanvasBase } from './useCanvasBase.hook.js';
 import { useDisplayExtras } from './useDisplayExtras.hook.js';
 
 export type DisplayPart = {
+  readonly bracketText: string | undefined;
   readonly tradeText: string | undefined;
   readonly asideOpenTime: number | undefined;
   readonly opinionText: string | undefined;
@@ -42,6 +43,7 @@ export function useDisplayPart(
     timeZone: base.timeZone,
   });
   return {
+    bracketText: extras.bracketText,
     tradeText: joinTexts(point.tradeText, extras.bracketText),
     asideOpenTime: extras.decisionOpenTime ?? point.pointedOpenTime,
     opinionText: extras.opinionText,

@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { readFileSync } from 'node:fs';
+
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
@@ -53,7 +55,7 @@ function layers15(call: RecordedCall): Response {
         values: candleTimes.map((time) => String(600 + (Math.round(time / RUN) % 7))),
       },
     ],
-    thresholds: [{ from: FIXTURE_FROM, to: from + 3 * RUN, buy: '2', sell: '-2' }],
+    thresholds: [{ from: FIXTURE_FROM, to, buy: '2', sell: '-2' }],
   });
 }
 
@@ -272,10 +274,12 @@ describe('compras, vendas e a saída decidida dentro da vela de 15 min', () => {
     const from = formatTimeInZone(fillTime(8), 'America/Sao_Paulo');
     const to = formatTimeInZone(fillTime(8) + RUN, 'America/Sao_Paulo');
     expect(
-      await screen.findByText(
-        `Saiu pela proteção entre ${from} e ${to} (a simulação decide em velas de 15 min)`,
-      ),
-    ).toBeDefined();
+      (
+        await screen.findAllByText(
+          `Saiu pela proteção entre ${from} e ${to} (a simulação decide em velas de 15 min)`,
+        )
+      ).length,
+    ).toBeGreaterThan(0);
   });
 });
 
@@ -363,5 +367,64 @@ describe('"Próxima vela de perto" com as velas de 3 min', () => {
     );
     await waitFor(() => expect(section.textContent).toContain('em formação'));
     expect(section.querySelectorAll('li')[2]?.textContent).toContain('651,25');
+  });
+});
+
+function chartTip(): HTMLElement {
+  const tip = [...document.querySelectorAll<HTMLElement>('[role="tooltip"]')].find((element) =>
+    element.classList.contains('tooltip'),
+  );
+  if (tip === undefined) throw new Error('balão do gráfico não encontrado');
+  return tip;
+}
+
+describe('balão de valores ao passar o mouse', () => {
+  test('em 3 min mostra hora, vela de 15 min, A/M/m/F, volume, linhas e placar da opinião que valia; Esc fecha', async () => {
+    const harness = show();
+    const surface = await ready(harness);
+    await waitFor(() =>
+      expect(list(surface.callsOf('setScore').at(-1)?.[0]).length).toBeGreaterThan(0),
+    );
+    act(() => surface.emitCrosshair(500));
+    await waitFor(() => expect(chartTip().hidden).toBe(false));
+    const tip = chartTip();
+    expect(tip.textContent).toContain('Dentro da vela de 15 min das');
+    for (const label of ['Abertura', 'Máxima', 'Mínima', 'Fechamento', 'Volume']) {
+      expect(tip.textContent).toContain(label);
+    }
+    expect(tip.textContent).toContain('Média rápida');
+    expect(tip.textContent).toContain('Placar');
+    expect(tip.textContent).toContain('compra em +2, venda em −2');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(chartTip().hidden).toBe(true));
+  });
+
+  test('numa vela com operação diz a compra com preço, quantidade e taxa; sem decisão, só os valores', async () => {
+    const harness = show({
+      kind: 'backtest',
+      search: `?${new URLSearchParams({
+        de: new Date(fillTime(3) - 6 * FIXTURE_HOUR).toISOString(),
+        ate: new Date(fillTime(3) + 6 * FIXTURE_HOUR).toISOString(),
+      }).toString()}`,
+    });
+    const surface = await ready(harness);
+    const candles = list(surface.callsOf('setCandles').at(-1)?.[0]);
+    const index = candles.findIndex((candle) => candle['time'] === fillTime(3) / 1_000);
+    act(() => surface.emitCrosshair(index));
+    await waitFor(() => expect(chartTip().hidden).toBe(false));
+    const tip = chartTip();
+    expect(tip.textContent).toContain('Compra a 609,00 · 0,5 BNB · taxa 0,3045 USDT');
+    act(() => surface.emitCrosshair(index + 5));
+    await waitFor(() => expect(chartTip().textContent).not.toContain('Compra a'));
+  });
+
+  test('os valores do balão não quebram: ficam numa linha só, em colunas rótulo e valor', () => {
+    const css = readFileSync(
+      new URL('../src/runs/candle-chart/CandleChart.module.css', import.meta.url),
+      'utf8',
+    );
+    const rule = css.slice(css.indexOf('.tipValues dd'));
+    expect(rule.slice(0, rule.indexOf('}'))).toMatch(/white-space:\s*nowrap/);
+    expect(css).toMatch(/\.tipValues\s*\{[^}]*grid-template-columns/);
   });
 });

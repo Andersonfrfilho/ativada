@@ -54,6 +54,7 @@ export type CandleCanvasModel = {
   readonly asideOpenTime: number | undefined;
   // Só com vela de exibição: a opinião que valia na vela apontada e a vela de 15 min em formação composta (spec 017).
   readonly opinionText: string | undefined;
+  readonly bracketText: string | undefined;
   readonly fifteenLegend: OhlcText | undefined;
   // "Compra a X · taxa Y" da vela apontada, quando ela tem operação.
   readonly tradeText: string | undefined;

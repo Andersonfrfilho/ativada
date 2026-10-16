@@ -7,6 +7,8 @@ import styles from './CandleChart.module.css';
 import { CHART_LAYER } from './candle-chart.constant.js';
 import { CHART_KEYBOARD_HELP } from './chart-key-plan.js';
 import { ChartCredit } from './ChartCredit.component.js';
+import { ChartTooltip } from './ChartTooltip.component.js';
+import { useChartTooltip } from './useChartTooltip.hook.js';
 import { ChartToolbar } from './ChartToolbar.component.js';
 import { ClusterButtons } from './ClusterButtons.component.js';
 import { LayerBar } from './LayerBar.component.js';
@@ -75,20 +77,26 @@ type DescriptionIds = { readonly help: string; readonly caption: string };
 // teclado e a descrição textual são lidas pelo leitor de tela ao chegar nele.
 function SurfaceBox({
   chart,
+  source,
   model,
   ids,
 }: CanvasViewProps & { readonly ids: DescriptionIds }): ReactElement {
+  const tooltip = useChartTooltip({ chart, source, model });
   return (
-    <div
-      ref={model.containerRef}
-      className={styles.canvas}
-      role="img"
-      aria-roledescription="gráfico de velas"
-      aria-label={`Gráfico de velas de ${formatSymbol(chart.symbol)}`}
-      aria-describedby={`${ids.help} ${ids.caption}`}
-      tabIndex={0}
-      onKeyDown={model.keyboard.onKeyDown}
-    />
+    <div className={styles.canvasFrame}>
+      <div
+        ref={model.containerRef}
+        className={styles.canvas}
+        role="img"
+        aria-roledescription="gráfico de velas"
+        aria-label={`Gráfico de velas de ${formatSymbol(chart.symbol)}`}
+        aria-describedby={`${ids.help} ${ids.caption}`}
+        tabIndex={0}
+        onKeyDown={model.keyboard.onKeyDown}
+        {...tooltip.handlers}
+      />
+      <ChartTooltip id={tooltip.id} model={tooltip.model} tipRef={tooltip.tipRef} />
+    </div>
   );
 }
 

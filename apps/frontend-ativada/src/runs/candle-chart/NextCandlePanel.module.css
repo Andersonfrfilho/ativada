@@ -266,7 +266,13 @@
   border-style: dashed;
 }
 
+.slot .number {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 .slotTime {
+  white-space: nowrap;
   font-family: var(--font-data);
   color: var(--ink);
 }
