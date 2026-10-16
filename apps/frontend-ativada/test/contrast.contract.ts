@@ -91,6 +91,10 @@ const GRAPHIC_PAIRS: readonly (readonly [string, string])[] = [
   ['warn', 'bg'],
   ['bench', 'surface-2'],
   ['warn', 'surface-2'],
+  ['accent', 'surface-2'],
+  ['accent', 'accent-soft'],
+  ['ink-3', 'surface'],
+  ['ink-3', 'surface-2'],
 ];
 
 for (const [theme, read] of [

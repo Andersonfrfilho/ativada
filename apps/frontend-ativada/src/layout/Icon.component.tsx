@@ -27,6 +27,8 @@ export const ICON_PATHS = {
   close: 'M6 6l12 12M18 6L6 18',
   stop: 'M7 6h10a1 1 0 011 1v10a1 1 0 01-1 1H7a1 1 0 01-1-1V7a1 1 0 011-1z',
   chevronRight: 'M9 6l6 6-6 6',
+  team: 'M9 4.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM2.5 20a6.5 6.5 0 0113 0M17 6.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zM16 14.2a5 5 0 015.5 5.8',
+  replay: 'M3 12a9 9 0 103-6.7M3 4v5h5',
 } as const;
 
 export type IconName = keyof typeof ICON_PATHS;

@@ -39,6 +39,30 @@
   --cone-up: color-mix(in srgb, var(--buy) 85%, var(--surface));
   --cone-down: color-mix(in srgb, var(--sell) 85%, var(--surface));
   --cone-neutral: color-mix(in srgb, var(--bench) 85%, var(--surface));
+  --motion-fast: 160ms;
+  --motion-medium: 240ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --bubble-shadow:
+    0 1px 2px color-mix(in srgb, var(--ink) 8%, transparent),
+    0 6px 18px color-mix(in srgb, var(--ink) 10%, transparent);
+  --shirt-trend: #2a8aa0;
+  --shirt-reversion: #7466d0;
+  --shirt-volume: #b07a1c;
+  --shirt-sentiment: #c0507c;
+  --shirt-other: #5f7f5a;
+  --shirt-analyst: var(--accent);
+  --shirt-auditor: #6b7690;
+  --skin-1: #e8b48f;
+  --skin-2: #8d5a3b;
+  --skin-3: #f1c7a5;
+  --skin-4: #c68a5e;
+  --hair-1: #2b2118;
+  --hair-2: #111111;
+  --hair-3: #8a5a2b;
+  --hair-4: #3b2a20;
+  --hair-5: #b9bcc4;
+  --pants: #39446a;
+  --shoe: #1a1f2e;
   color-scheme: light;
 }
 
