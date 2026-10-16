@@ -38,7 +38,7 @@ const OUTPUT_LABEL: Readonly<Record<string, string>> = {
   signal: 'linha de sinal',
   value: 'valor',
   obv: 'OBV',
-  ema: 'média do OBV',
+  ema: 'média OBV',
 };
 
 // A mesma saída muda de nome conforme a regra: o Donchian guarda a mínima e a máxima das últimas velas.

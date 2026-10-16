@@ -403,3 +403,65 @@ aparecem "—" com o peso da estratégia e a frase "sem número, sem posição",
 - **(C2)** ranking por especialista com `/analyst` (N de M, Wilson, veredito, peso do servidor, janela de 30 dias); sem analista, "—" e a frase. Sem seletor de janela (o servidor tem uma) e
   sem melhor/pior dica (sem dado).
 - **(H)** a régua da ficha do sinal (spec 014) já traz as zonas de ganho e perda; a faixa de compra agora cobre todos os gatilhos de preço. **(J)** chip "◆ 3 em breve" no celular, com a lista na ficha.
+
+## Escritório no app (2026-10-16)
+
+Escopo: G2 (escritório completo recolhível) e F2 (faixa da vela em formação) do adendo `escritorio.md`, só no painel; sem migration, sem
+mudar API nem motor.
+
+### F2 — faixa "opiniões valem até HH:MM"
+
+`SurfaceAnchorKind` ganhou `forming_left` e `forming_right` (`lightweight-anchor.ts`: centro da vela em formação ± meio `barSpacing`);
+`FormingBand` desenha um `<rect>` SVG (atributos, sem estilo inline) sobre o canvas e o rótulo com `run.nextDecisionAt` no fuso do usuário.
+Contrato `forming-band.contract.tsx`.
+
+### G2 — "Ver o escritório" (`src/runs/team-room/office/`)
+
+- **Recolhido por padrão** (`isCollapsed: true`; quem já escolheu mantém). O cartão "Sala da equipe" agora traz o palco novo no lugar do
+  antigo (`TeamRoomStage` removido), o navegador de velas, a lista "Falas desta vela em texto" e a lista equivalente de crachás (botões de
+  44 px com a ficha). O telão do modo "Sala com o gráfico" segue sendo o cartão "Preço e operações" (o monitor existente, não duplicado).
+- **Planta** (grade de 5 colunas, container query ≥ 900 px; abaixo, uma linha por personagem): parede com relógio (hora do próximo
+  fechamento do servidor), telão (fechamentos das decisões do servidor em linha e entrada/alvo/proteção da operação aberta), quadro de
+  avisos (palavra e pontuação da vela, cadeados das travas do analista, frase da meta); 4 mesas com monitor; mesa da Alice (fichas dos
+  votos); mesa do Otávio com a prancheta de Wilson; café; sala de vidro dos modelos (◆ MODELO · em breve).
+- **Monitores com dados reais**: `RuleLine.values` guarda a leitura gravada da decisão (nome por nome); `buildMonitor` desenha EMA
+  (rápida/lenta), RSI em barra 0–100 com as faixas de 30 e 70 e as bandas, OBV e média, Medo e Ganância em semicírculo. Regra sem leitura
+  gravada mostra "sem leitura gravada" e nenhum número; família sem regra na estratégia diz isso.
+- **Placa da Renata** reusa `buildPlaques` (mesmas consultas das plaquinhas); **luz do teto** por estado (calma, fechando, compra, pausa
+  âmbar + placa "Trava ligada · sem compra nova").
+- **Coreografia** (`office-scene.ts`, `scene-runner.ts`, `useOfficeScene.hook.ts`): cenas `new_candle`, `buy_signal`, `sell_signal`, `locked`
+  (trava e pausa vencem o sinal). Fases acumuladas em `data-phases` (watch, rise, walk, decide, audit, sign, speak, lock) e movimento só em CSS
+  por tokens (`--motion-fast|medium|walk`), nada em laço além dos três pontinhos; o ocioso dura 6,3 s e para. `prefers-reduced-motion` e
+  animação desligada: estado final no primeiro quadro. Pausa/Continuar (botão) e pausa automática fora da tela (IntersectionObserver) e com a
+  aba oculta. Falas: só frases do servidor (as mesmas do palco antigo).
+- **Tokens novos** (`global.css`): `--office-floor`, `--office-floor-line`, `--desk-top`, `--desk-front`, `--table-top`, `--bezel`, `--screen*`,
+  `--light`, `--light-strip`; pares de contraste e preenchimentos em `contrast.contract.ts`.
+- **Testes**: `office-scenes.contract.tsx` (cena por estado, planos ≤ 2,5 s, relógio falso com pausa/retomada, reduced-motion, animação
+  desligada, pausa fora da tela e aba oculta, folha de estilo só com tokens e um único laço) e `office-stage.contract.tsx` (monitores com a
+  leitura do servidor, planta, lista de crachás, recolhido por padrão, relógio/telão/quadro, cena de compra de ponta a ponta); ajustes em
+  `team-room`, `team-room-analyst`, `touch-targets`, `contrast`. Todos na lista explícita do script `test`.
+
+### Medidas no app dev real (Edge, usuário de teste, LINK/USDT 1 h)
+
+| Medida | Resultado |
+|---|---|
+| Sequência "Repetir" (vela nova), do primeiro ao último quadro com `data-motion=on` | 2.430 ms (plano de 2.460 ms) |
+| Animações simultâneas (`document.getAnimations()`), pico | 31; elementos marcados `data-animated`: 16 (limite 60) |
+| Depois da sequência | 6 animações ociosas por ~4,8 s e param |
+| Movimento reduzido | 0 animações, sequência não roda |
+| Rolagem horizontal 1280 e 375 | nenhuma (`scrollWidth` = largura da janela) |
+| Palco a 1130 px de largura | ~990 px de altura; a 375 px, lista de 1.405 px |
+
+Capturas finais: `capturas/escritorio-app-1280-claro.png` e `capturas/escritorio-app-375-escuro.png`.
+
+### Verificação
+
+`tsc` do painel, `eslint` do painel, `prettier --check` e `bun run --cwd apps/frontend-ativada test` (1.447) verdes no espelho Linux.
+
+### Pendências
+
+- A cena de compra/trava com dados reais só aparece quando o servidor gravar a vela correspondente (provada por contrato; a simulação de teste
+  estava parada, sem `nextDecisionAt`, então o relógio mostra "--:--").
+- A pausa congela as fases e as animações em curso (`animation-play-state`); uma transição de CSS já iniciada termina sozinha.
+- O telão da parede mostra o gráfico da simulação em linha (fechamentos do servidor); o gráfico completo é o cartão "Preço e operações".
+- CSS do palco antigo em `TeamRoom.module.css` (`.stage`, `.back`, `.frontRow`) ficou sem uso; os balões ainda usam o restante do módulo.

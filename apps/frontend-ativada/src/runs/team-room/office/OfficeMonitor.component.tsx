@@ -11,14 +11,14 @@ const GAUGE_LEFT = 10;
 
 function readoutRows(readouts: readonly MonitorReadout[], top: number): ReactElement[] {
   return readouts.slice(0, 4).map((readout, index) => (
-    <text key={readout.key} className={styles.screenText} x="8" y={top + index * 12}>
+    <text key={readout.key} className={styles.screenText} x="8" y={top + index * 14}>
       {readout.label} {readout.text}
     </text>
   ));
 }
 
 function Track({ className, x, width }: TrackProps): ReactElement {
-  return <rect className={className} x={x} y="24" width={width} height="6" rx="3" />;
+  return <rect className={className} x={x} y="26" width={width} height="6" rx="3" />;
 }
 
 type TrackProps = {
@@ -43,13 +43,13 @@ function Oscillator({ model }: { readonly model: MonitorModel }): ReactElement {
       />
       {gauge === undefined ? null : (
         <>
-          <rect className={styles.gaugeMark} x={mark - 1.5} y="20" width="3" height="14" rx="1.5" />
-          <text className={styles.screenText} x="8" y="46">
+          <rect className={styles.gaugeMark} x={mark - 1.5} y="22" width="3" height="14" rx="1.5" />
+          <text className={styles.screenText} x="8" y="52">
             {gauge.label} {gauge.text}
           </text>
         </>
       )}
-      {readoutRows(others, 58)}
+      {readoutRows(others, 74)}
     </>
   );
 }
@@ -60,16 +60,16 @@ function Gauge({ model }: { readonly model: MonitorModel }): ReactElement {
   const angle = -90 + (reading?.ratio ?? 0.5) * 180;
   return (
     <>
-      <path className={styles.gaugeArc} d="M40 60a40 40 0 0 1 80 0" />
+      <path className={styles.gaugeArc} d="M40 72a40 40 0 0 1 80 0" />
       <line
         className={styles.gaugeNeedle}
         x1="80"
-        y1="60"
+        y1="72"
         x2="80"
-        y2="30"
-        transform={`rotate(${angle} 80 60)`}
+        y2="40"
+        transform={`rotate(${angle} 80 72)`}
       />
-      <text className={styles.screenValue} x="80" y="78" textAnchor="middle">
+      <text className={styles.screenValue} x="80" y="92" textAnchor="middle">
         {reading?.text ?? ''}
       </text>
     </>
@@ -77,7 +77,7 @@ function Gauge({ model }: { readonly model: MonitorModel }): ReactElement {
 }
 
 function Averages({ model }: { readonly model: MonitorModel }): ReactElement {
-  return <>{readoutRows(model.readouts, 30)}</>;
+  return <>{readoutRows(model.readouts, 36)}</>;
 }
 
 function Body({ model }: { readonly model: MonitorModel }): ReactElement {
@@ -103,12 +103,12 @@ export function OfficeMonitor({ model }: { readonly model: MonitorModel }): Reac
   return (
     <svg
       className={styles.monitor}
-      viewBox="0 0 160 84"
+      viewBox="0 0 160 96"
       aria-hidden="true"
       focusable="false"
       data-animated=""
     >
-      <rect className={styles.bezel} x="1" y="1" width="158" height="82" rx="6" />
+      <rect className={styles.bezel} x="1" y="1" width="158" height="94" rx="6" />
       <text className={styles.screenTitle} x="8" y="14">
         {model.title}
       </text>

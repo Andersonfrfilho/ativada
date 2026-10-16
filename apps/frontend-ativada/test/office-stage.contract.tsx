@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 
 import { useLiveStream } from '../src/live/useLiveStream.hook.js';
 import { OFFICE_LIMITS } from '../src/runs/team-room/office/office.constant.js';
@@ -15,7 +15,7 @@ import { TEAM_ROOM_STORAGE_KEY } from '../src/runs/team-room/team-room.constant.
 import type { SpecialistView } from '../src/runs/team-room/team-room.types.js';
 import { useTeamRoomPreference } from '../src/runs/team-room/useTeamRoomPreference.hook.js';
 import { LIVE_RUN_ID, type LiveHarness } from './support/live-tracking-harness.js';
-import { renderApp } from './support/render-app.js';
+import { renderApp, type RenderedApp } from './support/render-app.js';
 import {
   buildRoomDecision,
   buildRoomLiveStatus,
@@ -46,9 +46,14 @@ function Room(): ReactElement {
   );
 }
 
-function openOffice(harness: LiveHarness): void {
+function openOffice(harness: LiveHarness): RenderedApp {
   localStorage.setItem(TEAM_ROOM_STORAGE_KEY, JSON.stringify({ isCollapsed: false }));
-  renderApp({ path: '/', isAuthenticated: true, routes: roomRoutes(harness), probe: <Room /> });
+  return renderApp({
+    path: '/',
+    isAuthenticated: true,
+    routes: roomRoutes(harness),
+    probe: <Room />,
+  });
 }
 
 async function stageOf(): Promise<HTMLElement> {
@@ -84,7 +89,7 @@ function harnessWith(votes: readonly VoteSpec[]): LiveHarness {
 }
 
 function monitorTexts(stage: HTMLElement): string[] {
-  return [...stage.querySelectorAll('svg[viewBox="0 0 160 84"] text')].map(
+  return [...stage.querySelectorAll('svg[viewBox="0 0 160 96"] text')].map(
     (node) => node.textContent ?? '',
   );
 }
@@ -102,7 +107,7 @@ describe('escritório: os monitores mostram só o que o servidor gravou na vela'
       'banda de baixo 12,862',
       'banda de cima 12,95',
       'OBV 100',
-      'média do OBV 90',
+      'média OBV 90',
       '41',
     ]) {
       expect(texts).toContain(expected);
@@ -250,5 +255,27 @@ describe('escritório: parede (relógio, telão, quadro)', () => {
     expect(
       buildBoard({ signalWord: 'x', scoreText: 'y', locks: undefined, goal: undefined }).locks,
     ).toBeUndefined();
+  });
+});
+
+describe('escritório: a cena de compra na vela nova', () => {
+  test('a candle that bought runs the walk and the sign, ends in under 4 s and lights the room green', async () => {
+    const harness = createRoomHarness();
+    const app = openOffice(harness);
+    const stage = await stageOf();
+    expect(stage.dataset.light).not.toBe('buy');
+    harness.liveStatus = buildRoomLiveStatus([
+      buildRoomDecision({ hoursBefore: -1, outcome: 'bought', message: 'Comprou na vela nova.' }),
+      buildRoomDecision(),
+    ]);
+    act(() =>
+      app.stream.emit({ type: 'event', runId: LIVE_RUN_ID, kind: 'fill', eventId: 'e1', at: 1 }),
+    );
+    await waitFor(() => expect(stage.dataset.phases).toContain('sign'), { timeout: 4000 });
+    expect(stage.dataset.phases).toContain('walk');
+    expect(stage.dataset.motion).toBe('on');
+    await waitFor(() => expect(stage.dataset.motion).toBe('off'), { timeout: 4000 });
+    expect(stage.dataset.phases).toBe('');
+    expect(stage.dataset.light).toBe('buy');
   });
 });
