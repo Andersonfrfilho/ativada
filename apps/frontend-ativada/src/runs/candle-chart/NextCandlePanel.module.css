@@ -261,6 +261,7 @@
 }
 
 .slot_pending,
+.slot_arriving,
 .slot_missing {
   border-style: dashed;
 }

@@ -120,6 +120,8 @@ describe('gráfico em velas de 3 min sobre a execução de 15 min', () => {
     const [first] = callsOfTimeframe(harness, '3m');
     const span = Number(first?.query.get('to')) - Number(first?.query.get('from'));
     expect(span / SHOWN).toBe(1_000);
+    // Acompanhando o fim, a ponta vai até o fim da vela de 15 min em curso (as de 3 min fecham antes da de 15).
+    expect(Number(first?.query.get('to'))).toBe(FIXTURE_FROM + 40 * FIXTURE_DAY + RUN);
     expect(callsOfTimeframe(harness, '3m')).toHaveLength(1);
     expect(list(surface.callsOf('setCandles').at(-1)?.[0])).toHaveLength(1_000);
   });
@@ -157,6 +159,24 @@ describe('gráfico em velas de 3 min sobre a execução de 15 min', () => {
     const points = list(list(surface.callsOf('setLines').at(-1)?.[0])[0]?.['points']);
     expect(points).toHaveLength(times.length);
     expect(Number(points[0]?.['time'])).toBe((from + RUN) / 1_000);
+  });
+
+  test('mexer a cruz não refaz as linhas, o placar nem as marcas (o arrasto não pode redesenhar camadas)', async () => {
+    const harness = show();
+    const surface = await ready(harness);
+    await waitFor(() =>
+      expect(list(surface.callsOf('setLines').at(-1)?.[0]).length).toBeGreaterThan(0),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const before = ['setLines', 'setScore', 'setMarkers', 'setWaited', 'setLevels'].map(
+      (method) => surface.calls.filter((call) => call.method === method).length,
+    );
+    for (const index of [10, 20, 30]) act(() => surface.emitCrosshair(index));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const after = ['setLines', 'setScore', 'setMarkers', 'setWaited', 'setLevels'].map(
+      (method) => surface.calls.filter((call) => call.method === method).length,
+    );
+    expect(after).toEqual(before);
   });
 
   test('"esperou" cai na primeira vela de 3 min em que a decisão já existia', async () => {

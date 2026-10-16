@@ -5,7 +5,10 @@ import { slotCount, type DisplayMapping } from './display-mapping.js';
 import type { MarketCandle } from './market-candles.validation.js';
 
 // As vagas de 3 min da vela de 15 min em formação (spec 017, RF07): fechadas, a em formação, as que faltam.
-export type SlotState = 'closed' | 'forming' | 'missing' | 'pending';
+export type SlotState = 'closed' | 'forming' | 'arriving' | 'missing' | 'pending';
+
+// A vela fechou há pouco e o worker ainda a está gravando: "chegando" antes de virar "sem dado".
+const ARRIVAL_MILLISECONDS = 60_000;
 
 export type SlotDirection = 'up' | 'down' | 'flat';
 
@@ -58,10 +61,11 @@ function slotAt(openTime: number, params: SlotsParams): DisplaySlot {
       hasNoTrades: candle.tradeCount === 0,
     };
   }
-  const isOver = openTime + mapping.displayMilliseconds <= now;
+  const closedAt = openTime + mapping.displayMilliseconds;
+  const overState: SlotState = now - closedAt < ARRIVAL_MILLISECONDS ? 'arriving' : 'missing';
   return {
     openTime,
-    state: isOver ? 'missing' : 'pending',
+    state: closedAt <= now ? overState : 'pending',
     close: undefined,
     direction: undefined,
     hasNoTrades: false,

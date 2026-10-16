@@ -24,6 +24,8 @@ export type CandleHistoryParams = {
   // Nada antes disto interessa (o começo do período da execução).
   readonly earliestTime: number;
   readonly timeframeMilliseconds: number;
+  // A ponta nova repete as últimas velas: a vela que o worker ainda não tinha gravado na vez anterior entra na seguinte.
+  readonly tailOverlapMilliseconds?: number;
 };
 
 export type CandleHistory = HistoryState & {
@@ -105,7 +107,7 @@ async function loadSeriesPage(
 // pedido em andamento (ou, depois de um 429, repetiria o pedido sem parar e alimentaria o próprio limite).
 function useSeriesLoader(params: CandleHistoryParams, control: LoaderControl): void {
   const { dispatch, loaded, attempt } = control;
-  const { symbol, timeframe, window, earliestTime } = params;
+  const { symbol, timeframe, window, earliestTime, tailOverlapMilliseconds = 0 } = params;
   const client = useApiClient();
   const queryClient = useQueryClient();
   const seriesKey = seriesKeyOf(params);
@@ -120,7 +122,9 @@ function useSeriesLoader(params: CandleHistoryParams, control: LoaderControl): v
     const isTail = isSameSeries && previous !== undefined && to > previous.to;
     if (isSameSeries && !isTail) return;
     if (!isTail && requestedToken.current === token) return;
-    const page = isTail && previous !== undefined ? { from: previous.to, to } : { from, to };
+    const tailFrom =
+      previous === undefined ? from : Math.max(from, previous.to - tailOverlapMilliseconds);
+    const page = isTail ? { from: tailFrom, to } : { from, to };
     if (page.to <= page.from) return;
     if (!isTail) requestedToken.current = token;
     const request = { queryClient, client, symbol, timeframe, page, earliestTime };
@@ -135,6 +139,7 @@ function useSeriesLoader(params: CandleHistoryParams, control: LoaderControl): v
     from,
     to,
     earliestTime,
+    tailOverlapMilliseconds,
     dispatch,
     loaded,
     attempt,

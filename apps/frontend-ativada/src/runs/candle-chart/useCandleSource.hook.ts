@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useAppConfig } from '../../app/useAppContext.hook.js';
 import { timeframeMilliseconds } from '../live-chart.js';
@@ -8,6 +8,7 @@ import type { ChartView } from '../useChartView.hook.js';
 import { DISPLAY_TIMEFRAMES } from './candle-chart.constant.js';
 import { computeCandleWindow, withLeadingContext } from './candle-window.js';
 import { createDisplayMapping, type DisplayMapping } from './display-mapping.js';
+import { useDisplayTail } from './useDisplayTail.hook.js';
 import { useCandleHistory, type CandleHistory } from './useCandleHistory.hook.js';
 import { useChartPreferences, type ChartPreferenceControls } from './useChartPreferences.hook.js';
 import { TIMEFRAMES } from '../run.constant.js';
@@ -95,6 +96,40 @@ function keyOfRange(range: ChartView['range']): string {
   return range === undefined ? 'end' : `${range.from}-${range.to}`;
 }
 
+type SourceHistoryParams = {
+  readonly chart: TradeChart;
+  readonly view: ChartView;
+  readonly mapping: DisplayMapping | undefined;
+  readonly timeframe: string;
+  readonly focus: number | undefined;
+};
+
+// A janela da primeira página e o histórico para a esquerda da vela mostrada; com vela de exibição, a ponta anda com o relógio.
+function useSourceHistory(params: SourceHistoryParams): CandleHistory {
+  const { chart, view, mapping, timeframe, focus } = params;
+  const duration = timeframeMilliseconds(timeframe) ?? 0;
+  const runRange = useDisplayTail({
+    chart,
+    mapping,
+    isFollowing: view.isLive && view.range === undefined,
+  });
+  const extent = withLeadingContext(runRange, duration);
+  const window = computeCandleWindow({
+    extent,
+    range: view.range,
+    focus,
+    timeframeMilliseconds: duration,
+  });
+  return useCandleHistory({
+    symbol: chart.symbol,
+    timeframe,
+    window,
+    earliestTime: extent.from,
+    timeframeMilliseconds: duration,
+    tailOverlapMilliseconds: mapping === undefined ? 0 : 2 * duration,
+  });
+}
+
 // De onde vêm as velas: a vela escolhida (ou a da execução), a janela da primeira página e o histórico para a esquerda.
 export function useCandleSource(chart: TradeChart, view: ChartView): CandleSource {
   const preferences = useChartPreferences();
@@ -104,20 +139,13 @@ export function useCandleSource(chart: TradeChart, view: ChartView): CandleSourc
   const duration = timeframeMilliseconds(timeframe);
   const rangeKey = keyOfRange(view.range);
   const focus = focusState?.rangeKey === rangeKey ? focusState.time : undefined;
-  const extent = withLeadingContext(chart.runRange, duration ?? 0);
-  const window = computeCandleWindow({
-    extent,
-    range: view.range,
-    focus,
-    timeframeMilliseconds: duration ?? 0,
-  });
-  const history = useCandleHistory({
-    symbol: chart.symbol,
-    timeframe,
-    window,
-    earliestTime: extent.from,
-    timeframeMilliseconds: duration ?? 0,
-  });
+  const runDuration = timeframeMilliseconds(chart.timeframe);
+  // A mesma referência enquanto as velas não mudam: camadas e marcas dependem dela para não serem refeitas a cada quadro.
+  const displayMapping = useMemo(
+    () => createDisplayMapping(runDuration, duration),
+    [runDuration, duration],
+  );
+  const history = useSourceHistory({ chart, view, mapping: displayMapping, timeframe, focus });
   return {
     history,
     preferences,
@@ -125,7 +153,7 @@ export function useCandleSource(chart: TradeChart, view: ChartView): CandleSourc
     timeframeOptions,
     isRunTimeframe: timeframe === chart.timeframe,
     isSupported: duration !== undefined,
-    displayMapping: createDisplayMapping(timeframeMilliseconds(chart.timeframe), duration),
+    displayMapping,
     retentionStart: history.retentionStart,
     durationMilliseconds: duration ?? 0,
     focus,

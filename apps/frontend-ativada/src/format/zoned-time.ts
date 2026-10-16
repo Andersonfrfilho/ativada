@@ -25,14 +25,25 @@ function cachedFormat(
   return created;
 }
 
-// Um nome IANA que o `Intl` não conhece cai no fuso padrão, nunca em erro de tela.
-export function resolveTimeZone(timeZone: string | undefined): string {
-  if (timeZone === undefined) return DEFAULT_TIME_ZONE;
+const resolvedZones = new Map<string, string>();
+
+function resolveKnownZone(timeZone: string): string {
   try {
     return new Intl.DateTimeFormat(LOCALE, { timeZone }).resolvedOptions().timeZone;
   } catch {
     return DEFAULT_TIME_ZONE;
   }
+}
+
+// Um nome IANA que o `Intl` não conhece cai no fuso padrão, nunca em erro de tela. O resultado é guardado: o gráfico formata
+// horas a cada quadro e criar um `Intl.DateTimeFormat` por chamada tirava quadros do arrasto.
+export function resolveTimeZone(timeZone: string | undefined): string {
+  if (timeZone === undefined) return DEFAULT_TIME_ZONE;
+  const known = resolvedZones.get(timeZone);
+  if (known !== undefined) return known;
+  const resolved = resolveKnownZone(timeZone);
+  resolvedZones.set(timeZone, resolved);
+  return resolved;
 }
 
 // `milliseconds` é UTC; a conversão para o fuso (e o horário de verão) é do `Intl`.

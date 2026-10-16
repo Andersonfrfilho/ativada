@@ -26,6 +26,7 @@ const DIRECTION_WORD: Readonly<Record<SlotDirection, string>> = {
 
 function stateWord(slot: DisplaySlot): string {
   if (slot.state === 'forming') return 'em formação';
+  if (slot.state === 'arriving') return 'chegando';
   if (slot.state === 'missing') return 'sem dado';
   if (slot.state === 'pending') return 'falta';
   return slot.hasNoTrades ? 'sem negócio' : 'fechada';

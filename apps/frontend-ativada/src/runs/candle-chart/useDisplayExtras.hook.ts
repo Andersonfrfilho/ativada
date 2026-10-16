@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { parseScaled } from '../../format/decimal.js';
 import { formatTimeInZone } from '../../format/zoned-time.js';
@@ -70,7 +70,7 @@ function fromStream(candle: StreamCandle, durationMilliseconds: number): MarketC
 }
 
 type FormingParams = {
-  readonly source: CandleSource;
+  readonly candles: readonly MarketCandle[];
   readonly mapping: DisplayMapping;
   readonly live: LiveCandleView | undefined;
   readonly live15: LiveCandleView | undefined;
@@ -80,7 +80,7 @@ type FormingParams = {
 function formingRunCandle(
   params: FormingParams,
 ): { candle: MarketCandle; from: number } | undefined {
-  const { source, mapping, live, live15 } = params;
+  const { candles, mapping, live, live15 } = params;
   const forming = live?.status === 'forming' ? live.candle : undefined;
   if (live15?.status === 'forming') {
     const { candle } = live15;
@@ -90,7 +90,7 @@ function formingRunCandle(
   if (forming === undefined) return undefined;
   const from = bucketOf(forming.openTime, mapping.runMilliseconds);
   const window = { openTime: from, closeTime: from + mapping.runMilliseconds - 1 };
-  const closed = pickWindowCandles(source.history.candles, window).filter(
+  const closed = pickWindowCandles(candles, window).filter(
     (candle) => candle.openTime !== forming.openTime,
   );
   const candle = composeCandles(
@@ -100,7 +100,12 @@ function formingRunCandle(
   return candle === undefined ? undefined : { candle, from };
 }
 
-function fifteenLegendOf(params: FormingParams & DisplayExtrasInput): OhlcText | undefined {
+type LegendParams = FormingParams & {
+  readonly chart: TradeChart;
+  readonly timeZone: string;
+};
+
+function fifteenLegendOf(params: LegendParams): OhlcText | undefined {
   const { chart, timeZone, mapping } = params;
   const forming = formingRunCandle(params);
   if (forming === undefined) return undefined;
@@ -136,6 +141,33 @@ function useFormingSlot(
   }, [surface, mapping, openTime]);
 }
 
+// A vela de 15 min composta só existe com o gráfico acompanhando o fim (`live` já chega vazio fora disso) e é refeita só quando a
+// vela em formação ou as fechadas mudam: formatar horas a cada movimento do mouse custaria quadros ao arrastar.
+function useFifteenLegend(
+  input: DisplayExtrasInput,
+  live15: LiveCandleView | undefined,
+): OhlcText | undefined {
+  const { chart, source, live, timeZone } = input;
+  const mapping = source.displayMapping;
+  const candles = source.history.candles;
+  return useMemo(() => {
+    if (mapping === undefined || live === undefined) return undefined;
+    return fifteenLegendOf({ chart, timeZone, mapping, candles, live, live15 });
+  }, [chart, timeZone, mapping, candles, live, live15]);
+}
+
+function useOpinionText(
+  mapping: DisplayMapping | undefined,
+  issuedAt: number | undefined,
+  timeZone: string,
+): string | undefined {
+  return useMemo(() => {
+    if (mapping === undefined || issuedAt === undefined) return undefined;
+    const clock = (milliseconds: number): string => formatTimeInZone(milliseconds, timeZone);
+    return `Opinião das ${clock(issuedAt)} · vale até ${clock(issuedAt + mapping.runMilliseconds)}`;
+  }, [mapping, issuedAt, timeZone]);
+}
+
 // O que só existe quando a vela mostrada é de exibição (3 min sobre 15 min): a opinião que valia na vela apontada, o colchete
 // da saída, a vela de 15 min em formação composta e a faixa dela alinhada às 5 velas. Sem o mapeamento, nada disto existe.
 export function useDisplayExtras(input: DisplayExtrasInput): DisplayExtras {
@@ -143,26 +175,24 @@ export function useDisplayExtras(input: DisplayExtrasInput): DisplayExtras {
   const mapping = source.displayMapping;
   const live15 = useLiveCandle(chart.symbol, chart.timeframe);
   useFormingSlot(surface, mapping, live);
-  if (mapping === undefined) return NOTHING;
   const shown = pointedOpenTime ?? source.history.candles.at(-1)?.openTime;
-  const window = shown === undefined ? undefined : opinionWindowAt(shown, mapping);
-  const clock = (milliseconds: number): string => formatTimeInZone(milliseconds, timeZone);
+  const issuedAt =
+    mapping === undefined || shown === undefined
+      ? undefined
+      : opinionWindowAt(shown, mapping).issuedAt;
+  const opinionText = useOpinionText(mapping, issuedAt, timeZone);
+  const fifteenLegend = useFifteenLegend(input, live15);
+  if (mapping === undefined) return NOTHING;
   const brackets = listExitBrackets(trades, mapping);
-  return {
-    opinionText:
-      window === undefined
-        ? undefined
-        : `Opinião das ${clock(window.issuedAt)} · vale até ${clock(window.validUntil)}`,
-    bracketText:
-      pointedOpenTime === undefined
-        ? undefined
-        : describeBracketAt({
-            brackets,
-            shownOpen: pointedOpenTime,
-            formatTime: clock,
-          }),
-    fifteenLegend: fifteenLegendOf({ ...input, mapping, live15 }),
-    decisionOpenTime:
-      pointedOpenTime === undefined ? undefined : decidedOpenAt(pointedOpenTime, mapping),
-  };
+  const bracketText =
+    pointedOpenTime === undefined
+      ? undefined
+      : describeBracketAt({
+          brackets,
+          shownOpen: pointedOpenTime,
+          formatTime: (milliseconds) => formatTimeInZone(milliseconds, timeZone),
+        });
+  const decisionOpenTime =
+    pointedOpenTime === undefined ? undefined : decidedOpenAt(pointedOpenTime, mapping);
+  return { opinionText, bracketText, fifteenLegend, decisionOpenTime };
 }
