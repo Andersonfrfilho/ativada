@@ -94,7 +94,9 @@ async function loadSeriesPage(
   control.dispatch(action.type === 'failed' && !isTail ? { ...action, scope: 'series' } : action);
 }
 
-// A série (par, vela e janela) pede a primeira página; a mesma série com o fim mais adiante pede só a ponta nova.
+// A série (par, vela e janela) pede a primeira página; a mesma série com o fim mais adiante pede só a ponta nova. A primeira
+// página de uma série sai UMA vez por tentativa: o fim da janela anda com o relógio e, sem isto, cada passo dele cancelaria o
+// pedido em andamento (ou, depois de um 429, repetiria o pedido sem parar e alimentaria o próprio limite).
 function useSeriesLoader(params: CandleHistoryParams, control: LoaderControl): void {
   const { dispatch, loaded, attempt } = control;
   const { symbol, timeframe, window, earliestTime } = params;
@@ -102,19 +104,22 @@ function useSeriesLoader(params: CandleHistoryParams, control: LoaderControl): v
   const queryClient = useQueryClient();
   const seriesKey = seriesKeyOf(params);
   const { from, to } = window.range;
+  const latestToken = useRef('');
+  const requestedToken = useRef('');
   useEffect(() => {
+    const token = `${seriesKey}|${attempt}`;
+    latestToken.current = token;
     const previous = loaded.current;
     const isSameSeries = previous?.key === seriesKey;
     const isTail = isSameSeries && previous !== undefined && to > previous.to;
-    if (isSameSeries && !isTail) return undefined;
+    if (isSameSeries && !isTail) return;
+    if (!isTail && requestedToken.current === token) return;
     const page = isTail && previous !== undefined ? { from: previous.to, to } : { from, to };
-    if (page.to <= page.from) return undefined;
-    let isActive = true;
+    if (page.to <= page.from) return;
+    if (!isTail) requestedToken.current = token;
     const request = { queryClient, client, symbol, timeframe, page, earliestTime };
-    void loadSeriesPage({ request, isTail, seriesKey }, { dispatch, loaded }, () => isActive);
-    return (): void => {
-      isActive = false;
-    };
+    const isActive = (): boolean => latestToken.current === token;
+    void loadSeriesPage({ request, isTail, seriesKey }, { dispatch, loaded }, isActive);
   }, [
     client,
     queryClient,

@@ -45,11 +45,13 @@ function useRecentCandles(
   window: PanelWindow | undefined,
   duration: number,
 ): readonly MarketCandle[] {
+  // Alinhado à grade da vela: o início da janela anda com o relógio e uma chave nova a cada passo refaria o pedido sem necessidade.
+  const gridEnd = duration > 0 ? Math.floor((window?.start ?? 0) / duration) * duration : 0;
   const query = useMarketCandlesQuery({
     symbol: chart.symbol,
     timeframe: chart.timeframe,
-    from: (window?.start ?? 0) - PAST_CANDLE_COUNT * duration,
-    to: window?.start ?? 0,
+    from: gridEnd - PAST_CANDLE_COUNT * duration,
+    to: gridEnd,
     isEnabled: window !== undefined,
   });
   return window === undefined ? NO_CANDLES : (query.data ?? NO_CANDLES).slice(-PAST_CANDLE_COUNT);

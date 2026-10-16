@@ -634,3 +634,19 @@ Relato: "você quebrou a parte de gráfico" na PEPE/USDT ao vivo, 15m, recém-cr
 **Correção:** `TradeChartBody` desenha o `CandleChart` também com a faixa vazia, e o aviso "A simulação ainda não processou nenhuma vela; as velas abaixo são só o contexto de antes do início" (com a hora da primeira vela) fica acima dele. `withLeadingContext` com faixa vazia entrega as últimas ~150 velas do par antes do início. Contratos: `candle-live` (aviso + canvas + pedido de velas com `to <= periodStart`), `team-always-beside-chart` (canvas e UMA coluna da equipe) e `surface-format` (PEPE 4e-6).
 
 **Conferido no app dev real:** PEPE agora pede `/v1/markets/candles?symbol=PEPEUSDT&timeframe=15m&from=…&to=<periodStart>`, desenha os canvases (670x377 de preço) e mantém a equipe ao lado; DOGE e LINK seguem com velas, equipe e camadas (200 em candles, strategy-layers e projections). Aba aberta: recarregar com Ctrl+F5.
+
+## Gráfico vazio com 429
+
+Relato: gráfico da PEPE sem nenhuma vela, com a legenda "em formação" (que chega pelo WebSocket) e a equipe normal.
+
+**Causa confirmada (Edge + Playwright, 16/10/2026, `page.route` forçando 429 em `/v1/markets/candles`; o dev real também devolveu 429 de verdade em quase toda rota, pois os agentes dividem o balde do usuário `teste`):**
+1. O cliente repetia o histórico escondido: o `defaultOptions.retry` do `QueryClient` valia também para o `fetchQuery` das páginas de velas, então um 429 com `Retry-After: 4` ficava em "Carregando as velas…" por ~20 s (5 repetições invisíveis) antes de qualquer aviso; a tela só tinha o texto genérico "velas não disponíveis".
+2. A primeira página saía de novo a cada passo do relógio (`to` da janela anda), cancelando o pedido em andamento: com o servidor lento ou recusando, o resultado nunca era aceito e a série ficava em "Carregando" repetindo o pedido (pressão extra no balde de 30/min).
+3. Histórico fechado VAZIO (200 com `[]`) era tratado como "gráfico OK": o canvas ficava em branco e só a vela em formação do stream aparecia; e a página vazia ficava em cache para sempre (`staleTime: Infinity`).
+4. O painel "Próxima vela de perto" pedia `/markets/candles` com `from/to` colados ao relógio: uma chave nova a cada passo (4 a 5 s), sem cache.
+
+**Correção:** `Retry-After` vira `ApiError.retryAfterSeconds`; `src/http/rate-limit.ts` (espera 2/4/8/16/30 s, `Retry-After` manda com teto de 60 s) é a política de repetição de todas as consultas (429 repete até 5 vezes; outra falha, uma) e o `staleTime` padrão passou a 10 s; o histórico usa `retry: false` e repete sozinho com a contagem no reducer (`rateLimit`), "Tentar de novo" antecipa; `RateLimitNotice` ("Aviso: Muitas consultas em pouco tempo. Tentando de novo em N s…") substitui o texto genérico, aparece também no `/chart` sem dados e no `live-status` sem dados; a primeira página sai UMA vez por tentativa; `EmptyHistoryNotice` avisa histórico vazio e página vazia sai do cache; o painel da próxima vela pede em grade da vela. Camadas (`strategy-layers`, `projections`) continuam independentes: falha delas mantém o texto "as velas e as operações continuam".
+
+**Provas:** `test/chart-rate-limit.contract.tsx` (fetch falso com 429 com e sem `Retry-After` e depois 200; histórico vazio; camada 429 mantém as velas; política de espera; `Retry-After` no cliente). Dev real: 429 forçado → aviso com "Tentando de novo em 4 s…" e botão em 0 s; ao voltar o 200 o canvas aparece sozinho; resposta vazia → aviso "Nenhuma vela fechada chegou".
+
+**Pendências de outros agentes (não tocadas):** `contrast.contract.ts` (tokens `zone-gain/zone-loss` em andamento) e typecheck/lint de `src/notices/` (spec 014). Não resolvido: `overview.query.ts`/`plan.query.ts` também pedem `/markets/candles` com `from/to` colados ao relógio.

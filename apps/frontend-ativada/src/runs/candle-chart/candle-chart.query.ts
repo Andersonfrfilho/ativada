@@ -147,6 +147,8 @@ export async function fetchMarketCandlesPage(
   const candles = await queryClient.fetchQuery({
     queryKey: marketCandlesKey(params),
     staleTime: Infinity,
+    // Quem repete é o histórico (com aviso e contagem); a repetição escondida do cliente deixaria o gráfico em "Carregando".
+    retry: false,
     queryFn: () => requestMarketCandles(client, params),
   });
   if (candles.length === 0) queryClient.removeQueries({ queryKey: marketCandlesKey(params) });
