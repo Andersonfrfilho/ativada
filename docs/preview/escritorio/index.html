@@ -44,6 +44,7 @@
   --bezel: #1a1f2e; --screen: #0e1526; --screen-grid: #223051; --screen-ink: #d5dcef; --screen-ink-2: #93a0c2;
   --screen-up: #41cc94; --screen-down: #ff7d83; --screen-accent: #8ea3ff; --screen-warn: #f2c26b;
   --light: transparent; --light-strip: color-mix(in srgb, var(--accent) 30%, var(--surface));
+  --model: #8a3ea8; --model-soft: #f3e8f8; --board: #fbfcfe; --board-ink: var(--ink); --postit: #fff3b0; --postit-ink: #4a3b00;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -58,6 +59,7 @@
     --shirt-auditor: #7d879e; --pants: #39446a; --shoe: #0b0f1c;
     --office-wall: color-mix(in srgb, var(--surface-2) 70%, var(--bg));
     --plant: #4f9d6a; --plant-2: #3a7d53;
+    --model: #d59af0; --model-soft: #2c1d3a; --board: #1b2337; --postit: #4a4214; --postit-ink: #f6e7a0;
     color-scheme: dark;
   }
 }
@@ -72,6 +74,7 @@
   --shirt-auditor: #7d879e; --pants: #39446a; --shoe: #0b0f1c;
   --office-wall: color-mix(in srgb, var(--surface-2) 70%, var(--bg));
   --plant: #4f9d6a; --plant-2: #3a7d53;
+    --model: #d59af0; --model-soft: #2c1d3a; --board: #1b2337; --postit: #4a4214; --postit-ink: #f6e7a0;
   color-scheme: dark;
 }
 
@@ -271,7 +274,7 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
 .desk-badge .b-role { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .desk-badge .b-id { font-family: var(--font-data); font-size: 0.86em; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .desk-badge .chip { font-size: 0.9em; justify-self: start; }
-.desk-badge.is-soon { background: color-mix(in srgb, var(--surface) 80%, transparent); border-style: dashed; border-top-style: dashed; color: var(--ink-2); box-shadow: none; }
+.desk-badge.is-soon { background: color-mix(in srgb, var(--model-soft) 70%, var(--surface)); border-color: var(--model); border-radius: 0.3em 1em 0.3em 1em; border-style: dashed; border-top-style: dashed; color: var(--ink-2); box-shadow: none; }
 .stage[data-focus] .desk-badge.is-focus, .desk-badge:hover { box-shadow: 0 0 0 3px var(--accent); }
 .stage[data-focus] .agent.is-focus .fig { filter: drop-shadow(0 0 4px var(--accent)) drop-shadow(0 0 1px var(--accent)); }
 
@@ -388,20 +391,110 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
 .disclaimer { display: flex; gap: 8px; align-items: start; margin: var(--space-4) 0 0; padding-top: var(--space-3); border-top: 1px solid var(--line); font-size: var(--text-sm); color: var(--ink-2); }
 .site-foot { max-width: 1232px; margin: 0 auto; padding: 0 var(--gutter) 32px; font-size: var(--text-xs); color: var(--ink-2); }
 
-/* ---------- cena principal: gráfico + equipe colada ---------- */
-.motion-bar { margin: 0 0 var(--space-3); }
-.duo-card { container: duo / inline-size; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: var(--space-4); margin-bottom: var(--space-4); }
-.duo { position: relative; display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: 0 34px; margin-top: var(--space-3); }
-.duo-chart { min-width: 0; }
-.chart-box { position: relative; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
-.chart-box svg { display: block; width: 100%; height: auto; }
+/* ---------- cena principal: a equipe na varanda, olhando o gráfico (adendo §4) ---------- */
+/* grade de 4 px: alturas e espaços múltiplos de 4; o gráfico fica com toda a largura e o resto da altura útil */
+body.is-duo .crumbs, body.is-duo .tags, body.is-duo .scene-picker > span, body.is-duo .page > .preview-note { display: none; }
+body.is-duo .page { padding-top: 6px; padding-bottom: 24px; }
+body.is-duo .app-head { padding-block: 4px; }
+body.is-duo .scene-picker ul { padding: 2px; }
+body.is-duo .duo-card { margin-top: 6px; padding-top: 8px; }
+body.is-duo .title-row { flex-wrap: nowrap; align-items: center; gap: 12px; }
+body.is-duo h1 { font-size: 18px; white-space: nowrap; }
+body.is-duo .scene-picker { flex: 1; min-width: 0; }
+body.is-duo .scene-picker ul { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+body.is-duo .scene-picker a { white-space: nowrap; }
+body.is-duo .motion-bar .btn-text { display: none; }
+body.is-duo .motion-bar .btn { width: 44px; padding: 0; justify-content: center; }
+.motion-bar { margin: 0; flex-wrap: nowrap; }
+.duo-card { container: duo / inline-size; margin: 8px 0 16px; padding: 12px 16px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); }
+.duo-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.duo-head h2 { margin: 0; display: flex; align-items: center; gap: 8px; font: 600 var(--text-md)/1.3 var(--font-display); }
+.duo-head .fixed-line { margin: 0 0 0 auto; padding: 4px 12px; font-size: var(--text-xs); }
+.kind-legend { display: inline-flex; gap: 12px; font-size: var(--text-xs); color: var(--ink-2); }
+.kind-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.mark-rule { color: var(--accent); font-size: 1.05em; }
+.mark-model { color: var(--model); font-size: 1.05em; }
+.duo { position: relative; display: flex; flex-direction: column; gap: 0; margin-top: 8px; }
+
+/* a varanda: parapeito de vidro, agentes em pé, crachás no parapeito, balões apontando para baixo */
+.balcony { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) clamp(296px, 27%, 400px); gap: 12px; padding: 8px 8px 0; border-radius: 12px 12px 0 0; background: linear-gradient(to bottom, var(--office-wall) 0, var(--office-wall) 44%, color-mix(in srgb, var(--office-wall) 40%, var(--surface)) 100%); border: 1px solid var(--line); border-bottom: 0; }
+.crew::after { content: ''; position: absolute; left: 80px; right: 0; top: 60px; height: 4px; border-radius: 2px; background: var(--desk-edge); pointer-events: none; }
+.crew { position: relative; display: grid; grid-template-columns: 76px repeat(6, minmax(0, 1fr)); gap: 4px; margin: 0; padding: 0; list-style: none; }
+.agent-slot { position: relative; display: grid; grid-template-rows: 64px 44px auto; justify-items: center; min-width: 0; }
+.agent-slot .lean { position: relative; width: 56px; height: 64px; transform-origin: 50% 100%; }
+.agent-slot .lean svg { display: block; width: 56px; height: 64px; transform: rotate(var(--tilt, 0deg)); overflow: visible; }
+.agent-slot .rail-glass { position: absolute; left: -4px; right: -4px; top: 46px; height: 14px; background: var(--glass); border-top: 2px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+.fig .eye { transform-box: fill-box; }
+.agent-slot[data-slot='tiago'], .agent-slot[data-slot='renata'] { --tilt: 4deg; }
+.agent-slot[data-slot='vitor'], .agent-slot[data-slot='sofia'] { --tilt: -4deg; }
+.agent-slot[data-slot='otavio'] { --tilt: -8deg; }
+.agent-slot .fig .eye { transform: translateY(1.6px); }
+.fig .arm-point { display: none; }
+.agent-slot.is-pointing .fig .arm-r { display: none; }
+.agent-slot.is-pointing .fig .arm-point { display: inline; }
+.badge-btn { position: relative; z-index: 2; display: grid; grid-template-columns: auto auto; align-content: center; justify-content: center; gap: 0 4px; width: 100%; max-width: 132px; min-height: 40px; margin-top: 2px; padding: 2px 6px; border: 1px solid var(--line); border-top: 3px solid var(--role); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 11.5px; line-height: 16px; cursor: pointer; }
+.badge-btn::before { content: ''; position: absolute; inset: -2px 0; }
+.badge-btn:hover { background: var(--surface-2); }
+.badge-btn .b-face { display: none; }
+.model-btn .m-count { display: none; }
+.badge-btn .b-name { font-weight: 700; white-space: nowrap; }
+.badge-btn .b-role { grid-column: 1 / -1; color: var(--ink-2); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.badge-btn .b-seal { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.badge-btn .b-seal .icon { width: 12px; height: 12px; }
+.b-seal.seal-above { color: var(--accent); } .b-seal.seal-below { color: var(--warn); } .b-seal.seal-even, .b-seal.seal-role { color: var(--ink-2); } .b-seal.seal-few { color: var(--ink-2); }
+.talk { position: relative; z-index: 3; width: calc(100% - 2px); max-width: 150px; margin: 4px 0 10px; padding: 4px 8px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--bubble-shadow); font-size: 12px; line-height: 16px; text-align: left; }
+.talk::after { content: ''; position: absolute; left: 50%; bottom: -6px; width: 10px; height: 10px; transform: translateX(-50%) rotate(45deg); background: inherit; border-right: inherit; border-bottom: inherit; }
+.talk.is-quiet { background: var(--surface-2); color: var(--ink-2); border: 1px dashed var(--ink-3); box-shadow: none; }
+.talk.is-voter { border: 2px solid var(--accent); }
+.talk .chip { font-size: 11px; padding: 0 6px; }
+.talk .t-line { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.talk .t-line b { font-family: var(--font-data); font-weight: 600; }
+.talk .dots { position: absolute; inset: 0; display: grid; place-items: center; border-radius: inherit; background: inherit; color: var(--ink-3); font-weight: 800; letter-spacing: 3px; opacity: 0; pointer-events: none; }
+.agent-slot.is-center .badge-btn { border-top-color: var(--accent); }
+
+/* modelos: forma, ícone, palavra e moldura próprios (nunca só cor) */
+.models-slot { display: flex; flex-direction: column; gap: 4px; padding: 2px 0 0; }
+.models-slot .models-head { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--model); letter-spacing: 0.04em; }
+.model-btn { position: relative; display: flex; align-items: center; gap: 4px; min-height: 30px; padding: 2px 4px; border: 1.5px dashed var(--model); border-radius: 4px 14px 4px 14px; background: color-mix(in srgb, var(--model-soft) 70%, var(--surface)); color: var(--ink-2); font-size: 11px; line-height: 14px; cursor: pointer; text-align: left; }
+.model-btn::before { content: ''; position: absolute; inset: -6px 0; }
+.model-btn .diamond { display: grid; place-items: center; flex: none; width: 20px; height: 20px; transform: rotate(45deg); border: 1.5px solid var(--model); background: var(--surface); }
+.model-btn .diamond svg { width: 12px; height: 12px; transform: rotate(-45deg); stroke: var(--model); fill: none; stroke-width: 2; }
+.model-btn b { color: var(--ink); }
+
+/* lousa (quadro branco) com o Otávio escrevendo e os post-its da Alice */
+.lousa { position: relative; align-self: start; margin: 0 0 8px; padding: 8px 12px 8px; border-radius: 6px; background: var(--board); border: 4px solid var(--desk-edge); box-shadow: inset 0 0 0 1px var(--line); color: var(--board-ink); font-size: 11.5px; line-height: 16px; }
+.lousa h3 { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+.lousa ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.lousa li { position: relative; padding-left: 14px; }
+.lousa li::before { content: '–'; position: absolute; left: 0; color: var(--ink-3); }
+.lousa li b { font-family: var(--font-data); font-weight: 700; }
+.lousa .hand { font-family: 'Segoe Print', 'Comic Sans MS', var(--font-body); }
+.lousa .struck { position: relative; display: inline-block; color: var(--ink-2); }
+.lousa .struck::after { content: ''; position: absolute; left: -2px; right: -2px; top: 50%; height: 2px; background: var(--sell); transform-origin: 0 50%; }
+.lousa .ok { color: var(--accent); font-weight: 700; }
+.postits { display: flex; gap: 6px; margin-top: 6px; }
+.postit { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; padding: 2px 8px; font-size: 11px; line-height: 14px; background: var(--postit); color: var(--postit-ink); box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 25%, transparent); transform: rotate(-2deg); }
+.postit:nth-child(2) { transform: rotate(1.5deg); }
+.postit .icon { width: 12px; height: 12px; }
+.postit.is-on { background: var(--warn-soft); color: var(--warn); outline: 2px solid var(--warn); }
+.lousa-close { display: none; }
+
+.chart-box { position: relative; border: 1px solid var(--line); border-radius: 0 0 12px 12px; background: var(--surface); }
 .chart-box:focus-visible { outline-offset: 3px; }
-.ch-grid { stroke: var(--chart-grid, color-mix(in srgb, var(--ink-3) 30%, var(--surface))); stroke-width: 1; }
+.chart-svg svg { display: block; width: 100%; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 4px 8px 0; font-size: var(--text-xs); color: var(--ink-2); }
+.chart-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.chart-legend .sw { display: inline-block; width: 16px; height: 0; border-top: 2px solid; }
+.sw-ema9 { color: var(--accent); } .sw-ema21 { color: var(--bench); border-top-style: dashed !important; }
+.sw-band { height: 8px !important; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent) !important; background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.sw-hollow { width: 8px !important; height: 12px !important; border: 1.6px solid var(--buy) !important; border-radius: 1px; }
+.mk-buy { color: var(--buy); } .mk-sell { color: var(--sell); }
+.ch-grid { stroke: color-mix(in srgb, var(--ink-3) 22%, var(--surface)); stroke-width: 1; }
 .ch-axis { fill: var(--ink-2); font-size: 11.5px; font-family: var(--font-data); }
 .ch-up { fill: var(--buy); stroke: var(--buy); }
 .ch-down { fill: var(--sell); stroke: var(--sell); }
 .ch-forming { fill: var(--surface); stroke-width: 1.6; }
-.ch-ema9 { fill: none; stroke: var(--accent); stroke-width: 1.8; }
+.ch-ema9 { fill: none; stroke: var(--accent); stroke-width: 2; }
 .ch-ema21 { fill: none; stroke: var(--bench); stroke-width: 1.6; stroke-dasharray: 5 3; }
 .ch-band { fill: color-mix(in srgb, var(--accent) 7%, transparent); stroke: color-mix(in srgb, var(--accent) 35%, transparent); stroke-width: 1; }
 .ch-vol { fill: color-mix(in srgb, var(--ink-3) 35%, transparent); }
@@ -410,95 +503,221 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
 .ch-zone-loss { fill: color-mix(in srgb, var(--sell) 11%, transparent); }
 .ch-lvl { stroke-width: 1.6; }
 .ch-lvl.entry { stroke: var(--ink); } .ch-lvl.target { stroke: var(--buy); stroke-dasharray: 7 4; } .ch-lvl.stop { stroke: var(--sell); stroke-dasharray: 7 4; }
-.ch-tag rect { stroke-width: 1.4; }
 .ch-tag text { font-size: 11px; font-weight: 700; font-family: var(--font-data); }
-.ch-tag.entry rect { fill: var(--ink); stroke: var(--ink); } .ch-tag.entry text { fill: var(--surface); }
-.ch-tag.target rect { fill: var(--buy); stroke: var(--buy); } .ch-tag.target text { fill: var(--surface); }
-.ch-tag.stop rect { fill: var(--sell); stroke: var(--sell); } .ch-tag.stop text { fill: var(--surface); }
-.ch-tag.now rect { fill: var(--surface); stroke: var(--accent); } .ch-tag.now text { fill: var(--accent); }
+.ch-tag.entry rect { fill: var(--ink); } .ch-tag.entry text { fill: var(--surface); }
+.ch-tag.target rect { fill: var(--buy); } .ch-tag.target text { fill: var(--surface); }
+.ch-tag.stop rect { fill: var(--sell); } .ch-tag.stop text { fill: var(--surface); }
+.ch-tag.now rect { fill: var(--surface); stroke: var(--accent); stroke-width: 1.4; } .ch-tag.now text { fill: var(--accent); }
 .ch-now-line { stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 2 3; }
 .ch-mark-band { fill: color-mix(in srgb, currentColor 10%, transparent); }
 .ch-mark { font-family: var(--font-data); font-size: 12px; font-weight: 700; }
 .ch-mark.buy { color: var(--buy); fill: var(--buy); } .ch-mark.sell { color: var(--sell); fill: var(--sell); }
-.ch-mark-label rect { fill: currentColor; }
-.ch-mark-label text { fill: var(--surface); }
+.ch-mark-label rect { fill: currentColor; } .ch-mark-label text { fill: var(--surface); }
 .ch-dot-halo { fill: var(--surface); }
 .ch-cross { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 3 3; }
 .ch-pointed { fill: color-mix(in srgb, var(--accent) 10%, transparent); }
 .ch-time-tag rect { fill: var(--ink); } .ch-time-tag text { fill: var(--surface); font-size: 11.5px; font-family: var(--font-data); }
-.chart-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 2px 0; font-size: var(--text-xs); color: var(--ink-2); }
-.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.chart-legend .sw { display: inline-block; width: 18px; height: 0; border-top: 2px solid; }
-.sw-ema9 { color: var(--accent); } .sw-ema21 { color: var(--bench); border-top-style: dashed !important; }
-.sw-band { height: 10px !important; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent) !important; background: color-mix(in srgb, var(--accent) 7%, transparent); }
-.sw-hollow { width: 9px !important; height: 14px !important; border: 1.6px solid var(--buy) !important; border-radius: 1px; }
-.mk-buy { color: var(--buy); } .mk-sell { color: var(--sell); }
+.leaders { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 4; }
+.leader-line { fill: none; stroke: var(--ink-3); stroke-width: 1.3; stroke-dasharray: 3 3; opacity: 0.9; }
+.leader-line.is-lit { stroke: var(--accent); stroke-width: 2; stroke-dasharray: none; opacity: 1; }
 
-.signal-card { margin-top: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-left: 6px solid var(--buy); border-radius: 12px; background: color-mix(in srgb, var(--buy-soft) 45%, var(--surface)); display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; align-items: center; }
-.sig-seal { display: grid; place-items: center; gap: 2px; width: 72px; height: 72px; border-radius: 14px; background: var(--buy); color: var(--surface); font-weight: 800; letter-spacing: 0.04em; font-size: 13px; }
+.row-pop { position: fixed; z-index: 60; width: min(320px, calc(100vw - 32px)); padding: 12px; border-radius: 12px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); box-shadow: var(--bubble-shadow); font-size: var(--text-sm); line-height: 1.45; }
+.row-pop h4 { margin: 0 0 4px; font-size: var(--text-md); }
+.row-pop dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 6px 0 0; }
+.row-pop dt { color: var(--ink-2); } .row-pop dd { margin: 0; }
+.row-pop .kind { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--text-xs); font-weight: 700; }
+.row-pop .kind.rule { color: var(--accent); background: var(--accent-soft); }
+.row-pop .kind.model { color: var(--model); background: var(--model-soft); border: 1px dashed var(--model); }
+.row-pop .sample { margin-top: 8px; padding: 6px 8px; border: 1.5px dashed var(--model); border-radius: 4px 12px 4px 12px; background: color-mix(in srgb, var(--model-soft) 60%, var(--surface)); }
+.row-pop .sample small { display: block; color: var(--ink-2); font-size: 11px; }
+.lousa-tab { display: none; }
+.below-fold { margin-top: 16px; }
+.office-wrap { margin-top: 0; }
+.office-summary { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 16px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); cursor: pointer; font-weight: 600; }
+.office-summary span { color: var(--ink-2); font-weight: 400; font-size: var(--text-sm); }
+.office-wrap[open] > .office-summary { margin-bottom: 12px; }
+body:not(.is-duo) .office-summary { display: none; }
+
+.signal-card { padding: 12px 16px; border: 1px solid var(--line); border-left: 6px solid var(--buy); border-radius: 12px; background: color-mix(in srgb, var(--buy-soft) 45%, var(--surface)); display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; align-items: center; }
+.sig-seal { display: grid; place-items: center; gap: 2px; width: 72px; height: 72px; border-radius: 12px; background: var(--buy); color: var(--surface); font-weight: 800; letter-spacing: 0.04em; font-size: 13px; }
 .sig-seal .icon { width: 24px; height: 24px; fill: currentColor; stroke: none; }
 .sig-main h4 { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; font: 600 var(--text-md)/1.3 var(--font-body); }
-.sig-main h4 .data { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.sig-main h4 .data { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
 .sig-main p { margin: 2px 0 0; font-size: var(--text-sm); color: var(--ink-2); }
 .sig-main p b { font-family: var(--font-data); color: var(--ink); }
+.sig-main p b.lbl { font-family: var(--font-body); }
 .sig-now { color: var(--buy); font-weight: 700; }
-.ruler { grid-column: 1 / -1; position: relative; height: 66px; margin: 6px 4px 0; }
-.ruler-track { position: absolute; left: 0; right: 0; top: 26px; height: 10px; border-radius: 5px; overflow: hidden; display: flex; }
+.ruler { grid-column: 1 / -1; position: relative; height: 64px; margin: 4px 4px 0; }
+.ruler-track { position: absolute; left: 0; right: 0; top: 24px; height: 8px; border-radius: 4px; overflow: hidden; display: flex; }
 .ruler-loss { background: color-mix(in srgb, var(--sell) 30%, var(--surface)); }
-.ruler-gain { background: color-mix(in srgb, var(--buy) 30%, var(--surface)); }
-.ruler-mark { position: absolute; top: 20px; transform: translateX(-50%); display: grid; justify-items: center; font-size: 12px; line-height: 1.25; white-space: nowrap; }
-.ruler-mark::before { content: ''; width: 2px; height: 22px; background: currentColor; }
+.ruler-gain { background: color-mix(in srgb, var(--buy) 30%, var(--surface)); flex: 1; }
+.ruler-mark { position: absolute; top: 20px; transform: translateX(-50%); display: grid; justify-items: center; font-size: 12px; line-height: 16px; white-space: nowrap; }
+.ruler-mark::before { content: ''; width: 2px; height: 20px; background: currentColor; }
 .ruler-mark b { font-family: var(--font-data); }
-.ruler-mark.stop { color: var(--sell); } .ruler-mark.entry { color: var(--ink); } .ruler-mark.target { color: var(--buy); }
-.ruler-mark.stop { transform: none; justify-items: start; } .ruler-mark.target { transform: translateX(-100%); justify-items: end; }
+.ruler-mark.stop { color: var(--sell); transform: none; justify-items: start; } .ruler-mark.entry { color: var(--ink); } .ruler-mark.target { color: var(--buy); transform: translateX(-100%); justify-items: end; }
 .ruler-now { position: absolute; top: 0; transform: translateX(-50%); display: grid; justify-items: center; font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
-.ruler-now::after { content: ''; width: 0; height: 0; margin-top: 2px; border: 6px solid transparent; border-top-color: var(--accent); }
+.ruler-now::after { content: ''; margin-top: 2px; border: 6px solid transparent; border-top-color: var(--accent); }
+.card-sub.duo-note { margin-top: 12px; }
 
-.duo-team { min-width: 0; display: flex; flex-direction: column; }
-.team-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
-.team-head h3 { margin: 0; font: 600 var(--text-md)/1.3 var(--font-display); }
-.team-head p { margin: 0; font-size: var(--text-xs); color: var(--ink-2); }
-.team-head p b { color: var(--accent); }
-.team-rows { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; padding-top: 6px; }
-.team-row { display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 3px 10px; align-items: start; padding: 5px 6px; border-radius: 12px; border: 1px solid transparent; }
-.team-row:hover, .team-row:focus-within, .team-row.is-lit { border-color: var(--line); background: color-mix(in srgb, var(--surface-2) 55%, var(--surface)); }
-.mini-desk { grid-row: 1 / span 2; width: 60px; height: 50px; display: block; margin-top: 2px; }
-.team-row .crach { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; font-size: var(--text-xs); line-height: 1.3; }
-.team-row .crach b { font-size: var(--text-sm); }
-.team-row .crach .role { color: var(--ink-2); }
-.team-row .crach .chip { font-size: 11px; }
-.team-row .crach .tag-id { font-family: var(--font-data); font-size: 11px; color: var(--ink-3); }
-.say { position: relative; grid-column: 2; margin: 0; padding: 5px 9px; font-size: 12.5px; line-height: 1.35; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--bubble-shadow); }
-.say.is-quiet { background: var(--surface-2); color: var(--ink-2); border-style: dashed; border-color: var(--ink-3); box-shadow: none; }
-.say.is-voter { border: 2px solid var(--accent); }
-.say .say-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-weight: 600; }
-.say .say-foot { display: block; margin-top: 2px; font-size: 12px; color: var(--ink-2); }
-.say .say-foot b { font-family: var(--font-data); color: var(--ink); font-weight: 600; }
-.say.is-quiet .say-foot b { color: var(--ink-2); }
-.say .dots { position: absolute; inset: 0; display: grid; place-items: center; border-radius: inherit; background: inherit; font-weight: 800; letter-spacing: 3px; color: var(--ink-3); opacity: 0; pointer-events: none; }
-.ficha-btn { position: relative; margin-left: auto; padding: 0 2px; border: 0; background: transparent; color: var(--accent); font-size: var(--text-xs); font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
-.ficha-btn::before { content: ''; position: absolute; left: -10px; right: -10px; top: 50%; height: 44px; transform: translateY(-50%); }
-.row-ficha { grid-column: 1 / -1; margin: 4px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); font-size: var(--text-xs); }
-.row-ficha dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0; }
-.row-ficha dt { color: var(--ink-2); } .row-ficha dd { margin: 0; }
-.team-foot { margin: 10px 0 0; font-size: var(--text-xs); color: var(--ink-2); }
-.say .say-where { display: none; color: var(--accent); }
-.leaders { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-.leader-line { fill: none; stroke: var(--ink-3); stroke-width: 1.3; stroke-dasharray: 3 3; opacity: 0.85; }
-.leader-line.is-lit { stroke: var(--accent); stroke-width: 2; stroke-dasharray: none; opacity: 1; }
-.leader-end { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.6; }
-.leader-end.is-lit { stroke: var(--accent); fill: var(--accent); }
-.leader-head { fill: var(--ink-3); }
-@container duo (max-width: 899px) {
-  .duo { grid-template-columns: 1fr; gap: var(--space-4); }
+/* celular: a varanda vira barra fixa no topo do gráfico; a lousa vira folha */
+@container duo (max-width: 699px) {
+  .duo-head h2 { font-size: var(--text-sm); }
+  .duo-head .fixed-line { margin: 0; width: 100%; }
+  .duo-head .pill, .kind-legend { display: none; }
+  .balcony { position: sticky; top: 0; z-index: 20; display: block; padding: 6px 4px 0; }
+  .balcony::after { display: none; }
+  .crew { display: flex; gap: 4px; padding-bottom: 78px; }
+  .agent-slot { display: block; flex: 1 1 0; }
+  .agent-slot .lean { display: none; }
+  .badge-btn { grid-template-columns: 1fr; justify-items: center; min-height: 48px; max-width: none; padding: 2px; gap: 0; }
+  .badge-btn .b-role { display: none; }
+  .badge-btn .b-face { display: block; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; background: color-mix(in srgb, var(--role) 22%, var(--surface)); }
+  .badge-btn .b-face svg { width: 26px; height: 26px; }
+  .badge-btn .b-name { font-size: 11px; }
+  .badge-btn .mark-rule { display: none; }
+  .badge-btn .b-seal span { display: none; }
+  .agent-slot.is-active .badge-btn { box-shadow: 0 0 0 2px var(--accent); }
+  .talk { display: none; }
+  .agent-slot.is-active .talk { display: block; position: absolute; left: 4px; right: 4px; top: 72px; width: auto; max-width: none; margin: 0; }
+  .agent-slot.is-active .talk .t-line { white-space: normal; }
+  .crew .agent-slot.is-active { position: static; }
+  .talk::after { display: none; }
+  .models-slot { flex: 0 0 52px; padding: 0; }
+  .models-slot .models-head { display: none; }
+  .model-btn { flex-direction: column; justify-content: center; min-height: 48px; padding: 2px; gap: 0; border-radius: 4px 12px 4px 12px; }
+  .model-btn:not(:first-of-type) { display: none; }
+  .model-btn .m-name { display: none; }
+  .model-btn .m-count { display: block; font-size: 10px; }
+  .lousa { display: none; }
+  .lousa.is-open { display: block; position: fixed; left: 8px; right: 8px; bottom: calc(56px + env(safe-area-inset-bottom, 0px)); z-index: 40; max-height: 60vh; overflow: auto; box-shadow: var(--bubble-shadow); }
+  .lousa-tab { display: flex; align-items: center; justify-content: center; gap: 8px; position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 41; min-height: 44px; border: 4px solid var(--desk-edge); border-radius: 10px; background: var(--board); color: var(--ink); font-weight: 600; cursor: pointer; }
   .leaders { display: none; }
-  .say .say-where { display: inline; }
-}
-@container duo (max-width: 520px) {
-  .signal-card { grid-template-columns: 1fr; padding: var(--space-3); }
+  .chart-legend { display: none; }
+  .signal-card { grid-template-columns: 1fr; }
   .sig-seal { width: auto; height: auto; grid-auto-flow: column; justify-content: start; gap: 6px; padding: 6px 10px; }
-  .sig-main h4 .data { font-size: 26px; }
+  .below-fold { padding-bottom: 56px; }
 }
+@media (max-width: 520px) {
+  body.is-duo .title-row { flex-wrap: wrap; row-gap: 4px; }
+  body.is-duo h1 { font-size: 16px; flex: 1; }
+  body.is-duo .scene-picker { order: 3; flex-basis: 100%; }
+  body.is-duo .scene-picker ul { padding: 2px; }
+}
+
+/* termos com dica (E-RF22): sublinhado pontilhado + "?" pequeno; dica leiga com exemplo */
+.term { display: inline; position: relative; white-space: nowrap; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: help; text-decoration: underline dotted color-mix(in srgb, var(--ink-2) 70%, transparent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.term::after { content: '?'; display: inline-grid; place-items: center; width: 10px; height: 10px; margin-left: 2px; border-radius: 50%; background: var(--surface-2); color: var(--ink-2); font-size: 8px; font-weight: 800; line-height: 1; vertical-align: 2px; }
+.term:hover, .term:focus-visible { color: var(--accent); }
+@media (pointer: coarse) { .term::before { content: ''; position: absolute; left: -6px; right: -6px; top: 50%; height: 44px; transform: translateY(-50%); } }
+.term-tip { position: fixed; z-index: 80; max-width: 300px; padding: 8px 12px; border-radius: 10px; background: var(--ink); color: var(--surface); font-size: 13px; line-height: 1.45; box-shadow: var(--bubble-shadow); }
+.term-tip b { font-weight: 700; }
+.term-tip .tip-example { display: block; margin-top: 4px; color: color-mix(in srgb, var(--surface) 78%, var(--ink)); font-family: var(--font-data); font-size: 12px; }
+
+/* balões: horizonte e linha curta */
+.talk .t-short { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.talk .t-hz { color: var(--ink-3); font-size: 11px; }
+.talk.is-quiet .t-hz { color: var(--ink-2); }
+
+/* lousa: abas, proteções, ranking curto, notas, escada */
+.lousa h3 { margin-bottom: 2px; }
+.lousa-tabs { display: flex; gap: 2px; margin: 0 0 6px; border-bottom: 1px solid var(--line); }
+.lousa-tabs button { position: relative; padding: 2px 8px 4px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--ink-2); font-size: 12px; font-weight: 600; cursor: pointer; }
+.lousa-tabs button::before { content: ''; position: absolute; inset: -10px 0; }
+.lousa-tabs button[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--accent); }
+.prot, .notes, .rank-mini { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.prot li, .notes li, .rank-mini li { display: flex; align-items: flex-start; gap: 6px; padding: 0; }
+.prot li::before, .notes li::before, .rank-mini li::before { content: none; }
+.prot .icon { flex: none; width: 14px; height: 14px; margin-top: 1px; color: var(--ink-2); }
+.prot .i-shield { color: var(--sell); }
+.prot b { font-family: var(--font-data); }
+.prot .lbl, .prot .lbl .term { font-family: var(--font-body); font-weight: 700; }
+.prot li.sub { padding-left: 20px; }
+.dist { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; }
+.dist .icon { width: 12px; height: 12px; }
+.dist-bar { display: inline-block; width: 44px; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.dist-bar i { display: block; height: 100%; }
+.dist.is-far { color: var(--buy); } .dist.is-far .dist-bar i { background: var(--buy); }
+.dist.is-near { color: var(--warn); } .dist.is-near .dist-bar i { background: var(--warn); }
+.dist.is-close { color: var(--sell); } .dist.is-close .dist-bar i { background: var(--sell); }
+.rank-mini li { align-items: center; }
+.rank-mini .pos { display: inline-block; width: 18px; color: var(--ink-2); font-size: 11px; font-weight: 700; }
+.rank-mini .crown, .ranking .crown { width: 16px; height: 16px; color: var(--accent); fill: currentColor; stroke: none; }
+.rank-mini .r-num { color: var(--ink-2); font-size: 11px; margin-left: auto; }
+.rank-mini .chip { font-size: 10px; padding: 0 5px; }
+.rank-mini .r-model { color: var(--ink-2); font-size: 11px; }
+.lousa-link { display: inline-block; margin-top: 4px; font-size: 11px; }
+.notes .struck { text-decoration: line-through 2px var(--sell); }
+.notes .struck::after { content: none; }
+.future-tag { display: inline-flex; align-items: center; margin: 0 0 2px; padding: 0 6px; border: 1px dashed var(--warn); border-radius: 999px; color: var(--warn); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.ladder-mini i { color: var(--ink-2); }
+
+/* gráfico: proteção contra queda, alvo, sugestão de venda, validade, escada */
+.ch-protect { color: var(--sell); }
+.ch-protect rect { fill: var(--sell-soft); stroke: var(--sell); stroke-width: 1.4; }
+.ch-protect .p-big { fill: var(--sell); font-size: 12.5px; font-weight: 800; letter-spacing: 0.02em; }
+.ch-protect .p-small { fill: var(--ink); font-size: 11.5px; }
+.ch-target rect { fill: var(--buy-soft); stroke: var(--buy); stroke-width: 1.2; }
+.ch-target text { fill: var(--buy); font-size: 12px; font-weight: 800; }
+.ch-suggest circle { fill: var(--surface); stroke: var(--sell); stroke-width: 2.4; }
+.ch-suggest text { fill: var(--sell); font-size: 11.5px; font-weight: 700; }
+.ch-valid { fill: color-mix(in srgb, var(--accent) 8%, transparent); }
+.ch-valid-text { fill: var(--accent); font-size: 11px; font-weight: 600; }
+.ch-step line { stroke-width: 1.6; stroke-dasharray: 6 4; }
+.ch-step.buy line { stroke: var(--buy); } .ch-step.sell line { stroke: var(--sell); }
+.ch-step.is-done line { stroke-dasharray: none; }
+.ch-step rect { fill: var(--surface); stroke-width: 1.2; }
+.ch-step.buy rect { stroke: var(--buy); } .ch-step.sell rect { stroke: var(--sell); }
+.ch-step text { fill: var(--ink); font-size: 11px; font-family: var(--font-data); }
+.ch-step.sell > text { fill: var(--sell); font-weight: 700; }
+
+/* ficha do sinal: % grande, USDT pequeno */
+.sig-big { display: grid; grid-template-columns: auto 1fr; gap: 0 10px; align-items: baseline; margin: 6px 0 4px !important; }
+.pct { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-data); font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+.pct .icon { width: 20px; height: 20px; }
+.pct.is-up { color: var(--buy); } .pct.is-down { color: var(--sell); } .pct.is-even { color: var(--ink-2); }
+.sig-big small { font-size: var(--text-xs); color: var(--ink-2); }
+.sig-suggest { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 6px !important; padding: 6px 8px; border-radius: 8px; background: var(--sell-soft); color: var(--ink) !important; }
+.sig-suggest .icon { color: var(--sell); }
+.copy-btn { min-height: 44px; font-family: var(--font-data); }
+.sig-ladder { margin-top: 6px !important; }
+
+/* plaquinhas */
+.plaques { margin-top: 16px; }
+.plaques h3, .ranking h3 { margin: 0 0 8px; font: 600 var(--text-md)/1.3 var(--font-display); }
+.plaque-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+.plaque { padding: 12px; border: 1px solid var(--line); border-top: 4px solid var(--ink-3); border-radius: 12px; background: var(--surface); }
+.plaque.is-buy { border-top-color: var(--buy); } .plaque.is-sell { border-top-color: var(--sell); } .plaque.is-protect { border-top-color: var(--sell); } .plaque.is-open { border-top-color: var(--accent); }
+.plaque p { margin: 0; }
+.pl-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--text-sm); }
+.pl-head .data { font-family: var(--font-data); font-weight: 700; }
+.pl-pct { margin-top: 4px !important; }
+.pl-note { font-size: var(--text-xs); color: var(--ink-2); }
+.pl-small { margin-top: 4px !important; font-size: var(--text-xs); font-family: var(--font-data); color: var(--ink); }
+
+/* ranking completo */
+.ranking { margin-top: 16px; }
+.rank-controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 8px; }
+.rank-frame { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--ink-2); }
+.rank-frame select { min-height: 44px; padding: 0 8px; border-radius: var(--radius-control); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+.ranking table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+.ranking th, .ranking td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.ranking thead th { font-size: var(--text-xs); color: var(--ink-2); font-weight: 600; white-space: nowrap; }
+.ranking tbody tr:last-child > * { border-bottom: 0; }
+.ranking small { display: block; color: var(--ink-2); font-size: 11px; font-weight: 400; }
+.ranking .num { font-family: var(--font-data); }
+.r-pos { white-space: nowrap; font-weight: 700; }
+.r-pos .crown { vertical-align: -3px; margin-right: 2px; }
+.wil { position: relative; display: block; width: 120px; height: 10px; border-radius: 5px; background: var(--surface-2); }
+.wil-coin { position: absolute; left: 37.5%; top: -3px; bottom: -3px; width: 2px; background: var(--ink-2); }
+.wil-bar { position: absolute; top: 2px; height: 6px; border-radius: 3px; }
+.wil-bar.above { background: var(--accent); } .wil-bar.below { background: var(--warn); } .wil-bar.even { background: var(--ink-3); }
+.tip-btn { min-height: 44px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--accent); font: inherit; font-size: var(--text-xs); font-family: var(--font-data); cursor: pointer; white-space: nowrap; }
+.rank-empty { padding: 12px; border: 1px dashed var(--line); border-radius: 12px; color: var(--ink-2); font-size: var(--text-sm); }
+.rank-models-title { margin: 12px 0 4px; font-weight: 600; font-size: var(--text-sm); }
+.rank-models { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: var(--text-sm); }
+.rank-models li { padding: 6px 10px; border: 1.5px dashed var(--model); border-radius: 4px 14px 4px 14px; background: color-mix(in srgb, var(--model-soft) 60%, var(--surface)); }
+.rank-foot { margin: 8px 0 0; font-size: var(--text-xs); color: var(--ink-2); max-width: 90ch; }
 
 /* modo lista: abaixo de 900 px de largura útil a cena some e os crachás contam tudo (adendo §8) */
 @container office (max-width: 899px) {
@@ -545,6 +764,8 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
   <symbol id="i-team" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2A4.6 4.6 0 0 1 21 19"/></symbol>
   <symbol id="i-buy" viewBox="0 0 24 24"><path d="M12 5 20 18H4z" fill="currentColor"/></symbol>
   <symbol id="i-caret" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.6-3 8-7 10-4-2-7-5.4-7-10V6z"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 24 24"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/></symbol>
   <symbol id="i-lens" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="5.5"/><path d="m15 15 5 5"/></symbol>
 </svg>
 
@@ -565,47 +786,53 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
       <span>Cena do preview</span>
       <ul data-scene-picker></ul>
     </nav>
+    <div class="motion-bar controls" aria-label="Animação">
+      <button type="button" class="btn" data-replay aria-label="Repetir a vela nova"><svg class="icon" aria-hidden="true"><use href="#i-repeat"/></svg><span class="btn-text">Repetir a vela nova</span></button>
+      <button type="button" class="btn" data-pause aria-pressed="false" aria-label="Pausar a animação"><svg class="icon" aria-hidden="true"><use href="#i-pause-btn"/></svg><span class="btn-text">Pausar</span></button>
+      <button type="button" class="btn" data-motion aria-pressed="true" aria-label="Animação ligada"><svg class="icon" aria-hidden="true"><use href="#i-motion"/></svg><span class="btn-text">Animação: ligada</span></button>
+    </div>
   </div>
   <p class="preview-note">Preview do adendo <span class="num">specs/011-sala-da-equipe/escritorio.md</span>. Acertos REAIS (medição T0.2 da spec 007, LINK/USDT 15 min, últimos 183 dias). As falas são exemplos tirados dos catálogos fechados (spec 011 §5, A17 da 007 e RF17 da 014): no painel vêm do servidor, nunca do navegador.</p>
 
-  <div class="motion-bar controls" aria-label="Animação">
-    <button type="button" class="btn" data-replay><svg class="icon" aria-hidden="true"><use href="#i-repeat"/></svg>Repetir a vela nova</button>
-    <button type="button" class="btn" data-pause aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-pause-btn"/></svg><span>Pausar</span></button>
-    <button type="button" class="btn" data-motion aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-motion"/></svg><span>Animação: ligada</span></button>
-  </div>
-
   <section class="duo-card" data-duo hidden aria-labelledby="duo-title">
-    <header class="card-head">
-      <div>
-        <h2 id="duo-title"><svg class="icon" aria-hidden="true"><use href="#i-team"/></svg>Preço e operações com a equipe</h2>
-        <p class="card-sub">Velas de 15 min com a equipe colada ao lado. Cada agente diz o que achou da vela, e a linha fina mostra onde ele está olhando. Passe o mouse (ou use ← →) numa vela para ver o que cada um disse nela.</p>
-      </div>
-      <p class="pills"><span class="pill is-accent" data-duo-pill></span><span class="pill">Modo sombra: só observa</span></p>
+    <header class="duo-head">
+      <h2 id="duo-title"><svg class="icon" aria-hidden="true"><use href="#i-team"/></svg>Preço e operações com a equipe</h2>
+      <span class="pill is-accent" data-duo-pill></span>
+      <span class="kind-legend" aria-label="Tipos de agente: regra e modelo"><span><b class="mark-rule" aria-hidden="true">●</b>Regra</span><span><b class="mark-model" aria-hidden="true">◆</b>Modelo</span></span>
+      <p class="fixed-line"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>Simulação com dinheiro fictício · tendência, não promessa</p>
     </header>
-    <p class="fixed-line"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>Simulação com dinheiro fictício · tendência, não promessa</p>
     <div class="duo" data-duo-grid>
-      <div class="duo-chart">
-        <div class="chart-box" data-chart tabindex="0" role="img" aria-roledescription="gráfico de velas" aria-describedby="chart-desc"></div>
-        <p id="chart-desc" class="visually-hidden" data-chart-desc></p>
-        <div class="chart-legend" aria-hidden="true">
-          <span><i class="sw sw-ema9"></i>EMA 9</span><span><i class="sw sw-ema21"></i>EMA 21</span><span><i class="sw sw-band"></i>bandas de Bollinger</span>
-          <span><b class="mk-buy">▲</b> compra</span><span><b class="mk-sell">▼</b> venda</span><span><i class="sw sw-hollow"></i>vela em formação</span>
-        </div>
-        <article class="signal-card" aria-labelledby="signal-title" data-signal-card></article>
+      <div class="balcony" data-balcony>
+        <ol class="crew" data-crew aria-label="Equipe agora"></ol>
+        <aside class="lousa" id="lousa" data-lousa aria-labelledby="lousa-title"></aside>
       </div>
-      <aside class="duo-team" aria-labelledby="team-title">
-        <header class="team-head">
-          <h3 id="team-title">Equipe agora</h3>
-          <p data-team-when></p>
-        </header>
-        <ol class="team-rows" data-team-rows></ol>
-        <p class="team-foot">As falas são frases do servidor. Quem decide é a Alice (regra automática), não você. Tendência, não promessa.</p>
-      </aside>
+      <div class="chart-box" data-chart tabindex="0" role="img" aria-roledescription="gráfico de velas" aria-describedby="chart-desc">
+        <div class="chart-legend" aria-hidden="true">
+          <span><i class="sw sw-ema9"></i>EMA 9</span><span><i class="sw sw-ema21"></i>EMA 21</span><span><i class="sw sw-band"></i>bandas</span>
+          <span><b class="mk-buy">▲</b> compra</span><span><b class="mk-sell">▼</b> venda</span><span><i class="sw sw-hollow"></i>vela em formação: as opiniões valem até ela fechar</span>
+        </div>
+        <div class="chart-svg" data-chart-svg></div>
+      </div>
+      <p id="chart-desc" class="visually-hidden" data-chart-desc></p>
       <svg class="leaders" data-leaders aria-hidden="true" focusable="false"></svg>
+    </div>
+    <button type="button" class="lousa-tab" data-lousa-toggle aria-expanded="false" aria-controls="lousa"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>Lousa da equipe: proteções e ranking</button>
+    <div class="row-pop" data-row-pop role="dialog" aria-modal="false" aria-labelledby="row-pop-title" hidden></div>
+    <div class="below-fold">
+      <article class="signal-card" aria-labelledby="signal-title" data-signal-card></article>
+      <section class="plaques" aria-labelledby="plaques-title">
+        <h3 id="plaques-title">Plaquinhas de compra e venda</h3>
+        <div class="plaque-row" data-plaques></div>
+      </section>
+      <section class="ranking" aria-labelledby="ranking-title" data-ranking></section>
+      <p class="card-sub duo-note">A equipe fica na varanda, de olho no gráfico. Cada um diz em poucas palavras o que achou da vela e aponta (linha tracejada) para o que está olhando. O que é longo fica na lousa: proteções, ranking e as notas do Otávio. Passe o mouse (ou use ← →) numa vela para ver o que cada um disse nela. As falas são frases do servidor; quem decide é a Alice (regra automática), não você.</p>
+      <p class="preview-note">Preview do adendo <span class="num">specs/011-sala-da-equipe/escritorio.md</span>. Velas REAIS de LINK/USDT 15 min (Binance). Acertos REAIS (T0.2 da spec 007, 183 dias). Tamanho da posição (87,6 LINK) e custos (0,30% ida e volta) são exemplos da simulação.</p>
     </div>
     <p class="visually-hidden" aria-live="polite" data-duo-live></p>
   </section>
 
+  <details class="office-wrap" data-office-wrap>
+  <summary class="office-summary"><svg class="icon" aria-hidden="true"><use href="#i-team"/></svg>Ver o escritório <span>mesas, telão e a reunião de cada vela</span></summary>
   <section class="office-card" data-office aria-labelledby="office-title">
     <header class="card-head">
       <div>
@@ -653,7 +880,9 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
     <p class="visually-hidden" aria-live="polite" data-live></p>
     <p class="disclaimer"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span>A Alice é uma regra automática sobre dados passados; não é recomendação. Tendência, não promessa. Tudo simulado, com dinheiro fictício.</span></p>
   </section>
+  </details>
 </main>
+<div class="term-tip" id="term-tip" role="tooltip" hidden></div>
 <footer class="site-foot">© <span data-year>2026</span> Ada Technology — AtivAdA · preview do escritório (spec 011)</footer>
 
 <script>
@@ -687,7 +916,7 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
     too_few: { label: 'Em observação', css: 'seal-few', icon: 'i-clock', situation: 'em observação: menos de 30' },
     decides: { label: 'Decide · não prevê', css: 'seal-role', icon: 'i-half' },
     measures: { label: 'Mede · não vota', css: 'seal-role', icon: 'i-lens' },
-    soon: { label: 'Em breve · modelo', css: 'seal-soon', icon: 'i-clock' },
+    soon: { label: '◆ Modelo · em breve', css: 'seal-soon', icon: 'i-clock' },
   };
   const VOTE = {
     favor: { label: 'a favor', css: 'vote-favor', icon: 'i-up' },
@@ -744,6 +973,7 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
 
   const SCENES = {
     'grafico-equipe': { label: 'Gráfico + equipe', flow: 'duo' },
+    escada: { label: 'Escada (futura)', flow: 'duo', ladder: true },
     'vela-nova': {
       label: 'Vela nova chegando', pair: 'LINK/USDT', candle: '13:45 às 14:00', close: '12,458', next: '14:15', series: 'calm', light: 'calm', flow: 'meeting',
       votes: {
@@ -832,6 +1062,7 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
 
   function sceneData() {
     const raw = SCENES[state.sceneKey];
+    if (raw.flow === 'duo') return SCENES['vela-nova'];
     if (!raw.base) return raw;
     return { ...SCENES[raw.base], label: raw.label, note: raw.note };
   }
@@ -1247,7 +1478,7 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
   function badgeInner(member, scene) {
     const seal = sealFor(member, scene);
     if (member.kind === 'soon') {
-      return `<div class="b-top"><span class="b-name">${member.name}</span></div><span class="b-role">${member.short}</span><span class="b-id">em breve</span>`;
+      return `<div class="b-top"><span class="b-name"><b class="mark-model" aria-hidden="true">◆</b> ${member.name}</span></div><span class="b-role">${member.short}</span><span class="b-id">modelo · em breve</span>`;
     }
     return `<div class="b-top"><span class="b-photo">${portraitSvg(member.key)}</span><span class="b-name">${member.name}</span></div>
       <span class="b-role">${member.role}</span>${chip(seal)}<span class="b-id">${member.id} · ${member.version}</span>`;
@@ -1628,13 +1859,14 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
     const raw = SCENES[state.sceneKey];
     const isDuo = raw.flow === 'duo';
     $('[data-duo]').hidden = !isDuo;
-    $('[data-office]').hidden = isDuo;
     $$('[data-scene-picker] a').forEach((link) => link.setAttribute('aria-current', String(link.dataset.scene === state.sceneKey)));
+    document.body.classList.toggle('is-duo', isDuo);
+    $('[data-office]').hidden = false;
+    $('[data-office-wrap]').open = !isDuo;
     if (isDuo) {
       $('[data-title]').textContent = 'LINK/USDT · simulação ao vivo';
-      duo.renderAll();
+      duo.renderAll({ ladder: raw.ladder });
       requestAnimationFrame(() => duo.play(isAnimated));
-      return;
     }
     const scene = sceneData();
     if (raw.mode) state.mode = raw.mode;
@@ -1650,7 +1882,7 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
     requestAnimationFrame(() => play({ isAnimated }));
   }
 
-  // ---------- cena principal: gráfico + equipe colada ----------
+  // ---------- cena principal: a equipe na varanda, olhando o gráfico (adendo §4) ----------
   // Velas REAIS de LINK/USDT 15 min (Binance, as mesmas de docs/preview/grafico-binance). Horários em GMT−3.
   const QUARTERS = [[1791878400000,13.068,13.111,13.056,13.109,15943],[1791879300000,13.109,13.109,13.015,13.028,27136],[1791880200000,13.027,13.031,12.995,13.024,41177],[1791881100000,13.023,13.032,13.008,13.008,55434],[1791882000000,13.007,13.007,12.917,12.941,48702],[1791882900000,12.942,12.954,12.915,12.92,36849],[1791883800000,12.92,12.983,12.897,12.95,43563],[1791884700000,12.951,12.995,12.905,12.991,16083],[1791885600000,12.992,13.001,12.944,12.95,17216],[1791886500000,12.95,12.961,12.898,12.898,11453],[1791887400000,12.899,12.904,12.824,12.83,34843],[1791888300000,12.83,12.882,12.825,12.882,15192],[1791889200000,12.882,12.882,12.773,12.779,25063],[1791890100000,12.78,12.958,12.724,12.844,45354],[1791891000000,12.843,12.922,12.838,12.873,21476],[1791891900000,12.872,12.874,12.816,12.84,30408],[1791892800000,12.839,12.848,12.816,12.819,12883],[1791893700000,12.818,12.896,12.769,12.886,57582],[1791894600000,12.887,12.95,12.873,12.911,34487],[1791895500000,12.911,12.974,12.9,12.953,31329],[1791896400000,12.954,12.958,12.878,12.913,20179],[1791897300000,12.913,13.001,12.9,12.992,22626],[1791898200000,12.993,13.049,12.941,12.96,50149],[1791899100000,12.959,13.003,12.864,12.883,22691],[1791900000000,12.882,13.075,12.866,13.037,54988],[1791900900000,13.038,13.093,12.996,13.009,42192],[1791901800000,13.01,13.065,12.986,13.057,23031],[1791902700000,13.056,13.098,13.001,13.004,13636],[1791903600000,13.005,13.034,12.934,12.973,19923],[1791904500000,12.972,13.019,12.903,12.948,31120],[1791905400000,12.947,12.959,12.873,12.881,21005],[1791906300000,12.882,12.901,12.825,12.899,25227],[1791907200000,12.9,12.956,12.893,12.899,18612],[1791908100000,12.899,12.978,12.899,12.914,10720],[1791909000000,12.913,12.958,12.897,12.945,12358],[1791909900000,12.946,12.981,12.924,12.924,17370],[1791910800000,12.923,12.923,12.887,12.908,9731],[1791911700000,12.908,12.946,12.902,12.905,10355],[1791912600000,12.905,12.928,12.883,12.913,14788],[1791913500000,12.913,12.925,12.86,12.885,10417],[1791914400000,12.886,12.966,12.88,12.927,17107],[1791915300000,12.926,12.944,12.909,12.911,5348],[1791916200000,12.912,12.937,12.881,12.924,11253],[1791917100000,12.924,12.966,12.92,12.953,3880],[1791918000000,12.953,12.996,12.942,12.942,6245],[1791918900000,12.942,12.945,12.913,12.913,15180],[1791919800000,12.912,12.924,12.888,12.892,19691],[1791920700000,12.892,12.936,12.881,12.932,8528],[1791921600000,12.933,12.952,12.92,12.92,11411],[1791922500000,12.92,12.923,12.9,12.911,3964],[1791923400000,12.911,12.973,12.905,12.947,8713],[1791924300000,12.946,12.95,12.916,12.928,5556],[1791925200000,12.927,12.936,12.906,12.906,3760],[1791926100000,12.905,12.917,12.891,12.904,3104],[1791927000000,12.905,12.944,12.898,12.928,6566],[1791927900000,12.927,12.947,12.924,12.931,4475],[1791928800000,12.931,12.936,12.897,12.905,8647],[1791929700000,12.906,12.924,12.896,12.924,3501],[1791930600000,12.925,12.945,12.923,12.93,3101],[1791931500000,12.93,12.951,12.92,12.94,4910],[1791932400000,12.94,12.94,12.886,12.896,4093],[1791933300000,12.896,12.902,12.86,12.877,15475],[1791934200000,12.876,12.901,12.876,12.899,5074],[1791935100000,12.898,12.906,12.877,12.884,3664],[1791936000000,12.884,12.951,12.884,12.936,9277],[1791936900000,12.937,12.995,12.936,12.995,3160],[1791937800000,12.996,13.035,12.983,13.019,40805],[1791938700000,13.02,13.039,12.951,12.951,11454],[1791939600000,12.952,12.986,12.936,12.971,7889],[1791940500000,12.97,12.979,12.936,12.961,6695],[1791941400000,12.962,12.967,12.9,12.95,30514],[1791942300000,12.949,12.99,12.928,12.932,7727],[1791943200000,12.932,12.973,12.927,12.948,6494],[1791944100000,12.947,12.967,12.93,12.93,5425],[1791945000000,12.93,12.946,12.902,12.942,5169],[1791945900000,12.942,13.007,12.942,13.002,5396],[1791946800000,13.004,13.008,12.963,12.978,3902],[1791947700000,12.979,13.009,12.964,13.003,4702],[1791948600000,13.003,13.077,13,13.04,15048],[1791949500000,13.039,13.05,13.007,13.011,9046],[1791950400000,13.011,13.014,12.973,12.982,7291],[1791951300000,12.983,13.006,12.954,13.003,3951],[1791952200000,13.003,13.048,13.003,13.035,10677],[1791953100000,13.035,13.047,13.031,13.035,3463],[1791954000000,13.034,13.034,12.939,12.957,9291],[1791954900000,12.957,12.962,12.928,12.952,12264],[1791955800000,12.952,12.959,12.899,12.911,12970],[1791956700000,12.912,12.915,12.855,12.869,23100],[1791957600000,12.87,12.907,12.848,12.899,7478],[1791958500000,12.9,12.922,12.87,12.873,9791],[1791959400000,12.873,12.902,12.857,12.898,19471],[1791960300000,12.898,12.903,12.879,12.887,5943],[1791961200000,12.886,12.943,12.869,12.894,25263],[1791962100000,12.895,12.915,12.867,12.914,6309],[1791963000000,12.913,12.921,12.893,12.899,12275],[1791963900000,12.899,12.942,12.897,12.927,9027],[1791964800000,12.926,13.1,12.918,13.044,27985],[1791965700000,13.044,13.055,12.999,13.011,8272],[1791966600000,13.01,13.014,12.915,12.935,12441],[1791967500000,12.935,12.977,12.911,12.931,11240]];
   const duo = (() => {
@@ -1666,7 +1898,7 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
       const window = closes.slice(Math.max(0, index - 19), index + 1);
       const mean = window.reduce((sum, value) => sum + value, 0) / window.length;
       const deviation = Math.sqrt(window.reduce((sum, value) => sum + (value - mean) ** 2, 0) / window.length);
-      return { lower: mean - 2 * deviation, upper: mean + 2 * deviation, mean };
+      return { lower: mean - 2 * deviation, upper: mean + 2 * deviation };
     });
     const rsi = closes.map((_, index) => {
       if (index < 14) return 50;
@@ -1680,95 +1912,199 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
     const forming = candles.map((candle) => candle.label).lastIndexOf('03:30');
     const start = candles.findIndex((candle, index) => index > forming - 60 && candle.label === '15:00');
     const at = (text) => candles.findIndex((candle, index) => index >= start && index <= forming && candle.label === text);
-    const POSITION = { entry: 12.87, target: 13.007, stop: 12.789, entryIndex: at('03:00') };
+    const NOW_PRICE = candles[forming].close;
+    // Operação aberta: 87,6 LINK a 12,870; custo ida e volta 0,30% (taxa + deslizamento). Arredondado contra o usuário.
+    const TRADE = {
+      entry: 12.87, target: 13.007, stop: 12.789, entryIndex: at('03:00'), quantity: '87,6 LINK', value: '1.127,4 USDT',
+      gainGross: '+1,06%', gainNet: '+0,76%', gainUsdt: '+8,5 USDT', lossGross: '−0,63%', lossNet: '−0,93%', lossUsdt: '−10,5 USDT',
+      openGross: '+0,22%', openNet: '−0,08%', openUsdt: '−0,9 USDT', toStop: '0,85%', ratio: '0,8', timeExit: 'sai na 5ª vela, às 04:15',
+    };
     const MARKS = [
       { index: at('20:30'), side: 'buy', value: 12.876, text: 'Compra 12,876' },
-      { index: at('21:30'), side: 'sell', value: 13.013, text: 'Venda 13,013 · alvo' },
-      { index: at('03:00'), side: 'buy', value: 12.87, text: 'Compra 12,870' },
+      { index: at('21:30'), side: 'sell', value: 13.013, text: 'Venda 13,013 · alvo · +0,76% líquido' },
+      { index: at('03:00'), side: 'buy', value: 12.87, text: 'Compra 12,870 · aberta' },
     ];
-    const NOW_PRICE = candles[forming].close;
-    const ROWS = ['renata', 'tiago', 'vitor', 'sofia', 'alice', 'otavio'];
-    const SHORT_ROLE = { renata: 'Reversão', tiago: 'Tendência', vitor: 'Volume', sofia: 'Sentimento', alice: 'Risco sênior', otavio: 'Auditor' };
-    const local = { pointed: null, geometry: null, lit: null, announceTimer: 0 };
+    // Escada (cena futura, spec 016): compras em cascata abaixo e vendas parciais acima; 1/3 da posição por degrau.
+    const LADDER = {
+      buys: [
+        { price: 12.87, text: 'Compra 1/3 a 12,870', amount: '29,2 LINK · 375,8 USDT · 33%', state: 'executada' },
+        { price: 12.613, text: 'Compra 2/3 se cair −2% (12,613)', amount: '29,2 LINK · 368,3 USDT · 33%', state: 'pendente' },
+        { price: 12.484, text: 'Compra 3/3 se cair −3% (12,484)', amount: '29,2 LINK · 364,5 USDT · 33%', state: 'pendente' },
+      ],
+      sells: [
+        { price: 13.257, text: 'Vende 1/3 a +3% (13,257) · líquido +2,70%', amount: '29,2 LINK · 33%', state: 'pendente' },
+        { price: 13.514, text: 'Vende 1/3 a +5% (13,514) · líquido +4,70%', amount: '29,2 LINK · 33%', state: 'pendente' },
+        { price: 14.157, text: 'Vende 1/3 a +10% (14,157) · líquido +9,70%', amount: '29,2 LINK · 33%', state: 'pendente' },
+      ],
+      stop: 12.359, exposure: '1.108,6 USDT', maxLoss: '29,3 USDT', average: '12,656', left: '29,2 LINK de 87,6 comprados',
+    };
+    // Glossário fechado (vira apps/frontend-ativada/src/glossary/): uma frase leiga + um exemplo com os números da tela. Nunca promete resultado.
+    const GLOSSARY = {
+      rsi: ['RSI', 'Mede, de 0 a 100, se o preço subiu ou caiu rápido demais. Abaixo de 30 costuma ser lido como "barato"; acima de 70, como "caro".', `Agora: RSI ${oneDecimal(rsi[forming - 1])}, nem um nem outro.`],
+      banda: ['Banda de Bollinger', 'Faixa em volta da média das últimas 20 velas. Fechar abaixo da banda de baixo é um exagero que às vezes volta.', `Banda de baixo agora: ${price(bands[forming - 1].lower)}.`],
+      ema: ['EMA (média)', 'Média do preço que dá mais peso às velas recentes. A EMA 9 é a rápida; a EMA 21, a lenta. A rápida acima da lenta indica preço subindo.', `Agora: EMA 9 ${price(ema9[forming - 1])} e EMA 21 ${price(ema21[forming - 1])}.`],
+      macd: ['MACD', 'Diferença entre duas médias do preço comparada com uma linha de sinal. Acima da linha indica força para cima.', ''],
+      donchian: ['Donchian', 'A máxima e a mínima das últimas 20 velas. Fechar acima da máxima indica rompimento.', ''],
+      obv: ['OBV (volume)', 'Soma o volume das velas que subiram e desconta o das que caíram. Acima da média dele, o volume confirma a subida.', ''],
+      fear: ['Medo e Ganância', 'Índice diário, de 0 a 100, do humor do mercado de cripto (Fear & Greed). Até 25 é medo; a partir de 75, ganância.', 'Hoje: 41, nem medo nem ganância.'],
+      atr: ['Faixa (ATR)', 'O tamanho típico do movimento de uma vela, medido nas últimas 14.', ''],
+      placar: ['Placar', 'A soma dos votos das regras da estratégia. A estratégia compra quando o placar alcança o limiar.', ''],
+      limiar: ['Limiar', 'O número que o placar precisa alcançar para a estratégia agir.', ''],
+      protecao: ['Proteção contra queda', 'O preço em que a simulação vende para limitar a perda (em inglês, stop). É uma regra da simulação, não uma ordem para você.', `Se cair a ${price(TRADE.stop)}, vende: ${TRADE.lossNet} líquido (${TRADE.lossUsdt}).`],
+      alvo: ['Alvo de ganho', 'O preço em que a simulação vende para realizar o lucro.', `${price(TRADE.target)}: ${TRADE.gainNet} líquido (${TRADE.gainUsdt}).`],
+      entrada: ['Entrada', 'O preço em que a simulação comprou.', `${price(TRADE.entry)}, às 03:00.`],
+      razao: ['Ganho ÷ risco', 'Quanto se ganha no alvo para cada 1 que se perde na proteção, já com custos. Abaixo de 1, o ganho possível é menor que a perda possível.', `${TRADE.gainNet.slice(1)} ÷ ${TRADE.lossNet.slice(1)} = ${TRADE.ratio}.`],
+      liquido: ['Líquido', 'O resultado depois da taxa e do deslizamento na compra e na venda.', 'Aqui o custo de ida e volta é 0,30%: +1,06% bruto vira +0,76% líquido.'],
+      wilson: ['Intervalo de confiança (Wilson)', 'A faixa onde o acerto verdadeiro provavelmente está, dado quantas previsões foram contadas. Com poucas previsões a faixa fica larga; o ranking usa o pior caso dela.', 'Reversão: de 53,7% a 57,6%, em 2.552 previsões.'],
+      moeda: ['Moeda ao ar', 'Acertar 50%, como cara ou coroa. Só ganha voto quem fica acima disso mesmo no pior caso do intervalo.', 'Tendência: 46,5% a 48,4%, abaixo da moeda.'],
+      observacao: ['Em observação', 'Menos de 30 previsões contadas: ainda não dá para medir o acerto, então não vota.', 'Nina, Lucas e Clara: faltam 30.'],
+      trava: ['Trava', 'Um limite de segurança (perda do dia, perdas seguidas, operações demais, folga da meta, movimento que não paga as taxas). Com uma trava ligada, a simulação não abre compra nova.', 'Agora: 0 de 5 ligadas.'],
+      teto: ['Teto de risco', 'Quanto do risco normal da estratégia a Alice libera.', '¼ = 0,25% do saldo por operação, em vez de 1%.'],
+      postura: ['Postura da Alice', 'PAUSA: nenhuma compra nova. CAUTELA: ¼ do risco. MODERADA: ½. LIBERADA: o risco inteiro da estratégia.', ''],
+      lucro: ['Lucro mínimo', 'Só compra se o alvo pagar pelo menos o dobro do custo de ida e volta.', '1,06% ≥ 2 × 0,30% = 0,60%.'],
+      deslizamento: ['Deslizamento', 'A diferença entre o preço pedido e o preço em que a ordem sai.', ''],
+      taxa: ['Taxa', 'O que a corretora cobra em cada compra e em cada venda.', ''],
+      tempo: ['Proteção por tempo', 'A Alice fecha a operação depois de um número de velas, mesmo sem alvo nem proteção.', TRADE.timeExit + '.'],
+      escada: ['Escada', 'Comprar ou vender em partes, em preços diferentes, em vez de tudo de uma vez. Comprar em queda aumenta o risco.', ''],
+      medio: ['Preço médio', 'O preço médio pago por todas as partes compradas.', `${LADDER.average} se as 3 compras entrarem.`],
+      formacao: ['Vela em formação', 'A vela de agora, que ainda não fechou. As opiniões valem até ela fechar.', 'Esta fecha às 03:45.'],
+      peso: ['Peso', 'Quanto o voto conta para a Alice. Quem não provou valor tem peso 0.', 'Reversão: 0,03.'],
+      regra: ['Agente de regra', 'Segue uma conta fixa sobre o preço: a mesma vela dá sempre a mesma opinião.', ''],
+      modelo: ['Agente de modelo', 'Usa um modelo de linguagem (IA) em vez de uma conta fixa. Pode errar e o auditor mede o acerto dele à parte.', ''],
+    };
+    const term = (key, text = GLOSSARY[key][0]) => `<button type="button" class="term" data-term="${key}" aria-describedby="term-tip">${text}</button>`;
+    const CREW = ['tiago', 'renata', 'alice', 'vitor', 'sofia', 'otavio'];
+    const MODELS = ['nina', 'lucas', 'clara'];
+    const MODEL_INFO = { name: 'Claude Haiku 4.5 (proposto)', where: 'nuvem (API da Anthropic)', cost: 'centavos por dia (estimado: 96 chamadas, uma por vela)' };
+    const SHORT_SEAL = { above: 'Acima', even: 'Igual', below: 'Abaixo', too_few: 'Em obs.' };
+    const SHORT_ROLE = { tiago: 'Tendência', renata: 'Reversão', alice: 'Risco sênior', vitor: 'Volume', sofia: 'Sentimento', otavio: 'Auditor' };
+    const local = { pointed: null, geometry: null, lit: null, tab: 'protecoes', active: 'renata', ladder: false, rankWindow: '6m', rankFrame: '15m', announce: 0 };
 
+    function closesAt(index) { return candles[index + 2]?.label ?? '03:45'; }
     function opinionsAt(index) {
       const candle = candles[index];
       const band = bands[index];
       const rate = rsi[index];
-      let renata = ['neutro', `O RSI (${oneDecimal(rate)}) está entre 30 e 70.`, `Vota a favor se fechar abaixo de ${price(band.lower)}.`];
-      if (candle.close < band.lower) renata = ['favor', 'O preço fechou abaixo da banda inferior.', ''];
-      else if (candle.close > band.upper) renata = ['contra', 'O preço fechou acima da banda superior.', ''];
-      else if (rate < 30) renata = ['favor', `O RSI (${oneDecimal(rate)}) está abaixo de 30.`, ''];
-      else if (rate > 70) renata = ['contra', `O RSI (${oneDecimal(rate)}) está acima de 70.`, ''];
-      const isHolding = index >= POSITION.entryIndex;
-      const posture = renata[0] === 'favor' ? 'normal' : 'caution';
-      const reason = renata[0] === 'favor' ? 'Quem provou valor está a favor: tamanho pela metade.'
-        : renata[0] === 'contra' ? 'Quem provou valor está contra nesta vela: nenhuma entrada nova.' : 'Os especialistas que provaram valor estão neutros nesta vela. Sem previsão.';
+      let renata = { vote: 'neutro', motive: `O RSI (${oneDecimal(rate)}) está entre 30 e 70.`, short: `${term('rsi')} <b>${oneDecimal(rate)}</b> · ${term('banda', 'banda')} <b>${price(band.lower)}</b>`, trigger: `Vota a favor se fechar abaixo de ${price(band.lower)}.` };
+      if (candle.close < band.lower) renata = { vote: 'favor', motive: 'O preço fechou abaixo da banda inferior.', short: `abaixo da ${term('banda', 'banda')} <b>${price(band.lower)}</b>`, trigger: '' };
+      else if (candle.close > band.upper) renata = { vote: 'contra', motive: 'O preço fechou acima da banda superior.', short: `acima da ${term('banda', 'banda')} <b>${price(band.upper)}</b>`, trigger: '' };
+      else if (rate < 30) renata = { vote: 'favor', motive: `O RSI (${oneDecimal(rate)}) está abaixo de 30.`, short: `${term('rsi')} <b>${oneDecimal(rate)}</b> < 30`, trigger: '' };
+      else if (rate > 70) renata = { vote: 'contra', motive: `O RSI (${oneDecimal(rate)}) está acima de 70.`, short: `${term('rsi')} <b>${oneDecimal(rate)}</b> > 70`, trigger: '' };
+      const isFavor = renata.vote === 'favor';
+      const trendUp = ema9[index] > ema21[index];
+      const volumeUp = obv[index] > obvEma[index];
       return {
-        renata: { vote: renata[0], motive: renata[1], trigger: renata[2], foot: `banda inferior <b>${price(band.lower)}</b> · fechou a <b>${price(candle.close)}</b>` },
-        tiago: ema9[index] > ema21[index]
-          ? { vote: 'favor', motive: 'A média rápida (EMA 9) está acima da lenta (EMA 21).', foot: `EMA 9 <b>${price(ema9[index])}</b> · EMA 21 <b>${price(ema21[index])}</b>` }
-          : { vote: 'contra', motive: 'A média rápida (EMA 9) está abaixo da lenta (EMA 21).', foot: `EMA 9 <b>${price(ema9[index])}</b> · EMA 21 <b>${price(ema21[index])}</b>` },
-        vitor: obv[index] > obvEma[index]
-          ? { vote: 'favor', motive: 'O volume (OBV) está acima da média dele.', foot: `volume da vela <b>${Math.round(candle.volume / 100) / 10} mil</b>` }
-          : { vote: 'contra', motive: 'O volume (OBV) está abaixo da média dele.', foot: `volume da vela <b>${Math.round(candle.volume / 100) / 10} mil</b>` },
-        sofia: { vote: 'neutro', motive: 'O Fear & Greed (41) não está em medo (até 25).', foot: 'o índice é diário: não aparece no gráfico' },
-        alice: { posture, reason, foot: isHolding ? `comprado desde 03:00 · saída de proteção <b>${price(POSITION.stop)}</b>` : `fechou a <b>${price(candle.close)}</b>` },
-        otavio: { foot: 'medido em 2.552 previsões da Reversão (183 dias)' },
+        renata,
+        tiago: { vote: trendUp ? 'favor' : 'contra', motive: `A média rápida (EMA 9) está ${trendUp ? 'acima' : 'abaixo'} da lenta (EMA 21).`, short: `${term('ema', 'EMA')} 9 ${trendUp ? 'acima' : 'abaixo'} da 21` },
+        vitor: { vote: volumeUp ? 'favor' : 'contra', motive: `O volume (OBV) está ${volumeUp ? 'acima' : 'abaixo'} da média dele.`, short: `${term('obv', 'OBV')} ${volumeUp ? 'acima' : 'abaixo'} da média` },
+        sofia: { vote: 'neutro', motive: 'O Fear & Greed (41) não está em medo (até 25).', short: `${term('fear')} <b>41</b>` },
+        alice: { posture: isFavor ? 'normal' : 'caution', motive: isFavor ? 'Quem provou valor está a favor: tamanho pela metade.' : 'Os especialistas que provaram valor estão neutros nesta vela. Sem previsão.', short: `${term('teto', isFavor ? 'teto de risco ½' : 'teto de risco ¼')}` },
+        otavio: { motive: 'A Reversão acerta 55,64% (1.420 de 2.552); as outras não passam de cara ou coroa.', short: `Reversão <b>55,6%</b> > ${term('moeda', 'moeda')}` },
       };
     }
 
-    function miniDesk(key) {
-      const screens = {
-        renata: '<path d="M7 34q7-6 14 0t14 0" stroke="var(--screen-accent)" stroke-width="1.3" fill="none"/><path d="M7 40q7-6 14 0t14 0" stroke="var(--screen-ink)" stroke-width="1.3" fill="none"/>',
-        tiago: '<path d="M7 41l8-5 7 2 12-10" stroke="var(--screen-accent)" stroke-width="1.6" fill="none"/>',
-        vitor: '<path d="M9 44v-6M14 44v-10M19 44v-4M24 44v-8M29 44v-12M34 44v-5" stroke="var(--screen-ink-2)" stroke-width="2.6"/>',
-        sofia: '<path d="M11 43a10 10 0 0 1 20 0" stroke="var(--screen-grid)" stroke-width="3" fill="none"/><path d="M21 43l-5-7" stroke="var(--screen-ink)" stroke-width="1.6"/>',
-        alice: '<path d="M21 28l9 3v6c0 5-4 8-9 9-5-1-9-4-9-9v-6z" stroke="var(--screen-accent)" stroke-width="1.5" fill="none"/>',
-        otavio: '<path d="M10 32h18M10 37h22M10 42h14" stroke="var(--screen-warn)" stroke-width="2.4" stroke-linecap="round"/><path d="M20 28v18" stroke="var(--screen-ink)" stroke-width="1" stroke-dasharray="2 2"/>',
-      };
-      const figure = figureSvg(key).replace('<svg class="fig"', '<svg class="fig" x="30" y="0" width="44" height="60.5"');
-      return `<svg class="mini-desk look-${key}" viewBox="0 0 74 62" aria-hidden="true" focusable="false">
-        <rect x="2" y="2" width="70" height="44" rx="6" fill="color-mix(in srgb, var(--surface-2) 80%, var(--accent-soft))"/>${figure}
-        <rect class="bezel" x="3" y="23" width="38" height="27" rx="2.5"/><rect class="screen" x="5" y="25" width="34" height="23" rx="1.5"/>${screens[key]}
-        <rect class="desk-top" x="0" y="48" width="74" height="4"/><rect class="desk-front" x="0" y="52" width="74" height="10" rx="1.5"/></svg>`;
+    // ---------- varanda ----------
+    function leanFigure(key) {
+      const figure = figureSvg(key)
+        .replace('<svg class="fig" viewBox="0 0 80 110"', '<svg class="fig" viewBox="6 0 68 78"')
+        .replace('<g class="arm arm-r">', '<g class="arm-point"><rect class="sleeve" x="53" y="47" width="9" height="26" rx="4" transform="rotate(-38 57 50)"/><circle class="skin" cx="71" cy="67" r="4"/></g><g class="arm arm-r">');
+      return `<div class="lean" aria-hidden="true">${figure}<span class="rail-glass"></span></div>`;
     }
-    function rowHtml(key, opinion, index, isNow) {
+    function sealOf(key) {
       const member = BY_KEY[key];
-      const seal = sealFor(member, { newPair: false });
-      const where = `<span class="say-where"> · vela das ${candles[index].label}</span>`;
-      let say = '';
+      if (member.kind === 'analyst') return { css: 'seal-role', icon: 'i-half', text: 'Decide', full: SEAL.decides.label };
+      if (member.kind === 'auditor') return { css: 'seal-role', icon: 'i-lens', text: 'Mede', full: SEAL.measures.label };
+      const verdict = AUDIT[member.audit].verdict;
+      return { css: SEAL[verdict].css, icon: SEAL[verdict].icon, text: SHORT_SEAL[verdict], full: SEAL[verdict].label };
+    }
+    function talkHtml(key, opinion, index) {
+      const valid = `<span class="t-line t-hz">${key === 'otavio' ? `${term('wilson', 'janela de 30 dias')}` : `${term('formacao', `vale até ${closesAt(index)}`)}`}</span>`;
       if (key === 'alice') {
         const posture = POSTURE[opinion.posture];
-        say = `<p class="say"><span class="say-head">${chip(posture, posture.label)}<span>teto de risco ${opinion.posture === 'normal' ? '½' : '¼'}</span></span>${opinion.reason}<span class="say-foot">${opinion.foot}${where}</span><span class="dots" aria-hidden="true">•••</span></p>`;
-      } else if (key === 'otavio') {
-        say = `<p class="say"><span class="say-head">${chip(SEAL.above, 'Reversão: 55,64%')}</span>A Reversão acerta 55,64% (1.420 de 2.552); as outras não passam de cara ou coroa.<span class="say-foot">${opinion.foot}</span><span class="dots" aria-hidden="true">•••</span></p>`;
-      } else {
-        const voter = key === 'renata' && (opinion.vote === 'favor' || opinion.vote === 'contra');
-        const quiet = key !== 'renata';
-        say = `<p class="say${quiet ? ' is-quiet' : ''}${voter ? ' is-voter' : ''}"><span class="say-head">${chip(VOTE[opinion.vote])}${quiet ? '<span>não vota</span>' : '<span>peso 0,03</span>'}</span>${opinion.motive}${opinion.trigger ? ` ${opinion.trigger}` : ''}<span class="say-foot">${opinion.foot}${where}</span><span class="dots" aria-hidden="true">•••</span></p>`;
+        return `<p class="talk" data-talk="${key}">${chip(posture, posture.label)}<span class="t-line t-short">${opinion.short}</span>${valid}<span class="dots" aria-hidden="true">•••</span></p>`;
       }
-      const accuracy = member.kind === 'specialist' ? `<dt>Acerto</dt><dd>${accuracyText(member, {})} · ${weightText(member, {})}</dd>` : '';
-      return `<li class="team-row" data-row="${key}">${miniDesk(key)}
-        <div class="crach"><b>${member.name}</b><span class="role">${SHORT_ROLE[key]}</span>${chip(seal)}
-          <button type="button" class="ficha-btn" aria-expanded="false" aria-controls="duo-ficha-${key}" data-duo-ficha="${key}">Ficha</button></div>
-        ${say}
-        <div class="row-ficha" id="duo-ficha-${key}" hidden><dl><dt>Cargo</dt><dd>${member.role}</dd><dt>O que faz</dt><dd>${member.does}</dd>${accuracy}<dt>ID</dt><dd class="bc-id">${member.id} · ${member.version}</dd></dl></div></li>`;
+      if (key === 'otavio') return `<p class="talk" data-talk="${key}">${chip(SEAL.above, 'confere')}<span class="t-line t-short">${opinion.short}</span>${valid}<span class="dots" aria-hidden="true">•••</span></p>`;
+      const isVoter = key === 'renata' && (opinion.vote === 'favor' || opinion.vote === 'contra');
+      const isQuiet = key !== 'renata';
+      return `<p class="talk${isQuiet ? ' is-quiet' : ''}${isVoter ? ' is-voter' : ''}" data-talk="${key}">${chip(VOTE[opinion.vote])}${isQuiet ? ' <span class="visually-hidden">não vota</span>' : ''}<span class="t-line t-short">${opinion.short}</span>${valid}<span class="dots" aria-hidden="true">•••</span></p>`;
+    }
+    function crewHtml(index) {
+      const opinions = opinionsAt(index);
+      const models = `<li class="models-slot" aria-label="Agentes de modelo, em breve"><span class="models-head"><b aria-hidden="true">◆</b>MODELOS · em breve</span>${MODELS.map((key) => `
+        <button type="button" class="model-btn" data-ficha="${key}" aria-haspopup="dialog"><span class="diamond" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 4v3M14 4v3M10 17v3M14 17v3M4 10h3M4 14h3M17 10h3M17 14h3"/></svg></span><span class="m-name"><b>${BY_KEY[key].name}</b> · ${BY_KEY[key].short}</span><span class="m-count">3 em breve</span></button>`).join('')}</li>`;
+      return models + CREW.map((key) => {
+        const member = BY_KEY[key];
+        const seal = sealOf(key);
+        const label = `${member.name}, ${member.role}, regra, ${seal.full}`;
+        return `<li class="agent-slot role-${key} look-${key}${key === 'alice' ? ' is-center' : ''}${key === local.active ? ' is-active' : ''} is-pointing" data-slot="${key}">
+          ${leanFigure(key)}
+          <button type="button" class="badge-btn" data-ficha="${key}" aria-haspopup="dialog" aria-label="${label}. Ver a ficha">
+            <span class="b-face" aria-hidden="true">${portraitSvg(key)}</span>
+            <span class="b-name"><b class="mark-rule" aria-hidden="true">●</b> ${member.name}</span>
+            <span class="b-seal ${seal.css}">${icon(seal.icon)}<span>${seal.text}</span></span>
+            <span class="b-role">${SHORT_ROLE[key]}</span></button>
+          ${talkHtml(key, opinions[key], index)}</li>`;
+      }).join('');
     }
 
-    function chartSvg(width, pointed) {
+    // ---------- lousa ----------
+    function distanceBar() {
+      const cushion = Math.min(1, (NOW_PRICE - TRADE.stop) / (TRADE.entry - TRADE.stop));
+      const state = cushion > 0.5 ? ['is-far', 'i-check', 'longe'] : cushion > 0.2 ? ['is-near', 'i-clock', 'perto'] : ['is-close', 'i-down', 'muito perto'];
+      return `<span class="dist ${state[0]}"><span class="dist-bar"><i data-width="${Math.round(cushion * 100)}"></i></span>${icon(state[1])}<span>${state[2]}: faltam <b>${TRADE.toStop}</b> até a proteção</span></span>`;
+    }
+    function lousaBody(tab) {
+      if (tab === 'protecoes') {
+        return `<ul class="prot">
+          <li data-write><svg class="icon i-shield" aria-hidden="true"><use href="#i-shield"/></svg><span><b class="lbl">${term('protecao')}</b> <b>${price(TRADE.stop)}</b> · ${TRADE.lossNet} · ${TRADE.lossUsdt}</span></li>
+          <li data-write class="sub">${distanceBar()}</li>
+          <li data-write>${icon('i-up')}<span><b class="lbl">${term('alvo')}</b> <b>${price(TRADE.target)}</b> · ${TRADE.gainNet} · ${TRADE.gainUsdt}</span></li>
+          <li data-write>${icon('i-clock')}<span><b class="lbl">${term('tempo')}</b> ${TRADE.timeExit}</span></li>
+          <li data-write>${icon('i-check')}<span><b class="lbl">${term('lucro')}</b> 1,06% ≥ 2 × custo ✓</span></li></ul>
+          <div class="postits"><span class="postit" data-postit>${icon('i-unlock')}${term('trava', 'Trava de pausa')}: 0 de 5</span><span class="postit">Perdas seguidas: 1 de 3</span></div>`;
+      }
+      if (tab === 'ranking') {
+        const rows = ['renata', 'sofia', 'vitor', 'tiago'].map((key, position) => {
+          const audit = AUDIT[BY_KEY[key].audit];
+          const crown = audit.verdict === 'above' ? `<svg class="icon crown" aria-label="coroa: acima da moeda ao ar"><use href="#i-crown"/></svg>` : `<span class="pos">${position + 1}º</span>`;
+          return `<li data-write>${crown}<b>${BY_KEY[key].name}</b><span class="r-num">${audit.low.toFixed(1).replace('.', ',')}% no ${term('wilson', 'pior caso')}</span>${chip({ ...SEAL[audit.verdict] }, SHORT_SEAL[audit.verdict])}</li>`;
+        }).join('');
+        return `<ol class="rank-mini">${rows}<li data-write class="r-model"><b class="mark-model" aria-hidden="true">◆</b>Nina, Lucas, Clara: ${term('observacao', 'em observação')} (faltam 30)</li></ol>
+          <a class="lousa-link" href="#ranking-title">Ranking completo, com a melhor e a pior dica</a>`;
+      }
+      if (tab === 'escada') {
+        return `<p class="future-tag">Cena futura (spec 016)</p><ul class="prot ladder-mini">
+          ${LADDER.buys.map((step) => `<li data-write><b class="mk-buy">▲</b><span>${step.text.replace('Compra ', '')} · ${step.amount.split(' · ')[0]} · <i>${step.state}</i></span></li>`).join('')}
+          <li data-write>${icon('i-flat')}<span>${term('medio', 'preço médio')} <b>${LADDER.average}</b> se as 3 entrarem · exposição máx. <b>${LADDER.exposure}</b></span></li></ul>`;
+      }
+      return `<ul class="notes">
+        <li data-write><span class="ok">✓ Reversão 55,64%</span> (1.420 de 2.552) vota</li>
+        <li data-write><span class="struck" data-strike>Tendência 47,44%</span> <span class="struck" data-strike>Volume 48,27%</span> <span class="struck" data-strike>Sentimento 49,95%</span> não votam</li>
+        <li data-write>${term('razao')} ${term('liquido', 'líquido')}: ${TRADE.gainNet.slice(1)} ÷ ${TRADE.lossNet.slice(1)} = <b>${TRADE.ratio}</b></li>
+        <li data-write>Gatilho: Renata compra se fechar abaixo de <b>${price(bands[forming - 1].lower)}</b></li></ul>`;
+    }
+    function lousaHtml() {
+      const tabs = [['protecoes', 'Proteções'], ['ranking', 'Ranking'], ['notas', 'Notas'], ...(local.ladder ? [['escada', 'Escada']] : [])];
+      return `<h3 id="lousa-title">Lousa da equipe<button type="button" class="lousa-close" data-lousa-toggle aria-label="Fechar a lousa">×</button></h3>
+        <div class="lousa-tabs" role="tablist" aria-label="Partes da lousa">${tabs.map(([key, label]) => `<button type="button" role="tab" id="tab-${key}" aria-selected="${key === local.tab}" aria-controls="lousa-panel" data-lousa-tab="${key}">${label}</button>`).join('')}</div>
+        <div class="lousa-panel" id="lousa-panel" role="tabpanel" aria-labelledby="tab-${local.tab}">${lousaBody(local.tab)}</div>`;
+    }
+
+    // ---------- gráfico ----------
+    function chartSvg(width, height, pointed) {
       const isNarrow = width < 560;
       const first = isNarrow ? forming - 23 : start;
-      const count = forming - first + 1;
-      const height = Math.round(Math.min(540, Math.max(330, width * 0.68)));
-      const pad = { left: 8, right: 122, top: 12, bottom: 26 };
-      const volumeHeight = isNarrow ? 40 : 60;
+      const pad = { left: 8, right: isNarrow ? 104 : 122, top: 22, bottom: 24 };
+      const volumeHeight = Math.round(Math.min(56, height * 0.14));
       const plotRight = width - pad.right;
+      const count = forming - first + 1;
       const step = (plotRight - pad.left) / count;
-      const priceBottom = height - pad.bottom - volumeHeight - 8;
+      const priceBottom = height - pad.bottom - volumeHeight - 6;
       const range = candles.slice(first, forming + 1);
-      const min = Math.min(...range.map((candle) => candle.low), POSITION.stop) - 0.014;
-      const max = Math.max(...range.map((candle) => candle.high), POSITION.target) + 0.014;
+      const stop = local.ladder ? LADDER.stop : TRADE.stop;
+      const top = local.ladder ? LADDER.sells[0].price : TRADE.target;
+      const min = Math.min(...range.map((candle) => candle.low), stop) - 0.012;
+      const max = Math.max(...range.map((candle) => candle.high), top) + 0.012;
       const xAt = (index) => pad.left + (index - first + 0.5) * step;
       const yAt = (value) => pad.top + ((max - value) / (max - min)) * (priceBottom - pad.top);
       const volumeBottom = height - pad.bottom;
@@ -1776,124 +2112,253 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
       const volumeTop = (index) => volumeBottom - (candles[index].volume / maxVolume) * volumeHeight;
       const indexes = range.map((_, offset) => first + offset);
       const closed = indexes.filter((index) => index < forming);
-      const gridValues = []; for (let value = Math.ceil(min / 0.05) * 0.05; value < max; value += 0.05) gridValues.push(value);
-      const tagValues = [POSITION.target, POSITION.entry, POSITION.stop, NOW_PRICE];
-      const grid = gridValues.map((value) => `<line class="ch-grid" x1="${pad.left}" x2="${plotRight}" y1="${yAt(value)}" y2="${yAt(value)}"/>${tagValues.some((tagValue) => Math.abs(yAt(tagValue) - yAt(value)) < 16) ? '' : `<text class="ch-axis" x="${plotRight + 8}" y="${yAt(value) + 4}">${price(value)}</text>`}`).join('');
-      const times = indexes.filter((index) => (forming - index) % (isNarrow ? 8 : 8) === 0).map((index) => `<text class="ch-axis" x="${xAt(index)}" y="${height - 8}" text-anchor="middle">${candles[index].label}</text>`).join('');
+      const tickStep = max - min > 0.6 ? 0.2 : 0.05;
+      const tags = [top, TRADE.entry, stop, NOW_PRICE];
+      const grid = []; for (let value = Math.ceil(min / tickStep) * tickStep; value < max; value += tickStep) grid.push(value);
+      const gridSvg = grid.map((value) => `<line class="ch-grid" x1="${pad.left}" x2="${plotRight}" y1="${yAt(value)}" y2="${yAt(value)}"/>${tags.some((tag) => Math.abs(yAt(tag) - yAt(value)) < 14) ? '' : `<text class="ch-axis" x="${plotRight + 8}" y="${yAt(value) + 4}">${price(value)}</text>`}`).join('');
+      const times = indexes.filter((index) => (forming - index) % 8 === 0).map((index) => `<text class="ch-axis" x="${xAt(index)}" y="${height - 6}" text-anchor="middle">${candles[index].label}</text>`).join('');
       const band = `<polygon class="ch-band" points="${polyline([...closed.map((index) => [xAt(index), yAt(bands[index].upper)]), ...closed.map((index) => [xAt(index), yAt(bands[index].lower)]).reverse()])}"/>`;
       const lines = `<polyline class="ch-ema21" points="${polyline(closed.map((index) => [xAt(index), yAt(ema21[index])]))}"/><polyline class="ch-ema9" points="${polyline(closed.map((index) => [xAt(index), yAt(ema9[index])]))}"/>`;
-      const volumes = indexes.map((index) => `<rect class="ch-vol${index === pointed ? ' is-pointed' : ''}" x="${xAt(index) - step * 0.34}" y="${volumeTop(index)}" width="${step * 0.68}" height="${volumeBottom - volumeTop(index)}"/>`).join('');
-      const zoneLeft = xAt(POSITION.entryIndex) - step / 2;
-      const zones = `<rect class="ch-zone-gain" x="${zoneLeft}" y="${yAt(POSITION.target)}" width="${plotRight - zoneLeft}" height="${yAt(POSITION.entry) - yAt(POSITION.target)}"/>
-        <rect class="ch-zone-loss" x="${zoneLeft}" y="${yAt(POSITION.entry)}" width="${plotRight - zoneLeft}" height="${yAt(POSITION.stop) - yAt(POSITION.entry)}"/>`;
+      const volumes = indexes.map((index) => `<rect class="ch-vol${index === pointed ? ' is-pointed' : ''}" x="${xAt(index) - step * 0.34}" y="${volumeTop(index)}" width="${step * 0.68}" height="${volumeBottom - volumeTop(index)}" rx="1"/>`).join('');
+      const zoneLeft = xAt(TRADE.entryIndex) - step / 2;
+      const zones = local.ladder ? '' : `<rect class="ch-zone-gain" x="${zoneLeft}" y="${yAt(TRADE.target)}" width="${plotRight - zoneLeft}" height="${yAt(TRADE.entry) - yAt(TRADE.target)}"/>
+        <rect class="ch-zone-loss" x="${zoneLeft}" y="${yAt(TRADE.entry)}" width="${plotRight - zoneLeft}" height="${yAt(TRADE.stop) - yAt(TRADE.entry)}"/>`;
       const tag = (css, value, text) => `<g class="ch-tag ${css}"><rect x="${plotRight + 2}" y="${yAt(value) - 10}" width="${pad.right - 6}" height="20" rx="4"/><text x="${plotRight + 7}" y="${yAt(value) + 4}">${text}</text></g>`;
-      const levels = [['target', POSITION.target, 'Alvo'], ['entry', POSITION.entry, 'Entrada'], ['stop', POSITION.stop, 'Proteção']]
-        .map(([css, value]) => `<line class="ch-lvl ${css}" x1="${zoneLeft}" x2="${plotRight}" y1="${yAt(value)}" y2="${yAt(value)}"/>`).join('');
-      const tags = tag('target', POSITION.target, `Alvo ${price(POSITION.target)}`) + tag('entry', POSITION.entry, `Entrada ${price(POSITION.entry)}`) + tag('stop', POSITION.stop, `Proteção ${price(POSITION.stop)}`)
-        + `<line class="ch-now-line" x1="${pad.left}" x2="${plotRight}" y1="${yAt(NOW_PRICE)}" y2="${yAt(NOW_PRICE)}"/>` + tag('now', NOW_PRICE, `agora ${price(NOW_PRICE)}`).replace('<g class="ch-tag now"', '<g class="ch-tag now" data-duo-anim="now"');
+      const levelLines = (local.ladder ? [] : [['target', TRADE.target]]).concat([['entry', TRADE.entry], ['stop', stop]])
+        .map(([css, value]) => `<line class="ch-lvl ${css}" x1="${local.ladder || css !== 'entry' ? pad.left : zoneLeft}" x2="${plotRight}" y1="${yAt(value)}" y2="${yAt(value)}"/>`).join('');
+      const pillWidth = Math.min(isNarrow ? 400 : 410, plotRight - pad.left - 8);
+      const pillY = isNarrow ? yAt(stop) + 6 : yAt(stop) - 42;
+      const pillX = pad.left + 8;
+      const shield = `<path d="M0 -6 7 -3.5v4c0 4.5-3.2 7-7 8.5-3.8-1.5-7-4-7-8.5v-4z" fill="currentColor"/>`;
+      const protection = `<g class="ch-protect" data-anchor="protect"><rect x="${pillX}" y="${pillY}" width="${pillWidth}" height="${isNarrow ? 34 : 36}" rx="6"/>
+        <g transform="translate(${pillX + 14} ${pillY + 13})">${shield}</g>
+        <text class="p-big" x="${pillX + 28}" y="${pillY + 15}">${isNarrow ? 'PROTEÇÃO CONTRA QUEDA' : `PROTEÇÃO CONTRA QUEDA · ${price(stop)} · sugestão de venda aqui`}</text>
+        <text class="p-small" x="${pillX + 28}" y="${pillY + 29}">${isNarrow ? `${price(stop)}: vende aqui se cair (${local.ladder ? '−4%' : '−0,63%'})` : `Se cair a ${price(stop)}, vende aqui (${local.ladder ? '−4% do 1º degrau' : '−0,63%'}) para limitar a perda`}</text></g>
+        <g class="ch-suggest"><circle cx="${xAt(forming)}" cy="${yAt(stop)}" r="6"/></g>`;
+      const target = local.ladder ? '' : `<g class="ch-target"><rect x="${pillX}" y="${yAt(TRADE.target) - 26}" width="${Math.min(pillWidth, isNarrow ? 200 : 250)}" height="22" rx="6"/>
+        <text x="${pillX + 10}" y="${yAt(TRADE.target) - 11}">▲ ${isNarrow ? 'ALVO' : 'ALVO DE GANHO'} · ${price(TRADE.target)} · ${TRADE.gainGross}</text></g>`;
+      const ladder = local.ladder ? ladderSvg({ xAt, yAt, plotRight, pad, first, isNarrow }) : '';
+      const validity = `<rect class="ch-valid" x="${xAt(forming) - step / 2}" y="${pad.top}" width="${step}" height="${volumeBottom - pad.top}"/>
+        <text class="ch-valid-text" x="${xAt(forming) + step / 2}" y="${pad.top - 8}" text-anchor="end">opiniões valem até 03:45</text>`;
       const bodies = indexes.map((index) => {
         const candle = candles[index];
-        const isUp = candle.close >= candle.open;
+        const css = `${candle.close >= candle.open ? 'ch-up' : 'ch-down'}${index === forming ? ' ch-forming' : ''}`;
         const x = xAt(index);
-        const top = yAt(Math.max(candle.open, candle.close));
-        const bodyHeight = Math.max(1.5, yAt(Math.min(candle.open, candle.close)) - top);
-        const css = `${isUp ? 'ch-up' : 'ch-down'}${index === forming ? ' ch-forming' : ''}`;
+        const bodyTop = yAt(Math.max(candle.open, candle.close));
+        const bodyHeight = Math.max(1.5, yAt(Math.min(candle.open, candle.close)) - bodyTop);
         const anim = index === forming ? ' data-duo-anim="forming" class="tv-new"' : index === forming - 1 ? ' data-duo-anim="closed"' : '';
-        return `<g${anim}><line class="${css}" x1="${x}" x2="${x}" y1="${yAt(candle.high)}" y2="${yAt(candle.low)}" stroke-width="1.2"/><rect class="${css}" x="${x - step * 0.34}" y="${top}" width="${step * 0.68}" height="${bodyHeight}" rx="1"/></g>`;
+        return `<g${anim}><line class="${css}" x1="${x}" x2="${x}" y1="${yAt(candle.high)}" y2="${yAt(candle.low)}" stroke-width="1.2"/><rect class="${css}" x="${x - step * 0.34}" y="${bodyTop}" width="${step * 0.68}" height="${bodyHeight}" rx="1"/></g>`;
       }).join('');
-      const marks = MARKS.filter((mark) => mark.index >= first).map((mark) => {
+      const marks = MARKS.filter((mark) => mark.index >= first).map((source) => {
+        const mark = local.ladder && source.index === TRADE.entryIndex ? { ...source, text: 'Compra 1/3 · 12,870 · 29,2 LINK · executada' } : source;
         const x = xAt(mark.index);
         const candle = candles[mark.index];
         const isBuy = mark.side === 'buy';
-        const labelWidth = isNarrow ? 64 : mark.text.length * 7.4 + 22;
-        const labelY = isBuy ? yAt(candle.low) + 14 : yAt(candle.high) - 34;
-        const labelX = Math.min(Math.max(x - labelWidth / 2, pad.left), plotRight - labelWidth);
         const text = isNarrow ? `${isBuy ? '▲' : '▼'} ${price(mark.value)}` : `${isBuy ? '▲' : '▼'} ${mark.text}`;
+        const labelWidth = text.length * 7 + 16;
+        const labelY = isBuy ? yAt(candle.low) + 12 : yAt(candle.high) - 30;
+        const labelX = Math.min(Math.max(x - labelWidth / 2, pad.left), plotRight - labelWidth);
         return `<g class="ch-mark ${mark.side}"><rect class="ch-mark-band" x="${x - step / 2}" y="${pad.top}" width="${step}" height="${priceBottom - pad.top}"/>
           <circle class="ch-dot-halo" cx="${x}" cy="${yAt(mark.value)}" r="7"/><circle cx="${x}" cy="${yAt(mark.value)}" r="4.5"/>
           <g class="ch-mark-label"><rect x="${labelX}" y="${labelY}" width="${labelWidth}" height="20" rx="5"/><text x="${labelX + 8}" y="${labelY + 14}">${text}</text></g></g>`;
       }).join('');
       const pointedLayer = pointed === null ? '' : `<rect class="ch-pointed" x="${xAt(pointed) - step / 2}" y="${pad.top}" width="${step}" height="${volumeBottom - pad.top}"/>
         <line class="ch-cross" x1="${xAt(pointed)}" x2="${xAt(pointed)}" y1="${pad.top}" y2="${volumeBottom}"/>
-        <g class="ch-time-tag"><rect x="${xAt(pointed) - 24}" y="${height - 22}" width="48" height="18" rx="4"/><text x="${xAt(pointed)}" y="${height - 9}" text-anchor="middle">${candles[pointed].label}</text></g>`;
-      local.geometry = { xAt, yAt, volumeTop, plotRight, first, step, pad, width, height };
+        <g class="ch-time-tag"><rect x="${xAt(pointed) - 24}" y="${height - 20}" width="48" height="18" rx="4"/><text x="${xAt(pointed)}" y="${height - 7}" text-anchor="middle">${candles[pointed].label}</text></g>`;
+      const rightTags = (local.ladder ? '' : tag('target', TRADE.target, `Alvo ${price(TRADE.target)}`)) + tag('entry', TRADE.entry, `Entrada ${price(TRADE.entry)}`) + tag('stop', stop, `Proteção ${price(stop)}`)
+        + `<line class="ch-now-line" x1="${pad.left}" x2="${plotRight}" y1="${yAt(NOW_PRICE)}" y2="${yAt(NOW_PRICE)}"/>` + tag('now', NOW_PRICE, `agora ${price(NOW_PRICE)}`);
+      local.geometry = { xAt, yAt, volumeTop, plotRight, first, step, pad, width, height, stop };
       return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-hidden="true" focusable="false">
-        ${grid}${band}${zones}${volumes}${lines}${levels}${bodies}${marks}${pointedLayer}${times}${tags}</svg>`;
+        ${gridSvg}${band}${zones}${validity}${volumes}${lines}${levelLines}${bodies}${marks}${ladder}${target}${protection}${pointedLayer}${times}${rightTags}</svg>`;
+    }
+    function ladderSvg({ xAt, yAt, plotRight, pad, isNarrow }) {
+      const left = xAt(TRADE.entryIndex) - 6;
+      const step = (row, side) => {
+        const y = yAt(row.price);
+        const isBelow = side === 'buy';
+        if (row.state === 'executada') return `<g class="ch-step ${side} is-done"><line x1="${left}" x2="${plotRight}" y1="${y}" y2="${y}"/></g>`;
+        const label = isNarrow ? `${side === 'buy' ? '▲' : '▼'} ${price(row.price)} · ${row.state}` : `${side === 'buy' ? '▲' : '▼'} ${row.text} · ${row.amount} · ${row.state}`;
+        const width = Math.min(label.length * 6.6 + 16, plotRight - pad.left - 8);
+        return `<g class="ch-step ${side} is-${row.state === 'executada' ? 'done' : 'pending'}"><line x1="${left}" x2="${plotRight}" y1="${y}" y2="${y}"/>
+          <rect x="${plotRight - width - 4}" y="${isBelow ? y + 3 : y - 21}" width="${width}" height="18" rx="4"/><text x="${plotRight - width + 4}" y="${isBelow ? y + 16 : y - 8}">${label}</text></g>`;
+      };
+      const offscreen = LADDER.sells.slice(1).map((row) => row.text.split(' · ')[0].replace('Vende 1/3 a ', '')).join(' e ');
+      return `${LADDER.buys.map((row) => step(row, 'buy')).join('')}${step(LADDER.sells[0], 'sell')}
+        <g class="ch-step sell is-pending"><text x="${pad.left + 4}" y="${pad.top + 2}">↑ vende 1/3 a ${offscreen} · fora da tela</text></g>`;
     }
 
+    // ---------- textos abaixo do primeiro quadro ----------
+    function signalHtml() {
+      const loss = ((TRADE.entry - TRADE.stop) / (TRADE.target - TRADE.stop)) * 100;
+      const now = ((NOW_PRICE - TRADE.stop) / (TRADE.target - TRADE.stop)) * 100;
+      const ladder = local.ladder ? `<p class="sig-ladder"><span class="future-tag">Cena futura (spec 016)</span> 3 compras · 3 vendas · exposição máxima <b>${LADDER.exposure}</b> · perda máxima <b>${LADDER.maxLoss}</b>. Comprar em queda aumenta o risco. Simulação com dinheiro fictício.</p>` : '';
+      return `<div class="sig-seal" aria-hidden="true">${icon('i-buy')}<span>COMPRA</span></div>
+        <div class="sig-main"><h4 id="signal-title"><span>Sinal de compra: LINK/USDT a</span><span class="data">${price(TRADE.entry)}</span></h4>
+          <p class="sig-big"><span class="pct is-up">${icon('i-up')}${TRADE.gainNet}</span><small>${term('liquido', 'líquido')} no ${term('alvo', 'alvo')} ${price(TRADE.target)} · ${TRADE.gainUsdt} · bruto ${TRADE.gainGross}</small>
+            <span class="pct is-down">${icon('i-down')}${TRADE.lossNet}</span><small>${term('liquido', 'líquido')} na ${term('protecao', 'proteção')} ${price(TRADE.stop)} · ${TRADE.lossUsdt}</small></p>
+          <p>Executada às 03:00 · ${TRADE.quantity} (${TRADE.value}) · ${term('razao')} <b>${TRADE.ratio}</b> · puxado pela Renata (Reversão) · Alice: MODERADA, ½ do risco</p>
+          <p class="sig-suggest"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><span><b class="lbl">Sugestão de venda</b> (${term('protecao', 'proteção contra queda')}): se o preço cair a <b>${price(TRADE.stop)}</b>. É a regra da simulação, não uma ordem.</span>
+            <button type="button" class="btn copy-btn" data-copy="12.789">Copiar 12.789</button></p>${ladder}</div>
+        <div class="ruler" role="img" aria-label="Régua da operação: proteção contra queda ${price(TRADE.stop)} (${TRADE.lossGross}), entrada ${price(TRADE.entry)}, alvo ${price(TRADE.target)} (${TRADE.gainGross}); agora ${price(NOW_PRICE)}.">
+          <div class="ruler-track"><span class="ruler-loss" data-basis="${loss}"></span><span class="ruler-gain"></span></div>
+          <span class="ruler-mark stop" data-left="0"><span>Proteção contra queda</span><b>${price(TRADE.stop)}</b></span>
+          <span class="ruler-mark entry" data-left="${loss}"><span>Entrada</span><b>${price(TRADE.entry)}</b></span>
+          <span class="ruler-mark target" data-left="100"><span>Alvo de ganho</span><b>${price(TRADE.target)}</b></span>
+          <span class="ruler-now" data-left="${now}">agora ${price(NOW_PRICE)}</span></div>`;
+    }
+    function plaquesHtml() {
+      const plaque = ({ css, head, pct, pctCss, pctIcon, pctNote, small, tagText }) => `<article class="plaque ${css}">
+        <p class="pl-head">${head}${tagText ? `<span class="future-tag">${tagText}</span>` : ''}</p>
+        <p class="pl-pct ${pctCss}">${icon(pctIcon)}<span>${pct}</span></p><p class="pl-note">${pctNote}</p><p class="pl-small">${small}</p></article>`;
+      return [
+        plaque({ css: 'is-buy', head: `<b>▲ COMPRA</b> <span class="data">${price(TRADE.entry)}</span>`, pct: TRADE.gainNet, pctCss: 'is-up', pctIcon: 'i-up', pctNote: `ganho ${term('liquido', 'líquido')} no ${term('alvo', 'alvo')} ${price(TRADE.target)} (bruto ${TRADE.gainGross})`, small: `${TRADE.gainUsdt} · ${term('protecao', 'proteção')} ${TRADE.lossNet} (${TRADE.lossUsdt}) · ${term('razao')} ${TRADE.ratio}` }),
+        plaque({ css: 'is-sell', head: '<b>▼ VENDA</b> <span class="data">13,013</span> · alvo às 21:30', pct: '+0,76%', pctCss: 'is-up', pctIcon: 'i-up', pctNote: 'líquido (bruto +1,06%)', small: '+8,5 USDT · comprada a 12,876 às 20:30' }),
+        plaque({ css: 'is-protect', head: '<b>▼ SAÍDA PELA PROTEÇÃO</b> <span class="data">12,372</span>', pct: '−0,99%', pctCss: 'is-down', pctIcon: 'i-down', pctNote: 'líquido (bruto −0,69%)', small: '−10,8 USDT · comprada a 12,458', tagText: 'exemplo da spec 014' }),
+        plaque({ css: 'is-open', head: `<b>▲ COMPRADO</b> desde 03:00 · agora <span class="data">${price(NOW_PRICE)}</span>`, pct: TRADE.openNet, pctCss: 'is-down', pctIcon: 'i-down', pctNote: `líquido se vender agora (bruto ${TRADE.openGross})`, small: `${TRADE.openUsdt} · faltam ${TRADE.toStop} para a proteção contra queda` }),
+      ].join('');
+    }
+    function bestAndWorst(key) {
+      let best = null; let worst = null;
+      for (let index = start; index < forming - 1; index += 1) {
+        const opinion = opinionsAt(index)[key];
+        if (opinion.vote !== 'favor' && opinion.vote !== 'contra') continue;
+        const move = ((closes[index + 1] - closes[index]) / closes[index]) * 100;
+        const signed = opinion.vote === 'favor' ? move : -move;
+        if (!best || signed > best.signed) best = { index, signed, move, vote: opinion.vote };
+        if (!worst || signed < worst.signed) worst = { index, signed, move, vote: opinion.vote };
+      }
+      return { best, worst };
+    }
+    const tipButton = (tip) => (tip ? `<button type="button" class="tip-btn" data-point="${tip.index}">vela ${candles[tip.index].label} · ${VOTE[tip.vote].label} · ${tip.move >= 0 ? '+' : '−'}${Math.abs(tip.move).toFixed(2).replace('.', ',')}%</button>` : '—');
+    function rankingHtml() {
+      const windows = [['30d', '30 dias'], ['6m', '6 meses'], ['all', 'desde o início']];
+      const isMeasured = local.rankWindow === '6m' && local.rankFrame === '15m';
+      const order = ['renata', 'sofia', 'vitor', 'tiago'];
+      const xAt = (rate) => ((rate - 44) / 16) * 100;
+      const rows = order.map((key, position) => {
+        const audit = AUDIT[BY_KEY[key].audit];
+        const { best, worst } = bestAndWorst(key);
+        const crown = audit.verdict === 'above' ? `<svg class="icon crown" role="img" aria-label="coroa: acima da moeda ao ar"><use href="#i-crown"/></svg>` : '';
+        return `<tr><td class="r-pos">${crown}${position + 1}º</td>
+          <th scope="row"><b class="mark-rule" aria-hidden="true">●</b> ${BY_KEY[key].name}<small>${BY_KEY[key].role}</small></th>
+          <td class="num">${audit.rate}<small>${audit.hits} de ${audit.counted}</small></td>
+          <td><span class="wil" role="img" aria-label="intervalo de ${oneDecimal(audit.low)}% a ${oneDecimal(audit.high)}%; moeda ao ar 50%"><i class="wil-coin"></i><i class="wil-bar ${audit.verdict}" data-left="${xAt(audit.low)}" data-width="${xAt(audit.high) - xAt(audit.low)}"></i></span><small>${oneDecimal(audit.low)}% a ${oneDecimal(audit.high)}%</small></td>
+          <td>${chip(SEAL[audit.verdict])}</td><td class="num">${audit.weight ?? '0 · não vota'}</td><td class="num" title="a medir">—</td>
+          <td>${tipButton(best)}</td><td>${tipButton(worst)}</td></tr>`;
+      }).join('');
+      const models = MODELS.map((key) => `<li><b class="mark-model" aria-hidden="true">◆</b> ${BY_KEY[key].name} · ${BY_KEY[key].role} · ${chip(SEAL.too_few)} 0 de 30 · faltam 30 previsões</li>`).join('');
+      const body = isMeasured
+        ? `<div class="table-wrap"><table><thead><tr><th scope="col">Posição</th><th scope="col">Agente</th><th scope="col">Acerto do lado</th><th scope="col">${term('wilson', 'Intervalo 95%')} × ${term('moeda', 'moeda 50%')}</th><th scope="col">Veredito</th><th scope="col">${term('peso', 'Peso')}</th><th scope="col">Semana</th><th scope="col">Melhor dica (na tela)</th><th scope="col">Pior dica (na tela)</th></tr></thead><tbody>${rows}</tbody></table></div>`
+        : '<p class="rank-empty">Ainda não medido nesta janela. A spec 007 (T0.2) mediu 6 meses de velas de 15 min; o painel mostra o que o servidor devolver.</p>';
+      return `<h3 id="ranking-title">Ranking da equipe</h3>
+        <div class="rank-controls"><div class="seg" role="group" aria-label="Janela do ranking">${windows.map(([key, label]) => `<button type="button" class="btn" aria-pressed="${key === local.rankWindow}" data-rank-window="${key}">${label}</button>`).join('')}</div>
+          <label class="rank-frame">Vela <select id="rank-frame" data-rank-frame><option value="15m"${local.rankFrame === '15m' ? ' selected' : ''}>15 min</option><option value="1h"${local.rankFrame === '1h' ? ' selected' : ''}>1 hora</option></select></label></div>
+        ${body}
+        <p class="rank-models-title"><b class="mark-model" aria-hidden="true">◆</b> Modelos em observação (fora da classificação)</p><ul class="rank-models">${models}</ul>
+        <p class="rank-foot">Ordenado pelo pior caso do intervalo de 95% (Wilson), não pelo acerto bruto, para não premiar sorte com poucas previsões. Coroa só para quem está acima da moeda ao ar. Alice e Otávio não entram: não preveem a vela. Ranking é desempenho passado, não garantia. "Semana": a medir.</p>`;
+    }
+
+    // ---------- ficha (popover) ----------
+    function fichaHtml(key) {
+      const member = BY_KEY[key];
+      if (member.kind === 'soon') {
+        return `<h4 id="row-pop-title">${member.name} — ${member.role}</h4><span class="kind model"><b aria-hidden="true">◆</b>${term('modelo', 'Modelo')} · em breve</span>
+          <dl><dt>O que faz</dt><dd>${member.does}</dd><dt>Modelo</dt><dd>${MODEL_INFO.name}</dd><dt>Onde roda</dt><dd>${MODEL_INFO.where}</dd><dt>Custo</dt><dd>${MODEL_INFO.cost}</dd>
+          <dt>Última chamada</dt><dd>— (ainda não roda)</dd><dt>Taxa de falha</dt><dd>—</dd><dt>Auditor</dt><dd>em observação: 0 de 30 previsões (faltam 30); acerto medido separado dos agentes de regra</dd></dl>
+          <div class="sample"><small>Exemplo de como o balão vai aparecer:</small>"As notícias do par estão neutras hoje."<small>gerado por modelo: Claude Haiku 4.5 · pode errar</small></div>`;
+      }
+      const opinion = opinionsAt(local.pointed ?? forming - 1)[key];
+      const audits = member.kind === 'auditor' ? `<dt>Como mede</dt><dd>Compara cada um com a ${term('moeda', 'moeda ao ar')} pelo ${term('wilson', 'intervalo de Wilson')}: só vota quem fica acima de 50% no pior caso.</dd>` : '';
+      const accuracy = member.kind === 'specialist' ? `<dt>Acerto</dt><dd>${accuracyText(member, {})} · ${weightText(member, {})}</dd>` : '';
+      return `<h4 id="row-pop-title">${member.name} — ${member.role}</h4><span class="kind rule"><b aria-hidden="true">●</b>${term('regra', 'Regra')} · ${sealOf(key).full}</span>
+        <dl><dt>O que faz</dt><dd>${member.does}</dd>${audits}${accuracy}<dt>Horizonte</dt><dd>olha a vela de 15 min · a opinião vale até ${closesAt(local.pointed ?? forming - 1)} · janela de acerto: últimos 30 dias · histórico medido em 183 dias</dd>
+        <dt>Disse</dt><dd>${opinion.motive}${opinion.trigger ? ` ${opinion.trigger}` : ''}</dd><dt>ID</dt><dd class="bc-id">${member.id} · ${member.version}</dd></dl>`;
+    }
+    function openFicha(key, anchor) {
+      const pop = $('[data-row-pop]');
+      pop.innerHTML = fichaHtml(key);
+      pop.hidden = false;
+      const box = anchor.getBoundingClientRect();
+      const left = Math.min(Math.max(8, box.left + box.width / 2 - 160), window.innerWidth - pop.offsetWidth - 8);
+      const below = box.bottom + 8 + pop.offsetHeight < window.innerHeight;
+      pop.style.left = `${left}px`;
+      pop.style.top = `${below ? box.bottom + 8 : Math.max(8, box.top - pop.offsetHeight - 8)}px`;
+      pop.dataset.for = key;
+    }
+    function closeFicha() { $('[data-row-pop]').hidden = true; }
+
+    // ---------- render e medida ----------
     function shownIndex() { return local.pointed ?? forming - 1; }
     function renderChart() {
-      const box = $('[data-chart]');
-      box.innerHTML = chartSvg(Math.max(300, Math.round(box.clientWidth)), local.pointed);
+      const host = $('[data-chart-svg]');
+      const width = Math.max(300, Math.round(host.clientWidth));
+      host.innerHTML = chartSvg(width, local.chartHeight ?? 360, local.pointed);
     }
-    function renderTeam() {
-      const index = shownIndex();
-      const opinions = opinionsAt(index);
-      const open = $$('[data-duo-ficha][aria-expanded="true"]').map((button) => button.dataset.duoFicha);
-      $('[data-team-rows]').innerHTML = ROWS.map((key) => rowHtml(key, opinions[key], index, local.pointed === null)).join('');
-      open.forEach((key) => { const button = $(`[data-duo-ficha="${key}"]`); button.setAttribute('aria-expanded', 'true'); $(`#duo-ficha-${key}`).hidden = false; });
-      const candle = candles[index];
-      $('[data-team-when]').innerHTML = local.pointed === null
-        ? `vela das ${candle.label} · fechou a ${price(candle.close)} · próxima às 03:45`
-        : `<b>vela apontada: ${candle.label}</b> · Esc volta a agora`;
+    function renderCrew() { $('[data-crew]').innerHTML = crewHtml(shownIndex()); }
+    function renderLousa() {
+      $('[data-lousa]').innerHTML = lousaHtml();
+      $$('[data-lousa] [data-width]').forEach((element) => { element.style.width = `${element.dataset.width}%`; });
+    }
+    function renderBelow() {
+      const card = $('[data-signal-card]');
+      card.innerHTML = signalHtml();
+      $$('[data-basis]', card).forEach((element) => { element.style.flexBasis = `${element.dataset.basis}%`; });
+      $$('[data-left]', card).forEach((element) => { element.style.left = `${element.dataset.left}%`; });
+      $('[data-plaques]').innerHTML = plaquesHtml();
+      $('[data-ranking]').innerHTML = rankingHtml();
+      $$('[data-ranking] [data-left]').forEach((element) => { element.style.left = `${element.dataset.left}%`; element.style.width = `${element.dataset.width}%`; });
+    }
+    function fit() {
+      const host = $('[data-chart-svg]');
+      const isPhone = $('[data-duo]').clientWidth < 700;
+      const reserve = isPhone ? 64 : 20;
+      const top = host.getBoundingClientRect().top + window.scrollY;
+      local.chartHeight = Math.round(Math.min(640, Math.max(isPhone ? 260 : 240, window.innerHeight - top - reserve)));
     }
     function renderLeaders() {
       const svg = $('[data-leaders]');
       const grid = $('[data-duo-grid]');
       if (!local.geometry || getComputedStyle(svg).display === 'none') { svg.innerHTML = ''; return; }
       const gridBox = grid.getBoundingClientRect();
-      const chartBox = $('[data-chart] svg').getBoundingClientRect();
-      const { xAt, yAt, volumeTop, plotRight } = local.geometry;
+      const chartBox = $('[data-chart-svg] svg').getBoundingClientRect();
+      const { xAt, yAt, volumeTop, stop } = local.geometry;
       const index = shownIndex();
       const targets = {
         renata: [xAt(index), yAt(bands[index].lower)],
         tiago: [xAt(index), yAt(ema9[index])],
         vitor: [xAt(index), volumeTop(index)],
-        alice: index >= POSITION.entryIndex ? [plotRight - 34, yAt(POSITION.stop)] : [xAt(index), yAt(candles[index].close)],
+        alice: [xAt(forming), yAt(stop)],
       };
       const paths = Object.entries(targets).map(([key, [x, y]]) => {
-        const say = $(`[data-row="${key}"] .say`);
-        if (!say) return '';
-        const sayBox = say.getBoundingClientRect();
-        const startX = sayBox.left - gridBox.left - 2;
-        const startY = sayBox.top - gridBox.top + 14;
+        const talk = $(`[data-talk="${key}"]`);
+        if (!talk) return '';
+        const box = talk.getBoundingClientRect();
+        const startX = box.left + box.width / 2 - gridBox.left;
+        const startY = box.bottom + 6 - gridBox.top;
         const endX = chartBox.left - gridBox.left + x;
         const endY = chartBox.top - gridBox.top + y;
         const isLit = local.lit === key;
-        return `<g data-duo-anim="leader" data-for="${key}"><path class="leader-line${isLit ? ' is-lit' : ''}" marker-end="url(#leader-arrow${isLit ? '-lit' : ''})" d="M${startX} ${startY} C${startX - 50} ${startY}, ${endX + 60} ${endY}, ${endX + 7} ${endY}"/></g>`;
+        return `<g data-duo-anim="leader" data-for="${key}"><path class="leader-line${isLit ? ' is-lit' : ''}" marker-end="url(#leader-arrow${isLit ? '-lit' : ''})" d="M${startX} ${startY} C${startX} ${startY + 50}, ${endX} ${endY - 60}, ${endX} ${endY - 7}"/></g>`;
       }).join('');
       svg.setAttribute('viewBox', `0 0 ${gridBox.width} ${gridBox.height}`);
       svg.innerHTML = `<defs><marker id="leader-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--ink-2)"/></marker>
         <marker id="leader-arrow-lit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--accent)"/></marker></defs>${paths}`;
     }
-    function renderSignal() {
-      const loss = ((POSITION.entry - POSITION.stop) / (POSITION.target - POSITION.stop)) * 100;
-      const now = ((NOW_PRICE - POSITION.stop) / (POSITION.target - POSITION.stop)) * 100;
-      const change = ((NOW_PRICE / POSITION.entry - 1) * 100).toFixed(2).replace('.', ',');
-      const card = $('[data-signal-card]');
-      card.innerHTML = `<div class="sig-seal" aria-hidden="true">${icon('i-buy')}<span>COMPRA</span></div>
-        <div class="sig-main"><h4 id="signal-title"><span>Sinal de compra: LINK/USDT a</span><span class="data">${price(POSITION.entry)}</span></h4>
-          <p>Executada às 03:00 · <span class="sig-now">▲ +${change}% em andamento</span> · puxado pela Renata (Reversão) · Alice: MODERADA, ½ do risco</p>
-          <p>Vender no alvo <b>${price(POSITION.target)}</b> (+1,06%) · sair se cair a <b>${price(POSITION.stop)}</b> (−0,63%)</p></div>
-        <div class="ruler" role="img" aria-label="Régua da operação: proteção ${price(POSITION.stop)} (−0,63%), entrada ${price(POSITION.entry)}, alvo ${price(POSITION.target)} (+1,06%); agora ${price(NOW_PRICE)}.">
-          <div class="ruler-track"><span class="ruler-loss" data-width="${loss}"></span><span class="ruler-gain" data-width="${100 - loss}"></span></div>
-          <span class="ruler-mark stop" data-left="0"><span>Proteção</span><b>${price(POSITION.stop)}</b></span>
-          <span class="ruler-mark entry" data-left="${loss}"><span>Entrada</span><b>${price(POSITION.entry)}</b></span>
-          <span class="ruler-mark target" data-left="100"><span>Alvo</span><b>${price(POSITION.target)}</b></span>
-          <span class="ruler-now" data-left="${now}">agora ${price(NOW_PRICE)}</span></div>`;
-      $$('[data-width]', card).forEach((element) => { element.style.flexBasis = `${element.dataset.width}%`; });
-      $$('[data-left]', card).forEach((element) => { element.style.left = `${element.dataset.left}%`; });
-    }
     function describe() {
       $('[data-duo-pill]').textContent = 'Vela das 03:15 às 03:30 · fechou · próxima fecha às 03:45';
       $('[data-chart]').setAttribute('aria-label', 'Gráfico de velas de 15 minutos de LINK/USDT, de 15:00 a 03:30 (GMT−3). Use as setas para escolher uma vela e ver o que a equipe disse nela.');
-      $('[data-chart-desc]').textContent = `Compra a 12,876 às 20:30; venda no alvo a 13,013 às 21:30; compra a 12,870 às 03:00, ainda aberta: alvo 13,007, saída de proteção 12,789, preço agora ${price(NOW_PRICE)} na vela em formação.`;
+      $('[data-chart-desc]').textContent = `Compra a 12,876 às 20:30; venda no alvo a 13,013 às 21:30 (+0,76% líquido); compra a 12,870 às 03:00, ainda aberta: alvo de ganho 13,007, proteção contra queda 12,789 (se cair até lá, vende para limitar a perda), preço agora ${price(NOW_PRICE)} na vela em formação.${local.ladder ? ' Escada futura: compras a 12,613 e 12,484 se cair; vendas parciais a +3%, +5% e +10%.' : ''}`;
     }
-    function renderAll() {
-      renderChart();
-      renderTeam();
-      renderSignal();
+    function renderAll(options = {}) {
+      local.ladder = Boolean(options.ladder);
+      if (!local.ladder && local.tab === 'escada') local.tab = 'protecoes';
+      if (local.ladder) local.tab = 'escada';
+      renderCrew();
+      renderLousa();
+      renderBelow();
       describe();
+      fit();
+      renderChart();
       requestAnimationFrame(renderLeaders);
     }
     function point(index) {
@@ -1901,40 +2366,53 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
       if (next === local.pointed) return;
       local.pointed = next;
       renderChart();
-      renderTeam();
+      renderCrew();
       renderLeaders();
-      window.clearTimeout(local.announceTimer);
-      local.announceTimer = window.setTimeout(() => {
+      window.clearTimeout(local.announce);
+      local.announce = window.setTimeout(() => {
         const opinions = opinionsAt(shownIndex());
         $('[data-duo-live]').textContent = `${next === null ? 'Agora, vela' : 'Vela'} das ${candles[shownIndex()].label}: Renata ${VOTE[opinions.renata.vote].label}; Alice ${POSTURE[opinions.alice.posture].label}.`;
       }, 400);
     }
+
+    // ---------- movimento (≤ 2,5 s; Web Animations, pausável) ----------
     function play(isAnimated) {
       const card = $('[data-duo]');
       card.getAnimations({ subtree: true }).forEach((animation) => animation.cancel());
       if (!isAnimated || !state.isMotionOn || reduceMotion.matches) return;
       const times = { fast: token('--motion-fast'), medium: token('--motion-medium') };
       const collected = [];
+      const slotWidth = $('[data-slot="alice"]').getBoundingClientRect().width;
       animate($('[data-duo-anim="forming"]'), [{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], { duration: times.medium, delay: 120 }, collected);
       animate($('[data-duo-anim="closed"] rect'), [{ fillOpacity: 0 }, { fillOpacity: 1 }], { duration: times.fast }, collected);
-      animate($('[data-duo-anim="now"]'), [{ opacity: 0.2 }, { opacity: 1 }], { duration: times.medium, delay: 120 }, collected);
-      animate($('[data-team-when]'), [{ opacity: 0.2 }, { opacity: 1 }], { duration: times.fast, delay: 120 }, collected);
-      ROWS.forEach((key, index) => {
-        const delay = 380 + index * 140;
-        animate($(`[data-row="${key}"] .dots`), [{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], { duration: delay, easing: 'linear' }, collected);
-        animate($(`[data-row="${key}"] .say`), [{ transform: 'translateY(4px)' }, { transform: 'none' }], { duration: times.fast, delay }, collected);
-        animate($(`[data-duo-anim="leader"][data-for="${key}"]`), [{ opacity: 0 }, { opacity: 1 }], { duration: times.fast, delay }, collected);
+      animate($('[data-slot="alice"]'), [{ transform: `translateX(${-slotWidth * 1.6}px)`, zIndex: 0 }, { transform: 'translateX(0)', zIndex: 0 }], { duration: 700, delay: 300 }, collected);
+      animate($('[data-slot="renata"] .lean'), [{ transform: 'translateX(24px)' }, { transform: 'translateX(24px)', offset: 0.4 }, { transform: 'translateX(0)' }], { duration: 700, delay: 300 }, collected);
+      animate($('[data-slot="vitor"] .lean'), [{ transform: 'translateX(-24px)' }, { transform: 'translateX(-24px)', offset: 0.4 }, { transform: 'translateX(0)' }], { duration: 700, delay: 300 }, collected);
+      CREW.forEach((key, index) => {
+        const delay = 250 + index * 120;
+        const lean = $(`[data-slot="${key}"] .lean svg`);
+        animate(lean, [{ transform: 'translateY(0) rotate(0)' }, { transform: 'translateY(4px) rotate(3deg)' }, { transform: 'translateY(0) rotate(0)' }], { duration: times.medium * 2, delay: 150 }, collected);
+        animate($(`[data-slot="${key}"] .arm-point`), [{ opacity: 0 }, { opacity: 1 }], { duration: times.fast, delay }, collected);
+        animate($(`[data-talk="${key}"] .dots`), [{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], { duration: delay + 200, easing: 'linear' }, collected);
+        animate($(`[data-duo-anim="leader"][data-for="${key}"]`), [{ opacity: 0 }, { opacity: 1 }], { duration: times.fast, delay: delay + 200 }, collected);
       });
+      $$('[data-lousa] [data-write]').forEach((line, index) => animate(line, [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }], { duration: times.medium, delay: 900 + index * 140, easing: 'linear' }, collected));
+      $$('[data-lousa] [data-strike]').forEach((line, index) => animate(line, [{ textDecorationColor: 'transparent' }, { textDecorationColor: 'var(--sell)' }], { duration: times.fast, delay: 1600 + index * 100 }, collected));
+      animate($('[data-postit]'), [{ transform: 'scale(0.6) rotate(-8deg)', opacity: 0 }, { transform: 'scale(1) rotate(-2deg)', opacity: 1 }], { duration: times.medium, delay: 1700 }, collected);
+      animate($('[data-slot="otavio"] .lean svg'), [{ transform: 'rotate(0)' }, { transform: 'rotate(-6deg)' }, { transform: 'rotate(0)' }], { duration: 600, delay: 900, iterations: 2 }, collected);
       if (state.isUserPaused || state.isAutoPaused) collected.forEach((animation) => animation.pause());
       const end = Math.max(...collected.map((animation) => animation.effect.getComputedTiming().endTime));
+      card.dataset.sequenceEnd = String(Math.round(end));
+      card.dataset.animated = String(new Set(collected.map((animation) => animation.effect.target)).size);
       $('[data-duo-live]').textContent = '';
-      window.setTimeout(() => { $('[data-duo-live]').textContent = 'Vela das 03:15 fechou a 12,873. Renata: neutro. Alice: CAUTELA. As falas estão na coluna da equipe.'; }, end + 200);
+      window.setTimeout(() => { $('[data-duo-live]').textContent = 'Vela das 03:15 fechou a 12,873. Renata: neutro. Alice: CAUTELA. As falas estão na varanda, acima do gráfico.'; }, end + 200);
     }
+
     function bind() {
       const chart = $('[data-chart]');
       chart.addEventListener('pointermove', (event) => {
         if (!local.geometry) return;
-        const box = chart.getBoundingClientRect();
+        const box = $('[data-chart-svg] svg').getBoundingClientRect();
         const x = ((event.clientX - box.left) / box.width) * local.geometry.width;
         point(local.geometry.first + Math.floor((x - local.geometry.pad.left) / local.geometry.step));
       });
@@ -1947,28 +2425,99 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
         event.preventDefault();
         point(moves[event.key]);
       });
-      const rows = $('[data-team-rows]');
-      rows.addEventListener('click', (event) => {
-        const button = event.target.closest('[data-duo-ficha]');
-        if (!button) return;
-        const isOpen = button.getAttribute('aria-expanded') === 'true';
-        button.setAttribute('aria-expanded', String(!isOpen));
-        $(`#duo-ficha-${button.dataset.duoFicha}`).hidden = isOpen;
+      const card = $('[data-duo]');
+      card.addEventListener('click', (event) => {
+        const ficha = event.target.closest('[data-ficha]');
+        if (ficha) {
+          const slot = ficha.closest('[data-slot]');
+          if (slot && card.clientWidth < 700) { local.active = slot.dataset.slot; renderCrew(); return; }
+          openFicha(ficha.dataset.ficha, ficha);
+          return;
+        }
+        const tab = event.target.closest('[data-lousa-tab]');
+        if (tab) { local.tab = tab.dataset.lousaTab; renderLousa(); $(`#tab-${local.tab}`).focus(); return; }
+        const toggle = event.target.closest('[data-lousa-toggle]');
+        if (toggle) {
+          const lousa = $('[data-lousa]');
+          const isOpen = lousa.classList.toggle('is-open');
+          $$('[data-lousa-toggle]').forEach((button) => button.setAttribute('aria-expanded', String(isOpen)));
+          return;
+        }
+        const tip = event.target.closest('[data-point]');
+        if (tip) { $('[data-chart]').scrollIntoView({ block: 'center' }); point(Number(tip.dataset.point)); $('[data-chart]').focus({ preventScroll: true }); return; }
+        const windowButton = event.target.closest('[data-rank-window]');
+        if (windowButton) { local.rankWindow = windowButton.dataset.rankWindow; renderBelow(); return; }
+        const copy = event.target.closest('[data-copy]');
+        if (copy) {
+          navigator.clipboard?.writeText(copy.dataset.copy).then(() => { copy.textContent = '✓ Copiado'; }, () => { copy.textContent = copy.dataset.copy; });
+        }
+      });
+      card.addEventListener('change', (event) => { if (event.target.matches('[data-rank-frame]')) { local.rankFrame = event.target.value; renderBelow(); } });
+      card.addEventListener('pointerover', (event) => {
+        const slot = event.target.closest('[data-slot]')?.dataset.slot ?? null;
+        if (slot === local.lit) return;
+        local.lit = slot;
         renderLeaders();
       });
-      const light = (event) => {
-        const key = event.target.closest('[data-row]')?.dataset.row ?? null;
-        if (key === local.lit) return;
-        local.lit = key;
-        $$('.team-row').forEach((row) => row.classList.toggle('is-lit', row.dataset.row === key));
-        renderLeaders();
-      };
-      rows.addEventListener('pointerover', light);
-      rows.addEventListener('focusin', light);
-      rows.addEventListener('pointerleave', () => { local.lit = null; $$('.team-row').forEach((row) => row.classList.remove('is-lit')); renderLeaders(); });
-      new ResizeObserver(() => { if (!$('[data-duo]').hidden) renderAll(); }).observe(chart);
+      card.addEventListener('focusin', (event) => {
+        const slot = event.target.closest('[data-slot]')?.dataset.slot ?? null;
+        if (slot !== local.lit) { local.lit = slot; renderLeaders(); }
+      });
+      document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeFicha(); });
+      document.addEventListener('pointerdown', (event) => { if (!event.target.closest('[data-row-pop], [data-ficha]')) closeFicha(); });
+      let swipeX = null;
+      $('[data-crew]').addEventListener('pointerdown', (event) => { swipeX = event.clientX; });
+      $('[data-crew]').addEventListener('pointerup', (event) => {
+        if (swipeX === null || card.clientWidth >= 700) return;
+        const delta = event.clientX - swipeX;
+        swipeX = null;
+        if (Math.abs(delta) < 40) return;
+        const order = CREW.indexOf(local.active) + (delta < 0 ? 1 : -1);
+        local.active = CREW[(order + CREW.length) % CREW.length];
+        renderCrew();
+      });
+      let lastWidth = 0;
+      const refit = () => { if (!card.hidden) { fit(); renderChart(); renderLeaders(); } };
+      new ResizeObserver(() => { const width = card.clientWidth; if (width !== lastWidth) { lastWidth = width; refit(); } }).observe(card);
+      window.addEventListener('resize', refit);
     }
-    return { renderAll, play, bind };
+    function showTip(button) {
+      const tip = $('#term-tip');
+      const [label, text, example] = GLOSSARY[button.dataset.term];
+      tip.innerHTML = `<b>${label}.</b> ${text}${example ? ` <span class="tip-example">${example}</span>` : ''}`;
+      tip.hidden = false;
+      const box = button.getBoundingClientRect();
+      const chartBox = $('[data-chart]').getBoundingClientRect();
+      const isBelowChart = $('[data-duo]').hidden || box.top > chartBox.bottom;
+      const left = Math.min(Math.max(8, box.left + box.width / 2 - tip.offsetWidth / 2), window.innerWidth - tip.offsetWidth - 8);
+      const above = box.top - tip.offsetHeight - 8;
+      const top = !isBelowChart && above > 4 ? above : box.bottom + 8;
+      tip.style.left = `${left}px`;
+      tip.style.top = `${top}px`;
+      local.tipOwner = button;
+    }
+    function hideTip() { $('#term-tip').hidden = true; local.tipOwner = null; }
+    function bindTips() {
+      let timer = 0;
+      document.addEventListener('pointerover', (event) => {
+        if (event.target.closest('#term-tip')) { window.clearTimeout(timer); return; }
+        const button = event.target.closest('.term');
+        if (button) { window.clearTimeout(timer); showTip(button); }
+      });
+      document.addEventListener('pointerout', (event) => {
+        if (event.target.closest('.term, #term-tip')) { window.clearTimeout(timer); timer = window.setTimeout(hideTip, 250); }
+      });
+      document.addEventListener('focusin', (event) => { const button = event.target.closest('.term'); if (button) showTip(button); });
+      document.addEventListener('focusout', (event) => { if (event.target.closest('.term')) hideTip(); });
+      document.addEventListener('click', (event) => {
+        const button = event.target.closest('.term');
+        if (!button) return;
+        event.stopPropagation();
+        if (local.tipOwner === button && !$('#term-tip').hidden) hideTip(); else showTip(button);
+      }, true);
+      document.addEventListener('keydown', (event) => { if (event.key === 'Escape') hideTip(); });
+    }
+    return { renderAll, play, bind, bindTips, showTip, term };
   })();
 
   // ---------- eventos ----------
@@ -2036,6 +2585,7 @@ h1 { margin: 0; font: 600 28px/1.2 var(--font-display); letter-spacing: -0.01em;
   observer.observe(stage);
   observer.observe($('[data-duo-grid]'));
   duo.bind();
+  duo.bindTips();
   document.addEventListener('visibilitychange', () => {
     state.isAutoPaused = document.hidden;
     setPaused();
