@@ -1,0 +1,481 @@
+/* A varanda: a equipe em pé acima do gráfico, olhando o pregão; a lousa ao lado. Posições por seletor de assento, sem estilo inline. */
+.frame {
+  position: sticky;
+  top: 40px;
+  z-index: 15;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.frame > * {
+  min-width: 0;
+}
+
+.frameTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.header {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+
+.moment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.pointed {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.legend {
+  display: inline-flex;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+}
+
+.markRule {
+  color: var(--accent);
+}
+
+.markModel {
+  color: var(--model);
+}
+
+.fixedLine {
+  margin: 0 0 0 auto;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: var(--text-xs);
+}
+
+.balcony {
+  position: relative;
+  display: grid;
+  flex-basis: 100%;
+  grid-template-columns: minmax(0, 1fr) clamp(280px, 27%, 380px);
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) 0;
+  border-radius: var(--radius-control);
+  background: linear-gradient(to bottom, var(--office-wall), var(--surface));
+}
+
+.crew {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slot {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  min-width: 0;
+}
+
+.figure {
+  width: 52px;
+  height: 56px;
+  overflow: hidden;
+  transform-origin: 50% 100%;
+}
+
+.figure svg {
+  display: block;
+  width: 52px;
+  height: 72px;
+}
+
+.slot[data-slot='tiago'] .figure,
+.slot[data-slot='renata'] .figure {
+  transform: rotate(3deg);
+}
+
+.slot[data-slot='vitor'] .figure,
+.slot[data-slot='sofia'] .figure {
+  transform: rotate(-3deg);
+}
+
+.slot[data-slot='otavio'] .figure {
+  transform: rotate(-6deg);
+}
+
+.badgeRoot {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 140px;
+}
+
+.badge {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-content: center;
+  justify-content: center;
+  gap: 0 6px;
+  width: 100%;
+  min-height: 44px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 11.5px;
+  line-height: 1.25;
+  cursor: pointer;
+}
+
+.badge:hover {
+  background: var(--surface-2);
+}
+
+.badge:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.badgeName {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.seal {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.role {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--ink-2);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bubble {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  width: calc(100% - 2px);
+  max-width: 152px;
+  margin: 8px 0 var(--space-2);
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--bubble-shadow);
+  font-size: var(--text-xs);
+  line-height: 16px;
+}
+
+.bubble::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  width: 10px;
+  height: 10px;
+  transform: translateX(-50%) rotate(45deg);
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.bubble[data-tone='voter'] {
+  border: 2px solid var(--accent);
+}
+
+.bubble[data-tone='quiet'] {
+  border: 1px dashed var(--ink-3);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  box-shadow: none;
+}
+
+.bubbleLine {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-weight: 600;
+}
+
+.bubbleHorizon {
+  color: var(--ink-2);
+}
+
+.dots {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: inherit;
+  background: var(--surface);
+  color: var(--ink-3);
+  font-weight: 800;
+  letter-spacing: 3px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease-out);
+}
+
+.slot[data-state='thinking'] .dots {
+  opacity: 1;
+}
+
+.sheet {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  display: grid;
+  gap: var(--space-1);
+  width: max-content;
+  max-width: 280px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  box-shadow: var(--toast-shadow);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.sheet[hidden] {
+  display: none;
+}
+
+.sheet ul {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: 16px;
+}
+
+.slot[data-slot='sofia'] .sheet,
+.slot[data-slot='otavio'] .sheet {
+  right: 0;
+  left: auto;
+}
+
+.board {
+  align-self: start;
+  margin-bottom: var(--space-2);
+  border: 4px solid var(--desk-edge);
+  border-radius: 6px;
+  background: var(--board);
+  color: var(--board-ink);
+  font-size: 11.5px;
+  line-height: 16px;
+}
+
+.boardBody {
+  padding: var(--space-2) var(--space-3);
+}
+
+.boardTitle {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.tab {
+  min-height: 28px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab[aria-selected='true'] {
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+.boardPanel {
+  padding-top: var(--space-2);
+}
+
+.boardList {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.boardNote {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.sheetToggle {
+  display: none;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dots {
+    transition: none;
+  }
+}
+
+/* Celular: a varanda vira barra fixa no topo do gráfico, um balão por vez, e a lousa sobe do rodapé como folha. */
+@media (max-width: 699px) {
+  .frame {
+    top: 60px;
+  }
+
+  .moment,
+  .fixedLine {
+    display: none;
+  }
+
+  .balcony {
+    display: block;
+    padding: 6px 4px 0;
+    background: var(--surface);
+  }
+
+  .crew {
+    padding-bottom: 80px;
+  }
+
+  .slot {
+    position: static;
+  }
+
+  .role,
+  .seal {
+    display: none;
+  }
+
+  .badge {
+    grid-template-columns: auto;
+    min-height: 44px;
+  }
+
+  .bubble {
+    display: none;
+  }
+
+  .slot[data-active='true'] .bubble {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    left: 4px;
+    display: grid;
+    max-width: none;
+    margin: 0;
+  }
+
+  .sheet {
+    position: fixed;
+    right: 8px;
+    bottom: 56px;
+    left: 8px;
+    max-width: none;
+    max-height: 50vh;
+    overflow: auto;
+  }
+
+  .board {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 25;
+    border-width: 2px 0 0;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .sheetToggle {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-weight: 600;
+  }
+
+  .boardBody {
+    display: none;
+    max-height: 60vh;
+    overflow: auto;
+  }
+
+  .board[data-open='true'] .boardBody {
+    display: block;
+  }
+}

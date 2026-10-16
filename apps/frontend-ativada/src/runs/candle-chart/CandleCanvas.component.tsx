@@ -11,7 +11,7 @@ import { ChartToolbar } from './ChartToolbar.component.js';
 import { ClusterButtons } from './ClusterButtons.component.js';
 import { LayerBar } from './LayerBar.component.js';
 import { BesideTeam } from '../team-room/BesideTeam.component.js';
-import { TeamAside, useHasTeamAside } from '../team-room/TeamAside.context.js';
+import { TeamAside } from '../team-room/TeamAside.context.js';
 import { LayerNotices } from './LayerNotices.component.js';
 import { LiveCandleNotice } from './LiveCandleNotice.component.js';
 import { NextCandlePanel } from './NextCandlePanel.component.js';
@@ -88,28 +88,26 @@ function ChartCaption(props: CanvasViewProps & { readonly id: string }): ReactEl
   );
 }
 
-// A coluna ao lado do gráfico: a equipe colada nele e, com a camada "Previsão", a próxima vela de perto.
-function ChartSide({ chart, model, view }: CanvasViewProps): ReactElement {
+// A coluna ao lado do gráfico: com a camada "Previsão", a próxima vela de perto (a equipe fica na varanda, acima do gráfico).
+function ChartSide({ chart, model }: CanvasViewProps): ReactElement {
   return (
     <div className={styles.side}>
-      <TeamAside pointedOpenTime={model.pointedOpenTime} />
-      {view.isLive && model.isLayerOn(CHART_LAYER.FORECAST) ? (
-        <NextCandlePanel chart={chart} layerData={model.layerData} />
-      ) : null}
+      <NextCandlePanel chart={chart} layerData={model.layerData} />
     </div>
   );
 }
 
 function CanvasView(props: CanvasViewProps): ReactElement {
   const { chart, view, selection, model } = props;
-  const hasTeam = useHasTeamAside();
+  const hasSide = view.isLive && model.isLayerOn(CHART_LAYER.FORECAST);
   const ids: DescriptionIds = { help: useId(), caption: useId() };
   return (
     <figure className={styles.wrapper}>
+      <TeamAside pointedOpenTime={model.pointedOpenTime} />
       <CanvasHeader {...props} />
-      <div className={styles.chartLayout}>
+      <div className={hasSide ? styles.chartLayout : styles.chartAlone}>
         <SurfaceBox {...props} ids={ids} />
-        {view.isLive || hasTeam ? <ChartSide {...props} /> : null}
+        {hasSide ? <ChartSide {...props} /> : null}
       </div>
       <LayerNotices
         data={model.layerData}

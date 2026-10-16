@@ -75,6 +75,8 @@ const PAIRS: readonly (readonly [string, string])[] = [
   ['on-accent', 'sell'],
   ['on-buy', 'buy'],
   ['on-sell', 'sell'],
+  ['model', 'surface'],
+  ['postit-ink', 'postit'],
 ];
 
 // Setas, linha, halo e contorno do gráfico são elementos gráficos (WCAG 1.4.11): 3:1.
@@ -131,6 +133,7 @@ const PERCENT_DIVISOR = 100;
 const CONE_TOKENS = ['cone-up', 'cone-down', 'cone-neutral'] as const;
 // Fundos suaves da central de avisos (spec 014): cancelada em cinza e as zonas de ganho e perda da régua.
 const NOTICE_FILL_TOKENS = ['cancel-soft', 'zone-gain', 'zone-loss'] as const;
+const BALCONY_FILL_TOKENS = ['model-soft', 'board', 'office-wall', 'desk-edge', 'glass'] as const;
 // A grade só ajuda o olho: o valor está nos rótulos dos eixos (WCAG 1.4.11 não a cobra), então o piso é só "visível".
 const GRID_MINIMUM_RATIO = 1.5;
 
@@ -159,7 +162,9 @@ function withDerivedTokens(base: Map<string, string>): Map<string, string> {
 describe('chart tokens declared in global.css (spec 009, RF06 e RNF06)', () => {
   test('the grid and the three cone colors are derived with color-mix from existing tokens', () => {
     const declared = [...CSS.matchAll(MIX_DECLARATION)].map((match) => match[1]);
-    expect(declared.sort()).toEqual(['chart-grid', ...CONE_TOKENS, ...NOTICE_FILL_TOKENS].sort());
+    expect(declared.sort()).toEqual(
+      ['chart-grid', ...CONE_TOKENS, ...NOTICE_FILL_TOKENS, ...BALCONY_FILL_TOKENS].sort(),
+    );
   });
 });
 

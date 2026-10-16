@@ -36,6 +36,11 @@
   min-width: 0;
 }
 
+.chartAlone {
+  display: grid;
+  min-width: 0;
+}
+
 .side {
   display: grid;
   gap: 12px;
@@ -46,7 +51,7 @@
 .canvas {
   width: 100%;
   min-width: 0;
-  height: 560px;
+  height: clamp(280px, calc(100dvh - 440px), 640px);
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
   overflow: hidden;
@@ -188,7 +193,7 @@
   }
 
   .canvas {
-    height: 620px;
+    height: clamp(240px, calc(100dvh - 440px), 640px);
   }
 }
 

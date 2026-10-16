@@ -1,4 +1,4 @@
-/* O que ocupa o lugar do gráfico (carregando, vazio, reserva) ganha a mesma coluna da equipe que o gráfico ganharia. */
+/* O que ocupa o lugar do gráfico (carregando, vazio, reserva) ganha a mesma varanda que o gráfico ganharia, acima dele. */
 .layout {
   display: grid;
   gap: 12px;
@@ -7,15 +7,4 @@
 
 .main {
   min-width: 0;
-}
-
-.side {
-  min-width: 0;
-}
-
-@media (min-width: 1100px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr) clamp(340px, 32%, 420px);
-    align-items: start;
-  }
 }

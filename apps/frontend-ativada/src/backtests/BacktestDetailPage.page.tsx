@@ -30,19 +30,21 @@ function failureMessage(run: RunDetail): string {
   return FAILURE_TEXT[code] ?? `A execução falhou (${code || 'sem código'}).`;
 }
 
-// A simulação ao vivo (qualquer estado, menos falha) abre pelo pulso e pelo resumo curto; o gráfico com a equipe vem logo depois e o detalhe fica por último.
+// A simulação ao vivo (qualquer estado, menos falha) abre pela equipe na varanda e pelo gráfico, sempre em tela sem rolar; o
+// cabeçalho, o pulso e o resumo curto vêm logo depois do primeiro quadro e o detalhe fica por último.
 function LivePaperBody({ run }: { readonly run: RunDetail }): ReactElement {
   const hasChart = run.status === RUN_STATUS.RUNNING || run.status === RUN_STATUS.CANCELLED;
   return (
     <>
-      {run.status === RUN_STATUS.CANCELLED ? (
-        <p role="status" className={controls.muted}>
-          {failureMessage(run)}
-        </p>
-      ) : null}
-      <LiveSummarySection run={run} />
-      {run.status === RUN_STATUS.COMPLETED ? <CompletedBacktest run={run} /> : null}
       <LiveChartArea runId={run.id} hasChart={hasChart}>
+        <RunHeader run={run} />
+        {run.status === RUN_STATUS.CANCELLED ? (
+          <p role="status" className={controls.muted}>
+            {failureMessage(run)}
+          </p>
+        ) : null}
+        <LiveSummarySection run={run} />
+        {run.status === RUN_STATUS.COMPLETED ? <CompletedBacktest run={run} /> : null}
         <AnalystSection runId={run.id} />
         <LiveDecisionsSection run={run} />
         <LiveTrackingSection run={run} />
@@ -52,8 +54,12 @@ function LivePaperBody({ run }: { readonly run: RunDetail }): ReactElement {
   );
 }
 
+function isLivePaperRun(run: RunDetail): boolean {
+  return run.kind === RUN_KIND.LIVE_PAPER && run.status !== RUN_STATUS.FAILED;
+}
+
 function RunBody({ run }: { readonly run: RunDetail }): ReactElement {
-  if (run.kind === RUN_KIND.LIVE_PAPER && run.status !== RUN_STATUS.FAILED) {
+  if (isLivePaperRun(run)) {
     return <LivePaperBody run={run} />;
   }
   // Backtest e walk-forward só mostram operações depois de concluídos.
@@ -108,7 +114,7 @@ function RunDetailView({ runId }: { readonly runId: string }): ReactElement {
   return (
     <>
       <RunSwitcher runId={runId} run={run.data} isFailed={false} />
-      <RunHeader run={run.data} />
+      {isLivePaperRun(run.data) ? null : <RunHeader run={run.data} />}
       <RunBody run={run.data} />
     </>
   );

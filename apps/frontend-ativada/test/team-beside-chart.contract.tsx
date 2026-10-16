@@ -41,14 +41,14 @@ function isBefore(first: HTMLElement, second: HTMLElement): boolean {
 }
 
 describe('detalhe da simulação ao vivo: a equipe junto do gráfico', () => {
-  test('the page goes pulse, short summary, chart, decisions, detail and only then the big room', async () => {
+  test('the page opens on the chart with the team on the balcony, then the short summary, decisions, detail and only then the big room', async () => {
     openLiveDetail(createRoomHarness());
     const summary = await screen.findByRole('region', { name: 'Sua simulação ao vivo' });
     const chart = await screen.findByRole('region', { name: 'Preço e operações' });
     const decisions = await screen.findByRole('region', { name: /^O que a estratégia decidiu/ });
     const tracking = await screen.findByRole('region', { name: 'Acompanhamento' });
     const room = await screen.findByRole('region', { name: 'Sala da equipe' });
-    const order = [summary, chart, decisions, tracking, room];
+    const order = [chart, summary, decisions, tracking, room];
     order.slice(1).forEach((section, index) => {
       expect(isBefore(order[index] ?? section, section)).toBe(true);
     });

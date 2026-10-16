@@ -3,7 +3,7 @@ import type { ReactElement, ReactNode } from 'react';
 
 import { RUN_KIND } from '../run.constant.js';
 import { renderHistoricalTeam } from './BacktestTeam.component.js';
-import { CompactTeam } from './CompactTeam.component.js';
+import { TeamBalcony } from './balcony/TeamBalcony.component.js';
 import { TeamAsideProvider, type TeamAsideRenderer } from './TeamAside.context.js';
 import type { TeamRoomPreference } from './team-room-preference.js';
 import { useTeamRoomPreference } from './useTeamRoomPreference.hook.js';
@@ -13,7 +13,7 @@ export function renderCompactTeam(
   preference: TeamRoomPreference,
 ): TeamAsideRenderer {
   return (pointedOpenTime) => (
-    <CompactTeam
+    <TeamBalcony
       runId={runId}
       pointedOpenTime={pointedOpenTime}
       isAnimationOn={preference.isAnimationOn}

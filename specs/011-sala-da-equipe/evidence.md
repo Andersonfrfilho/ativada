@@ -196,3 +196,31 @@ produção precisa de novo build).
 ### Pendências
 
 - Backtest não mostra a equipe "da vela apontada": o motor não grava falas por vela em backtest (nem há rota); a coluna diz isso.
+
+## Varanda no app (2026-10-16)
+
+Autorização: o usuário cobrou as melhorias de tela do preview no app ("cadê as melhorias de tela que você apresentou") e isso vale
+como autorização para implementar a INTERFACE do adendo `escritorio.md` com as decisões **D-E1 a D-E13 todas A** (vista frontal;
+crachá sempre visível; agentes com propósito; modelos na faixa como "em breve"; palco ACIMA do gráfico; faixa ≤ 220 px; ranking
+pelo limite inferior de Wilson; escada só como cena futura). Sem migration, sem mudar o motor, sem mudar rotas existentes.
+Referência: `docs/preview/escritorio/index.html` (`#cena=grafico-equipe`).
+
+### (1) Equipe sempre em tela
+
+- **Onde:** `src/runs/team-room/balcony/` (novo): `TeamBalcony` (moldura "Equipe agora", cabeçalho com a vela, legenda
+  "● Regra ◆ Modelo" e a linha fixa), `BalconyCrew`, `BalconyAgentSlot` (bonequinho, crachá e balão), `BalconyBoard` (lousa com abas),
+  `balcony-agents.ts` (puro: dados da equipe → seis agentes), `useBadgeSheet` (ficha: clique/Enter abre, Esc e clique fora fecham,
+  o foco volta ao crachá). Substitui a coluna lateral: `renderCompactTeam` agora monta a varanda, o `CandleCanvas` a põe ACIMA do
+  gráfico e o `BesideTeam` a empilha acima dos avisos do lugar do gráfico. `CompactTeam` (coluna) segue no código, sem uso na tela.
+- **Dados:** nada de consulta nova; mesmas frases do servidor da coluna antiga (`useCompactTeamModel`). Tiago, Renata, Vitor e Sofia
+  são as famílias de regras; Alice é o analista de risco (ou o resumo do placar, quando a simulação não tem analista); Otávio é o
+  auditor (resumo de acertos de `/projections`).
+- **Honestidade do selo:** o servidor ainda não mede o acerto por especialista, então o selo dos quatro diz "Sem medida" (e a ficha
+  diz que o auditor mede só o resumo geral). Alice "Decide" e Otávio "Mede". Balão tracejado "não vota" = fora do placar.
+- **Altura útil:** o gráfico passa a ter altura `clamp(240–640 px, 100dvh − 440 px)`; a varanda fica `sticky` (equipe sempre em tela
+  ao rolar o gráfico) e o detalhe da simulação ao vivo abre pelo gráfico com a equipe (cabeçalho, pulso e resumo vêm logo depois).
+- **Celular (< 700 px):** barra fixa no topo com os avatares e um balão por vez (o do último crachá tocado); a lousa vira folha
+  que sobe do rodapé ("Lousa da equipe: proteções e ranking").
+- **Tokens novos** (`global.css`, claro e escuro): `--motion-walk`, `--model` (+ `--model-soft`), `--board`, `--board-ink`, `--postit`,
+  `--postit-ink`, `--office-wall`, `--desk-edge`, `--glass`; pares `model/surface` e `postit-ink/postit` no `contrast.contract.ts`.
+- **Testes:** `test/team-balcony.contract.tsx` (5), `team-beside-chart` ajustado à nova ordem (gráfico antes do resumo).

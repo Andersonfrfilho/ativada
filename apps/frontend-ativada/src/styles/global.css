@@ -74,6 +74,16 @@
   --hair-5: #b9bcc4;
   --pants: #39446a;
   --shoe: #1a1f2e;
+  --motion-walk: 1750ms;
+  --model: #8a3ea8;
+  --model-soft: color-mix(in srgb, var(--model) 12%, var(--surface));
+  --board: color-mix(in srgb, var(--surface) 92%, var(--accent));
+  --board-ink: var(--ink);
+  --postit: #fbe9a6;
+  --postit-ink: #3d2f00;
+  --office-wall: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  --desk-edge: color-mix(in srgb, var(--ink-3) 55%, var(--surface));
+  --glass: color-mix(in srgb, var(--accent) 12%, var(--surface));
   color-scheme: light;
 }
 
@@ -98,6 +108,9 @@
     --bench: #8b94ad;
     --on-buy: #06231a;
     --on-sell: #2a0b0e;
+    --model: #d59af0;
+    --postit: #4a3d12;
+    --postit-ink: #fbe9a6;
     --scrim: rgb(0 0 0 / 0.6);
     --toast-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 14px 36px rgb(0 0 0 / 0.5);
     color-scheme: dark;
@@ -124,6 +137,9 @@
   --bench: #8b94ad;
   --on-buy: #06231a;
   --on-sell: #2a0b0e;
+  --model: #d59af0;
+  --postit: #4a3d12;
+  --postit-ink: #fbe9a6;
   --scrim: rgb(0 0 0 / 0.6);
   --toast-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 14px 36px rgb(0 0 0 / 0.5);
   color-scheme: dark;
