@@ -17,6 +17,7 @@ import type { ChartSurface } from './chart-surface.types.js';
 import { toTime, type Context } from './lightweight-context.js';
 import { buildOverlaySetters, buildSeriesSetters } from './lightweight-data.js';
 import { buildEvents, buildView } from './lightweight-view.js';
+import { ZoneBandsPrimitive } from './zone-bands-primitive.js';
 import { LevelBoxesPrimitive } from './level-boxes-primitive.js';
 import { TradeMarksPrimitive } from './trade-marks-primitive.js';
 import { DEFAULT_PRECISION, pricePriceFormat, VOLUME_PRICE_FORMAT } from './surface-format.js';
@@ -57,7 +58,11 @@ const STRETCH = { PRICE: 5, VOLUME: 1.2 } as const;
 function attachPrimitives(
   chart: IChartApi,
   candles: ISeriesApi<'Candlestick'>,
-): { readonly boxes: LevelBoxesPrimitive; readonly marks: TradeMarksPrimitive } {
+): {
+  readonly boxes: LevelBoxesPrimitive;
+  readonly marks: TradeMarksPrimitive;
+  readonly zones: ZoneBandsPrimitive;
+} {
   const projection = {
     timeToX: (seconds: number): number | null =>
       chart.timeScale().timeToCoordinate(toTime(seconds)),
@@ -66,9 +71,11 @@ function attachPrimitives(
   };
   const boxes = new LevelBoxesPrimitive(projection);
   const marks = new TradeMarksPrimitive(projection);
+  const zones = new ZoneBandsPrimitive(projection);
+  candles.attachPrimitive(zones);
   candles.attachPrimitive(boxes);
   candles.attachPrimitive(marks);
-  return { boxes, marks };
+  return { boxes, marks, zones };
 }
 
 function createContext(chart: IChartApi): Context {
@@ -86,7 +93,7 @@ function createContext(chart: IChartApi): Context {
     { priceFormat, lineWidth: 2, title: 'agora' },
     PANE.PRICE,
   );
-  const { boxes, marks } = attachPrimitives(chart, candles);
+  const { boxes, marks, zones } = attachPrimitives(chart, candles);
   chart.panes()[PANE.PRICE]?.setStretchFactor(STRETCH.PRICE);
   chart.panes()[PANE.VOLUME]?.setStretchFactor(STRETCH.VOLUME);
   return {
@@ -98,6 +105,7 @@ function createContext(chart: IChartApi): Context {
     realPrice,
     boxes,
     marks,
+    zones,
     markers: createSeriesMarkers(candles, []),
     state: createSurfaceState(),
     layers: { lines: [], cone: [], score: undefined, scoreLevels: [], levelLines: [] },

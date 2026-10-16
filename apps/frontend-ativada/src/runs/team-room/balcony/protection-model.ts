@@ -13,6 +13,7 @@ import {
 } from './protection-math.js';
 
 export type ProtectionView = {
+  readonly entryPrice: string;
   readonly stopPrice: string;
   readonly targetPrice: string;
   readonly stopNet: NetText | undefined;
@@ -54,6 +55,7 @@ export function buildProtection(input: ProtectionInput): ProtectionView | undefi
   const price = currentPrice === undefined ? undefined : parseScaled(currentPrice);
   const fall = divideFloor(stop - entry, entry);
   return {
+    entryPrice: formatPriceAtTick(symbol, position.entryPrice),
     stopPrice: formatPriceAtTick(symbol, position.stopPrice),
     targetPrice: formatPriceAtTick(symbol, position.targetPrice),
     stopNet: netAt({ entry, exit: stop, quantity, costs }),

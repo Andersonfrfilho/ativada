@@ -153,6 +153,16 @@ export function buildLevelColors(theme: SurfaceTheme): {
   };
 }
 
+// Faixas: compra em azul de acento, venda no verde de alta, proteção no vermelho de baixa (só cor, o rótulo diz o que é).
+export function buildZoneColors(theme: SurfaceTheme): {
+  readonly buy: string;
+  readonly sell: string;
+  readonly protection: string;
+  readonly text: string;
+} {
+  return { buy: theme.line, sell: theme.up, protection: theme.down, text: theme.text };
+}
+
 export function buildCandleColors(theme: SurfaceTheme): {
   readonly upColor: string;
   readonly downColor: string;

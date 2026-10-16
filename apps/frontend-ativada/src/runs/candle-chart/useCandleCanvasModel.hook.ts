@@ -22,6 +22,7 @@ import type { CandleSource, TimeframeChoice } from './useCandleSource.hook.js';
 import { useChartLayers, type ChartLayerData } from './useChartLayers.hook.js';
 import { useChartSurface } from './useChartSurface.hook.js';
 import { useFormingCandle } from './useFormingCandle.hook.js';
+import type { StrategyZones } from './strategy-zones.js';
 import { useLevelLines } from './useLevelLines.hook.js';
 import { useLayerSurface } from './useLayerSurface.hook.js';
 import { useSurfaceData } from './useSurfaceData.hook.js';
@@ -44,6 +45,7 @@ export type CandleCanvasModel = {
   readonly live: LiveCandleView | undefined;
   // Os níveis da estratégia desenhados agora (camada "Níveis"); vazio sem posição aberta nem gatilho.
   readonly levels: readonly SurfacePriceLevel[];
+  readonly zones: StrategyZones;
   readonly layerData: ChartLayerData;
   readonly isLayerOn: (layer: ChartLayer) => boolean;
   readonly handleTimeframeChange: (next: TimeframeChoice) => void;
@@ -127,7 +129,7 @@ function forecastTextFor(
   return describeForecast({ state, now, timeZone });
 }
 
-type LayerModel = Pick<CandleCanvasModel, 'layerData' | 'isLayerOn' | 'live' | 'levels'>;
+type LayerModel = Pick<CandleCanvasModel, 'layerData' | 'isLayerOn' | 'live' | 'levels' | 'zones'>;
 
 // As camadas da estratégia na superfície e a vela em formação.
 function useLayerModel(
@@ -144,11 +146,11 @@ function useLayerModel(
     timeframe: source.timeframe,
     isFollowing: view.isLive && view.range === undefined,
   });
-  const levels = useLevelLines(base.surface, {
+  const lines = useLevelLines(base.surface, {
     runId,
     isOn: view.isLive && isLayerOn(CHART_LAYER.LEVELS),
   });
-  return { layerData, isLayerOn, live, levels };
+  return { layerData, isLayerOn, live, levels: lines.levels, zones: lines.zones };
 }
 
 // A vela que a cruz aponta (a equipe fala dela) e, se tem operação, a dica "Compra a X · taxa Y".

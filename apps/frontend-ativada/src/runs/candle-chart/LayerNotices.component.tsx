@@ -7,6 +7,7 @@ import { CHART_LAYER, type ChartLayer } from './candle-chart.constant.js';
 import styles from './CandleChart.module.css';
 import { describeScorePanel } from './layer-series.js';
 import { LEVELS_NOTICE } from './strategy-levels.js';
+import { ZONES_NOTICE, type StrategyZones } from './strategy-zones.js';
 import type { ChartLayerData } from './useChartLayers.hook.js';
 
 export type LayerNoticesProps = {
@@ -16,6 +17,7 @@ export type LayerNoticesProps = {
   readonly isLive: boolean;
   // Há linhas de nível na tela agora.
   readonly hasLevels: boolean;
+  readonly zones: StrategyZones;
 };
 
 const NO_PRICE_LINES = 'Esta estratégia não usa linhas sobre o preço';
@@ -27,17 +29,18 @@ const FORECAST_NARROW =
 
 // O texto das camadas: cada linha da estratégia pelo nome, o que o painel do placar mostra e o motivo de uma camada
 // estar vazia ou ter falhado. A falha das camadas NUNCA tira as velas da tela.
-export function LayerNotices({
-  data,
-  decisions,
-  isOn,
-  isLive,
-  hasLevels,
-}: LayerNoticesProps): ReactElement {
+function isWaitedWithoutData({ data, decisions, isOn, isLive }: LayerNoticesProps): boolean {
+  return isLive && isOn(CHART_LAYER.WAITED) && data.isStrategyTimeframe && decisions === null;
+}
+
+function ZonesNotice({ zones }: { readonly zones: StrategyZones }): ReactElement {
+  return <p className={controls.muted}>{zones.reason ?? ZONES_NOTICE}</p>;
+}
+
+export function LayerNotices(props: LayerNoticesProps): ReactElement {
+  const { data, isOn, isLive, hasLevels, zones } = props;
   const { layers } = data;
   const lines = isOn(CHART_LAYER.STRATEGY_LINES) ? layers?.lines : undefined;
-  const isWaitedOnWithoutData =
-    isLive && isOn(CHART_LAYER.WAITED) && data.isStrategyTimeframe && decisions === null;
   return (
     <div className={styles.notices}>
       {data.hasLayersFailed ? (
@@ -59,7 +62,8 @@ export function LayerNotices({
         <p className={controls.muted}>{describeScorePanel(layers.thresholds)}</p>
       )}
       {hasLevels ? <p className={controls.muted}>{LEVELS_NOTICE}</p> : null}
-      {isWaitedOnWithoutData ? <p className={controls.muted}>{ZOOM_FOR_DECISIONS}</p> : null}
+      {isLive && isOn(CHART_LAYER.LEVELS) ? <ZonesNotice zones={zones} /> : null}
+      {isWaitedWithoutData(props) ? <p className={controls.muted}>{ZOOM_FOR_DECISIONS}</p> : null}
       {isLive && isOn(CHART_LAYER.FORECAST) && data.projection !== undefined ? (
         <p className={controls.muted}>{FORECAST_NARROW}</p>
       ) : null}

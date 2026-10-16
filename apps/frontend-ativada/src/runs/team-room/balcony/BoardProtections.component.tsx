@@ -52,6 +52,9 @@ function ProtectionBody({ view }: { readonly view: ProtectionView }): ReactEleme
         </span>
         <DistanceBar view={view} />
       </li>
+      <li className={styles.boardNote}>
+        {`Faixa de venda: ${view.entryPrice}–${view.targetPrice} · Faixa de proteção: ${view.stopPrice}–${view.entryPrice}. ${BALCONY_TEXT.BAND_NOTE}`}
+      </li>
       <li>
         <strong>{BALCONY_TEXT.TARGET_TITLE}</strong> {view.targetPrice} · {netText(view.targetNet)}
       </li>

@@ -349,3 +349,16 @@ legenda numa faixa fina, crachás de uma linha, e o cabeçalho a 1100–1279 px 
 | 853 × 480 (zoom 150%) | recolhida | 395 → 635 (240 px) | NÃO |
 
 Crachás 6/6 e balão ativo dentro do viewport em todos; a lousa fica fora na varanda recolhida (abre pelo botão "Confortável"/folha).
+
+### Bloco 2 (faixas): faixas de compra, venda e proteção no gráfico
+
+- Camada "Níveis" (ligada por padrão) agora também desenha **faixas translúcidas com borda tracejada e rótulo** atrás das velas: `ZoneBandsPrimitive`
+  (`candle-chart/zone-bands-primitive.ts`) via `ChartSurface.setZones` (aditivo; superfície falsa de teste atualizada). Cores do tema da superfície (compra no azul
+  de acento, venda no verde de alta, proteção no vermelho de baixa); `Number` só em `toDrawingNumber`.
+- `strategy-zones.ts` (puro): com posição, **Faixa de venda: entrada–alvo** e **Proteção: se cair abaixo de X vende**; sem posição, **Faixa de compra da estratégia**
+  da última vela fechada até o preço que a regra de preço pede (só dado do servidor: `triggers.rules[]` e a última decisão). Sem leitura, nada é desenhado e a tela diz
+  "A faixa aparece quando a estratégia tiver leitura." Aviso fixo: "Faixa da estratégia nesta simulação — não é recomendação para você operar. Faixas: compra · venda · proteção."
+- Também em texto na aba Proteções da lousa. Contrato `strategy-zones.contract.tsx` (6, com superfície falsa: preços entregues e faixas ocultas sem dado).
+- App real (Edge, `live-status` interceptado com posição aberta, dev): faixas verde e vermelha desenhadas no canvas com os rótulos (`capturas/faixas-no-app-1366x768-claro.png`);
+  sem interceptar, a execução de teste está sem leitura e mostra a frase honesta.
+- **Pendente:** `Term` com dica para cada faixa (item D do bloco 2) e a mesma faixa na régua da ficha do sinal (spec 014).

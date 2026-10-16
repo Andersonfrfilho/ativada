@@ -11,6 +11,7 @@ import type {
   SurfaceTheme,
   SurfaceTime,
   SurfaceVolumeBar,
+  SurfaceZone,
 } from './chart-surface.types.js';
 import { DEFAULT_PRECISION } from './surface-format.js';
 
@@ -28,6 +29,7 @@ export type SurfaceState = {
   waited: readonly SurfaceTime[];
   levels: readonly SurfaceLevelBox[];
   priceLevels: readonly SurfacePriceLevel[];
+  zones: readonly SurfaceZone[];
   projection: SurfaceProjection | null;
   live: SurfaceCandle | null;
 };
@@ -46,6 +48,7 @@ export function createSurfaceState(): SurfaceState {
     waited: [],
     levels: [],
     priceLevels: [],
+    zones: [],
     projection: null,
     live: null,
   };

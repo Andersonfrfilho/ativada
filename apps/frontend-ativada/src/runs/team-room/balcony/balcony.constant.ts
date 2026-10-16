@@ -100,6 +100,7 @@ export const BALCONY_TEXT = {
   NET_WORD: 'líquido',
   PROTECTION_TITLE: 'PROTEÇÃO CONTRA QUEDA',
   TARGET_TITLE: 'Alvo de ganho',
+  BAND_NOTE: 'Faixas da estratégia nesta simulação, não recomendação.',
   NOT_AN_ORDER: 'É a regra da simulação, não uma ordem.',
   NO_POSITION: 'Sem operação aberta: a proteção contra queda aparece quando a simulação comprar.',
   PLAQUES_TITLE: 'Plaquinhas da operação',

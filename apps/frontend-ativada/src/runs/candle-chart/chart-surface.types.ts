@@ -67,6 +67,15 @@ export type SurfacePriceLevel = {
   readonly title: string;
 };
 
+// Faixa de preço sombreada (compra, venda ou proteção): da mínima à máxima, na largura do gráfico, com o texto pronto.
+export type SurfaceZone = {
+  readonly key: string;
+  readonly kind: 'buy' | 'sell' | 'protection';
+  readonly low: number;
+  readonly high: number;
+  readonly label: string;
+};
+
 // Caixas "Stop e alvo": da entrada ao alvo e da entrada ao stop; `exitTime` nulo = posição aberta (vai até a ponta).
 export type SurfaceLevelBox = {
   readonly key: string;
@@ -118,6 +127,7 @@ export type ChartSurface = {
   ) => void;
   readonly setMarkers: (markers: readonly SurfaceMarker[]) => void;
   readonly setLevels: (boxes: readonly SurfaceLevelBox[]) => void;
+  readonly setZones: (zones: readonly SurfaceZone[]) => void;
   readonly setPriceLevels: (levels: readonly SurfacePriceLevel[]) => void;
   // Pontinhos discretos de "esperou" (camada desligada por padrão).
   readonly setWaited: (times: readonly SurfaceTime[]) => void;

@@ -7,6 +7,7 @@ import {
   buildConeEdges,
   buildFormingColors,
   buildLevelColors,
+  buildZoneColors,
   buildLevelLineColors,
   buildMarkColors,
   buildMarkerSpecs,
@@ -117,6 +118,9 @@ export const renderMarkers: Render = (ctx, theme) => {
 export const renderLevels: Render = (ctx, theme) =>
   ctx.boxes.update(ctx.state.levels, buildLevelColors(theme));
 
+export const renderZones: Render = (ctx, theme) =>
+  ctx.zones.update(ctx.state.zones, buildZoneColors(theme));
+
 const renderCandleColors: Render = (ctx, theme) =>
   ctx.candles.applyOptions(buildCandleColors(theme));
 
@@ -143,5 +147,6 @@ export const RENDER_ALL: readonly Render[] = [
   renderProjection,
   renderLive,
   renderLevels,
+  renderZones,
   renderPriceLevels,
 ];
