@@ -89,6 +89,17 @@ describe('faixas da estratégia nesta simulação', () => {
     expect(zone?.label).toBe('Faixa de compra da estratégia 12,44–12,53');
   });
 
+  test('with several price rules the buy zone covers every trigger', () => {
+    const other = { ...PRICE_RULE, ruleId: 'dc', threshold: '12.60' };
+    const status = statusWith({
+      triggers: awaiting([PRICE_RULE, other]),
+      decisions: decisionsWithClose('12.44'),
+    });
+    expect(buildStrategyZones(status).zones[0]?.label).toBe(
+      'Faixa de compra da estratégia 12,44–12,60',
+    );
+  });
+
   test('without reading from the server no zone is drawn and the reason says so', () => {
     const none = buildStrategyZones(statusWith({ triggers: awaiting([]) }));
     expect(none.zones).toEqual([]);

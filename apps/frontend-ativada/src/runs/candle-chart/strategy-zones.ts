@@ -50,18 +50,25 @@ function holdingZones(position: NonNullable<LiveStatus['openPosition']>): readon
   ];
 }
 
-// Sem posição: da última vela fechada até o preço em que a regra de preço passa a votar a favor (o que falta para comprar).
+// Sem posição: da última vela fechada até os preços em que as regras de preço ainda não atendidas passam a votar a favor (o que
+// falta para comprar). Com várias regras a faixa cobre todos os gatilhos.
 function buyZones(status: LiveStatus): readonly SurfaceZone[] {
   const { triggers } = status;
   if (triggers.status !== 'available' || triggers.state !== 'awaiting_entry') return [];
-  const rule = triggers.rules.find(
-    (candidate) =>
-      candidate.metric === 'close_price' && candidate.threshold !== null && !candidate.isMet,
-  );
   const close = status.decisions.items[0]?.close;
-  if (rule === undefined || rule.threshold === null || close === undefined) return [];
-  const pair = ordered(close, rule.threshold);
-  return pair === undefined ? [] : [zoneOf('buy', pair, 'Faixa de compra da estratégia')];
+  const thresholds = triggers.rules.flatMap((rule) =>
+    rule.metric === 'close_price' && rule.threshold !== null && !rule.isMet ? [rule.threshold] : [],
+  );
+  if (close === undefined || thresholds.length === 0) return [];
+  const values = [close, ...thresholds].flatMap((text) => {
+    const scaled = parseScaled(text);
+    return scaled === undefined ? [] : [{ text, scaled }];
+  });
+  const sorted = [...values].sort((left, right) => (left.scaled < right.scaled ? -1 : 1));
+  const low = sorted[0];
+  const high = sorted.at(-1);
+  if (low === undefined || high === undefined || low.scaled === high.scaled) return [];
+  return [zoneOf('buy', { low: low.text, high: high.text }, 'Faixa de compra da estratégia')];
 }
 
 // As faixas da camada "Níveis": o que o servidor já devolveu (posição aberta, limiares das regras e a última vela). Nada é
