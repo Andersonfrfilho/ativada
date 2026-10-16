@@ -26,14 +26,22 @@ function spotOf(ctx: Context, kind: SurfaceAnchorKind): Spot | undefined {
   return point === undefined ? undefined : { time: point.time, price: point.value };
 }
 
-// As bordas da coluna da vela em formação: o centro da vela de agora menos ou mais meio espaçamento entre barras.
+// As bordas da coluna da vela em formação: o centro da vela de agora menos ou mais meio espaçamento entre barras. Com vela de
+// exibição, a coluna cobre as velas da vela da execução inteira: do início dela ao fim, contadas em espaçamentos de barra.
 function formingEdgeOf(ctx: Context, kind: 'forming_left' | 'forming_right'): SurfaceAnchor | null {
-  const { live } = ctx.state;
+  const { live, formingSlot } = ctx.state;
   if (live === null) return null;
   const x = ctx.chart.timeScale().timeToCoordinate(toTime(live.time));
   if (x === null) return null;
-  const half = ctx.chart.timeScale().options().barSpacing / 2;
-  return { x: kind === 'forming_left' ? x - half : x + half, y: 0 };
+  const spacing = ctx.chart.timeScale().options().barSpacing;
+  const before = formingSlot === null ? 0 : (live.time - formingSlot.from) / formingSlot.barSeconds;
+  const after =
+    formingSlot === null ? 0 : (formingSlot.to - live.time) / formingSlot.barSeconds - 1;
+  const half = spacing / 2;
+  return {
+    x: kind === 'forming_left' ? x - half - before * spacing : x + half + after * spacing,
+    y: 0,
+  };
 }
 
 export function buildAnchors(ctx: Context): Pick<ChartSurface, 'anchorOf'> {

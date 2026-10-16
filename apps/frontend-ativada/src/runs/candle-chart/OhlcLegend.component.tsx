@@ -20,12 +20,14 @@ export type OhlcLegendProps = {
   readonly text: OhlcText;
   // "Compra a X · taxa Y" da vela apontada.
   readonly tradeText?: string | undefined;
+  // "Opinião das 10:15 · vale até 10:30": só com vela de exibição (3 min).
+  readonly opinionText?: string | undefined;
 };
 
 type LegendItem = { readonly label: string; readonly short: string; readonly value: string };
 
 // A legenda do topo (RF03): a vela apontada pela cruz, ou a última; estado e direção sempre com palavra ou sinal além da cor.
-export function OhlcLegend({ text, tradeText }: OhlcLegendProps): ReactElement {
+export function OhlcLegend({ text, tradeText, opinionText }: OhlcLegendProps): ReactElement {
   const items: readonly LegendItem[] = [
     { label: 'Abertura', short: 'A', value: text.open },
     { label: 'Máxima', short: 'M', value: text.high },
@@ -58,6 +60,7 @@ export function OhlcLegend({ text, tradeText }: OhlcLegendProps): ReactElement {
           <dd>{text.volume}</dd>
         </div>
       </dl>
+      {opinionText === undefined ? null : <p className={styles.legendOpinion}>{opinionText}</p>}
       {tradeText === undefined ? null : <p className={styles.legendTrade}>{tradeText}</p>}
     </div>
   );

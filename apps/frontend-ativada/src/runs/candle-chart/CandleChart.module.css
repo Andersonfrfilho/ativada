@@ -224,6 +224,12 @@
   border: 0;
 }
 
+.legendOpinion {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
 .legendTrade {
   margin: 0;
   font-size: 13px;

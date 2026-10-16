@@ -10,6 +10,7 @@ import { LEVELS_NOTICE } from './strategy-levels.js';
 import { GLOSSARY_TERM } from '../../glossary/glossary.constant.js';
 import { Term } from '../../glossary/Term.component.js';
 import { ZONES_LEAD, type StrategyZones } from './strategy-zones.js';
+import type { DisplayMapping } from './display-mapping.js';
 import type { ChartLayerData } from './useChartLayers.hook.js';
 
 export type LayerNoticesProps = {
@@ -20,6 +21,8 @@ export type LayerNoticesProps = {
   // Há linhas de nível na tela agora.
   readonly hasLevels: boolean;
   readonly zones: StrategyZones;
+  // Vela de exibição: o cone cobre as velas da vela de 15 min inteira (spec 017).
+  readonly displayMapping?: DisplayMapping | undefined;
 };
 
 const NO_PRICE_LINES = 'Esta estratégia não usa linhas sobre o preço';
@@ -28,6 +31,9 @@ const LAYERS_FAILED =
 const ZOOM_FOR_DECISIONS = 'Aproxime o gráfico para ver cada decisão';
 const FORECAST_NARROW =
   'A previsão vale para uma vela só, por isso o cone é estreito aqui; a leitura clara está em "Próxima vela de perto".';
+
+const FORECAST_DISPLAY =
+  'A previsão vale para a vela de 15 min inteira (as 5 velas de 3 min do cone); a leitura clara está em "Próxima vela de perto".';
 
 // O texto das camadas: cada linha da estratégia pelo nome, o que o painel do placar mostra e o motivo de uma camada
 // estar vazia ou ter falhado. A falha das camadas NUNCA tira as velas da tela.
@@ -74,7 +80,9 @@ export function LayerNotices(props: LayerNoticesProps): ReactElement {
       {isLive && isOn(CHART_LAYER.LEVELS) ? <ZonesNotice zones={zones} /> : null}
       {isWaitedWithoutData(props) ? <p className={controls.muted}>{ZOOM_FOR_DECISIONS}</p> : null}
       {isLive && isOn(CHART_LAYER.FORECAST) && data.projection !== undefined ? (
-        <p className={controls.muted}>{FORECAST_NARROW}</p>
+        <p className={controls.muted}>
+          {props.displayMapping === undefined ? FORECAST_NARROW : FORECAST_DISPLAY}
+        </p>
       ) : null}
     </div>
   );

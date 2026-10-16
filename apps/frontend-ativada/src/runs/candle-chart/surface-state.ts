@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type {
   SurfaceCandle,
+  SurfaceFormingSlot,
   SurfaceLevelBox,
   SurfaceLine,
   SurfaceMarker,
@@ -32,6 +33,7 @@ export type SurfaceState = {
   zones: readonly SurfaceZone[];
   projection: SurfaceProjection | null;
   live: SurfaceCandle | null;
+  formingSlot: SurfaceFormingSlot | null;
 };
 
 export function createSurfaceState(): SurfaceState {
@@ -51,5 +53,6 @@ export function createSurfaceState(): SurfaceState {
     zones: [],
     projection: null,
     live: null,
+    formingSlot: null,
   };
 }

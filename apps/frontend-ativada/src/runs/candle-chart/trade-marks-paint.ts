@@ -17,6 +17,8 @@ export type MarkPlacement = {
   readonly mark: SurfaceMarker;
   readonly x: number;
   readonly y: number;
+  // O x da última vela de exibição do colchete de uma saída decidida dentro da vela da execução.
+  readonly endX?: number | undefined;
 };
 
 export type MarkFrame = { readonly width: number; readonly height: number };
@@ -70,9 +72,34 @@ export function paintBands(
   placements: readonly MarkPlacement[],
   options: { readonly colors: MarkColors; readonly frame: MarkFrame },
 ): void {
-  for (const { mark, x } of placements) {
+  for (const { mark, x, endX } of placements) {
     context.fillStyle = mark.side === 'buy' ? options.colors.buyBand : options.colors.sellBand;
-    context.fillRect(x - BAND_WIDTH / 2, 0, BAND_WIDTH, options.frame.height);
+    const width = endX === undefined ? BAND_WIDTH : endX - x + BAND_WIDTH;
+    context.fillRect(x - BAND_WIDTH / 2, 0, width, options.frame.height);
+  }
+}
+
+const BRACKET_RISE = 18;
+const BRACKET_TICK = 7;
+const BRACKET_WIDTH = 2;
+
+// O colchete da saída por alvo/proteção: cobre as velas de exibição da vela de 15 min em que o motor decidiu (spec 017).
+export function paintBrackets(
+  context: CanvasRenderingContext2D,
+  placements: readonly MarkPlacement[],
+  colors: MarkColors,
+): void {
+  context.lineWidth = BRACKET_WIDTH;
+  for (const { mark, x, y, endX } of placements) {
+    if (endX === undefined) continue;
+    const top = y - BRACKET_RISE;
+    context.beginPath();
+    context.moveTo(x - BAND_WIDTH / 2, top + BRACKET_TICK);
+    context.lineTo(x - BAND_WIDTH / 2, top);
+    context.lineTo(endX + BAND_WIDTH / 2, top);
+    context.lineTo(endX + BAND_WIDTH / 2, top + BRACKET_TICK);
+    context.strokeStyle = colorOf(colors, mark.side);
+    context.stroke();
   }
 }
 

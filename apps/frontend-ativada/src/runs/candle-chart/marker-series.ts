@@ -2,6 +2,7 @@
 import type { ChartMarker } from '../trade-chart.validation.js';
 import { formatPrice } from '../../format/format.js';
 import { MARKER_LABEL } from './candle-chart.constant.js';
+import type { ExitBracket } from './display-mapping.js';
 import { toDrawingNumber, toSurfaceTime } from './candle-series.js';
 import type { SurfaceMarker } from './chart-surface.types.js';
 
@@ -32,6 +33,44 @@ export function toSurfaceMarkers(
       isSelected: marker.positionKey === selectedKey,
     }))
     .sort((left, right) => left.time - right.time);
+}
+
+const EXIT_WORD: Readonly<Record<string, string>> = {
+  target: 'pelo alvo',
+  stop: 'pela proteção',
+  gap: 'por falta de dados do mercado',
+};
+
+// A venda por alvo, proteção ou lacuna ganha o colchete sobre as velas de exibição da vela de 15 min em que aconteceu.
+export function applyExitBrackets(
+  markers: readonly SurfaceMarker[],
+  brackets: readonly ExitBracket[],
+): SurfaceMarker[] {
+  if (brackets.length === 0) return [...markers];
+  const lastOpenByKey = new Map(
+    brackets.map((bracket) => [`${bracket.positionKey}:sell`, bracket.lastOpen]),
+  );
+  return markers.map((marker) => {
+    const lastOpen = lastOpenByKey.get(marker.key);
+    return lastOpen === undefined ? marker : { ...marker, endTime: toSurfaceTime(lastOpen) };
+  });
+}
+
+export type BracketTextParams = {
+  readonly brackets: readonly ExitBracket[];
+  readonly shownOpen: number;
+  readonly formatTime: (milliseconds: number) => string;
+};
+
+// "Saiu pela proteção entre 10:15 e 10:30 (a simulação decide em velas de 15 min)" nas velas do colchete.
+export function describeBracketAt(params: BracketTextParams): string | undefined {
+  const { brackets, shownOpen, formatTime } = params;
+  const hit = brackets.find(
+    (bracket) => shownOpen >= bracket.firstOpen && shownOpen <= bracket.lastOpen,
+  );
+  if (hit === undefined) return undefined;
+  const word = EXIT_WORD[hit.reason] ?? 'dentro da vela';
+  return `Saiu ${word} entre ${formatTime(hit.from)} e ${formatTime(hit.to)} (a simulação decide em velas de 15 min)`;
 }
 
 // A compra ou a venda que cai na vela de abertura dada (a seta que a pessoa clicou); a primeira, se forem duas.

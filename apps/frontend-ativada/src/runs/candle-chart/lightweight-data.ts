@@ -30,6 +30,7 @@ type OverlaySetters = Pick<
   | 'setPriceLevels'
   | 'setProjection'
   | 'setLiveCandle'
+  | 'setFormingSlot'
   | 'setTheme'
 >;
 
@@ -107,6 +108,9 @@ export function buildOverlaySetters(ctx: Context): OverlaySetters {
     setLiveCandle: (candle): void => {
       state.live = candle;
       paint(ctx, renderLive);
+    },
+    setFormingSlot: (slot): void => {
+      state.formingSlot = slot;
     },
     setTheme: (theme): void => {
       state.theme = theme;

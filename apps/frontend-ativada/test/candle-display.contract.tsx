@@ -1,10 +1,14 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 
-import { buildFixtureChart } from './fixtures/trade-chart.fixture.js';
+import { formatTimeInZone } from '../src/format/zoned-time.js';
+import { STREAM_STATUS } from '../src/live/stream.constant.js';
+import type { StreamCandle } from '../src/live/stream.validation.js';
+import { buildFixtureChart, FIXTURE_DAY, fillTime } from './fixtures/trade-chart.fixture.js';
 import type { FakeChartSurface } from './support/fake-chart-surface.js';
+import { buildProjectionsResponse } from './support/candle-chart-fixtures.js';
 import { dataResponse, type RecordedCall } from './support/fake-fetch.js';
 import {
   FIXTURE_FROM,
@@ -191,5 +195,153 @@ describe('a visão de 15 min continua idêntica à da spec 009', () => {
       expect(times[0]).toBe(Number(call?.query.get('from')) / 1_000);
       expect(times[1]).toBe((times[0] ?? 0) + RUN / 1_000);
     });
+  });
+});
+
+const CLOSED_TRADE = {
+  status: 'closed',
+  entryPrice: '609',
+  quantity: '0.5',
+  openedCandleTime: fillTime(3),
+};
+
+function aroundExit(): string {
+  const params = new URLSearchParams({
+    de: new Date(fillTime(8) - 6 * FIXTURE_HOUR).toISOString(),
+    ate: new Date(fillTime(8) + 6 * FIXTURE_HOUR).toISOString(),
+  });
+  return `?${params.toString()}`;
+}
+
+function markersOf(surface: FakeChartSurface): readonly Record<string, unknown>[] {
+  return list(surface.callsOf('setMarkers').at(-1)?.[0]);
+}
+
+describe('compras, vendas e a saída decidida dentro da vela de 15 min', () => {
+  test('alvo e proteção ganham o colchete sobre as 5 velas; a saída por sinal e a compra não', async () => {
+    const trades = [
+      { ...CLOSED_TRADE, engineKey: 'p1', exitReason: 'stop', closedCandleTime: fillTime(8) },
+      { ...CLOSED_TRADE, engineKey: 'p2', exitReason: 'signal', closedCandleTime: fillTime(20) },
+    ];
+    const harness = show({ trades });
+    const surface = await ready(harness);
+    await waitFor(() =>
+      expect(markersOf(surface).some((m) => m['endTime'] !== undefined)).toBe(true),
+    );
+    const byKey = new Map(markersOf(surface).map((marker) => [marker['key'], marker]));
+    expect(byKey.get('p1:sell')).toMatchObject({
+      time: fillTime(8) / 1_000,
+      endTime: (fillTime(8) + RUN - SHOWN) / 1_000,
+    });
+    expect(byKey.get('p1:buy')?.['endTime']).toBeUndefined();
+    expect(byKey.get('p2:sell')?.['endTime']).toBeUndefined();
+  });
+
+  test('a dica do colchete diz entre quais horas a simulação decidiu', async () => {
+    const trades = [
+      { ...CLOSED_TRADE, engineKey: 'p1', exitReason: 'stop', closedCandleTime: fillTime(8) },
+    ];
+    const harness = show({ trades, search: aroundExit() });
+    const surface = await ready(harness);
+    await waitFor(() =>
+      expect(markersOf(surface).some((m) => m['endTime'] !== undefined)).toBe(true),
+    );
+    const candles = list(surface.callsOf('setCandles').at(-1)?.[0]);
+    const index = candles.findIndex((candle) => candle['time'] === (fillTime(8) + SHOWN) / 1_000);
+    act(() => surface.emitCrosshair(index));
+    const from = formatTimeInZone(fillTime(8), 'America/Sao_Paulo');
+    const to = formatTimeInZone(fillTime(8) + RUN, 'America/Sao_Paulo');
+    expect(
+      await screen.findByText(
+        `Saiu pela proteção entre ${from} e ${to} (a simulação decide em velas de 15 min)`,
+      ),
+    ).toBeDefined();
+  });
+});
+
+describe('a opinião que valia na vela apontada', () => {
+  test('a legenda diz quando a opinião nasceu e até quando vale, e a equipe fala da vela decidida', async () => {
+    const pointed: (number | undefined)[] = [];
+    const harness = show({
+      aside: (openTime) => {
+        pointed.push(openTime);
+        return <p>equipe</p>;
+      },
+    });
+    const surface = await ready(harness);
+    const candles = list(surface.callsOf('setCandles').at(-1)?.[0]);
+    const index = 500;
+    const open = Number(candles[index]?.['time']) * 1_000;
+    act(() => surface.emitCrosshair(index));
+    const issued = Math.floor(open / RUN) * RUN;
+    const clock = (value: number): string => formatTimeInZone(value, 'America/Sao_Paulo');
+    expect(
+      await screen.findByText(`Opinião das ${clock(issued)} · vale até ${clock(issued + RUN)}`),
+    ).toBeDefined();
+    await waitFor(() => expect(pointed.at(-1)).toBe(issued - RUN));
+  });
+});
+
+const RUN_END = FIXTURE_FROM + 40 * FIXTURE_DAY;
+
+function streamed(overrides: Partial<StreamCandle>): StreamCandle {
+  return {
+    type: 'candle',
+    symbol: 'BNBUSDT',
+    timeframe: '3m',
+    openTime: RUN_END,
+    open: '650.00',
+    high: '652.50',
+    low: '649.00',
+    close: '651.25',
+    volume: '120.5',
+    closed: false,
+    at: RUN_END + 1_000,
+    ...overrides,
+  };
+}
+
+describe('a vela de 15 min em formação', () => {
+  test('sem a kline de 15 min, a legenda é composta da vela de 3 min; com ela, a kline é a fonte', async () => {
+    const harness = show();
+    const surface = await ready(harness);
+    act(() => harness.app.stream.setStatus(STREAM_STATUS.LIVE));
+    act(() => harness.app.stream.candle(streamed({ openTime: RUN_END + SHOWN })));
+    const range = `${formatTimeInZone(RUN_END, 'America/Sao_Paulo')}–${formatTimeInZone(RUN_END + RUN, 'America/Sao_Paulo')}`;
+    expect(await screen.findByText(`Vela de 15 min em formação (${range})`)).toBeDefined();
+    await waitFor(() =>
+      expect(surface.callsOf('setFormingSlot').at(-1)?.[0]).toStrictEqual({
+        from: RUN_END / 1_000,
+        to: (RUN_END + RUN) / 1_000,
+        barSeconds: SHOWN / 1_000,
+      }),
+    );
+    expect(screen.getAllByText('652,50').length).toBeGreaterThan(0);
+    act(() =>
+      harness.app.stream.candle(
+        streamed({ timeframe: '15m', high: '660.00', close: '655.00', at: RUN_END + 2_000 }),
+      ),
+    );
+    await waitFor(() => expect(screen.getAllByText('660,00').length).toBeGreaterThan(0));
+  });
+});
+
+describe('"Próxima vela de perto" com as velas de 3 min', () => {
+  test('mostra as 5 vagas de 3 min da vela de 15 min em formação, com a em formação marcada por ícone e palavra', async () => {
+    const harness = show({ respondProjections: () => dataResponse(buildProjectionsResponse()) });
+    await ready(harness);
+    act(() => harness.app.stream.setStatus(STREAM_STATUS.LIVE));
+    const section = await screen.findByRole('region', {
+      name: 'As velas de 3 min desta vela de 15 min',
+    });
+    // A previsão do fixture é velha: o painel desenha a vela de 15 min do relógio.
+    const start = Math.floor(Date.now() / RUN) * RUN;
+    expect(section.querySelectorAll('li')).toHaveLength(5);
+    expect(section.textContent).toContain(formatTimeInZone(start, 'America/Sao_Paulo'));
+    act(() =>
+      harness.app.stream.candle(streamed({ openTime: start + 2 * SHOWN, close: '651.25' })),
+    );
+    await waitFor(() => expect(section.textContent).toContain('em formação'));
+    expect(section.querySelectorAll('li')[2]?.textContent).toContain('651,25');
   });
 });

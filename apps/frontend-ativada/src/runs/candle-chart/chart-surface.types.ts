@@ -57,6 +57,9 @@ export type SurfaceMarker = {
   readonly price: number;
   readonly priceText: string;
   readonly isSelected: boolean;
+  // Saída decidida dentro de uma vela da execução (alvo, proteção, lacuna): a abertura da ÚLTIMA vela de exibição dela; o colchete
+  // cobre da marca até aqui (spec 017, D4-A).
+  readonly endTime?: SurfaceTime | undefined;
 };
 
 // Níveis da estratégia desenhados como linha horizontal rotulada (camada "Níveis"); o texto da etiqueta vem pronto.
@@ -120,6 +123,14 @@ export type SurfaceAnchorKind =
   'band_lower' | 'ema_fast' | 'volume' | 'protection' | 'forming_left' | 'forming_right';
 export type SurfaceAnchor = { readonly x: number; readonly y: number };
 
+// A vela da execução em formação, em segundos UTC: o intervalo que a faixa sombreada cobre sobre as velas de exibição.
+export type SurfaceFormingSlot = {
+  readonly from: SurfaceTime;
+  readonly to: SurfaceTime;
+  // A duração de uma vela de exibição, em segundos.
+  readonly barSeconds: number;
+};
+
 export type SurfaceLogicalRange = { readonly from: number; readonly to: number };
 
 export type ChartSurface = {
@@ -140,6 +151,8 @@ export type ChartSurface = {
   readonly setWaited: (times: readonly SurfaceTime[]) => void;
   readonly setProjection: (projection: SurfaceProjection | null) => void;
   readonly setLiveCandle: (candle: SurfaceCandle | null) => void;
+  // Com vela de exibição, a coluna da vela em formação cobre as velas da vela da execução inteira (`null`: só a vela viva).
+  readonly setFormingSlot: (slot: SurfaceFormingSlot | null) => void;
   readonly setCrosshair: (index: number | null) => void;
   readonly onCrosshairMove: (listener: (index: number | null) => void) => () => void;
   readonly onVisibleRangeChange: (listener: (range: SurfaceLogicalRange) => void) => () => void;

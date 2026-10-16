@@ -58,8 +58,13 @@ function CanvasHeader({ chart, view, source, model }: CanvasViewProps): ReactEle
       />
       <LiveCandleNotice live={model.live} />
       {model.legend === undefined ? null : (
-        <OhlcLegend text={model.legend} tradeText={model.tradeText} />
+        <OhlcLegend
+          text={model.legend}
+          tradeText={model.tradeText}
+          opinionText={model.opinionText}
+        />
       )}
+      {model.fifteenLegend === undefined ? null : <OhlcLegend text={model.fifteenLegend} />}
     </>
   );
 }
@@ -99,10 +104,15 @@ function ChartCaption(props: CanvasViewProps & { readonly id: string }): ReactEl
 }
 
 // A coluna ao lado do gráfico: com a camada "Previsão", a próxima vela de perto (a equipe fica na varanda, acima do gráfico).
-function ChartSide({ chart, model }: CanvasViewProps): ReactElement {
+function ChartSide({ chart, model, source }: CanvasViewProps): ReactElement {
+  const { displayMapping, history } = source;
+  const display =
+    displayMapping === undefined
+      ? undefined
+      : { mapping: displayMapping, candles: history.candles };
   return (
     <div className={styles.side}>
-      <NextCandlePanel chart={chart} layerData={model.layerData} />
+      <NextCandlePanel chart={chart} layerData={model.layerData} display={display} />
     </div>
   );
 }
@@ -138,7 +148,7 @@ function CanvasView(props: CanvasViewProps): ReactElement {
   return (
     <LeaderFocusProvider>
       <figure ref={figureRef} className={styles.wrapper}>
-        <TeamAside pointedOpenTime={model.pointedOpenTime} />
+        <TeamAside pointedOpenTime={model.asideOpenTime} />
         <CanvasHeader {...props} />
         <div className={hasSide ? styles.chartLayout : styles.chartAlone}>
           <SurfaceBox {...props} ids={ids} />
@@ -151,6 +161,7 @@ function CanvasView(props: CanvasViewProps): ReactElement {
           isLive={view.isLive}
           hasLevels={model.levels.length > 0}
           zones={model.zones}
+          displayMapping={props.source.displayMapping}
         />
         <CanvasFooter {...props} ids={ids} />
         <FormingBand

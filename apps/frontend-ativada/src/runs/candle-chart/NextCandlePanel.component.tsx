@@ -5,6 +5,11 @@ import { formatPrice, formatPriceEdge } from '../../format/format.js';
 import { Icon, type IconName } from '../../layout/Icon.component.js';
 import controls from '../../styles/Controls.module.css';
 import type { TradeChart } from '../trade-chart.validation.js';
+import { useLiveCandle } from '../../live/useLiveCandle.hook.js';
+import type { DisplayMapping } from './display-mapping.js';
+import { buildSlots } from './display-slots.js';
+import type { MarketCandle } from './market-candles.validation.js';
+import { ThreeMinuteSlots } from './ThreeMinuteSlots.component.js';
 import { NextCandleChart } from './NextCandleChart.component.js';
 import styles from './NextCandlePanel.module.css';
 import { describeHorizon, NEXT_CANDLE_TEXT } from './next-candle-state.js';
@@ -13,9 +18,17 @@ import type { ResultView } from './projection-text.js';
 import type { ChartLayerData } from './useChartLayers.hook.js';
 import { useNextCandle, type NextCandleView } from './useNextCandle.hook.js';
 
+export type PanelDisplay = {
+  readonly mapping: DisplayMapping;
+  // As velas de exibição fechadas já carregadas no gráfico (nenhum pedido novo).
+  readonly candles: readonly MarketCandle[];
+};
+
 export type NextCandlePanelProps = {
   readonly chart: TradeChart;
   readonly layerData: ChartLayerData;
+  // Com vela de exibição na tela, o painel mostra as velas de 3 min que compõem a vela de 15 min (spec 017, RF07).
+  readonly display?: PanelDisplay | undefined;
 };
 
 const RESULT_ICON: Readonly<Record<ResultView['tone'], IconName>> = {
@@ -90,9 +103,27 @@ function Horizon({ view }: { readonly view: NextCandleView }): ReactElement | nu
   );
 }
 
+function DisplaySlots(props: {
+  readonly chart: TradeChart;
+  readonly view: NextCandleView;
+  readonly display: PanelDisplay;
+}): ReactElement | null {
+  const { chart, view, display } = props;
+  const live = useLiveCandle(chart.symbol, '3m');
+  if (view.window === undefined) return null;
+  const slots = buildSlots({
+    start: view.window.start,
+    mapping: display.mapping,
+    closed: display.candles,
+    forming: live?.status === 'forming' ? live.candle : undefined,
+    now: view.now,
+  });
+  return <ThreeMinuteSlots slots={slots} timeZone={view.timeZone} />;
+}
+
 // "Próxima vela de perto" (D13): o desenho pequeno da vela que se forma, a tendência do placar com a faixa, o resultado da
 // previsão anterior e o aviso de que é tendência, não promessa. Estado é ícone + palavra + cor; sem tendência, sem faixa.
-export function NextCandlePanel({ chart, layerData }: NextCandlePanelProps): ReactElement {
+export function NextCandlePanel({ chart, layerData, display }: NextCandlePanelProps): ReactElement {
   const headingId = useId();
   const view = useNextCandle({ chart, layerData });
   const { state, drawing } = view;
@@ -106,6 +137,7 @@ export function NextCandlePanel({ chart, layerData }: NextCandlePanelProps): Rea
       {drawing === undefined ? null : (
         <NextCandleChart model={drawing.model} labels={drawing.labels} />
       )}
+      {display === undefined ? null : <DisplaySlots chart={chart} view={view} display={display} />}
       {state.kind === 'available' ? (
         <Tendency current={state.current} />
       ) : (

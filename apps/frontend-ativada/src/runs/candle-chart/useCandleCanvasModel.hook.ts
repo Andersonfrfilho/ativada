@@ -1,7 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { RefObject } from 'react';
 
-import { useUserTimeZone } from '../../account/useUserTimeZone.hook.js';
 import { formatSymbol } from '../../format/format.js';
 import type { LiveCandleView } from '../../live/live-candle.js';
 import type { TradeChart } from '../trade-chart.validation.js';
@@ -20,13 +19,12 @@ import { useCanvasInteractions } from './useCanvasInteractions.hook.js';
 import { useChartKeyboard, type ChartKeyboard } from './useChartKeyboard.hook.js';
 import type { CandleSource, TimeframeChoice } from './useCandleSource.hook.js';
 import { useChartLayers, type ChartLayerData } from './useChartLayers.hook.js';
-import { useChartSurface } from './useChartSurface.hook.js';
 import { useFormingCandle } from './useFormingCandle.hook.js';
 import type { StrategyZones } from './strategy-zones.js';
 import { useLevelLines } from './useLevelLines.hook.js';
 import { useLayerSurface } from './useLayerSurface.hook.js';
-import { useSurfaceData } from './useSurfaceData.hook.js';
-import { useSurfaceTheme } from './useSurfaceTheme.hook.js';
+import { useCanvasBase, type CanvasBase } from './useCanvasBase.hook.js';
+import { useDisplayPart } from './useDisplayPart.hook.js';
 
 export type CandleCanvasInput = {
   readonly runId: string;
@@ -52,30 +50,16 @@ export type CandleCanvasModel = {
   readonly keyboard: ChartKeyboard;
   // A abertura da vela que a cruz aponta (mouse ou teclado); a equipe junto do gráfico fala dela.
   readonly pointedOpenTime: number | undefined;
+  // A vela decidida cuja opinião valia na vela apontada (a equipe fala dela); a própria vela apontada fora da exibição.
+  readonly asideOpenTime: number | undefined;
+  // Só com vela de exibição: a opinião que valia na vela apontada e a vela de 15 min em formação composta (spec 017).
+  readonly opinionText: string | undefined;
+  readonly fifteenLegend: OhlcText | undefined;
   // "Compra a X · taxa Y" da vela apontada, quando ela tem operação.
   readonly tradeText: string | undefined;
   // A frase da previsão para a descrição textual (RF20); `undefined` sem camada de previsão ou sem resposta.
   readonly forecastText: string | undefined;
 };
-
-type CanvasBase = Pick<CandleCanvasModel, 'timeZone' | 'containerRef' | 'surface' | 'hasFailed'>;
-
-// A superfície com o tema e o que a tela já sabe empurrar para ela: velas, volume e as setas das operações.
-function useCanvasBase(input: CandleCanvasInput): CanvasBase {
-  const { chart, selection, source } = input;
-  const timeZone = useUserTimeZone();
-  const { containerRef, surface, hasFailed } = useChartSurface();
-  useSurfaceTheme(surface);
-  useSurfaceData(surface, {
-    candles: source.history.candles,
-    markers: chart.markers,
-    isTradesVisible: source.preferences.preferences.layers[CHART_LAYER.TRADES],
-    selectedKey: selection.selectedKey,
-    timeframeMilliseconds: source.durationMilliseconds,
-    timeZone,
-  });
-  return { timeZone, containerRef, surface, hasFailed };
-}
 
 // Depois de trocar a série: o instante em foco no centro, a faixa da URL inteira, ou as últimas velas ao acompanhar o fim.
 function reframe(surface: ChartSurface | undefined, input: CandleCanvasInput): void {
@@ -198,11 +182,14 @@ export function useCandleCanvasModel(input: CandleCanvasInput): CandleCanvasMode
     onPick: pick,
   });
   const pointed = interactions.hoverIndex ?? keyboard.index;
+  const point = pointedCandle(input, pointed);
+  const display = useDisplayPart(input, { base, live: layers.live, point });
   return {
     ...base,
     ...layers,
     keyboard,
-    ...pointedCandle(input, pointed),
+    ...point,
+    ...display,
     forecastText: forecastTextFor(chart.timeframe, layers, base.timeZone),
     legend: legendFor(input, { hoverIndex: pointed, live: layers.live, timeZone: base.timeZone }),
     handleTimeframeChange: (next): void => {

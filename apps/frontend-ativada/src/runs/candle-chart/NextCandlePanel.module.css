@@ -221,3 +221,57 @@
   font-size: var(--text-xs);
   color: var(--ink-2);
 }
+
+.slots {
+  display: grid;
+  gap: 6px;
+}
+
+.slotsTitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.slotList {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slot {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.slot_forming {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.slot_pending,
+.slot_missing {
+  border-style: dashed;
+}
+
+.slotTime {
+  font-family: var(--font-data);
+  color: var(--ink);
+}
+
+.slotState {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

@@ -66,6 +66,7 @@ export function createFakeChartSurface(container: HTMLElement): FakeChartSurface
     setWaited: record('setWaited'),
     setProjection: record('setProjection'),
     setLiveCandle: record('setLiveCandle'),
+    setFormingSlot: record('setFormingSlot'),
     setCrosshair: record('setCrosshair'),
     setTheme: record('setTheme'),
     setTimeLabels: record('setTimeLabels'),

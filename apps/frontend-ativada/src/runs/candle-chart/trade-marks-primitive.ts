@@ -4,6 +4,7 @@ import type { BoxProjection } from './level-boxes-primitive.js';
 import {
   groupMarks,
   paintBands,
+  paintBrackets,
   paintDots,
   paintPill,
   type MarkColors,
@@ -65,7 +66,8 @@ export class TradeMarksPrimitive {
     return this.marks.flatMap((mark) => {
       const x = projection.timeToX(mark.time);
       const y = projection.priceToY(mark.price);
-      return x === null || y === null ? [] : [{ mark, x, y }];
+      const endX = mark.endTime === undefined ? undefined : projection.timeToX(mark.endTime);
+      return x === null || y === null ? [] : [{ mark, x, y, endX: endX ?? undefined }];
     });
   }
 
@@ -90,6 +92,7 @@ export class TradeMarksPrimitive {
     placements: readonly MarkPlacement[],
     options: { readonly colors: MarkColors; readonly frame: { width: number; height: number } },
   ): void {
+    paintBrackets(context, placements, options.colors);
     paintDots(context, placements, options.colors);
     for (const group of groupMarks(placements)) paintPill(context, group, options);
   }
