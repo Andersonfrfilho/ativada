@@ -2,6 +2,8 @@
 import { createContext } from 'react';
 
 import type { Notice } from './notice.validation.js';
+import type { LiveRunOption } from './useLiveRunOptions.hook.js';
+import type { NearTrigger } from './useNearTriggers.hook.js';
 import type { NoticePreferences } from './notice-preferences.js';
 
 export const CONNECTION_NOTICE = { OK: 'ok', PAUSED: 'paused', ENDED: 'ended' } as const;
@@ -37,6 +39,10 @@ export type NoticeCenter = {
   readonly dismissSummary: () => void;
   // Fala um texto curto no ÚNICO aria-live (p.ex. "Copiado").
   readonly speak: (text: string) => void;
+  // As simulações ao vivo que a pessoa pode ajustar e os avisos "perto de comprar" das marcadas (RF18).
+  readonly runOptions: readonly LiveRunOption[];
+  readonly nearTriggers: readonly NearTrigger[];
+  readonly dismissNear: (key: string) => void;
   readonly updatePreferences: (change: (current: NoticePreferences) => NoticePreferences) => void;
 };
 

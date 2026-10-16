@@ -184,3 +184,30 @@ código e a varredura de palavras proibidas e de horas estão em `test/api-notic
   (`live-stored-readings-parity`) seguem verdes (50 testes); painel de acompanhamento 57 testes.
 - Observação: `test/api-run-live-status-mutants.contract.test.ts` falha hoje por uma mudança alheia em
   `live-status-context.ts` (o texto-alvo do mutante `LIVE_STATUS_OF_FOREIGN_RUN_IS_A_409` agora aparece 2x); não é desta task.
+
+### T3.1 — Fora da aba (título, ícone, notificação, som)
+
+- `useTabTitle`: com a aba escondida e não lidos, o título vira "(N) AtivAdA" e o ícone troca para `public/icon-dot.svg` (o PNG de
+  sempre com um ponto, embutido em SVG; sem canvas); ao voltar, tudo volta. `notice-browser.ts`: a permissão só é pedida em
+  "Ativar notificações" (provado: nenhum pedido sem clique, nenhuma notificação sem permissão), `tag` = `noticeId`, texto
+  "▲ Sinal de compra · LINK/USDT a 12,458" / "Alvo 12,590 · sair se cair a 12,379. Simulação com dinheiro fictício.".
+  `notice-sound.ts`: o `AudioContext` só nasce no clique no interruptor "Som"; sobe na compra (523 e 659 Hz), desce na venda, tom
+  único no resto; ordem pedida nunca faz som. Prova: `test/notice-outside-tab.contract.tsx` (7 testes).
+
+### T3.2 — "Perto de comprar" (D4-A)
+
+- `near-trigger.ts` (BigInt, sem `Number(`, provado por teste): distância até o limite da regra de preço, entra a 0,3% e só sai
+  além de 0,6% (histerese), "falta N%" arredondado para CIMA (nunca parece mais perto: 12,430 contra 12,400 diz 0,25%, a spec
+  escreveu 0,24%), barra de progresso em % inteiro. `useNearTriggers` só consulta o `live-status` das simulações MARCADAS
+  ("Avisar antes de comprar") e rodando, só para regra de preço exata, ainda não atendida e com `completesScore` (T1.3), uma vez
+  por (simulação, vela, regra); fechar o aviso não o traz de volta na mesma vela; a vela nova troca a chave. O aviso fica só na
+  pilha da tela (não entra no sino: não é fato gravado). A lista de execuções ao vivo só é pedida com a gaveta aberta ou com
+  alguma simulação marcada. Prova: `test/near-trigger.contract.tsx` (9 testes: contas, histerese, ausência de aviso sem marca,
+  sem `completesScore`, atendida ou aproximada).
+
+### T3.3 — Conexão caída e resumo ao voltar
+
+- Já entregue com T2.4 (`ConnectionStrip`, ponto âmbar no sino, `beginAway` ao religar e UM resumo sem toasts individuais);
+  provado em `notices-center.contract.tsx` ("reconectando além do prazo… ao voltar, UM resumo"). Desvio: em vez de `after=<cursor>`
+  o resumo compara a lista refeita pelo `resync` com a anterior (o cursor do servidor é opaco para o painel e a consulta já é
+  refeita pelo stream); a rota segue aceitando `after` para quem precisar.

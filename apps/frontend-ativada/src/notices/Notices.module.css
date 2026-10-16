@@ -862,6 +862,26 @@
   fill: var(--ink);
 }
 
+.progress {
+  width: 100%;
+}
+
+.progress svg {
+  display: block;
+  width: 100%;
+  height: 8px;
+}
+
+.progressTrack {
+  fill: var(--surface-2);
+  stroke: var(--line);
+  stroke-width: 0.5;
+}
+
+.progressFill {
+  fill: var(--accent);
+}
+
 /* ---------- Operar à mão ---------- */
 .manual {
   display: grid;

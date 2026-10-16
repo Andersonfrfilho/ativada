@@ -3,11 +3,11 @@ import type { ReactElement } from 'react';
 
 import { NoticeSwitch } from './NoticeSwitch.component.js';
 import styles from './Notices.module.css';
-import { listRunOptions, type RunOption } from './notice-groups.js';
+import type { LiveRunOption } from './useLiveRunOptions.hook.js';
 import { withEarlyRun, withMutedRun } from './notice-preferences.js';
 import { useNoticeCenter } from './useNoticeCenter.hook.js';
 
-function RunPreferenceRow({ option }: { readonly option: RunOption }): ReactElement {
+function RunPreferenceRow({ option }: { readonly option: LiveRunOption }): ReactElement {
   const { preferences, updatePreferences } = useNoticeCenter();
   const isMuted = preferences.mutedRunIds.includes(option.runId);
   function handleMute(isOn: boolean): void {
@@ -42,8 +42,7 @@ function RunPreferenceRow({ option }: { readonly option: RunOption }): ReactElem
 
 // Por simulação: "Silenciar esta simulação" (o aviso entra no sino, sem toast, som nem notificação) e "Avisar antes de comprar".
 export function NoticeRunPreferences(): ReactElement | null {
-  const { items } = useNoticeCenter();
-  const options = listRunOptions(items);
+  const { runOptions: options } = useNoticeCenter();
   if (options.length === 0) return null;
   return (
     <div>
