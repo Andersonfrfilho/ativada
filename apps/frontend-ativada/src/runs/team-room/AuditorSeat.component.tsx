@@ -8,7 +8,13 @@ import styles from './TeamRoom.module.css';
 import { TEAM_ROOM_TEXT } from './team-room.constant.js';
 import type { AuditorView } from './team-room.types.js';
 
-function AuditorSpeech({ auditor }: { readonly auditor: AuditorView }): ReactElement {
+function AuditorSpeech({
+  auditor,
+  isCompact,
+}: {
+  readonly auditor: AuditorView;
+  readonly isCompact: boolean;
+}): ReactElement {
   return (
     <>
       <StatusChip tone={auditor.look.tone} icon={auditor.look.icon}>
@@ -18,8 +24,8 @@ function AuditorSpeech({ auditor }: { readonly auditor: AuditorView }): ReactEle
         Acertou o lado <span className={styles.number}>{auditor.rateText}</span>; a moeda ao ar
         acerta <span className={styles.number}>{auditor.coinText}</span>.
       </span>
-      <span className={styles.motive}>{auditor.verdictMessage}</span>
-      {auditor.intervalText === undefined ? null : (
+      {isCompact ? null : <span className={styles.motive}>{auditor.verdictMessage}</span>}
+      {isCompact || auditor.intervalText === undefined ? null : (
         <span className={styles.note}>{auditor.intervalText}</span>
       )}
     </>
@@ -27,10 +33,13 @@ function AuditorSpeech({ auditor }: { readonly auditor: AuditorView }): ReactEle
 }
 
 // O auditor confere o acerto da estratégia contra a moeda ao ar, com o resumo que o servidor já calculou (spec 009).
+// `isCompact` (equipe junto do gráfico) corta o veredito e o intervalo, que seguem na sala grande.
 export function AuditorSeat({
   auditor,
+  isCompact = false,
 }: {
   readonly auditor: AuditorView | undefined;
+  readonly isCompact?: boolean;
 }): ReactElement {
   return (
     <div className={`${styles.seat} ${styles.front}`} data-state="spoken">
@@ -44,7 +53,7 @@ export function AuditorSeat({
           {auditor === undefined ? (
             <span className={styles.motive}>Conferindo os acertos…</span>
           ) : (
-            <AuditorSpeech auditor={auditor} />
+            <AuditorSpeech auditor={auditor} isCompact={isCompact} />
           )}
         </SpeechBubble>
       </div>

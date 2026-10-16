@@ -2,62 +2,88 @@
 import { useId, type ReactElement } from 'react';
 
 import { Icon } from '../../layout/Icon.component.js';
-import { StatusChip } from '../live-tracking/StatusChip.component.js';
 import { useLiveStatusQuery } from '../live-tracking/live-status.query.js';
-import styles from './TeamRoomCard.module.css';
+import type { LiveStatus } from '../live-tracking/live-status.validation.js';
+import { AnalystSeat } from './AnalystSeat.component.js';
+import { AuditorSeat } from './AuditorSeat.component.js';
+import { CompactSpecialist } from './CompactSpecialist.component.js';
+import styles from './CompactTeam.module.css';
+import { useCompactTeamModel, type CompactTeamModel } from './useCompactTeamModel.hook.js';
+import room from './TeamRoom.module.css';
+import { describeAnnouncement } from './team-room-lines.js';
+import { analystStateOf, REST_STEP, seatStateOf } from './team-room-sequence.js';
 import { TEAM_ROOM_TEXT } from './team-room.constant.js';
-import { buildTeamRoomView, VOTE_LOOK } from './team-room-view.js';
-import type { SpecialistView, TeamRoomView } from './team-room.types.js';
 
-function SpecialistLine({ specialist }: { readonly specialist: SpecialistView }): ReactElement {
-  const quietClass = specialist.tone === 'quiet' ? styles.compactQuiet : undefined;
-  return (
-    <li className={`${styles.compactItem} ${quietClass ?? ''}`}>
-      <span className={styles.compactName}>{specialist.name}</span>
-      {specialist.rules.map((rule) => {
-        const look = VOTE_LOOK[rule.voteKind];
-        return (
-          <StatusChip key={rule.ruleId} tone={look.tone} icon={look.icon}>
-            {rule.label}: {look.word}
-          </StatusChip>
-        );
-      })}
-    </li>
-  );
+export type CompactTeamProps = {
+  readonly runId: string;
+  // A vela que o gráfico aponta (mouse ou teclado); sem ela a equipe fala da vela mais recente.
+  readonly pointedOpenTime?: number | undefined;
+  readonly isAnimationOn?: boolean;
+  // Com a sala grande recolhida, é aqui que o leitor de tela ouve a vela nova.
+  readonly shouldAnnounce?: boolean;
+};
+
+function momentText({ view, isPointed, closedText }: CompactTeamModel): string {
+  if (view === undefined) return TEAM_ROOM_TEXT.POINTED_WITHOUT_SPEECH;
+  return isPointed
+    ? `${TEAM_ROOM_TEXT.POINTED_CANDLE} ${closedText}`
+    : `${TEAM_ROOM_TEXT.LATEST_CANDLE} ${closedText}`;
 }
 
-function CompactList({ view }: { readonly view: TeamRoomView }): ReactElement {
-  const { analyst } = view;
+function Seats({ model }: { readonly model: CompactTeamModel }): ReactElement | null {
+  const { view, auditor, step } = model;
+  if (view === undefined) return null;
+  const count = view.specialists.length;
+  const isRinging = step !== REST_STEP && step >= count;
   return (
-    <ul className={styles.compactList}>
-      {view.specialists.map((specialist) => (
-        <SpecialistLine key={specialist.family} specialist={specialist} />
+    <div
+      className={`${room.stage} ${styles.seats}`}
+      data-motion={step === REST_STEP ? 'off' : 'on'}
+    >
+      {view.specialists.map((specialist, index) => (
+        <CompactSpecialist
+          key={specialist.family}
+          specialist={specialist}
+          state={seatStateOf(index, step)}
+          isRinging={isRinging}
+        />
       ))}
-      <li className={styles.compactItem}>
-        <span className={styles.compactName}>Resumo</span>
-        <StatusChip tone={analyst.outcome.tone} icon={analyst.outcome.icon}>
-          {analyst.outcome.word}
-        </StatusChip>
-        <span>pontuação {analyst.scoreText}</span>
-      </li>
-    </ul>
+      <AnalystSeat view={view} state={analystStateOf(count, step)} />
+      <AuditorSeat auditor={auditor} isCompact />
+    </div>
   );
 }
 
-// A equipe em versão compacta, ao lado de "Próxima vela de perto": os votos da vela mais recente, sem bonequinhos.
-export function CompactTeam({ runId }: { readonly runId: string }): ReactElement | null {
+type LoadedProps = CompactTeamProps & { readonly status: LiveStatus };
+
+function LoadedTeam(props: LoadedProps): ReactElement | null {
   const headingId = useId();
-  const status = useLiveStatusQuery(runId, true).data;
-  const decision = status?.decisions.items[0];
-  if (status === undefined || decision === undefined) return null;
-  const view = buildTeamRoomView({ decision, triggers: status.triggers });
+  const model = useCompactTeamModel(props);
+  if (model === undefined) return null;
+  const { view, isAnnounced } = model;
+  const announcement = props.shouldAnnounce === true && isAnnounced && view !== undefined;
   return (
     <aside className={styles.compact} aria-labelledby={headingId}>
-      <h3 id={headingId} className={styles.compactTitle}>
+      <h3 id={headingId} className={styles.title}>
         <Icon name="team" size={16} />
         {TEAM_ROOM_TEXT.COMPACT_TITLE}
       </h3>
-      <CompactList view={view} />
+      <p className={model.isPointed ? `${styles.moment} ${styles.pointed}` : styles.moment}>
+        {model.isPointed ? <Icon name="flag" size={14} /> : null}
+        {momentText(model)}
+      </p>
+      <Seats model={model} />
+      <p className={styles.disclaimer}>{TEAM_ROOM_TEXT.DISCLAIMER}</p>
+      <p className={styles.visuallyHidden} role="status" aria-live="polite">
+        {announcement ? describeAnnouncement(view, model.closedText) : ''}
+      </p>
     </aside>
   );
+}
+
+// A equipe junto do gráfico: bonequinhos compactos com o balão de cada especialista, o resumo do placar e o auditor. Na vela
+// mais recente anima só quando chega vela nova; apontando outra vela mostra o que cada um disse NAQUELA vela.
+export function CompactTeam(props: CompactTeamProps): ReactElement | null {
+  const status = useLiveStatusQuery(props.runId, true).data;
+  return status === undefined ? null : <LoadedTeam {...props} status={status} />;
 }

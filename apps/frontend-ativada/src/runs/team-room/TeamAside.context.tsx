@@ -1,19 +1,27 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { createContext, useContext, type ReactElement, type ReactNode } from 'react';
 
-const TeamAsideContext = createContext<ReactElement | undefined>(undefined);
+// Recebe o instante de abertura da vela que o gráfico aponta (mouse ou teclado); `undefined` é "agora".
+export type TeamAsideRenderer = (pointedOpenTime: number | undefined) => ReactElement;
 
-// A equipe compacta que o gráfico mostra ao lado de "Próxima vela de perto"; sem provedor (ou na sala), nada aparece.
+const TeamAsideContext = createContext<TeamAsideRenderer | undefined>(undefined);
+
+// A equipe compacta que o gráfico mostra colada nele; sem provedor (ou na sala), nada aparece.
 export function TeamAsideProvider({
   aside,
   children,
 }: {
-  readonly aside: ReactElement | undefined;
+  readonly aside: TeamAsideRenderer | undefined;
   readonly children: ReactNode;
 }): ReactElement {
   return <TeamAsideContext.Provider value={aside}>{children}</TeamAsideContext.Provider>;
 }
 
-export function TeamAside(): ReactElement | null {
-  return useContext(TeamAsideContext) ?? null;
+export function TeamAside({
+  pointedOpenTime,
+}: {
+  readonly pointedOpenTime: number | undefined;
+}): ReactElement | null {
+  const render = useContext(TeamAsideContext);
+  return render === undefined ? null : render(pointedOpenTime);
 }

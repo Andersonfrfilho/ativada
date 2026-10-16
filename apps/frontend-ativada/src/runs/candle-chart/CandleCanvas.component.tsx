@@ -85,6 +85,18 @@ function ChartCaption(props: CanvasViewProps & { readonly id: string }): ReactEl
   );
 }
 
+// A coluna ao lado do gráfico: a equipe colada nele e, com a camada "Previsão", a próxima vela de perto.
+function ChartSide({ chart, model }: Pick<CanvasViewProps, 'chart' | 'model'>): ReactElement {
+  return (
+    <div className={styles.side}>
+      <TeamAside pointedOpenTime={model.pointedOpenTime} />
+      {model.isLayerOn(CHART_LAYER.FORECAST) ? (
+        <NextCandlePanel chart={chart} layerData={model.layerData} />
+      ) : null}
+    </div>
+  );
+}
+
 function CanvasView(props: CanvasViewProps): ReactElement {
   const { chart, view, selection, model } = props;
   const ids: DescriptionIds = { help: useId(), caption: useId() };
@@ -93,12 +105,7 @@ function CanvasView(props: CanvasViewProps): ReactElement {
       <CanvasHeader {...props} />
       <div className={styles.chartLayout}>
         <SurfaceBox {...props} ids={ids} />
-        {view.isLive && model.isLayerOn(CHART_LAYER.FORECAST) ? (
-          <div className={styles.side}>
-            <NextCandlePanel chart={chart} layerData={model.layerData} />
-            <TeamAside />
-          </div>
-        ) : null}
+        {view.isLive ? <ChartSide chart={chart} model={model} /> : null}
       </div>
       <LayerNotices
         data={model.layerData}

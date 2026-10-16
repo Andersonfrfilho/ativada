@@ -4,6 +4,10 @@ import { RouterProvider } from 'react-router/dom';
 
 import { LiveMarketProvider } from '../../src/live/LiveMarketProvider.component.js';
 import { ChartSurfaceLoaderContext } from '../../src/runs/candle-chart/chart-surface-loader.js';
+import {
+  TeamAsideProvider,
+  type TeamAsideRenderer,
+} from '../../src/runs/team-room/TeamAside.context.js';
 import { TradeChartCard } from '../../src/runs/TradeChartCard.component.js';
 import {
   buildFixtureChart,
@@ -44,6 +48,8 @@ export type CandleCardOptions = {
   // Só para provar o silêncio da vela em formação sem esperar 10 s.
   readonly silenceMilliseconds?: number;
   readonly marketTimeframes?: readonly string[];
+  // A equipe que a simulação ao vivo cola no gráfico (recebe a vela apontada).
+  readonly aside?: TeamAsideRenderer;
 };
 
 export const LAYERS_PATH = '/v1/runs/run-1/strategy-layers';
@@ -192,7 +198,9 @@ export function showCandleCard(options: CandleCardOptions = {}): CandleCardHarne
     probe: (
       <ChartSurfaceLoaderContext value={() => Promise.resolve(factory)}>
         <LiveMarketProvider>
-          <RouterProvider router={router} />
+          <TeamAsideProvider aside={options.aside}>
+            <RouterProvider router={router} />
+          </TeamAsideProvider>
         </LiveMarketProvider>
       </ChartSurfaceLoaderContext>
     ),

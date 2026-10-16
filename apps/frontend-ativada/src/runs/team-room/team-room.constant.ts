@@ -69,6 +69,10 @@ export const TEAM_ROOM_TEXT = {
   LAYOUT_ROOM_WITH_CHART: 'Sala com o gráfico',
   NOT_VOTING: 'fora do placar',
   COMPACT_TITLE: 'Equipe agora',
+  LATEST_CANDLE: 'Vela que fechou',
+  POINTED_CANDLE: 'Vela apontada no gráfico, fechou',
+  POINTED_WITHOUT_SPEECH:
+    'Esta vela não tem falas gravadas (ainda não fechou ou é anterior às decisões carregadas).',
   MONITOR: 'Monitor da sala: o gráfico da simulação',
 } as const;
 

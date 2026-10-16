@@ -45,6 +45,8 @@ export type CandleCanvasModel = {
   readonly isLayerOn: (layer: ChartLayer) => boolean;
   readonly handleTimeframeChange: (next: TimeframeChoice) => void;
   readonly keyboard: ChartKeyboard;
+  // A abertura da vela que a cruz aponta (mouse ou teclado); a equipe junto do gráfico fala dela.
+  readonly pointedOpenTime: number | undefined;
   // A frase da previsão para a descrição textual (RF20); `undefined` sem camada de previsão ou sem resposta.
   readonly forecastText: string | undefined;
 };
@@ -170,6 +172,7 @@ export function useCandleCanvasModel(input: CandleCanvasInput): CandleCanvasMode
     ...base,
     ...layers,
     keyboard,
+    pointedOpenTime: pointed === null ? undefined : source.history.candles[pointed]?.openTime,
     forecastText: forecastTextFor(chart.timeframe, layers, base.timeZone),
     legend: legendFor(input, { hoverIndex: pointed, live: layers.live, timeZone: base.timeZone }),
     handleTimeframeChange: (next): void => {

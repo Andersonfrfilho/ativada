@@ -179,10 +179,16 @@
     justify-content: space-between;
     align-items: center;
   }
+}
 
+@media (min-width: 1100px) {
   .chartLayout {
-    grid-template-columns: minmax(0, 1fr) clamp(250px, 26%, 310px);
+    grid-template-columns: minmax(0, 1fr) clamp(340px, 32%, 420px);
     align-items: start;
+  }
+
+  .canvas {
+    height: 620px;
   }
 }
 
