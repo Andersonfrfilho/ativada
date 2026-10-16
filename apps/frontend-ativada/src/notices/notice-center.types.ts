@@ -35,6 +35,8 @@ export type NoticeCenter = {
   readonly markAllRead: () => void;
   readonly dismissToast: (noticeId: string) => void;
   readonly dismissSummary: () => void;
+  // Fala um texto curto no ÚNICO aria-live (p.ex. "Copiado").
+  readonly speak: (text: string) => void;
   readonly updatePreferences: (change: (current: NoticePreferences) => NoticePreferences) => void;
 };
 

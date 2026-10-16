@@ -43,4 +43,6 @@ export const TIME_TOKEN = {
   CLOSES: '{fecha}',
   EXPIRES: '{validade}',
   AT: '{hora}',
+  DECIDED: '{decisao}',
+  CONFIRMED: '{confirmacao}',
 } as const;

@@ -33,6 +33,11 @@ function timeOf(instant: string | null, timeZone: string): string {
   return instant === null ? '' : formatTimeInZone(Date.parse(instant), timeZone);
 }
 
+// A hora ("20:15") de um instante ISO no fuso do usuário; sem instante, texto vazio.
+export function formatTimeInZoneText(instant: string | null, timeZone: string): string {
+  return instant === null ? '' : formatTimeInZone(Date.parse(instant), timeZone);
+}
+
 // Troca as marcas de horário da frase do servidor pelo horário no fuso do usuário (o servidor não conhece o fuso).
 export function fillTimeTokens(text: string, notice: Notice, timeZone: string): string {
   return text

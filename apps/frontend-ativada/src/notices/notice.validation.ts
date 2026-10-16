@@ -4,6 +4,34 @@ import { z } from '@ativada/environment';
 import { decimalText } from '../http/decimal.validation.js';
 import { NOTICE_KIND, NOTICE_STATE } from './notice.constant.js';
 
+const manualSchema = z.object({
+  orderType: z.string().nullable(),
+  decidedAt: z.iso.datetime().nullable(),
+  referencePrice: decimalText,
+  quantity: decimalText.nullable(),
+  runBalance: decimalText.nullable(),
+  notional: decimalText.nullable(),
+  targetPrice: decimalText,
+  stopPrice: decimalText,
+  tickSize: decimalText.nullable(),
+  quantityStep: decimalText.nullable(),
+  costRate: decimalText.nullable(),
+  netGainRate: decimalText.nullable(),
+  netLossRate: decimalText.nullable(),
+  netRatio: decimalText.nullable(),
+  breakEvenEntry: decimalText.nullable(),
+  history: z.object({ days: z.number(), netReturnRate: decimalText }).nullable(),
+  how: z.string().nullable(),
+  quantityText: z.string().nullable(),
+  costText: z.string().nullable(),
+  netText: z.string().nullable(),
+  giveUpText: z.string().nullable(),
+  historyText: z.string(),
+  honesty: z.string(),
+});
+
+export type NoticeManual = z.infer<typeof manualSchema>;
+
 // Espelho de `GET /v1/notices` (apps/api-ativada/src/notices/notices.docs.ts): mudou o contrato, mude aqui.
 export const noticeSchema = z.object({
   noticeId: z.string().min(1),
@@ -28,6 +56,7 @@ export const noticeSchema = z.object({
   title: z.string(),
   message: z.string(),
   detail: z.string().nullable(),
+  manual: manualSchema.nullable(),
 });
 
 export type Notice = z.infer<typeof noticeSchema>;

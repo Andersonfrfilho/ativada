@@ -27,7 +27,7 @@ type LiveContext = { readonly context: EventContext; readonly timeZone: string }
 
 type RoutingView = Pick<
   NoticeCenter,
-  'toasts' | 'summary' | 'announcement' | 'dismissToast' | 'dismissSummary'
+  'toasts' | 'summary' | 'announcement' | 'dismissToast' | 'dismissSummary' | 'speak'
 >;
 
 // Mesmo `noticeId` troca de estado NO LUGAR (sem empilhar três); aviso novo entra em cima.
@@ -107,9 +107,13 @@ export function useNoticeRouting(params: RoutingParams): {
     [],
   );
   const dismissSummary = useCallback((): void => setSummary(undefined), []);
+  const speak = useCallback(
+    (text: string): void => setAnnouncement((current) => ({ text, id: current.id + 1 })),
+    [],
+  );
   const view = useMemo(
-    () => ({ toasts, summary, announcement, dismissToast, dismissSummary }),
-    [toasts, summary, announcement, dismissToast, dismissSummary],
+    () => ({ toasts, summary, announcement, dismissToast, dismissSummary, speak }),
+    [toasts, summary, announcement, dismissToast, dismissSummary, speak],
   );
   return { view, beginAway: router.beginAway };
 }

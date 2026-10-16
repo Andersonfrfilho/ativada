@@ -8,7 +8,7 @@ type CenterParts = {
   readonly feed: NoticeFeed;
   readonly view: Pick<
     NoticeCenter,
-    'toasts' | 'summary' | 'announcement' | 'dismissToast' | 'dismissSummary'
+    'toasts' | 'summary' | 'announcement' | 'dismissToast' | 'dismissSummary' | 'speak'
   >;
   readonly drawer: DrawerState;
   readonly preferences: PreferencesState;

@@ -7,6 +7,7 @@ import styles from './Notices.module.css';
 import type { Notice } from './notice.validation.js';
 import { describeNoticePair, describeWhen, fillTimeTokens } from './notice-text.js';
 import { buildChartLink, describeTone } from './notice-tone.js';
+import { ManualTradePanel } from './ManualTradePanel.component.js';
 import { buildNoticeRuler, SignalCard } from './SignalCard.component.js';
 import { useNoticeCenter } from './useNoticeCenter.hook.js';
 
@@ -54,6 +55,7 @@ export function NoticeItem({ notice }: { readonly notice: Notice }): ReactElemen
       <div>
         <ItemTop notice={notice} isUnread={isUnread} />
         <ItemSummary notice={notice} />
+        <ManualTradePanel notice={notice} />
         {detail === null ? null : (
           <details className={styles['disclosure']}>
             <summary>Ver detalhe</summary>

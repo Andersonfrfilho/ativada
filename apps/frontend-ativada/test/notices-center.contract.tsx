@@ -378,3 +378,113 @@ describe('conexão caída e resumo ao voltar (RF19, RF20)', () => {
     expect(await screen.findByText('Avisos parados. Entre de novo.')).toBeDefined();
   });
 });
+
+describe('Operar à mão (RF27 a RF34): só mostra e copia', () => {
+  function stubClipboard(): string[] {
+    const written: string[] = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: (text: string): Promise<void> => Promise.resolve(void written.push(text)),
+      },
+      configurable: true,
+    });
+    return written;
+  }
+
+  async function openManual(): Promise<{ dialog: HTMLElement; rig: Rig }> {
+    const rig = mount({ runs: [filled()] });
+    fireEvent.click(await screen.findByRole('button', { name: 'Avisos: 1 não lido' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Avisos' });
+    return { dialog, rig };
+  }
+
+  test('como a simulação executou, quantidade, três ordens, custo, líquido, desistência e honestidade', async () => {
+    const { dialog } = await openManual();
+    expect(within(dialog).getByText(/^Operar à mão · LINK\/USDT/)).toBeDefined();
+    expect(
+      within(dialog).getByText(
+        /Ordem a mercado\. Decidiu no fechamento das \d\d:\d\d e comprou pelo preço de abertura da vela das \d\d:\d\d \(confirmado às \d\d:\d\d\)\. Preço de referência: 12,458\./,
+      ),
+    ).toBeDefined();
+    expect(
+      within(dialog).getByText(
+        /A simulação comprou 113,50 LINK \(≈ 1\.414,00 USDT\) com saldo de 10\.000,00 USDT\./,
+      ),
+    ).toBeDefined();
+    expect(within(dialog).getByText('Entrada: 12,458')).toBeDefined();
+    expect(within(dialog).getByText('Alvo (venda limitada): 12,590')).toBeDefined();
+    expect(within(dialog).getByText('Proteção: 12,379')).toBeDefined();
+    expect(within(dialog).getByText(/Custo estimado ida e volta: 0,30%/)).toBeDefined();
+    expect(within(dialog).getByText(/Ganho possível depois do custo: \+0,75%/)).toBeDefined();
+    expect(
+      within(dialog).getByText(/acima de 12,447 o ganho depois do custo já fica menor que a perda/),
+    ).toBeDefined();
+    expect(within(dialog).getByText('Desista se o preço já passou de 12,447.')).toBeDefined();
+    expect(
+      within(dialog).getByText(/Últimos 183 dias, LINK\/USDT 15 min, com taxas: −14,30%\./),
+    ).toBeDefined();
+    expect(
+      within(dialog).getByText(/O AtivAdA não envia ordens e não tem chave da sua corretora\./),
+    ).toBeDefined();
+  });
+
+  test('o link do par abre em outra aba, sem dado da pessoa; nada é enviado à API', async () => {
+    const { dialog, rig } = await openManual();
+    const link = within(dialog).getByRole('link', { name: 'Abrir LINK/USDT na Binance' });
+    expect(link.getAttribute('href')).toBe('https://www.binance.com/pt-BR/trade/LINK_USDT');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+    const writes = rig.app.fake.calls.filter(
+      (call) => call.method !== 'GET' && !call.path.startsWith('/v1/session'),
+    );
+    expect(writes).toEqual([]);
+  });
+
+  test('Meu saldo dá a quantidade proporcional (para baixo no passo) e fica só no navegador', async () => {
+    const { dialog, rig } = await openManual();
+    fireEvent.change(within(dialog).getByLabelText('Meu saldo (USDT, opcional)'), {
+      target: { value: '2000' },
+    });
+    await waitFor(() =>
+      expect(
+        within(dialog).getByText(
+          (_, element) =>
+            element?.tagName === 'P' &&
+            element.textContent === 'Com 2000 USDT, a mesma proporção dá 22,70 LINK.',
+        ),
+      ).toBeDefined(),
+    );
+    expect(window.localStorage.getItem('ativada.notices.my-balance')).toBe('2000');
+    expect(JSON.stringify(rig.app.fake.calls)).not.toContain('2000');
+  });
+
+  test('copiar quantidade e todas as ordens usa ponto decimal e anuncia "Copiado"', async () => {
+    const written = stubClipboard();
+    const { dialog } = await openManual();
+    fireEvent.change(within(dialog).getByLabelText('Meu saldo (USDT, opcional)'), {
+      target: { value: '2000' },
+    });
+    fireEvent.click(await within(dialog).findByRole('button', { name: 'Copiar quantidade' }));
+    await waitFor(() => expect(written).toEqual(['22.70']));
+    await within(dialog).findByRole('button', { name: 'Copiado' });
+    expect(screen.getByRole('status', { name: 'Anúncio dos avisos' }).textContent).toBe('Copiado');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Copiar todas as ordens' }));
+    await waitFor(() =>
+      expect(written.at(-1)).toBe(
+        'Entrada: 12.458 · quantidade 22.70\nAlvo (venda limitada): 12.590\nProteção: 12.379',
+      ),
+    );
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Copiar preço' }));
+    await waitFor(() => expect(written.at(-1)).toBe('12.458'));
+    Reflect.deleteProperty(navigator, 'clipboard');
+  });
+
+  test('no aviso da tela só há o botão que leva à gaveta', async () => {
+    const rig = mount();
+    await bell();
+    pushEvent(rig, [filled()]);
+    const stack = await waitFor(() => within(screen.getByRole('list', { name: STACK })));
+    fireEvent.click(await stack.findByRole('button', { name: 'Operar à mão' }));
+    await screen.findByRole('dialog', { name: 'Avisos' });
+  });
+});

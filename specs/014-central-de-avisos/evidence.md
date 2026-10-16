@@ -142,3 +142,32 @@ código e a varredura de palavras proibidas e de horas estão em `test/api-notic
   ficha da compra e da venda); `api-notices` 37 e `route-isolation-test` com `entryPrice`; contraste dos tokens novos já em T2.3.
 - Pendência: o cartão "Sinal em andamento" da tela da simulação e o cursor "agora" ao vivo (COMPRADO) ficam na T4.1, que
   mexe nos arquivos das specs 009 e 011.
+
+### T1.5 — Bloco `manual` ("Operar à mão") nos avisos de compra executada e venda
+
+- `notice-manual-math.ts` (EngineDecimal, puro) e `notice-manual-messages.ts` (frases `manual.*`): ordem a mercado ou limitada
+  com as marcas `{decisao}` e `{confirmacao}`, quantidade e notional da simulação (de `fills`) com o saldo inicial, as três
+  ordens no tick do par (parâmetros gravados em `runs.run_parameters`), custo ida e volta (`2 × (taxa + deslizamento)`), ganho e
+  perda depois do custo, razão e o ponto de equilíbrio `(alvo + proteção) ÷ (2 + 2 × custo)` para baixo no tick, histórico do
+  último backtest ou walk-forward concluído da MESMA versão, par e vela (uma consulta extra, `notice-history.ts`, com o dono)
+  e a frase fixa de honestidade. Sem backtest: `history: null` e "Sem histórico deste par. Rode um backtest em Backtests.".
+- Contas do exemplo conferidas à mão no contrato: 113,50 LINK, custo 0,30%, equilíbrio 12,447, razão 0,8 : 1. Decisão de
+  arredondamento: o ganho líquido DESCE e a perda líquida CRESCE (contra o usuário, como pede o plano D3), então o servidor diz
+  **+0,75% e −0,94%** onde a spec escreveu +0,76% e −0,93% (arredondamento comum); a razão sai igual (0,8 : 1) e o equilíbrio
+  também (12,447). A régua da ficha (distância até o nível, não dinheiro) segue o arredondamento comum da spec (−0,63% e +1,06%).
+- Gates: `typecheck` e `lint` limpos nos arquivos da task; `api-notices` 43 testes (bloco manual: contas, frases, par sem
+  histórico, saída, limitada sem taxa, varredura de palavras e horário); `route-isolation-test` com o histórico e o isolamento
+  dele; `make api-runs-mutants` com **36 de 36 mutantes de dono reprovados** (+1: o filtro de dono do histórico).
+
+### T2.7 — "Operar à mão" no painel
+
+- `ManualTradePanel` (recolhível, na gaveta; no aviso da tela só o botão "Operar à mão" que abre a gaveta): como a simulação
+  executou, quantidade, entrada/alvo/proteção no tick, custo, líquido, "Desista se o preço já passou de 12,447", histórico, o
+  roteiro de 3 passos e a honestidade. Os botões copiam com ponto decimal e nas casas do par ("Copiar preço", "Copiar
+  quantidade", "Copiar alvo", "Copiar proteção", "Copiar todas as ordens") e o retorno "Copiado" ✓ dura 2 s e fala no
+  ÚNICO `aria-live`. "Abrir LINK/USDT na Binance" é o link do par (`exchange-link.ts`), nova aba, `noopener noreferrer`, sem
+  nenhum dado da pessoa na URL; nenhuma requisição de escrita sai deste painel.
+- "Meu saldo" (D12-A, `my-balance.ts`) fica só no `localStorage`; a proporção é BigInt, para BAIXO no passo (2.000 USDT sobre
+  10.000 dão 22,70 LINK; `manual-trade.ts` não usa `Number`, provado por teste).
+- Gates: painel `typecheck`/`lint`/`format` limpos nos arquivos da task; `manual-trade.contract.ts` (13) e `notices-center`
+  com 5 testes novos (fatos, link, proporção e armazenamento, cópia com clipboard falso e anúncio, botão do aviso).

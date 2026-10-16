@@ -56,6 +56,11 @@ function ToastActions(props: {
 }): ReactElement {
   const link = buildChartLink(props.notice);
   const { runId } = props.notice;
+  const { openDrawer } = useNoticeCenter();
+  function handleManual(): void {
+    props.onDone();
+    openDrawer();
+  }
   return (
     <div className={styles['actions']}>
       {link === undefined ? null : (
@@ -66,6 +71,11 @@ function ToastActions(props: {
         >
           Ver no gráfico
         </Link>
+      )}
+      {props.notice.manual === null ? null : (
+        <button type="button" className={styles['action']} onClick={handleManual}>
+          Operar à mão
+        </button>
       )}
       {runId === null ? null : <MuteButton runId={runId} onDone={props.onDone} />}
     </div>
