@@ -206,6 +206,37 @@ async function checkListing(context: LifecycleCheckContext): Promise<void> {
       walkForwards.runs.every((run) => run.kind === RUN_KIND.WALK_FORWARD),
     'filtro por tipo',
   );
+  const ethereumParams = buildRunParams(version.id, { symbol: 'ETHUSDT' });
+  await runs.createRun(owner.scope, ethereumParams);
+  await runs.createRun(owner.scope, ethereumParams);
+  const foreign = await seedRun(handle, other, { symbol: 'ETHUSDT' });
+  const bySymbol = await runs.listRuns(owner.scope, {
+    limit: 100,
+    after: undefined,
+    kind: undefined,
+    symbol: 'ETHUSDT',
+  });
+  assertCondition(
+    bySymbol.runs.length === 2 && bySymbol.runs.every((run) => run.symbol === 'ETHUSDT'),
+    'filtro por par traz só as do par e só as do dono',
+  );
+  const byVersion = await runs.listRuns(owner.scope, {
+    limit: 100,
+    after: undefined,
+    kind: undefined,
+    symbol: 'ETHUSDT',
+    strategyVersionId: version.id,
+  });
+  const foreignVersion = await runs.listRuns(owner.scope, {
+    limit: 100,
+    after: undefined,
+    kind: undefined,
+    strategyVersionId: foreign.strategyVersionId,
+  });
+  assertCondition(
+    byVersion.runs.length === 2 && foreignVersion.runs.length === 0,
+    'filtro por versão combina com o par e não enxerga a versão de outro dono',
+  );
   reportCheck(
     `listagem: ${PAGED_RUNS} execuções em páginas de ${PAGE_SIZE} sem repetir nem pular (cursor com microssegundos, 6 no mesmo milissegundo)`,
   );

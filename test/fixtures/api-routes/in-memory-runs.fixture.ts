@@ -230,6 +230,12 @@ export function createInMemoryRuns(
       const owned = runs
         .filter((stored) => stored.userId === scope.ownerUserId && stored.deletedAt === undefined)
         .filter((stored) => params.kind === undefined || stored.record.kind === params.kind)
+        .filter((stored) => params.symbol === undefined || stored.record.symbol === params.symbol)
+        .filter(
+          (stored) =>
+            params.strategyVersionId === undefined ||
+            stored.record.strategyVersionId === params.strategyVersionId,
+        )
         .sort((first, second) => second.sequence - first.sequence);
       const start =
         params.after === undefined

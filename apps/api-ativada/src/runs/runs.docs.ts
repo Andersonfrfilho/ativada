@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { RUN_KIND, RUN_STATUS } from '@ativada/database';
+import { RUN_STATUS } from '@ativada/database';
 import { z } from '@ativada/environment';
 
 import type { RouteDocumentation } from '../openapi/route-documentation.types.js';
@@ -11,7 +11,6 @@ import {
   VALIDATION_ERROR_CODE,
 } from '../shared/errors/error-code.constant.js';
 import { HTTP_STATUS } from '../shared/http/http.constant.js';
-import { PAGE_QUERY_SHAPE } from '../shared/pagination/page-query.schema.js';
 import { CSV_TABLE_NAMES } from './csv-tables.constant.js';
 import { RUN_DETAIL_SCHEMA, RUN_VIEW_SCHEMA } from './run-view.schema.js';
 import { RUN_ID_PARAM } from './runs.constant.js';
@@ -55,12 +54,9 @@ export const RUN_DOCUMENTATION = {
     ],
   },
   list: {
-    summary: 'Lista as execuções do usuário, das mais novas para as mais antigas.',
+    summary:
+      'Lista as execuções do usuário, das mais novas para as mais antigas. Filtros opcionais e combináveis: `kind`, `symbol` (par habilitado) e `strategyVersionId`; valem antes da paginação por cursor.',
     tag: TAG,
-    query: z.strictObject({
-      ...PAGE_QUERY_SHAPE,
-      kind: z.enum(RUN_KIND).optional(),
-    }),
     successes: [
       {
         status: HTTP_STATUS.OK,

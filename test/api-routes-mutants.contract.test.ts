@@ -548,6 +548,14 @@ const MUTANTS: readonly SourceMutant[] = [
     ),
   },
   {
+    name: 'RUN_LIST_IGNORES_THE_SYMBOL_FILTER',
+    edits: edit('runs/runs.routes.ts', '        symbol: query.symbol,\n', ''),
+  },
+  {
+    name: 'RUN_LIST_IGNORES_THE_STRATEGY_VERSION_FILTER',
+    edits: edit('runs/runs.routes.ts', '        strategyVersionId: query.strategyVersionId,\n', ''),
+  },
+  {
     name: 'OVERFITTING_ALERT_NOT_EXTRACTED',
     edits: edit(
       'runs/run-view.ts',

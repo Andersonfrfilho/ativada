@@ -92,6 +92,8 @@ export type ListRunsParams = {
   readonly limit: number;
   readonly after: RunCursor | undefined;
   readonly kind: RunKind | undefined;
+  readonly symbol?: string | undefined;
+  readonly strategyVersionId?: string | undefined;
 };
 
 export type RunsPage = {

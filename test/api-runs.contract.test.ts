@@ -928,6 +928,80 @@ describe('GET /v1/runs', () => {
     }
   });
 
+  test('filtra por par e por versão da estratégia, combina filtros e mantém o cursor dentro do filtro', async () => {
+    const isolated = await createRunsHarness();
+    try {
+      const seededOne = await isolated.seedStrategy(SUBJECT_A, 'filtro-a');
+      const seededTwo = await isolated.seedStrategy(SUBJECT_A, 'filtro-b');
+      const foreign = await isolated.seedStrategy(SUBJECT_B, 'filtro-c');
+      const create = async (
+        subject: string,
+        versionId: string,
+        symbol: string,
+      ): Promise<string> => {
+        const { body } = await readJson(
+          await isolated.call({
+            subject,
+            method: 'POST',
+            path: RUNS,
+            body: backtestBody({ strategyVersionId: versionId, symbol }),
+          }),
+        );
+        return (body as RunBody).data.id;
+      };
+      const btcOne = await create(SUBJECT_A, seededOne.versionId, 'BTCUSDT');
+      const ethOne = await create(SUBJECT_A, seededOne.versionId, 'ETHUSDT');
+      const btcTwo = await create(SUBJECT_A, seededTwo.versionId, 'BTCUSDT');
+      const btcThree = await create(SUBJECT_A, seededTwo.versionId, 'BTCUSDT');
+      const foreignBtc = await create(SUBJECT_B, foreign.versionId, 'BTCUSDT');
+      const idsOf = async (subject: string, query: string): Promise<string[]> => {
+        const { body } = await readJson(await isolated.call({ subject, path: `${RUNS}?${query}` }));
+        return (body as { data: { id: string }[] }).data.map((row) => row.id);
+      };
+      expect(await idsOf(SUBJECT_A, 'symbol=BTCUSDT')).toStrictEqual([btcThree, btcTwo, btcOne]);
+      expect(await idsOf(SUBJECT_A, 'symbol=ETHUSDT')).toStrictEqual([ethOne]);
+      expect(await idsOf(SUBJECT_A, `strategyVersionId=${seededTwo.versionId}`)).toStrictEqual([
+        btcThree,
+        btcTwo,
+      ]);
+      expect(
+        await idsOf(
+          SUBJECT_A,
+          `symbol=BTCUSDT&kind=backtest&strategyVersionId=${seededOne.versionId}`,
+        ),
+      ).toStrictEqual([btcOne]);
+      expect(await idsOf(SUBJECT_A, 'symbol=BTCUSDT&kind=walk_forward')).toStrictEqual([]);
+      expect(await idsOf(SUBJECT_A, `strategyVersionId=${foreign.versionId}`)).toStrictEqual([]);
+      expect(await idsOf(SUBJECT_B, 'symbol=BTCUSDT')).toStrictEqual([foreignBtc]);
+      const first = await readJson(
+        await isolated.call({ subject: SUBJECT_A, path: `${RUNS}?symbol=BTCUSDT&limit=2` }),
+      );
+      const page = first.body as { data: { id: string }[]; pagination: { nextCursor: string } };
+      expect(page.data.map((row) => row.id)).toStrictEqual([btcThree, btcTwo]);
+      const cursor = encodeURIComponent(page.pagination.nextCursor);
+      expect(await idsOf(SUBJECT_A, `symbol=BTCUSDT&limit=2&cursor=${cursor}`)).toStrictEqual([
+        btcOne,
+      ]);
+    } finally {
+      await isolated.stop();
+    }
+  });
+
+  test('par fora dos habilitados e versão que não é UUID são 400, sem eco do valor', async () => {
+    for (const query of [
+      'symbol=DOGEUSDT',
+      'symbol=',
+      'strategyVersionId=nao-e-uuid',
+      'symbol=BTCUSDT&symbol=ETHUSDT',
+    ]) {
+      const response = await readJson(
+        await harness.call({ subject: SUBJECT_A, path: `${RUNS}?${query}` }),
+      );
+      expect({ query, status: response.status }).toStrictEqual({ query, status: 400 });
+      expect(JSON.stringify(response.body)).not.toMatch(/DOGEUSDT|nao-e-uuid/);
+    }
+  });
+
   test('limit acima de 100, kind inválido e cursor adulterado são 400', async () => {
     const forgedInstant = Buffer.from(JSON.stringify({ c: 'abc', i: MISSING_ID })).toString(
       'base64url',
