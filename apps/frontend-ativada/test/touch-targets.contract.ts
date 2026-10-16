@@ -43,6 +43,14 @@ const TARGETS: readonly (readonly [string, string])[] = [
   ['backtests/run-switch/RunSwitcher.module.css', '.trigger'],
   ['backtests/run-switch/RunSwitcher.module.css', '.option'],
   ['backtests/run-switch/RunSwitcher.module.css', '.searchInput'],
+  ['notices/Notices.module.css', '.bell'],
+  ['notices/Notices.module.css', '.close'],
+  ['notices/Notices.module.css', '.action'],
+  ['notices/Notices.module.css', '.chip'],
+  ['notices/Notices.module.css', '.textButton'],
+  ['notices/Notices.module.css', '.switch'],
+  ['notices/Notices.module.css', '.coachButton'],
+  ['notices/Notices.module.css', '.more'],
 ];
 
 describe('alvos de toque', () => {

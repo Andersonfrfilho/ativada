@@ -3,11 +3,17 @@ import type { ReactElement } from 'react';
 import { Outlet } from 'react-router';
 
 import { APP_NAME } from '../app/app.constant.js';
+import { NoticeAnnouncer } from '../notices/NoticeAnnouncer.component.js';
+import { NoticeCenterProvider } from '../notices/NoticeCenterProvider.component.js';
+import { NoticeDrawer } from '../notices/NoticeDrawer.component.js';
+import { NoticeToastStack } from '../notices/NoticeToastStack.component.js';
+import { useNoticeCenter } from '../notices/useNoticeCenter.hook.js';
 import { LiveMarketProvider } from '../live/LiveMarketProvider.component.js';
 import styles from './AppShell.module.css';
 import { HeaderMenu } from './HeaderMenu.component.js';
 
 function ShellFrame(): ReactElement {
+  const { isDrawerOpen } = useNoticeCenter();
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
@@ -17,6 +23,9 @@ function ShellFrame(): ReactElement {
       <main className={styles.main}>
         <Outlet />
       </main>
+      <NoticeAnnouncer />
+      <NoticeToastStack />
+      {isDrawerOpen ? <NoticeDrawer /> : null}
     </div>
   );
 }
@@ -24,7 +33,9 @@ function ShellFrame(): ReactElement {
 export function AppShell(): ReactElement {
   return (
     <LiveMarketProvider>
-      <ShellFrame />
+      <NoticeCenterProvider>
+        <ShellFrame />
+      </NoticeCenterProvider>
     </LiveMarketProvider>
   );
 }

@@ -73,6 +73,8 @@ const PAIRS: readonly (readonly [string, string])[] = [
   ['accent', 'warn-soft'],
   ['warn', 'surface'],
   ['on-accent', 'sell'],
+  ['on-buy', 'buy'],
+  ['on-sell', 'sell'],
 ];
 
 // Setas, linha, halo e contorno do gráfico são elementos gráficos (WCAG 1.4.11): 3:1.
@@ -127,6 +129,8 @@ const MIX_DECLARATION =
   /--([a-z0-9-]+):\s*color-mix\(in srgb,\s*var\(--([a-z0-9-]+)\)\s*(\d+)%,\s*var\(--([a-z0-9-]+)\)\)/g;
 const PERCENT_DIVISOR = 100;
 const CONE_TOKENS = ['cone-up', 'cone-down', 'cone-neutral'] as const;
+// Fundos suaves da central de avisos (spec 014): cancelada em cinza e as zonas de ganho e perda da régua.
+const NOTICE_FILL_TOKENS = ['cancel-soft', 'zone-gain', 'zone-loss'] as const;
 // A grade só ajuda o olho: o valor está nos rótulos dos eixos (WCAG 1.4.11 não a cobra), então o piso é só "visível".
 const GRID_MINIMUM_RATIO = 1.5;
 
@@ -155,7 +159,7 @@ function withDerivedTokens(base: Map<string, string>): Map<string, string> {
 describe('chart tokens declared in global.css (spec 009, RF06 e RNF06)', () => {
   test('the grid and the three cone colors are derived with color-mix from existing tokens', () => {
     const declared = [...CSS.matchAll(MIX_DECLARATION)].map((match) => match[1]);
-    expect(declared.sort()).toEqual(['chart-grid', ...CONE_TOKENS].sort());
+    expect(declared.sort()).toEqual(['chart-grid', ...CONE_TOKENS, ...NOTICE_FILL_TOKENS].sort());
   });
 });
 
@@ -188,5 +192,27 @@ for (const [theme, read] of [
       const cone = ratio(tokens.get('cone-up') ?? '#000000', tokens.get('surface') ?? '#ffffff');
       expect(grid).toBeLessThan(cone);
     });
+  });
+}
+
+// O texto sobre os fundos suaves da central de avisos precisa de contraste de texto (AA) nos dois temas.
+for (const [theme, read] of [
+  ['light', lightTokens],
+  ['dark', darkTokens],
+] as const) {
+  describe(`${theme} theme notice fills`, () => {
+    const tokens = withDerivedTokens(read());
+    for (const fill of NOTICE_FILL_TOKENS) {
+      for (const text of ['ink', 'ink-2'] as const) {
+        test(`${text} on ${fill} is at least ${MINIMUM_RATIO}:1`, () => {
+          const front = tokens.get(text);
+          const back = tokens.get(fill);
+          expect(back, fill).toBeDefined();
+          expect(ratio(front ?? '#000000', back ?? '#ffffff')).toBeGreaterThanOrEqual(
+            MINIMUM_RATIO,
+          );
+        });
+      }
+    }
   });
 }

@@ -33,6 +33,10 @@ export type RenderAppOptions = {
   readonly ownsSessionRoute?: boolean;
   // Só para provar o silêncio por par sem dormir 10 s.
   readonly silenceMilliseconds?: number;
+  // Só para provar a vida do aviso na tela sem esperar 8 s.
+  readonly noticeToastMilliseconds?: number;
+  // Só para provar a faixa de conexão caída sem esperar 5 s.
+  readonly noticeConnectionMilliseconds?: number;
   // As velas que o ambiente da API tem (a configuração pública do painel); o padrão é não limitar.
   readonly marketTimeframes?: readonly string[];
   // Para testar um hook ou componente sozinho: renderiza isto dentro dos provedores, no lugar das rotas.
@@ -108,6 +112,12 @@ export function renderApp(options: RenderAppOptions): RenderedApp {
     ...(options.silenceMilliseconds === undefined
       ? {}
       : { silenceMilliseconds: options.silenceMilliseconds }),
+    ...(options.noticeToastMilliseconds === undefined
+      ? {}
+      : { noticeToastMilliseconds: options.noticeToastMilliseconds }),
+    ...(options.noticeConnectionMilliseconds === undefined
+      ? {}
+      : { noticeConnectionMilliseconds: options.noticeConnectionMilliseconds }),
     ...(options.marketTimeframes === undefined
       ? {}
       : { marketTimeframes: options.marketTimeframes }),

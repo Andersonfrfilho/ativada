@@ -99,3 +99,27 @@ código e a varredura de palavras proibidas e de horas estão em `test/api-notic
   toasts (ou resume se passou de 60 s).
 - Gates (WSL, espelho `~/gates/ativada-spec14`): `typecheck`, `lint` e `format:check` limpos; `test/notice-model.contract.ts`
   com 23 testes (preferências, texto e horário no fuso, mescla, troca de estado, efeitos, roteador).
+
+### T2.3, T2.4 e T2.5 — Toasts, sino, gaveta e preferências na tela
+
+- `NoticeCenterProvider` (dentro do `AppShell`, sob o `LiveMarketProvider`) junta consultas, preferências, roteador e
+  gaveta num contexto; `NoticeBell` fica no cabeçalho FORA do painel recolhido (44×44 px, `aria-label="Avisos: 2 não lidos"`,
+  ponto âmbar se pausou), `NoticeToastStack` (no máximo 3, "+N no sino", compacta com gráfico), `NoticeToast` (o ciclo da
+  ordem troca de estado NO LUGAR, 8 s com pausa no mouse/foco, "Ver no gráfico" para `/backtests/:runId?operacao=…#grafico`,
+  "Silenciar esta simulação", fechar sem marcar como lido) e `NoticeAnnouncer` (o ÚNICO `aria-live`; os toasts são uma
+  lista com rótulo, sem `aria-live`, para não anunciar duas vezes e manter botões focáveis).
+- `NoticeDrawer`: `role="dialog"` `aria-modal`, foco no título, foco preso (Tab em ciclo), Esc fecha e devolve o foco ao sino,
+  frase fixa "Simulações com dinheiro fictício. Não é recomendação.", agrupado por dia ("Hoje", "Ontem"), "Novo", detalhe
+  recolhido, "Marcar todos como lidos", filtro por simulação, "Ver avisos anteriores", vazio amigável e a faixa
+  "Avisos pausados — reconectando…" (RF19) / "Avisos parados. Entre de novo.". Balão do primeiro uso (RF11).
+- Preferências (RF15): `role="switch"` para "Avisar quando comprar ou vender", "Avisar quando algo parar" e "Som" (o clique
+  no interruptor prepara o Web Audio), botão "Ativar notificações" (o pedido ao navegador só acontece no clique; negado diz
+  como religar), e por simulação "Silenciar esta simulação"/"Voltar a avisar" e "Avisar antes de comprar".
+- Tokens novos em `global.css` (`--on-buy`, `--on-sell`, `--scrim`, `--toast-shadow`, `--cancel-soft`, `--zone-gain`,
+  `--zone-loss`, `--space-6`); `contrast.contract.ts` ganhou `on-buy`/`on-sell` e o texto sobre os fundos suaves (4,5:1 nos
+  dois temas) e `touch-targets.contract.ts` os alvos de 44 px; `prefers-reduced-motion` no CSS do módulo.
+- Gates: `typecheck`, `lint`, `format:check` limpos e `bun run --cwd apps/frontend-ativada test` com 1.309 testes verdes (103
+  arquivos), dos quais 22 novos em `test/notices-center.contract.tsx` (primeiro carregamento sem toast, pedida → executada
+  no mesmo toast com anúncio, cancelada em cinza, 8 s com pausa, teto de 3, fechar não marca como lido, desligar o tipo e
+  silenciar mantêm o sino, tela da própria simulação sem toast, gaveta com foco/Esc/Tab, "Marcar todos", filtro, reconexão
+  com UM resumo, notificação só no clique).

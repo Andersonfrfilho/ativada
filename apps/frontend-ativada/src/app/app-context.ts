@@ -16,6 +16,10 @@ export type AppConfig = LoginConfig & {
   readonly fallbackPollMilliseconds?: number;
   // Só os testes encurtam: padrão de 10 s sem tick para o par deixar de valer como ao vivo.
   readonly silenceMilliseconds?: number;
+  // Só os testes encurtam: padrão de 8 s de vida do aviso na tela (D7-A).
+  readonly noticeToastMilliseconds?: number;
+  // Só os testes encurtam: padrão de 5 s de socket caído até a faixa "Avisos pausados" (RF19).
+  readonly noticeConnectionMilliseconds?: number;
 };
 
 export const AppConfigContext = createContext<AppConfig | undefined>(undefined);

@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactElement } from 'react';
 
 import { useSessionService } from '../app/useAppContext.hook.js';
+import { NoticeBell } from '../notices/NoticeBell.component.js';
 import { LiveStatusBadge } from '../live/LiveStatusBadge.component.js';
 import { useLiveMarket } from '../live/useLiveMarket.hook.js';
 import controls from '../styles/Controls.module.css';
@@ -26,6 +27,9 @@ export function HeaderMenu(): ReactElement {
 
   return (
     <>
+      <span className={styles.bellSlot}>
+        <NoticeBell />
+      </span>
       <button
         type="button"
         className={`${controls.button} ${styles.menuButton}`}

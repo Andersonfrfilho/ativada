@@ -35,6 +35,7 @@ export const ICON_PATHS = {
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
   replay: 'M3 12a9 9 0 103-6.7M3 4v5h5',
   lock: 'M7 11V8a5 5 0 0110 0v3M5 11h14v10H5zM12 15v2',
+  cancelled: 'M12 3a9 9 0 100 18 9 9 0 000-18zM5.6 5.6l12.8 12.8',
   eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 100 6 3 3 0 000-6z',
 } as const;
 
