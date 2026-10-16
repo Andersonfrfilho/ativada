@@ -230,3 +230,22 @@ bun run format:check → All matched files use Prettier code style!
 bun test (os 10 arquivos risk-analyst + strategy-engine-boundary, code-size-limits, app-import-boundary, database.contract,
           wilson-interval, projection-rule/messages/summary-oracle) → 359 pass / 0 fail
 ```
+
+## T1.4 — dourado `analyst-1` e mutantes (2026-10-15)
+
+- **Dourado literal** (`test/fixtures/risk-analyst/analyst-golden.fixture.ts`, 12 casos; gravado por `bun run scripts/record-risk-analyst-golden.ts`, que usa o código de PRODUÇÃO): a decisão inteira e as frases (`buildAnalystMessages`) em JSON compacto. 6 casos do **recorte real de 15 min** (BTCUSDT, 3.300 velas e o Fear & Greed do banco; velas 3299, 3000, 2600, 2000, 1500) e 6 de um **mercado sintético de 3.000 velas** (processo de reversão à média, semente 4242, em que a Reversão prova valor: 129 de 160, `above`; Tendência e Volume `below`). Cada caso com uma carteira (limpa, perdendo 1,1%, 8 entradas em 24 h, saída por tempo com o halt do analista, 3 perdas seguidas, folga curta da meta) e um custo (padrão, ou taxa 0,02% + slippage 0,01% no caso `real:3000:cheap`). No custo padrão o BTC de 15 min fica em PAUSA por `move_cost` (ATR% 0,11% a 0,28% contra 0,6% exigidos: movimento ÷ custo de 0,37 a 0,92): é o resultado honesto da casa; com o custo baixo o mesmo mercado vira CAUTELA (ninguém provou valor). Os instantes sintéticos saíram da varredura de todas as velas de 1.200 a 2.999 e cobrem LIBERADA com a porta aberta (1 h e 15 min), MODERADA por oscilação alta e por volume baixo, equipe contra e CAUTELA com `too_volatile`.
+- **`test/risk-analyst-golden.contract.test.ts`** (27 testes): cada caso é igual ao dourado byte a byte; a tabela da equipe de cada decisão repete o **oráculo `bigint` do auditor** (contadas, acertos, taxas, veredito, limites e peso) calculado sobre a mesma série de votos; o dourado cobre pausas, mais de 3 posturas, `above` e `below`, previsão a favor, saída por tempo e as quatro travas; nenhum caso passa de 1 × o risco da estratégia.
+- **52 mutantes** (`test/risk-analyst-mutants.contract.test.ts`, cópias de `packages/risk-analyst/src` rodadas num processo à parte, como no motor), todos MORTOS, mais a cópia de controle que passa nos 10 contratos: média de volume com a vela atual (lookahead), percentil por arredondamento para baixo, 95 amostras, janela do percentil com a borda velha, divisão para cima, momentum de 5 velas; auditor contando a vela `t`, horizonte de 0 velas (`t+1` trocado por `t`), janela uma vela curta, empate como erro, taxa para cima, peso pago a `even`/`below`, base do peso 0,4; sentimento sem o corte de inserção, voto neutro virando +1, lacuna não declarada, âncora deslizante, Bollinger de 3 desvios; equipe dividida e firme em 2/3 exatos, tendência da estratégia votando, neutros fora do peso aprovado, `too_volatile` no percentil exato, equipe contra sem pausa, mercado parado em 0,4 exato, LIBERADA com volume > 1 e ATR% < percentil 90, fraca e firme trocadas, ritmo em 0,7 e 1,5 exatos, janela de entrada pela abertura, ritmo de 1 h = 30 min, tamanho 2×; perda do dia, 3ª perda, pausa de 4 velas, 8ª entrada, borda da janela de 24 h, folga de 2 operações, movimento ÷ custo (2 mutantes), ordem das travas; saída por tempo uma vela antes e uma depois, `resume` desfazendo qualquer `halt`, saída por tempo barrada pela porta fechada, `halt` repetido; rótulos NORMAL/CONFIANTE, risco em % para baixo e o aviso sem a negação.
+
+```text
+bun run typecheck    → verde (tsc raiz e painel)
+bun run lint         → verde
+bun run format:check → All matched files use Prettier code style!
+bun test (todos os risk-analyst + strategy-engine-boundary, code-size-limits, app-import-boundary, database.contract,
+          wilson-interval, projection-rule/messages/summary-oracle, api-run-projections, api-run-strategy-layers) → 495 pass / 0 fail
+bun test test/risk-analyst-mutants.contract.test.ts → 54 pass / 0 fail (52 mutantes mortos, controle verde)
+```
+
+## Fase 1 — fechamento (2026-10-15)
+
+`packages/risk-analyst` está completo e puro: leituras, equipe, auditor com o Wilson único, travas, ritmo, postura, saída por tempo, comandos (só `halt`, `resume` e `exit_position`) e o catálogo de frases, com dourado e 52 mutantes. Nada em `packages/strategy-engine` nem `packages/run-recording` mudou; sem migration; sem worker, API nem painel. A Fase 2 (sombra no worker, T2.1 pede autorização da migration `analyst_decisions`) NÃO foi iniciada.
