@@ -601,3 +601,36 @@ bun test (97 arquivos: strategy-engine-*, production-engine*, wallet*, risk-*, b
 ```
 
 Rodado numa cópia do espelho WSL (`~/gates/ativada-spec7-t41`). Nenhuma migration, container ou volume tocado nesta task.
+
+## T4.2a — `toGovernInputs`, a tradução PURA da decisão para o passo (2026-10-16)
+
+- **Função** (`packages/risk-analyst/src/govern-inputs.ts`, exportada pelo índice): `toGovernInputs({ decision | undefined (falha),
+  wallet: { hasPosition }, candle: { openTime, closeTime }, isGoalEnded })` → `{ commands, entryRiskScale }`. Regras (A21):
+  falha ⇒ `'0'` e nenhum comando; porta fechada ⇒ `'0'`; porta aberta ⇒ o tamanho da decisão, e tamanho fora do conjunto
+  fechado `0 / 0,25 / 0,5 / 1` vira `'0'` (nunca passa de 1); a SAÍDA nunca é bloqueada: `exit_position` com o motivo
+  `analyst_timeout` (id `analyst:<abertura>:exit_position`, `issuedAt` = fechamento da vela) vai sempre que a saída por tempo
+  está devida e há posição, inclusive com a porta fechada e a escala 0; meta decidida (`isGoalEnded`) ⇒ nenhum comando. A
+  tradução com `halt`/`resume` (`toAnalystCommands`) segue valendo só para o `wouldCommands` da sombra.
+- **Quem a usa**: o worker (T4.2b) e o contrafactual (`scripts/analyst-counterfactual/simulation.ts`), que agora GOVERNA uma
+  carteira em memória como o worker (decide sobre o passo feito, traduz, refaz o candle com `entryRiskScale` e `commands`,
+  guarda o histórico do resultado final) e perdeu a tradução própria (`ENGINE_REASON_OF`, `halt`/`resume` com motivos
+  emprestados e `ownsHalt`). `analyst-step.ts` ganhou `analyzeStep(kit, step)` (decisão ou código da falha, nunca lança), que a
+  sombra (`decideShadowStep`) e o contrafactual usam. **Desvio:** o contrafactual ainda importa do worker o cache da série, o
+  histórico da própria execução e `analyzeStep` (`analyst-series-cache.ts`, `analyst-run-history.ts`, `analyst-step.ts`): movê-los
+  para um pacote exigiria dependência nova de workspace (`bun.lock`) e quebraria o arnês de mutantes do worker, que edita esses
+  arquivos pelo caminho. O que saiu do contrafactual é tudo o que era TRADUÇÃO (o que o usuário pediu para ficar num lugar só).
+- **Provas** (`test/risk-analyst-govern-inputs.contract.test.ts`, 23 testes): contas à mão (cada tamanho, porta fechada, falha
+  com e sem posição, saída por tempo com id e instante exatos, a saída com a porta fechada, sem posição, sem saída devida,
+  meta decidida, 7 tamanhos fora do conjunto) e **2.000 sorteios**, duas semeaduras: falha ⇒ `'0'`; tamanho sempre no conjunto e
+  ≤ 1; no máximo um comando e só `exit_position`; `exit_position` sai exatamente quando devida, com posição e sem meta decidida
+  (nunca suprimido pela porta); meta decidida ⇒ nenhum comando; porta fechada ⇒ `'0'`; a escala nunca passa do tamanho que a
+  regra decidiu. `test/analyst-counterfactual.contract.test.ts`: o contrafactual não tem mais `halt` (a pausa é escala 0) e o
+  único comando é `exit_position`; um contrato lê o fonte e reprova `COMMAND_KIND.HALT/RESUME`, `decideShadowStep` e
+  `ENGINE_REASON_OF` nele. **Mutantes novos (11, todos mortos)** em `test/risk-analyst-mutants.contract.test.ts`
+  (`GOVERN_FAILURE_KEEPS_FULL_SIZE`, `GOVERN_CLOSED_GATE_KEEPS_THE_SIZE`, `GOVERN_CLOSED_GATE_BLOCKS_THE_TIME_EXIT`,
+  `GOVERN_TIME_EXIT_WITHOUT_A_POSITION`, `GOVERN_ENDED_GOAL_STILL_COMMANDS`, `GOVERN_TIME_EXIT_REASON_IS_USER_STOP`,
+  `GOVERN_TIME_EXIT_KIND_IS_HALT`, `GOVERN_UNKNOWN_SIZE_BECOMES_FULL`, `GOVERN_SIZE_MATCHED_BY_PREFIX`,
+  `GOVERN_COMMAND_ID_USES_THE_CLOSE_TIME`, `GOVERN_ISSUED_AT_IS_THE_OPEN_TIME`); com os 52 de antes, 63 mortos e o controle verde
+  (71 testes, 14,6 s). O contrato de fronteira do pacote (sem `Date`, `Math.random`, `console`, `as`) segue verde.
+- Os gates e as provas desta task foram rodados na árvore já com a T4.2b aplicada (as duas dividem `analyst-step.ts`); o
+  resultado completo está na T4.2b.

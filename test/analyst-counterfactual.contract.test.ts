@@ -249,17 +249,13 @@ describe('a execução em memória', () => {
     );
   });
 
-  test('o analista decide em toda vela, sem falha, e só dá os comandos que o motor já tem', async () => {
+  test('o analista GOVERNA em toda vela, sem falha: pausa é escala 0 (nunca halt) e o único comando é a saída por tempo', async () => {
     const result = await ready;
     const leadIn = computeStrategyLeadInCandles(COUNTERFACTUAL_STRATEGIES.classic.version.config);
     expect(result.tally.decisions).toBe(periodCandles + leadIn - 1);
     expect(result.tally.failed).toBe(0);
-    expect(
-      Object.keys(result.tally.commands).every((kind) =>
-        ['halt', 'resume', 'exit_position'].includes(kind),
-      ),
-    ).toBe(true);
-    expect(result.tally.commands['halt'] ?? 0).toBeGreaterThan(0);
+    expect(Object.keys(result.tally.commands).every((kind) => kind === 'exit_position')).toBe(true);
+    expect(result.tally.gateClosed).toBeGreaterThan(0);
     expect(result.tally.postures['pause'] ?? 0).toBeGreaterThan(0);
     expect(result.windows.length).toBe(1);
   });
@@ -297,5 +293,14 @@ describe('nada é gravado', () => {
         .replace(/\/\*[\s\S]*?\*\//g, '');
       expect(WRITES.exec(code)?.[0] ?? `${path} sem escrita`).toBe(`${path} sem escrita`);
     }
+  });
+});
+
+describe('a tradução da decisão', () => {
+  test('o contrafactual usa a função pura do pacote e não tem tradução nem halt próprios', async () => {
+    const root = new URL('../', import.meta.url).pathname;
+    const code = await Bun.file(`${root}scripts/analyst-counterfactual/simulation.ts`).text();
+    expect(code).toContain('toGovernInputs(');
+    expect(code).not.toMatch(/COMMAND_KIND\.(HALT|RESUME)|decideShadowStep|ENGINE_REASON_OF/);
   });
 });

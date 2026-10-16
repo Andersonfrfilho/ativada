@@ -4,21 +4,20 @@ import {
   createAnalystSeriesCache,
   type AnalystSeriesCache,
 } from '../../apps/worker-ativada/src/live/analyst-series-cache.js';
-import { decideShadowStep } from '../../apps/worker-ativada/src/live/analyst-step.js';
+import {
+  analyzeStep,
+  type AnalystVerdict,
+} from '../../apps/worker-ativada/src/live/analyst-step.js';
 import type { AnalystRunKit } from '../../apps/worker-ativada/src/live/load-analyst-context.js';
-import { ANALYST_COMMAND_REASON } from '../../packages/risk-analyst/src/index.js';
+import { toGovernInputs, type GovernInputs } from '../../packages/risk-analyst/src/index.js';
 import { advanceCandle } from '../../packages/run-recording/src/index.js';
 import {
-  COMMAND_KIND,
-  COMMAND_REASON,
   createEngine,
   ENGINE_TIMEFRAME_DURATION_MILLISECONDS,
+  ENTRY_RISK_SCALE,
   formatEngineDecimal,
   toEngineDecimal,
-  type CommandKind,
-  type CommandReason,
   type EngineCandle,
-  type EngineCommand,
   type EngineState,
   type RunSetup,
   type StepResult,
@@ -31,15 +30,9 @@ import type {
   SimulationOutcome,
 } from './counterfactual.types.js';
 
-// Nada aqui grava: o passo é o `advanceCandle` do produto sobre a série em memória, como a linha de 15 min da spec 003.
-// O motor ainda não tem motivo de comando do analista (Fase 4, que muda o motor e a tabela `run_commands`): como nada é
-// gravado, o comando do analista entra com um motivo que o motor já conhece; o efeito na carteira é o mesmo.
-const ENGINE_REASON_OF: Readonly<Record<CommandKind, CommandReason>> = {
-  [COMMAND_KIND.HALT]: COMMAND_REASON.USER_STOP,
-  [COMMAND_KIND.RESUME]: COMMAND_REASON.USER_RESUME,
-  [COMMAND_KIND.EXIT_POSITION]: COMMAND_REASON.WINDOW_END,
-};
-const ENGINE_KINDS: readonly string[] = Object.values(COMMAND_KIND);
+// Nada aqui grava: o passo é o `advanceCandle` do produto sobre a série em memória, como a linha de 15 min da spec 003. O analista
+// GOVERNA como no worker (ADR 0002 A21): decide sobre o passo feito, `toGovernInputs` (a mesma função do worker) o traduz em
+// teto de entrada e saída por tempo, e o candle é refeito com eles.
 
 export type SimulationParams = {
   readonly strategy: StrategyVersion;
@@ -69,26 +62,6 @@ function bump(counts: Record<string, number>, key: string): void {
   counts[key] = (counts[key] ?? 0) + 1;
 }
 
-function readProperty(value: unknown, name: string): unknown {
-  if (typeof value !== 'object' || value === null) return undefined;
-  return Object.getOwnPropertyDescriptor(value, name)?.value;
-}
-
-function isEngineKind(kind: string): kind is CommandKind {
-  return ENGINE_KINDS.includes(kind);
-}
-
-// Os comandos que a decisão gravaria (`commands` do registro), como o motor os entende; fecham no fechamento da vela.
-function toEngineCommands(commands: unknown, candle: EngineCandle): EngineCommand[] {
-  if (!Array.isArray(commands)) return [];
-  return commands.flatMap((item: unknown) => {
-    const kind = readProperty(item, 'kind');
-    const commandId = readProperty(item, 'commandId');
-    if (typeof kind !== 'string' || typeof commandId !== 'string' || !isEngineKind(kind)) return [];
-    return [{ commandId, issuedAt: candle.closeTime, kind, reason: ENGINE_REASON_OF[kind] }];
-  });
-}
-
 type CandleWindow = { readonly from: number; readonly to: number; readonly limit: number };
 
 function createCandleSource(
@@ -113,58 +86,63 @@ function createCandleSource(
 }
 
 type AnalystDriver = {
-  readonly decide: (candle: EngineCandle, result: StepResult) => Promise<EngineCommand[]>;
+  readonly decide: (candle: EngineCandle, result: StepResult) => Promise<GovernInputs>;
+  // O histórico da própria simulação guarda o resultado FINAL do passo, como no worker.
+  readonly record: (candle: EngineCandle, result: StepResult) => void;
   readonly tally: MutableTally;
 };
 
-// O analista do worker (a mesma série por âncora, o mesmo `decideShadowStep`) governando uma carteira em memória: a porta
-// que ele fecha é a que ele reabre, e a de meta ou do usuário nunca é desfeita (aqui só há a dele).
+function tallyDecision(tally: MutableTally, verdict: AnalystVerdict, inputs: GovernInputs): void {
+  tally.decisions += 1;
+  if ('failureCode' in verdict) {
+    tally.failed += 1;
+    return;
+  }
+  const { decision } = verdict;
+  bump(tally.postures, decision.posture);
+  bump(tally.reasons, decision.reason);
+  if (decision.entryGate === 'closed') tally.gateClosed += 1;
+  for (const command of inputs.commands) bump(tally.commands, command.kind);
+}
+
+// O analista do worker (a mesma série por âncora, o mesmo `analyzeStep`) governando uma carteira em memória.
 function createAnalystDriver(params: SimulationParams, cache: AnalystSeriesCache): AnalystDriver {
   const tally = createTally();
-  const findCandles = createCandleSource(params.pair.candles);
   const history = createAnalystRunHistory({
     readAnalystHistory: () => Promise.resolve({ scores: [], equities: [], positions: [] }),
   });
-  let ownsHalt = false;
-  let isHalted = false;
   const base: AnalystRunKit = {
     runId: 'counterfactual',
     market: params.pair.market,
     seriesCache: cache,
-    source: { findCandles, observations: params.pair.observations, lastOpenTime: 0 },
+    source: {
+      findCandles: createCandleSource(params.pair.candles),
+      observations: params.pair.observations,
+      lastOpenTime: 0,
+    },
     history,
     goal: null,
     waiting: { isPending: false },
-    haltReason: () => (ownsHalt && isHalted ? ANALYST_COMMAND_REASON.PAUSE : null),
+    haltReason: () => null,
   };
   return {
     tally,
-    decide: async (candle, result): Promise<EngineCommand[]> => {
-      isHalted = result.state.wallet.isHalted;
+    record: (candle, result): void => history.record(candle, result.decisions),
+    decide: async (candle, result): Promise<GovernInputs> => {
       const kit: AnalystRunKit = {
         ...base,
         source: { ...base.source, lastOpenTime: candle.openTime },
       };
-      const record = await decideShadowStep(kit, {
-        context: { setup: params.setup, strategy: params.strategy },
+      const context = { setup: params.setup, strategy: params.strategy };
+      const verdict = await analyzeStep(kit, { context, candle, result });
+      const inputs = toGovernInputs({
+        decision: 'decision' in verdict ? verdict.decision : undefined,
+        wallet: { hasPosition: result.state.wallet.position !== null },
         candle,
-        result,
+        isGoalEnded: false,
       });
-      tally.decisions += 1;
-      if (record.status !== 'decided') {
-        tally.failed += 1;
-        return [];
-      }
-      bump(tally.postures, record.posture ?? 'unknown');
-      bump(tally.reasons, record.reason ?? 'unknown');
-      if (record.entryGate === 'closed') tally.gateClosed += 1;
-      const commands = toEngineCommands(record.commands, candle);
-      for (const command of commands) {
-        bump(tally.commands, command.kind);
-        if (command.kind === COMMAND_KIND.HALT) ownsHalt = true;
-        if (command.kind === COMMAND_KIND.RESUME) ownsHalt = false;
-      }
-      return commands;
+      tallyDecision(tally, verdict, inputs);
+      return inputs;
     },
   };
 }
@@ -210,6 +188,10 @@ function createRecorder(): Recorder {
   };
 }
 
+function isNeutral(inputs: GovernInputs): boolean {
+  return inputs.commands.length === 0 && inputs.entryRiskScale === ENTRY_RISK_SCALE.FULL;
+}
+
 export async function simulate(
   params: SimulationParams,
   cache: AnalystSeriesCache = createAnalystSeriesCache(),
@@ -224,7 +206,7 @@ export async function simulate(
   for (let index = params.firstIndex; index < pair.candles.length; index += 1) {
     const candle = pair.candles[index];
     if (candle === undefined) break;
-    const step = (commands?: readonly EngineCommand[]): StepResult =>
+    const step = (inputs?: GovernInputs): StepResult =>
       advanceCandle({
         engine,
         strategy,
@@ -234,11 +216,13 @@ export async function simulate(
         previousOpenTime,
         durationMilliseconds,
         pickSentiment: () => undefined,
-        commands,
+        commands: inputs?.commands,
+        entryRiskScale: inputs?.entryRiskScale,
       }).result;
     let result = step();
-    const commands = (await driver?.decide(candle, result)) ?? [];
-    if (commands.length > 0) result = step(commands);
+    const inputs = await driver?.decide(candle, result);
+    if (inputs !== undefined && !isNeutral(inputs)) result = step(inputs);
+    driver?.record(candle, result);
     recorder.add(result);
     state = result.state;
     previousOpenTime = candle.openTime;

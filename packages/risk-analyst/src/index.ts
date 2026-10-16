@@ -44,6 +44,12 @@ export {
   type ToAnalystCommandsParams,
 } from './analyst-commands.js';
 export { decideAnalyst } from './analyst-decision.js';
+export {
+  toGovernInputs,
+  type GovernCandle,
+  type GovernInputs,
+  type ToGovernInputsParams,
+} from './govern-inputs.js';
 export type * from './analyst-decision.types.js';
 export * from './analyst-messages.constant.js';
 export {

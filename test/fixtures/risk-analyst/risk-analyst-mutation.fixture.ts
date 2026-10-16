@@ -23,6 +23,7 @@ export const RISK_ANALYST_MUTANT_TARGET: MutantTarget = {
     'test/risk-analyst-properties.contract.test.ts',
     'test/risk-analyst-golden.contract.test.ts',
     'test/risk-analyst-specialist-motive.contract.test.ts',
+    'test/risk-analyst-govern-inputs.contract.test.ts',
   ],
   sourceVariable: RISK_ANALYST_SOURCE_VARIABLE,
   judgeTimeoutMilliseconds: 240_000,

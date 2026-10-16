@@ -89,8 +89,8 @@ const MUTANTS: readonly LiveSourceMutant[] = [
     name: 'ANALYST_FAILURE_ESCAPES_THE_STEP',
     edits: edit(
       ANALYST_STEP,
-      '  } catch (error: unknown) {\n    return toFailedRecord({',
-      '  } catch (error: unknown) {\n    throw error;\n    return toFailedRecord({',
+      '  } catch (error: unknown) {\n    return { failureCode: describeAnalystFailure(error) };',
+      '  } catch (error: unknown) {\n    throw error;\n    return { failureCode: describeAnalystFailure(error) };',
     ),
   },
   {

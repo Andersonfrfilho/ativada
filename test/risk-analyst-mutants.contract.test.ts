@@ -32,6 +32,7 @@ const MESSAGES = 'analyst-messages.ts';
 const MESSAGE_CONSTANT = 'analyst-messages.constant.ts';
 const MOTIVE = 'specialist-motive.ts';
 const MOTIVE_CONSTANT = 'specialist-motive.constant.ts';
+const GOVERN = 'govern-inputs.ts';
 
 function edit(file: string, find: string, replace: string, occurrences = 1): SourceEdit[] {
   return [{ file, find, replace, occurrences }];
@@ -431,6 +432,63 @@ const MESSAGE_MUTANTS: readonly SourceMutant[] = [
   },
 ];
 
+const TIME_EXIT_CONDITION = 'decision.timeExitDue && wallet.hasPosition && !isGoalEnded';
+
+const GOVERN_MUTANTS: readonly SourceMutant[] = [
+  {
+    name: 'GOVERN_FAILURE_KEEPS_FULL_SIZE',
+    edits: edit(
+      GOVERN,
+      'if (decision === undefined) return { commands: [], entryRiskScale: ENTRY_RISK_SCALE.NONE };',
+      'if (decision === undefined) return { commands: [], entryRiskScale: ENTRY_RISK_SCALE.FULL };',
+    ),
+  },
+  {
+    name: 'GOVERN_CLOSED_GATE_KEEPS_THE_SIZE',
+    edits: edit(
+      GOVERN,
+      'isGateOpen ? scaleOf(decision.riskScale) : ENTRY_RISK_SCALE.NONE',
+      'scaleOf(decision.riskScale)',
+    ),
+  },
+  {
+    name: 'GOVERN_CLOSED_GATE_BLOCKS_THE_TIME_EXIT',
+    edits: edit(GOVERN, TIME_EXIT_CONDITION, `${TIME_EXIT_CONDITION} && isGateOpen`),
+  },
+  {
+    name: 'GOVERN_TIME_EXIT_WITHOUT_A_POSITION',
+    edits: edit(GOVERN, TIME_EXIT_CONDITION, 'decision.timeExitDue && !isGoalEnded'),
+  },
+  {
+    name: 'GOVERN_ENDED_GOAL_STILL_COMMANDS',
+    edits: edit(GOVERN, TIME_EXIT_CONDITION, 'decision.timeExitDue && wallet.hasPosition'),
+  },
+  {
+    name: 'GOVERN_TIME_EXIT_REASON_IS_USER_STOP',
+    edits: edit(GOVERN, 'COMMAND_REASON.ANALYST_TIMEOUT', 'COMMAND_REASON.USER_STOP'),
+  },
+  {
+    name: 'GOVERN_TIME_EXIT_KIND_IS_HALT',
+    edits: edit(GOVERN, 'kind: COMMAND_KIND.EXIT_POSITION', 'kind: COMMAND_KIND.HALT'),
+  },
+  {
+    name: 'GOVERN_UNKNOWN_SIZE_BECOMES_FULL',
+    edits: edit(GOVERN, '?? ENTRY_RISK_SCALE.NONE;', '?? ENTRY_RISK_SCALE.FULL;'),
+  },
+  {
+    name: 'GOVERN_SIZE_MATCHED_BY_PREFIX',
+    edits: edit(GOVERN, '(scale) => scale === value', '(scale) => value.startsWith(scale)'),
+  },
+  {
+    name: 'GOVERN_COMMAND_ID_USES_THE_CLOSE_TIME',
+    edits: edit(GOVERN, 'analyst:${candle.openTime}', 'analyst:${candle.closeTime}'),
+  },
+  {
+    name: 'GOVERN_ISSUED_AT_IS_THE_OPEN_TIME',
+    edits: edit(GOVERN, 'issuedAt: candle.closeTime', 'issuedAt: candle.openTime'),
+  },
+];
+
 const MUTANTS: readonly SourceMutant[] = [
   ...READINGS_MUTANTS,
   ...AUDITOR_MUTANTS,
@@ -439,6 +497,7 @@ const MUTANTS: readonly SourceMutant[] = [
   ...DECISION_MUTANTS,
   ...MESSAGE_MUTANTS,
   ...MOTIVE_MUTANTS,
+  ...GOVERN_MUTANTS,
 ];
 
 describe('analyst-1: o contrato reprova cada mutante do código de produção', () => {
