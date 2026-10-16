@@ -9,6 +9,7 @@ import controls from '../styles/Controls.module.css';
 import { RunHeader } from '../runs/RunHeader.component.js';
 import {
   LiveDecisionsSection,
+  LiveSummarySection,
   LiveTrackingSection,
 } from '../runs/live-tracking/LiveTrackingSection.component.js';
 import { RunProgressCard } from '../runs/RunProgressCard.component.js';
@@ -26,7 +27,7 @@ function failureMessage(run: RunDetail): string {
   return FAILURE_TEXT[code] ?? `A execução falhou (${code || 'sem código'}).`;
 }
 
-// A simulação ao vivo (qualquer estado, menos falha) abre pelo acompanhamento: saldo, meta, o que falta e as decisões; a sala e o gráfico vêm depois.
+// A simulação ao vivo (qualquer estado, menos falha) abre pelo pulso e pelo resumo curto; o gráfico com a equipe vem logo depois e o detalhe fica por último.
 function LivePaperBody({ run }: { readonly run: RunDetail }): ReactElement {
   const hasChart = run.status === RUN_STATUS.RUNNING || run.status === RUN_STATUS.CANCELLED;
   return (
@@ -36,10 +37,12 @@ function LivePaperBody({ run }: { readonly run: RunDetail }): ReactElement {
           {failureMessage(run)}
         </p>
       ) : null}
-      <LiveTrackingSection run={run} />
+      <LiveSummarySection run={run} />
       {run.status === RUN_STATUS.COMPLETED ? <CompletedBacktest run={run} /> : null}
-      <LiveDecisionsSection run={run} />
-      <LiveChartArea runId={run.id} hasChart={hasChart} />
+      <LiveChartArea runId={run.id} hasChart={hasChart}>
+        <LiveDecisionsSection run={run} />
+        <LiveTrackingSection run={run} />
+      </LiveChartArea>
       {isActiveRun(run) ? <RunProgressCard run={run} /> : null}
     </>
   );

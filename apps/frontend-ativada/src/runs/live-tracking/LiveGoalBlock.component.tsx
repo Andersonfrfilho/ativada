@@ -23,7 +23,7 @@ import { CHIP_TONE, StatusChip, type ChipTone } from './StatusChip.component.js'
 
 const CLOCK_MILLISECONDS = 60_000;
 
-const OUTCOME_TEXT: Readonly<Record<NonNullable<LiveGoal['outcome']>, string>> = {
+export const GOAL_OUTCOME_TEXT: Readonly<Record<NonNullable<LiveGoal['outcome']>, string>> = {
   goal_reached: 'Meta alcançada',
   goal_stopped: 'A simulação parou na perda máxima aceita',
   goal_expired: 'O prazo da meta acabou',
@@ -42,7 +42,7 @@ function goalChip(goal: LiveGoal, meters: GoalMeters | undefined): ReactElement 
         tone={OUTCOME_CHIP[goal.outcome]}
         icon={goal.outcome === 'goal_reached' ? 'check' : 'alert'}
       >
-        {OUTCOME_TEXT[goal.outcome]}
+        {GOAL_OUTCOME_TEXT[goal.outcome]}
       </StatusChip>
     );
   }
@@ -74,7 +74,7 @@ function OutcomeBody({
   const when = goal.outcomeAt === null ? '' : ` em ${formatDayAndTime(goal.outcomeAt, timeZone)}`;
   return (
     <p role="status" className={styles.bigValue}>
-      {OUTCOME_TEXT[goal.outcome]}
+      {GOAL_OUTCOME_TEXT[goal.outcome]}
       {when}
     </p>
   );
