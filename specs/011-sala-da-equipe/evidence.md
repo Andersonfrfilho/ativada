@@ -154,3 +154,45 @@ camada "Stop e alvo" (caixas por operação) segue como estava.
   esquerda abaixo do gráfico no desktop.
 - A "Sala com o gráfico" mantém o gráfico dentro da sala (sem a coluna); a equipe compacta não aparece nesse layout.
 - Rever velas da sala grande e a vela apontada no gráfico são seleções independentes (sem estado compartilhado, por pedido).
+
+## Equipe não aparecia (2026-10-16)
+
+Relato: "no gráfico mais equipe não está aparecendo". Conferido no painel de desenvolvimento (Edge, 1280 px, tema claro, login
+local de teste) nas quatro execuções abaixo, por DOM, rede e console; capturas em `capturas/` do scratchpad da sessão.
+
+| Execução | Antes | Depois |
+|---|---|---|
+| LINK 15 min, 1 operação, sem analista | coluna "Equipe agora" presente (361 px, ao lado do canvas de 756 px) | igual |
+| LINK 15 min com analista | presente | presente |
+| PEPE recém-criada | coluna presente só depois da 1ª decisão; antes dela e com o gráfico sem velas, nada | coluna ao lado do aviso do gráfico, com "A equipe ainda está olhando o mercado…" |
+| Backtest `01a131cd…` | **nenhuma coluna**; o canvas (756 px) ficava com a coluna da direita vazia | coluna "Equipe agora" com a frase honesta de execução histórica |
+
+Causas encontradas (cada uma reproduzida por contrato em `test/team-always-beside-chart.contract.tsx`):
+
+1. **Sem decisões ainda** (`useCompactTeamModel` devolvia `undefined` e o `CompactTeam` renderizava `null`): simulação recém-criada
+   ou parada antes da 1ª vela não tinha equipe. Agora diz "A equipe ainda está olhando o mercado. A primeira opinião chega quando a
+   vela de N fechar às HH:MM." (hora no fuso do usuário, de `nextDecisionAt`) ou, parada, "não está rodando".
+2. **`live-status` carregando, 409/429/5xx** (`useLiveStatusQuery` sem dado): o componente renderizava `null`; uma resposta 429 do
+   limite de renovação (visto várias vezes no dev) fazia a equipe sumir sem aviso. Agora a moldura fica, com "Carregando a equipe…"
+   ou "Não deu para carregar a equipe agora." e o botão "Tentar de novo".
+3. **Backtest e walk-forward**: `CompletedBacktest`/`CompletedWalkForward` desenham o gráfico fora do `TeamAsideProvider`, e o
+   `CandleCanvas` só montava a coluna com `view.isLive`. Agora a coluna existe e diz "Esta execução roda sobre o passado: a equipe só
+   opina nas simulações ao vivo. As compras e vendas estão marcadas no gráfico." (backtest não grava falas; não há dado por vela).
+4. **Simulação ao vivo concluída** (`hasChart` falso no `LiveChartArea`; o gráfico vem do `CompletedBacktest`): sem provedor, sem
+   equipe. Agora `RunTeamAside` dá a equipe compacta à execução ao vivo terminada.
+5. **Gráfico que não chega ao canvas** (carregando as velas, "Ainda não há velas para mostrar", velas públicas ausentes, canvas
+   que falhou): a coluna morava dentro do `CandleCanvas`, então sumia junto. Agora `BesideTeam` reserva a mesma coluna ao lado desses avisos.
+6. **Layout "Sala com o gráfico" salvo no navegador** (`ativada.team-room`): a equipe compacta some por desenho, e a sala sem
+   decisões, carregando ou com erro **não renderizava o monitor**: o gráfico inteiro desaparecia e não havia botão para voltar.
+   Agora esses estados mantêm o gráfico (monitor) e o seletor "Gráfico + equipe | Sala com o gráfico" fica visível no cartão.
+7. Largura < 1100 px: não é causa; a coluna desce para logo abaixo do canvas (CSS `min-width: 1100px` já existia).
+   `isCollapsed` não esconde a equipe compacta (só a sala grande).
+
+Verificação: typecheck, lint e format do painel limpos; `bun run --cwd apps/frontend-ativada test`: 1231 testes verdes (100
+arquivos). Testes antigos que seguravam o elemento "Equipe agora" passaram a esperar a opinião chegar (`test/support/loaded-team.ts`),
+porque a moldura agora existe desde o carregamento. Para ver no navegador: Ctrl+F5 (o Vite recarrega sozinho, mas o painel de
+produção precisa de novo build).
+
+### Pendências
+
+- Backtest não mostra a equipe "da vela apontada": o motor não grava falas por vela em backtest (nem há rota); a coluna diz isso.
