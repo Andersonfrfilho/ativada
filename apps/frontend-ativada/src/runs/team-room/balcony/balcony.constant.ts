@@ -111,6 +111,8 @@ export const BALCONY_TEXT = {
   RANKING_UNMEASURED:
     'O servidor ainda não mede o acerto por especialista: sem número, sem posição.',
   RANKING_MODELS: 'Nina, Lucas e Clara: os agentes de modelo ainda não existem.',
+  PAUSE: 'Pausar animação',
+  RESUME: 'Continuar animação',
   NET_WORD: 'líquido',
   PROTECTION_TITLE: 'PROTEÇÃO CONTRA QUEDA',
   TARGET_TITLE: 'Alvo de ganho',

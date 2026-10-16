@@ -383,9 +383,23 @@
   border: 0;
 }
 
+@keyframes lean {
+  from {
+    transform: translateY(6px) rotate(0deg);
+  }
+}
+
+.balcony[data-motion='on'] .figure {
+  animation: lean var(--motion-medium) var(--ease-out);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dots {
     transition: none;
+  }
+
+  .balcony[data-motion='on'] .figure {
+    animation: none;
   }
 }
 

@@ -96,6 +96,13 @@ describe('a varanda: a equipe em pé acima do gráfico (spec 011, escritório)',
     expect(sheet.textContent).toContain('Custo estimado por dia: —');
   });
 
+  test('the animation has its own pause button and the choice is remembered', async () => {
+    const team = await openBalcony();
+    fireEvent.click(within(team).getByRole('button', { name: 'Pausar animação' }));
+    expect(within(team).getByRole('button', { name: 'Continuar animação' })).toBeDefined();
+    expect(localStorage.getItem('ativada.team-room')).toContain('"isAnimationOn":false');
+  });
+
   test('the board opens on the protections tab and says why when there is no open position', async () => {
     const team = await openBalcony();
     expect(within(team).getByRole('tab', { name: 'Proteções', selected: true })).toBeDefined();

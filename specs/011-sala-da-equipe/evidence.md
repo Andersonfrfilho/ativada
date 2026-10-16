@@ -384,3 +384,11 @@ Aba Ranking com tabela: posição, agente, "N de M" e taxa contra a moeda ao ar 
 "Acima da moeda ao ar", ordem pelo limite inferior de Wilson. O servidor só mede o resumo do placar (`/projections`), então essa é a única linha com número; Tiago, Renata, Vitor e Sofia
 aparecem "—" com o peso da estratégia e a frase "sem número, sem posição", e os modelos como "ainda não existem". Rodapé "Ranking é desempenho passado, não garantia." Contrato `balcony-ranking.contract.ts` (4).
 **Pendente (precisa do servidor):** ranking por especialista, janela selecionável, tendência da semana e melhor/pior dica com botão que leva o gráfico à vela.
+
+### Bloco 2 (G): pausa e movimento; remedição final
+
+- Botão próprio "Pausar animação / Continuar animação" na varanda (lembrado em `ativada.team-room`); a sequência de vela nova segue ≤ 1,8 s (pensa, fala um a um) e os bonecos se
+  inclinam por `--motion-medium` (`@keyframes lean`), tudo desligado com `prefers-reduced-motion` ou animação desligada. **Pendente:** a caminhada até a Alice e a placa da Renata
+  no sinal (escritório completo, fase 3).
+- Remedição com tudo (modelos, ranking, pausa): 1366×650, 1366×768, 1536×730, 1440×700, 1280×720, 1280×600 e 1136×600 com o gráfico inteiro no viewport e scrollY = 0; 1024×540 e
+  853×480 (zoom 125% e 150%) não cabem (gráfico no mínimo de 240 px, base 28 px e 0 px além, respectivamente 568 > 540 e 635 > 480).

@@ -15,6 +15,7 @@ import { useCompactTeamModel, type CompactTeamModel } from '../useCompactTeamMod
 import { BALCONY_TEXT } from './balcony.constant.js';
 import styles from './Balcony.module.css';
 import { DENSITY } from './balcony-density.js';
+import { useTeamRoomPreference } from '../useTeamRoomPreference.hook.js';
 import { useBalconyDensity } from './useBalconyDensity.hook.js';
 import { BalconyCrew } from './BalconyCrew.component.js';
 
@@ -37,7 +38,13 @@ function horizonOf(
   return `${BALCONY_TEXT.VALID_UNTIL} ${formatTimeInZone(nextDecisionAt, timeZone)}`;
 }
 
-function BalconyFrame({ children }: { readonly children: ReactNode }): ReactElement {
+type FrameProps = {
+  readonly children: ReactNode;
+  readonly isAnimationOn: boolean;
+  readonly onToggleAnimation: () => void;
+};
+
+function BalconyFrame({ children, isAnimationOn, onToggleAnimation }: FrameProps): ReactElement {
   const headingId = useId();
   const { density, toggle, expand } = useBalconyDensity();
   const isCollapsed = density === DENSITY.COLLAPSED;
@@ -57,6 +64,14 @@ function BalconyFrame({ children }: { readonly children: ReactNode }): ReactElem
           : density === DENSITY.COMFORTABLE
             ? BALCONY_TEXT.COMPACT
             : BALCONY_TEXT.COMFORTABLE}
+      </button>
+      <button
+        type="button"
+        className={styles.densityButton}
+        aria-pressed={!isAnimationOn}
+        onClick={onToggleAnimation}
+      >
+        {isAnimationOn ? BALCONY_TEXT.PAUSE : BALCONY_TEXT.RESUME}
       </button>
       {children}
     </aside>
@@ -146,9 +161,14 @@ function BalconyBody(props: CompactTeamProps): ReactElement {
 // A equipe na varanda, acima do gráfico e sempre em tela: de pé, olhando o pregão, com o crachá à vista e um balão curto de
 // cada um; a lousa ao lado guarda o que é longo. Mesmas frases do servidor da coluna antiga, nenhuma consulta nova.
 export function TeamBalcony(props: CompactTeamProps): ReactElement {
+  const { preference, update } = useTeamRoomPreference();
+  const isAnimationOn = props.isAnimationOn !== false && preference.isAnimationOn;
   return (
-    <BalconyFrame>
-      <BalconyBody {...props} />
+    <BalconyFrame
+      isAnimationOn={isAnimationOn}
+      onToggleAnimation={() => update({ isAnimationOn: !preference.isAnimationOn })}
+    >
+      <BalconyBody {...props} isAnimationOn={isAnimationOn} />
     </BalconyFrame>
   );
 }
