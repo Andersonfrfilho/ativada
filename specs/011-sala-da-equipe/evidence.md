@@ -302,3 +302,29 @@ outras frentes em andamento (notices, overview, varanda).
   abaixo de 20%; "faltam N% até a proteção") e o alvo de ganho com o líquido. Sem operação aberta a aba diz isso.
 - **Pendente:** proteção por tempo, trava e lucro mínimo na lousa (o `live-status` não os traz por operação; ficam para quando a spec 007 expuser), e o botão
   "Copiar" da proteção (a spec 014 já tem "Copiar" na ficha do sinal).
+
+### Densidade e viewports úteis (feedback "ainda não coube tudo na tela")
+
+- **Densidade** (`balcony-density.ts`, `useBalconyDensity`): `confortável` a partir de 800 px de altura, `compacto` de 640 a 799 (sem bonequinho, balão de 1 linha,
+  lousa com altura contida) e `recolhida` abaixo de 640 (só avatares com selo, UM balão por vez, lousa fora, botão "Expandir equipe"). Botão "Compacto /
+  Confortável" visível, lembrado em `localStorage` (`ativada.balcony-density`, com try/catch); a medida segue o redimensionamento e o zoom. O gráfico mantém no
+  mínimo 320 px (`clamp(320px, 100dvh − 440px, 640px)`, e `− 330px` com janela baixa). Contrato `balcony-density.contract.ts` (4).
+- **Medida no app dev (Edge, scrollY = 0, sem rolagem horizontal salvo a barra do app a 1136):**
+
+| Viewport | Densidade | Crachás | Balão ativo | Varanda (topo → base) | Gráfico (topo, altura) |
+|---|---|---|---|---|---|
+| 1366 × 650 | compacta | 6/6 | sim | 296 → 491 | 660 (acima do mínimo) |
+| 1366 × 768 | compacta | 6/6 | sim | 296 → 491 | 660, 438 px |
+| 1536 × 730 | compacta | 6/6 | sim | 296 → 491 | 660, 400 px |
+| 1440 × 700 | compacta | 6/6 | sim | 296 → 491 | 660, 370 px |
+| 1280 × 720 | compacta | 6/6 | sim | 296 → 491 | 660, 390 px |
+| 1280 × 600 | recolhida | 6/6 | sim | 296 → 470 | 639, 320 px |
+| 1136 × 600 (zoom 110%) | recolhida | 6/6 | sim | 296 → 470 | 639, 320 px |
+| 1024 × 540 (zoom 125%) | recolhida | 6/6 | sim | 296 → 470 | 639, 280 px |
+| 853 × 480 (zoom 150%) | recolhida | 6/6 | sim | 296 → 470 | 743, 280 px |
+| 1920 × 1080 | confortável | 6/6 | sim | 296 → 560 | 729, 640 px |
+
+  **Passam:** equipe (crachás e balão ativo) inteira na janela, sem rolar, em todas as combinações acima. **Não passa:** o gráfico inteiro com `scrollY = 0`:
+  acima da varanda ficam ~296 px (aviso 38, cabeçalho 61, troca de execução 59, título e status do cartão ~100) e abaixo dela ~170 px de barras do gráfico
+  (tempo/zoom, camadas, legenda), então o gráfico começa em ~640 a 730 px. A varanda é `sticky`: ao rolar, equipe e gráfico ficam juntos em tela.
+  Fechar essa conta exige compactar o cabeçalho do app, a troca de execução e as barras do gráfico (arquivos de outras specs); proposta na pendência.

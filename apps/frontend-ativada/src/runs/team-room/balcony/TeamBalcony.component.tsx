@@ -14,6 +14,8 @@ import type { CompactTeamProps } from '../CompactTeam.component.js';
 import { useCompactTeamModel, type CompactTeamModel } from '../useCompactTeamModel.hook.js';
 import { BALCONY_TEXT } from './balcony.constant.js';
 import styles from './Balcony.module.css';
+import { DENSITY } from './balcony-density.js';
+import { useBalconyDensity } from './useBalconyDensity.hook.js';
 import { BalconyCrew } from './BalconyCrew.component.js';
 
 function momentText({ view, isPointed, closedText }: CompactTeamModel): string {
@@ -37,12 +39,25 @@ function horizonOf(
 
 function BalconyFrame({ children }: { readonly children: ReactNode }): ReactElement {
   const headingId = useId();
+  const { density, toggle, expand } = useBalconyDensity();
+  const isCollapsed = density === DENSITY.COLLAPSED;
   return (
-    <aside className={styles.frame} aria-labelledby={headingId}>
+    <aside className={styles.frame} data-density={density} aria-labelledby={headingId}>
       <h3 id={headingId} className={styles.frameTitle}>
         <Icon name="team" size={16} />
         {TEAM_ROOM_TEXT.COMPACT_TITLE}
       </h3>
+      <button
+        type="button"
+        className={styles.densityButton}
+        onClick={isCollapsed ? expand : toggle}
+      >
+        {isCollapsed
+          ? BALCONY_TEXT.EXPAND
+          : density === DENSITY.COMFORTABLE
+            ? BALCONY_TEXT.COMPACT
+            : BALCONY_TEXT.COMFORTABLE}
+      </button>
       {children}
     </aside>
   );

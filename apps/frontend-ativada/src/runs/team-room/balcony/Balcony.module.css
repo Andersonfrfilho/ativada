@@ -415,8 +415,14 @@
   }
 
   .role,
-  .seal {
+  .seal,
+  .badgeName > span {
     display: none;
+  }
+
+  .badge {
+    padding: 2px;
+    font-size: 11px;
   }
 
   .badge {
@@ -520,4 +526,78 @@
   font-size: var(--text-xs);
   font-weight: 600;
   color: var(--ink);
+}
+
+.densityButton {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.densityButton:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+/* Compacto: sem bonequinho, crachá e balão de uma linha; a lousa com altura contida. */
+.frame[data-density='compact'] .figure,
+.frame[data-density='collapsed'] .figure {
+  display: none;
+}
+
+.frame[data-density='compact'] .bubbleLine {
+  -webkit-line-clamp: 1;
+}
+
+.frame[data-density='compact'] .bubbleHorizon,
+.frame[data-density='compact'] .legend {
+  display: none;
+}
+
+.frame[data-density='compact'] .boardPanel {
+  max-height: 72px;
+  overflow: auto;
+}
+
+.frame[data-density='compact'] .bubble {
+  margin-top: 6px;
+}
+
+/* Recolhida (janela baixa): só os avatares com selo e UM balão por vez; a ficha abre ao tocar ou focar. */
+.frame[data-density='collapsed'] .bubble {
+  display: none;
+}
+
+.frame[data-density='collapsed'] .slot[data-active='true'] .bubble {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  display: grid;
+  width: 160px;
+  max-width: none;
+  margin: 4px 0 0;
+}
+
+.frame[data-density='collapsed'] .balcony {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.frame[data-density='collapsed'] .board {
+  display: none;
+}
+
+.frame[data-density='collapsed'] .crew {
+  padding-bottom: 56px;
+}
+
+.frame[data-density='collapsed'] .moment,
+.frame[data-density='collapsed'] .fixedLine {
+  display: none;
 }

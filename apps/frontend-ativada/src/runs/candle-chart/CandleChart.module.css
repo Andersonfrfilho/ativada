@@ -193,7 +193,7 @@
   }
 
   .canvas {
-    height: clamp(240px, calc(100dvh - 440px), 640px);
+    height: clamp(320px, calc(100dvh - 440px), 640px);
   }
 }
 
@@ -228,4 +228,11 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--ink);
+}
+
+/* Janela baixa: a varanda compacta devolve altura ao gráfico, que mantém o mínimo útil de 320 px. */
+@media (min-width: 1100px) and (max-height: 799px) {
+  .canvas {
+    height: clamp(320px, calc(100dvh - 330px), 640px);
+  }
 }
