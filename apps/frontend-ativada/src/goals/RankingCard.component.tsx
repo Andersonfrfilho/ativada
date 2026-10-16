@@ -124,7 +124,7 @@ function orderByRank(combinations: readonly Combination[], isGoalOnly: boolean):
 
 export function RankingCard({ goalId, evaluation }: RankingCardProps): ReactElement {
   const choice = useSimulationChoice();
-  const simulation = useGoalSimulation(goalId, choice.timeframe, choice.isAnalystOn);
+  const simulation = useGoalSimulation(goalId, choice.timeframe, choice.analystMode);
   const slots = useLiveRunSlots();
   const [isGoalOnly, setIsGoalOnly] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);

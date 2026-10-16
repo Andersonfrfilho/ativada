@@ -51,8 +51,11 @@ export const SMALL_CANDLE_FEES_NOTICE =
 
 export const SIMULATION_PICKER_LEGEND = 'De quanto em quanto tempo olhar o mercado';
 
-// O analista de risco (spec 007): só existe com a vela de 15 min, em modo sombra; os 0,30% são a taxa e o deslizamento padrão de
+// O analista de risco (spec 007): só existe com a vela de 15 min, em sombra (padrão) ou governando; os 0,30% são a taxa e o deslizamento padrão de
 // uma ida e volta (0,10% e 0,05% de cada lado). Tudo é texto fixo: o painel não calcula nada.
+export const ANALYST_MODE = { SHADOW: 'shadow', GOVERN: 'govern' } as const;
+export type AnalystMode = (typeof ANALYST_MODE)[keyof typeof ANALYST_MODE];
+
 export const ANALYST_OPTION_LABEL = 'Deixar o analista de risco decidir';
 export const ANALYST_LOCKED_TIMEFRAME_NOTICE =
   'A vela fica travada em 15 minutos: o analista olha o mercado a cada vela de 15 minutos.';
@@ -60,6 +63,17 @@ export const ANALYST_ROUND_TRIP_FEE_NOTICE =
   'Cada ida e volta (compra e venda) custa 0,30% do valor, entre taxa e deslizamento. O analista só libera uma entrada quando o movimento típico paga pelo menos o dobro disso.';
 export const ANALYST_SHADOW_NOTICE =
   'Modo sombra: o analista só observa e mostra o que faria; a simulação segue a estratégia sem mudança.';
+export const ANALYST_GOVERN_NOTICE =
+  'Governar: o analista pode pausar as entradas, reduzir o tamanho da entrada (¼, ½ ou 1× do que a estratégia arriscaria) e sair por tempo. A saída por proteção (stop) nunca é bloqueada. É sempre dinheiro fictício.';
+export const ANALYST_MODE_LEGEND = 'O que o analista faz';
+export const ANALYST_MODE_LABEL = {
+  shadow: 'Só observar (sombra)',
+  govern: 'Decidir de verdade (governar)',
+} as const;
+export const ANALYST_MODE_HINT = {
+  shadow: 'Mostra o que ele faria; a simulação segue a estratégia sem mudança.',
+  govern: 'A simulação passa a obedecer ao analista.',
+} as const;
 
 // O teto de verdade vem de `GET /v1/me` (`limits.maxActiveLivePaperRuns`); este é o padrão do servidor, usado enquanto o perfil não chega.
 export const DEFAULT_LIVE_RUN_LIMIT = 5;

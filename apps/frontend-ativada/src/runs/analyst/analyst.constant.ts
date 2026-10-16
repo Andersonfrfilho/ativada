@@ -12,6 +12,7 @@ export const ANALYST_TEXT = {
   ERROR: 'Não deu para carregar o analista agora.',
   RETRY: 'Tentar de novo',
   SHADOW_SEAL: 'modo sombra: o analista só observa',
+  GOVERN_SEAL: 'o analista está decidindo',
   POSTURE: 'Postura',
   CLOSED_AT: 'Vela que fechou',
   FACT_CADENCE: 'Ritmo',

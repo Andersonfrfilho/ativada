@@ -34,7 +34,7 @@ function findAnalystIssue(body: AnalystBody): string | undefined {
   return undefined;
 }
 
-// O analista é da simulação ao vivo de 15 min. Governar a simulação só chega na Fase 4 da spec 007: até lá, `govern` é recusado.
+// O analista é da simulação ao vivo de 15 min, em sombra (só observa) ou governando (pausa, tamanho e saída por tempo).
 export function resolveAnalyst(
   body: AnalystBody,
   context: z.RefinementCtx,
@@ -44,10 +44,6 @@ export function resolveAnalyst(
   const issue = findAnalystIssue(body);
   if (issue !== undefined) {
     addIssue(context, [RUN_FIELD.ANALYST], issue);
-    return undefined;
-  }
-  if (mode === ANALYST_REQUEST_MODE.GOVERN) {
-    addIssue(context, [RUN_FIELD.ANALYST, RUN_FIELD.MODE], RUN_REASON.GOVERN_NOT_AVAILABLE);
     return undefined;
   }
   return { version: ANALYST_REQUEST_VERSION, mode };

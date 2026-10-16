@@ -16,6 +16,7 @@ import styles from './Analyst.module.css';
 import { ANALYST_TEXT } from './analyst.constant.js';
 import { useAnalystQuery } from './analyst.query.js';
 import type { Analyst, DecidedAnalystDecision } from './analyst.validation.js';
+import { GovernSeal } from './GovernSeal.component.js';
 import { PostureChip } from './PostureChip.component.js';
 import { ShadowSeal } from './ShadowSeal.component.js';
 
@@ -146,7 +147,7 @@ export function AnalystCard({ runId }: { readonly runId: string }): ReactElement
     <Card
       title={ANALYST_TEXT.TITLE}
       icon="activity"
-      aside={analyst.mode === 'shadow' ? <ShadowSeal /> : undefined}
+      aside={analyst.mode === 'shadow' ? <ShadowSeal /> : <GovernSeal />}
     >
       <Body analyst={analyst} />
     </Card>

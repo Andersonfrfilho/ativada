@@ -717,3 +717,27 @@ live-test: OK   (o live-test inteiro: paridade com o backtest, SIGKILL, atomicid
   `GOVERN_STEP_NOT_REDONE_WITH_THE_ANALYST_INPUTS` (o recorte não exercitou o governar). `CONTROL: passa (arnês sólido)`; os 12
   mutantes antigos não foram rodados de novo (cada um custa um `live-test` inteiro de ~12 min; nada no adaptador do banco mudou).
 - **Não feito (fora do pedido):** T4.2d (liberar `govern` na API) e T4.3 (contrafactual de novo e o selo do painel).
+
+## T4.2d — `govern` liberado na API e no painel (2026-10-16)
+
+- **API** (`apps/api-ativada/src/runs/run-analyst-request.ts`): `POST /v1/runs` aceita `analyst: { mode: 'govern' }` em `live_paper` de
+  15 min e grava `{ version: 'analyst-1', mode: 'govern' }` em `runs.request`; os 400 de antes ficam (`not_allowed_for_kind` fora do ao
+  vivo, `analyst_requires_15m_timeframe` fora do 15m, modo inválido ou campo extra sem eco do valor) e **sem analista nada muda** (o
+  pedido não ganha chave). O motivo `govern_not_available` saiu do vocabulário. A documentação OpenAPI (`runs.docs.ts`) explica o que
+  `govern` faz (pausar entradas, reduzir o teto de risco da entrada em ¼, ½ ou 1×, sair por tempo; a saída por proteção nunca é
+  bloqueada; sempre dinheiro fictício).
+- **Painel**: a opção "Deixar o analista de risco decidir" ganhou a escolha **"Só observar (sombra)"** (padrão) × **"Decidir de
+  verdade (governar)"** (`AnalystModeChoice`, dois botões de rádio em `fieldset`), cada uma com a dica de uma linha, e o aviso muda
+  com a escolha: governar = "o analista pode pausar as entradas, reduzir o tamanho da entrada (¼, ½ ou 1× do que a estratégia
+  arriscaria) e sair por tempo. A saída por proteção (stop) nunca é bloqueada. É sempre dinheiro fictício." `useSimulationChoice`
+  expõe `analystMode` (`undefined` sem analista) e `useGoalSimulation` manda `analyst: { mode }`; desligar o analista depois de
+  escolher governar não manda a chave. **Selo**: no cartão do analista o modo sombra mostra "modo sombra: o analista só observa" e o
+  modo governar mostra "o analista está decidindo" (`GovernSeal`); a sala da equipe (`AnalystSeat`) diz a mesma coisa nas duas.
+- **Contratos**: `test/api-run-analyst-request.contract.test.ts` (govern aceito em 15m com o pedido gravado; govern em 1h e em
+  backtest = 400 com os motivos da sombra e nada criado), `apps/frontend-ativada/test/analyst-picker.contract.tsx` (+4: a escolha só
+  existe com o analista ligado e a sombra é o padrão; a explicação de governar; o pedido `govern` em 15m; desligar não manda
+  `analyst`) e `test/analyst.contract.tsx` (selo em governar). Arquivos já na lista explícita do script `test` do painel.
+- Gates (WSL, espelho `~/gates/ativada-spec7`): `bun run typecheck` verde; eslint e prettier verdes nos arquivos da task;
+  `panel-test` 1.189 pass / 0 fail; `bun test` da task e vizinhos (api-*, risk-analyst-*, analyst-*, live-analyst-govern e shadow,
+  app-import-boundary, ownership-registry, code-size-limits, api-openapi) 1.172 pass / 0 fail. O `bun run lint` do projeto inteiro
+  mostra 6 erros em arquivos de OUTRO agente em andamento (`backtests/run-switch/*`, `useCandleSource.hook.ts`), nenhum meu.

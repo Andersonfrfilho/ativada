@@ -3,15 +3,18 @@ import { useState } from 'react';
 
 import type { AnalystOptionProps } from './AnalystOption.component.js';
 import {
+  ANALYST_MODE,
   DEFAULT_SIMULATION_TIMEFRAME,
   SIMULATION_TIMEFRAME,
+  type AnalystMode,
   type SimulationTimeframe,
 } from './simulation-timeframe.constant.js';
 
 export type SimulationChoice = {
   readonly timeframe: SimulationTimeframe;
   readonly setTimeframe: (timeframe: SimulationTimeframe) => void;
-  readonly isAnalystOn: boolean;
+  // `undefined` sem analista; com ele, o modo escolhido (o padrão é a sombra).
+  readonly analystMode: AnalystMode | undefined;
   readonly analyst: AnalystOptionProps;
 };
 
@@ -19,12 +22,15 @@ export type SimulationChoice = {
 export function useSimulationChoice(): SimulationChoice {
   const [timeframe, setTimeframe] = useState<SimulationTimeframe>(DEFAULT_SIMULATION_TIMEFRAME);
   const [isAnalystOn, setIsAnalystOn] = useState(false);
+  const [mode, setMode] = useState<AnalystMode>(ANALYST_MODE.SHADOW);
   return {
     timeframe,
     setTimeframe,
-    isAnalystOn,
+    analystMode: isAnalystOn ? mode : undefined,
     analyst: {
       isOn: isAnalystOn,
+      mode,
+      onModeChange: setMode,
       onChange: (isOn): void => {
         setIsAnalystOn(isOn);
         setTimeframe(isOn ? SIMULATION_TIMEFRAME.QUARTER_HOUR : DEFAULT_SIMULATION_TIMEFRAME);

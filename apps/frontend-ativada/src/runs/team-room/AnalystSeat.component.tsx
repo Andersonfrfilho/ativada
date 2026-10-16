@@ -48,7 +48,9 @@ function RiskAnalystSpeech({ risk }: { readonly risk: RiskAnalystView }): ReactE
           {line}
         </span>
       ))}
-      {risk.isShadow ? <span className={styles.note}>{ANALYST_TEXT.SHADOW_SEAL}</span> : null}
+      <span className={styles.note}>
+        {risk.isShadow ? ANALYST_TEXT.SHADOW_SEAL : ANALYST_TEXT.GOVERN_SEAL}
+      </span>
     </>
   );
 }

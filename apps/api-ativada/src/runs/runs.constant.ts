@@ -41,7 +41,6 @@ export const RUN_REASON = {
   UNKNOWN_FIELD: 'unknown_field',
   GOAL_SYMBOL_MISMATCH: 'goal_symbol_mismatch',
   ANALYST_REQUIRES_15M: 'analyst_requires_15m_timeframe',
-  GOVERN_NOT_AVAILABLE: 'govern_not_available',
 } as const;
 
 export const INVALID_GRID_MESSAGE =

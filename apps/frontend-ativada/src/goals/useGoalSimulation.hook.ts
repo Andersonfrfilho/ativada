@@ -6,9 +6,7 @@ import { RUN_KIND } from '../runs/run.constant.js';
 import { useCreateRunMutation } from '../runs/runs.query.js';
 import { messageFromGoalError } from './goal-form.validation.js';
 import type { Combination } from './goal.validation.js';
-import type { SimulationTimeframe } from './simulation-timeframe.constant.js';
-
-const ANALYST_MODE_SHADOW = 'shadow';
+import type { AnalystMode, SimulationTimeframe } from './simulation-timeframe.constant.js';
 
 export type GoalSimulation = {
   readonly isPending: boolean;
@@ -20,7 +18,7 @@ export type GoalSimulation = {
 export function useGoalSimulation(
   goalId: string,
   timeframe: SimulationTimeframe,
-  hasAnalyst = false,
+  analystMode: AnalystMode | undefined,
 ): GoalSimulation {
   const navigate = useNavigate();
   const create = useCreateRunMutation();
@@ -35,8 +33,8 @@ export function useGoalSimulation(
           symbol: combination.symbol,
           timeframe,
           goalId,
-          // O analista de risco só observa (modo sombra) e só existe com a vela de 15 min.
-          ...(hasAnalyst ? { analyst: { mode: ANALYST_MODE_SHADOW } } : {}),
+          // O analista de risco (sombra ou governar) só existe com a vela de 15 min.
+          ...(analystMode === undefined ? {} : { analyst: { mode: analystMode } }),
         },
         { onSuccess: () => void navigate(ROUTE_PATH.OVERVIEW) },
       ),

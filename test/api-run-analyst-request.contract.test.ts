@@ -134,13 +134,33 @@ describe('POST /v1/runs com analista de risco (spec 007, T2.2)', () => {
     }
   });
 
-  test('govern é recusado com 400 até a Fase 4 e nada é criado', async () => {
-    const before = harness.runs.all().length;
+  test('govern em 15m: aceita e guarda { version, mode: govern } no pedido da execução', async () => {
     const { status, body } = await post(liveBody({ analyst: { mode: 'govern' } }));
-    expect(status).toBe(400);
-    expect(detailsOf(body)).toContainEqual({
-      field: 'analyst.mode',
-      reason: 'govern_not_available',
+    expect(status).toBe(202);
+    const run = harness.runs.all().find((candidate) => candidate.id === (body as RunBody).data.id);
+    expect(run?.request).toStrictEqual({ analyst: { version: 'analyst-1', mode: 'govern' } });
+  });
+
+  test('govern fora do 15m ou fora do ao vivo: 400 pelos mesmos motivos da sombra', async () => {
+    const before = harness.runs.all().length;
+    const hourly = await post(liveBody({ timeframe: '1h', analyst: { mode: 'govern' } }));
+    expect(hourly.status).toBe(400);
+    expect(detailsOf(hourly.body)).toContainEqual({
+      field: 'analyst',
+      reason: 'analyst_requires_15m_timeframe',
+    });
+    const backtest = await post(
+      liveBody({
+        kind: 'backtest',
+        periodStart: PERIOD_START,
+        periodEnd: PERIOD_END,
+        analyst: { mode: 'govern' },
+      }),
+    );
+    expect(backtest.status).toBe(400);
+    expect(detailsOf(backtest.body)).toContainEqual({
+      field: 'analyst',
+      reason: 'not_allowed_for_kind',
     });
     expect(harness.runs.all()).toHaveLength(before);
   });

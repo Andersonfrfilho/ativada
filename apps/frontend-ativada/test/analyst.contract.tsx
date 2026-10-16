@@ -104,14 +104,14 @@ describe('cartão do analista: as quatro posturas', () => {
   });
 });
 
-describe('cartão do analista: modo sombra', () => {
+describe('cartão do analista: o selo do modo', () => {
   test('o selo diz que o analista só observa', async () => {
     open(createAnalystHarness());
     const card = within(await cardOf());
     expect(card.getByText('modo sombra: o analista só observa')).toBeDefined();
   });
 
-  test('em outro modo o selo não aparece', async () => {
+  test('em governar o selo vira "o analista está decidindo" e o de sombra some', async () => {
     const harness = createAnalystHarness({
       analyst: buildAnalystResponse({
         mode: 'govern',
@@ -121,6 +121,7 @@ describe('cartão do analista: modo sombra', () => {
     open(harness);
     const card = within(await cardOf());
     await card.findByText('PAUSA');
+    expect(card.getByText('o analista está decidindo')).toBeDefined();
     expect(card.queryByText('modo sombra: o analista só observa')).toBeNull();
   });
 });

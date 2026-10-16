@@ -114,3 +114,53 @@ describe('criando a simulação', () => {
     expect(Object.keys(body as object)).not.toContain('analyst');
   });
 });
+
+const SHADOW_RADIO = 'Só observar (sombra)';
+const GOVERN_RADIO = 'Decidir de verdade (governar)';
+const GOVERN_NOTICE =
+  'Governar: o analista pode pausar as entradas, reduzir o tamanho da entrada (¼, ½ ou 1× do que a estratégia arriscaria) e sair por tempo. A saída por proteção (stop) nunca é bloqueada. É sempre dinheiro fictício.';
+
+describe('escolha entre observar e governar', () => {
+  test('a escolha só aparece com o analista ligado e a sombra é o padrão', async () => {
+    open();
+    const box = await screen.findByRole('checkbox', { name: ANALYST });
+    expect(screen.queryByRole('radio', { name: GOVERN_RADIO })).toBeNull();
+    fireEvent.click(box);
+    expect(screen.getByRole('radio', { name: SHADOW_RADIO })).toHaveProperty('checked', true);
+    expect(screen.getByRole('radio', { name: GOVERN_RADIO })).toHaveProperty('checked', false);
+  });
+
+  test('governar troca a explicação: pausa, tamanho, saída por tempo, stop nunca bloqueado, dinheiro fictício', async () => {
+    open();
+    fireEvent.click(await screen.findByRole('checkbox', { name: ANALYST }));
+    fireEvent.click(screen.getByRole('radio', { name: GOVERN_RADIO }));
+    const group = await screen.findByRole('group', { name: LEGEND });
+    expect(group.textContent).toContain(GOVERN_NOTICE);
+    expect(group.textContent).not.toContain(SHADOW);
+  });
+
+  test('governar manda analyst em modo govern com a vela de 15 min', async () => {
+    const { fake } = open([acceptRun()]);
+    fireEvent.click(await screen.findByRole('checkbox', { name: ANALYST }));
+    fireEvent.click(screen.getByRole('radio', { name: GOVERN_RADIO }));
+    fireEvent.click(await screen.findByRole('button', { name: SIMULATE }));
+    await waitFor(() => expect(fake.callsTo('POST', '/v1/runs')).toHaveLength(1));
+    expect(fake.callsTo('POST', '/v1/runs')[0]?.body).toMatchObject({
+      timeframe: '15m',
+      analyst: { mode: 'govern' },
+    });
+  });
+
+  test('desligar o analista depois de escolher governar não manda analyst', async () => {
+    const { fake } = open([acceptRun()]);
+    const box = await screen.findByRole('checkbox', { name: ANALYST });
+    fireEvent.click(box);
+    fireEvent.click(screen.getByRole('radio', { name: GOVERN_RADIO }));
+    fireEvent.click(box);
+    fireEvent.click(await screen.findByRole('button', { name: SIMULATE }));
+    await waitFor(() => expect(fake.callsTo('POST', '/v1/runs')).toHaveLength(1));
+    expect(Object.keys(fake.callsTo('POST', '/v1/runs')[0]?.body as object)).not.toContain(
+      'analyst',
+    );
+  });
+});
