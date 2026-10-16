@@ -74,6 +74,14 @@ export const TEAM_ROOM_TEXT = {
   POINTED_WITHOUT_SPEECH:
     'Esta vela não tem falas gravadas (ainda não fechou ou é anterior às decisões carregadas).',
   MONITOR: 'Monitor da sala: o gráfico da simulação',
+  COMPACT_LOADING: 'Carregando a equipe…',
+  COMPACT_ERROR: 'Não deu para carregar a equipe agora.',
+  COMPACT_HISTORICAL:
+    'Esta execução roda sobre o passado: a equipe só opina nas simulações ao vivo. As compras e vendas estão marcadas no gráfico.',
+  COMPACT_STOPPED:
+    'Esta simulação não está rodando e ainda não registrou nenhuma opinião da equipe.',
+  COMPACT_WAITING: 'A equipe ainda está olhando o mercado.',
+  COMPACT_FIRST_OPINION: 'A primeira opinião chega quando a primeira vela fechar.',
 } as const;
 
 // Legenda (RF13): o que cada voto quer dizer.

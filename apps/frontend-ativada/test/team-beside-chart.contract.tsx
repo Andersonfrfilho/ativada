@@ -20,6 +20,7 @@ import {
   openLiveDetail,
   type LiveHarness,
 } from './support/live-tracking-harness.js';
+import { findLoadedTeam } from './support/loaded-team.js';
 import { renderApp, type RenderedApp } from './support/render-app.js';
 import {
   buildRoomDecision,
@@ -134,7 +135,7 @@ describe('equipe junto do gráfico: o que cada agente disse naquela vela', () =>
 
   test('pointing at an older candle shows what was recorded for it, without the live sentences', async () => {
     openTeam(createRoomHarness([buildRoomDecision(), older]), FIXTURE_CANDLE_TIME - HOUR);
-    const aside = await screen.findByRole('complementary', { name: 'Equipe agora' });
+    const aside = await findLoadedTeam();
     expect(await within(aside).findByText('Vela de antes.')).toBeDefined();
     expect(within(aside).queryByText(SERVER_MOTIVE)).toBeNull();
     expect(aside.textContent).toContain('Vela apontada no gráfico');
@@ -142,7 +143,7 @@ describe('equipe junto do gráfico: o que cada agente disse naquela vela', () =>
 
   test('a candle with no recorded speech says so instead of showing another candle', async () => {
     openTeam(createRoomHarness([buildRoomDecision(), older]), FIXTURE_CANDLE_TIME - 50 * HOUR);
-    const aside = await screen.findByRole('complementary', { name: 'Equipe agora' });
+    const aside = await findLoadedTeam();
     expect(aside.textContent).toContain('Esta vela não tem falas gravadas');
     expect(aside.querySelector('[data-motion]')).toBeNull();
   });
@@ -150,7 +151,7 @@ describe('equipe junto do gráfico: o que cada agente disse naquela vela', () =>
   test('a new candle thinks, speaks and rests', async () => {
     const harness = createRoomHarness();
     const app = openTeam(harness);
-    const aside = await screen.findByRole('complementary', { name: 'Equipe agora' });
+    const aside = await findLoadedTeam();
     await within(aside).findByText(SERVER_MOTIVE);
     expect(aside.querySelector('[data-motion]')?.getAttribute('data-motion')).toBe('off');
     harness.liveStatus = buildRoomLiveStatus([
@@ -170,7 +171,7 @@ describe('equipe junto do gráfico: o que cada agente disse naquela vela', () =>
   test('a refetch with the same latest candle (price moving) does not animate again', async () => {
     const harness = createRoomHarness();
     const app = openTeam(harness);
-    const aside = await screen.findByRole('complementary', { name: 'Equipe agora' });
+    const aside = await findLoadedTeam();
     await within(aside).findByText(SERVER_MOTIVE);
     act(() => app.stream.emit(NEW_CANDLE_EVENT));
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -187,7 +188,7 @@ describe('equipe junto do gráfico: o que cada agente disse naquela vela', () =>
       routes: roomRoutes(harness),
       probe: <TeamWithPreference />,
     });
-    const aside = await screen.findByRole('complementary', { name: 'Equipe agora' });
+    const aside = await findLoadedTeam();
     await within(aside).findByText(SERVER_MOTIVE);
     harness.liveStatus = buildRoomLiveStatus([
       buildRoomDecision({ hoursBefore: -1, message: 'Vela nova decidida.' }),

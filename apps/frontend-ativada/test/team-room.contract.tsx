@@ -12,6 +12,7 @@ import { TEAM_ROOM_STORAGE_KEY } from '../src/runs/team-room/team-room.constant.
 import { useTeamRoomPreference } from '../src/runs/team-room/useTeamRoomPreference.hook.js';
 import { buildProjectionsSummary } from './support/candle-chart-fixtures.js';
 import { LIVE_RUN_ID, type LiveHarness } from './support/live-tracking-harness.js';
+import { findLoadedTeam } from './support/loaded-team.js';
 import { renderApp, type RenderedApp } from './support/render-app.js';
 import {
   buildRoomDecision,
@@ -294,7 +295,7 @@ describe('equipe compacta ao lado de "Próxima vela de perto"', () => {
       routes: roomRoutes(createRoomHarness()),
       probe: <CompactTeam runId={LIVE_RUN_ID} />,
     });
-    const aside = await screen.findByRole('complementary', { name: 'Equipe agora' });
+    const aside = await findLoadedTeam();
     expect(within(aside).getByText('RSI: contra')).toBeDefined();
     expect(within(aside).getByText('Cruzamento de médias: a favor')).toBeDefined();
     expect(within(aside).getByText('pontuação +1 de +2')).toBeDefined();
