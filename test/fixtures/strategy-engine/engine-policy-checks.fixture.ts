@@ -14,6 +14,8 @@ type CloseSituation = {
   readonly cancelledBy: (reason: string) => boolean;
   readonly commandKinds: readonly string[];
   readonly blocksEntry: boolean;
+  // Teto '0' do passo (A21): nenhuma entrada nova neste fechamento.
+  readonly isZeroScale: boolean;
 };
 
 function isCreatedHere(order: OrderEvent, entry: TimelineEntry): boolean {
@@ -55,6 +57,7 @@ function describeClose(timeline: Timeline, entry: TimelineEntry): CloseSituation
       decisions.orders.some((order) => order.status === 'cancelled' && order.reason === reason),
     commandKinds: appliedKinds,
     blocksEntry: appliedKinds.some((kind) => kind === 'halt' || kind === 'exit_position'),
+    isZeroScale: entry.step.entryRiskScale === '0',
   };
 }
 
@@ -87,7 +90,8 @@ function assertSignal(action: string, situation: CloseSituation, label: string):
     situation.hasPosition ||
     situation.isHalted ||
     situation.isAfterGap ||
-    situation.blocksEntry;
+    situation.blocksEntry ||
+    situation.isZeroScale;
   if (action === 'SELL' && situation.hasLiveEntry && !situation.cancelledBy('command')) {
     assertContract(
       situation.cancelledBy('opposite_signal'),

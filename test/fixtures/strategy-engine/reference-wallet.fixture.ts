@@ -139,6 +139,7 @@ export function runReferenceWalletStep(
     signal: input.signal,
     commands: input.commands ?? [],
     isAfterGap,
+    entryRiskScale: input.entryRiskScale,
   });
   const equity = input.signal === null ? null : equityPoint(draft, context, held);
   const { commands, orders, fills, openedPositions, closedPositions } = draft;

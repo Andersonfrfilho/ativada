@@ -13,6 +13,7 @@ import type { EngineState, SignalState, WalletState } from './engine-state.types
 import type {
   CommandKind,
   CommandReason,
+  EntryRiskScale,
   EXECUTION_REPORT_KIND,
 } from './engine-vocabulary.constant.js';
 import type { EngineMarket, RunSetup, StrategyVersion } from './strategy-config.types.js';
@@ -65,6 +66,8 @@ export type StepInput = {
   readonly commands?: readonly EngineCommand[] | undefined;
   readonly executionReports?: readonly ExecutionReport[] | undefined;
   readonly confirmedGapCandles?: number | undefined;
+  // Teto da entrada nova deste passo (A21): ausente = '1', '0' = nenhuma entrada; fora do configHash/runHash.
+  readonly entryRiskScale?: EntryRiskScale | undefined;
 };
 
 export type StepResult = {
@@ -94,6 +97,7 @@ export type WalletStepInput = {
   readonly signal: SignalDecision | null;
   readonly commands?: readonly EngineCommand[] | undefined;
   readonly executionReports?: readonly ExecutionReport[] | undefined;
+  readonly entryRiskScale?: EntryRiskScale | undefined;
 };
 
 export type WalletStepResult = {

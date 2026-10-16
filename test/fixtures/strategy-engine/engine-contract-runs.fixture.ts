@@ -44,6 +44,7 @@ export function buildStepInput(params: {
   readonly sentiment: readonly SentimentObservation[];
 }): StepInput {
   const { scenario, candle } = params;
+  const entryRiskScale = scenario.entryRiskScales?.[candle.openTime];
   return {
     strategy: scenario.strategy,
     run: scenario.run,
@@ -65,6 +66,7 @@ export function buildStepInput(params: {
       candle,
       timeframe: scenario.run.parameters.timeframe,
     }),
+    ...(entryRiskScale === undefined ? {} : { entryRiskScale }),
   };
 }
 
@@ -99,6 +101,7 @@ export function runSteps(params: RunStepsParams): RecordedStep[] {
       candle,
       sentiment: input.sentiment,
       commands: input.commands ?? [],
+      entryRiskScale: input.entryRiskScale,
       confirmedGapCandles: input.confirmedGapCandles ?? 0,
       result,
     });

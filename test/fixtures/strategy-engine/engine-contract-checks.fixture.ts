@@ -117,6 +117,7 @@ export function checkStepComposition(context: CheckContext): void {
       candle: step.candle,
       signal: signal.signal,
       commands: step.commands,
+      entryRiskScale: step.entryRiskScale,
     });
     const composed = {
       state: { ...before, signal: signal.state, wallet: wallet.state },

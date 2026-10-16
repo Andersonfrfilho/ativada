@@ -46,6 +46,7 @@ function step(input: StepInput): StepResult {
     signal: signal.signal,
     commands: input.commands,
     executionReports: input.executionReports,
+    entryRiskScale: input.entryRiskScale,
   });
   return {
     state: { ...input.state, signal: signal.state, wallet: wallet.state },

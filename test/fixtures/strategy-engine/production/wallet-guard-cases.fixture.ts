@@ -98,6 +98,17 @@ const EXTERNAL_REPORT = {
   fee: '0.1',
 } as const;
 
+// Fora do conjunto fechado (A21): acima de 1, negativa, outra grafia do mesmo número e número em vez de texto.
+export const INVALID_ENTRY_RISK_SCALES: readonly unknown[] = [
+  '2',
+  '1.5',
+  '-0.25',
+  '1.0',
+  '0.75',
+  '',
+  1,
+];
+
 // Cada recusa do `walletStep` avulso, com o código que o chamador ramifica.
 export function buildWalletGuardCases(): readonly WalletGuardCase[] {
   const code = ENGINE_INPUT_ERROR_CODE;
@@ -199,11 +210,19 @@ export function buildWalletGuardCases(): readonly WalletGuardCase[] {
       { executionReports: [{ ...EXTERNAL_REPORT, reportedAt: second.openTime }] },
     ],
   ];
-  return cases.map(([label, expected, overrides]) => ({
-    label,
-    code: expected,
-    input: guardInput(overrides),
+  const scaleCases = INVALID_ENTRY_RISK_SCALES.map((scale) => ({
+    label: `escala de entrada ${JSON.stringify(scale)}`,
+    code: code.ENTRY_RISK_SCALE_INVALID,
+    input: Object.assign(guardInput(), { entryRiskScale: scale }),
   }));
+  return [
+    ...cases.map(([label, expected, overrides]) => ({
+      label,
+      code: expected,
+      input: guardInput(overrides),
+    })),
+    ...scaleCases,
+  ];
 }
 
 // A entrada que DEVE passar: lacuna confirmada ecoada pelo sinal.

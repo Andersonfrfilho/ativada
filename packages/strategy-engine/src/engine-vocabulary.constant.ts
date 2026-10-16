@@ -108,6 +108,16 @@ export const COMMAND_REASON = {
 } as const;
 export type CommandReason = (typeof COMMAND_REASON)[keyof typeof COMMAND_REASON];
 
+// Teto da entrada NOVA de um passo, sobre o valor em risco da estratégia (ADR 0002 A21): conjunto fechado por
+// igualdade de texto; '0' não coloca a entrada. Ausente vale '1'. Não é estado: não passa ao passo seguinte.
+export const ENTRY_RISK_SCALE = {
+  NONE: '0',
+  QUARTER: '0.25',
+  HALF: '0.5',
+  FULL: '1',
+} as const;
+export type EntryRiskScale = (typeof ENTRY_RISK_SCALE)[keyof typeof ENTRY_RISK_SCALE];
+
 export const ENTRY_ORDER_TYPE = { MARKET: ORDER_TYPE.MARKET, LIMIT: ORDER_TYPE.LIMIT } as const;
 export type EntryOrderType = (typeof ENTRY_ORDER_TYPE)[keyof typeof ENTRY_ORDER_TYPE];
 

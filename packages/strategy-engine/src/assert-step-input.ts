@@ -9,7 +9,7 @@ import { assertRunHash, assertStrategyHash } from './assert-hashes.js';
 import type { EngineCandle, SentimentObservation } from './engine-candle.types.js';
 import { SENTIMENT_MAXIMUM_VALUE } from './engine.constant.js';
 import type { EngineCommand, SignalStepInput, StepInput, WalletStepInput } from './engine.types.js';
-import { COMMAND_KIND, COMMAND_REASON } from './engine-vocabulary.constant.js';
+import { COMMAND_KIND, COMMAND_REASON, ENTRY_RISK_SCALE } from './engine-vocabulary.constant.js';
 import {
   ENGINE_INPUT_ERROR_CODE,
   ENGINE_STATE_ERROR_CODE,
@@ -24,6 +24,7 @@ export type AssertStepInputParams = {
 const MAX_IDENTIFIER_LENGTH = 64;
 const COMMAND_KINDS: readonly string[] = Object.values(COMMAND_KIND);
 const COMMAND_REASONS: readonly string[] = Object.values(COMMAND_REASON);
+const ENTRY_RISK_SCALES: readonly unknown[] = Object.values(ENTRY_RISK_SCALE);
 
 function isIdentifier(value: string): boolean {
   return value.length > 0 && value.length <= MAX_IDENTIFIER_LENGTH;
@@ -67,6 +68,12 @@ export function assertCommands(commands: readonly EngineCommand[], candle: Engin
   if (!isValid) refuse(ENGINE_INPUT_ERROR_CODE.COMMAND_INVALID, 'Comando inválido ou repetido.');
 }
 
+// Conjunto fechado por igualdade de texto (A21): '1.0', '2' ou número não passam.
+export function assertEntryRiskScale(scale: unknown): void {
+  if (scale === undefined || ENTRY_RISK_SCALES.includes(scale)) return;
+  refuse(ENGINE_INPUT_ERROR_CODE.ENTRY_RISK_SCALE_INVALID, 'Escala de entrada fora do conjunto.');
+}
+
 export function assertSignalStepInput(input: SignalStepInput): void {
   assertCandleShape(input.candle, input.market);
   assertCandleSequence({
@@ -85,6 +92,7 @@ export function assertWalletStepInput(input: WalletStepInput): void {
     refuse(ENGINE_INPUT_ERROR_CODE.SIGNAL_MISMATCH, 'Sinal de outro candle.');
   }
   assertCommands(input.commands ?? [], input.candle);
+  assertEntryRiskScale(input.entryRiskScale);
 }
 
 // Guarda do passo inteiro: motor, versão da estratégia e parâmetros da execução antes do candle.
@@ -113,4 +121,5 @@ export function assertStepInput(params: AssertStepInputParams): void {
   }
   assertSignalStepInput({ ...input, market: input.run.parameters, state: input.state.signal });
   assertCommands(input.commands ?? [], input.candle);
+  assertEntryRiskScale(input.entryRiskScale);
 }

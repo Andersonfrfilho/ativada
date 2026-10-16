@@ -294,6 +294,11 @@ function guardCases(context: CheckContext): GuardCase[] {
         ],
       },
     },
+    {
+      label: 'escala de entrada fora do conjunto',
+      code: code.ENTRY_RISK_SCALE_INVALID,
+      input: Object.assign({ ...base }, { entryRiskScale: '2' }),
+    },
   ];
 }
 

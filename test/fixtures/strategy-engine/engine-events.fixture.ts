@@ -153,6 +153,27 @@ function classifySignal(entry: TimelineEntry, found: Found, seenResume: { value:
     found.add(ENGINE_EVENT_KIND.SENTIMENT_STALE);
 }
 
+const PARTIAL_ENTRY_SCALES: readonly string[] = ['0.25', '0.5'];
+
+// O teto do passo (A21): entrada aberta com ¼ ou ½, e a escala '0' sozinha barrando um BUY com a carteira livre.
+function classifyEntryScale(entry: TimelineEntry, found: Found): void {
+  const { step } = entry;
+  const { decisions, state } = step.result;
+  const entryOrders = decisions.orders.filter(
+    (order) => order.purpose === 'entry' && order.createdCandleOpenTime === step.candle.openTime,
+  );
+  const scale = step.entryRiskScale ?? '1';
+  const isCreated = entryOrders.some((order) => order.status === 'created');
+  if (PARTIAL_ENTRY_SCALES.includes(scale) && isCreated) found.add(ENGINE_EVENT_KIND.SCALED_ENTRY);
+  const isFree =
+    state.wallet.position === null && state.wallet.pendingOrder === null && !state.wallet.isHalted;
+  const isClean = decisions.commands.length === 0 && step.confirmedGapCandles === 0;
+  const isBuy = decisions.signal?.action === 'BUY';
+  if (scale === '0' && isBuy && isFree && isClean && entryOrders.length === 0) {
+    found.add(ENGINE_EVENT_KIND.ZERO_SCALE_BLOCKS_ENTRY);
+  }
+}
+
 // Entrada limitada pelo caixa: depois da compra não sobra para mais um passo de quantidade.
 function classifyCashBound(timeline: Timeline, found: Found): void {
   let cash: EngineDecimalValue = toEngineDecimal(timeline.run.initialBalance);
@@ -181,6 +202,7 @@ export function classifyEvents(context: CheckContext): ReadonlySet<EngineEventKi
     classifyExits(timeline, entry, found);
     classifyOrders(entry, found);
     classifySignal(entry, found, seenResume);
+    classifyEntryScale(entry, found);
   }
   classifyLimitTouches(timeline, found);
   classifyCashBound(timeline, found);

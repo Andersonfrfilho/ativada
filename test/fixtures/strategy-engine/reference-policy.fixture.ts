@@ -12,6 +12,8 @@ import {
   RISK_ATR_INDICATOR_ID,
   SIGNAL_ACTION,
   type EngineCommand,
+  type EntryRiskScale,
+  type EngineDecimalValue,
   type ExitReason,
   type OrderEventReason,
   type PendingOrderState,
@@ -33,6 +35,18 @@ import {
 } from './reference-pricing.fixture.js';
 
 const NO_FILL = '0';
+const NO_ENTRY_SCALE = '0';
+const FULL_ENTRY_SCALE = '1';
+
+// O teto do passo multiplica a fração de risco ANTES do caixa (a escala é exata, então o produto é o mesmo);
+// um único arredondamento para baixo no fim.
+function referenceRiskAmount(
+  cash: string,
+  riskPerTrade: string,
+  scale: string,
+): EngineDecimalValue {
+  return moneyDown(toEngineDecimal(cash).times(toEngineDecimal(riskPerTrade).times(scale)));
+}
 
 function emptyEntry(draft: WalletDraft, context: WalletContext): PendingOrderState {
   const isLimit = context.config.entry.orderType === ENTRY_ORDER_TYPE.LIMIT;
@@ -63,12 +77,12 @@ function rejectEntry(draft: WalletDraft, context: WalletContext, reason: OrderEv
 function buildEntryOrder(
   draft: WalletDraft,
   context: WalletContext,
-  atr: number,
+  entry: { readonly atr: number; readonly scale: string },
 ): PendingOrderState {
   const { config, candle, defect } = context;
-  const atrValue = decimalFromIndicator(atr);
+  const atrValue = decimalFromIndicator(entry.atr);
   const order = emptyEntry(draft, context);
-  const riskAmount = moneyDown(toEngineDecimal(draft.state.cash).times(config.risk.riskPerTrade));
+  const riskAmount = referenceRiskAmount(draft.state.cash, config.risk.riskPerTrade, entry.scale);
   const isStashingClose =
     defect === REFERENCE_ENGINE_DEFECT.SIZE_AT_DECISION ||
     defect === REFERENCE_ENGINE_DEFECT.STOP_FROM_DECISION_CLOSE;
@@ -90,7 +104,12 @@ function buildEntryOrder(
   };
 }
 
-function placeEntry(draft: WalletDraft, context: WalletContext, signal: SignalDecision): void {
+function placeEntry(
+  draft: WalletDraft,
+  context: WalletContext,
+  request: { readonly signal: SignalDecision; readonly scale: string },
+): void {
+  const { signal, scale } = request;
   const { state } = draft;
   if (state.isHalted || state.pendingOrder !== null) return;
   if (state.position !== null) {
@@ -101,10 +120,10 @@ function placeEntry(draft: WalletDraft, context: WalletContext, signal: SignalDe
   }
   const atr = signal.indicators[RISK_ATR_INDICATOR_ID] ?? null;
   if (atr === null || atr <= 0) return rejectEntry(draft, context, ORDER_EVENT_REASON.ZERO_ATR);
-  if (moneyDown(toEngineDecimal(state.cash).times(context.config.risk.riskPerTrade)).lte(0)) {
+  if (referenceRiskAmount(state.cash, context.config.risk.riskPerTrade, scale).lte(0)) {
     return rejectEntry(draft, context, ORDER_EVENT_REASON.BELOW_MIN_NOTIONAL);
   }
-  const order = buildEntryOrder(draft, context, atr);
+  const order = buildEntryOrder(draft, context, { atr, scale });
   draft.orders.push(orderEvent({ order, context, status: ORDER_STATUS.CREATED }));
   const isFillingAtClose =
     context.defect === REFERENCE_ENGINE_DEFECT.FILLS_AT_DECISION_CLOSE &&
@@ -203,6 +222,7 @@ export function applyClose(
     readonly signal: SignalDecision | null;
     readonly commands: readonly EngineCommand[];
     readonly isAfterGap: boolean;
+    readonly entryRiskScale?: EntryRiskScale | undefined;
   },
 ): void {
   let isEntryBlocked = params.isAfterGap;
@@ -213,7 +233,10 @@ export function applyClose(
   const { signal } = params;
   if (signal === null) return;
   if (signal.action === SIGNAL_ACTION.BUY) {
-    return isEntryBlocked ? undefined : placeEntry(draft, context, signal);
+    // A escala '0' fecha a entrada deste passo e nada mais (não cancela pendente nem toca a saída).
+    const scale = params.entryRiskScale ?? FULL_ENTRY_SCALE;
+    if (isEntryBlocked || scale === NO_ENTRY_SCALE) return;
+    return placeEntry(draft, context, { signal, scale });
   }
   if (signal.action !== SIGNAL_ACTION.SELL) return;
   if (context.defect !== REFERENCE_ENGINE_DEFECT.IGNORES_OPPOSITE_SIGNAL) {

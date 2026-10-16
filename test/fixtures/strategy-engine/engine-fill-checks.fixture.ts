@@ -117,8 +117,14 @@ function assertVolumeShare(timeline: Timeline, entry: TimelineEntry, fill: FillD
   );
 }
 
+// Teto da entrada que abriu a posição (A21): a escala do candle em que a ordem nasceu; sem escala, 1.
+function entryScaleOf(timeline: Timeline, fill: FillDecision): string {
+  const created = timeline.createdOrders.get(fill.orderKey);
+  return timeline.entries[created?.createdIndex ?? -1]?.step.entryRiskScale ?? '1';
+}
+
 // RF05: a perda realizada no stop sem gap (com taxas e slippage de saída) nunca passa de
-// riskPerTrade × saldo da decisão. Gap além do stop fica fora de "até o stop".
+// escala × riskPerTrade × saldo da decisão. Gap além do stop fica fora de "até o stop".
 export function checkRealizedRisk(context: CheckContext): void {
   const timeline = buildTimeline(context.scenario, context.baseline);
   const riskPerTrade = toEngineDecimal(context.scenario.strategy.config.risk.riskPerTrade);
@@ -127,11 +133,13 @@ export function checkRealizedRisk(context: CheckContext): void {
     quantity: new EngineDecimal(0),
   };
   const cashAtEntry = new Map<string, EngineDecimalValue>();
+  const scaleAtEntry = new Map<string, string>();
   const stops = new Map<string, string>();
   for (const entry of timeline.entries) {
     for (const fill of entry.step.result.decisions.fills) {
       assertVolumeShare(timeline, entry, fill);
       if (fill.side === 'buy') cashAtEntry.set(fill.positionKey, ledger.cash);
+      if (fill.side === 'buy') scaleAtEntry.set(fill.positionKey, entryScaleOf(timeline, fill));
       applyFill(ledger, fill, timeline);
     }
     for (const opened of entry.step.result.decisions.openedPositions)
@@ -139,9 +147,9 @@ export function checkRealizedRisk(context: CheckContext): void {
     for (const closed of entry.step.result.decisions.closedPositions) {
       const stop = stops.get(closed.positionKey) ?? '0';
       if (!isStopWithoutGap(entry, closed, stop)) continue;
-      const allowed = (cashAtEntry.get(closed.positionKey) ?? new EngineDecimal(0)).times(
-        riskPerTrade,
-      );
+      const allowed = (cashAtEntry.get(closed.positionKey) ?? new EngineDecimal(0))
+        .times(riskPerTrade)
+        .times(scaleAtEntry.get(closed.positionKey) ?? '1');
       const loss = toEngineDecimal(closed.netProfit).negated();
       assertContract(
         loss.lte(allowed),

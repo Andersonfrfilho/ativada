@@ -4,10 +4,15 @@ import {
   ENGINE_TIMEFRAME,
   EngineDecimal,
   type EngineCandle,
+  type EntryRiskScale,
   type StrategyConfigInput,
   type StrategyVersion,
 } from '../../../../packages/strategy-engine/src/index.js';
-import { ENGINE_EVENT_KIND, type EngineScenario } from '../engine-contract-types.fixture.js';
+import {
+  ENGINE_EVENT_KIND,
+  type EngineScenario,
+  type ScenarioEntryRiskScales,
+} from '../engine-contract-types.fixture.js';
 import {
   buildReferenceRun,
   command,
@@ -136,6 +141,7 @@ const LIMIT_ENTRY_CONFIG: FastStrategyOptions['entry'] = {
   expiryCandles: 2,
 };
 const SCENARIO_LENGTH = 70;
+const SCALE_SCENARIO_SEED = 5;
 
 function shapeOf(seed: number): CandleShape {
   return {
@@ -168,6 +174,24 @@ const COMMAND_SERIES = commandsByIndex([
     (index) => [index, [command(index, 'exit_position', 'goal_reached')]] as const,
   ),
 ]);
+
+// Teto da entrada por candle (A21) num ciclo que passa por todos os valores, inclusive vela sem escala (= 1).
+const SCALE_CYCLE: readonly (EntryRiskScale | undefined)[] = [
+  '0.25',
+  '0',
+  '0.5',
+  undefined,
+  '1',
+  '0',
+];
+
+function entryRiskScalesOf(length: number): ScenarioEntryRiskScales {
+  const entries = Array.from({ length }, (_unused, index) => {
+    const scale = SCALE_CYCLE[index % SCALE_CYCLE.length];
+    return scale === undefined ? [] : [[FIRST_OPEN_TIME + index * HOUR, scale] as const];
+  });
+  return Object.fromEntries(entries.flat());
+}
 
 // Cada cenário promete o que de fato acontece com o placar de verdade; o harness reprova se deixar de ocorrer.
 export function buildProductionScenarios(): EngineScenario[] {
@@ -251,6 +275,22 @@ export function buildProductionScenarios(): EngineScenario[] {
         kind.SENTIMENT_STALE,
       ],
     }),
+    {
+      ...buildSyntheticScenario({
+        name: 'fast-market-entry-risk-scale',
+        shape: shapeOf(SCALE_SCENARIO_SEED),
+        strategy: marketStrategy(),
+        sentiment: NO_SENTIMENT,
+        commands: NO_COMMANDS,
+        requiredEvents: [
+          kind.SCALED_ENTRY,
+          kind.ZERO_SCALE_BLOCKS_ENTRY,
+          kind.MARKET_ENTRY_FILL,
+          kind.STOP_EXIT_WITHOUT_GAP,
+        ],
+      }),
+      entryRiskScales: entryRiskScalesOf(SCENARIO_LENGTH),
+    },
     ...buildClassicScenarios(),
   ];
 }

@@ -1,0 +1,30 @@
+{
+  "engineVersion": "engine-2",
+  "cycle": ["1", "0.5", "0.25", "0", null, "0.25", "0"],
+  "datasets": {
+    "BTCUSDT 1h × 500": {
+      "candles": 500,
+      "decided": 307,
+      "operations": 11,
+      "wins": 3,
+      "feesPaid": "82.92770126",
+      "finalEquity": "9665.17753303",
+      "maxDrawdownAtClose": "0.04896248",
+      "maxDrawdownAtLow": "0.05128153",
+      "buyAndHoldReturn": "0.12345809",
+      "digest": "ca848a55992683413546a1f01d938851a09274676496bd1c9791e059c66ffb6f"
+    },
+    "ETHUSDT 1d × 400": {
+      "candles": 400,
+      "decided": 207,
+      "operations": 10,
+      "wins": 2,
+      "feesPaid": "13.98860537",
+      "finalEquity": "9866.40605713",
+      "maxDrawdownAtClose": "0.0180417",
+      "maxDrawdownAtLow": "0.01868453",
+      "buyAndHoldReturn": "-0.08379965",
+      "digest": "50cbad4733786e56ec5764f4f7c4818861ee2cffc64a705755ab9ff46cad65f9"
+    }
+  }
+}

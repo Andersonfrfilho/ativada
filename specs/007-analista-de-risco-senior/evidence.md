@@ -550,3 +550,54 @@ db:database-test     → database-test: OK (inclui "run_commands: analyst_timeou
 bun test (strategy-persistence-schema, classic-scoreboard-engine, metrics-golden, ownership-registry, database.contract,
           code-size-limits, app-import-boundary, strategy-engine-boundary) → 161 pass / 0 fail
 ```
+
+## T4.1b — teto de entrada por passo no motor (2026-10-16)
+
+- **Motor** (`packages/strategy-engine`, sem versão nova): `ENTRY_RISK_SCALE` (`'0' | '0.25' | '0.5' | '1'`, tipo
+  `EntryRiskScale`) no vocabulário; `entryRiskScale?` em `StepInput` e `WalletStepInput`; `assertEntryRiskScale` (conjunto
+  fechado por igualdade de texto, `EngineInputError` `ENTRY_RISK_SCALE_INVALID`) nas guardas do passo e da carteira avulsa;
+  `create-engine.ts` → `wallet-step.ts` → `ClosingInputs.entryRiskScale` → `placeEntry(draft, context, { signal,
+  entryRiskScale })`. `'0'` volta em silêncio antes do ATR (nenhuma ordem, nem recusada); os outros dão `riskAmount =
+  moneyDown(caixa × riskPerTrade × escala)` (um arredondamento); ausente = `'1'`. O valor em risco é calculado uma vez e passado
+  a `buildEntryOrder` (antes era calculado duas vezes, com o mesmo resultado). Estado canônico, `configHash`, `runHash`,
+  `ENGINE_VERSION` e `ENGINE_STATE_VERSION` intactos. **`advanceCandle`** (`packages/run-recording`) ganhou só o parâmetro
+  opcional `entryRiskScale`, repassado ao passo; nenhum chamador o usa ainda (backtest, walk-forward e ao vivo inalterados).
+- **Prova de que o antigo ficou idêntico**: o dourado `engine-2` (`classic-scoreboard-engine`, digest SHA-256 de todas as
+  decisões dos dois conjuntos reais) e o das métricas passam SEM regravar; o diferencial byte a byte dos 3.000 fluxos contra a
+  referência segue com 0 divergências (sequência dos fluxos intocada); escala `'1'` em TODO candle dá o mesmo resumo (com o
+  digest) da execução sem escala nos dois conjuntos reais; os 51 mutantes antigos morrem no MESMO estágio de antes.
+- **Referência independente** (`reference-policy.fixture.ts`): a escala multiplica a FRAÇÃO de risco antes do caixa e o `'0'`
+  sai antes de `placeEntry`. **Diferencial com gerador separado** (`wallet/wallet-scale-flow.fixture.ts`): 1.500 fluxos do
+  `buildWalletFlow` a partir do índice 100.000 (longe dos 3.000) com a escala de cada passo de outro sorteio (semente
+  20.261.016; 1 passo em 5 sem escala): 0 divergências. **Propriedades**: risco da entrada em `(teto − 1e-8, teto]` com teto =
+  escala × riskPerTrade × caixa do fechamento; `'0'` sem evento de entrada; passo sem BUY idêntico ao mesmo passo sem escala e,
+  com BUY, preenchimentos, saídas e comandos idênticos (a escala nunca toca a saída).
+- **Harness `runEngineContract`** (as 21 verificações, sem verificação nova): cenário `fast-market-entry-risk-scale` (escala
+  por candle num ciclo `¼, 0, ½, —, 1, 0`, semente 5) com eventos obrigatórios novos `scaled-entry` e
+  `zero-scale-blocks-entry`; corte, retomada, lotes e não-lookahead passam com a escala; `step-composition` repassa a escala à
+  carteira; `signal-policy` trata `'0'` como ocupado; `realized-risk` passou a exigir perda no stop ≤ escala × riskPerTrade ×
+  caixa; `input-guards` ganhou "escala fora do conjunto". O juiz dos mutantes ganhou o estágio `scale` (diferencial com escala +
+  propriedades, 300 fluxos) antes do harness e o cenário 6 nos cenários baratos; as guardas da carteira avulsa ganharam 7
+  escalas inválidas (`'2'`, `'1.5'`, `'-0.25'`, `'1.0'`, `'0.75'`, `''`, `1`).
+- **Dourado de escala novo**: `golden/classic-scoreboard-engine-entry-scale.engine-2.json` (ciclo `1, ½, ¼, 0, —, ¼, 0` sobre os
+  dois conjuntos reais; `scripts/record-engine-entry-scale-golden.ts`): BTC 11 operações, patrimônio final 9665,17753303; ETH
+  10 operações, 9866,40605713. Contas à mão (`test/engine-entry-risk-scale.contract.test.ts`): 1234,56789012 × 0,013 →
+  16,04938257 (`'1'` e ausente), 8,02469128 (`½`), 4,01234564 (`¼`), nenhuma ordem com `'0'`; `advanceCandle` repassa a escala.
+- **Mutantes novos (10, todos mortos no estágio previsto)**: `ENTRY_SCALE_IGNORED`, `RISK_ROUNDED_BEFORE_THE_SCALE`,
+  `ZERO_SCALE_DOES_NOT_BLOCK_THE_ENTRY`, `ENTRY_SCALE_APPLIED_TO_THE_EXIT`, `ENTRY_SCALE_LEAKS_TO_THE_NEXT_STEP`,
+  `WALLET_STEP_DROPS_THE_ENTRY_SCALE` (estágio `scale`); `ENTRY_SCALE_ABOVE_ONE_ACCEPTED`, `WALLET_GUARD_ACCEPTS_ANY_SCALE`
+  (`guards`); `STEP_DROPS_THE_ENTRY_SCALE`, `STEP_GUARD_ACCEPTS_ANY_SCALE` (`harness`). **Desvio registrado**: o
+  "arredondamento duplo" literal, `moneyDown(moneyDown(caixa × risco) × escala)`, é um mutante EQUIVALENTE (⌊⌊y⌋ ÷ n⌋ = ⌊y ÷ n⌋
+  com ¼ e ½), impossível de matar; no lugar dele entrou `RISK_ROUNDED_BEFORE_THE_SCALE` (arredonda antes da escala e não depois).
+
+```text
+bun run typecheck    → verde
+bun run lint         → verde
+bun run format:check → All matched files use Prettier code style!
+bun test test/production-engine-mutants.contract.test.ts → 67 pass / 0 fail (51 antigos + 10 novos mortos, 45 s)
+bun test (97 arquivos: strategy-engine-*, production-engine*, wallet*, risk-*, backtest*, walk-forward*, live-*, api-runs*,
+          engine-*, classic-scoreboard*, oracle-bigint, metrics-golden, horizon-intraday*, strategy-persistence-schema,
+          ownership-registry, database.contract, code-size-limits, app-import-boundary) → 1608 pass / 0 fail (876 s)
+```
+
+Rodado numa cópia do espelho WSL (`~/gates/ativada-spec7-t41`). Nenhuma migration, container ou volume tocado nesta task.
