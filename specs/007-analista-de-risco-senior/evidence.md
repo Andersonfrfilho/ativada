@@ -330,3 +330,66 @@ test/live-analyst-performance.contract.test.ts                                  
 ```
 
 - **Não feito:** `make live-mutants` (os 2 mutantes novos do adaptador) e `make lgpd-test` (pede Docker, como na T2.1); `make migration-test` não se aplica (sem migration). A 0024 continua só no banco de teste; o banco de dev não foi tocado.
+
+## T2.4 — contrafactual: o que o analista teria feito (2026-10-16)
+
+**Como foi medido.** `scripts/analyst-counterfactual.ts` (+ `scripts/analyst-counterfactual/`), em MEMÓRIA, sem gravar nada. Dados reais do banco de dev (`ativada-dev-postgres`, porta 56432), lidos só por `SELECT` pelos repositórios do repo (`createCandleRepository(...).findCandles` e `createSentimentRepository(...).findFearGreed`): 183 dias de velas de 15 min dos quatro pares (17.568 velas, de 2026-04-16T03:00Z a 2026-10-16T02:45Z) e o Fear & Greed diário. Para cada par e cada estratégia: (a) a estratégia sozinha, o passo do produto (`advanceCandle`) sobre a série; (b) a MESMA estratégia com o analista governando uma carteira em memória. O analista é o do worker, sem cópia: o `decideShadowStep` com a série do par por âncora diária (A3) e o histórico da própria execução; os comandos que ele dá (`halt`, `resume`, `exit_position`) refazem o candle com `commands`, como a saída por meta, com os motivos que o motor JÁ conhece (`user_stop`, `user_resume`, `window_end`) porque nada é gravado e a Fase 4 ainda não mudou o motor. A porta que o analista fechou é a que ele reabre; a decisão de cada vela usa só velas até `t`.
+
+- **Estratégias.** "Placar clássico" = a estratégia de exemplo do produto (`CLASSIC_SCOREBOARD_STRATEGY`). "Reversão" = a estratégia de uma família só que o especialista Reversão do analista usa (`SPECIALIST_CATALOG.reversion.config`: RSI 14 em 30/70 + Bollinger 20/2, compra com +1 e vende com −1, mesmo risco de ATR 14, stop 2×, alvo 3×, 1% do saldo por operação). Saldo inicial 10.000 USDT, taxa 0,1% e slippage 0,05% por lado, filtros de preço e quantidade de cada par (`resolveSymbolFilters`).
+- **Veredito D11.** Janelas seguidas de 7 dias (26 em 183 dias; o dia que sobra não entra): "à frente" = o líquido da semana COM o analista maior que SEM; "atrás" = menor; igual não conta. Wilson 95% do `@ativada/statistics` (o único) sobre à frente ÷ (à frente + atrás); `ajudou` se o limite inferior passa de 50%, `atrapalhou` se o superior fica abaixo, `empatou` no meio, `poucas semanas` abaixo de 20 semanas com diferença.
+- **Nada gravado.** `--counts` (só `SELECT`) antes e depois da medição: `runs=60` nas duas, e `analyst_decisions` nem existe neste banco (a 0024 só entra no próximo `dev-up`); o contrato `test/analyst-counterfactual.contract.test.ts` varre o script e o leitor de mercado atrás de qualquer escrita.
+- **Reproduzir** (espelho WSL, `DATABASE_URL` do `envs/env.dev`, nunca impressa): `bun run scripts/analyst-counterfactual.ts --job LINKUSDT:classic --out dir/LINKUSDT-classic.json` (um por par e estratégia; os 8 em paralelo levam ~9 min), depois `--report dir --out relatorio.md`.
+
+### Relatório literal (saída de `--report`)
+
+Período medido: 2026-04-16T03:00:00.000Z a 2026-10-16T02:45:00.000Z (17568 velas de 15 min, 183 dias), saldo inicial 10000 USDT, taxa 0,1% e slippage 0,05% por lado.
+
+| Par | Estratégia | Líquido sem o analista (USDT) | Líquido com o analista (USDT) | Diferença | Taxas sem | Taxas com | Taxas poupadas | Operações sem | Operações com | Evitadas | Maior queda sem | Maior queda com | Porta fechada |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| LINKUSDT | Placar clássico | −5.072,39 (−50,72%) | −1.427,48 (−14,27%) | 36,45 p.p. | 3.440,75 | 1.148,94 | 2.291,81 | 641 | 127 | 514 | 51,56% | 15,35% | 94,31% |
+| LINKUSDT | Reversão | −4.695,75 (−46,96%) | −1.036,57 (−10,37%) | 36,59 p.p. | 3.193,05 | 988,39 | 2.204,67 | 483 | 96 | 387 | 48,07% | 12,56% | 94,55% |
+| BNBUSDT | Placar clássico | −8.138,21 (−81,38%) | −400,18 (−4,00%) | 77,38 p.p. | 6.110,27 | 208,00 | 5.902,27 | 683 | 17 | 666 | 81,54% | 4,69% | 98,97% |
+| BNBUSDT | Reversão | −7.288,29 (−72,88%) | −199,34 (−1,99%) | 70,89 p.p. | 5.352,46 | 232,49 | 5.119,97 | 543 | 19 | 524 | 73,27% | 4,26% | 99,18% |
+| BTCUSDT | Placar clássico | −8.682,19 (−86,82%) | −174,97 (−1,75%) | 85,07 p.p. | 5.514,59 | 128,91 | 5.385,67 | 676 | 11 | 665 | 86,86% | 2,68% | 99,32% |
+| BTCUSDT | Reversão | −7.560,25 (−75,60%) | −153,36 (−1,53%) | 74,07 p.p. | 5.855,42 | 131,61 | 5.723,81 | 549 | 11 | 538 | 76,05% | 2,66% | 99,42% |
+| ETHUSDT | Placar clássico | −8.330,36 (−83,30%) | −689,71 (−6,90%) | 76,41 p.p. | 5.204,87 | 610,17 | 4.594,70 | 650 | 53 | 597 | 83,52% | 7,98% | 97,79% |
+| ETHUSDT | Reversão | −7.092,12 (−70,92%) | −397,28 (−3,97%) | 66,95 p.p. | 5.778,82 | 511,48 | 5.267,33 | 543 | 42 | 501 | 71,26% | 5,18% | 98,10% |
+
+| Par | Estratégia | Semanas | À frente | Atrás | Iguais | Veredito (D11) |
+| --- | --- | --- | --- | --- | --- | --- |
+| LINKUSDT | Placar clássico | 26 | 20 | 6 | 0 | ajudou: terminou à frente em 20 de 26 semanas com diferença (Wilson 95%: 57,95% a 88,97%), acima da moeda ao ar |
+| LINKUSDT | Reversão | 26 | 20 | 6 | 0 | ajudou: terminou à frente em 20 de 26 semanas com diferença (Wilson 95%: 57,95% a 88,97%), acima da moeda ao ar |
+| BNBUSDT | Placar clássico | 26 | 24 | 2 | 0 | ajudou: terminou à frente em 24 de 26 semanas com diferença (Wilson 95%: 75,86% a 97,86%), acima da moeda ao ar |
+| BNBUSDT | Reversão | 26 | 23 | 3 | 0 | ajudou: terminou à frente em 23 de 26 semanas com diferença (Wilson 95%: 71,02% a 96,00%), acima da moeda ao ar |
+| BTCUSDT | Placar clássico | 26 | 25 | 1 | 0 | ajudou: terminou à frente em 25 de 26 semanas com diferença (Wilson 95%: 81,11% a 99,32%), acima da moeda ao ar |
+| BTCUSDT | Reversão | 26 | 23 | 3 | 0 | ajudou: terminou à frente em 23 de 26 semanas com diferença (Wilson 95%: 71,02% a 96,00%), acima da moeda ao ar |
+| ETHUSDT | Placar clássico | 26 | 23 | 3 | 0 | ajudou: terminou à frente em 23 de 26 semanas com diferença (Wilson 95%: 71,02% a 96,00%), acima da moeda ao ar |
+| ETHUSDT | Reversão | 26 | 22 | 4 | 0 | ajudou: terminou à frente em 22 de 26 semanas com diferença (Wilson 95%: 66,47% a 93,85%), acima da moeda ao ar |
+
+Postura do analista nas velas (com o analista governando a carteira em memória):
+
+- LINKUSDT · Placar clássico: pausa 86,48% · cautela 12,86% · moderada 0,35% · liberada 0,32%. Motivos mais comuns: move_cost 14429, no_forecast 2284, quiet_market 325, daily_loss 291. Comandos: halt 494, resume 493, exit_position 105. Falhas do analista: 0.
+- LINKUSDT · Reversão: pausa 86,85% · cautela 12,60% · moderada 0,28% · liberada 0,27%. Motivos mais comuns: move_cost 14011, no_forecast 2226, daily_loss 845, quiet_market 328. Comandos: halt 476, resume 475, exit_position 75. Falhas do analista: 0.
+- BNBUSDT · Placar clássico: pausa 97,64% · cautela 2,36% · moderada 0,00% · liberada 0,00%. Motivos mais comuns: move_cost 17097, no_forecast 420, daily_loss 179, quiet_market 41. Comandos: halt 83, resume 82, exit_position 14. Falhas do analista: 0.
+- BNBUSDT · Reversão: pausa 98,00% · cautela 2,00% · moderada 0,00% · liberada 0,00%. Motivos mais comuns: move_cost 16980, no_forecast 353, daily_loss 284, quiet_market 43. Comandos: halt 70, resume 69, exit_position 13. Falhas do analista: 0.
+- BTCUSDT · Placar clássico: pausa 98,44% · cautela 1,56% · moderada 0,00% · liberada 0,00%. Motivos mais comuns: move_cost 17370, no_forecast 277, daily_loss 89, quiet_market 13. Comandos: halt 51, resume 50, exit_position 8. Falhas do analista: 0.
+- BTCUSDT · Reversão: pausa 98,71% · cautela 1,29% · moderada 0,00% · liberada 0,00%. Motivos mais comuns: move_cost 17314, no_forecast 228, daily_loss 98, quiet_market 20. Comandos: halt 49, resume 48, exit_position 8. Falhas do analista: 0.
+- ETHUSDT · Placar clássico: pausa 94,80% · cautela 5,11% · moderada 0,08% · liberada 0,01%. Motivos mais comuns: move_cost 16491, no_forecast 908, daily_loss 220, quiet_market 77. Comandos: halt 194, resume 193, exit_position 45. Falhas do analista: 0.
+- ETHUSDT · Reversão: pausa 95,28% · cautela 4,63% · moderada 0,08% · liberada 0,01%. Motivos mais comuns: move_cost 16352, no_forecast 818, daily_loss 378, quiet_market 67. Comandos: halt 186, resume 185, exit_position 32. Falhas do analista: 0.
+
+Dos 8 casos (4 pares × 2 estratégias): ajudou em 8, atrapalhou em 0, empatou em 0 e ficou com poucas semanas em 0. Somando os 8 casos, o líquido com o analista menos o líquido sem ele é 52.380,67 USDT (saldo inicial de 10000 USDT por caso). O veredito mede só se o analista perde MENOS que a estratégia sozinha, não se ganha: com o analista o líquido ficou positivo em 0 dos 8 casos e negativo em 8, ou seja, pior que não operar (líquido zero) em 8.
+
+### O que o relatório diz, sem esconder nada
+
+1. **O veredito D11 é `ajudou` nos 8 casos** (o analista terminou à frente em 20 a 25 de 26 semanas; limite inferior do Wilson de 57,95% a 81,11%). **Mas "ajudou" aqui é perder MENOS que a estratégia sozinha, não ganhar:** com o analista o líquido ficou **negativo nos 8 casos** (−1,53% a −14,27% do saldo em 183 dias) e, portanto, **pior que não operar** (líquido zero). A estratégia sozinha perde 47% a 87% do saldo em 15 min (taxas de 3,2 a 6,1 mil USDT sobre 10 mil em 483 a 683 operações): o analista não acerta mercado, ele para de queimar taxa.
+2. **De onde vem a ajuda:** a trava `move_cost` (o movimento típico de 15 min, o ATR em %, tem de pagar pelo menos o dobro da ida e volta, 0,6%) é o motivo mais comum em todos os casos e a porta fica fechada em **94% a 99% das velas**. Postura MODERADA ou LIBERADA soma no máximo 0,67% das velas em LINK, 0,09% em ETH e 0,00% em BNB e BTC; o grosso é PAUSA (86% a 99%) e CAUTELA. Ou seja: nesta janela o analista é, na prática, "não operar em 15 min porque o custo come o movimento". É a resposta honesta que a spec previa (§8) e coerente com a T0.2 (o Placar clássico acerta menos que a moeda ao ar em 15 min).
+3. **O que NÃO está medido:** o tamanho do analista (¼ e ½ do risco) não entra, porque o motor só ganha o comando de tamanho na Fase 4 (T4.1, mudança de motor): nas velas em CAUTELA ou MODERADA com a porta aberta a operação roda no tamanho cheio da estratégia. O contrafactual também não vê o que o analista faria com a meta (`goal`) nem com `waitingForData`.
+4. **Ordem de grandeza para o usuário decidir o `govern` (D1):** governar tira a perda de taxa, mas não cria ganho; com as estratégias e as taxas de hoje a simulação de 15 min continua perdendo em todos os pares. A decisão de liberar o modo `govern` (Fase 4) fica com o usuário; a evidência acima NÃO é uma recomendação de operar.
+5. **Conferências:** zero falhas do analista nas 17.568 velas × 8; a estratégia sozinha bate com o laço direto do motor (patrimônio final e número de entradas) no recorte de 900 velas do teste; o analista sem comandos de entrada (só `halt`, `resume`, `exit_position`).
+
+```text
+bun run typecheck    → verde
+bun run lint         → verde
+bun run format:check → All matched files use Prettier code style!
+bun test test/analyst-counterfactual.contract.test.ts → 19 pass / 0 fail
+```
