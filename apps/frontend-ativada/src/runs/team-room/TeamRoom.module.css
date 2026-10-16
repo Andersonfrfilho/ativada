@@ -243,6 +243,7 @@
       'avatar'
       'placard';
     justify-items: center;
+    align-content: end;
   }
 
   .back .bubbleCell {
