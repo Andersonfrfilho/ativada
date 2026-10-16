@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Central de avisos · AtivAdA (preview)</title>
+<style>
+/* Tokens: os mesmos de apps/frontend-ativada/src/styles/global.css (e dos previews das specs 009 e 011). */
+:root {
+  --bg: #f2f4f8; --surface: #ffffff; --surface-2: #ebeef4; --line: #d8dee9;
+  --ink: #10162a; --ink-2: #47516c; --ink-3: #5f6b86;
+  --accent: #2541b2; --accent-soft: #e1e7fb; --on-accent: #ffffff;
+  --buy: #087a52; --buy-soft: #dbf2e8; --sell: #c0353d; --sell-soft: #fbe3e4;
+  --warn: #7a4f00; --warn-soft: #fbf0d9; --bench: #66708c;
+  --font-body: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-data: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --text-xs: 12px; --text-sm: 13px; --text-md: 15px; --text-lg: 18px; --text-xl: 22px;
+  --radius-card: 14px; --radius-control: 10px; --radius-pill: 999px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px;
+  --motion-fast: 160ms; --motion-medium: 240ms; --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* novos (spec 014), derivados dos tokens */
+  --on-buy: #ffffff; --on-sell: #ffffff;
+  --toast-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 10%, transparent), 0 12px 32px color-mix(in srgb, var(--ink) 16%, transparent);
+  --cancel-soft: color-mix(in srgb, var(--bench) 14%, var(--surface));
+  --zone-gain: color-mix(in srgb, var(--buy) 22%, var(--surface));
+  --zone-loss: color-mix(in srgb, var(--sell) 18%, var(--surface));
+  --scrim: color-mix(in srgb, var(--ink) 38%, transparent);
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  --bg: #0b0f1c; --surface: #131a2c; --surface-2: #1a2238; --line: #262f4b;
+  --ink: #e8ecf6; --ink-2: #a8b1c8; --ink-3: #8a94ad;
+  --accent: #8ea3ff; --accent-soft: #1e2954; --on-accent: #0b0f1c;
+  --buy: #41cc94; --buy-soft: #0e2d23; --sell: #ff7d83; --sell-soft: #3a191e;
+  --warn: #f2c26b; --warn-soft: #33270f; --bench: #8b94ad;
+  --on-buy: #06231a; --on-sell: #2a0b0e;
+  --toast-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 14px 36px rgb(0 0 0 / 0.5);
+  --zone-gain: color-mix(in srgb, var(--buy) 26%, var(--surface));
+  --zone-loss: color-mix(in srgb, var(--sell) 24%, var(--surface));
+  --scrim: rgb(3 6 14 / 0.62);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.6 var(--font-body); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, p, ol, ul, dl, dd { margin: 0; padding: 0; }
+li { list-style: none; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.icon { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.icon-sm { width: 16px; height: 16px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.data { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.pos { color: var(--buy); font-weight: 700; }
+.neg { color: var(--sell); font-weight: 700; }
+
+/* ---------- Barra do preview (fora do produto) ---------- */
+.preview-bar { background: var(--surface-2); border-bottom: 1px solid var(--line); padding: var(--space-3) 16px; display: grid; gap: var(--space-2); }
+.preview-bar[hidden] { display: none; }
+.preview-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.preview-label { font-size: var(--text-xs); color: var(--ink-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-right: var(--space-2); }
+.preview-row button { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-pill); padding: 6px 12px; font-size: var(--text-sm); min-height: 36px; }
+.preview-row button[aria-pressed='true'] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+/* ---------- Cabeçalho ---------- */
+.topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: var(--space-4); padding: 0 16px; height: 64px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.brand { font: 700 var(--text-lg)/1 var(--font-display); letter-spacing: -0.01em; }
+.brand b { color: var(--accent); }
+.nav { display: none; gap: var(--space-1); }
+.nav a { color: var(--ink-2); text-decoration: none; padding: 8px 10px; border-radius: var(--radius-control); font-size: var(--text-sm); font-weight: 600; }
+.nav a[aria-current='page'] { color: var(--ink); background: var(--surface-2); }
+.top-actions { margin-left: auto; display: flex; align-items: center; gap: var(--space-2); position: relative; }
+.live-badge { display: none; align-items: center; gap: 6px; font-size: var(--text-xs); font-weight: 600; color: var(--buy); background: var(--buy-soft); border-radius: var(--radius-pill); padding: 4px 10px; }
+.live-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.live-badge.is-warn { color: var(--warn); background: var(--warn-soft); }
+.ctl { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-control); padding: 0 12px; font-size: var(--text-sm); font-weight: 600; }
+.ctl-wide { display: none; }
+.bell { position: relative; padding: 0; width: 44px; }
+.bell[aria-expanded='true'] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.bell .icon { width: 22px; height: 22px; }
+.bell-count { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--sell); color: var(--on-sell); font: 700 12px/18px var(--font-body); text-align: center; border: 2px solid var(--surface); }
+.bell-count[hidden], .bell-paused[hidden] { display: none; }
+.bell-paused { position: absolute; bottom: -4px; right: -4px; width: 14px; height: 14px; border-radius: 50%; background: var(--warn); border: 2px solid var(--surface); }
+@media (min-width: 1100px) {
+  .nav { display: flex; }
+  .menu-btn { display: none; }
+  .ctl-wide, .live-badge { display: inline-flex; }
+}
+
+/* ---------- Página de fundo ---------- */
+main { max-width: 1200px; margin: 0 auto; padding: var(--space-5) 16px 120px; display: grid; gap: var(--space-4); }
+.page-title { font: 700 var(--text-xl)/1.2 var(--font-display); }
+.pulse { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-control); padding: 10px 14px; font-size: var(--text-sm); color: var(--ink-2); }
+.pulse strong { color: var(--ink); }
+.run-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--buy); display: inline-block; margin-right: 6px; }
+.chip-new { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); background: var(--accent-soft); border-radius: var(--radius-pill); padding: 1px 8px; }
+.grid { display: grid; gap: var(--space-4); align-items: start; }
+@media (min-width: 1024px) { .grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: var(--space-4) var(--space-5); min-width: 0; }
+.card h2 { font: 700 var(--text-md)/1.3 var(--font-display); margin-bottom: var(--space-3); display: flex; flex-wrap: wrap; gap: 0 var(--space-2); align-items: baseline; }
+.card h2 span { font: 400 var(--text-sm) var(--font-body); color: var(--ink-3); }
+.kpi { display: grid; gap: var(--space-1); }
+.kpi .big { font: 700 28px/1.2 var(--font-data); }
+.muted { color: var(--ink-3); font-size: var(--text-sm); }
+.runs-list li { display: flex; align-items: center; gap: var(--space-3); padding: 10px 0; border-bottom: 1px solid var(--line); font-size: var(--text-sm); }
+.runs-list li:last-child { border-bottom: 0; }
+.runs-list b { font-size: var(--text-md); }
+.runs-list .right { margin-left: auto; text-align: right; }
+
+/* gráfico */
+.chart { width: 100%; height: auto; display: block; }
+.chart .grid-line { stroke: var(--line); stroke-width: 1; }
+.chart .up { fill: var(--buy); stroke: var(--buy); }
+.chart .down { fill: var(--sell); stroke: var(--sell); }
+.chart .zone-gain { fill: var(--zone-gain); opacity: 0.7; }
+.chart .zone-loss { fill: var(--zone-loss); opacity: 0.75; }
+.chart .lv-entry { stroke: var(--ink-2); stroke-width: 1.5; }
+.chart .lv-target { stroke: var(--buy); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.chart .lv-stop { stroke: var(--sell); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.chart .tag rect { stroke-width: 1; }
+.chart .tag.entry rect { fill: var(--surface); stroke: var(--ink-2); }
+.chart .tag.target rect { fill: var(--buy); stroke: var(--buy); }
+.chart .tag.stop rect { fill: var(--sell); stroke: var(--sell); }
+.chart .tag.now rect { fill: var(--accent); stroke: var(--accent); }
+.chart .tag text { font: 700 11px var(--font-data); }
+.chart .tag.entry text { fill: var(--ink); }
+.chart .tag.target text { fill: var(--on-buy); }
+.chart .tag.stop text { fill: var(--on-sell); }
+.chart .tag.now text { fill: var(--on-accent); }
+.chart .arrow-buy { fill: var(--buy); stroke: var(--surface); stroke-width: 2; }
+.chart .arrow-sell { fill: var(--sell); stroke: var(--surface); stroke-width: 2; }
+.chart .arrow-label { font: 800 12px var(--font-body); letter-spacing: 0.04em; }
+.chart .arrow-label.b { fill: var(--buy); }
+.chart .axis { font: 11px var(--font-data); fill: var(--ink-3); }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--text-xs); color: var(--ink-2); margin-top: var(--space-2); }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 18px; height: 0; border-top: 2px solid; display: inline-block; }
+.sw.entry { border-color: var(--ink-2); }
+.sw.target { border-color: var(--buy); border-top-style: dashed; }
+.sw.stop { border-color: var(--sell); border-top-style: dashed; }
+.sw.band { height: 10px; border: 0; background: linear-gradient(180deg, var(--zone-gain) 50%, var(--zone-loss) 50%); border-radius: 2px; }
+
+/* equipe agora */
+.team { display: grid; gap: var(--space-3); }
+.agent { display: grid; grid-template-columns: 40px 1fr; gap: var(--space-2) var(--space-3); align-items: start; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font: 800 13px var(--font-display); color: #fff; }
+.avatar.rev { background: #7466d0; } .avatar.trend { background: #2a8aa0; } .avatar.boss { background: var(--accent); color: var(--on-accent); }
+.agent-name { font-weight: 700; font-size: var(--text-sm); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.vote { font-size: var(--text-xs); font-weight: 700; border-radius: var(--radius-pill); padding: 0 8px; display: inline-flex; gap: 3px; align-items: center; }
+.vote.buy { color: var(--buy); background: var(--buy-soft); }
+.vote.neutral { color: var(--ink-2); background: var(--surface-2); }
+.bubble { grid-column: 2; position: relative; background: var(--surface-2); border-radius: 4px 12px 12px 12px; padding: 8px 10px; font-size: var(--text-sm); }
+.bubble.quiet { border: 1px dashed var(--line); background: transparent; color: var(--ink-2); }
+.bubble.signal { background: var(--buy-soft); border: 2px solid var(--buy); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+.bubble-sig { display: flex; gap: 8px; align-items: flex-start; }
+.mini-badge { width: 28px; height: 28px; border-radius: 8px; background: var(--buy); color: var(--on-buy); display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.mini-badge .icon { width: 18px; height: 18px; stroke-width: 2.6; }
+.bubble-sig b { color: var(--buy); letter-spacing: 0.02em; }
+.bubble .fine { display: block; margin-top: 6px; font-size: 11px; color: var(--ink-2); line-height: 1.45; }
+
+/* ---------- Ficha do sinal ---------- */
+.signal { --tone: var(--accent); --tone-soft: var(--accent-soft); --on-tone: var(--on-accent); display: grid; gap: var(--space-3); container-type: inline-size; container-name: signal; }
+.signal.buy, .signal.hold { --tone: var(--buy); --tone-soft: var(--buy-soft); --on-tone: var(--on-buy); }
+.signal.sell { --tone: var(--sell); --tone-soft: var(--sell-soft); --on-tone: var(--on-sell); }
+.signal-top { display: grid; grid-template-columns: auto 1fr; gap: 2px var(--space-3); align-items: center; }
+.signal-badge { grid-row: span 2; width: 56px; height: 56px; border-radius: 16px; background: var(--tone); color: var(--on-tone); display: inline-flex; align-items: center; justify-content: center; }
+.signal-badge .icon { width: 34px; height: 34px; stroke-width: 2.8; }
+.signal-word { font: 800 24px/1 var(--font-display); letter-spacing: 0.08em; color: var(--tone); display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.signal-word small { font: 600 var(--text-xs)/1.3 var(--font-body); letter-spacing: 0; color: var(--ink-2); text-transform: none; }
+.signal-pair { font-size: var(--text-sm); color: var(--ink-2); }
+.signal-pair b { color: var(--ink); }
+.signal-price { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.signal-price .data { font-size: 34px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; }
+.signal-price .unit { font-size: var(--text-sm); color: var(--ink-3); font-weight: 600; }
+.signal-price .pl { font: 700 var(--text-md) var(--font-data); padding: 2px 10px; border-radius: var(--radius-pill); }
+.signal-price .pl.pos { background: var(--buy-soft); }
+.signal-price .pl.neg { background: var(--sell-soft); }
+.signal-line { font-size: var(--text-md); font-weight: 600; }
+
+/* régua: proteção — entrada — alvo, com o preço de agora */
+.levels { position: relative; height: 92px; margin: 2px 0 0; }
+.levels.no-now { height: 60px; }
+.levels.no-now .lv-track { top: 8px; } .levels.no-now .lv-mark { top: 2px; } .levels.no-now .lv-lbl { top: 26px; }
+.lv-track { position: absolute; left: 0; right: 0; top: 40px; height: 12px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.lv-zone { position: absolute; top: 0; bottom: 0; }
+.lv-zone.loss { background: var(--zone-loss); border-right: 2px solid var(--surface); }
+.lv-zone.gain { background: var(--zone-gain); }
+.lv-mark { position: absolute; top: 34px; width: 3px; height: 24px; margin-left: -1.5px; border-radius: 2px; }
+.lv-mark.stop { background: var(--sell); } .lv-mark.entry { background: var(--ink); } .lv-mark.target { background: var(--buy); }
+.lv-lbl { position: absolute; top: 58px; font-size: 11px; line-height: 1.3; white-space: nowrap; transform: translateX(-50%); text-align: center; }
+.lv-lbl b { display: block; font: 700 12px var(--font-data); color: var(--ink); }
+.lv-lbl.start { transform: none; text-align: left; } .lv-lbl.end { transform: translateX(-100%); text-align: right; }
+.lv-lbl .nm { font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 10px; }
+.lv-lbl.stop .nm { color: var(--sell); } .lv-lbl.target .nm { color: var(--buy); } .lv-lbl.entry .nm { color: var(--ink-2); }
+.lv-now { position: absolute; top: 0; transform: translateX(-50%); display: grid; justify-items: center; }
+.lv-now span { font: 700 11px/1.2 var(--font-data); color: var(--on-accent); background: var(--accent); border-radius: 6px; padding: 3px 6px; white-space: nowrap; }
+.lv-now::after { content: ''; width: 0; height: 0; border: 6px solid transparent; border-top-color: var(--accent); margin-top: -1px; }
+.lv-now.edge-start { transform: none; justify-items: start; } .lv-now.edge-end { transform: translateX(-100%); justify-items: end; }
+.ratio { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--text-sm); color: var(--ink-2); }
+.ratio span { display: inline-flex; align-items: center; gap: 6px; }
+.ratio i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.ratio i.loss { background: var(--zone-loss); border: 1px solid var(--sell); } .ratio i.gain { background: var(--zone-gain); border: 1px solid var(--buy); }
+.ratio b { color: var(--ink); font-family: var(--font-data); }
+@container signal (max-width: 280px) {
+  .levels { height: auto; display: grid; gap: 6px; }
+  .lv-track, .lv-mark, .lv-now { display: none; }
+  .lv-lbl, .lv-lbl.start, .lv-lbl.end { position: static; transform: none; text-align: left; display: flex; gap: 8px; align-items: baseline; border-left: 4px solid; padding-left: 8px; }
+  .lv-lbl.target { order: 1; border-color: var(--buy); } .lv-lbl.entry { order: 2; border-color: var(--ink); } .lv-lbl.stop { order: 3; border-color: var(--sell); }
+}
+
+/* progresso até a condição (perto de comprar) */
+.progress { display: grid; gap: 6px; }
+.progress-track { position: relative; height: 14px; border-radius: 7px; background: var(--surface-2); }
+.progress-fill { position: absolute; inset: 0 auto 0 0; border-radius: 7px; background: linear-gradient(90deg, var(--accent-soft), var(--accent)); }
+.progress-goal { position: absolute; right: -2px; top: -5px; width: 4px; height: 24px; border-radius: 2px; background: var(--buy); }
+.progress-row { display: flex; justify-content: space-between; gap: 8px; font-size: var(--text-xs); color: var(--ink-2); }
+.progress-row b { font-family: var(--font-data); color: var(--ink); }
+.progress-row .goal b { color: var(--buy); }
+
+/* ---------- Aviso flutuante ---------- */
+.toast-stack { position: fixed; z-index: 30; left: 16px; right: 16px; bottom: 16px; display: grid; gap: var(--space-3); max-height: calc(100vh - 96px); overflow-y: auto; }
+@media (max-width: 639px) { .toast .levels, .toast .ratio, .toast .cycle { display: none; } }
+@media (min-width: 1024px) { .toast-stack { left: auto; right: 24px; bottom: 24px; width: 400px; } }
+.toast { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); box-shadow: var(--toast-shadow); padding: var(--space-3) var(--space-4) var(--space-4) calc(var(--space-4) + 6px); display: grid; gap: var(--space-3); overflow: hidden; animation: toast-in var(--motion-medium) var(--ease-out); }
+.toast::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 6px; background: var(--rail, var(--accent)); }
+.toast.buy { --rail: var(--buy); } .toast.sell { --rail: var(--sell); } .toast.cancel { --rail: var(--bench); }
+@keyframes toast-in { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+.toast-head { display: flex; align-items: center; gap: var(--space-2); min-height: 28px; }
+.state { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs); font-weight: 700; color: var(--tone, var(--accent)); background: var(--tone-soft, var(--accent-soft)); border-radius: var(--radius-pill); padding: 2px 10px 2px 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+.state.cancel { --tone: var(--ink-2); --tone-soft: var(--cancel-soft); }
+.state.ok { --tone: var(--buy); --tone-soft: var(--buy-soft); }
+.state.sellst { --tone: var(--sell); --tone-soft: var(--sell-soft); }
+.when { font-size: var(--text-xs); color: var(--ink-3); }
+.close { position: relative; margin-left: auto; width: 36px; height: 36px; margin-right: -8px; border: 0; background: transparent; border-radius: var(--radius-control); display: inline-flex; align-items: center; justify-content: center; color: var(--ink-3); }
+.close::after { content: ''; position: absolute; inset: -4px; }
+.toast-main { font: 600 var(--text-md)/1.4 var(--font-body); }
+.facts { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--text-sm); color: var(--ink-2); }
+.facts b { font-family: var(--font-data); color: var(--ink); font-weight: 700; }
+.cycle { display: flex; align-items: center; gap: 6px 8px; font-size: var(--text-xs); color: var(--ink-2); flex-wrap: wrap; }
+.cycle li { display: inline-flex; align-items: center; gap: 4px; }
+.cycle .done { color: var(--ink); font-weight: 600; }
+.cycle .done .icon { color: var(--buy); }
+.cycle .now { color: var(--accent); font-weight: 700; }
+.cycle .cut { color: var(--ink-2); font-weight: 700; }
+.cycle .sep { color: var(--ink-3); }
+.ask { background: var(--surface-2); border-radius: var(--radius-control); padding: 8px 10px; font-size: var(--text-sm); color: var(--ink-2); display: grid; gap: 2px; }
+.ask b { color: var(--ink); }
+.fixed-line { font-size: var(--text-xs); color: var(--ink-2); line-height: 1.5; border-top: 1px dashed var(--line); padding-top: var(--space-2); display: flex; gap: 6px; align-items: flex-start; }
+.fixed-line .verdict { font-weight: 700; white-space: nowrap; }
+.verdict.above { color: var(--buy); } .verdict.below { color: var(--sell); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); border-radius: var(--radius-control); padding: 0 14px; font-size: var(--text-sm); font-weight: 700; border: 1px solid var(--line); background: var(--surface); }
+.btn-primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); flex: 1 1 150px; }
+.btn-quiet { color: var(--ink-2); font-weight: 600; }
+
+/* ---------- Primeiro uso ---------- */
+.bell-wrap { position: relative; display: inline-flex; }
+.coach { position: absolute; top: 56px; right: -14px; z-index: 40; width: min(320px, calc(100vw - 32px)); background: var(--ink); color: var(--surface); border-radius: var(--radius-card); padding: var(--space-4); display: grid; gap: var(--space-3); box-shadow: var(--toast-shadow); animation: toast-in var(--motion-medium) var(--ease-out); }
+.coach::before { content: ''; position: absolute; top: -7px; right: 29px; width: 14px; height: 14px; background: var(--ink); transform: rotate(45deg); }
+.coach p { font-size: var(--text-md); font-weight: 700; line-height: 1.4; }
+.coach small { font-size: var(--text-sm); opacity: 0.85; }
+.coach .btn-light { background: var(--surface); color: var(--ink); border-color: var(--surface); flex: 1; }
+.coach .btn-ghost { background: transparent; color: var(--surface); border-color: color-mix(in srgb, var(--surface) 40%, transparent); }
+@media (max-width: 639px) { .coach { position: fixed; top: 72px; left: 16px; right: 16px; width: auto; } .coach::before { right: 107px; } }
+.coach-target { box-shadow: 0 0 0 4px var(--accent-soft), 0 0 0 6px var(--accent); }
+
+/* ---------- Gaveta ---------- */
+.scrim { position: fixed; inset: 0; z-index: 50; background: var(--scrim); }
+.drawer { position: fixed; z-index: 60; inset: 0; background: var(--surface); display: flex; flex-direction: column; animation: drawer-in var(--motion-medium) var(--ease-out); }
+@media (min-width: 1024px) { .drawer { left: auto; width: 420px; border-left: 1px solid var(--line); box-shadow: var(--toast-shadow); } }
+@keyframes drawer-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.drawer-head { padding: var(--space-4) var(--space-5) var(--space-3); border-bottom: 1px solid var(--line); display: grid; gap: var(--space-2); }
+.drawer-title { display: flex; align-items: center; gap: var(--space-2); }
+.drawer-title h2 { font: 700 var(--text-xl)/1.2 var(--font-display); }
+.drawer-title .count { font-size: var(--text-sm); color: var(--ink-3); }
+.drawer-title .close { width: 44px; height: 44px; border: 1px solid var(--line); margin-right: 0; }
+.drawer-sub { font-size: var(--text-sm); color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+.drawer-tools { display: flex; flex-wrap: wrap; gap: 0 var(--space-3); align-items: center; }
+.chips { display: flex; gap: var(--space-2); overflow-x: auto; padding: 4px 0; }
+.chip { min-height: 36px; white-space: nowrap; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-pill); padding: 0 12px; font-size: var(--text-sm); font-weight: 600; color: var(--ink-2); position: relative; }
+.chip::after { content: ''; position: absolute; inset: -4px 0; }
+.chip[aria-pressed='true'] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.link-btn { min-height: 44px; border: 0; background: transparent; color: var(--accent); font-weight: 700; font-size: var(--text-sm); padding: 0 4px; display: inline-flex; align-items: center; gap: 6px; }
+.strip { display: flex; gap: var(--space-2); align-items: flex-start; background: var(--warn-soft); color: var(--warn); padding: 10px var(--space-5); font-size: var(--text-sm); border-bottom: 1px solid var(--line); }
+.strip b { display: block; }
+.strip span { color: var(--ink-2); }
+.drawer-body { overflow-y: auto; flex: 1; padding: 0 0 var(--space-6); }
+.day { font-size: var(--text-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); padding: var(--space-3) var(--space-5) var(--space-1); }
+.item { display: grid; grid-template-columns: 36px 1fr; gap: var(--space-3); padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--line); }
+.item.unread { background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface)); }
+.item-ico { width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; color: var(--tone); background: var(--tone-soft); }
+.item.buy { --tone: var(--on-buy); --tone-soft: var(--buy); }
+.item.sell { --tone: var(--on-sell); --tone-soft: var(--sell); }
+.item.cancel { --tone: var(--ink-2); --tone-soft: var(--cancel-soft); }
+.item.near, .item.price { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+.item.stop-run { --tone: var(--warn); --tone-soft: var(--warn-soft); }
+.item.ok-run { --tone: var(--buy); --tone-soft: var(--buy-soft); }
+.item-top { display: flex; gap: var(--space-2); align-items: baseline; flex-wrap: wrap; }
+.item-title { font-weight: 800; font-size: var(--text-md); }
+.item.buy .item-title { color: var(--buy); } .item.sell .item-title { color: var(--sell); }
+.item-time { margin-left: auto; font-size: var(--text-xs); color: var(--ink-3); font-family: var(--font-data); }
+.item-pair { font-size: var(--text-sm); color: var(--ink-2); }
+.item-text { font-size: var(--text-sm); }
+.item-text .px { font: 800 var(--text-md) var(--font-data); }
+.item-actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
+.item-actions .btn { min-height: 44px; }
+.unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; }
+.empty { display: grid; justify-items: center; text-align: center; gap: var(--space-3); padding: 56px var(--space-6); }
+.empty-art { width: 88px; height: 88px; border-radius: 50%; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; color: var(--ink-3); }
+.empty-art .icon { width: 40px; height: 40px; stroke-width: 1.6; }
+.empty h3 { font: 700 var(--text-lg)/1.3 var(--font-display); }
+.empty p { color: var(--ink-2); max-width: 300px; }
+.prefs { padding: var(--space-2) var(--space-5) var(--space-6); display: grid; gap: var(--space-1); }
+.prefs h3 { font: 700 var(--text-md)/1.3 var(--font-display); margin-top: var(--space-4); }
+.pref { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--space-3); align-items: center; padding: var(--space-3) 0; border-bottom: 1px solid var(--line); }
+.pref label { font-weight: 600; display: flex; align-items: center; gap: var(--space-2); }
+.pref .help { grid-column: 1; font-size: var(--text-sm); color: var(--ink-3); }
+.switch { grid-row: 1 / span 2; grid-column: 2; position: relative; width: 52px; height: 32px; border-radius: var(--radius-pill); background: var(--surface-2); border: 1px solid var(--ink-3); padding: 0; }
+.switch::before { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--ink-3); transition: transform var(--motion-fast) var(--ease-out); }
+.switch::after { content: ''; position: absolute; inset: -6px -2px; }
+.switch[aria-checked='true'] { background: var(--accent); border-color: var(--accent); }
+.switch[aria-checked='true']::before { transform: translateX(20px); background: var(--on-accent); }
+.pref-run { display: grid; gap: var(--space-1); padding: var(--space-3) 0; border-bottom: 1px solid var(--line); }
+.pref-run-head { display: flex; align-items: center; gap: var(--space-2); font-weight: 700; flex-wrap: wrap; }
+.pref-run-head .muted { font-weight: 400; }
+.pref-run .pref { border: 0; padding: 4px 0; }
+.tag-muted { font-size: var(--text-xs); font-weight: 700; color: var(--ink-2); background: var(--cancel-soft); border-radius: var(--radius-pill); padding: 2px 8px; display: inline-flex; gap: 4px; align-items: center; }
+.notify-box { display: grid; gap: var(--space-2); background: var(--surface-2); border-radius: var(--radius-control); padding: var(--space-3) var(--space-4); margin-top: var(--space-3); }
+.notify-box p { font-size: var(--text-sm); color: var(--ink-2); }
+.notify-box .btn { justify-self: start; flex: none; }
+
+/* ---------- Aba em segundo plano ---------- */
+.bg-demo { display: grid; gap: var(--space-4); }
+.bg-demo[hidden], #page[hidden] { display: none; }
+.browser { border: 1px solid var(--line); border-radius: var(--radius-card); overflow: hidden; background: var(--surface); }
+.tabs { display: flex; gap: 2px; padding: 8px 8px 0; background: var(--surface-2); overflow-x: auto; }
+.tab { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 10px 10px 0 0; font-size: var(--text-sm); color: var(--ink-2); white-space: nowrap; }
+.tab.active { background: var(--surface); color: var(--ink); }
+.tab.ours { font-weight: 800; color: var(--ink); outline: 2px solid var(--accent); outline-offset: -2px; }
+.fav { width: 16px; height: 16px; border-radius: 4px; background: var(--accent); position: relative; display: inline-block; flex: none; }
+.fav.other { background: var(--ink-3); }
+.fav.dot::after { content: ''; position: absolute; right: -3px; bottom: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--sell); border: 2px solid var(--surface-2); }
+.browser-body { padding: var(--space-5); color: var(--ink-3); font-size: var(--text-sm); min-height: 110px; display: grid; gap: var(--space-2); align-content: start; }
+.ph { height: 10px; border-radius: 5px; background: var(--surface-2); }
+.ph.w70 { width: 70%; } .ph.w45 { width: 45%; }
+.os-note { justify-self: end; width: min(380px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--toast-shadow); padding: var(--space-3) var(--space-4); display: grid; grid-template-columns: 36px 1fr; gap: 2px var(--space-3); }
+.os-note .sq { width: 36px; height: 36px; border-radius: 9px; grid-row: span 3; display: inline-flex; align-items: center; justify-content: center; background: var(--buy); color: var(--on-buy); }
+.os-note .sq .icon { width: 22px; height: 22px; stroke-width: 2.6; }
+.os-note .src { font-size: var(--text-xs); color: var(--ink-3); }
+.os-note b { font-size: var(--text-md); }
+.os-note p { font-size: var(--text-sm); color: var(--ink-2); }
+.callouts { display: grid; gap: var(--space-2); font-size: var(--text-sm); color: var(--ink-2); }
+.callouts li { display: flex; gap: var(--space-2); align-items: flex-start; }
+.callouts .icon { color: var(--buy); margin-top: 3px; }
+
+/* ---------- Operar à mão ---------- */
+.detail { padding: var(--space-3) var(--space-5) var(--space-6); display: grid; gap: var(--space-4); }
+.manual { display: grid; gap: var(--space-3); border-top: 1px solid var(--line); padding-top: var(--space-4); }
+.manual h3 { font: 700 var(--text-lg)/1.3 var(--font-display); display: flex; gap: var(--space-2); align-items: center; }
+.honesty { display: grid; gap: 6px; background: var(--warn-soft); border-radius: var(--radius-control); padding: var(--space-3) var(--space-4); font-size: var(--text-sm); color: var(--ink); }
+.honesty .h-head { display: flex; gap: 6px; align-items: center; color: var(--warn); font-weight: 800; }
+.history { display: grid; grid-template-columns: 1fr; gap: 2px var(--space-3); align-items: center; border: 1px solid var(--line); border-radius: var(--radius-control); padding: var(--space-3) var(--space-4); }
+.history .big { font: 800 26px/1.1 var(--font-data); color: var(--sell); }
+@media (min-width: 480px) { .history { grid-template-columns: auto 1fr; } .history .big { grid-row: span 2; } }
+.history p { font-size: var(--text-sm); color: var(--ink-2); }
+.history b { color: var(--ink); }
+.steps { display: grid; gap: var(--space-3); counter-reset: step; }
+.step { display: grid; grid-template-columns: 32px 1fr; gap: var(--space-1) var(--space-3); }
+.step::before { counter-increment: step; content: counter(step); width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: var(--surface); font: 800 var(--text-md)/32px var(--font-display); text-align: center; grid-row: span 3; }
+.step-title { font-weight: 700; }
+.copy-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.val { display: inline-flex; align-items: baseline; gap: 6px; background: var(--surface-2); border-radius: 8px; padding: 6px 10px; min-height: 44px; align-items: center; }
+.val small { font-size: var(--text-xs); color: var(--ink-2); }
+.val b { font: 800 var(--text-md) var(--font-data); }
+.val.target b { color: var(--buy); } .val.stop b { color: var(--sell); }
+.btn-copy { min-height: 44px; padding: 0 12px; font-weight: 700; }
+.btn-copy.done { color: var(--buy); border-color: var(--buy); background: var(--buy-soft); }
+.btn-ext { background: var(--ink); color: var(--surface); border-color: var(--ink); text-decoration: none; }
+.give-up { display: flex; gap: var(--space-2); align-items: flex-start; font-size: var(--text-sm); border-left: 4px solid var(--sell); background: var(--sell-soft); padding: var(--space-2) var(--space-3); border-radius: 0 8px 8px 0; }
+.give-up .icon { color: var(--sell); margin-top: 2px; }
+.my-balance { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
+.my-balance label { font-weight: 700; }
+.my-balance input { width: 120px; min-height: 44px; border: 1px solid var(--ink-3); border-radius: 8px; padding: 0 10px; background: var(--surface); color: var(--ink); font: 700 var(--text-md) var(--font-data); text-align: right; }
+.facts-table { display: grid; gap: 6px; font-size: var(--text-sm); color: var(--ink-2); }
+.facts-table div { display: grid; grid-template-columns: 150px 1fr; gap: var(--space-3); }
+.facts-table dt { font-weight: 700; color: var(--ink); }
+@media (max-width: 480px) { .facts-table div { grid-template-columns: 1fr; gap: 0; } }
+
+.scene-note { display: flex; gap: var(--space-2); align-items: flex-start; font-size: var(--text-sm); color: var(--ink-2); background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius-control); padding: 10px 14px; }
+.scene-note .icon { color: var(--accent); margin-top: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .toast, .drawer, .coach { animation: none; }
+  .switch::before { transition: none; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true">
+  <defs>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 1112 0c0 6 2 7 2 7H4s2-1 2-7zM10 20a2 2 0 004 0"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2"/></symbol>
+    <symbol id="i-cancel" viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zM5.6 5.6l12.8 12.8"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3L2 21h20zM12 10v4M12 17.5v.5"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 100 6 3 3 0 000-6z"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zM12 11v5M12 7.5v.5"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18M7 15l4-5 3 3 5-7"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM17 9l4 6M21 9l-4 6"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16.5 8.5a5 5 0 010 7"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zM10 8.5l5 3.5-5 3.5z"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8M14 4v6M8 14v6"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 01-12 0zM12 17v4"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 103-6.7M3 4v5h5M12 8v4l3 2"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9h11v11H9zM5 15H4V4h11v1"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5a1.5 1.5 0 013 0v6M11 11V4a1.5 1.5 0 013 0v7M14 11V6a1.5 1.5 0 013 0v8a6 6 0 01-6 6h-1a6 6 0 01-5-2.7L3 14a1.5 1.5 0 012.5-1.7L8 15"/></symbol>
+    <symbol id="i-shield"viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+  </defs>
+</svg>
+
+<div class="preview-bar" id="preview-bar">
+  <div class="preview-row" role="group" aria-labelledby="scene-label">
+    <span class="preview-label" id="scene-label">Cena</span>
+    <button type="button" data-scene="primeiro-uso">Primeiro uso</button>
+    <button type="button" data-scene="perto">Perto de comprar</button>
+    <button type="button" data-scene="pedida">Compra pedida</button>
+    <button type="button" data-scene="compra">Sinal de compra</button>
+    <button type="button" data-scene="no-grafico">Comprado: gráfico e equipe</button>
+    <button type="button" data-scene="operar-a-mao">Operar à mão</button>
+    <button type="button" data-scene="venda">Sinal de venda</button>
+    <button type="button" data-scene="cancelada">Ordem cancelada</button>
+    <button type="button" data-scene="gaveta">Sino e avisos</button>
+    <button type="button" data-scene="vazio">Sem avisos</button>
+    <button type="button" data-scene="fundo">Aba em segundo plano</button>
+    <button type="button" data-scene="caiu">Conexão caída</button>
+    <button type="button" data-scene="voltou">Resumo ao voltar</button>
+    <button type="button" data-scene="ajustes">Ajustes</button>
+  </div>
+  <div class="preview-row" role="group" aria-labelledby="theme-label">
+    <span class="preview-label" id="theme-label">Tema</span>
+    <button type="button" data-theme-choice="light">Claro</button>
+    <button type="button" data-theme-choice="dark">Escuro</button>
+  </div>
+</div>
+
+<header class="topbar">
+  <span class="brand">Ativ<b>AdA</b></span>
+  <nav class="nav" aria-label="Principal">
+    <a href="#" id="nav-overview" aria-current="page">Visão geral</a><a href="#">Metas</a><a href="#">Prazos</a><a href="#" id="nav-runs">Backtests</a><a href="#">Estratégias</a><a href="#">Alertas</a><a href="#">Ativos</a>
+  </nav>
+  <div class="top-actions">
+    <span class="live-badge" id="live-badge"><span class="dot"></span><span id="live-word">Ao vivo</span></span>
+    <span class="bell-wrap"><button type="button" class="ctl bell" id="bell" aria-haspopup="dialog" aria-expanded="false" aria-label="Avisos">
+      <svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>
+      <span class="bell-count" id="bell-count" aria-hidden="true">2</span>
+      <span class="bell-paused" id="bell-paused" aria-hidden="true" hidden></span>
+    </button><span id="coach-slot"></span></span>
+    <button type="button" class="ctl ctl-wide">Tema</button>
+    <button type="button" class="ctl ctl-wide">Sair</button>
+    <button type="button" class="ctl menu-btn">Menu</button>
+  </div>
+</header>
+
+<main id="main">
+  <p class="scene-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span id="scene-note-text"></span></p>
+  <section class="bg-demo" id="bg-demo" hidden aria-label="Aba em segundo plano">
+    <div class="browser" aria-hidden="true">
+      <div class="tabs">
+        <span class="tab active"><span class="fav other"></span>Planilha de gastos</span>
+        <span class="tab ours"><span class="fav dot"></span>(2) AtivAdA</span>
+        <span class="tab"><span class="fav other"></span>Notícias</span>
+      </div>
+      <div class="browser-body"><span>Você está noutra aba…</span><span class="ph"></span><span class="ph w70"></span><span class="ph w45"></span></div>
+    </div>
+    <div class="os-note" role="img" aria-label="Notificação do navegador: Sinal de compra, LINK/USDT a 12,458">
+      <span class="sq"><svg class="icon" aria-hidden="true"><use href="#i-up"/></svg></span>
+      <span class="src">AtivAdA · agora</span>
+      <b>▲ Sinal de compra · LINK/USDT a 12,458</b>
+      <p>Alvo 12,590 · sair se cair a 12,379. Simulação com dinheiro fictício.</p>
+    </div>
+    <ul class="callouts">
+      <li><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg><span>O título da aba conta o que chegou: <b>(2) AtivAdA</b>, e o ícone ganha um ponto. Volta ao normal quando você abre a aba.</span></li>
+      <li><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg><span>A notificação do navegador só existe se você clicou em <b>Ativar notificações</b>. O navegador pede a permissão nesse clique, nunca ao abrir a tela.</span></li>
+      <li><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg><span>Duas abas do painel abertas não repetem a mesma notificação.</span></li>
+    </ul>
+  </section>
+  <div id="page"></div>
+</main>
+
+<div class="toast-stack" id="toasts" aria-hidden="true"></div>
+<div id="drawer-slot"></div>
+<p class="visually-hidden" role="status" aria-live="polite" id="announcer"></p>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  function icon(name, cls) { return '<svg class="icon ' + (cls || '') + '" aria-hidden="true"><use href="#i-' + name + '"/></svg>'; }
+  function br(v, d) { return v.toFixed(d === undefined ? 3 : d).replace('.', ','); }
+
+  /* Níveis do exemplo real (LINK/USDT 15 min). Number aqui é só para DESENHAR a régua (no painel, o texto vem do servidor). */
+  var ENTRY = 12.458, TARGET = 12.590, STOP = 12.379;
+
+  /* ---------- Ficha do sinal ---------- */
+  function ruler(now, nowLabel) {
+    var lo = Math.min(STOP, now !== undefined ? now : STOP), hi = Math.max(TARGET, now !== undefined ? now : TARGET);
+    var span = hi - lo, at = function (v) { return ((v - lo) / span * 100); };
+    var pe = at(ENTRY), ps = at(STOP), pt = at(TARGET);
+    var pct = function (v) { var r = (v / ENTRY - 1) * 100; return (r > 0 ? '+' : '−') + br(Math.abs(r), 2) + '%'; };
+    var out = '<div class="levels' + (now === undefined ? ' no-now' : '') + '" role="img" aria-label="Régua do sinal: proteção ' + br(STOP) + ' (' + pct(STOP) + '), entrada ' + br(ENTRY) + ', alvo ' + br(TARGET) + ' (' + pct(TARGET) + ')' + (now !== undefined ? ', agora ' + br(now) : '') + '">' +
+      '<div class="lv-track"><span class="lv-zone loss" style="left:' + ps + '%;width:' + (pe - ps) + '%"></span><span class="lv-zone gain" style="left:' + pe + '%;width:' + (pt - pe) + '%"></span></div>' +
+      '<span class="lv-mark stop" style="left:' + ps + '%"></span><span class="lv-mark entry" style="left:' + pe + '%"></span><span class="lv-mark target" style="left:' + pt + '%"></span>' +
+      '<span class="lv-lbl stop ' + (ps < 12 ? 'start' : '') + '" style="left:' + ps + '%"><span class="nm">Proteção</span><b>' + br(STOP) + '</b>' + pct(STOP) + '</span>' +
+      '<span class="lv-lbl entry" style="left:' + pe + '%"><span class="nm">Entrada</span><b>' + br(ENTRY) + '</b>' + (now === undefined ? 'preço da compra' : '&nbsp;') + '</span>' +
+      '<span class="lv-lbl target end" style="left:' + pt + '%"><span class="nm">Alvo</span><b>' + br(TARGET) + '</b>' + pct(TARGET) + '</span>';
+    if (now !== undefined) {
+      var pn = at(now), edge = pn < 10 ? ' edge-start' : pn > 90 ? ' edge-end' : '';
+      out += '<span class="lv-now' + edge + '" style="left:' + pn + '%"><span>' + nowLabel + ' ' + br(now) + '</span></span>';
+    }
+    return out + '</div>';
+  }
+  var RATIO = '<p class="ratio"><span><i class="loss"></i>Perda possível <b>−0,63%</b></span><span><i class="gain"></i>Ganho possível <b>+1,06%</b></span><span>Ganho ÷ perda <b>1,7 : 1</b></span></p>';
+
+  function signalTop(o) {
+    return '<div class="signal-top"><span class="signal-badge">' + icon(o.ico) + '</span>' +
+      '<span class="signal-word">' + o.word + ' <small>' + o.small + '</small></span>' +
+      '<span class="signal-pair"><b>LINK/USDT</b> · vela de 15 min</span></div>';
+  }
+  var FIXED_REV = '<p class="fixed-line">' + icon('info', 'icon-sm') + '<span>Simulação com dinheiro fictício · tendência, não promessa · acerto da Reversão: <b class="data">1.420 de 2.552</b> (55,6%; cara ou coroa = 50%) <span class="verdict above">▲ acima da moeda</span></span></p>';
+  var FIXED_STRAT = '<p class="fixed-line">' + icon('info', 'icon-sm') + '<span>Simulação com dinheiro fictício · tendência, não promessa · acerto desta estratégia: <b class="data">7.225 de 15.085</b> (47,9%; cara ou coroa = 50%) <span class="verdict below">▼ abaixo da moeda</span></span></p>';
+
+  var SIGNAL_BUY = '<div class="signal buy">' + signalTop({ ico: 'up', word: 'COMPRA', small: 'Sinal de compra' }) +
+    '<p class="signal-price"><span class="data">12,458</span><span class="unit">USDT · executada às 20:30</span></p>' +
+    '<p class="signal-line">Vender no alvo <span class="data pos">12,590</span> · sair se cair a <span class="data neg">12,379</span></p>' +
+    ruler() + RATIO + '</div>';
+  var SIGNAL_HOLD = '<div class="signal hold">' + signalTop({ ico: 'up', word: 'COMPRADO', small: 'desde 20:30' }) +
+    '<p class="signal-price"><span class="data">12,490</span><span class="unit">agora</span><span class="pl pos">▲ +0,26%</span><span class="unit">em andamento</span></p>' +
+    ruler(12.490, 'agora') +
+    '<p class="ratio"><span>Até o alvo <b>+0,80%</b></span><span>Até a proteção <b>−0,89%</b></span><span>Ganho ÷ perda <b>1,7 : 1</b></span></p></div>';
+  var SIGNAL_SELL = '<div class="signal sell">' + signalTop({ ico: 'down', word: 'VENDA', small: 'Sinal de venda · proteção' }) +
+    '<p class="signal-price"><span class="data">12,372</span><span class="unit">USDT · às 00:30</span><span class="pl neg">▼ −0,13% no saldo</span></p>' +
+    '<p class="signal-line">Sair a <span class="data">12,372</span>: caiu até a saída de proteção</p>' +
+    ruler(12.372, 'saiu') + '</div>';
+
+  /* ---------- Operar à mão (ficha completa, na gaveta) ---------- */
+  function copyBtn(label, done) {
+    return '<button type="button" class="btn btn-copy' + (done ? ' done' : '') + '">' + icon(done ? 'check' : 'copy', 'icon-sm') + (done ? 'Copiado' : label) + '</button>';
+  }
+  var MANUAL = '<section class="manual" aria-labelledby="manual-title"><h3 id="manual-title">' + icon('hand') + 'Operar à mão</h3>' +
+    '<div class="history"><span class="big">−14,3%</span><p><b>Últimos 183 dias</b>, LINK/USDT 15 min, com taxas (estratégia com o analista; sozinha: −50,7%)</p>' +
+    '<p>Acerto da Reversão: <b class="data">1.420 de 2.552</b> (55,6%) contra 50% da moeda ao ar</p></div>' +
+    '<div class="honesty"><span class="h-head">' + icon('alert', 'icon-sm') + 'Antes de decidir</span>' +
+    '<span>A simulação executa sem atraso e sem a oscilação de preço real. À mão haverá diferença (deslizamento e atraso) e você pode perder dinheiro. O AtivAdA não envia ordens e não tem chave da sua corretora.</span></div>' +
+    '<div class="my-balance"><label for="my-balance">Meu saldo</label><input id="my-balance" inputmode="decimal" value="2.000,00"><span class="muted">USDT · fica só neste navegador</span></div>' +
+    '<ol class="steps">' +
+    '<li class="step"><span class="step-title">Abrir o par na corretora</span><div class="copy-row"><a class="btn btn-ext" href="https://www.binance.com/pt-BR/trade/LINK_USDT" target="_blank" rel="noopener noreferrer">' + icon('external', 'icon-sm') + 'Abrir LINK/USDT na Binance</a></div><span class="muted">Abre só a página do par. Nenhum dado seu vai no link.</span></li>' +
+    '<li class="step"><span class="step-title">Comprar a mercado</span><div class="copy-row"><span class="val"><small>Quantidade</small><b>22,70</b><small>LINK</small></span>' + copyBtn('Copiar quantidade', true) + '<span class="val"><small>Preço de referência</small><b>12,458</b></span>' + copyBtn('Copiar preço') + '</div>' +
+    '<span class="muted">Mesma proporção da simulação para 2.000 USDT (≈ 282,80 USDT), para baixo no passo de 0,01 LINK.</span></li>' +
+    '<li class="step"><span class="step-title">Cadastrar a saída</span><div class="copy-row"><span class="val target"><small>Alvo · venda limitada</small><b>12,590</b></span>' + copyBtn('Copiar alvo') + '<span class="val stop"><small>Proteção · stop</small><b>12,379</b></span>' + copyBtn('Copiar proteção') + '</div>' +
+    '<span class="muted">Na Binance, uma ordem OCO junta alvo e proteção.</span></li>' +
+    '</ol>' +
+    '<div class="copy-row"><button type="button" class="btn btn-primary">' + icon('copy') + 'Copiar todas as ordens</button></div>' +
+    '<p class="give-up">' + icon('cancel', 'icon-sm') + '<span><b>Quando desistir:</b> a simulação compra a mercado e não desiste pelo preço. À mão, acima de <b class="data">12,447</b> o ganho depois do custo já fica menor que a perda — este sinal entrou acima disso.</span></p>' +
+    '<dl class="facts-table">' +
+    '<div><dt>Como a simulação executou</dt><dd>Ordem a mercado. Decidiu no fechamento das 20:15 e comprou pelo preço de abertura da vela das 20:15 (confirmado às 20:30).</dd></div>' +
+    '<div><dt>Quantidade da simulação</dt><dd>113,50 LINK (≈ 1.414 USDT) com saldo de 10.000 USDT. A quantidade real depende do seu saldo e da sua corretora.</dd></div>' +
+    '<div><dt>Custo ida e volta</dt><dd>0,30% (taxa 0,10% + deslizamento 0,05% por lado, os da simulação)</dd></div>' +
+    '<div><dt>Depois do custo</dt><dd>Ganho possível <span class="pos">+0,76%</span> · perda possível <span class="neg">−0,93%</span> · ganho ÷ perda <b>0,8 : 1</b></dd></div>' +
+    '</dl></section>';
+
+  /* ---------- Avisos flutuantes ---------- */
+  function head(stateCls, ico, word, when) {
+    return '<div class="toast-head"><span class="state ' + stateCls + '">' + icon(ico, 'icon-sm') + word + '</span><span class="when">' + when + '</span>' +
+      '<button type="button" class="close" aria-label="Fechar aviso">' + icon('close') + '</button></div>';
+  }
+  function actions(second) {
+    return '<div class="actions"><button type="button" class="btn btn-primary">' + icon('chart') + 'Ver no gráfico</button>' +
+      '<button type="button" class="btn btn-quiet">' + icon('mute', 'icon-sm') + (second || 'Silenciar esta simulação') + '</button></div>';
+  }
+  var TOASTS = {
+    pedida: '<article class="toast">' + head('', 'clock', 'Ordem pedida', 'às 20:15') +
+      '<div class="signal">' + signalTop({ ico: 'up', word: 'COMPRA', small: 'Sinal de compra · pedida' }) + '</div>' +
+      '<p class="toast-main">Compra pelo preço de abertura da vela das 20:15. O preço sai às 20:30, quando ela fecha.</p>' +
+      '<ol class="cycle" aria-label="Andamento da ordem"><li class="now">' + icon('clock', 'icon-sm') + 'Pedida 20:15</li><li class="sep">→</li><li>Executa na abertura</li><li class="sep">→</li><li>Confirma 20:30</li></ol>' +
+      '<div class="ask"><b>Vai cancelar?</b>Só se a estratégia mudar de ideia no próximo fechamento, se a simulação for parada ou se faltarem dados do mercado.</div>' +
+      FIXED_REV + actions() + '</article>',
+    compra: '<article class="toast buy">' + head('ok', 'check', 'Executada', 'há instantes · 20:30') + SIGNAL_BUY +
+      '<ol class="cycle" aria-label="Andamento da ordem"><li class="done">' + icon('check', 'icon-sm') + 'Pedida 20:15</li><li class="sep">→</li><li class="done">' + icon('check', 'icon-sm') + 'Executada 20:30 · taxa 0,0125 USDT</li></ol>' +
+      FIXED_REV + '<div class="actions"><button type="button" class="btn btn-primary">' + icon('chart') + 'Ver no gráfico</button>' +
+      '<button type="button" class="btn">' + icon('hand', 'icon-sm') + 'Operar à mão</button>' +
+      '<button type="button" class="link-btn">' + icon('mute', 'icon-sm') + 'Silenciar esta simulação</button></div></article>',
+    venda: '<article class="toast sell">' + head('sellst', 'shield', 'Proteção', 'há instantes · 00:30') + SIGNAL_SELL +
+      '<p class="facts"><span>Comprou a <b>12,458</b> ontem às 20:15</span><span>Proteção em <b>12,379</b></span></p>' +
+      FIXED_STRAT + actions() + '</article>',
+    cancelada: '<article class="toast cancel">' + head('cancel', 'cancel', 'Cancelada', 'às 19:00') +
+      '<p class="toast-main">Compra de LINK/USDT cancelada: a estratégia mudou de ideia antes de executar.</p>' +
+      '<ol class="cycle" aria-label="Andamento da ordem"><li class="done">' + icon('check', 'icon-sm') + 'Pedida 18:45</li><li class="sep">→</li><li class="cut">' + icon('cancel', 'icon-sm') + 'Cancelada 19:00</li></ol>' +
+      '<p class="facts"><span>Nenhum dinheiro (fictício) saiu do saldo.</span></p>' + actions() + '</article>',
+    perto: '<article class="toast">' + head('', 'eye', 'Perto de comprar', 'agora · 20:08') +
+      '<p class="toast-main">A Reversão dá sinal de compra se a vela fechar abaixo de <span class="data">12,470</span>.</p>' +
+      '<div class="progress" role="img" aria-label="Faltam 0,16% até a condição de compra; a vela fecha às 20:15">' +
+      '<div class="progress-track"><span class="progress-fill" style="width:73%"></span><span class="progress-goal"></span></div>' +
+      '<div class="progress-row"><span>Agora <b>12,490</b> · falta <b>0,16%</b></span><span class="goal">Condição <b>12,470</b></span></div></div>' +
+      '<p class="facts"><span>A vela fecha às <b>20:15</b></span></p>' +
+      FIXED_REV + actions('Parar de avisar antes') + '</article>',
+    voltou: '<article class="toast">' + head('', 'history', 'Enquanto você estava fora', '00:42') +
+      '<p class="toast-main">2 operações (1 compra, 1 venda) e 1 ordem cancelada.</p>' +
+      '<p class="facts"><span>As simulações continuaram no servidor. Nada se perdeu.</span></p>' +
+      '<div class="actions"><button type="button" class="btn btn-primary">' + icon('bell') + 'Ver no sino</button></div></article>'
+  };
+
+  /* ---------- Páginas de fundo ---------- */
+  var LAST = 'Sinal de compra a 12,458 às 20:30';
+  function overview() { return '<h1 class="page-title">Visão geral</h1>' +
+    '<div class="pulse"><span><span class="run-dot" aria-hidden="true"></span><strong>Rodando</strong></span><span>LINK/USDT <strong class="data">' + (LAST.indexOf('venda') > 0 ? '12,372' : '12,490') + '</strong> ao vivo · há 2 s</span>' +
+    '<span>Última decisão: <strong>' + LAST + '</strong> <span class="chip-new">Novo</span></span><span>Próxima em <strong class="data">11:52</strong></span></div>' +
+    '<div class="grid"><section class="card"><h2>Suas simulações <span>ao vivo, dinheiro fictício</span></h2><ul class="runs-list">' +
+    '<li><span class="run-dot" aria-hidden="true"></span><span><b>LINK/USDT</b> · 15 min<br><span class="muted">Placar clássico com analista</span></span><span class="right"><b class="data">1.000,26</b><br><span class="pos">▲ +0,03%</span></span></li>' +
+    '<li><span class="run-dot" aria-hidden="true"></span><span><b>BTC/USDT</b> · 1 h<br><span class="muted">Placar clássico</span></span><span class="right"><b class="data">1.004,10</b><br><span class="pos">▲ +0,41%</span></span></li>' +
+    '</ul></section><section class="card kpi"><h2>Saldo total <span>fictício</span></h2><span class="big">2.004,36</span><span class="muted">USDT · começou com 2.000,00</span></section></div>'; }
+
+  function chartSvg() {
+    var closes = [12.53,12.55,12.52,12.50,12.51,12.48,12.47,12.48,12.46,12.47,12.45,12.46,12.47,12.48,12.47,12.49,12.48,12.50,12.49];
+    var narrow = window.innerWidth < 640;
+    var lo = 12.355, hi = 12.615, w = narrow ? 380 : 720, h = narrow ? 260 : 300, padR = 118, n = closes.length, step = (w - padR) / (n + 1);
+    var y = function (v) { return 12 + (hi - v) / (hi - lo) * (h - 24); };
+    var bi = 9, bx = step * (bi + 1), x1 = w - padR + 4;
+    var out = '';
+    [12.40, 12.45, 12.50, 12.55, 12.60].forEach(function (g) { out += '<line class="grid-line" x1="0" x2="' + (w - padR) + '" y1="' + y(g) + '" y2="' + y(g) + '"/><text class="axis" x="4" y="' + (y(g) - 3) + '">' + br(g, 2) + '</text>'; });
+    out += '<rect class="zone-gain" x="' + bx + '" y="' + y(TARGET) + '" width="' + (x1 - bx) + '" height="' + (y(ENTRY) - y(TARGET)) + '"/>';
+    out += '<rect class="zone-loss" x="' + bx + '" y="' + y(ENTRY) + '" width="' + (x1 - bx) + '" height="' + (y(STOP) - y(ENTRY)) + '"/>';
+    out += '<line class="lv-target" x1="' + bx + '" x2="' + x1 + '" y1="' + y(TARGET) + '" y2="' + y(TARGET) + '"/>';
+    out += '<line class="lv-entry" x1="' + bx + '" x2="' + x1 + '" y1="' + y(ENTRY) + '" y2="' + y(ENTRY) + '"/>';
+    out += '<line class="lv-stop" x1="' + bx + '" x2="' + x1 + '" y1="' + y(STOP) + '" y2="' + y(STOP) + '"/>';
+    var prev = 12.54;
+    closes.forEach(function (c, i) {
+      var x = step * (i + 1), up = c >= prev, top = y(Math.max(c, prev)), bot = y(Math.min(c, prev)), cls = up ? 'up' : 'down';
+      out += '<line class="' + cls + '" x1="' + x + '" x2="' + x + '" y1="' + (top - 7) + '" y2="' + (bot + 7) + '" stroke-width="1.2"/>';
+      var cw = Math.min(16, step * 0.62);
+      out += '<rect class="' + cls + '" x="' + (x - cw / 2) + '" y="' + top + '" width="' + cw + '" height="' + Math.max(2, bot - top) + '" rx="1.5"/>';
+      prev = c;
+    });
+    var ay = y(ENTRY) + 44;
+    out += '<path class="arrow-buy" d="M' + bx + ' ' + (ay - 18) + ' l-13 18 h8 v12 h10 v-12 h8 z"/>';
+    out += '<text class="arrow-label b" x="' + (bx - 30) + '" y="' + (ay + 28) + '">▲ COMPRA 12,458</text>';
+    function tag(cls, v, text) {
+      var ty = y(v);
+      return '<g class="tag ' + cls + '"><rect x="' + (x1 + 2) + '" y="' + (ty - 10) + '" width="' + (padR - 8) + '" height="20" rx="4"/><text x="' + (x1 + 8) + '" y="' + (ty + 4) + '">' + text + '</text></g>';
+    }
+    out += tag('target', TARGET, 'Alvo 12,590') + tag('entry', ENTRY, 'Entrada 12,458') + tag('stop', STOP, 'Proteção 12,379') + tag('now', 12.490, 'Agora 12,490');
+    return out;
+  }
+  var RUN_PAGE = '<h1 class="page-title">Simulação LINK/USDT · 15 min</h1>' +
+    '<div class="pulse"><span><span class="run-dot" aria-hidden="true"></span><strong>Rodando</strong></span><span>LINK/USDT <strong class="data">12,490</strong> ao vivo</span>' +
+    '<span><strong>Comprado</strong> desde 20:30 · <span class="pos">▲ +0,26%</span> em andamento</span><span>Próxima em <strong class="data">11:52</strong></span></div>' +
+    '<div class="grid"><section class="card"><h2>Preço e operações <span>vela de 15 min · camada "Níveis" ligada</span></h2>' +
+    '<svg class="chart" viewBox="0 0 ' + (window.innerWidth < 640 ? '380 260' : '720 300') + '" role="img" aria-label="Gráfico: sinal de compra às 20:30 a 12,458; alvo 12,590 acima e proteção 12,379 abaixo, faixa sombreada da operação; agora 12,490">' + chartSvg() + '</svg>' +
+    '<p class="chart-legend"><span><i class="sw entry"></i>Entrada</span><span><i class="sw target"></i>Alvo</span><span><i class="sw stop"></i>Proteção</span><span><i class="sw band"></i>Ganho possível (verde) e perda possível (vermelho)</span></p></section>' +
+    '<div class="grid" style="grid-template-columns:1fr">' +
+    '<section class="card"><h2>Sinal em andamento</h2>' + SIGNAL_HOLD + FIXED_REV + '</section>' +
+    '<section class="card"><h2>Equipe agora <span>vela das 20:15</span></h2><div class="team">' +
+    '<div class="agent"><span class="avatar rev" aria-hidden="true">Re</span><span class="agent-name">Reversão <span class="vote buy">▲ a favor</span></span>' +
+    '<p class="bubble signal"><span class="bubble-sig"><span class="mini-badge">' + icon('up') + '</span><span><b>Sinal de compra:</b> LINK/USDT a <b class="data">12,458</b> · vender no alvo <span class="data">12,590</span> · sair se cair a <span class="data">12,379</span></span></span>' +
+    '<span class="fine">Simulação com dinheiro fictício · tendência, não promessa · acerto: 1.420 de 2.552 (cara ou coroa = 50%)</span></p></div>' +
+    '<div class="agent"><span class="avatar trend" aria-hidden="true">Te</span><span class="agent-name">Tendência <span class="vote neutral">= neutro · não vota</span></span><p class="bubble quiet">As médias estão quase iguais.</p></div>' +
+    '<div class="agent"><span class="avatar boss" aria-hidden="true">An</span><span class="agent-name">Analista <span class="vote buy">MODERADA</span></span><p class="bubble">Liberou a compra com metade do tamanho.</p></div>' +
+    '</div></section></div></div>';
+
+  /* ---------- Gaveta ---------- */
+  function item(o) {
+    return '<li class="item ' + o.cls + (o.unread ? ' unread' : '') + '"><span class="item-ico">' + icon(o.ico) + '</span><div>' +
+      '<div class="item-top"><span class="item-title">' + o.title + '</span>' + (o.unread ? '<span class="chip-new"><span class="unread-dot" aria-hidden="true"></span>Novo</span>' : '') + '<span class="item-time">' + o.time + '</span></div>' +
+      '<p class="item-pair">' + o.pair + '</p><p class="item-text">' + o.text + '</p>' +
+      (o.chart ? '<div class="item-actions"><button type="button" class="btn">' + icon('chart', 'icon-sm') + 'Ver no gráfico</button></div>' : '') + '</div></li>';
+  }
+  var LINK = 'LINK/USDT · 15 min';
+  var LIST = '<p class="day">Hoje</p><ul>' +
+    item({ cls: 'sell', ico: 'down', title: 'VENDA · proteção', time: '00:30', pair: LINK, unread: true, chart: true,
+      text: 'Sinal de venda: sair a <span class="px">12,372</span> · <span class="neg">▼ −0,13%</span> no saldo. Caiu até a saída de proteção.' }) +
+    '</ul><p class="day">Ontem</p><ul>' +
+    item({ cls: 'price', ico: 'flag', title: 'Alerta de preço', time: '23:58', pair: 'BTC/USDT', text: 'BTC/USDT passou de <span class="data">61.700,00</span>.' }) +
+    item({ cls: 'buy', ico: 'up', title: 'COMPRA · executada', time: '20:30', pair: LINK, unread: true, chart: true,
+      text: 'Sinal de compra: <span class="px">12,458</span> · vender no alvo 12,590 · sair se cair a 12,379. Pedida 20:15.' }) +
+    item({ cls: 'near', ico: 'eye', title: 'Perto de comprar', time: '20:08', pair: LINK, text: 'Condição: fechar abaixo de 12,470. Faltava 0,16%.' }) +
+    item({ cls: 'cancel', ico: 'cancel', title: 'Cancelada', time: '19:00', pair: LINK, chart: true, text: 'Compra pedida às 18:45. A estratégia mudou de ideia antes de executar.' }) +
+    item({ cls: 'ok-run', ico: 'play', title: 'Simulação voltou', time: '17:35', pair: 'BTC/USDT · 1 h', text: 'Voltou a decidir as velas.' }) +
+    item({ cls: 'stop-run', ico: 'pause', title: 'Simulação parada', time: '17:20', pair: 'BTC/USDT · 1 h', text: 'Não decidiu a vela das 17:00.' }) +
+    '</ul><div class="item-actions" style="padding:12px 20px"><button type="button" class="btn">Ver avisos anteriores</button></div>';
+  var EMPTY = '<div class="empty"><span class="empty-art">' + icon('bell') + '</span><h3>Sem avisos ainda</h3>' +
+    '<p>Quando uma simulação comprar ou vender, aparece aqui.</p>' +
+    '<button type="button" class="btn btn-primary">' + icon('play') + 'Começar uma simulação</button></div>';
+  function sw(on, label) { return '<button type="button" class="switch" role="switch" aria-checked="' + on + '" aria-label="' + label + '"></button>'; }
+  var PREFS = '<div class="prefs">' +
+    '<div class="pref"><label>' + icon('up', 'icon-sm') + 'Avisar quando comprar ou vender</label>' + sw(true, 'Avisar quando comprar ou vender') + '<p class="help">Inclui a ordem pedida, executada ou cancelada e seus alertas de preço.</p></div>' +
+    '<div class="pref"><label>' + icon('pause', 'icon-sm') + 'Avisar quando algo parar</label>' + sw(true, 'Avisar quando algo parar') + '<p class="help">Simulação parada, esperando dados, analista pausou, meta encerrada.</p></div>' +
+    '<div class="pref"><label>' + icon('sound', 'icon-sm') + 'Som</label>' + sw(false, 'Som') + '<p class="help">Um toque curto: sobe na compra, desce na venda.</p></div>' +
+    '<div class="notify-box"><p><b>Avisos com a aba escondida?</b> Só se você quiser. O navegador vai pedir permissão quando você clicar.</p><button type="button" class="btn btn-primary">' + icon('bell') + 'Ativar notificações</button></div>' +
+    '<h3>Por simulação</h3>' +
+    '<div class="pref-run"><div class="pref-run-head">LINK/USDT <span class="muted">15 min · rodando</span></div>' +
+    '<div class="pref"><label>' + icon('eye', 'icon-sm') + 'Avisar antes de comprar</label>' + sw(true, 'Avisar antes de comprar, LINK/USDT') + '<p class="help">Avisa quando o preço chega perto da condição de compra.</p></div>' +
+    '<div class="item-actions"><button type="button" class="btn btn-quiet">' + icon('mute', 'icon-sm') + 'Silenciar esta simulação</button></div></div>' +
+    '<div class="pref-run"><div class="pref-run-head">BTC/USDT <span class="muted">1 h · rodando</span> <span class="tag-muted">' + icon('mute', 'icon-sm') + 'Silenciada</span></div>' +
+    '<p class="muted">Os avisos dela entram no sino, sem aparecer na tela nem tocar.</p>' +
+    '<div class="item-actions"><button type="button" class="btn">' + icon('bell', 'icon-sm') + 'Voltar a avisar</button></div></div>' +
+    '<button type="button" class="link-btn">' + icon('play', 'icon-sm') + 'Mostrar um aviso de exemplo</button></div>';
+
+  function drawer(kind) {
+    var body = kind === 'vazio' ? EMPTY : kind === 'ajustes' ? PREFS : kind === 'detalhe' ? '<div class="detail">' + SIGNAL_BUY + FIXED_REV + MANUAL + '</div>' : LIST;
+    var title = kind === 'ajustes' ? 'Ajustar avisos' : kind === 'detalhe' ? 'Sinal de compra' : 'Avisos';
+    if (kind === 'detalhe') {
+      return '<div class="scrim"></div><section class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">' +
+        '<div class="drawer-head"><div class="drawer-title"><button type="button" class="link-btn" aria-label="Voltar aos avisos">←</button><h2 id="drawer-title" tabindex="-1">' + title + '</h2><span class="count">20:30</span><span style="flex:1"></span>' +
+        '<button type="button" class="close" aria-label="Fechar avisos">' + icon('close') + '</button></div></div>' +
+        '<div class="drawer-body">' + body + '</div></section>';
+    }
+    var count = kind === 'gaveta' || kind === 'caiu' ? '<span class="count">2 não lidos</span>' : '';
+    var tools = kind === 'ajustes' ? '' :
+      '<div class="chips" role="group" aria-label="Filtrar por simulação"><button type="button" class="chip" aria-pressed="true">Todas</button>' +
+      (kind === 'vazio' ? '' : '<button type="button" class="chip" aria-pressed="false">LINK/USDT 15 min</button><button type="button" class="chip" aria-pressed="false">BTC/USDT 1 h</button>') + '</div>' +
+      '<div class="drawer-tools"><button type="button" class="link-btn">' + icon('sliders', 'icon-sm') + 'Ajustar</button>' +
+      (kind === 'vazio' ? '' : '<button type="button" class="link-btn">' + icon('check', 'icon-sm') + 'Marcar todos como lidos</button>') + '</div>';
+    var strip = kind === 'caiu' ? '<div class="strip">' + icon('plug') + '<div><b>Avisos pausados — reconectando…</b><span>As simulações continuam no servidor. Quando a conexão voltar, mostramos o que aconteceu.</span></div></div>' : '';
+    return '<div class="scrim"></div><section class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">' +
+      '<div class="drawer-head"><div class="drawer-title">' + (kind === 'ajustes' ? '<button type="button" class="link-btn" aria-label="Voltar aos avisos">←</button>' : '') +
+      '<h2 id="drawer-title" tabindex="-1">' + title + '</h2>' + count + '<span style="flex:1"></span>' +
+      '<button type="button" class="close" aria-label="Fechar avisos">' + icon('close') + '</button></div>' +
+      '<p class="drawer-sub">' + icon('info', 'icon-sm') + 'Simulações com dinheiro fictício. Não é recomendação.</p>' + tools + '</div>' +
+      strip + '<div class="drawer-body">' + body + '</div></section>';
+  }
+  var COACH = '<div class="coach" role="dialog" aria-labelledby="coach-text"><p id="coach-text">Seus avisos ficam aqui.</p>' +
+    '<small>Já estão ligados para compras, vendas e paradas. Não precisa configurar nada.</small>' +
+    '<div class="actions"><button type="button" class="btn btn-light">Entendi</button><button type="button" class="btn btn-ghost">Ajustar</button></div></div>';
+
+  /* ---------- Cenas ---------- */
+  var SCENES = {
+    'primeiro-uso': { toast: 'pedida', coach: true, unread: 1, last: 'Sinal de compra · ordem pedida às 20:15',
+      note: 'Primeiro aviso: o balão aponta o sino uma única vez. Nada a configurar; compras, vendas e paradas já vêm ligadas; som e notificação do navegador desligados.',
+      say: 'Ordem pedida: sinal de compra de LINK/USDT. Executa na abertura da vela das 20:15.' },
+    perto: { toast: 'perto', unread: 0, last: 'Esperou às 20:00',
+      note: 'Aviso antecipado, só para a simulação marcada "Avisar antes de comprar": a barra mostra quanto falta até a condição que o servidor calcula, e some se o preço se afastar ou a vela fechar.',
+      say: 'Perto de comprar, LINK/USDT. Falta 0,16%.' },
+    pedida: { toast: 'pedida', unread: 1, last: 'Sinal de compra · ordem pedida às 20:15',
+      note: 'Ordem pedida no fechamento das 20:15: compra pelo preço de abertura da vela seguinte e confirma quando ela fecha. "Vai cancelar?" diz o que faria cancelar.',
+      say: 'Ordem pedida: sinal de compra de LINK/USDT.' },
+    compra: { toast: 'compra', unread: 1,
+      note: 'O MESMO aviso mudou de estado no lugar (pedida → executada). A ficha do sinal é visível de relance: ícone grande + COMPRA + cor, preço em destaque e a régua proteção · entrada · alvo com a perda e o ganho possíveis.',
+      say: 'Sinal de compra executado: LINK/USDT a 12,458. Alvo 12,590, sair se cair a 12,379.' },
+    'no-grafico': { page: 'run', unread: 0,
+      note: 'Na tela da própria simulação não há aviso flutuante (o gráfico já mostra): seta grande, linhas rotuladas de entrada, alvo e proteção, a faixa da operação, a ficha "Comprado" com o preço de agora na régua e o balão da Reversão falando o sinal.',
+      say: '' },
+    'operar-a-mao': { drawer: 'detalhe', unread: 1,
+      note: 'Quem vai executar à mão abre "Operar à mão": primeiro o histórico líquido real e o aviso de honestidade, depois 3 passos com os valores no tick do par e botões de copiar, o link só do par na Binance e quando desistir. Nada é enviado à corretora.',
+      say: 'Quantidade copiada.' },
+    venda: { toast: 'venda', unread: 2, sold: true,
+      note: 'Sinal de venda: VENDA em vermelho com ícone e palavra, o preço de saída em destaque e a marca "saiu" na régua, abaixo da proteção (escorregamento). O acerto real da estratégia, abaixo da moeda ao ar, fica à vista.',
+      say: 'Sinal de venda, LINK/USDT: sair a 12,372, caiu até a saída de proteção. Menos 0,13% no saldo.' },
+    cancelada: { toast: 'cancelada', unread: 1, last: 'Compra cancelada às 19:00',
+      note: 'Cancelada tem ícone, palavra e cor próprios (cinza: não é erro nem perda) e o motivo do servidor em frase curta.',
+      say: 'Ordem cancelada. A estratégia mudou de ideia antes de executar.' },
+    gaveta: { drawer: 'gaveta', unread: 2, sold: true,
+      note: 'O sino é o único lugar para rever tudo: COMPRA e VENDA com ícone cheio, não lidos em destaque, por dia, filtro por simulação e "Marcar todos como lidos".', say: '' },
+    vazio: { drawer: 'vazio', unread: 0, note: 'Estado vazio que ensina, com uma ação só.', say: '' },
+    fundo: { background: true, unread: 2,
+      note: 'Aba em segundo plano: o título conta os avisos e, se a pessoa ativou, o navegador mostra a notificação com o sinal e o preço.', say: '' },
+    caiu: { drawer: 'caiu', unread: 2, paused: true, sold: true,
+      note: 'Conexão caiu: ponto âmbar no sino e uma faixa na gaveta. Nenhum aviso em cima da tela por isso; as simulações não param.', say: '' },
+    voltou: { toast: 'voltou', unread: 3, sold: true,
+      note: 'Conexão voltou: o painel busca de uma vez o que aconteceu e mostra UM resumo, sem som.',
+      say: 'Enquanto você estava fora: 2 operações e 1 ordem cancelada.' },
+    ajustes: { drawer: 'ajustes', unread: 2,
+      note: 'Três interruptores com uma linha de ajuda. Notificação do navegador só no clique. Por simulação: avisar antes de comprar e silenciar.', say: '' }
+  };
+
+  function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.querySelectorAll('[data-theme-choice]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.themeChoice === theme)); });
+  }
+  function show(name) {
+    var s = SCENES[name] || SCENES.compra;
+    document.querySelectorAll('[data-scene]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.scene === name)); });
+    $('scene-note-text').textContent = s.note;
+    LAST = s.last || (s.sold ? 'Sinal de venda a 12,372 às 00:30' : 'Sinal de compra a 12,458 às 20:30');
+    $('page').innerHTML = s.page === 'run' ? RUN_PAGE : overview();
+    $('nav-overview').toggleAttribute('aria-current', s.page !== 'run');
+    $('nav-runs').toggleAttribute('aria-current', s.page === 'run');
+    if (s.page === 'run') $('nav-runs').setAttribute('aria-current', 'page'); else $('nav-overview').setAttribute('aria-current', 'page');
+    $('toasts').innerHTML = s.toast ? TOASTS[s.toast] : '';
+    $('drawer-slot').innerHTML = s.drawer ? drawer(s.drawer) : '';
+    $('coach-slot').innerHTML = s.coach ? COACH : '';
+    var bell = $('bell');
+    bell.classList.toggle('coach-target', !!s.coach);
+    bell.setAttribute('aria-expanded', String(!!s.drawer));
+    $('bell-count').hidden = !s.unread;
+    $('bell-count').textContent = s.unread > 9 ? '9+' : String(s.unread || '');
+    bell.setAttribute('aria-label', 'Avisos: ' + (s.unread ? s.unread + ' não lido' + (s.unread > 1 ? 's' : '') : 'nenhum novo') + (s.paused ? ', pausados, reconectando' : ''));
+    $('bell-paused').hidden = !s.paused;
+    $('live-badge').classList.toggle('is-warn', !!s.paused);
+    $('live-word').textContent = s.paused ? 'Reconectando…' : 'Ao vivo';
+    $('bg-demo').hidden = !s.background;
+    $('page').hidden = !!s.background;
+    document.title = s.background ? '(2) AtivAdA' : 'Central de avisos · AtivAdA (preview)';
+    $('announcer').textContent = s.say || '';
+    var t = document.getElementById('drawer-title');
+    if (t && !document.body.dataset.capture) t.focus();
+  }
+  function readHash() {
+    var params = new URLSearchParams(location.hash.slice(1));
+    if (params.get('captura') === '1') { $('preview-bar').hidden = true; document.body.dataset.capture = '1'; }
+    setTheme(params.get('tema') === 'escuro' ? 'dark' : 'light');
+    show(params.get('cena') || 'compra');
+  }
+  document.querySelectorAll('[data-scene]').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.scene); }); });
+  document.querySelectorAll('[data-theme-choice]').forEach(function (b) { b.addEventListener('click', function () { setTheme(b.dataset.themeChoice); }); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && $('drawer-slot').innerHTML) { $('drawer-slot').innerHTML = ''; $('bell').setAttribute('aria-expanded', 'false'); $('bell').focus(); }
+  });
+  $('bell').addEventListener('click', function () { show('gaveta'); });
+  window.addEventListener('hashchange', readHash);
+  readHash();
+})();
+</script>
+</body>
+</html>
