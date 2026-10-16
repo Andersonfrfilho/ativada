@@ -7,6 +7,7 @@
     "@ativada/database": "workspace:*",
     "@ativada/environment": "workspace:*",
     "@ativada/market-data-crypto": "workspace:*",
+    "@ativada/risk-analyst": "workspace:*",
     "@ativada/run-recording": "workspace:*",
     "@ativada/strategy-engine": "workspace:*"
   }

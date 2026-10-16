@@ -9,6 +9,7 @@ import {
   RUN_STATUS,
   USER_RESOLUTION_STATUS,
   type DatabaseHandle,
+  type JsonContainer,
   type OwnerScope,
   type RunRecord,
 } from '../../packages/database/src/index.js';
@@ -160,9 +161,11 @@ export async function seedCandles(
 
 export type NewLiveRun = {
   readonly symbol: string;
-  readonly timeframe: '1h' | '1d';
+  readonly timeframe: '15m' | '1h' | '1d';
   readonly periodStart: number;
   readonly user?: LiveUser;
+  // O que a API grava em `runs.request` (por exemplo, o pedido do analista de risco em sombra).
+  readonly request?: JsonContainer;
 };
 
 export async function createLiveRun(
@@ -188,6 +191,7 @@ export async function createLiveRun(
     periodStart: params.periodStart,
     periodEnd: undefined,
     migratedFromRunId: undefined,
+    ...(params.request === undefined ? {} : { request: params.request }),
   });
   if (run === undefined) throw new Error('execução não foi criada');
   return run;

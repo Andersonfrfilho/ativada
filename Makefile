@@ -139,7 +139,7 @@ queue-mutants: ## Prova que a fila e a reivindicação ao vivo reprovam 24 mutan
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/queue-mutants.ts
 
-live-test: ## Prova a simulação ao vivo contra Postgres de teste descartável: paridade com o backtest nos dois conjuntos reais, morte do processo (SIGKILL) entre passos e no meio de um, candle repetido, conta apagada ou bloqueada, dois workers, teto por usuário, lacuna de candles e a API real ponta a ponta
+live-test: ## Prova a simulação ao vivo contra Postgres de teste descartável: paridade com o backtest nos dois conjuntos reais, morte do processo (SIGKILL) entre passos e no meio de um, candle repetido, conta apagada ou bloqueada, dois workers, teto por usuário, lacuna de candles, a sombra do analista de risco (uma decisão e um aviso por passo, SIGKILL sem duplicar nem perder) e a API real ponta a ponta
 	set -a; . envs/env.test; set +a; \
 	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
 	trap 'exit 130' INT; \
@@ -153,7 +153,7 @@ db-outage-test: ## Prova a recuperação do worker e da API quando o banco cai e
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && OUTAGE_DOCKER_CONTAINER=$(PROJECT_NAME)-$(ENV)-postgres bun --env-file=envs/env.test run scripts/db-outage-test.ts
 
-live-mutants: ## Prova que o adaptador do banco da simulação ao vivo reprova 8 mutantes (passo em duas transações, checkpoint recusado que deixa linhas, bolsa errada, sentimento sem corte, espera por buraco que não grava ou não apaga, entre outros) contra o live-test inteiro, num Postgres de teste descartável
+live-mutants: ## Prova que o adaptador do banco da simulação ao vivo reprova 10 mutantes (passo em duas transações, checkpoint recusado que deixa linhas, bolsa errada, sentimento sem corte, espera por buraco que não grava ou não apaga, decisão do analista fora do passo, entre outros) contra o live-test inteiro, num Postgres de teste descartável
 	set -a; . envs/env.test; set +a; \
 	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
 	trap 'exit 130' INT; \

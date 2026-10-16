@@ -3,7 +3,7 @@ import { COIN_FLIP_VERDICT, judgeAgainstCoinFlip, type CoinFlipVerdict } from '@
 import { EngineDecimal, formatEngineDecimal } from '@ativada/strategy-engine';
 
 import { ANALYST_RULES } from './analyst.constant.js';
-import { decimalOf } from './analyst-decimal.js';
+import { compareDecimalTexts, decimalOf } from './analyst-decimal.js';
 import type { AuditSummary, AuditWindow, VoteReading } from './analyst.types.js';
 
 const RATE_DECIMAL_PLACES = 4;
@@ -31,7 +31,7 @@ function rateOf(part: number, total: number): string | null {
 }
 
 function tallyMove(tally: Tally, reading: VoteReading, nextClose: string): void {
-  const direction = decimalOf(nextClose).comparedTo(decimalOf(reading.close));
+  const direction = compareDecimalTexts(nextClose, reading.close);
   if (direction === 0) {
     tally.ties += 1;
     return;

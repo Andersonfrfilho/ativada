@@ -2,6 +2,7 @@
 import { and, eq } from 'drizzle-orm';
 
 import { writeAlerts } from '../alerts/alert-write.js';
+import { insertAnalystDecision } from '../analyst/analyst-decision.repository.js';
 import type { DatabaseExecutor } from '../database-executor.js';
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
@@ -19,6 +20,7 @@ import {
   writeSignals,
   writeWindows,
 } from './run-result-append.js';
+import { publishAnalystEvent } from '../run-events/publish-analyst-event.js';
 import { publishStepEvents } from '../run-events/publish-step-events.js';
 import { writeOrders, writePositions } from './run-result-upsert.js';
 import type { RunBatchRepository, RunBatchWriter, RunResultRows } from './run-batch.types.js';
@@ -95,6 +97,17 @@ function createWriter(target: BatchTarget, status: RunStatus): RunBatchWriter {
       saveCheckpoint(target.executor, target.scope, { runId: target.runId, ...params }),
     recordGoalOutcome: (params) =>
       recordGoalOutcome(target.executor, target.scope, { runId: target.runId, ...params }),
+    appendAnalystDecision: async (input): Promise<boolean> => {
+      const isNew = await insertAnalystDecision(target.executor, target.scope, input);
+      if (isNew) {
+        await publishAnalystEvent({
+          executor: target.executor,
+          runId: target.runId,
+          candleTime: input.candleTime,
+        });
+      }
+      return isNew;
+    },
     ...createRunControlWriter(target),
   };
 }

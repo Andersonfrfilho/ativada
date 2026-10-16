@@ -11,6 +11,7 @@ import {
   ANALYST_DECISION_COLUMNS,
   toAnalystDecisionRecord,
 } from './analyst-decision-record.mapper.js';
+import { readAnalystHistory } from './analyst-history.js';
 import type {
   AnalystDecisionRecord,
   AnalystDecisionRepository,
@@ -100,5 +101,6 @@ export function createAnalystDecisionRepository(handle: DatabaseHandle): Analyst
     findLatestAnalystDecision: async (scope, runId) =>
       (await listPage(database, scope, { runId, limit: 1, before: undefined })).decisions[0],
     listAnalystDecisionsPage: (scope, params) => listPage(database, scope, params),
+    readAnalystHistory: (scope, params) => readAnalystHistory(database, scope, params),
   };
 }

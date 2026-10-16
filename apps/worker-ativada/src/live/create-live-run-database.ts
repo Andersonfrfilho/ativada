@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
+  createAnalystDecisionRepository,
   createCandleRepository,
   createRunBatchRepository,
   createRunMetricsRepository,
@@ -62,6 +63,8 @@ async function commitStep(
         if (commit.shouldClearWait === true) await writer.clearDataWait();
         // O aviso à API sai na MESMA transação: chega no COMMIT e some no ROLLBACK, então nunca precede nem sobrevive ao dado.
         await writer.publishStepEvents(commit.checkpoint.lastCandleTime);
+        // A sombra do analista nasce com o passo: reentrega é idempotente por (execução, vela) e o aviso só sai se a linha é nova.
+        if (commit.analyst !== undefined) await writer.appendAnalystDecision(commit.analyst);
         return LIVE_COMMIT_OUTCOME.COMMITTED;
       },
     );
@@ -114,6 +117,8 @@ function createSession(target: SessionTarget): LiveRunSession {
         }),
       ),
     commitStep: (commit) => commitStep(target, commit),
+    readAnalystHistory: (params) =>
+      createAnalystDecisionRepository(handle).readAnalystHistory(scope, { runId, ...params }),
     recordDataWait: (params) =>
       createRunBatchRepository(handle).runInBatch(scope, runId, async (writer) => {
         if ((await writer.readStatus()) !== RUN_STATUS.RUNNING) return undefined;

@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type {
   AlertInput,
+  AnalystDecisionInput,
+  AnalystHistory,
   DataWaitState,
   GoalRunOutcome,
   BatchCheckpointParams,
@@ -48,6 +50,8 @@ export type LiveStepCommit = {
   readonly goal?: LiveGoalCommit;
   // O passo atravessa um buraco que a simulação esperava: a espera gravada some junto com o passo.
   readonly shouldClearWait?: boolean;
+  // A decisão do analista de risco em sombra (spec 007): entra na mesma transação e some junto com ela se o passo for desfeito.
+  readonly analyst?: AnalystDecisionInput;
 };
 
 // Taxa de acerto fora da amostra do último walk-forward concluído da versão (texto decimal exato) e as operações dela.
@@ -74,6 +78,10 @@ export type LiveRunSession = {
   // Registra (e conta) a espera por um buraco de candles NA execução; `undefined` se ela não está mais `running`.
   readonly recordDataWait: (params: RecordDataWaitInput) => Promise<DataWaitState | undefined>;
   readonly failRun: (errorCode: string) => Promise<boolean>;
+  // O placar, o patrimônio e as posições da PRÓPRIA simulação, a partir de uma vela (só o analista lê).
+  readonly readAnalystHistory: (params: {
+    readonly fromCandleTime: number;
+  }) => Promise<AnalystHistory>;
 };
 
 export type RecordDataWaitInput = {

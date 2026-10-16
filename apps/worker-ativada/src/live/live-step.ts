@@ -24,6 +24,7 @@ import {
   type GoalDecision,
   type GoalTracking,
 } from './goal-step.js';
+import { decideShadowStep } from './analyst-step.js';
 import { LIVE_PROGRESS } from './live.constant.js';
 import type {
   LiveAlertingSettings,
@@ -31,6 +32,7 @@ import type {
   LiveGoalCommit,
   LiveRunSession,
 } from './live-run.types.js';
+import type { AnalystRunKit } from './load-analyst-context.js';
 import type { LiveContext } from './load-live-context.js';
 import type { LiveCursor } from './resolve-live-cursor.js';
 import { collectStepAlerts, type HitRateReader } from './step-alerts.js';
@@ -52,6 +54,8 @@ export type StepRun = {
   readonly goal: GoalProgress | undefined;
   // A execução tem uma espera gravada: o primeiro passo que a atravessa a apaga, na mesma transação.
   readonly waiting: { isPending: boolean };
+  // O analista de risco em sombra desta simulação nesta ronda; ausente = não pedido (ou fora da vela de 15 min).
+  readonly analyst?: AnalystRunKit | undefined;
 };
 
 export type PassRunStep = { readonly commit: LiveCommitOutcome; readonly next: LiveCursor };
@@ -150,6 +154,10 @@ export async function stepOnce(
   const buffer = createBatchBuffer();
   appendDecisions({ buffer, decisions: result.decisions, tracker: run.tracker });
   const goal = buildGoalCommit(run, { settled, candle });
+  const analyst =
+    run.analyst === undefined
+      ? undefined
+      : await decideShadowStep(run.analyst, { context: run.context, candle, result });
   const commit = await run.session.commitStep({
     alerts: await collectAlerts(run, { settled, candle }),
     rows: toRunResultRows(buffer),
@@ -160,6 +168,7 @@ export async function stepOnce(
     },
     ...(goal === undefined ? {} : { goal }),
     ...(run.waiting.isPending ? { shouldClearWait: true } : {}),
+    ...(analyst === undefined ? {} : { analyst }),
   });
   if (commit === 'committed') run.waiting.isPending = false;
   if (run.goal !== undefined && settled.decision !== undefined && commit === 'committed') {

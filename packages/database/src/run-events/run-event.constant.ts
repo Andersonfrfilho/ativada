@@ -10,6 +10,8 @@ export const RUN_EVENT_KIND = {
   BALANCE: 'balance',
   // A simulação parou à espera de candles que faltam (`waitingForData` na execução).
   WARNING: 'warning',
+  // O analista de risco decidiu a vela (spec 007): `eventId` é a abertura da vela decidida.
+  ANALYST: 'analyst',
 } as const;
 
 export type RunEventKind = (typeof RUN_EVENT_KIND)[keyof typeof RUN_EVENT_KIND];

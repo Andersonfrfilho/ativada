@@ -78,6 +78,19 @@ describe('run event dispatcher — the owner comes from the database, delivery i
     expect(socketOfA.sent[0]).not.toContain(USER_A);
   });
 
+  test('the analyst notice (kind analyst, eventId = the decided candle) reaches only the owner, like the others', async () => {
+    const { socketOfA, socketOfB, dispatch } = openHarness();
+    await dispatch({ runId: RUN_OF_A, kind: 'analyst', eventId: '1789861500000' });
+    expect(JSON.parse(socketOfA.sent[0] ?? '{}')).toStrictEqual({
+      type: 'event',
+      runId: RUN_OF_A,
+      kind: 'analyst',
+      eventId: '1789861500000',
+      at: NOW,
+    });
+    expect(socketOfB.sent).toStrictEqual([]);
+  });
+
   test('a run with no active owner (unknown, blocked or deleted) delivers to nobody', async () => {
     const { socketOfA, socketOfB, dispatch } = openHarness();
     await dispatch({ runId: UNKNOWN_RUN, kind: 'signal', eventId: EVENT_ID });

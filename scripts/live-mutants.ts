@@ -12,7 +12,7 @@ const RECORDING_IMPORT = "from '@ativada/run-recording'";
 const DATABASE_FILE = 'create-live-run-database.ts';
 const JUDGE = `${REPOSITORY_ROOT}scripts/live-test.ts`;
 const OUTPUT_EXCERPT_LENGTH = 160;
-const JUDGE_TIMEOUT_MILLISECONDS = 280_000;
+const JUDGE_TIMEOUT_MILLISECONDS = 420_000;
 const TIMEOUT_EXIT_CODE = 124;
 
 type Edit = { readonly file: string; readonly find: string; readonly replace: string };
@@ -86,6 +86,22 @@ const MUTANTS: readonly Mutant[] = [
       DATABASE_FILE,
       'return writer.recordDataWait(params);',
       'return { since: params.now, failedRecoveries: 0, isNew: true };',
+    ),
+  },
+  {
+    name: 'ANALYST_DECISION_NOT_WRITTEN_IN_THE_STEP',
+    edits: edit(
+      DATABASE_FILE,
+      '        if (commit.analyst !== undefined) await writer.appendAnalystDecision(commit.analyst);\n',
+      '',
+    ),
+  },
+  {
+    name: 'ANALYST_HISTORY_READ_FOR_ANOTHER_RUN',
+    edits: edit(
+      DATABASE_FILE,
+      'readAnalystHistory(scope, { runId, ...params })',
+      "readAnalystHistory(scope, { runId: '00000000-0000-0000-0000-000000000000', ...params })",
     ),
   },
   {

@@ -87,6 +87,48 @@ function readingOf(candle: EngineCandle, signal: SignalDecision | null): VoteRea
   };
 }
 
+export type VoteCursor = {
+  readonly state: ReturnType<typeof createStrategySignalState>;
+  readonly previousOpenTime: number | undefined;
+};
+
+export function createVoteCursor(strategy: StrategyVersion): VoteCursor {
+  return { state: createStrategySignalState(strategy.config), previousOpenTime: undefined };
+}
+
+export type AdvanceVoteParams = {
+  readonly strategy: StrategyVersion;
+  readonly market: EngineMarket;
+  readonly cursor: VoteCursor;
+  readonly candle: EngineCandle;
+  readonly sentiment: SentimentObservation | undefined;
+};
+
+// Um passo do `signalStep` de PRODUÇÃO com a lacuna declarada exata entre velas não contíguas (RF03, A3). É o mesmo passo
+// da série inteira e do avanço incremental do worker, então os dois dão o mesmo voto vela a vela.
+export function advanceVote(params: AdvanceVoteParams): {
+  readonly cursor: VoteCursor;
+  readonly reading: VoteReading;
+} {
+  const { strategy, market, cursor, candle, sentiment } = params;
+  const duration = ENGINE_TIMEFRAME_DURATION_MILLISECONDS[market.timeframe];
+  const { previousOpenTime } = cursor;
+  const confirmedGapCandles =
+    previousOpenTime === undefined ? 0 : (candle.openTime - previousOpenTime) / duration - 1;
+  const stepped = signalStep({
+    strategy,
+    market,
+    state: cursor.state,
+    candle,
+    sentiment,
+    confirmedGapCandles,
+  });
+  return {
+    cursor: { state: stepped.state, previousOpenTime: candle.openTime },
+    reading: readingOf(candle, stepped.signal),
+  };
+}
+
 export type VoteSeriesParams = {
   readonly strategy: StrategyVersion;
   readonly market: EngineMarket;
@@ -95,26 +137,19 @@ export type VoteSeriesParams = {
   readonly sentiments: readonly (SentimentObservation | undefined)[];
 };
 
-// O `signalStep` de PRODUÇÃO vela a vela, com a lacuna declarada exata entre velas não contíguas (RF03, A3).
 export function computeVoteSeries(params: VoteSeriesParams): readonly VoteReading[] {
   const { strategy, market, candles, sentiments } = params;
-  const duration = ENGINE_TIMEFRAME_DURATION_MILLISECONDS[market.timeframe];
-  let state = createStrategySignalState(strategy.config);
-  let previousOpenTime: number | undefined;
+  let cursor = createVoteCursor(strategy);
   return candles.map((candle, index) => {
-    const confirmedGapCandles =
-      previousOpenTime === undefined ? 0 : (candle.openTime - previousOpenTime) / duration - 1;
-    previousOpenTime = candle.openTime;
-    const stepped = signalStep({
+    const advanced = advanceVote({
       strategy,
       market,
-      state,
+      cursor,
       candle,
       sentiment: sentiments[index],
-      confirmedGapCandles,
     });
-    state = stepped.state;
-    return readingOf(candle, stepped.signal);
+    cursor = advanced.cursor;
+    return advanced.reading;
   });
 }
 

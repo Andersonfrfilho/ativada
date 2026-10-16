@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { AlertInput } from '../alerts/alert.types.js';
+import type { AnalystDecisionInput } from '../analyst/analyst-decision.types.js';
 import type { JsonContainer } from '../json-value.types.js';
 import type { OwnerScope } from '../ownership/owner-scope.js';
 import type { DataWaitState, RecordDataWaitParams } from '../runs/run-data-wait.js';
@@ -56,6 +57,8 @@ export type RunBatchWriter = {
   readonly clearDataWait: () => Promise<boolean>;
   // Avisa a API (NOTIFY na mesma transação) do que o passo do candle gravou; devolve quantos avisos saíram.
   readonly publishStepEvents: (candleTime: number) => Promise<number>;
+  // A decisão do analista de risco da vela (spec 007), na MESMA transação do passo; avisa a API só se a linha é nova.
+  readonly appendAnalystDecision: (input: AnalystDecisionInput) => Promise<boolean>;
 };
 
 export type RunBatchRepository = {

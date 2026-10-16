@@ -25,13 +25,17 @@ export {
   type SpecialistDefinition,
 } from './specialist-catalog.js';
 export {
+  advanceVote,
   computeSeriesAnchor,
   computeVoteSeries,
+  createVoteCursor,
   runSpecialistTeam,
   selectSentiments,
   SPECIALIST_VERSIONS,
+  type AdvanceVoteParams,
   type SelectSentimentsParams,
   type SpecialistTeamParams,
+  type VoteCursor,
   type VoteSeriesParams,
 } from './specialist-team.js';
 export {

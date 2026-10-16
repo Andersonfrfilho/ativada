@@ -15,6 +15,16 @@ import type {
 import type { buildGoalAlert } from '../../../apps/worker-ativada/src/live/goal-alert.js';
 import type { goalAlertPayloadSchema } from '../../../apps/worker-ativada/src/live/alert-payload.schema.js';
 import type { createLiveScheduler } from '../../../apps/worker-ativada/src/live/live-scheduler.js';
+import type {
+  AnalystFailure,
+  describeAnalystFailure,
+} from '../../../apps/worker-ativada/src/live/analyst-failure.js';
+import type {
+  toDecidedRecord,
+  toFailedRecord,
+} from '../../../apps/worker-ativada/src/live/analyst-record.js';
+import type { createAnalystSeriesCache } from '../../../apps/worker-ativada/src/live/analyst-series-cache.js';
+import type { isShadowAnalystRequested } from '../../../apps/worker-ativada/src/live/load-analyst-context.js';
 
 const PRODUCTION_SOURCE = new URL('../../../apps/worker-ativada/src/live', import.meta.url)
   .pathname;
@@ -42,6 +52,15 @@ export type LiveGoalParts = {
   readonly isWalletSettled: typeof isWalletSettled;
   readonly buildGoalAlert: typeof buildGoalAlert;
   readonly goalAlertPayloadSchema: typeof goalAlertPayloadSchema;
+};
+
+export type LiveAnalystParts = {
+  readonly createAnalystSeriesCache: typeof createAnalystSeriesCache;
+  readonly AnalystFailure: typeof AnalystFailure;
+  readonly describeAnalystFailure: typeof describeAnalystFailure;
+  readonly toDecidedRecord: typeof toDecidedRecord;
+  readonly toFailedRecord: typeof toFailedRecord;
+  readonly isShadowAnalystRequested: typeof isShadowAnalystRequested;
 };
 
 export function resolveLiveSource(): string {
@@ -115,4 +134,26 @@ export async function loadLiveGoalParts(): Promise<LiveGoalParts> {
     throw new Error('Módulo ao vivo sem as partes da meta.');
   }
   return members as LiveGoalParts;
+}
+
+// O analista de risco em sombra no passo ao vivo (spec 007, T2.3): a série do par por ronda, a falha tipada, a linha gravada
+// e o pedido gravado na execução. Os mutantes entram por aqui.
+export async function loadAnalystLiveParts(): Promise<LiveAnalystParts> {
+  const source = resolveLiveSource();
+  const cache: unknown = await import(`${source}/analyst-series-cache.ts`);
+  const failure: unknown = await import(`${source}/analyst-failure.ts`);
+  const record: unknown = await import(`${source}/analyst-record.ts`);
+  const context: unknown = await import(`${source}/load-analyst-context.ts`);
+  const members = {
+    createAnalystSeriesCache: readMember(cache, 'createAnalystSeriesCache'),
+    AnalystFailure: readMember(failure, 'AnalystFailure'),
+    describeAnalystFailure: readMember(failure, 'describeAnalystFailure'),
+    toDecidedRecord: readMember(record, 'toDecidedRecord'),
+    toFailedRecord: readMember(record, 'toFailedRecord'),
+    isShadowAnalystRequested: readMember(context, 'isShadowAnalystRequested'),
+  };
+  if (Object.values(members).some((member) => member === undefined)) {
+    throw new Error('Módulo ao vivo sem as partes do analista.');
+  }
+  return members as LiveAnalystParts;
 }

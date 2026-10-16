@@ -2170,3 +2170,26 @@ recalcular sob demanda (D3-B); (b) D1/D2 — governar e o comando de tamanho no 
 colunas em `candles`, livro de ofertas e fontes externas (A22); (d) o desvio da A11 (postura recalculada em toda vela, sem
 `lastPosture`) — se preferir a postura presa entre as janelas de ritmo, é `analyst-2`; (e) os rótulos "MODERADA" e
 "LIBERADA" no lugar de "NORMAL" e "CONFIANTE".
+
+**T2.3 — como a sombra entrou no worker (registro de desvios da A18; o contrato da regra não mudou).**
+
+- **Ordem no passo.** A decisão da vela `t` sai DEPOIS do passo puro do motor de `t` (o patrimônio e as posições "em `t`" só existem
+  nele) e ANTES da gravação, como o passo da meta: `settleCandle` → `decideShadowStep` → `commitStep`. Em sombra nada volta ao
+  motor; no governar (Fase 4) os comandos refazem o MESMO candle com `commands`, como a saída por meta.
+- **Uma leitura por par por ronda.** `createAnalystSeriesCache` (um por avaliador) guarda por `(par, fonte do sentimento, âncora)`
+  o estado dos quatro `signalStep` e os votos, e só avança as velas novas (`advanceVote`, o mesmo passo da série inteira): o
+  resultado é IGUAL ao recálculo desde a âncora em toda vela (prova em `test/live-analyst-series.contract.test.ts`). Ele
+  estende até a última vela da ronda numa leitura só; âncora nova (todo dia) ou reinício recomeça do zero. Um buraco que o
+  banco preencher depois de a cópia já tê-lo atravessado só é visto no recálculo (reinício); a linha já gravada não muda.
+- **`isCatchingUp`** = a vela decidida é mais velha que a última vela da ronda (o relógio fica no worker e a regra não o lê); a
+  ronda que ainda alcança o mercado decide `no_data` ("atrasada") e não libera entrada, como a A10 manda.
+- **Dono do `halt`.** Em sombra o analista nunca fecha a porta da carteira: `lastHaltReason` é nulo, então `wouldCommands` mostra
+  "daria `halt`" em toda vela de porta fechada e nunca "daria `resume`" (A15). O contrafactual governa uma carteira em memória e
+  informa o dono do `halt` pelo mesmo gancho (`haltReason`).
+- **Falha.** Qualquer erro do analista vira a linha `failed` com SÓ o código (`ANALYST_SERIES_UNAVAILABLE`, `ANALYST_INPUT_INVALID`
+  ou `ANALYST_ENGINE_REFUSED:<código do motor>`): nem a linha nem o log levam o texto do erro. O pedido só vale para `analyst-1`,
+  `shadow` e vela de 15 min; qualquer outro deixa a simulação sem analista.
+- **Desempenho (RNF06).** Para o passo caber em 50 ms o pacote puro ganhou três atalhos que não mudam nenhum número da regra:
+  comparação de preço por dígitos (`compareDecimalTexts`), ordenação dos percentis por inteiro exato (`sortDecimalTexts`) e o
+  `atrRate` de cada leitura memorizado pelo próprio objeto (`WeakMap`). Cada um tem paridade com o decimal em sorteios
+  (`test/risk-analyst-decimal-texts.contract.test.ts`) e o dourado e os 52 mutantes seguem iguais.

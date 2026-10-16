@@ -2,7 +2,7 @@
 import { EngineDecimal, formatEngineDecimal } from '@ativada/strategy-engine';
 
 import { ANALYST_RULES, CANDLE_MILLISECONDS } from './analyst.constant.js';
-import { decimalOf, divideDown, sumTexts } from './analyst-decimal.js';
+import { decimalOf, divideDown, sortDecimalTexts, sumTexts } from './analyst-decimal.js';
 import type { MarketReadings, ReadingCandle, RunCost, VoteReading } from './analyst.types.js';
 
 // Índice da vela de abertura `openTime` numa lista crescente por abertura, ou -1.
@@ -66,6 +66,19 @@ export function computeAtrRate(params: {
   return divideDown(decimalOf(params.atr), close);
 }
 
+// O `atrRate` de uma leitura nunca muda, e as mesmas leituras voltam a cada vela do par: calcula-se uma vez por leitura (a
+// chave é o próprio objeto; o resultado é função só dele, então a memória não muda nada do que a regra devolve).
+const ATR_RATE_BY_READING = new WeakMap<VoteReading, string | null>();
+
+function atrRateOf(reading: VoteReading): string | null {
+  const known = ATR_RATE_BY_READING.get(reading);
+  if (known !== undefined) return known;
+  const rate =
+    reading.atr === null ? null : computeAtrRate({ atr: reading.atr, close: reading.close });
+  ATR_RATE_BY_READING.set(reading, rate);
+  return rate;
+}
+
 export type AtrRates = {
   // Os `atrRate` das velas com leitura em (t − 2.880·d, t], em ordem de abertura.
   readonly rates: readonly string[];
@@ -84,8 +97,7 @@ export function collectAtrRates(params: CollectAtrRatesParams): AtrRates {
   let current: string | null = null;
   for (const reading of series) {
     if (reading.openTime <= windowStart || reading.openTime > candleTime) continue;
-    if (reading.atr === null) continue;
-    const rate = computeAtrRate({ atr: reading.atr, close: reading.close });
+    const rate = atrRateOf(reading);
     if (rate === null) continue;
     rates.push(rate);
     if (reading.openTime === candleTime) current = rate;
@@ -98,10 +110,10 @@ export type AtrPercentiles = { readonly p90: string | null; readonly p95: string
 // Percentil nearest-rank (posição ⌈p·N ÷ 100⌉, base 1, em ordem crescente); `null` abaixo de 96 amostras.
 export function computeAtrPercentiles(rates: readonly string[]): AtrPercentiles {
   if (rates.length < ANALYST_RULES.percentileMinimumSamples) return { p90: null, p95: null };
-  const sorted = rates.map(decimalOf).sort((left, right) => left.comparedTo(right));
+  const sorted = sortDecimalTexts(rates);
   const pick = (percentile: number): string | null => {
     const value = sorted[Math.ceil((percentile * sorted.length) / 100) - 1];
-    return value === undefined ? null : formatEngineDecimal(value);
+    return value === undefined ? null : formatEngineDecimal(decimalOf(value));
   };
   return {
     p90: pick(ANALYST_RULES.confidentMaximumAtrPercentile),

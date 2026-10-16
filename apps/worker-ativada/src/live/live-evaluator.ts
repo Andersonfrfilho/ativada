@@ -8,6 +8,7 @@ import type {
   LivePassOutcome,
   LiveTickSummary,
 } from './live-run.types.js';
+import { createAnalystSeriesCache } from './analyst-series-cache.js';
 import { evaluateLiveRun } from './evaluate-live-run.js';
 
 type RunRoster = Set<string>;
@@ -59,13 +60,17 @@ export function createLiveEvaluator(dependencies: LiveEvaluatorDependencies): Li
   const roster: RunRoster = new Set();
   const engine = dependencies.engine ?? createEngine();
   const maxSteps = dependencies.maxStepsPerPass ?? LIVE_MAX_STEPS_PER_PASS;
+  // Uma série de velas por par, dividida entre as simulações com analista da MESMA instância (A3).
+  const analystSeries = createAnalystSeriesCache();
   return {
     tick: async (): Promise<LiveTickSummary> => {
       await dependencies.claims.cancelLiveRunsOfInactiveOwners();
       await refreshRoster(dependencies, roster);
       const claimed = await claimNewRuns(dependencies, roster);
       const outcomes = await Promise.all(
-        [...roster].map((runId) => evaluateLiveRun({ dependencies, engine, maxSteps, runId })),
+        [...roster].map((runId) =>
+          evaluateLiveRun({ dependencies, engine, maxSteps, runId, analystSeries }),
+        ),
       );
       return summarize(claimed, outcomes);
     },
