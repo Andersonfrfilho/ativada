@@ -685,3 +685,35 @@ test/live-analyst-mutants.contract.test.ts → 42 mutantes mortos, controle verd
 
   Não rodado: `production-engine-mutants` e os alvos do motor (nada em `packages/strategy-engine` nem `packages/run-recording`
   mudou nesta task; a T4.1b os rodou); `make lgpd-test` (pede Docker). Nenhuma migration nova, nada aplicado no banco dev.
+
+## T4.2c — paridade do governar no `live-test` (2026-10-16)
+
+- **Check novo** `scripts/live-test/check-analyst-govern.ts` (chamado por `scripts/live-test.ts` depois do `checkAnalyst` da
+  sombra; o alvo `make live-test` ganhou a frase): o recorte BTCUSDT de 15 min (3.300 velas, `test/fixtures/risk-analyst/market/`)
+  é entregue VELA POR VELA ao worker de produção contra o Postgres (o aquecimento já está no banco, cada ronda processa UMA vela
+  com `maxStepsPerPass: 1`; entregue de uma vez, toda vela viraria `late_candle`), com o pedido `govern` em `runs.request`,
+  taxas mínimas (para a regra liberar a cautela de ¼) e uma queda de conexão antes do commit 1.500. O símbolo de teste é
+  ETHUSDT (o recorte de BTCUSDT da sombra já ocupa o outro no mesmo banco). A referência é o laço em memória da T4.2a
+  (`simulate` do contrafactual, `onStep` entrega o resultado final de cada passo) gravado pelo MESMO repositório
+  (`appendResults`) numa execução de backtest sem executor, e as duas execuções são comparadas pelas seis tabelas
+  (`signals`, `orders`, `fills`, `positions`, `equity_points`, `run_commands`) com o digest do `check-analyst`.
+- **Resultado** (Postgres embutido do WSL, porta 56447, `~/pg-scratch/data-007-t42`; nenhum container e nenhum
+  `ativada-dev-*` tocado):
+
+```text
+live-test: (T4.2c) analista GOVERNANDO: 3300 velas de 15 min entregues UMA POR VEZ (nenhuma em atraso), 3300 decisões em modo
+govern (751 com tamanho 1/4, 120 entradas, 85 saídas por tempo) e uma queda de conexão na vela 1500; sinais, ordens,
+preenchimentos, posições, patrimônio e comandos IDÊNTICOS ao laço em memória da T4.2a, byte a byte (digest 962445bf99ee254e);
+ronda de uma simulação com Postgres de verdade: p50 23.5 ms, p95 38.6 ms
+live-test: OK   (o live-test inteiro: paridade com o backtest, SIGKILL, atomicidade, sombra, contas, dois workers, lacunas,
+                 falhas tipadas e API real, todos verdes)
+```
+
+  A medição de 50 ms do analista é a do contrato de desempenho (T4.2b: p95 20,67 ms governando). No `live-test` a ronda
+  inteira (banco, batimento, leitura, passo e commit) é medida e só reprovada acima de 150 ms: com 4 rodadas pesadas em
+  paralelo o p95 chegou a 50,1 ms, e o relógio de uma máquina ocupada não é contrato.
+- **Mutantes do adaptador** (`scripts/live-mutants.ts`, +2 que o `live-test` reprova; rodados só os dois, mais o controle):
+  `GOVERN_ENTRY_SCALE_NOT_HANDED_TO_THE_ENGINE` (linhas diferem do laço em memória) e
+  `GOVERN_STEP_NOT_REDONE_WITH_THE_ANALYST_INPUTS` (o recorte não exercitou o governar). `CONTROL: passa (arnês sólido)`; os 12
+  mutantes antigos não foram rodados de novo (cada um custa um `live-test` inteiro de ~12 min; nada no adaptador do banco mudou).
+- **Não feito (fora do pedido):** T4.2d (liberar `govern` na API) e T4.3 (contrafactual de novo e o selo do painel).

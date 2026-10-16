@@ -166,6 +166,8 @@ export type NewLiveRun = {
   readonly user?: LiveUser;
   // O que a API grava em `runs.request` (por exemplo, o pedido do analista de risco em sombra).
   readonly request?: JsonContainer;
+  // Custo da simulação diferente do exemplo (taxa e slippage por lado, texto decimal).
+  readonly costs?: { readonly feeRate: string; readonly slippageRate: string };
 };
 
 export async function createLiveRun(
@@ -177,6 +179,7 @@ export async function createLiveRun(
     ...loadClassicRunParameters(),
     symbol: params.symbol,
     timeframe: params.timeframe,
+    ...params.costs,
   });
   const run = await createRunRepository(context.handle).createRun(user.scope, {
     strategyVersionId: user.versionId,

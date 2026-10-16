@@ -139,7 +139,7 @@ queue-mutants: ## Prova que a fila e a reivindicação ao vivo reprovam 24 mutan
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/queue-mutants.ts
 
-live-test: ## Prova a simulação ao vivo contra Postgres de teste descartável: paridade com o backtest nos dois conjuntos reais, morte do processo (SIGKILL) entre passos e no meio de um, candle repetido, conta apagada ou bloqueada, dois workers, teto por usuário, lacuna de candles, a sombra do analista de risco (uma decisão e um aviso por passo, SIGKILL sem duplicar nem perder) e a API real ponta a ponta
+live-test: ## Prova a simulação ao vivo contra Postgres de teste descartável: paridade com o backtest nos dois conjuntos reais, morte do processo (SIGKILL) entre passos e no meio de um, candle repetido, conta apagada ou bloqueada, dois workers, teto por usuário, lacuna de candles, a sombra do analista de risco (uma decisão e um aviso por passo, SIGKILL sem duplicar nem perder), o analista GOVERNANDO (velas entregues uma por vez, linhas idênticas ao laço em memória, queda de conexão no meio) e a API real ponta a ponta
 	set -a; . envs/env.test; set +a; \
 	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
 	trap 'exit 130' INT; \

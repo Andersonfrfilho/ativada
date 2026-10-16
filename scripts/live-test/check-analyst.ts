@@ -47,7 +47,7 @@ const ANALYST_REQUEST = parseJsonContainer(JSON.stringify({ analyst: ANALYST_SHA
 type StartedRun = { readonly runId: string; readonly user: LiveUser };
 type DecisionRow = { readonly candle_time: string; readonly status: string; readonly mode: string };
 
-async function resultRowsDigest(context: LiveTestContext, runId: string): Promise<string> {
+export async function resultRowsDigest(context: LiveTestContext, runId: string): Promise<string> {
   const tables: unknown[] = [];
   for (const table of RESULT_TABLES) {
     const rows: unknown = await context.client.unsafe(

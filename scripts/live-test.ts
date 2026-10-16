@@ -7,6 +7,7 @@ import {
   dropTemporaryDatabase,
 } from '../packages/database/test-support/temporary-database.js';
 import { checkAnalyst } from './live-test/check-analyst.js';
+import { checkAnalystGovern } from './live-test/check-analyst-govern.js';
 import { checkApi } from './live-test/check-api.js';
 import { checkAtomicStep } from './live-test/check-atomic-step.js';
 import { checkClosedAccounts } from './live-test/check-closed-accounts.js';
@@ -35,6 +36,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkDuplicates(context);
     await checkStepEvents(context);
     await checkAnalyst(context);
+    await checkAnalystGovern(context);
     await checkClosedAccounts(context);
     await checkTwoWorkers(context);
     await checkGaps(context);

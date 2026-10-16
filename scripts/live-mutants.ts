@@ -112,6 +112,18 @@ const MUTANTS: readonly Mutant[] = [
       'false',
     ),
   },
+  {
+    name: 'GOVERN_ENTRY_SCALE_NOT_HANDED_TO_THE_ENGINE',
+    edits: edit('live-step.ts', '    entryRiskScale: params.entryRiskScale,\n', ''),
+  },
+  {
+    name: 'GOVERN_STEP_NOT_REDONE_WITH_THE_ANALYST_INPUTS',
+    edits: edit(
+      'live-step.ts',
+      'redo: (inputs) => advance(run, { cursor, candle, ...inputs }),',
+      'redo: () => settled.result,',
+    ),
+  },
 ];
 
 type Verdict = { readonly exitCode: number; readonly output: string };
