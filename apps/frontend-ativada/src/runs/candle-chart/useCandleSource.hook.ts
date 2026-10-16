@@ -9,8 +9,13 @@ import { computeCandleWindow, withLeadingContext } from './candle-window.js';
 import { useCandleHistory, type CandleHistory } from './useCandleHistory.hook.js';
 import { useChartPreferences, type ChartPreferenceControls } from './useChartPreferences.hook.js';
 import { TIMEFRAMES } from '../run.constant.js';
+import {
+  useTimeframeChoice,
+  type TimeframeChoice,
+  type TimeframeChoiceState,
+} from './useTimeframeChoice.hook.js';
 
-export type TimeframeChoice = (typeof TIMEFRAMES)[number];
+export type { TimeframeChoice };
 
 export type CandleSource = {
   readonly history: CandleHistory;
@@ -34,9 +39,6 @@ export type CandleSource = {
 
 type FocusState = { readonly time: number; readonly rangeKey: string };
 
-// A escolha vale só para esta execução e esta tela: nada vai ao armazenamento (RF05).
-type Choice = { readonly owner: string; readonly timeframe: TimeframeChoice };
-
 function offeredTimeframes(
   runTimeframe: string,
   enabled: readonly string[] | undefined,
@@ -46,6 +48,21 @@ function offeredTimeframes(
   );
 }
 
+// A vela mostrada e as oferecidas: as do ambiente, e sempre a da própria execução.
+function useRunTimeframe(chart: TradeChart): {
+  readonly choice: TimeframeChoiceState;
+  readonly timeframeOptions: readonly TimeframeChoice[];
+} {
+  const { marketTimeframes } = useAppConfig();
+  const timeframeOptions = offeredTimeframes(chart.timeframe, marketTimeframes);
+  const choice = useTimeframeChoice({
+    owner: `${chart.symbol}|${chart.timeframe}`,
+    runTimeframe: chart.timeframe,
+    offered: timeframeOptions,
+  });
+  return { choice, timeframeOptions };
+}
+
 function keyOfRange(range: ChartView['range']): string {
   return range === undefined ? 'end' : `${range.from}-${range.to}`;
 }
@@ -53,11 +70,9 @@ function keyOfRange(range: ChartView['range']): string {
 // De onde vêm as velas: a vela escolhida (ou a da execução), a janela da primeira página e o histórico para a esquerda.
 export function useCandleSource(chart: TradeChart, view: ChartView): CandleSource {
   const preferences = useChartPreferences();
-  const { marketTimeframes } = useAppConfig();
-  const [choice, setChoice] = useState<Choice | undefined>(undefined);
-  const owner = `${chart.symbol}|${chart.timeframe}`;
+  const { choice, timeframeOptions } = useRunTimeframe(chart);
   const [focusState, setFocusState] = useState<FocusState | undefined>(undefined);
-  const timeframe = choice?.owner === owner ? choice.timeframe : chart.timeframe;
+  const { timeframe } = choice;
   const duration = timeframeMilliseconds(timeframe);
   const rangeKey = keyOfRange(view.range);
   const focus = focusState?.rangeKey === rangeKey ? focusState.time : undefined;
@@ -79,15 +94,15 @@ export function useCandleSource(chart: TradeChart, view: ChartView): CandleSourc
     history,
     preferences,
     timeframe,
-    timeframeOptions: offeredTimeframes(chart.timeframe, marketTimeframes),
+    timeframeOptions,
     isRunTimeframe: timeframe === chart.timeframe,
     isSupported: duration !== undefined,
     durationMilliseconds: duration ?? 0,
     focus,
     changeTimeframe: (next, centerTime): void => {
       setFocusState({ time: centerTime, rangeKey });
-      setChoice({ owner, timeframe: next });
+      choice.choose(next);
     },
-    backToRunTimeframe: (): void => setChoice(undefined),
+    backToRunTimeframe: choice.clear,
   };
 }

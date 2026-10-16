@@ -14,13 +14,13 @@ const KIND_OPTIONS: readonly { readonly kind: RunKind | undefined; readonly labe
   { kind: RUN_KIND.WALK_FORWARD, label: 'Walk-forward' },
 ];
 
-type FilterChipProps = {
+export type FilterChipProps = {
   readonly label: string;
   readonly isPressed: boolean;
   readonly onSelect: () => void;
 };
 
-function FilterChip({ label, isPressed, onSelect }: FilterChipProps): ReactElement {
+export function FilterChip({ label, isPressed, onSelect }: FilterChipProps): ReactElement {
   return (
     <button type="button" className={styles.chip} aria-pressed={isPressed} onClick={onSelect}>
       {isPressed ? <Icon name="check" size={14} /> : null}

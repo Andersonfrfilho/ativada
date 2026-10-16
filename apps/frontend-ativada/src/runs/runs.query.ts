@@ -64,14 +64,17 @@ export function useRunDetailQuery(runId: string): UseQueryResult<RunDetail> {
   });
 }
 
+// `isEnabled` falso adia a consulta (a troca rápida só pede os outros tipos com a lista aberta); a chave é a da tela de Backtests.
 export function useRunListQuery(
   kind: RunKind,
   symbol?: string,
+  isEnabled = true,
 ): UseInfiniteQueryResult<InfiniteData<Page<Run>, string | null>> {
   const client = useApiClient();
   const { runPollMilliseconds = RUN_POLL_MILLISECONDS } = useAppConfig();
   return useInfiniteQuery({
     queryKey: [RUN_QUERY_ROOT, 'list', kind, symbol ?? null],
+    enabled: isEnabled,
     initialPageParam: FIRST_PAGE,
     queryFn: ({ pageParam }) =>
       client.requestPage({

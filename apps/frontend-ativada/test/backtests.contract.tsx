@@ -453,7 +453,8 @@ describe('backtest detail', () => {
       isAuthenticated: true,
       routes: [...STRATEGY_ROUTES, ...runRoutes([buildRun({ strategyVersionId: 'version-2' })])],
     });
-    expect(await screen.findByText(/Placar clássico · versão 2/)).toBeDefined();
+    // O nome da estratégia aparece no cabeçalho e no botão de troca rápida; o hash curto só no cabeçalho.
+    expect((await screen.findAllByText(/Placar clássico · versão 2/)).length).toBeGreaterThan(0);
     expect(screen.getByText(/bbbbbbbb/)).toBeDefined();
   });
 
