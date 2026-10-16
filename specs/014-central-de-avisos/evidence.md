@@ -82,3 +82,20 @@ código e a varredura de palavras proibidas e de horas estão em `test/api-notic
 - Mutantes de dono (`scripts/api-runs-mutants.ts`, Postgres embutido): **35 de 35 reprovados** (30 antigos + 5 novos:
   filtro de dono das execuções, das ordens, das saídas, da volta e dos alertas de preço; o de ordens, saídas e volta
   levam também o filtro das execuções, porque o `JOIN` por execução já protege sozinho).
+
+### T2.1 e T2.2 — Modelo dos avisos no painel (`apps/frontend-ativada/src/notices/`)
+
+- `notice.validation.ts` espelha `GET /v1/notices` (Zod, valores decimais como texto); `notices.query.ts` tem duas consultas
+  sob as raízes do stream: `['runs', 'notices']` (infinita, "Ver avisos anteriores") e `['price-alerts', 'notices']`
+  (o mesmo endpoint com `scope=price-alerts`). O stream não mudou: todo `event` e `price_alert` já refaz a raiz.
+- `notice-preferences.ts`: três interruptores, silenciadas, "avisar antes", cursor de leitura e "já vi o balão", tudo no
+  `localStorage` por `sub` opaco (`SessionService.readSubject`, claim `sub` do token em memória); JSON ruim, campo inválido
+  e acesso negado caem nos padrões A, campo a campo. Nada de preço nem par guardado.
+- `notice-events.ts` (puro): mescla por `noticeId` (o estado mais avançado vence, nunca volta), `diffNotices`, não lidos,
+  `decideEffects` (desligar o tipo ou silenciar tira toast, som e notificação; a simulação aberta na tela não ganha toast;
+  ordem pedida não faz som nem notificação) e o texto do resumo.
+- `notice-router.ts`: o primeiro carregamento de cada assunto é só linha de base (nada vira toast); depois, toast e
+  anúncio por mudança; depois de religar, UM resumo sem toast individual; aba escondida só notifica e, ao voltar, repõe os
+  toasts (ou resume se passou de 60 s).
+- Gates (WSL, espelho `~/gates/ativada-spec14`): `typecheck`, `lint` e `format:check` limpos; `test/notice-model.contract.ts`
+  com 23 testes (preferências, texto e horário no fuso, mescla, troca de estado, efeitos, roteador).

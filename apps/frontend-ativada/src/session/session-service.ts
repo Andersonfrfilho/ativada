@@ -17,7 +17,7 @@ import {
   type SessionStatus,
 } from './session.constant.js';
 import { RENEWAL_RETRY_MILLISECONDS } from './session.constant.js';
-import { readEmailClaim, tokenResponseSchema } from './session.validation.js';
+import { readEmailClaim, readSubjectClaim, tokenResponseSchema } from './session.validation.js';
 
 export type ExchangeCodeParams = {
   readonly code: string;
@@ -38,6 +38,8 @@ export type SessionService = {
   readonly hasUnconfirmedSignOut: () => boolean;
   readonly expire: () => void;
   readonly readEmail: () => string | undefined;
+  // O identificador opaco da conta (claim sub), chave das preferências de avisos guardadas só neste navegador.
+  readonly readSubject: () => string | undefined;
 };
 
 export type SessionServiceOptions = {
@@ -141,6 +143,9 @@ class MemorySessionService implements SessionService {
 
   readonly readEmail = (): string | undefined =>
     this.credentials === undefined ? undefined : readEmailClaim(this.credentials.accessToken);
+
+  readonly readSubject = (): string | undefined =>
+    this.credentials === undefined ? undefined : readSubjectClaim(this.credentials.accessToken);
 
   private publish(next: SessionStatus, credentials: Credentials | undefined): void {
     this.status = next;
