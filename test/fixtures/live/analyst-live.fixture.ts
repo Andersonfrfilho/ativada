@@ -3,11 +3,17 @@ import type { InMemoryLive, LiveScenario } from './in-memory-live-database.fixtu
 import {
   ANALYST_REAL_DATASET,
   ANALYST_REAL_SENTIMENT,
+  ANALYST_GOVERN_REQUEST,
   ANALYST_SHADOW_REQUEST,
 } from './analyst-real-data.fixture.js';
 import { buildLive } from './live-scenarios.fixture.js';
 
-export { ANALYST_REAL_DATASET, ANALYST_REAL_SENTIMENT, ANALYST_SHADOW_REQUEST };
+export {
+  ANALYST_GOVERN_REQUEST,
+  ANALYST_REAL_DATASET,
+  ANALYST_REAL_SENTIMENT,
+  ANALYST_SHADOW_REQUEST,
+};
 
 export type AnalystLiveBuild = {
   readonly withAnalyst: boolean;

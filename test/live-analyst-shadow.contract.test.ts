@@ -129,7 +129,6 @@ describe('a sombra não muda a simulação', () => {
   );
 
   test.each([
-    ['modo governar (só chega na Fase 4)', { version: 'analyst-1', mode: 'govern' }],
     ['versão desconhecida', { version: 'analyst-9', mode: 'shadow' }],
     ['modo desconhecido', { version: 'analyst-1', mode: 'qualquer' }],
   ])('pedido com %s: o analista não decide', async (_name, analyst) => {

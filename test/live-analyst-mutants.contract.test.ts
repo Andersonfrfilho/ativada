@@ -10,7 +10,7 @@ import {
   type LiveSourceMutant,
 } from './fixtures/live/live-mutation.fixture.js';
 
-const MUTANT_TIMEOUT_MILLISECONDS = 900_000;
+const MUTANT_TIMEOUT_MILLISECONDS = 3_600_000;
 const PARALLEL_MUTANTS = 4;
 const CONTROL: LiveSourceMutant = { name: 'CONTROL', edits: [] };
 const STEP = 'live-step.ts';
@@ -21,6 +21,8 @@ const ANALYST_CONTEXT = 'load-analyst-context.ts';
 const ANALYST_RECORD = 'analyst-record.ts';
 const ANALYST_FAILURE = 'analyst-failure.ts';
 const ANALYST_CONSTANT = 'analyst-live.constant.ts';
+const GOVERN_STEP = 'govern-step.ts';
+const GOVERN_RECORD = 'govern-record.ts';
 
 function edit(file: string, find: string, replace: string, occurrences = 1): LiveSourceEdit[] {
   return [{ file, find, replace, occurrences }];
@@ -28,7 +30,130 @@ function edit(file: string, find: string, replace: string, occurrences = 1): Liv
 
 // O analista de risco em sombra no passo ao vivo (spec 007, T2.3): a série do par por ronda, a decisão na transação do passo,
 // a falha que grava só o código e o pedido gravado na execução.
-const MUTANTS: readonly LiveSourceMutant[] = [
+
+// O analista GOVERNANDO o passo ao vivo (spec 007, T4.2b, A21): o teto de entrada e a saída por tempo no mesmo candle refeito.
+// O histórico do resultado final não tem mutante: ordens não entram no histórico, então gravar o primeiro resultado ou o final
+// é a mesma coisa (mutante equivalente); a invariância do resultado é provada pela refeitura com a escala GRAVADA.
+const GOVERN_MUTANTS: readonly LiveSourceMutant[] = [
+  {
+    name: 'GOVERN_STEP_NOT_REDONE_WITH_THE_ANALYST_INPUTS',
+    edits: edit(
+      STEP,
+      'redo: (inputs) => advance(run, { cursor, candle, ...inputs }),',
+      'redo: () => settled.result,',
+    ),
+  },
+  {
+    name: 'GOVERN_ENTRY_SCALE_NOT_HANDED_TO_THE_ENGINE',
+    edits: edit(STEP, '    entryRiskScale: params.entryRiskScale,\n', ''),
+  },
+  {
+    name: 'GOVERN_FINAL_RESULT_NOT_KEPT',
+    edits: edit(STEP, 'settled: { ...settled, result: governed.result }', 'settled'),
+  },
+  {
+    name: 'GOVERN_RUNS_WITHOUT_AN_ANALYST_KIT',
+    edits: edit(
+      ANALYST_CONTEXT,
+      "return readProperty(readProperty(run.request, 'analyst'), 'mode') === ANALYST_RECORD_MODE.GOVERN;",
+      'return false;',
+    ),
+  },
+  {
+    name: 'GOVERN_REQUEST_ONLY_OBSERVES',
+    edits: edit(STEP, 'if (analyst.mode === ANALYST_RECORD_MODE.SHADOW) {', 'if (true) {'),
+  },
+  {
+    name: 'GOVERN_SHADOW_REQUEST_GOVERNS',
+    edits: edit(STEP, 'if (analyst.mode === ANALYST_RECORD_MODE.SHADOW) {', 'if (false) {'),
+  },
+  {
+    name: 'GOVERN_GOAL_ENDED_NOT_TOLD_TO_THE_ANALYST',
+    edits: edit(
+      STEP,
+      'isGoalEnded: settled.decision !== undefined || run.goal?.isOutcomeRecorded === true,',
+      'isGoalEnded: false,',
+    ),
+  },
+  {
+    name: 'GOVERN_UNSUPPORTED_REQUEST_ACCEPTED',
+    edits: edit(
+      ANALYST_CONTEXT,
+      'isSupported: mode === ANALYST_RECORD_MODE.SHADOW || isKnownAnalystRequest(context.run),',
+      'isSupported: true,',
+    ),
+  },
+  {
+    name: 'GOVERN_UNSUPPORTED_REQUEST_STILL_ANALYSES',
+    edits: edit(
+      GOVERN_STEP,
+      'if (kit.isSupported) return analyzeStep(kit, step);',
+      'return analyzeStep(kit, step);',
+    ),
+  },
+  {
+    name: 'GOVERN_REFUSED_ENTRY_REDONE_WITHOUT_THE_ANALYST',
+    edits: edit(
+      GOVERN_STEP,
+      'return { result: params.redo(SAFE_INPUTS), refusal: describeAnalystFailure(error) };',
+      'return { result: params.step.result, refusal: describeAnalystFailure(error) };',
+    ),
+  },
+  {
+    name: 'GOVERN_SAFE_INPUTS_KEEP_THE_FULL_SIZE',
+    edits: edit(
+      GOVERN_STEP,
+      'const SAFE_INPUTS: GovernInputs = { commands: [], entryRiskScale: ENTRY_RISK_SCALE.NONE };',
+      'const SAFE_INPUTS: GovernInputs = { commands: [], entryRiskScale: ENTRY_RISK_SCALE.FULL };',
+    ),
+  },
+  {
+    name: 'GOVERN_REFUSAL_NOT_RECORDED',
+    edits: edit(GOVERN_STEP, 'if (refusal !== undefined) return fail(refusal);', ''),
+  },
+  {
+    name: 'GOVERN_OTHER_ERRORS_SWALLOWED',
+    edits: edit(GOVERN_STEP, 'if (!(error instanceof EngineInputError)) throw error;', ''),
+  },
+  {
+    name: 'GOVERN_NEVER_SEES_THE_POSITION',
+    edits: edit(
+      GOVERN_STEP,
+      'hasPosition: step.result.state.wallet.position !== null',
+      'hasPosition: false',
+    ),
+  },
+  {
+    name: 'GOVERN_RECORD_MARKED_AS_SHADOW',
+    edits: edit(
+      GOVERN_RECORD,
+      'mode: ANALYST_RECORD_MODE.GOVERN,',
+      'mode: ANALYST_RECORD_MODE.SHADOW,',
+    ),
+  },
+  {
+    name: 'GOVERN_FAILED_RECORD_MARKED_AS_SHADOW',
+    edits: edit(
+      GOVERN_RECORD,
+      'mode: ANALYST_RECORD_MODE.GOVERN }',
+      'mode: ANALYST_RECORD_MODE.SHADOW }',
+    ),
+  },
+  {
+    name: 'GOVERN_RECORD_KEEPS_THE_DECIDED_SIZE',
+    edits: edit(GOVERN_RECORD, '    riskScale: inputs.entryRiskScale,\n', ''),
+  },
+  {
+    name: 'GOVERN_RECORD_KEEPS_THE_WOULD_COMMANDS',
+    edits: edit(
+      GOVERN_RECORD,
+      'commands: inputs.commands.map(({ commandId, kind, reason }) => ({ commandId, kind, reason })),',
+      '',
+    ),
+  },
+];
+
+const SHADOW_MUTANTS: readonly LiveSourceMutant[] = [
   {
     name: 'ANALYST_SERIES_NOT_SHARED_BETWEEN_SIMULATIONS',
     edits: edit(
@@ -153,7 +278,7 @@ const MUTANTS: readonly LiveSourceMutant[] = [
     name: 'ANALYST_GOVERN_REQUEST_ACCEPTED',
     edits: edit(
       ANALYST_CONTEXT,
-      "readProperty(analyst, 'mode') === ANALYST_RECORD_MODE.SHADOW &&",
+      "readProperty(readProperty(run.request, 'analyst'), 'mode') === ANALYST_RECORD_MODE.SHADOW &&",
       'true &&',
     ),
   },
@@ -195,7 +320,9 @@ const MUTANTS: readonly LiveSourceMutant[] = [
   },
 ];
 
-describe('mutantes do analista de risco em sombra no passo ao vivo', () => {
+const MUTANTS: readonly LiveSourceMutant[] = [...SHADOW_MUTANTS, ...GOVERN_MUTANTS];
+
+describe('mutantes do analista de risco (sombra e governar) no passo ao vivo', () => {
   const verdicts = new Map<string, LiveMutantVerdict>();
 
   beforeAll(async () => {

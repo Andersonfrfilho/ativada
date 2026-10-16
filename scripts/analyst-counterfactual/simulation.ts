@@ -41,6 +41,8 @@ export type SimulationParams = {
   // A primeira vela passada ao motor: o início do período menos o aquecimento da estratégia.
   readonly firstIndex: number;
   readonly withAnalyst: boolean;
+  // Recebe o resultado FINAL de cada passo (a paridade com o ao vivo grava as linhas dele).
+  readonly onStep?: (result: StepResult) => void;
 };
 
 export type SimulationRun = { readonly outcome: SimulationOutcome; readonly tally: AnalystTally };
@@ -113,6 +115,8 @@ function createAnalystDriver(params: SimulationParams, cache: AnalystSeriesCache
   });
   const base: AnalystRunKit = {
     runId: 'counterfactual',
+    mode: 'govern',
+    isSupported: true,
     market: params.pair.market,
     seriesCache: cache,
     source: {
@@ -224,6 +228,7 @@ export async function simulate(
     if (inputs !== undefined && !isNeutral(inputs)) result = step(inputs);
     driver?.record(candle, result);
     recorder.add(result);
+    params.onStep?.(result);
     state = result.state;
     previousOpenTime = candle.openTime;
   }

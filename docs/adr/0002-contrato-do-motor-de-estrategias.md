@@ -2238,6 +2238,39 @@ colunas em `candles`, livro de ofertas e fontes externas (A22); (d) o desvio da 
   anulação, sem leitura, os 3.300 candles reais de 15 min com votos por regra em toda vela lida, corte da série no meio dando os
   mesmos votos) e 6 mutantes novos em `test/risk-analyst-mutants.contract.test.ts`.
 
+**T4.2 — como o governar entrou no worker (registro de desvios da A21; o contrato do motor e da regra não mudou).**
+
+- **Ordem no passo.** `settleCandle` (primeira passada, com a meta) → decisão do analista sobre ESSE resultado → `toGovernInputs`
+  (a mesma função pura do contrafactual) → o MESMO candle é refeito com `entryRiskScale` e a saída por tempo → o resultado
+  FINAL é o que vai para `appendDecisions`, os alertas, o desfecho da meta e o checkpoint, junto com a linha de
+  `analyst_decisions`, na mesma transação. Escala `'1'` e nenhum comando = o passo não é refeito (é o antigo, exato). Meta já
+  decidida ou desfecho já gravado: o passo da meta é o final e o analista não manda comando (a carteira para por `halt`).
+- **Falha segura em três lugares, sempre com a escala 0 e nunca sem o analista.** (a) A regra falha (série, histórico, entrada):
+  linha `failed` com o código e nenhuma entrada naquela vela. (b) Pedido `govern` com versão desconhecida ou vela que não é a de
+  15 min: o analista NÃO roda e toda vela grava `failed`/`ANALYST_REQUEST_UNSUPPORTED` com a escala 0 (a API recusa esses
+  pedidos; o worker não presume isso). (c) O motor recusa a entrada do analista (`EngineInputError`): o candle é refeito SÓ com a
+  escala 0 e a linha vira `failed` com `ANALYST_ENGINE_REFUSED:<código>`; qualquer outro erro continua subindo como no passo puro.
+- **A linha é o que o passo recebeu.** `mode = govern`; `risk_scale` é a escala EFETIVA (porta fechada = 0, mesmo com postura
+  `normal` fora do ritmo) e `commands` são os comandos enviados ao motor (só `exit_position`/`analyst_timeout`), não o
+  `wouldCommands` da sombra. Prova de invariância: refazer a simulação do zero com a escala e os comandos GRAVADOS nas linhas
+  dá linhas e estado do motor idênticos aos da simulação (`test/live-analyst-govern.contract.test.ts`).
+- **A retomada não lê a linha gravada.** Passo e decisão nascem na mesma transação: não existe linha sem passo confirmado, então
+  a retomada recalcula só velas ainda não gravadas, com o histórico relido do banco, e chega às MESMAS decisões (teste de queda
+  no meio da transação e retomada por outra instância; `live-test` com queda de conexão). Uma decisão gravada nunca é recalculada
+  porque o passo dela também nunca é refeito.
+- **O histórico em memória guarda o resultado final**, mas isso não muda nada observável: o histórico só tem placar, patrimônio e
+  posições, e a escala só afeta ORDENS (a entrada nova só preenche na vela seguinte); por isso gravar o primeiro ou o final é
+  equivalente e não há mutante para essa linha.
+- **Decisão do dono do produto (aceita e registrada): a escala `'0'` só impede a entrada NOVA daquela vela e NÃO cancela uma
+  ordem de entrada pendente criada numa vela anterior.** Uma ordem criada com a porta aberta em `t − d` ainda preenche na
+  abertura de `t` mesmo que a decisão de `t` seja pausa. O custo é no máximo uma entrada a mais por pausa, com o tamanho que a
+  regra liberou na vela em que ela nasceu; cancelar exigiria um comando novo no motor, fora do escopo da A21.
+- **`isCatchingUp` e a divergência aceita.** Depende do relógio do worker (a vela decidida é mais velha que a última vela da
+  ronda): uma ronda que ainda alcança o mercado decide `no_data` ("atrasada") e a escala é 0. Reprocessar a mesma história mais
+  tarde em rondas de uma vela pode dar outra decisão nessas velas; a linha de cada vela diz o motivo e nada é escondido. Por isso
+  o `live-test` do governar entrega as velas UMA POR VEZ.
+- **Sem `halt` próprio.** O analista no governar nunca fecha nem reabre a porta (`haltReason` é sempre nulo): a pausa é a escala 0.
+
 ## Lucro mínimo por operação (spec 013)
 
 Contrato da T0.1 da spec 013: a regra `minimum-profit-1` fechada. **Autorização:** em 2026-10-16 o usuário pediu "certo, add

@@ -12,10 +12,12 @@ import {
   serializeEngineState,
   type Engine,
   type EngineCandle,
+  type EngineCommand,
+  type EntryRiskScale,
   type StepResult,
 } from '@ativada/strategy-engine';
 
-import type { AlertInput } from '@ativada/database';
+import type { AlertInput, AnalystDecisionInput } from '@ativada/database';
 import { buildGoalAlert } from './goal-alert.js';
 import {
   buildGoalCommands,
@@ -24,7 +26,9 @@ import {
   type GoalDecision,
   type GoalTracking,
 } from './goal-step.js';
+import { ANALYST_RECORD_MODE } from './analyst-live.constant.js';
 import { decideShadowStep } from './analyst-step.js';
+import { settleGovernedStep } from './govern-step.js';
 import { LIVE_PROGRESS } from './live.constant.js';
 import type {
   LiveAlertingSettings,
@@ -63,7 +67,8 @@ export type PassRunStep = { readonly commit: LiveCommitOutcome; readonly next: L
 function advance(
   run: StepRun,
   params: { readonly cursor: LiveCursor; readonly candle: EngineCandle } & {
-    readonly commands?: ReturnType<typeof buildGoalCommands>;
+    readonly commands?: readonly EngineCommand[];
+    readonly entryRiskScale?: EntryRiskScale;
   },
 ): StepResult {
   const { context } = run;
@@ -77,6 +82,7 @@ function advance(
     durationMilliseconds: context.durationMilliseconds,
     pickSentiment: run.pickSentiment,
     commands: params.commands,
+    entryRiskScale: params.entryRiskScale,
   }).result;
 }
 
@@ -144,20 +150,44 @@ async function collectAlerts(
   return [...signalAlerts, goalAlert];
 }
 
+type Analysed = { readonly settled: Settled; readonly analyst: AnalystDecisionInput | undefined };
+
+// O analista de risco do candle. Em sombra só observa o passo; no governar ele dá o teto da entrada e a saída por tempo, o
+// MESMO candle é refeito com eles e só o refeito é gravado (junto com a linha da decisão), depois da meta.
+async function settleAnalyst(
+  run: StepRun,
+  params: { readonly cursor: LiveCursor; readonly candle: EngineCandle; readonly settled: Settled },
+): Promise<Analysed> {
+  const { analyst } = run;
+  const { cursor, candle, settled } = params;
+  const step = { context: run.context, candle, result: settled.result };
+  if (analyst === undefined) return { settled, analyst: undefined };
+  if (analyst.mode === ANALYST_RECORD_MODE.SHADOW) {
+    return { settled, analyst: await decideShadowStep(analyst, step) };
+  }
+  const governed = await settleGovernedStep({
+    kit: analyst,
+    step,
+    isGoalEnded: settled.decision !== undefined || run.goal?.isOutcomeRecorded === true,
+    redo: (inputs) => advance(run, { cursor, candle, ...inputs }),
+  });
+  return { settled: { ...settled, result: governed.result }, analyst: governed.record };
+}
+
 export async function stepOnce(
   run: StepRun,
   cursor: LiveCursor,
   candle: EngineCandle,
 ): Promise<PassRunStep> {
-  const settled = settleCandle(run, cursor, candle);
+  const { settled, analyst } = await settleAnalyst(run, {
+    cursor,
+    candle,
+    settled: settleCandle(run, cursor, candle),
+  });
   const { result } = settled;
   const buffer = createBatchBuffer();
   appendDecisions({ buffer, decisions: result.decisions, tracker: run.tracker });
   const goal = buildGoalCommit(run, { settled, candle });
-  const analyst =
-    run.analyst === undefined
-      ? undefined
-      : await decideShadowStep(run.analyst, { context: run.context, candle, result });
   const commit = await run.session.commitStep({
     alerts: await collectAlerts(run, { settled, candle }),
     rows: toRunResultRows(buffer),

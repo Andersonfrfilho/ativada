@@ -26,10 +26,11 @@ export const LIVE_JUDGE_TEST_FILES: readonly string[] = [
   'test/live-goal-evaluator.contract.test.ts',
 ];
 
-// Os testes que reprovam o mutante do analista de risco em sombra: a série do par e o passo com a decisão na transação.
+// Os testes que reprovam o mutante do analista de risco em sombra e governando: a série do par e o passo com a decisão na transação.
 export const LIVE_ANALYST_JUDGE_TEST_FILES: readonly string[] = [
   'test/live-analyst-series.contract.test.ts',
   'test/live-analyst-shadow.contract.test.ts',
+  'test/live-analyst-govern.contract.test.ts',
 ];
 
 export type LiveSourceEdit = {

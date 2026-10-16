@@ -22,16 +22,20 @@ import type { AnalystSeriesCache, SeriesSource } from './analyst-series-cache.js
 import type { LiveRunSession } from './live-run.types.js';
 import type { LiveContext } from './load-live-context.js';
 
-// O analista em SOMBRA de uma simulação, nesta ronda: só observa, nunca muda o passo (spec 007, RNF01).
+// O analista de uma simulação nesta ronda: em sombra só observa (spec 007, RNF01); no governar entrega o teto de entrada e
+// a saída por tempo ao passo (A21).
 export type AnalystRunKit = {
   readonly runId: string;
+  readonly mode: AnalystMode;
+  // Governar com versão ou vela desconhecida não roda a regra: o passo recebe a escala 0 (falha segura).
+  readonly isSupported: boolean;
   readonly market: EngineMarket;
   readonly seriesCache: AnalystSeriesCache;
   readonly source: SeriesSource;
   readonly history: AnalystRunHistory;
   readonly goal: GoalSpec | null;
   readonly waiting: { readonly isPending: boolean };
-  // Quem fechou a porta da carteira agora (`analyst_pause` só se foi o analista): em sombra ele nunca a fecha, então é nulo.
+  // Quem fechou a porta da carteira agora (`analyst_pause` só se foi o analista): ele nunca a fecha (sombra ou governar), então é nulo.
   readonly haltReason: () => string | null;
 };
 
@@ -40,15 +44,33 @@ function readProperty(value: unknown, name: string): unknown {
   return Object.getOwnPropertyDescriptor(value, name)?.value;
 }
 
-// `runs.request.analyst` gravado pela API: versão conhecida e modo sombra. Qualquer outra coisa (governar só chega na Fase 4,
-// outra versão, vela que não é a de 15 min) deixa a simulação sem analista, como se ele nunca tivesse sido pedido.
-export function isShadowAnalystRequested(run: RunRecord): boolean {
+// `runs.request.analyst` gravado pela API: versão conhecida e vela de 15 min (`isKnownAnalystRequest`) e modo sombra. Qualquer outra coisa (o governar é
+// de `isGovernAnalystRequested`) deixa a simulação sem analista em sombra, como se ele nunca tivesse sido pedido.
+function isKnownAnalystRequest(run: RunRecord): boolean {
   const analyst = readProperty(run.request, 'analyst');
   return (
     readProperty(analyst, 'version') === ANALYST_VERSION &&
-    readProperty(analyst, 'mode') === ANALYST_RECORD_MODE.SHADOW &&
     run.timeframe === ANALYST_RULES.baseTimeframe
   );
+}
+
+export function isShadowAnalystRequested(run: RunRecord): boolean {
+  return (
+    readProperty(readProperty(run.request, 'analyst'), 'mode') === ANALYST_RECORD_MODE.SHADOW &&
+    isKnownAnalystRequest(run)
+  );
+}
+
+export type AnalystMode = (typeof ANALYST_RECORD_MODE)[keyof typeof ANALYST_RECORD_MODE];
+
+// Governar é pedido pelo modo gravado, mesmo com versão ou vela desconhecida: pedido que não se entende não roda SEM governo.
+export function isGovernAnalystRequested(run: RunRecord): boolean {
+  return readProperty(readProperty(run.request, 'analyst'), 'mode') === ANALYST_RECORD_MODE.GOVERN;
+}
+
+function resolveAnalystMode(run: RunRecord): AnalystMode | undefined {
+  if (isShadowAnalystRequested(run)) return ANALYST_RECORD_MODE.SHADOW;
+  return isGovernAnalystRequested(run) ? ANALYST_RECORD_MODE.GOVERN : undefined;
 }
 
 export type CreateAnalystKitParams = {
@@ -64,10 +86,13 @@ export type CreateAnalystKitParams = {
 
 export function createAnalystKit(params: CreateAnalystKitParams): AnalystRunKit | undefined {
   const { context, session } = params;
-  if (!isShadowAnalystRequested(context.run)) return undefined;
+  const mode = resolveAnalystMode(context.run);
+  if (mode === undefined) return undefined;
   const { symbol, timeframe, sentimentSource } = context.setup.parameters;
   return {
     runId: context.run.id,
+    mode,
+    isSupported: mode === ANALYST_RECORD_MODE.SHADOW || isKnownAnalystRequest(context.run),
     market: { symbol, timeframe, sentimentSource },
     seriesCache: params.seriesCache,
     source: {

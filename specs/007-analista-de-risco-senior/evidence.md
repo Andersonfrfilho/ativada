@@ -634,3 +634,54 @@ Rodado numa cópia do espelho WSL (`~/gates/ativada-spec7-t41`). Nenhuma migrati
   (71 testes, 14,6 s). O contrato de fronteira do pacote (sem `Date`, `Math.random`, `console`, `as`) segue verde.
 - Os gates e as provas desta task foram rodados na árvore já com a T4.2b aplicada (as duas dividem `analyst-step.ts`); o
   resultado completo está na T4.2b.
+
+## T4.2b — o analista GOVERNA o passo ao vivo no worker (2026-10-16)
+
+- **Passo** (`apps/worker-ativada/src/live/`): `live-step.ts` (`settleAnalyst`) → `govern-step.ts` (`settleGovernedStep`) →
+  `toGovernInputs` (T4.2a) → o MESMO candle refeito com `entryRiskScale` e a saída por tempo → o resultado FINAL vai para as
+  linhas, os alertas, a meta e o checkpoint, com a linha de `analyst_decisions` (`govern-record.ts`: `mode = govern`, tamanho
+  EFETIVO e os comandos ENVIADOS) na mesma transação. Pedido `govern` (`isGovernAnalystRequested`) cria o analista em modo
+  governar mesmo com versão ou vela desconhecida; esse pedido NÃO roda a regra e grava `failed`/`ANALYST_REQUEST_UNSUPPORTED`
+  com a escala 0. Recusa do motor refaz SÓ com a escala 0 e grava `ANALYST_ENGINE_REFUSED:<código>`. O analista não tem `halt`
+  próprio (a pausa é a escala 0). A API segue recusando `govern` com `400` (T4.2d não feita). Sem migration (a 0025 não foi
+  aplicada em banco dev). Decisões e desvios no ADR 0002 ("T4.2 — como o governar entrou no worker"), incluindo a decisão do dono
+  do produto: a escala `'0'` só barra a entrada NOVA daquela vela e NÃO cancela uma ordem de entrada pendente de vela anterior.
+- **Contratos** (`test/live-analyst-govern.contract.test.ts`, 18 testes, via `loadAnalystLiveParts()`/`buildAnalystLive` e o
+  motor de verdade espiado; recorte BTCUSDT 15 min, uma vela por ronda): uma linha `govern` por vela confirmada, tamanho efetivo
+  (porta fechada ou pausa = 0, nunca > 1) e só `exit_position`; **invariância**: refazer a simulação do zero com a escala e os
+  comandos GRAVADOS dá as mesmas linhas e o mesmo estado do motor; **pausa barra entrada e nunca saída**: em todo passo refeito os
+  preenchimentos, posições abertas/fechadas e patrimônio são iguais aos do mesmo passo SEM a escala, escala 0 não coloca entrada
+  alguma (e houve vela em que a estratégia entraria), e no recorte inteiro saíram por sinal, stop, alvo e comando, inclusive em
+  velas pausadas; **tamanho ¼**: valor em risco da entrada ≤ ¼ do que a estratégia arriscaria (+1e-8); **saída por tempo**: toda
+  posição fechada por comando ficou aberta exatamente 4 velas (sai na 5ª) e o comando `analyst_timeout` foi gravado; **falha**:
+  histórico ilegível ⇒ linhas `failed` sem o texto do erro, nenhuma ordem e o passo segue; versão desconhecida ⇒ nenhuma ordem e
+  nenhuma leitura do histórico; recusa do motor ⇒ refeito com 0 e código gravado; erro que não é recusa NÃO é engolido; **meta +
+  analista**: meta decidida ⇒ nenhum comando do analista, mesmo desfecho (`goal_expired`) com e sem analista e a execução conclui;
+  **queda e retomada**: queda no meio da transação desfaz passo e decisão e outra instância retoma com decisões e linhas IDÊNTICAS
+  às da execução contínua. O pedido `govern` saiu do teste "pedido que o analista ignora" da sombra
+  (`live-analyst-shadow`), onde agora só ficam versão e modo desconhecidos. Nota: com o custo do exemplo (0,1% + 0,05%) o recorte
+  real é pausa em toda vela (`move_cost`), então os testes de tamanho e de saída por tempo usam taxas mínimas (0,001%), com as quais
+  a regra libera a cautela de ¼ (751 de 3.300 velas, 120 entradas, 85 saídas por tempo); a pausa é provada nos dois custos.
+- **Desempenho** (`test/live-analyst-performance.contract.test.ts`, caso novo com o passo refeito, 5 simulações do par, série
+  cheia): governando **p50 9,68 ms, p95 20,67 ms** por simulação por vela (sombra: p50 8,04 ms, p95 12,56 ms); teto 50 ms.
+- **Mutantes novos do worker (18, todos mortos; `test/live-analyst-mutants.contract.test.ts` ficou com 42 mutantes, controle
+  verde, 1.286 s)**: passo não refeito, escala não entregue ao motor, resultado final não mantido, analista não criado no governar,
+  governar que só observa, sombra que governa, meta decidida não informada, pedido não suportado aceito ou ainda analisado, recusa
+  refeita sem o analista, tamanho seguro cheio, recusa não gravada, erros outros engolidos, posição nunca vista, linha marcada como
+  sombra (decidida e falha), tamanho decidido no lugar do efetivo, comandos "daria" no lugar dos enviados. Sem mutante para o histórico do
+  resultado final (equivalente, ver ADR). Os mutantes antigos de `analyst-step.ts` e `load-analyst-context.ts` foram reescritos
+  para o texto novo; `test/live-analyst-mutants.contract.test.ts` ganhou o teto de 1 h (eram 900 s) e o arquivo do governar no juiz.
+- Gates (WSL, espelho próprio `~/gates/ativada-spec7`, cópias `-run` e `-run2` para as rodadas longas; Postgres embutido porta 56447):
+
+```text
+bun run typecheck    → verde (tsc raiz e painel)
+bun run lint         → verde
+bun run format:check → All matched files use Prettier code style!
+bun test (50 arquivos: live-*, risk-analyst-*, analyst-counterfactual, strategy-persistence-schema, ownership-registry,
+          database.contract, code-size-limits, app-import-boundary, strategy-engine-boundary, engine-*) → 878 pass / 0 fail
+test/risk-analyst-mutants.contract.test.ts → 63 mutantes mortos (52 + 11 da T4.2a), controle verde
+test/live-analyst-mutants.contract.test.ts → 42 mutantes mortos, controle verde
+```
+
+  Não rodado: `production-engine-mutants` e os alvos do motor (nada em `packages/strategy-engine` nem `packages/run-recording`
+  mudou nesta task; a T4.1b os rodou); `make lgpd-test` (pede Docker). Nenhuma migration nova, nada aplicado no banco dev.

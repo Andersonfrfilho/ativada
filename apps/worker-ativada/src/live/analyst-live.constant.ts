@@ -5,10 +5,12 @@ export const ANALYST_FAILURE_CODE = {
   SERIES_UNAVAILABLE: 'ANALYST_SERIES_UNAVAILABLE',
   INPUT_INVALID: 'ANALYST_INPUT_INVALID',
   ENGINE_REFUSED: 'ANALYST_ENGINE_REFUSED',
+  // Governar com versão ou vela que esta cópia não conhece: o analista não roda e a escala é 0 (A21).
+  REQUEST_UNSUPPORTED: 'ANALYST_REQUEST_UNSUPPORTED',
 } as const;
 
 // Os valores gravados em `analyst_decisions` (o banco os repete em `analyst-decision.constant.ts`; um contrato os confere).
-export const ANALYST_RECORD_MODE = { SHADOW: 'shadow' } as const;
+export const ANALYST_RECORD_MODE = { SHADOW: 'shadow', GOVERN: 'govern' } as const;
 export const ANALYST_RECORD_STATUS = { DECIDED: 'decided', FAILED: 'failed' } as const;
 
 // A cópia do analista em memória guarda no máximo estas âncoras diárias por par: o dia atual e o anterior (uma simulação

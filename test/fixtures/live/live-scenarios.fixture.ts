@@ -22,6 +22,7 @@ import {
   createEngine,
   ENGINE_TIMEFRAME_DURATION_MILLISECONDS,
   serializeEngineState,
+  type Engine,
   type EngineCandle,
   type RunSetup,
   type StoredSentimentObservation,
@@ -91,6 +92,7 @@ export type TestEvaluatorOptions = {
   readonly logger?: TestLogger;
   readonly alerting?: LiveAlertingSettings;
   readonly gapPolicy?: GapPolicy;
+  readonly engine?: Engine;
 };
 
 export async function createTestEvaluator(
@@ -109,6 +111,7 @@ export async function createTestEvaluator(
     ...(options.maxStepsPerPass === undefined ? {} : { maxStepsPerPass: options.maxStepsPerPass }),
     ...(options.alerting === undefined ? {} : { alerting: options.alerting }),
     ...(options.gapPolicy === undefined ? {} : { gapPolicy: options.gapPolicy }),
+    ...(options.engine === undefined ? {} : { engine: options.engine }),
   });
   return { evaluator, logger };
 }

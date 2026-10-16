@@ -48,3 +48,4 @@ export const ANALYST_REAL_SENTIMENT: readonly StoredSentimentObservation[] = (
 }));
 
 export const ANALYST_SHADOW_REQUEST = { version: 'analyst-1', mode: 'shadow' } as const;
+export const ANALYST_GOVERN_REQUEST = { version: 'analyst-1', mode: 'govern' } as const;
