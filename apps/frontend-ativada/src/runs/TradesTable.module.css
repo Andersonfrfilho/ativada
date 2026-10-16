@@ -54,11 +54,15 @@
   color: var(--ink);
 }
 
-/* Dez colunas cabem na largura do cartão: o texto quebra em duas linhas (cabem nos 44 px da linha) em vez de cortar à direita. */
+/* Dez colunas: o texto quebra em duas linhas (cabem nos 44 px da linha), mas número e palavra nunca quebram no meio; no celular a tabela rola de lado em vez de espremer as colunas. */
+.scroller table {
+  min-width: 760px;
+}
+
 .scroller table th,
 .scroller table td {
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
   padding: 4px 8px;
   font-size: 12.5px;
   line-height: 1.25;

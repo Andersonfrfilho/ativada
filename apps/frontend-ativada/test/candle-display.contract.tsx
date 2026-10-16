@@ -458,3 +458,14 @@ describe('começo da simulação', () => {
     expect(Number(candles[0]?.['time']) * 1_000).toBeLessThanOrEqual(FIXTURE_FROM - 40 * SHOWN);
   });
 });
+
+describe('tabela de operações no celular', () => {
+  test('não quebra número no meio nem espreme as colunas: a tabela rola de lado', () => {
+    const css = readFileSync(
+      new URL('../src/runs/TradesTable.module.css', import.meta.url),
+      'utf8',
+    );
+    expect(css).not.toMatch(/overflow-wrap:\s*anywhere/);
+    expect(css).toMatch(/\.scroller table\s*\{[^}]*min-width:\s*\d+px/);
+  });
+});
