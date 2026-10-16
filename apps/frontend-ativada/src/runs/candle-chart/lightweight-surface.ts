@@ -10,6 +10,7 @@ import {
   createChart,
   createSeriesMarkers,
   type IChartApi,
+  type ISeriesApi,
 } from 'lightweight-charts';
 
 import type { ChartSurface } from './chart-surface.types.js';
@@ -17,6 +18,7 @@ import { toTime, type Context } from './lightweight-context.js';
 import { buildOverlaySetters, buildSeriesSetters } from './lightweight-data.js';
 import { buildEvents, buildView } from './lightweight-view.js';
 import { LevelBoxesPrimitive } from './level-boxes-primitive.js';
+import { TradeMarksPrimitive } from './trade-marks-primitive.js';
 import { DEFAULT_PRECISION, pricePriceFormat, VOLUME_PRICE_FORMAT } from './surface-format.js';
 import { createSurfaceState } from './surface-state.js';
 
@@ -51,6 +53,24 @@ export type LibraryKit = typeof KIT;
 const PANE = { PRICE: 0, VOLUME: 1 } as const;
 const STRETCH = { PRICE: 5, VOLUME: 1.2 } as const;
 
+// As caixas "Stop e alvo" e as etiquetas de compra e venda se projetam na mesma escala da série de velas.
+function attachPrimitives(
+  chart: IChartApi,
+  candles: ISeriesApi<'Candlestick'>,
+): { readonly boxes: LevelBoxesPrimitive; readonly marks: TradeMarksPrimitive } {
+  const projection = {
+    timeToX: (seconds: number): number | null =>
+      chart.timeScale().timeToCoordinate(toTime(seconds)),
+    priceToY: (price: number): number | null => candles.priceToCoordinate(price),
+    paneWidth: (): number => chart.timeScale().width(),
+  };
+  const boxes = new LevelBoxesPrimitive(projection);
+  const marks = new TradeMarksPrimitive(projection);
+  candles.attachPrimitive(boxes);
+  candles.attachPrimitive(marks);
+  return { boxes, marks };
+}
+
 function createContext(chart: IChartApi): Context {
   const priceFormat = pricePriceFormat(DEFAULT_PRECISION);
   const candles = chart.addSeries(CandlestickSeries, { priceFormat }, PANE.PRICE);
@@ -66,12 +86,7 @@ function createContext(chart: IChartApi): Context {
     { priceFormat, lineWidth: 2, title: 'agora' },
     PANE.PRICE,
   );
-  const boxes = new LevelBoxesPrimitive({
-    timeToX: (seconds): number | null => chart.timeScale().timeToCoordinate(toTime(seconds)),
-    priceToY: (price): number | null => candles.priceToCoordinate(price),
-    paneWidth: (): number => chart.timeScale().width(),
-  });
-  candles.attachPrimitive(boxes);
+  const { boxes, marks } = attachPrimitives(chart, candles);
   chart.panes()[PANE.PRICE]?.setStretchFactor(STRETCH.PRICE);
   chart.panes()[PANE.VOLUME]?.setStretchFactor(STRETCH.VOLUME);
   return {
@@ -82,6 +97,7 @@ function createContext(chart: IChartApi): Context {
     forming,
     realPrice,
     boxes,
+    marks,
     markers: createSeriesMarkers(candles, []),
     state: createSurfaceState(),
     layers: { lines: [], cone: [], score: undefined, scoreLevels: [] },

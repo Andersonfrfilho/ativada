@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { SurfaceTheme } from './chart-surface.types.js';
 import type { LevelBoxesPrimitive } from './level-boxes-primitive.js';
+import type { TradeMarksPrimitive } from './trade-marks-primitive.js';
 import type {
   IChartApi,
   IPriceLine,
@@ -30,6 +31,7 @@ export type Context = {
   readonly realPrice: ISeriesApi<'Line'>;
   readonly markers: ISeriesMarkersPluginApi<Time>;
   readonly boxes: LevelBoxesPrimitive;
+  readonly marks: TradeMarksPrimitive;
   readonly state: SurfaceState;
   readonly layers: Layers;
   // Quem escuta a cruz (ver `placeCrosshair`).

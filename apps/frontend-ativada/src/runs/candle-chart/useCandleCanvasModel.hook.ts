@@ -14,7 +14,7 @@ import { judgeNextCandle } from './next-candle-state.js';
 import type { ChartSurface } from './chart-surface.types.js';
 import { LAYERS_BLOCK_BARS } from './layer-series.js';
 import { buildLegendText } from './legend-text.js';
-import { findPositionKeyAt } from './marker-series.js';
+import { describeTradesAt, findPositionKeyAt } from './marker-series.js';
 import type { OhlcText } from './ohlc-text.js';
 import { useCanvasInteractions } from './useCanvasInteractions.hook.js';
 import { useChartKeyboard, type ChartKeyboard } from './useChartKeyboard.hook.js';
@@ -47,6 +47,8 @@ export type CandleCanvasModel = {
   readonly keyboard: ChartKeyboard;
   // A abertura da vela que a cruz aponta (mouse ou teclado); a equipe junto do gráfico fala dela.
   readonly pointedOpenTime: number | undefined;
+  // "Compra a X · taxa Y" da vela apontada, quando ela tem operação.
+  readonly tradeText: string | undefined;
   // A frase da previsão para a descrição textual (RF20); `undefined` sem camada de previsão ou sem resposta.
   readonly forecastText: string | undefined;
 };
@@ -142,6 +144,20 @@ function useLayerModel(
   return { layerData, isLayerOn, live };
 }
 
+// A vela que a cruz aponta (a equipe fala dela) e, se tem operação, a dica "Compra a X · taxa Y".
+function pointedCandle(
+  input: CandleCanvasInput,
+  pointed: number | null,
+): Pick<CandleCanvasModel, 'pointedOpenTime' | 'tradeText'> {
+  const { chart, source } = input;
+  const pointedOpenTime = pointed === null ? undefined : source.history.candles[pointed]?.openTime;
+  const isTradesOn = source.preferences.preferences.layers[CHART_LAYER.TRADES];
+  if (pointedOpenTime === undefined || !isTradesOn)
+    return { pointedOpenTime, tradeText: undefined };
+  const tradeText = describeTradesAt(chart.markers, pointedOpenTime, source.durationMilliseconds);
+  return { pointedOpenTime, tradeText };
+}
+
 // Tudo o que o gráfico precisa ligar: a superfície e seu tema, os dados, a cruz (mouse e teclado), o clique, a página
 // anterior, o reenquadramento, as camadas e a vela em formação. O componente só desenha o resultado.
 export function useCandleCanvasModel(input: CandleCanvasInput): CandleCanvasModel {
@@ -172,7 +188,7 @@ export function useCandleCanvasModel(input: CandleCanvasInput): CandleCanvasMode
     ...base,
     ...layers,
     keyboard,
-    pointedOpenTime: pointed === null ? undefined : source.history.candles[pointed]?.openTime,
+    ...pointedCandle(input, pointed),
     forecastText: forecastTextFor(chart.timeframe, layers, base.timeZone),
     legend: legendFor(input, { hoverIndex: pointed, live: layers.live, timeZone: base.timeZone }),
     handleTimeframeChange: (next): void => {

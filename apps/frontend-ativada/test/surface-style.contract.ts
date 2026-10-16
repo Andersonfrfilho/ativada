@@ -90,8 +90,24 @@ describe('surface-style: decisões de desenho', () => {
   test('markers: arrow up below the bar for buys, down above for sells, waited dots, all in time order', () => {
     const specs = buildMarkerSpecs(
       [
-        { key: 'a:sell', time: 300, side: 'sell', label: 'Venda', isSelected: false },
-        { key: 'a:buy', time: 100, side: 'buy', label: 'Compra', isSelected: true },
+        {
+          key: 'a:sell',
+          time: 300,
+          side: 'sell',
+          label: 'Venda',
+          price: 12.5,
+          priceText: '12,50',
+          isSelected: false,
+        },
+        {
+          key: 'a:buy',
+          time: 100,
+          side: 'buy',
+          label: 'Compra',
+          price: 12,
+          priceText: '12,00',
+          isSelected: true,
+        },
       ],
       [200],
       THEME,
@@ -100,17 +116,18 @@ describe('surface-style: decisões de desenho', () => {
     expect(specs[0]).toMatchObject({
       position: 'belowBar',
       shape: 'arrowUp',
-      text: 'Compra',
-      size: 2,
+      text: '',
+      size: 3,
     });
     expect(specs[1]).toMatchObject({ position: 'inBar', shape: 'circle', text: '' });
     expect(specs[2]).toMatchObject({
       position: 'aboveBar',
       shape: 'arrowDown',
-      text: 'Venda',
-      size: 1,
+      text: '',
+      size: 2,
     });
     expect(specs[1]?.size).toBeLessThan(1);
+    // A palavra e o preço moram na etiqueta desenhada pelo primitivo, não no texto da seta.
   });
 
   test('line roles keep the strategy lines apart: channel and bands dashed, EMAs solid', () => {

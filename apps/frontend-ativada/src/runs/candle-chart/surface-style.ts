@@ -10,12 +10,15 @@ import type {
   SurfaceVolumeBar,
 } from './chart-surface.types.js';
 import { withAlpha } from './chart-theme.js';
+import type { MarkColors } from './trade-marks-paint.js';
 
 // Decisões de cor, traço e forma do adaptador, sem importar a biblioteca (ele só aplica o que sai daqui).
 const VOLUME_ALPHA = 0.45;
 const LEVEL_ALPHA = 0.16;
+const MARK_BAND_ALPHA = 0.14;
 const FORMING_FILL_ALPHA = 0;
-const SELECTED_MARKER_SIZE = 2;
+const MARKER_SIZE = 2;
+const SELECTED_MARKER_SIZE = 3;
 const WAITED_MARKER_SIZE = 0.5;
 
 export type LineStyleChoice = { readonly color: string; readonly isDashed: boolean };
@@ -95,8 +98,8 @@ function tradeMarkerSpec(marker: SurfaceMarker, theme: SurfaceTheme): MarkerSpec
     position: isBuy ? 'belowBar' : 'aboveBar',
     shape: isBuy ? 'arrowUp' : 'arrowDown',
     color: isBuy ? theme.up : theme.down,
-    text: marker.label,
-    size: marker.isSelected ? SELECTED_MARKER_SIZE : 1,
+    text: '',
+    size: marker.isSelected ? SELECTED_MARKER_SIZE : MARKER_SIZE,
   };
 }
 
@@ -116,6 +119,18 @@ export function buildMarkerSpecs(
   }));
   const tradeSpecs = markers.map((marker) => tradeMarkerSpec(marker, theme));
   return [...tradeSpecs, ...waitedSpecs].sort((left, right) => left.time - right.time);
+}
+
+// Cores das etiquetas de compra e venda: a mesma cor semântica da vela, com faixa suave na vela, halo e texto do fundo do gráfico.
+export function buildMarkColors(theme: SurfaceTheme): MarkColors {
+  return {
+    buy: theme.up,
+    sell: theme.down,
+    buyBand: withAlpha(theme.up, MARK_BAND_ALPHA),
+    sellBand: withAlpha(theme.down, MARK_BAND_ALPHA),
+    halo: theme.background,
+    onMark: theme.background,
+  };
 }
 
 export function buildLevelColors(theme: SurfaceTheme): {

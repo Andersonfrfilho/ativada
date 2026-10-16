@@ -46,7 +46,9 @@ function CanvasHeader({ chart, view, source, model }: CanvasViewProps): ReactEle
       />
       <TimeframeNotice timeframe={source.timeframe} runTimeframe={chart.timeframe} />
       <LiveCandleNotice live={model.live} />
-      {model.legend === undefined ? null : <OhlcLegend text={model.legend} />}
+      {model.legend === undefined ? null : (
+        <OhlcLegend text={model.legend} tradeText={model.tradeText} />
+      )}
     </>
   );
 }

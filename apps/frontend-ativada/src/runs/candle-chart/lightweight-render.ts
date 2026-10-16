@@ -7,6 +7,7 @@ import {
   buildConeEdges,
   buildFormingColors,
   buildLevelColors,
+  buildMarkColors,
   buildMarkerSpecs,
   buildScoreData,
   buildThresholdLines,
@@ -107,8 +108,10 @@ export const renderLive: Render = (ctx, theme) => {
 export const renderVolume: Render = (ctx, theme) =>
   ctx.volume.setData(stamp(buildVolumeData(ctx.state.volume, theme)));
 
-export const renderMarkers: Render = (ctx, theme) =>
+export const renderMarkers: Render = (ctx, theme) => {
   ctx.markers.setMarkers(stamp(buildMarkerSpecs(ctx.state.markers, ctx.state.waited, theme)));
+  ctx.marks.update(ctx.state.markers, buildMarkColors(theme));
+};
 
 export const renderLevels: Render = (ctx, theme) =>
   ctx.boxes.update(ctx.state.levels, buildLevelColors(theme));

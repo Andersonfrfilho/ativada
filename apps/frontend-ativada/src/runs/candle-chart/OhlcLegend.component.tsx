@@ -16,12 +16,16 @@ const DIRECTION_CLASS: Readonly<Record<OhlcDirection, string | undefined>> = {
   flat: undefined,
 };
 
-export type OhlcLegendProps = { readonly text: OhlcText };
+export type OhlcLegendProps = {
+  readonly text: OhlcText;
+  // "Compra a X · taxa Y" da vela apontada.
+  readonly tradeText?: string | undefined;
+};
 
 type LegendItem = { readonly label: string; readonly short: string; readonly value: string };
 
 // A legenda do topo (RF03): a vela apontada pela cruz, ou a última; estado e direção sempre com palavra ou sinal além da cor.
-export function OhlcLegend({ text }: OhlcLegendProps): ReactElement {
+export function OhlcLegend({ text, tradeText }: OhlcLegendProps): ReactElement {
   const items: readonly LegendItem[] = [
     { label: 'Abertura', short: 'A', value: text.open },
     { label: 'Máxima', short: 'M', value: text.high },
@@ -54,6 +58,7 @@ export function OhlcLegend({ text }: OhlcLegendProps): ReactElement {
           <dd>{text.volume}</dd>
         </div>
       </dl>
+      {tradeText === undefined ? null : <p className={styles.legendTrade}>{tradeText}</p>}
     </div>
   );
 }

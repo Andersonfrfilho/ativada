@@ -120,18 +120,40 @@ describe('score series', () => {
 
 describe('marker series', () => {
   const sources = [
-    { positionKey: 'p2', side: 'sell', candleTime: FIRST_CANDLE_TIME + 2 * HOUR_MILLISECONDS },
-    { positionKey: 'p1', side: 'buy', candleTime: FIRST_CANDLE_TIME + 1_800_000 },
+    {
+      positionKey: 'p2',
+      side: 'sell',
+      candleTime: FIRST_CANDLE_TIME + 2 * HOUR_MILLISECONDS,
+      price: '12.60',
+      fee: '0.01',
+    },
+    {
+      positionKey: 'p1',
+      side: 'buy',
+      candleTime: FIRST_CANDLE_TIME + 1_800_000,
+      price: '12.45',
+      fee: '0.01',
+    },
   ] as const;
 
   test('keeps the position key and side, labels in words and orders by time', () => {
     expect(toSurfaceMarkers(sources, HOUR_MILLISECONDS)).toStrictEqual([
-      { key: 'p1:buy', time: FIRST_SECOND, side: 'buy', label: 'Compra', isSelected: false },
+      {
+        key: 'p1:buy',
+        time: FIRST_SECOND,
+        side: 'buy',
+        label: 'Compra',
+        price: 12.45,
+        priceText: '12,45',
+        isSelected: false,
+      },
       {
         key: 'p2:sell',
         time: FIRST_SECOND + 7_200,
         side: 'sell',
         label: 'Venda',
+        price: 12.6,
+        priceText: '12,60',
         isSelected: false,
       },
     ]);

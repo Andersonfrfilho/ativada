@@ -53,6 +53,9 @@ export type SurfaceMarker = {
   readonly time: SurfaceTime;
   readonly side: 'buy' | 'sell';
   readonly label: string;
+  // O preço do preenchimento: o ponto exato onde o marcador pousa (desenho) e o texto da etiqueta.
+  readonly price: number;
+  readonly priceText: string;
   readonly isSelected: boolean;
 };
 
