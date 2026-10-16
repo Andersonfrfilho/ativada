@@ -2237,3 +2237,143 @@ colunas em `candles`, livro de ofertas e fontes externas (A22); (d) o desvio da 
 - **Provas:** `test/risk-analyst-specialist-motive.contract.test.ts` (tabela da §5 literal, igualdade com a spec 008, escolha da regra,
   anulação, sem leitura, os 3.300 candles reais de 15 min com votos por regra em toda vela lida, corte da série no meio dando os
   mesmos votos) e 6 mutantes novos em `test/risk-analyst-mutants.contract.test.ts`.
+
+## Lucro mínimo por operação (spec 013)
+
+Contrato da T0.1 da spec 013: a regra `minimum-profit-1` fechada. **Autorização:** em 2026-10-16 o usuário pediu "certo, add
+isso nas regras para evitarmos transações nesses valores" (registrado em `specs/013-lucro-minimo-por-operacao/evidence.md`),
+o que vale como resposta às decisões do `spec.md` §9 com as opções A: D1-A (campo da execução + checagem no motor), D2-A
+(0,6% pré-preenchido e desligável no painel, só depois da T0.2), D3-A (recusa com motivo próprio, migration aditiva do
+`CHECK`), D4-A (`move_cost` do analista como está), D5-A ("ganho possível" = o alvo) e D6-A (prazos, metas e "O que falta"
+fora). A T0.1 só escreve o contrato e o oráculo: **nada no motor, no `run-recording`, no banco ou nos apps mudou nela**, e a
+migration só é escrita e aplicada na Fase 2 (T2.1). Conferido no código em 2026-10-16:
+
+- **MP1 — O campo.** `RUN_PARAMETERS_SCHEMA.minimumNetTargetRate = decimalTextSchema({ minimum: '0', maximum: '0.1',
+  maximumDecimalPlaces: 8 }).exactOptional()`: fração de 0 a 0,1 (0% a 10%) inclusive, no máximo 8 casas, grafia canônica
+  (`'0.0060'` vira `'0.006'`), **sem `.default`**. É `exactOptional`, não `optional`: conferido no `zod@4.6.5` que
+  `.optional()` devolve a chave com `undefined` quando o chamador passa `{ minimumNetTargetRate: undefined }`, e o
+  `canonicalJson` LANÇA com valor `undefined`; com `exactOptional` a chave explícita sem valor é recusada pelo esquema
+  (`RunParametersError` com o caminho `minimumNetTargetRate`) e nunca chega ao hash. `'0'` NÃO é ausente: liga a regra (o
+  alvo tem de pagar o custo) e muda o `runHash`. O campo do corpo de `POST /v1/runs` (`runParametersBodySchema`,
+  `create-run-setup.ts`) também é `.exactOptional()`, para a API e o motor recusarem a mesma coisa. O campo não entra no
+  catálogo ajustável do walk-forward.
+  `RUN_PARAMETERS_SCHEMA_VERSION` continua `1` (o literal entra no hash: trocá-lo mudaria o `runHash` de toda execução).
+- **MP2 — A fórmula.** Tudo da vela `t` (sem lookahead; a compra liberada sai na abertura de `t+1`, como hoje): `A` =
+  `decimalFromIndicator(signal.indicators[RISK_ATR_INDICATOR_ID])` (a MESMA porta da `targetDistance`, 15 algarismos), `m` =
+  `config.risk.targetAtrMultiple`, `C` = `candle.close` de `t`, `f` e `s` = `feeRate` e `slippageRate`, `n` = o mínimo.
+  Custo de ida e volta `c = 2 × (f + s)`, exato (no máximo 8 casas e 0,12). Bruto no alvo `g = m × A ÷ C`, líquido `g − c`.
+  **Decisão: compra se e só se `m × A ≥ (n + c) × C`** — sem divisão e sem arredondamento; igual passa. A ordem limitada usa o
+  mesmo `C` (ela compra mais barato, então a regra fica do lado conservador). Para a ordem a mercado `C` é aproximação: ela
+  preenche na abertura de `t+1`, que pode diferir de `C`; o slippage de entrada já está no custo `2 × (f + s)`.
+- **MP3 — Precisão.** Os dois produtos são feitos num clone próprio, `EngineDecimal.clone({ precision: 64 })`
+  (`ENTRY_EDGE_DECIMAL_PRECISION = 64`), não no `EngineDecimal` de 40 algarismos: `m × A` tem no máximo 14 + 15 = 29
+  algarismos, mas `(n + c) × C` chega a 8 + 40 = 48 (a vela aceita 20 + 20 algarismos). Medido no `decimal.js@10.6.0`: com
+  `C = 40000000000000100000.00000000000000000001`, `A = 400000000000.001`, `m = 3`, `f = n = 0,00000001` e `s = 0`, a 40
+  algarismos (HALF_UP) os lados ficam IGUAIS e a compra passaria; a 64 o exigido é `1200000000000.0030000000000000000000000003`
+  e ela é barrada. Com 64, todo valor que os esquemas aceitam dá produtos exatos e a comparação é exata.
+- **MP4 — Funções puras do motor** (`packages/strategy-engine/src/risk/entry-profit-edge.ts`, exportadas pelo `index.ts`,
+  cada uma ≤ 40 linhas): `computeRoundTripCostRate({ feeRate, slippageRate })` → texto de `c`, o **lugar único do custo de
+  ida e volta** (a T4.2, depois que a spec 007 fechar, troca o `2 × (taxa + slippage)` de `packages/risk-analyst/src/market-readings.ts`
+  por ela com o dourado `analyst-1` idêntico; nada no analista muda antes disso); `computeEntryProfitEdge({ atr, close,
+  targetAtrMultiple, feeRate, slippageRate })` → `{ grossTargetRate, roundTripCostRate, netTargetRate }` em texto, com `g`
+  dividido no clone de 64 com `ROUND_FLOOR` e cortado a 12 casas para BAIXO (= o piso exato a 12 casas) e o líquido exato
+  sobre ele; `isEntryProfitable({ atr, close, targetAtrMultiple, feeRate, slippageRate, minimumNetTargetRate })` → a decisão
+  da MP2. A assinatura `isEntryProfitable({ edge, minimum })` do plan D2 foi trocada: a decisão não lê texto arredondado.
+  Equivalência provada no oráculo: como `n + c` tem no máximo 8 casas, `piso12(g) − c ≥ n` ⇔ `g − c ≥ n` (3.000 sorteios).
+- **MP5 — Onde entra em `placeEntry`** (`wallet/entry-order.ts`), nesta ordem: carteira livre (sem posição, sem pendente, sem
+  `halt`) → escala `'0'` sai em silêncio (A21) → ATR ausente ou ≤ 0 = `zero_atr` → **lucro mínimo, só se
+  `context.parameters.minimumNetTargetRate !== undefined`: barrada = `rejectEntry(..., BELOW_MINIMUM_PROFIT)`** → risco ≤ 0 =
+  `below_min_notional` → cria a ordem. A pausa do analista continua sem registro (nada de recusa em dobro); a escala `'0.25'`
+  ou `'0.5'` não muda a conta (a escala mexe no tamanho, não no alvo). A recusa usa o `rejectEntry` existente: consome uma
+  chave de ordem, então as chaves seguintes mudam SÓ nas execuções com o campo. Como `placeEntry` só existe para a entrada
+  nova, a regra não toca ordem pendente, posição, stop, alvo, venda por sinal, `exit_position`, `halt`, meta, parada do
+  usuário nem lacuna. Estado do motor: nenhum campo novo.
+- **MP6 — Vocabulário.** `ORDER_EVENT_REASON.BELOW_MINIMUM_PROFIT = 'below_minimum_profit'` (20 caracteres, cabe no
+  `varchar(32)`) e a cópia em `ORDER_REASON` de `packages/database/src/run-results/run-result.constant.ts`. A migration da
+  T2.1 (número livre NA HORA; hoje a última é `0025_run_commands_analyst` e a spec 007 pode criar outra antes) recria
+  `orders_reason_check` com o valor novo (`NOT VALID` + `VALIDATE`, como a 0025) e cria o índice PARCIAL
+  `orders_minimum_profit_idx ON orders (run_id, created_candle_time) WHERE reason = 'below_minimum_profit'` (só as linhas da
+  regra: custo zero para execução sem o campo; serve a MP8 e a contagem da MP9). O `.rollback.sql` derruba o índice e ABORTA
+  se existir linha com o motivo (nunca apaga trilha). O índice é declarado em `orders.schema.ts` com `.where(...)` e o
+  snapshot do Drizzle é regravado (senão o próximo `db:generate` o remove), e o `EXISTS` e o `count` usam o predicado
+  LITERAL (`` sql`${orders.reason} = 'below_minimum_profit'` ``), nunca `eq(orders.reason, …)`: com o valor como parâmetro,
+  o plano genérico do Postgres não usa índice parcial.
+- **MP7 — Hashes e versões.** `configHash` não muda (o campo não é da estratégia). `runHash`: campo ausente = bytes idênticos
+  (o esquema não acrescenta a chave e o JSON canônico não a vê); presente = entra no hash (é outra execução, como trocar a
+  taxa). **`ENGINE_VERSION` (`engine-2`), `ENGINE_STATE_VERSION`, `SIGNAL_ENGINE_VERSION`, `METRICS_VERSION` e
+  `RUN_PARAMETERS_SCHEMA_VERSION` NÃO mudam**, pelo precedente da A21, conferido no código: `assertStepInput` recusa estado de
+  outra versão (`ENGINE_MISMATCH`); `load-live-context.ts`, `load-backtest-context.ts` e `load-walk-forward-context.ts` falham
+  a execução com `ENGINE_VERSION_MISMATCH` quando `runs.engine_version !== ENGINE_VERSION`; `restore-live-state.ts` e
+  `restore-checkpoint.ts` só aproveitam checkpoint da mesma versão. Versão nova FALHARIA toda simulação ao vivo em andamento
+  e todo backtest/walk-forward na fila ou com checkpoint, exatamente o que a RF03 proíbe. Sem versão nova: o estado não ganha
+  campo (o mínimo mora no `RunParameters`, que a execução já carrega), o comportamento sem o campo é o antigo, exato, e a
+  prova é o dourado `engine-2` IDÊNTICO byte a byte, o `runHash` literal de `classic-scoreboard.run.json` e o dourado
+  `analyst-1` idênticos. Execução com o campo só nasce de código novo; código velho a recusa (`strictObject`), daí a MP12.
+- **MP8 — A recusa fica em `orders`, nunca em `signals`.** Ordem `rejected` com o motivo, `purpose = entry`,
+  `created_candle_time = t` e distâncias nulas, como `zero_atr`; aparece no `/log.csv`, no histórico de ordens e na
+  exportação LGPD sem código novo. `signals` é a decisão do placar e não muda (mexer nela mexeria no sinal e numa migration).
+  **`live-status` continua em 5 consultas** (hoje: execução, versão, último ponto, página de decisões com as velas, posições;
+  o teto já está cheio): `listDecisionRows` ganha a coluna `isMinimumProfitRefused` =
+  `EXISTS (SELECT 1 FROM orders WHERE <dono> AND orders.run_id = signals.run_id AND orders.created_candle_time =
+  signals.candle_time AND orders.reason = 'below_minimum_profit')`, na MESMA consulta (com o filtro de dono também em
+  `orders`, que entra no `make api-runs-mutants`). No máximo uma recusa por vela (`placeEntry` roda uma vez por passo). Assim
+  `/decisions` herda sem consulta nova, e `listDecisionMarkers` (`/chart`) ganha a mesma coluna para o pontinho do gráfico
+  concordar com a tabela. **O `outcome` NÃO ganha valor novo** (revisão do arquiteto, troca da RF07 do spec): o painel
+  publicado valida `outcome` com `z.enum([...])` fechado (`live-status.validation.ts`, `trade-chart.validation.ts`), então um
+  valor novo derrubaria o `live-status` e o `/chart` do painel velho no deploy (API antes do painel) e na reversão (painel
+  antes da API). `CandleState` ganha `isMinimumProfitRefused`; `resolveDecisionOutcome` fica: saída → venda → (não é BUY ou
+  está comprada) `waited` → **recusada = `waited`** → preencheu = `bought` → última vela = `buy_pending` → `waited`; e a
+  decisão (no `live-status`, no `/decisions` e no `/chart`) ganha o campo ADITIVO `waitReason: 'minimum_profit' | null`
+  (`'minimum_profit'` só quando a recusa existe e o `outcome` é `waited`), que o painel velho ignora (`z.object` não
+  estrito). A recusa vem ANTES da última vela (uma compra barrada nunca é "pendente"); a saída na mesma vela continua
+  ganhando.
+- **MP9 — A frase fechada** (catálogo `decision-messages.ts`, sem data nem hora), com `n > 0`:
+  `Esperou: o ganho possível até o alvo (X%) não paga o custo de ida e volta (Y%) mais o lucro mínimo que você pediu (Z%).`;
+  com `n = 0` (exatamente zero): `Esperou: o ganho possível até o alvo (X%) não paga o custo de ida e volta (Y%).`; sem os
+  números: `Esperou: o ganho possível até o alvo não pagava o custo mais o lucro mínimo.` X = `grossTargetRate` de
+  `computeEntryProfitEdge` com o ATR de `signals.indicators` de `t` (o `jsonb` devolve o mesmo `double`), o fechamento de `t`
+  (já em `DecisionRow.close`), o `targetAtrMultiple` da versão e as taxas do `RunParameters`, por `formatRatePercent(…, DOWN)`;
+  Y = `formatRatePercent(c, UP)`; Z = `formatRatePercent(n, UP)`: pt-BR, 2 casas, vírgula e milhar. X é o piso EXATO
+  (piso a 12 casas e depois a 2 de porcentagem). **Sem contradição na tela:** barrada ⇒ `g < c + n` ⇒ `piso(g) < teto(c) +
+  teto(n)`, então X nunca chega a Y + Z (propriedade no oráculo). Sem leitura de ATR, ou se a conta refeita por
+  `isEntryProfitable` disser que passaria (impossível com banco e motor de acordo), sai a frase sem números — nunca 500. "Não
+  garante lucro" fica ao lado do campo e no glossário, não em cada linha. `GET /v1/runs/:id` traz
+  `minimumProfit: { skippedEntries }` (`count(*)` no índice parcial, só do dono; `null` sem o campo); no walk-forward conta
+  só o que foi gravado, as janelas de TESTE.
+- **MP10 — Avisos.** `warnRunParameters` ganha `minimum_profit_below_cost` (`n < c`) e `no_minimum_profit_short_candle`
+  (timeframe `15m` sem o campo). Aviso não entra em hash.
+- **MP11 — Com o analista (spec 007).** O analista decide a ESCALA (A21); com escala ≠ `'0'` o motor confere o lucro mínimo.
+  `analyst-1` intacto. A porta do analista abre com `atrRate ≥ 2c`, o que implica líquido `≥ (2m − 1) × c` (0,6% com `m ≥
+  1,5` e o custo padrão; o Placar clássico tem `m = 3`), então no padrão a regra não barra a mais. A implicação vale até o
+  último algarismo: o `atrRate` do analista sai da leitura gravada e é cortado a 12 casas, então numa vela no limite exato as
+  duas travas podem discordar — vale a do motor, com a recusa gravada. Na sombra o analista não muda a simulação; a regra,
+  sim (é da execução).
+- **MP12 — O que não muda e o que muda em cada lugar.** Backtest, walk-forward (a carteira por janela recebe o MESMO
+  `run.parameters`) e ao vivo passam por `advanceCandle`/`walletStep`: a regra vale igual nos três sem mudar o
+  `run-recording`. No walk-forward a busca também roda com o mínimo, então a combinação escolhida é a melhor COM a regra.
+  Prazos (spec 003), metas, plano, "O que falta para comprar" e previsões montam o próprio `RunParameters` sem o campo:
+  intactos (D6-A). Simulação em andamento fica como está e NÃO pode ganhar o campo (mudaria o `runHash` e o checkpoint daria
+  `RUN_HASH_MISMATCH`): quem quiser a regra cria outra simulação. O alerta do Telegram de uma compra barrada já sai como
+  "Ação simulada: nenhuma (carteira já posicionada ou entrada bloqueada)" (`build-step-alert.ts` só conta ordem `created`).
+  **Decisão explícita: nesta spec o alerta fica como está** (enfileirado, com "nenhuma"); a spec não pede mudar o worker de
+  alertas. Risco aceito e levado ao usuário: quem segue o alerta pode comprar à mão justamente a operação barrada. As
+  alternativas (não enfileirar o BUY barrado, ou levar o motivo `below_minimum_profit` no texto) só entram com resposta dele.
+- **MP13 — Deploy e reversão.** Banco (CHECK + índice) → worker (dormente: só age com o campo) → API (aceita o campo, conta,
+  frase e `waitReason` aditivo; o painel velho segue abrindo) → painel (pré-preenche 0,6). Reversão: painel → API (recusa o campo) → encerrar as execuções com o campo (ao vivo,
+  na fila e com checkpoint: o código velho recusa o `RunParameters` delas) → worker → banco (o rollback aborta enquanto houver
+  recusa gravada).
+- **MP14 — Provas e oráculo.** O oráculo independente está em `test/fixtures/minimum-profit/minimum-profit-oracle.ts` (TS puro,
+  `bigint`, sem `src` nem `decimal.js`; o plan D7 citava `test/fixtures/strategy-engine/minimum-profit/`, a T0.1 o pôs onde
+  a tarefa pediu) com `test/minimum-profit-oracle.contract.test.ts`: 8 casos à mão (igual passa; 1e-12 abaixo barra; mínimo
+  zero barra alvo abaixo do custo e passa alvo igual ao custo; o exemplo 0,66%; custo e mínimo para cima; bruto para baixo; a
+  armadilha de precisão da MP3), as velas de compra dos três conjuntos reais (gravadas por
+  `scripts/record-minimum-profit-oracle-inputs.ts` em `real-buy-candles.json`) e 3.000 sorteios. **Resultado nos conjuntos
+  reais, exato:** BTCUSDT 15 min (879 compras pedidas) barra 131 / 372 / 693 / 843 com 0 / 0,3% / 0,6% / 1,0%; BTCUSDT 1 h
+  (113) barra 0 / 0 / 0 / 10; ETHUSDT 1 d (60) não barra nenhuma. Os números de 0,3%, 0,6% e 1,0% são IGUAIS aos da
+  estimativa do `spec.md` §7 (que usava divisão e corte a 6 casas). Novo: com mínimo 0, 131 compras de 15 min (15%) tinham o
+  alvo abaixo do custo. Os mutantes da Fase 1 (plan D7) ganham dois: precisão 40 no lugar de 64 (morto pela armadilha) e
+  `.optional()` no lugar de `.exactOptional()` (morto pelo `undefined` explícito).
+- **Validação (T0.1).** Revisão do `architect` (opus) em 2026-10-16: APROVADO COM AJUSTES, sem bloqueio (nada exige mudar o
+  sinal, o estado do motor nem o analista). Os ajustes entraram acima: `waitReason` aditivo no lugar de um `outcome` novo
+  (MP8), corpo da API com `exactOptional` (MP1), predicado literal e índice no esquema do Drizzle (MP6), a aproximação da
+  ordem a mercado (MP2), o alerta do Telegram como decisão explícita (MP12) e a monotonicidade do mínimo sorteada no oráculo.
