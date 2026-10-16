@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { CANDLE_PAGE_SIZE } from './candle-chart.constant.js';
+import { CANDLE_PAGE_SIZE, INITIAL_VISIBLE_BARS } from './candle-chart.constant.js';
 import type { PageRange } from './candle-paging.js';
 
 export type CandleWindowParams = {
@@ -17,6 +17,14 @@ export type CandleWindow = {
   // Identifica a série: enquanto não muda, a janela só cresce no fim (vela nova) e nada é descartado nem reajustado.
   readonly anchor: string;
 };
+
+// Execução curta (a que começou há pouco): completa a abertura do gráfico com velas de ANTES do início, só como contexto.
+export function withLeadingContext(extent: PageRange, timeframeMilliseconds: number): PageRange {
+  if (timeframeMilliseconds <= 0) return extent;
+  const runCandles = Math.ceil((extent.to - extent.from) / timeframeMilliseconds);
+  const missing = Math.max(0, INITIAL_VISIBLE_BARS - runCandles);
+  return { from: Math.max(0, extent.from - missing * timeframeMilliseconds), to: extent.to };
+}
 
 function lastPage(end: PageRange['to'], start: PageRange['from'], span: number): PageRange {
   return { from: Math.max(start, end - span), to: end };

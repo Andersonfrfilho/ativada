@@ -5,7 +5,7 @@ import { useAppConfig } from '../../app/useAppContext.hook.js';
 import { timeframeMilliseconds } from '../live-chart.js';
 import type { TradeChart } from '../trade-chart.validation.js';
 import type { ChartView } from '../useChartView.hook.js';
-import { computeCandleWindow } from './candle-window.js';
+import { computeCandleWindow, withLeadingContext } from './candle-window.js';
 import { useCandleHistory, type CandleHistory } from './useCandleHistory.hook.js';
 import { useChartPreferences, type ChartPreferenceControls } from './useChartPreferences.hook.js';
 import { TIMEFRAMES } from '../run.constant.js';
@@ -61,8 +61,9 @@ export function useCandleSource(chart: TradeChart, view: ChartView): CandleSourc
   const duration = timeframeMilliseconds(timeframe);
   const rangeKey = keyOfRange(view.range);
   const focus = focusState?.rangeKey === rangeKey ? focusState.time : undefined;
+  const extent = withLeadingContext(chart.runRange, duration ?? 0);
   const window = computeCandleWindow({
-    extent: chart.runRange,
+    extent,
     range: view.range,
     focus,
     timeframeMilliseconds: duration ?? 0,
@@ -71,7 +72,7 @@ export function useCandleSource(chart: TradeChart, view: ChartView): CandleSourc
     symbol: chart.symbol,
     timeframe,
     window,
-    earliestTime: chart.runRange.from,
+    earliestTime: extent.from,
     timeframeMilliseconds: duration ?? 0,
   });
   return {

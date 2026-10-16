@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
-import { computeCandleWindow } from '../src/runs/candle-chart/candle-window.js';
+import { computeCandleWindow, withLeadingContext } from '../src/runs/candle-chart/candle-window.js';
 
 const HOUR = 3_600_000;
 const EXTENT = { from: 0, to: 3_000 * HOUR };
@@ -99,5 +99,23 @@ describe('janela da primeira página de velas', () => {
     });
     expect(after.anchor).toBe(before.anchor);
     expect(after.range.to - before.range.to).toBe(HOUR);
+  });
+
+  test('a short run is completed with context candles before its start, so the chart is not cut at the start', () => {
+    const extent = withLeadingContext({ from: 500 * HOUR, to: 530 * HOUR }, HOUR);
+    expect(extent).toEqual({ from: 380 * HOUR, to: 530 * HOUR });
+    const window = computeCandleWindow({
+      extent,
+      range: undefined,
+      focus: undefined,
+      timeframeMilliseconds: HOUR,
+    });
+    expect(window.range).toEqual({ from: 380 * HOUR, to: 530 * HOUR });
+  });
+
+  test('a run with enough candles gets no context, and the context never goes before the epoch', () => {
+    const long = { from: 500 * HOUR, to: 900 * HOUR };
+    expect(withLeadingContext(long, HOUR)).toEqual(long);
+    expect(withLeadingContext({ from: 10 * HOUR, to: 20 * HOUR }, HOUR).from).toBe(0);
   });
 });

@@ -604,3 +604,21 @@ Gates de cada commit: `prettier --write`, `typecheck`, `lint`, `format`, `panel-
 **E2E no Edge:** não rodado. M1 e a correção do teclado são provados por contrato com a superfície falsa (a vela escolhida e o teclado não dependem do desenho real) e M5 não foi implementado.
 
 **Pendências sem mudar comportamento** (ADR, última nota): `candle-window` com relógio, kline de fechamento descartada, camadas no balde `RUN_CHART`, `role` do canvas, ordem de limpeza na desmontagem e caixas de stop/alvo só das operações carregadas. Também ficou sem "Tentar de novo" o gráfico simples que entra por falha do DESENHO (superfície que não carregou): recarregar a página é o caminho.
+
+## Gráfico parado desde as 2h
+
+Relato: "nosso gráfico está desde as 2 da manhã", "o histórico dele é até as 2 da manhã, sendo que começamos antes" e "não vejo as marcações de compra e venda".
+
+**O que foi medido (Edge + Playwright, 16/10/2026 ~10:40 a 10:50 BRT, usuário local `teste`):**
+
+- Banco e API em dia: `/v1/markets/candles` devolve a vela de 15 min até `13:15Z`; `/chart` traz `runRange.to` = última vela + 15 min.
+- O painel NÃO está parado: na simulação LINK 15m (`01a14175-…`) a legenda foi de "10:30 em formação" para "10:45 em formação" sozinha, sem recarregar, com a vela fechada do 10:45 pedida pelo aviso do stream (`/chart`, `strategy-layers` e `/markets/candles?from=<fim anterior>`); o WebSocket reconectou normalmente. "Última decisão" e "Painel atualizado há N s" andaram junto.
+- O gráfico começa onde a execução começa (`period_start`): a `01a14328-…` (LINK 15m com analista) foi criada às 02:15 BRT (`from=1792127700000`), então o gráfico dela só tinha velas a partir das 02:15, com as 3 horas da manhã e nada antes. É isto o "histórico até as 2 da manhã". A `01a14175-…` começa às 18:15 BRT de 15/10 e leva compra (20:15 BRT) e venda por stop (00:30 BRT) na janela: `markers=2` no `/chart` e as setas desenhadas (camada "Compras e vendas" ligada por padrão).
+
+**Causa:** `useCandleSource` limitava a primeira página e a paginação à esquerda ao período da execução (`earliestTime = runRange.from`); execução recém-criada abria um gráfico "cortado" no começo, com poucas velas e sem passado.
+
+**Correção:** `withLeadingContext` (`candle-window.ts`) completa a abertura com velas de ANTES do início até `INITIAL_VISIBLE_BARS` (150) quando a execução tem menos que isso; execução longa não muda. Depois da correção a `01a14328-…` pede `from=1792023300000` (150 velas) em vez de `1792127700000`. Contrato em `test/candle-window.contract.ts`.
+
+**Recuperação de aba antiga:** o aviso `runs` do stream já refaz o fim, e o cliente reconecta com espera crescente (`StreamClient`); não foi preciso mudar nada. Aba aberta há horas: recarregar (F5) resolve.
+
+Pendência de outro agente: 4 testes de "backtest list/filtro por moeda" falham no painel por mudança em andamento de `src/runs/runs.query.ts` (fora desta correção).
