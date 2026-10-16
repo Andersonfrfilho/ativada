@@ -8,6 +8,8 @@ import { messageFromGoalError } from './goal-form.validation.js';
 import type { Combination } from './goal.validation.js';
 import type { SimulationTimeframe } from './simulation-timeframe.constant.js';
 
+const ANALYST_MODE_SHADOW = 'shadow';
+
 export type GoalSimulation = {
   readonly isPending: boolean;
   readonly message: string | undefined;
@@ -15,7 +17,11 @@ export type GoalSimulation = {
 };
 
 // A vela é por simulação (`runs.timeframe`); a meta e o ranking não mudam.
-export function useGoalSimulation(goalId: string, timeframe: SimulationTimeframe): GoalSimulation {
+export function useGoalSimulation(
+  goalId: string,
+  timeframe: SimulationTimeframe,
+  hasAnalyst = false,
+): GoalSimulation {
   const navigate = useNavigate();
   const create = useCreateRunMutation();
   return {
@@ -29,6 +35,8 @@ export function useGoalSimulation(goalId: string, timeframe: SimulationTimeframe
           symbol: combination.symbol,
           timeframe,
           goalId,
+          // O analista de risco só observa (modo sombra) e só existe com a vela de 15 min.
+          ...(hasAnalyst ? { analyst: { mode: ANALYST_MODE_SHADOW } } : {}),
         },
         { onSuccess: () => void navigate(ROUTE_PATH.OVERVIEW) },
       ),

@@ -450,3 +450,34 @@ bun run lint         → verde
 bun run format:check → All matched files use Prettier code style!
 bun run --cwd apps/frontend-ativada test → 1167 pass / 0 fail (com os testes da T3.3 já no lugar)
 ```
+
+## T3.3 — analista de risco no painel (2026-10-16)
+
+- **Opção "Deixar o analista de risco decidir"** no `SimulationTimeframePicker` (`goals/AnalystOption.component.tsx`, estado em `useSimulationChoice`): ligada, a
+  vela fica travada em 15 min (as quatro opções ficam marcadas e desabilitadas), o painel explica a taxa ("cada ida e volta custa 0,30%, entre taxa e
+  deslizamento") e avisa o modo sombra; desligada, volta para 1 hora. O pedido leva `analyst: { mode: 'shadow' }` só com a opção ligada (sem ela a chave nem
+  existe). A opção só aparece onde o chamador passa `analyst` (a tela do ranking da meta).
+- **Detalhe da simulação ao vivo** (`runs/analyst/`, `AnalystSection` logo depois do gráfico): `AnalystCard` (postura em ícone + palavra + cor, com a palavra do
+  servidor: PAUSA, CAUTELA, MODERADA, LIBERADA; frase da postura, motivo, ritmo, janela de entrada, saída por tempo, ritmo/tamanho/duração, meta somada e o aviso
+  fixo do servidor, "Tendência, não promessa… dinheiro fictício"; chip "Sem previsão" quando a equipe não aponta lado), `AnalystTeamTable` (especialistas e a
+  tendência da estratégia: voto, acerto, situação dada pelo auditor, peso e o motivo curto por regra do D4-A; abaixo de 700 px vira lista), `AnalystLocks` (as cinco
+  travas sempre à vista, a ativa com cadeado, a palavra "ativa" e a frase do motivo), `AnalystHistory` ("Ver decisões anteriores" por cursor; a vela sem decisão
+  aparece como "sem decisão") e o selo "modo sombra: o analista só observa" (ícone + palavra, com a dica do glossário).
+- **Analista real na sala da equipe e na coluna "Equipe agora"** (`team-room/`): quando a simulação tem analista, a fala dele (postura, motivo, fora da janela,
+  saída por tempo e o selo do modo sombra) toma o lugar do "Resumo do placar da estratégia"; sem analista, o resumo continua. Só frases do servidor, vela a vela (a vela
+  revista usa a decisão gravada dela; sem decisão diz "O analista não tem fala gravada para esta vela."); a lista em texto e o anúncio do leitor de tela falam do
+  analista. Nenhuma consulta nova: as do cartão (`runs/.../analyst` e `analyst-decisions`).
+- **Nenhum número calculado no painel:** só formatação e tabelas de rótulo (`CADENCE_TEXT`, `SIZE_TEXT`, `até N min`); acerto, peso, metas e somas são texto do servidor.
+- **Contratos** (lista explícita do script `test` do painel): `analyst.contract.tsx` (4 posturas com palavra, ícone e cor, texto literal do servidor, selo do modo sombra,
+  tabela, travas, meta somada, 6 estados sem decisão, carregando/erro com "Tentar de novo", 409 sem cartão, o aviso do stream mudando o cartão sem recarregar,
+  histórico por cursor, honestidade), `analyst-picker.contract.tsx` (opção, trava de 15 min, textos literais, corpo do `POST /v1/runs` com e sem analista),
+  `team-room-analyst.contract.tsx` (sala e equipe compacta com e sem analista, indisponível, vela sem fala, anúncio) e `analyst-layout.contract.ts` (375 px: nenhuma
+  largura fixa acima de 343 px, texto do servidor quebra, tabela vira lista); `touch-targets` ganhou o botão "Ver decisões anteriores" (44 px).
+- **Pendência de olho:** a captura de tela (1 só) e a revisão de 375 e 1280 px nos dois temas ficam para a T6.1; aqui a prova é por texto (`read_page`/contratos).
+
+```text
+bun run typecheck    → verde (tsc raiz e painel)
+bun run lint         → verde
+bun run format:check → All matched files use Prettier code style!
+bun run --cwd apps/frontend-ativada test → 1178 pass / 0 fail
+```

@@ -12,6 +12,7 @@ import {
   LiveSummarySection,
   LiveTrackingSection,
 } from '../runs/live-tracking/LiveTrackingSection.component.js';
+import { AnalystSection } from '../runs/analyst/AnalystSection.component.js';
 import { RunProgressCard } from '../runs/RunProgressCard.component.js';
 import { LiveChartArea } from '../runs/team-room/LiveChartArea.component.js';
 import { FAILURE_TEXT, RUN_KIND, RUN_STATUS } from '../runs/run.constant.js';
@@ -40,6 +41,7 @@ function LivePaperBody({ run }: { readonly run: RunDetail }): ReactElement {
       <LiveSummarySection run={run} />
       {run.status === RUN_STATUS.COMPLETED ? <CompletedBacktest run={run} /> : null}
       <LiveChartArea runId={run.id} hasChart={hasChart}>
+        <AnalystSection runId={run.id} />
         <LiveDecisionsSection run={run} />
         <LiveTrackingSection run={run} />
       </LiveChartArea>

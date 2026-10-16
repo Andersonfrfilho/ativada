@@ -9,6 +9,7 @@ import { pickDecisionForCandle } from './compact-team-pick.js';
 import { REST_STEP } from './team-room-sequence.js';
 import { buildAuditorView, buildTeamRoomView } from './team-room-view.js';
 import type { AuditorView, TeamRoomView } from './team-room.types.js';
+import { useRiskAnalystSource, type RiskAnalystSource } from './useRiskAnalystSource.hook.js';
 import { useTeamRoomSequence } from './useTeamRoomSequence.hook.js';
 
 const CLOCK_MILLISECONDS = 60_000;
@@ -31,8 +32,16 @@ export type CompactTeamModel = {
 };
 
 // Vela revista: só o voto e a leitura gravados na decisão (a frase por regra do servidor existe só na mais recente).
-function speechOf(decision: Decision | undefined): TeamRoomView | undefined {
-  return decision === undefined ? undefined : buildTeamRoomView({ decision, triggers: undefined });
+function speechOf(
+  decision: Decision | undefined,
+  riskAnalyst: RiskAnalystSource,
+): TeamRoomView | undefined {
+  if (decision === undefined) return undefined;
+  return buildTeamRoomView({
+    decision,
+    triggers: undefined,
+    riskAnalyst: riskAnalyst.viewFor(decision.candleTime, false),
+  });
 }
 
 // Tudo o que a equipe compacta mostra, das consultas que o acompanhamento já faz (nenhuma consulta nova): a decisão da
@@ -43,11 +52,16 @@ export function useCompactTeamModel(input: CompactTeamModelInput): CompactTeamMo
   const now = useClock(CLOCK_MILLISECONDS);
   const { decisions } = useOlderDecisions(runId, status);
   const summary = useProjectionsQuery({ runId }).data?.summary;
+  const riskAnalyst = useRiskAnalystSource(runId);
   const latest = decisions[0];
   const latestView =
     latest === undefined
       ? undefined
-      : buildTeamRoomView({ decision: latest, triggers: status.triggers });
+      : buildTeamRoomView({
+          decision: latest,
+          triggers: status.triggers,
+          riskAnalyst: riskAnalyst.viewFor(latest.candleTime, true),
+        });
   const sequence = useTeamRoomSequence({
     candleKey: latest?.candleTime,
     seatCount: latestView?.specialists.length ?? 0,
@@ -55,7 +69,7 @@ export function useCompactTeamModel(input: CompactTeamModelInput): CompactTeamMo
   });
   if (latest === undefined) return undefined;
   const shown = pickDecisionForCandle(decisions, pointedOpenTime);
-  const view = shown === latest ? latestView : speechOf(shown);
+  const view = shown === latest ? latestView : speechOf(shown, riskAnalyst);
   return {
     view,
     auditor: summary === undefined ? undefined : buildAuditorView(summary),

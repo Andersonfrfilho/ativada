@@ -10,12 +10,10 @@ import styles from './Goals.module.css';
 import { RankingExplainer } from './RankingExplainer.component.js';
 import { RankingItem } from './RankingItem.component.js';
 import { SimulationTimeframePicker } from './SimulationTimeframePicker.component.js';
-import {
-  DEFAULT_SIMULATION_TIMEFRAME,
-  type SimulationTimeframe,
-} from './simulation-timeframe.constant.js';
+import type { SimulationTimeframe } from './simulation-timeframe.constant.js';
 import { useGoalSimulation, type GoalSimulation } from './useGoalSimulation.hook.js';
 import { useLiveRunSlots, type LiveRunSlots } from './useLiveRunSlots.hook.js';
+import { useSimulationChoice } from './useSimulationChoice.hook.js';
 
 const PODIUM_SIZE = 3;
 const COLLAPSED_COUNT = 10;
@@ -125,8 +123,8 @@ function orderByRank(combinations: readonly Combination[], isGoalOnly: boolean):
 }
 
 export function RankingCard({ goalId, evaluation }: RankingCardProps): ReactElement {
-  const [timeframe, setTimeframe] = useState<SimulationTimeframe>(DEFAULT_SIMULATION_TIMEFRAME);
-  const simulation = useGoalSimulation(goalId, timeframe);
+  const choice = useSimulationChoice();
+  const simulation = useGoalSimulation(goalId, choice.timeframe, choice.isAnalystOn);
   const slots = useLiveRunSlots();
   const [isGoalOnly, setIsGoalOnly] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -136,10 +134,11 @@ export function RankingCard({ goalId, evaluation }: RankingCardProps): ReactElem
     <Card title="Estratégia × moeda">
       <RankingExplainer />
       <SimulationTimeframePicker
-        value={timeframe}
-        onChange={setTimeframe}
+        value={choice.timeframe}
+        onChange={choice.setTimeframe}
         activeCount={slots.count}
         limit={slots.limit}
+        analyst={choice.analyst}
       />
       <GoalOnlyToggle isChecked={isGoalOnly} onChange={setIsGoalOnly} />
       <RankingList
@@ -147,7 +146,7 @@ export function RankingCard({ goalId, evaluation }: RankingCardProps): ReactElem
         combinations={shown}
         simulation={simulation}
         slots={slots}
-        timeframe={timeframe}
+        timeframe={choice.timeframe}
       />
       <ExpandFooter
         total={ordered.length}

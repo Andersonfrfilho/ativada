@@ -22,6 +22,7 @@ import {
 import type {
   AnalystView,
   AuditorView,
+  RiskAnalystView,
   RuleLine,
   SeatLook,
   SeatTone,
@@ -126,16 +127,22 @@ export type TeamRoomViewInput = {
   readonly decision: Decision;
   // Só a vela mais recente leva as frases por regra do acompanhamento (`triggers`); vela revista usa as leituras gravadas.
   readonly triggers: Triggers | undefined;
+  readonly riskAnalyst?: RiskAnalystView | undefined;
 };
 
 // Do servidor à sala: agrupa as regras da decisão por família e junta os textos prontos. Nada é recalculado.
-export function buildTeamRoomView({ decision, triggers }: TeamRoomViewInput): TeamRoomView {
+export function buildTeamRoomView({
+  decision,
+  triggers,
+  riskAnalyst,
+}: TeamRoomViewInput): TeamRoomView {
   const specialists = buildSpecialists(decision, triggers);
   return {
     candleTime: decision.candleTime,
     closedAt: decision.closedAt,
     specialists,
     analyst: buildAnalyst(decision),
+    riskAnalyst,
     hasOpinion: specialists.some((specialist) => specialist.tone === 'voter'),
   };
 }

@@ -468,3 +468,21 @@
   font: var(--text-xs) var(--font-data);
   color: var(--ink-2);
 }
+
+.analystOption {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.analystOption input[type='checkbox'] {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+
+.analystNotices {
+  display: grid;
+  gap: 8px;
+}

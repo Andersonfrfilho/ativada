@@ -17,6 +17,7 @@ import { REST_STEP } from './team-room-sequence.js';
 import { TEAM_ROOM_TEXT } from './team-room.constant.js';
 import type { TeamRoomView } from './team-room.types.js';
 import { buildAuditorView, buildTeamRoomView } from './team-room-view.js';
+import { useRiskAnalystSource } from './useRiskAnalystSource.hook.js';
 import { useTeamRoomReview, type TeamRoomReview } from './useTeamRoomReview.hook.js';
 import { useTeamRoomSequence, type TeamRoomSequence } from './useTeamRoomSequence.hook.js';
 
@@ -79,6 +80,7 @@ export function useTeamRoomModel(input: TeamRoomModelInput): TeamRoomCardProps |
   const older = useOlderDecisions(runId, status);
   const review = useTeamRoomReview(older.decisions);
   const projections = useProjectionsQuery({ runId });
+  const riskAnalyst = useRiskAnalystSource(runId);
   const { shown } = review;
   const view =
     shown === undefined
@@ -86,6 +88,7 @@ export function useTeamRoomModel(input: TeamRoomModelInput): TeamRoomCardProps |
       : buildTeamRoomView({
           decision: shown,
           triggers: review.isReviewing ? undefined : status.triggers,
+          riskAnalyst: riskAnalyst.viewFor(shown.candleTime, !review.isReviewing),
         });
   const sequence = useTeamRoomSequence({
     candleKey: older.decisions[0]?.candleTime,

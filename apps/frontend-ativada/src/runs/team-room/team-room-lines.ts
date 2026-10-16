@@ -15,7 +15,10 @@ export function describeSpecialist(specialist: SpecialistView): string {
 }
 
 export function describeAnalyst(view: TeamRoomView): string {
-  const { analyst } = view;
+  const { analyst, riskAnalyst } = view;
+  if (riskAnalyst !== undefined) {
+    return `${riskAnalyst.name} — ${riskAnalyst.look.word}. ${riskAnalyst.lines.join(' ')}`;
+  }
   return `${analyst.name} — ${analyst.outcome.word}, pontuação ${analyst.scoreText}. ${analyst.message}`;
 }
 
@@ -41,5 +44,9 @@ function votersOf(specialist: SpecialistView): string | undefined {
 export function describeAnnouncement(view: TeamRoomView, closedText: string): string {
   const voters = view.specialists.flatMap((specialist) => votersOf(specialist) ?? []);
   const who = voters.length === 0 ? 'Nenhum especialista votou.' : `${voters.join('. ')}.`;
-  return `Vela que fechou ${closedText}. ${who} Resumo do placar: ${view.analyst.outcome.word}. As falas estão na lista de texto.`;
+  const closing =
+    view.riskAnalyst === undefined
+      ? `Resumo do placar: ${view.analyst.outcome.word}.`
+      : `Analista de risco: ${view.riskAnalyst.look.word}.`;
+  return `Vela que fechou ${closedText}. ${who} ${closing} As falas estão na lista de texto.`;
 }

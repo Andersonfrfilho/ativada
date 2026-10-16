@@ -40,11 +40,21 @@ export type AnalystView = {
   readonly message: string;
 };
 
+// O analista de risco de verdade (spec 007): a postura em ícone + palavra + cor e só frases do servidor.
+export type RiskAnalystView = {
+  readonly name: string;
+  readonly look: SeatLook;
+  readonly lines: readonly string[];
+  readonly isShadow: boolean;
+};
+
 export type TeamRoomView = {
   readonly candleTime: number;
   readonly closedAt: number;
   readonly specialists: readonly SpecialistView[];
   readonly analyst: AnalystView;
+  // Presente só quando a simulação tem analista: ele toma o lugar do resumo do placar da estratégia.
+  readonly riskAnalyst: RiskAnalystView | undefined;
   readonly hasOpinion: boolean;
 };
 
