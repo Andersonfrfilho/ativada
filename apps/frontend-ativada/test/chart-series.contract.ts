@@ -45,6 +45,12 @@ describe('candle series', () => {
     expect(toSurfaceTime(FIRST_CANDLE_TIME + 999)).toBe(FIRST_SECOND);
   });
 
+  test('PEPE-sized prices (4e-6, 8 decimals) keep their exact drawing value', () => {
+    expect(toDrawingNumber('0.00000402')).toBe(0.00000402);
+    expect(toDrawingNumber('0.00000399')).toBe(0.00000399);
+    expect(toDrawingNumber('0.00000001')).toBeGreaterThan(0);
+  });
+
   test('maps each candle to open, high, low and close at its open time', () => {
     expect(toSurfaceCandles([candle(0), candle(1)])).toStrictEqual([
       { time: FIRST_SECOND, open: 12.93, high: 12.985, low: 12.872, close: 12.905 },
