@@ -28,6 +28,7 @@ export const ICON_PATHS = {
   stop: 'M7 6h10a1 1 0 011 1v10a1 1 0 01-1 1H7a1 1 0 01-1-1V7a1 1 0 011-1z',
   chevronRight: 'M9 6l6 6-6 6',
   team: 'M9 4.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM2.5 20a6.5 6.5 0 0113 0M17 6.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zM16 14.2a5 5 0 015.5 5.8',
+  trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
   replay: 'M3 12a9 9 0 103-6.7M3 4v5h5',
 } as const;
 

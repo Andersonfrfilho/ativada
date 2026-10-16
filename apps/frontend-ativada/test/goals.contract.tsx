@@ -184,6 +184,28 @@ describe('goal list', () => {
   });
 });
 
+describe('goal list: running simulation and discreet delete', () => {
+  test('says which goal has a running simulation, and the delete is an icon button with a tip', async () => {
+    renderApp({
+      path: '/metas',
+      isAuthenticated: true,
+      routes: goalRoutes([
+        {
+          method: 'GET',
+          path: '/v1/runs',
+          respond: (): Response =>
+            pageResponse([buildRun({ kind: 'live_paper', status: 'running', goalId: 'goal-1' })]),
+        },
+      ]),
+    });
+    const list = await screen.findByRole('list', { name: 'Metas' });
+    expect(await within(list).findByText('Simulação rodando')).toBeDefined();
+    const remove = within(list).getByRole('button', { name: 'Apagar meta de BTC/USDT' });
+    expect(remove.getAttribute('data-tip')).toBe('Apagar esta meta');
+    expect(remove.textContent).toBe('');
+  });
+});
+
 const RANKING = buildEvaluation([
   buildCombination(),
   buildCombination({
@@ -234,6 +256,37 @@ describe('goal ranking', () => {
     const second = within(list).getAllByRole('listitem')[1];
     expect(second?.textContent).toContain('Desfavorável no histórico');
     expect(second?.textContent).toContain('sem tempo típico');
+  });
+
+  test('opens with the 10 best (podium of 3 plus rows) and "Mostrar as 12" shows them all', async () => {
+    const many = Array.from({ length: 12 }, (_, index) =>
+      buildCombination({
+        rank: index + 1,
+        strategy: {
+          id: `s-${index}`,
+          name: `Regra ${index + 1}`,
+          versionId: `v-${index}`,
+          version: 1,
+        },
+      }),
+    );
+    renderApp({
+      path: '/metas/goal-1',
+      isAuthenticated: true,
+      routes: goalRoutes([
+        {
+          method: 'GET',
+          path: '/v1/goals/goal-1/evaluation',
+          respond: (): Response => dataResponse(buildEvaluation(many)),
+        },
+      ]),
+    });
+    const list = await screen.findByRole('list', { name: 'Ranking de estratégias por moeda' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(10);
+    expect(screen.getByText('10 de 12 combinações de estratégia e moeda.')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar as 12' }));
+    expect(within(list).getAllByRole('listitem')).toHaveLength(12);
+    expect(screen.getByRole('button', { name: 'Mostrar só as 10' })).toBeDefined();
   });
 
   test('says honestly that it is history, never a promise', async () => {
@@ -378,6 +431,57 @@ function liveStatusOf(
     },
   });
 }
+
+describe('goal screen: "Simulação desta meta"', () => {
+  test('shows what is missing, the deadline and the loss room of the simulation tied to THIS goal', async () => {
+    renderApp({
+      path: '/metas/goal-1',
+      isAuthenticated: true,
+      routes: goalRoutes([
+        {
+          method: 'GET',
+          path: '/v1/runs',
+          respond: (): Response =>
+            pageResponse([
+              buildRun({ id: 'run-goal', kind: 'live_paper', status: 'running', goalId: 'goal-1' }),
+            ]),
+        },
+        {
+          method: 'GET',
+          path: '/v1/runs/run-goal/live-status',
+          respond: (): Response => dataResponse(liveStatusOf('10000')),
+        },
+        {
+          method: 'GET',
+          path: '/v1/goals/goal-1/evaluation',
+          respond: (): Response => dataResponse(RANKING),
+        },
+      ]),
+    });
+    const card = await screen.findByRole('region', { name: 'Simulação desta meta' });
+    expect(card.textContent).toContain('Faltam');
+    expect(card.textContent).toContain('Prazo');
+    expect(card.textContent).toContain('Queda que ainda cabe');
+    expect(within(card).getByRole('link', { name: 'Abrir o acompanhamento' })).toBeDefined();
+  });
+
+  test('without a simulation tied to this goal the card does not appear', async () => {
+    renderApp({
+      path: '/metas/goal-1',
+      isAuthenticated: true,
+      routes: goalRoutes([
+        { method: 'GET', path: '/v1/runs', respond: (): Response => pageResponse([]) },
+        {
+          method: 'GET',
+          path: '/v1/goals/goal-1/evaluation',
+          respond: (): Response => dataResponse(RANKING),
+        },
+      ]),
+    });
+    await screen.findByRole('list', { name: 'Ranking de estratégias por moeda' });
+    expect(screen.queryByRole('region', { name: 'Simulação desta meta' })).toBeNull();
+  });
+});
 
 describe('simulating from the goal screen', () => {
   test('the overview shows the new "Meta ativa" even though it had been loaded empty a moment before', async () => {

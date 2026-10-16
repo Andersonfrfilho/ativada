@@ -4,20 +4,57 @@ import { Link } from 'react-router';
 
 import { formatChangePercent, formatPercent, formatSymbol } from '../format/format.js';
 import { Card } from '../layout/Card.component.js';
+import { Icon } from '../layout/Icon.component.js';
 import { ListStatus } from '../layout/ListStatus.component.js';
+import { CHIP_TONE, StatusChip } from '../runs/live-tracking/StatusChip.component.js';
 import controls from '../styles/Controls.module.css';
 import { messageFromGoalError } from './goal-form.validation.js';
 import { useDeleteGoalMutation, useGoalsQuery } from './goal.query.js';
 import type { Goal } from './goal.validation.js';
+import { useActiveLiveRunsQuery } from './live-runs.query.js';
 import styles from './Goals.module.css';
 
 type GoalRowProps = {
   readonly goal: Goal;
+  readonly hasRunningSimulation: boolean;
   readonly isConfirming: boolean;
   readonly onDelete: (goalId: string) => void;
 };
 
-function GoalRow({ goal, isConfirming, onDelete }: GoalRowProps): ReactElement {
+type DeleteControlProps = {
+  readonly name: string;
+  readonly isConfirming: boolean;
+  readonly onDelete: () => void;
+};
+
+// Discreto: um ícone com dica; o primeiro clique arma e o botão vira "Confirmar", o segundo apaga.
+function DeleteControl({ name, isConfirming, onDelete }: DeleteControlProps): ReactElement {
+  if (isConfirming) {
+    return (
+      <button type="button" className={`${controls.button} ${controls.danger}`} onClick={onDelete}>
+        {`Confirmar: apagar meta de ${name}`}
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={styles.iconButton}
+      aria-label={`Apagar meta de ${name}`}
+      data-tip="Apagar esta meta"
+      onClick={onDelete}
+    >
+      <Icon name="trash" />
+    </button>
+  );
+}
+
+function GoalRow({
+  goal,
+  hasRunningSimulation,
+  isConfirming,
+  onDelete,
+}: GoalRowProps): ReactElement {
   const name = formatSymbol(goal.symbol);
   return (
     <li className={styles.row}>
@@ -30,13 +67,12 @@ function GoalRow({ goal, isConfirming, onDelete }: GoalRowProps): ReactElement {
           perda máxima {formatPercent(Number(goal.maxLossRate))}
         </span>
       </Link>
-      <button
-        type="button"
-        className={`${controls.button} ${isConfirming ? controls.danger : ''}`}
-        onClick={() => onDelete(goal.id)}
-      >
-        {isConfirming ? `Confirmar: apagar meta de ${name}` : `Apagar meta de ${name}`}
-      </button>
+      {hasRunningSimulation ? (
+        <StatusChip tone={CHIP_TONE.BUY} icon="activity">
+          Simulação rodando
+        </StatusChip>
+      ) : null}
+      <DeleteControl name={name} isConfirming={isConfirming} onDelete={() => onDelete(goal.id)} />
     </li>
   );
 }
@@ -67,6 +103,7 @@ export function GoalListCard(): ReactElement {
   const goals = useGoalsQuery();
   const deletion = useGoalDeletion();
   const items = goals.data ?? [];
+  const runningGoalIds = new Set((useActiveLiveRunsQuery().data ?? []).map((run) => run.goalId));
   return (
     <Card title="Suas metas">
       {items.length === 0 ? (
@@ -81,6 +118,7 @@ export function GoalListCard(): ReactElement {
             <GoalRow
               key={goal.id}
               goal={goal}
+              hasRunningSimulation={runningGoalIds.has(goal.id)}
               isConfirming={deletion.confirmingId === goal.id}
               onDelete={deletion.handleDelete}
             />
