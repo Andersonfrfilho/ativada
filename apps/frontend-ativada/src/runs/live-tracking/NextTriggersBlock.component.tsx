@@ -14,6 +14,9 @@ import { NOT_A_FORECAST_TEXT } from './LiveTrackingNotices.component.js';
 import { formatScorePoints, ScoreboardRuler } from './ScoreboardRuler.component.js';
 import { VoteLabel } from './VoteLabel.component.js';
 
+// O servidor já fecha a frase com este aviso; repeti-lo embaixo era o "i" duplicado.
+const FORECAST_DISCLAIMER = 'Isto não é previsão';
+
 type Available = Extract<LiveStatus['triggers'], { readonly status: 'available' }>;
 
 function RuleRow({ rule }: { readonly rule: RuleTrigger }): ReactElement {
@@ -114,9 +117,11 @@ export function NextTriggersBlock({ status }: { readonly status: LiveStatus }): 
       ) : (
         <p className={styles.gapLine}>{triggers.message}</p>
       )}
-      <p className={`${styles.extraSmall} ${styles.muted}`}>
-        <Icon name="info" size={14} /> {NOT_A_FORECAST_TEXT}
-      </p>
+      {triggers.message.includes(FORECAST_DISCLAIMER) ? null : (
+        <p className={`${styles.extraSmall} ${styles.muted}`}>
+          <Icon name="info" size={14} /> {NOT_A_FORECAST_TEXT}
+        </p>
+      )}
     </Card>
   );
 }

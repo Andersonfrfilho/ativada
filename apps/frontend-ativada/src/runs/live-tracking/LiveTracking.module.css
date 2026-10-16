@@ -206,8 +206,14 @@
 }
 
 .scoreZone {
-  fill: var(--buy);
-  opacity: 0.4;
+  stroke: var(--buy);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+
+.scoreHatch {
+  stroke: var(--buy);
+  stroke-width: 2;
 }
 
 .scoreMark {
@@ -422,19 +428,11 @@
 }
 
 .notices {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: var(--text-sm);
-  color: var(--ink-2);
-}
-
-.notices li {
   display: flex;
   gap: 8px;
   align-items: flex-start;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
 }
 
 .notices svg {

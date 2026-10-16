@@ -15,32 +15,26 @@ export const NOT_A_FORECAST_TEXT =
 export const PLAY_MONEY_TEXT =
   'Simulação com dinheiro fictício; nada aqui é recomendação de compra ou venda.';
 
-// Os avisos fixos do cartão (RF10), curtos: o que é uma vela, de quanto em quanto tempo ela decide e que o dinheiro é fictício.
+// Um aviso só (RF10): o que é uma vela, de quanto em quanto tempo ela decide e que o dinheiro é fictício.
 export function LiveTrackingNotices({ timeframe }: { readonly timeframe: string }): ReactElement {
   const label = isSimulationTimeframe(timeframe)
     ? SIMULATION_TIMEFRAME_LABEL[timeframe]
     : timeframe;
   const every = isSimulationTimeframe(timeframe) ? SIMULATION_EVERY_TEXT[timeframe] : undefined;
   return (
-    <ul className={styles.notices} aria-label="Avisos sobre a simulação">
-      <li>
-        <Icon name="info" size={14} />
+    <div role="note" className={styles.notices} aria-label="Avisos sobre a simulação">
+      <Icon name="info" size={14} />
+      <p>
         <span>
           <Term term="candle">Vela</Term>: o resumo do preço em {label}, com abertura, máxima,
           mínima e fechamento.
-        </span>
-      </li>
-      <li>
-        <Icon name="info" size={14} />
+        </span>{' '}
         <span>
           A simulação olha o mercado {every ?? `a cada vela de ${label}`} e decide só quando a vela
           fecha.
-        </span>
-      </li>
-      <li>
-        <Icon name="info" size={14} />
+        </span>{' '}
         <span>{PLAY_MONEY_TEXT}</span>
-      </li>
-    </ul>
+      </p>
+    </div>
   );
 }

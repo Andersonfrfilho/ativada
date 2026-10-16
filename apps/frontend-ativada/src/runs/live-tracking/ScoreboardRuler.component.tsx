@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { ReactElement } from 'react';
+import { useId, type ReactElement } from 'react';
 
 import { formatDecimalText } from '../../format/decimal.js';
 import { buildScoreScale, type ScoreScale } from './scoreboard-scale.js';
@@ -30,12 +30,25 @@ function anchorOf(percent: number): Anchor {
   return percent > 100 - EDGE_PERCENT ? 'end' : 'middle';
 }
 
+// A zona-alvo é hachurada: preenchida até o limiar a faixa parecia "quase lá" quando ainda faltava chegar.
 function Track({ scale }: { readonly scale: ScoreScale }): ReactElement {
+  const patternId = useId();
   const isRight = scale.thresholdPercent >= 50;
   const zoneStart = isRight ? scale.thresholdPercent : 0;
   const zoneWidth = isRight ? 100 - scale.thresholdPercent : scale.thresholdPercent;
   return (
     <>
+      <defs>
+        <pattern
+          id={patternId}
+          patternUnits="userSpaceOnUse"
+          width="7"
+          height="7"
+          patternTransform="rotate(45)"
+        >
+          <line className={styles.scoreHatch} x1="0" y1="0" x2="0" y2="7" />
+        </pattern>
+      </defs>
       <rect
         className={styles.scoreTrack}
         x="0"
@@ -46,6 +59,7 @@ function Track({ scale }: { readonly scale: ScoreScale }): ReactElement {
       />
       <rect
         className={styles.scoreZone}
+        fill={`url(#${patternId})`}
         x={`${zoneStart}%`}
         y={TRACK_TOP}
         width={`${zoneWidth}%`}

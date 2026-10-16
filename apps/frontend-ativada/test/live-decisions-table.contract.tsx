@@ -212,6 +212,18 @@ describe('tabela "O que a estratégia decidiu" (T3.2)', () => {
     ).toBe('true');
   });
 
+  test('opens short: the 8 newest decisions, and "Ver mais" shows the rest', async () => {
+    const items = Array.from({ length: 12 }, (_, hours) =>
+      buildDecisionAt(hours, { score: String(hours), message: `Motivo ${hours}` }),
+    );
+    openLiveDetail(liveWith(items, null));
+    const card = await screen.findByRole('region', TABLE_CARD);
+    expect(within(card).getAllByRole('row')).toHaveLength(9);
+    fireEvent.click(within(card).getByRole('button', { name: 'Ver mais 4 decisões' }));
+    expect(within(card).getAllByRole('row')).toHaveLength(13);
+    expect(within(card).queryByRole('button', { name: /Ver mais/ })).toBeNull();
+  });
+
   test('"Ver decisões anteriores" pages by cursor and disappears at the end', async () => {
     const newest = [0, 1].map((hours) => buildDecisionAt(hours, { score: String(hours + 1) }));
     const harness = liveWith(newest, 'page-1');

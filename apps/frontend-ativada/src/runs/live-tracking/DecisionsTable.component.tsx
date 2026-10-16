@@ -14,6 +14,8 @@ import type { Decision, LiveStatus } from './live-status.validation.js';
 import { DECISIONS_ANCHOR } from './LiveTradesState.component.js';
 
 const CLOCK_MILLISECONDS = 60_000;
+// A tela abre curta: as 8 mais novas à vista, o resto atrás de "Ver mais" (o gráfico e a sala não ficam para o fim da página).
+const INITIAL_DECISIONS = 8;
 
 const EVERY_TIMEFRAME: Readonly<Record<string, string>> = {
   '15m': 'a cada 15 minutos',
@@ -122,7 +124,10 @@ function TableFooter({ count, nextDecisionAt, now, timeZone }: FooterProps): Rea
 export function DecisionsTable({ runId, status }: DecisionsTableProps): ReactElement {
   const timeZone = useUserTimeZone();
   const now = useClock(CLOCK_MILLISECONDS);
-  const { decisions, hasMore, isLoading, loadMore } = useOlderDecisions(runId, status);
+  const { decisions: loaded, hasMore, isLoading, loadMore } = useOlderDecisions(runId, status);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const hiddenCount = isExpanded ? 0 : Math.max(0, loaded.length - INITIAL_DECISIONS);
+  const decisions = hiddenCount === 0 ? loaded : loaded.slice(0, INITIAL_DECISIONS);
   const timeframe = status.run.timeframe;
   return (
     <Card
@@ -142,7 +147,12 @@ export function DecisionsTable({ runId, status }: DecisionsTableProps): ReactEle
         now={now}
         timeZone={timeZone}
       />
-      {hasMore ? (
+      {hiddenCount > 0 ? (
+        <button type="button" className={styles.more} onClick={() => setIsExpanded(true)}>
+          {`Ver mais ${hiddenCount} decisões`}
+        </button>
+      ) : null}
+      {hasMore && hiddenCount === 0 ? (
         <button type="button" className={styles.more} disabled={isLoading} onClick={loadMore}>
           {isLoading ? 'Carregando…' : 'Ver decisões anteriores'}
         </button>

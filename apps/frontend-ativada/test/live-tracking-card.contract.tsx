@@ -152,10 +152,10 @@ describe('cartão "Acompanhamento" (T3.1)', () => {
     expect(within(card).getByText('Ainda sem vela fechada.')).toBeDefined();
   });
 
-  test('the card keeps the fixed notices short: candle, every hour and play money', async () => {
+  test('the card keeps the notices in a single short note: candle, every hour and play money', async () => {
     openLiveDetail(createLiveHarness());
     const card = await screen.findByRole('region', TRACKING);
-    const notices = await within(card).findByRole('list', { name: 'Avisos sobre a simulação' });
+    const notices = await within(card).findByRole('note', { name: 'Avisos sobre a simulação' });
     expect(within(notices).getByText(/o resumo do preço em 1 hora/)).toBeDefined();
     expect(
       within(notices).getByText(/olha o mercado a cada 1 hora e decide só quando a vela/),

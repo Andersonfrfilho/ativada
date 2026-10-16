@@ -26,7 +26,7 @@ function failureMessage(run: RunDetail): string {
   return FAILURE_TEXT[code] ?? `A execução falhou (${code || 'sem código'}).`;
 }
 
-// A simulação ao vivo (qualquer estado, menos falha) abre pelo acompanhamento: saldo, meta, o que falta e as decisões; o gráfico fica entre eles.
+// A simulação ao vivo (qualquer estado, menos falha) abre pelo acompanhamento: saldo, meta, o que falta e as decisões; a sala e o gráfico vêm depois.
 function LivePaperBody({ run }: { readonly run: RunDetail }): ReactElement {
   const hasChart = run.status === RUN_STATUS.RUNNING || run.status === RUN_STATUS.CANCELLED;
   return (
@@ -38,8 +38,8 @@ function LivePaperBody({ run }: { readonly run: RunDetail }): ReactElement {
       ) : null}
       <LiveTrackingSection run={run} />
       {run.status === RUN_STATUS.COMPLETED ? <CompletedBacktest run={run} /> : null}
-      <LiveChartArea runId={run.id} hasChart={hasChart} />
       <LiveDecisionsSection run={run} />
+      <LiveChartArea runId={run.id} hasChart={hasChart} />
       {isActiveRun(run) ? <RunProgressCard run={run} /> : null}
     </>
   );
