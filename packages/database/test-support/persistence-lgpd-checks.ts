@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { ALERT_CHANNEL, ALERT_SIDE } from '../src/alerts/alert.constant.js';
+import { createAnalystDecisionRepository } from '../src/analyst/analyst-decision.repository.js';
 import { readOpenDatabase, type DatabaseHandle } from '../src/database-handle.js';
 import { toJsonb } from '../src/jsonb.js';
 import { alerts } from '../src/schema/alerts.schema.js';
@@ -11,6 +12,7 @@ import { createGoalRepository } from '../src/goals/goal.repository.js';
 import { createUserAssetRepository } from '../src/user-assets/user-asset.repository.js';
 import { createPriceAlertRepository } from '../src/price-alerts/price-alert.repository.js';
 import { createStrategyRepository } from '../src/strategies/strategy.repository.js';
+import { buildAnalystDecisionInput } from './analyst-decision-checks.js';
 import type {
   LifecycleCheckContext,
   LifecycleOwner,
@@ -46,6 +48,7 @@ export const PERSISTENCE_TABLES = [
   'run_commands',
   'walk_forward_windows',
   'alerts',
+  'analyst_decisions',
   'goals',
   'price_alerts',
   'user_assets',
@@ -66,6 +69,7 @@ export const PERSISTENCE_EXPECTED_ROWS: Readonly<
   run_commands: 1,
   walk_forward_windows: 2,
   alerts: 1,
+  analyst_decisions: 2,
   goals: 2,
   price_alerts: 2,
   user_assets: 2,
@@ -115,9 +119,25 @@ export async function seedOwnerPersistence(
   await results.appendCommands(owner.scope, run.id, buildCommands(1));
   await results.appendWindows(owner.scope, run.id, buildWindows(2));
   await seedAlert(handle, owner, run.id);
+  await seedAnalystDecisions(handle, owner, run.id);
   await seedGoals(handle, owner);
   await seedPriceAlerts(handle, owner);
   await seedUserAssets(handle, owner);
+}
+
+// A decisão do analista revela a postura e as travas da simulação do dono: entra na exportação e some com a exclusão da conta.
+async function seedAnalystDecisions(
+  handle: DatabaseHandle,
+  owner: LifecycleOwner,
+  runId: string,
+): Promise<void> {
+  const decisions = createAnalystDecisionRepository(handle);
+  for (const candleTime of [1, 2]) {
+    await decisions.appendAnalystDecision(
+      owner.scope,
+      buildAnalystDecisionInput(runId, candleTime),
+    );
+  }
 }
 
 const USER_ASSET_SEED_LIMIT = 50;
@@ -286,6 +306,6 @@ export async function checkPersistencePurge(
     );
   }
   reportCheck(
-    'purga: as 12 tabelas de estratégia/execução/resultado/alerta/meta de A vazias, as de B intactas',
+    'purga: as 15 tabelas de estratégia/execução/resultado/alerta/meta de A vazias, as de B intactas',
   );
 }

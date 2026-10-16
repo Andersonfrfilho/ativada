@@ -6,6 +6,7 @@ import { readDatabaseUrl } from '../src/read-database-url.js';
 import { checkPendingQueue, checkPurge, checkRemoveAndRetention } from './account-purge-checks.js';
 import { checkAdminRepositories } from './admin-checks.js';
 import { checkAlerts } from './alert-checks.js';
+import { checkAnalystDecisions } from './analyst-decision-checks.js';
 import { checkAuditRetention, checkBlockedAccounts } from './cron-repository-checks.js';
 import {
   checkExport,
@@ -173,6 +174,7 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkRunQueueReading(context);
   await checkLiveRuns(context);
   await checkAlerts(context);
+  await checkAnalystDecisions(context);
   await checkGoals(context);
   await checkPriceAlerts(context);
   await checkStorageQuotas(context);

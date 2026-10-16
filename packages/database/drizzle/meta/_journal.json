@@ -169,6 +169,13 @@
       "when": 1791922208878,
       "tag": "0023_run_stall",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792113967206,
+      "tag": "0024_analyst_decisions",
+      "breakpoints": true
     }
   ]
 }

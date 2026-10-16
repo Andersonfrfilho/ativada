@@ -193,3 +193,5 @@ export { createWorkerHeartbeatRepository } from './worker-heartbeats/worker-hear
 export type * from './worker-heartbeats/worker-heartbeat.types.js';
 export { createRunStallRepository } from './run-stall/run-stall.repository.js';
 export type * from './run-stall/run-stall.types.js';
+export { createAnalystDecisionRepository } from './analyst/analyst-decision.repository.js';
+export type * from './analyst/analyst-decision.types.js';

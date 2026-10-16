@@ -19,3 +19,4 @@ export { goals } from './goals.schema.js';
 export { priceAlerts } from './price-alerts.schema.js';
 export { userAssets } from './user-assets.schema.js';
 export { workerHeartbeats } from './worker-heartbeats.schema.js';
+export { analystDecisions } from './analyst-decisions.schema.js';

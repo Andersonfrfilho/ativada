@@ -3,6 +3,7 @@ import { getTableName } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 
 import { alerts } from '../schema/alerts.schema.js';
+import { analystDecisions } from '../schema/analyst-decisions.schema.js';
 import { auditEvents } from '../schema/audit-events.schema.js';
 import { candles } from '../schema/candles.schema.js';
 import { equityPoints } from '../schema/equity-points.schema.js';
@@ -47,6 +48,7 @@ export const OWNED_TABLES: readonly PgTable[] = [
   runCommands,
   walkForwardWindows,
   alerts,
+  analystDecisions,
   goals,
   priceAlerts,
   userAssets,
@@ -56,6 +58,7 @@ export const OWNED_TABLES: readonly PgTable[] = [
 export const OWNED_TABLE_DELETION_ORDER: readonly PgTable[] = [
   telegramLinkCodes,
   alerts,
+  analystDecisions,
   equityPoints,
   runCommands,
   walkForwardWindows,

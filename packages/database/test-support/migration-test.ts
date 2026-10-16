@@ -6,6 +6,8 @@ import { readDatabaseUrl } from '../src/read-database-url.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
 
 const TEMPORARY_DATABASE_PREFIX = 'ativada_migration_';
+// Tabela da migration mais nova: existe depois de aplicar e some depois do rollback (o teste de tabelas sobrando cobre a volta).
+const LATEST_MIGRATION_TABLE = 'analyst_decisions';
 
 type CountRow = { readonly total: number };
 type TableNameRow = { readonly table_name: string };
@@ -53,6 +55,11 @@ async function runMigrationTest(adminUrl: string): Promise<number> {
       throw new Error(
         `${appliedCount} migrations registradas, ${migrationFileNames.length} esperadas`,
       );
+    }
+
+    const appliedTables = await listPublicTables(temporary.url);
+    if (!appliedTables.includes(LATEST_MIGRATION_TABLE)) {
+      throw new Error(`a migration mais nova não criou ${LATEST_MIGRATION_TABLE}`);
     }
 
     await applyRollbacks({ databaseUrl: temporary.url, migrationsFolder: MIGRATIONS_FOLDER });

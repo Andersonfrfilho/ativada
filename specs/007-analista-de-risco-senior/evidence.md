@@ -249,3 +249,26 @@ bun test test/risk-analyst-mutants.contract.test.ts → 54 pass / 0 fail (52 mut
 ## Fase 1 — fechamento (2026-10-15)
 
 `packages/risk-analyst` está completo e puro: leituras, equipe, auditor com o Wilson único, travas, ritmo, postura, saída por tempo, comandos (só `halt`, `resume` e `exit_position`) e o catálogo de frases, com dourado e 52 mutantes. Nada em `packages/strategy-engine` nem `packages/run-recording` mudou; sem migration; sem worker, API nem painel. A Fase 2 (sombra no worker, T2.1 pede autorização da migration `analyst_decisions`) NÃO foi iniciada.
+
+## Autorização registrada (2026-10-15)
+
+O usuário (Anderson) autorizou na thread, em 2026-10-15, os itens 1 e 2 da lista de autorizações da spec: (1) a migration aditiva da tabela `analyst_decisions` (D3-A, T2.1) e (2) a mudança no motor e em `run_commands` da Fase 4 (governar a simulação e o comando de tamanho, D1 e D2-A; ainda NÃO executada, só a T2.1 e a T2.2 desta rodada). Mensagem do usuário: "ta autorizado ja era para ter feito". **Continuam NÃO autorizados:** colunas em `candles` (T5.2), fotos do livro de ofertas (T5.3) e fontes externas (T5.4).
+
+## T2.1 — tabela `analyst_decisions` (2026-10-15)
+
+- **Migration `0024_analyst_decisions`** (0024 era o próximo número livre; a última era a 0023) + `.rollback.sql` (`DROP TABLE`), gerada pelo `drizzle-kit` (snapshot e `_journal.json` incluídos; segunda geração depois do lint respondeu "No schema changes"). Colunas e `CHECK` da A19 (versão, modo, estado, postura, ritmo 15/60/240, porta, tamanho 0/0,25/0,5/1 e a coerência `decided` ⇒ postura, ritmo, porta e tamanho; `failed` ⇒ `failure_code`), FK composta `(run_id, user_id) → runs ON DELETE RESTRICT`, único `(run_id, candle_time)` e índice `(user_id, run_id, candle_time DESC)`. Sem ENUM nativo.
+- **Código** (`packages/database/src/`): `schema/analyst-decisions.schema.ts`, `analyst/analyst-decision.{constant,types,repository}.ts` e `analyst-decision-record.mapper.ts`. Desvio de nome: o repositório é `analyst-decision.repository.ts` (padrão `*.repository.ts` do pacote), não `analyst-decisions.ts` da A19. `createAnalystDecisionRepository` (`appendAnalystDecision` idempotente por vela, `findAnalystDecision`, `findLatestAnalystDecision`, `listAnalystDecisionsPage` decrescente por cursor) tem `OwnerScope` no tipo de toda chamada; `insertAnalystDecision(executor, scope, input)` fica interno ao pacote para a T2.3 gravar na transação do passo.
+- **Registro**: `analystDecisions` em `OWNED_TABLES`, em `OWNED_TABLE_DELETION_ORDER` ANTES de `runs` e em `OWNED_TABLE_EXPORTS` (19 colunas, sem `id` nem `userId`; lista em `ownership/analyst-decision-export-columns.ts` por causa do teto de 200 linhas).
+- **Checks de banco real** (`test-support/analyst-decision-checks.ts`, ligado ao `database-test`): ida e volta (jsonb volta como objeto/lista; tamanho em texto exato), imutabilidade por vela (repetir não grava nem muda), linha de falha só com o código, 9 valores fora do catálogo barrados com `23514`, páginas decrescentes de 2 em 2 sem repetir nem pular, outro dono não lê nem grava (FK composta) e `DELETE` da execução barrado (RESTRICT). LGPD no mesmo `database-test`: `analyst_decisions` entrou em `PERSISTENCE_TABLES` (2 linhas semeadas por dono; exportação de A completa e sem vazar B; purga de A zera e B fica intacto; páginas de 1 linha da exportação em fluxo iguais). `migration-test` confere que a tabela existe depois de aplicar e que o rollback não deixa tabela.
+- **Onde rodou**: Postgres EMBUTIDO do WSL (`~/pg-scratch/data-007`, porta 56438, `pgctl-007.sh`), `DATABASE_URL` direto; nenhum Docker e nenhum container/volume `ativada-dev-*` tocado. **Desvio:** `make lgpd-test` (`scripts/lgpd-test.ts`) exige Docker (Keycloak, API e cron) e NÃO foi rodado; a exportação e a purga LGPD da tabela foram provadas pelo `database-test` (mesmos `PERSISTENCE_TABLES` que o `lgpd-test` reaproveita em `scripts/lgpd-test/`). O `make database-test`/`migration-test` equivalem a `bun run --cwd packages/database db:database-test|db:migration-test` neste Postgres.
+- **NÃO aplicada no banco DEV**: o app dev aplica a 0024 no próximo `dev-up`.
+
+```text
+bun run typecheck    → verde
+bun run lint         → verde
+bun run format:check → All matched files use Prettier code style!
+db:migration-test    → OK (25 migrations aplicadas e desfeitas)
+db:database-test     → OK (inclui as 3 verificações analyst_decisions e a exportação/purga de 15 tabelas)
+bun test (ownership-registry, database.contract, strategy-persistence-schema, code-size-limits,
+          app-import-boundary, strategy-engine-boundary) → 140 pass / 0 fail
+```

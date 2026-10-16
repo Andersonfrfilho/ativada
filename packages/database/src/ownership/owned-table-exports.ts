@@ -2,6 +2,8 @@
 import type { PgTable } from 'drizzle-orm/pg-core';
 
 import { alerts } from '../schema/alerts.schema.js';
+import { ANALYST_DECISION_EXPORT_COLUMNS } from './analyst-decision-export-columns.js';
+import { analystDecisions } from '../schema/analyst-decisions.schema.js';
 import { equityPoints } from '../schema/equity-points.schema.js';
 import { fills } from '../schema/fills.schema.js';
 import { goals } from '../schema/goals.schema.js';
@@ -192,4 +194,5 @@ export const OWNED_TABLE_EXPORTS: readonly OwnedTableExportStep[] = [
     'createdAt',
     'sentAt',
   ]),
+  exportColumns(analystDecisions, ANALYST_DECISION_EXPORT_COLUMNS),
 ];
