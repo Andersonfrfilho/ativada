@@ -9,7 +9,7 @@ import {
 } from '../../../test/fixtures/run-chart/chart-oracle.fixture.js';
 import {
   CANDLE_TIMEFRAME_DURATION_MILLISECONDS,
-  type CANDLE_TIMEFRAMES,
+  type RUN_CANDLE_TIMEFRAMES,
 } from '../src/candles/candle.constant.js';
 import { createCandleRepository } from '../src/candles/candle.repository.js';
 import type { CandleRecord } from '../src/candles/candle.types.js';
@@ -25,7 +25,7 @@ import type { FillInput, PositionInput, TimeRange } from '../src/run-results/run
 import type { LifecycleCheckContext } from './account-lifecycle-checks.js';
 import { candleTimeAt, resolvePersistenceOwner, seedRun } from './persistence-seed.js';
 
-type Timeframe = (typeof CANDLE_TIMEFRAMES)[number];
+type Timeframe = (typeof RUN_CANDLE_TIMEFRAMES)[number];
 export type Series = {
   readonly name: string;
   readonly symbol: string;

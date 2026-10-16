@@ -32,5 +32,7 @@ export const TASK_NAME = {
   RECONCILE_BLOCKED_ACCOUNTS: 'reconcile-blocked-accounts',
   EXPIRE_AUDIT_EVENTS: 'expire-audit-events',
   BACKFILL_CANDLES: 'backfill-candles',
+  BACKFILL_DISPLAY_CANDLES: 'backfill-display-candles',
+  PURGE_DISPLAY_CANDLES: 'purge-display-candles',
   SYNC_FEAR_GREED: 'sync-fear-greed',
 } as const;

@@ -17,6 +17,7 @@ export type MarketEnvironment = Pick<
   Environment,
   | 'MARKET_SYMBOLS'
   | 'MARKET_TIMEFRAMES'
+  | 'MARKET_DISPLAY_TIMEFRAMES'
   | 'TICKER_KLINE_ENABLED'
   | 'BINANCE_BASE_URL'
   | 'BINANCE_STREAM_URL'
@@ -62,7 +63,9 @@ function openTicker(
 ): TickerStream {
   return createTickerStream({
     symbols: params.environment.MARKET_SYMBOLS,
-    timeframes: params.environment.TICKER_KLINE_ENABLED ? params.environment.MARKET_TIMEFRAMES : [],
+    timeframes: params.environment.TICKER_KLINE_ENABLED
+      ? [...params.environment.MARKET_TIMEFRAMES, ...params.environment.MARKET_DISPLAY_TIMEFRAMES]
+      : [],
     baseUrl: params.environment.BINANCE_STREAM_URL,
     onCandle: (candle) => publisher.handleRawCandle(candle),
     onTick: (tick) => {

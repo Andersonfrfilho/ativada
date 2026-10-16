@@ -2419,3 +2419,37 @@ migration só é escrita e aplicada na Fase 2 (T2.1). Conferido no código em 20
   sinal, o estado do motor nem o analista). Os ajustes entraram acima: `waitReason` aditivo no lugar de um `outcome` novo
   (MP8), corpo da API com `exactOptional` (MP1), predicado literal e índice no esquema do Drizzle (MP6), a aproximação da
   ordem a mercado (MP2), o alerta do Telegram como decisão explícita (MP12) e a monotonicidade do mínimo sorteada no oráculo.
+
+## Gráfico em velas menores (spec 017)
+
+Contrato da T0.1 da spec 017 (decisões A do usuário em `specs/017-grafico-em-velas-menores/evidence.md`). O gráfico passa a
+poder mostrar velas de **3 min** sobre execuções de 15 min; as decisões, o placar, a previsão, as metas, o analista e os
+prazos continuam em velas de execução. **O motor, o `run-recording` e o `risk-analyst` não mudam.** Conferido no código em
+2026-10-16.
+
+**As duas questões abertas do plan, fechadas.**
+
+- **Instante dentro da vela.** `fills` grava só `candle_time` (`fill.candleOpenTime`, `map-decisions.ts:58`): a ABERTURA da
+  vela de execução em que a ordem executou, com chave única `(run_id, order_key, candle_time)`. A compra executa na abertura
+  de `t + d` (decisão no fechamento de `t`, sem lookahead). **A saída por alvo, proteção ou lacuna também só carrega a
+  abertura da vela de 15 min em que aconteceu: o motor não sabe o minuto.** Logo o painel não pode apontar "a vela de 3 min
+  que tocou o nível" sem inventar um dado; vale D4-A: marca no início da vela de 15 min com colchete sobre as 5 de 3 min.
+- **Nome do campo do corte.** `retentionStart`: abertura (ms UTC, na grade da vela) da primeira vela que a retenção ainda
+  guarda, `ceil((agora − retenção) ÷ d) × d`. Vai em `meta` (campo ADITIVO do envelope: `{ data, meta: { retentionStart } }`),
+  só na resposta de velas de exibição; a resposta das velas de execução continua `{ data }`, byte a byte igual.
+
+| # | Decisão | Motivo |
+|---|---|---|
+| V1 | **`DISPLAY_TIMEFRAME` (`3m`) FORA de `TIMEFRAME`/`ENGINE_TIMEFRAME`/`RUN_TIMEFRAMES`.** Nascem `MARKET_CANDLE_TIMEFRAME = TIMEFRAME ∪ DISPLAY_TIMEFRAME` (mercado) e `CANDLE_TIMEFRAMES = RUN_CANDLE_TIMEFRAMES ∪ DISPLAY_CANDLE_TIMEFRAMES` (banco). `Candle<TTimeframe = Timeframe>` e `CandleRecord<TTimeframe = CandleTimeframe>` ganham o parâmetro: o padrão continua sendo a vela de execução (compatível com o motor, `toEngineCandle` intacto); o fluxo de mercado usa `MarketCandle`/`CandleRecord<StoredCandleTimeframe>`. `findCandles`, `findMissingOpenTimes` e `findLatestOpenTime` são genéricos na vela da chave, então quem lê por `run.timeframe` continua recebendo vela de execução no tipo | O teste de fronteira do motor (`ENGINE_TIMEFRAME ≡ TIMEFRAME`) e `timeframe-tables` seguem como estavam; `1m` e `5m` NÃO foram autorizados e ficam fora do CHECK |
+| V2 | **Fronteira (RNF01) com teste próprio** (`test/display-timeframe-boundary.contract.test.ts`): interseção vazia de todas as listas do motor e das execuções; `MARKET_TIMEFRAMES` recusa `3m`; `POST /v1/runs` com `3m` = `400` em `backtest` e `live_paper` e o esquema do corpo recusa mesmo com `3m` habilitado por engano; sonda que reprova qualquer menção a vela de exibição em `strategy-engine`, `run-recording`, `risk-analyst`, `worker/src/live` e `api/src/{backtest,walk-forward,goals,horizons}`; a série de cada execução nasce de `isCandleTimeframe(run.timeframe)` e `timeframe: run.timeframe` | Mutante: tirar o filtro, o guarda ou listar `3m` em `RUN_TIMEFRAMES` reprova |
+| V3 | **Ambiente.** `MARKET_DISPLAY_TIMEFRAMES` (padrão VAZIO = nenhuma vela de exibição; o plan dizia `3m`, mas padrão ligado faria todo ambiente, inclusive os de teste, baixar e assinar 3m sem pedir; `envs/env.dev` liga `3m`) e `CANDLE_DISPLAY_RETENTION_DAYS` (7 a 365, padrão 90), ambos no `marketEnvironmentShape` compartilhado. A API habilita `3m` SÓ na consulta de velas (`createMarketDependencies`); criar execução usa `MARKET_TIMEFRAMES` | Desvio registrado do padrão do plan; reversível por env |
+| V4 | **Migration aditiva `0026_candles_display_timeframes`**: recria `candles_timeframe_check` com `3m` (`NOT VALID` + `VALIDATE`, sem reescrever a tabela). `.rollback.sql` ABORTA com `restrict_violation` se existir linha `3m` | Mesma forma da 0025; autorizada |
+| V5 | **Cron.** `backfill-display-candles` (mesma tarefa do backfill, janela em DIAS: `ceil((agora − retenção) ÷ d) × d` até a vela em formação, por par, em sequência, peso e 418 como o backfill existente: 418 aborta) e `purge-display-candles` (`purgeDisplayCandles` do repositório: `DELETE ... WHERE ctid IN (SELECT ctid ... WHERE timeframe IN (<exibição>) AND open_time < $corte LIMIT $lote)` em lotes de 5.000, corte EXCLUSIVO, parametrizado; **o filtro de vela mora no repositório**, então nenhuma tarefa consegue apagar 15m, 1h, 4h ou 1d). Ambas em `TASK_NAME`/`CRON_TASKS` | Autorizado (apagar só exibição vencida) |
+| V6 | **Worker.** Assina `<par>@kline_3m` junto das demais (9 pares × 5 velas = 45 streams, limite da conexão 1.024) e grava só `x === true` com `upsertCandles` (idempotente, vela fechada imutável). A recuperação de lacuna por janela (`STREAM_GAP_LOOKBACK_HOURS`) cobre 3m; par sem nenhuma vela fica para o backfill do cron. **Vela de exibição gravada NÃO aciona `onCandleStored`** (acordaria a simulação à toa; o motor só lê vela de execução) | |
+| V7 | **API (ticker).** `kline_3m` entra na MESMA conexão do `miniTicker` quando `TICKER_KLINE_ENABLED`; a mensagem `candle` já leva `timeframe`; o agregador é 1/s por (par, vela). `GET /v1/markets/candles` aceita `3m` quando habilitada, mesmo teto de 5.000 e mesmo balde `CANDLE_QUERY` | |
+| V8 | **Opiniões em `[t + d, t + 2d)`** (D6 do plan) e o mapeamento 15 min → 3 min ficam para o painel (Fase 3, outro executor): o contrato acima (a saída só tem a abertura da vela de 15 min) é o que ele lê | |
+| V9 | **Oráculo `bigint`:** 5 velas de 3 min = a vela de 15 min gravada (abertura da 1ª, máxima, mínima, fechamento da 5ª, soma de volume e de `trade_count`), conferido por `SELECT` nos dados reais do dev e por teste no Postgres embutido | |
+
+**Validação.** Esta seção foi escrita por quem implementou as Fases 0 a 2; a validação por `architect` (opus) pedida na T0.1
+não rodou nesta sessão e fica registrada como pendência em `evidence.md`. Nada aqui exige mudar o motor, o
+`run-recording` ou o analista.

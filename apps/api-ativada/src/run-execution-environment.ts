@@ -41,4 +41,6 @@ export const runExecutionEnvironmentShape = {
   MARKET_EXCHANGE: marketEnvironmentShape.MARKET_EXCHANGE,
   MARKET_SYMBOLS: marketEnvironmentShape.MARKET_SYMBOLS,
   MARKET_TIMEFRAMES: marketEnvironmentShape.MARKET_TIMEFRAMES,
+  MARKET_DISPLAY_TIMEFRAMES: marketEnvironmentShape.MARKET_DISPLAY_TIMEFRAMES,
+  CANDLE_DISPLAY_RETENTION_DAYS: marketEnvironmentShape.CANDLE_DISPLAY_RETENTION_DAYS,
 } as const;

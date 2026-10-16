@@ -1,10 +1,13 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@ativada/environment';
 
-import type { Candle } from './candle.types.js';
+import type { MarketCandle } from './candle.types.js';
 import { DECIMAL_STRING_SCHEMA, TIMESTAMP_SCHEMA } from './decimal.schema.js';
 import { MarketDataResponseError } from './market-data.error.js';
-import { TIMEFRAME_DURATION_MILLISECONDS, type Timeframe } from './timeframe.constant.js';
+import {
+  MARKET_CANDLE_DURATION_MILLISECONDS,
+  type MarketCandleTimeframe,
+} from './timeframe.constant.js';
 
 const decimalString = DECIMAL_STRING_SCHEMA;
 const timestamp = TIMESTAMP_SCHEMA;
@@ -33,17 +36,17 @@ const klinesResponseSchema = z.array(klineRowSchema);
 export type ParseKlinesParams = {
   readonly body: unknown;
   readonly symbol: string;
-  readonly timeframe: Timeframe;
+  readonly timeframe: MarketCandleTimeframe;
   readonly startTime?: number | undefined;
   readonly endTime?: number | undefined;
 };
 
 function describeGridViolation(
-  candle: Candle,
+  candle: MarketCandle,
   params: ParseKlinesParams,
   previous: number | undefined,
 ): string | undefined {
-  const duration = TIMEFRAME_DURATION_MILLISECONDS[params.timeframe];
+  const duration = MARKET_CANDLE_DURATION_MILLISECONDS[params.timeframe];
   if (candle.closeTime !== candle.openTime + duration - 1) return 'closeTime fora da grade';
   if (previous !== undefined && candle.openTime <= previous) return 'ordem não crescente';
   if (params.startTime !== undefined && candle.openTime < params.startTime)
@@ -53,7 +56,7 @@ function describeGridViolation(
 }
 
 // Linha fora da grade não é gravada: o erro nomeia a regra, nunca ecoa o corpo.
-function assertOnGrid(candles: readonly Candle[], params: ParseKlinesParams): void {
+function assertOnGrid(candles: readonly MarketCandle[], params: ParseKlinesParams): void {
   let previous: number | undefined;
   for (const candle of candles) {
     const violation = describeGridViolation(candle, params, previous);
@@ -66,7 +69,7 @@ function assertOnGrid(candles: readonly Candle[], params: ParseKlinesParams): vo
   }
 }
 
-export function parseKlinesResponse(params: ParseKlinesParams): readonly Candle[] {
+export function parseKlinesResponse(params: ParseKlinesParams): readonly MarketCandle[] {
   const parsed = klinesResponseSchema.safeParse(params.body);
   if (!parsed.success) {
     const paths = parsed.error.issues.map((issue) => issue.path.join('.')).slice(0, 3);
@@ -74,7 +77,7 @@ export function parseKlinesResponse(params: ParseKlinesParams): readonly Candle[
       `Resposta de klines fora do formato esperado (campos: ${paths.join(', ')}).`,
     );
   }
-  const candles = parsed.data.map((row): Candle => ({
+  const candles = parsed.data.map((row): MarketCandle => ({
     symbol: params.symbol,
     timeframe: params.timeframe,
     openTime: row[0],

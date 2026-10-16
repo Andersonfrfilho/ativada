@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { DisconnectReason, MalformedReason } from '../kline-stream.types.js';
-import type { Timeframe } from '../timeframe.constant.js';
+import type { MarketCandleTimeframe } from '../timeframe.constant.js';
 
 // O que o `<par>@miniTicker` da Binance diz: o preço corrente, o de abertura da janela de 24 h e o instante do evento.
 // Preços ficam em texto decimal, como chegam: nenhuma conta de dinheiro passa por `number`.
@@ -15,7 +15,7 @@ export type RawTick = {
 // decimal, como chegam. `isClosed` é o `x` da Binance.
 export type RawCandle = {
   readonly symbol: string;
-  readonly timeframe: Timeframe;
+  readonly timeframe: MarketCandleTimeframe;
   readonly openTime: number;
   readonly open: string;
   readonly high: string;
@@ -31,7 +31,7 @@ type MaybePromise = void | Promise<void>;
 export type TickerStreamSettings = {
   readonly symbols: readonly string[];
   // Velas cujo `kline` também se assina (na mesma conexão); ausente ou vazio = só o miniTicker.
-  readonly timeframes?: readonly Timeframe[] | undefined;
+  readonly timeframes?: readonly MarketCandleTimeframe[] | undefined;
   readonly baseUrl?: string | undefined;
   readonly staleAfterMilliseconds?: number | undefined;
   readonly reconnectBaseMilliseconds?: number | undefined;

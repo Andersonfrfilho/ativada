@@ -29,7 +29,7 @@ import {
 } from './create-portfolio-route-dependencies.js';
 import { createNoticeDependencies } from '../notices/create-notice-dependencies.js';
 import type { ListNoticesUseCase } from '../notices/list-notices.use-case.js';
-import { createListCandlesUseCase } from '../markets/list-candles.use-case.js';
+import { createMarketDependencies } from '../markets/create-market-dependencies.js';
 import type { MarketRouteDependencies } from '../markets/markets.routes.js';
 import { createCreateRunUseCase } from '../runs/create-run.use-case.js';
 import { createExportRunCsvUseCase } from '../runs/export-run-csv.use-case.js';
@@ -192,13 +192,7 @@ export function createDomainRouteDependencies(params: DomainRouteParams): Domain
     timeframes: environment.MARKET_TIMEFRAMES,
   };
   return {
-    markets: {
-      enabled,
-      listCandles: createListCandlesUseCase({
-        candles: createCandleRepository(database),
-        exchange: environment.MARKET_EXCHANGE,
-      }),
-    },
+    markets: createMarketDependencies({ database, environment, now: params.now }),
     sentiment: {
       getSentiment: createGetSentimentUseCase({ sentiments: createSentimentRepository(database) }),
     },

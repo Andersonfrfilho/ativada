@@ -21,6 +21,7 @@ import { createExpireAuditEventsTask } from './audit/expire-audit-events.task.js
 import { TASK_NAME } from './cron.constant.js';
 import { createBackfillCandlesTask } from './market/backfill-candles.task.js';
 import { BACKFILL_LOG } from './market/market.constant.js';
+import { createPurgeDisplayCandlesTask } from './market/purge-display-candles.task.js';
 import { createSyncFearGreedTask } from './market/sync-fear-greed.task.js';
 import type { CronTask } from './run-cron-tasks.js';
 import { selectCronTasks } from './select-cron-tasks.js';
@@ -44,6 +45,42 @@ function createBackfillTask(params: CreatePurgeTaskParams, serverClock: ServerCl
       symbols: environment.MARKET_SYMBOLS,
       timeframes: environment.MARKET_TIMEFRAMES,
       years: environment.BACKFILL_YEARS,
+    }),
+  };
+}
+
+function createBackfillDisplayTask(
+  params: CreatePurgeTaskParams,
+  serverClock: ServerClock,
+): CronTask {
+  const { environment, database, logger } = params;
+  return {
+    name: TASK_NAME.BACKFILL_DISPLAY_CANDLES,
+    run: createBackfillCandlesTask({
+      repository: createCandleRepository(database),
+      client: createMarketDataClient({
+        baseUrl: environment.BINANCE_BASE_URL,
+        clock: serverClock,
+      }),
+      logger,
+      now: serverClock.now,
+      refreshClock: serverClock.refresh,
+      exchange: environment.MARKET_EXCHANGE,
+      symbols: environment.MARKET_SYMBOLS,
+      timeframes: environment.MARKET_DISPLAY_TIMEFRAMES,
+      days: environment.CANDLE_DISPLAY_RETENTION_DAYS,
+    }),
+  };
+}
+
+function createPurgeDisplayTask(params: CreatePurgeTaskParams): CronTask {
+  const { environment, database } = params;
+  return {
+    name: TASK_NAME.PURGE_DISPLAY_CANDLES,
+    run: createPurgeDisplayCandlesTask({
+      repository: createCandleRepository(database),
+      retentionDays: environment.CANDLE_DISPLAY_RETENTION_DAYS,
+      now: () => Date.now(),
     }),
   };
 }
@@ -93,6 +130,8 @@ export function createProductionTasks(params: CreatePurgeTaskParams): readonly C
   const tasks: readonly CronTask[] = [
     ...createAccountTasks(params),
     createBackfillTask(params, serverClock),
+    createBackfillDisplayTask(params, serverClock),
+    createPurgeDisplayTask(params),
     createFearGreedTask(params),
   ];
   return selectCronTasks({ tasks, names: environment.CRON_TASKS });

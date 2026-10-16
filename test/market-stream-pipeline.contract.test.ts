@@ -46,6 +46,7 @@ function startPipeline(isKlineEnabled = false): {
     environment: {
       MARKET_SYMBOLS: ['BTCUSDT', 'ETHUSDT'],
       MARKET_TIMEFRAMES: ['1h'],
+      MARKET_DISPLAY_TIMEFRAMES: [],
       TICKER_KLINE_ENABLED: isKlineEnabled,
       BINANCE_BASE_URL: server.restUrl,
       BINANCE_STREAM_URL: server.streamUrl,

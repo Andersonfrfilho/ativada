@@ -4,11 +4,12 @@ import type { CandleRepository } from '@ativada/database';
 import {
   createCancellableSleep,
   createKlineStream,
+  isDisplayTimeframe,
   type CancellableSleep,
   type KlineStream,
   type MarketDataClient,
   type ServerClock,
-  type Timeframe,
+  type MarketCandleTimeframe,
 } from '@ativada/market-data-crypto';
 
 import type { WorkerLogger } from '../logging/worker-logger.js';
@@ -43,7 +44,7 @@ export type WorkerTiming = {
 export type WorkerDependencies = {
   readonly exchange: string;
   readonly symbols: readonly string[];
-  readonly timeframes: readonly Timeframe[];
+  readonly timeframes: readonly MarketCandleTimeframe[];
   readonly repository: Pick<
     CandleRepository,
     'findLatestOpenTime' | 'findMissingOpenTimes' | 'upsertCandles'
@@ -156,7 +157,8 @@ function createWorkerStream(params: WorkerStreamParams): KlineStream {
     random: timing.random,
     onCandle: async (candle) => {
       await writer.write(candle);
-      dependencies.onCandleStored?.();
+      // Vela de exibição nunca acorda a simulação: o motor só lê as velas de execução.
+      if (!isDisplayTimeframe(candle.timeframe)) dependencies.onCandleStored?.();
     },
     // O fluxo não é confiável antes da lacuna fechada: cada (re)conexão dispara a recuperação.
     onConnected: ({ attempt }) => {

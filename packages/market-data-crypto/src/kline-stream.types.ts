@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { Candle } from './candle.types.js';
+import type { MarketCandle } from './candle.types.js';
 import type { DISCONNECT_REASON, MALFORMED_REASON } from './kline-stream.constant.js';
-import type { Timeframe } from './timeframe.constant.js';
+import type { MarketCandleTimeframe } from './timeframe.constant.js';
 
 export type DisconnectReason = (typeof DISCONNECT_REASON)[keyof typeof DISCONNECT_REASON];
 export type MalformedReason = (typeof MALFORMED_REASON)[keyof typeof MALFORMED_REASON];
@@ -17,7 +17,7 @@ type MaybePromise = void | Promise<void>;
 
 export type KlineStreamSettings = {
   readonly symbols: readonly string[];
-  readonly timeframes: readonly Timeframe[];
+  readonly timeframes: readonly MarketCandleTimeframe[];
   readonly baseUrl?: string | undefined;
   readonly staleAfterMilliseconds?: number | undefined;
   readonly reconnectBaseMilliseconds?: number | undefined;
@@ -27,7 +27,7 @@ export type KlineStreamSettings = {
   readonly sleep?: ((milliseconds: number) => Promise<void>) | undefined;
   readonly random?: (() => number) | undefined;
   readonly webSocketFactory?: ((url: string) => WebSocket) | undefined;
-  readonly onCandle: (candle: Candle) => MaybePromise;
+  readonly onCandle: (candle: MarketCandle) => MaybePromise;
   readonly onConnected?: ((event: KlineStreamConnected) => MaybePromise) | undefined;
   readonly onDisconnected?: ((event: KlineStreamDisconnected) => MaybePromise) | undefined;
   readonly onMalformed?: ((event: KlineStreamMalformed) => MaybePromise) | undefined;

@@ -6,6 +6,7 @@ import type {
   CreateRunParams,
   EquityPointInput,
   FillCursor,
+  FindCandlesParams,
   FillInput,
   FillMarkerInput,
   ListPositionsParams,
@@ -24,6 +25,7 @@ import type {
   RunResultRepository,
   RunStatus,
   SignalInput,
+  StoredCandleTimeframe,
   StrategyRepository,
   WalkForwardWindowInput,
 } from '../../../packages/database/src/index.js';
@@ -680,16 +682,20 @@ export type InMemoryCandles = {
   readonly queries: { from: number; to: number; limit: number | undefined }[];
 };
 
-export function createInMemoryCandleSeries(seed: readonly CandleRecord[]): InMemoryCandles {
+export function createInMemoryCandleSeries(
+  seed: readonly CandleRecord<StoredCandleTimeframe>[],
+): InMemoryCandles {
   const queries: InMemoryCandles['queries'] = [];
   return {
     queries,
     repository: {
-      findCandles: (params): Promise<readonly CandleRecord[]> => {
+      findCandles: <TTimeframe extends StoredCandleTimeframe>(
+        params: FindCandlesParams<TTimeframe>,
+      ): Promise<readonly CandleRecord<TTimeframe>[]> => {
         queries.push({ from: params.from, to: params.to, limit: params.limit });
         const matching = seed
           .filter(
-            (candle) =>
+            (candle): candle is CandleRecord<TTimeframe> =>
               candle.exchange === params.exchange &&
               candle.symbol === params.symbol &&
               candle.timeframe === params.timeframe &&

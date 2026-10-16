@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { CandleRecord } from '../../../packages/database/src/index.js';
+import type { CandleRecord, StoredCandleTimeframe } from '../../../packages/database/src/index.js';
 import {
   createOwnerScope,
   type OwnerScope,
@@ -72,6 +72,10 @@ export type RunsHarnessOptions = {
   readonly csvLimits?: { maxRows?: number; maxDurationMilliseconds?: number };
   readonly extraRoutes?: (app: ApiApp, parts: HarnessParts) => readonly Route[];
   readonly symbols?: readonly string[];
+  // Velas de exibição (spec 017) habilitadas só na consulta de velas; criar execução continua só com as do motor.
+  readonly displayTimeframes?: readonly string[];
+  readonly displayCandles?: readonly CandleRecord<StoredCandleTimeframe>[];
+  readonly displayRetentionDays?: number;
   // Teto de execuções guardadas por usuário (padrão alto: só os testes da cota o baixam).
   readonly runStorageLimit?: number;
   readonly strategyLimits?: {
@@ -137,7 +141,10 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
   const jwks: JwksTestServer = startJwksTestServer([key]);
   const strategies = createInMemoryStrategies();
   const goals = createInMemoryGoals();
-  const candles = createInMemoryCandleSeries(options.candles ?? []);
+  const candles = createInMemoryCandleSeries([
+    ...(options.candles ?? []),
+    ...(options.displayCandles ?? []),
+  ]);
   const runs = createInMemoryRuns(
     strategies.repository,
     (goalId) => goals.referenced.add(goalId),
@@ -212,7 +219,14 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
   const series = app.runSeriesUseCases.createRunSeriesUseCases({ results: runs.results });
   const routes: readonly Route[] = [
     ...app.marketRoutes.createMarketRoutes({
-      enabled,
+      enabled: {
+        ...enabled,
+        timeframes: [...enabled.timeframes, ...(options.displayTimeframes ?? [])],
+      },
+      displayRetention:
+        options.displayRetentionDays === undefined
+          ? undefined
+          : { days: options.displayRetentionDays, now: () => clock.now },
       listCandles: app.candlesUseCase.createListCandlesUseCase({
         candles: candles.repository,
         exchange: EXCHANGE,

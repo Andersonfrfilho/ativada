@@ -2,7 +2,7 @@
 import { KLINES_PATH, MAX_KLINES_PER_REQUEST, SYMBOL_PATTERN } from './market-data.constant.js';
 import { MarketDataInvalidRequestError } from './market-data.error.js';
 import type { FetchKlinesParams } from './market-data.types.js';
-import { TIMEFRAME_DURATION_MILLISECONDS } from './timeframe.constant.js';
+import { MARKET_CANDLE_DURATION_MILLISECONDS } from './timeframe.constant.js';
 
 function assertTimestamp(name: string, value: number | undefined): void {
   if (value === undefined) return;
@@ -15,7 +15,7 @@ export function assertValidKlinesParams(params: FetchKlinesParams): void {
   if (!SYMBOL_PATTERN.test(params.symbol)) {
     throw new MarketDataInvalidRequestError('symbol deve conter só letras maiúsculas e dígitos.');
   }
-  if (!Object.hasOwn(TIMEFRAME_DURATION_MILLISECONDS, params.timeframe)) {
+  if (!Object.hasOwn(MARKET_CANDLE_DURATION_MILLISECONDS, params.timeframe)) {
     throw new MarketDataInvalidRequestError('timeframe não suportado.');
   }
   assertTimestamp('startTime', params.startTime);

@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export type { Candle } from './candle.types.js';
+export type { Candle, MarketCandle } from './candle.types.js';
 export { createCancellableSleep, type CancellableSleep } from './cancellable-sleep.js';
 export { createFearGreedClient } from './create-fear-greed-client.js';
 export { createMarketDataClient } from './create-market-data-client.js';
@@ -36,6 +36,9 @@ export {
   MAX_KLINES_PER_REQUEST,
   MAXIMUM_RETRY_AFTER_SECONDS,
   SUPPORTED_MARKET_EXCHANGES,
+  DEFAULT_CANDLE_DISPLAY_RETENTION_DAYS,
+  MAXIMUM_CANDLE_DISPLAY_RETENTION_DAYS,
+  MINIMUM_CANDLE_DISPLAY_RETENTION_DAYS,
 } from './market-data.constant.js';
 export {
   MarketDataAbortedError,
@@ -58,8 +61,14 @@ export type {
   MarketDataClientSettings,
 } from './market-data.types.js';
 export {
+  DISPLAY_TIMEFRAME,
+  isDisplayTimeframe,
+  MARKET_CANDLE_DURATION_MILLISECONDS,
+  MARKET_CANDLE_TIMEFRAME,
   TIMEFRAME,
   TIMEFRAME_DURATION_MILLISECONDS,
+  type DisplayTimeframe,
+  type MarketCandleTimeframe,
   type Timeframe,
 } from './timeframe.constant.js';
 export { DISCONNECT_REASON, MALFORMED_REASON } from './kline-stream.constant.js';

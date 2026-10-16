@@ -46,7 +46,7 @@ function createConfiguredWorker(params: WorkerWiringParams): Worker {
   return createWorker({
     exchange: environment.MARKET_EXCHANGE,
     symbols: environment.MARKET_SYMBOLS,
-    timeframes: environment.MARKET_TIMEFRAMES,
+    timeframes: [...environment.MARKET_TIMEFRAMES, ...environment.MARKET_DISPLAY_TIMEFRAMES],
     repository: createCandleRepository(database),
     client: createMarketDataClient({
       baseUrl: environment.BINANCE_BASE_URL,
@@ -104,7 +104,7 @@ function reportStarted(params: {
     env: environment.ENV,
     exchange: environment.MARKET_EXCHANGE,
     symbols: environment.MARKET_SYMBOLS.length,
-    timeframes: environment.MARKET_TIMEFRAMES.length,
+    timeframes: environment.MARKET_TIMEFRAMES.length + environment.MARKET_DISPLAY_TIMEFRAMES.length,
     isAlertingEnabled: params.isAlertingEnabled,
   });
 }

@@ -1,5 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-export const CANDLE_TIMEFRAMES = ['15m', '1h', '4h', '1d'] as const;
+// Velas de execução: as únicas que o motor lê (iguais ao TIMEFRAME do mercado e ao ENGINE_TIMEFRAME).
+export const RUN_CANDLE_TIMEFRAMES = ['15m', '1h', '4h', '1d'] as const;
+// Velas só de exibição (spec 017): retenção curta, nunca timeframe de execução.
+export const DISPLAY_CANDLE_TIMEFRAMES = ['3m'] as const;
+export const CANDLE_TIMEFRAMES = [...RUN_CANDLE_TIMEFRAMES, ...DISPLAY_CANDLE_TIMEFRAMES] as const;
+// Lote do expurgo das velas de exibição vencidas.
+export const DISPLAY_CANDLE_PURGE_BATCH_SIZE = 5_000;
 
 // 11 colunas por linha: 1000 linhas usam 11000 parâmetros, longe do teto de 65535 do Postgres.
 export const CANDLE_INSERT_BATCH_SIZE = 1_000;
@@ -18,4 +24,5 @@ export const CANDLE_TIMEFRAME_DURATION_MILLISECONDS: Readonly<
   '1h': 60 * MILLISECONDS_PER_MINUTE,
   '4h': 240 * MILLISECONDS_PER_MINUTE,
   '1d': 1_440 * MILLISECONDS_PER_MINUTE,
+  '3m': 3 * MILLISECONDS_PER_MINUTE,
 };

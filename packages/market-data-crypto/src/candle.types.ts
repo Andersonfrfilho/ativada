@@ -1,10 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { Timeframe } from './timeframe.constant.js';
+import type { MarketCandleTimeframe, Timeframe } from './timeframe.constant.js';
 
 // Preços e volume ficam como string decimal exata: float binário não cruza a borda (constituição §6).
-export type Candle = {
+// O padrão é o timeframe de execução (compatível com o motor); `MarketCandle` inclui as velas de exibição.
+export type Candle<TTimeframe extends MarketCandleTimeframe = Timeframe> = {
   readonly symbol: string;
-  readonly timeframe: Timeframe;
+  readonly timeframe: TTimeframe;
   readonly openTime: number;
   readonly closeTime: number;
   readonly open: string;
@@ -14,3 +15,5 @@ export type Candle = {
   readonly volume: string;
   readonly tradeCount: number;
 };
+
+export type MarketCandle = Candle<MarketCandleTimeframe>;

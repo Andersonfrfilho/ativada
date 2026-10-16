@@ -4,7 +4,7 @@ import { z } from '@ativada/environment';
 import { DECIMAL_STRING_SCHEMA, TIMESTAMP_SCHEMA } from '../decimal.schema.js';
 import { KLINE_EVENT_TYPE, KLINE_STREAM_SUFFIX } from '../kline-stream.constant.js';
 import { SYMBOL_PATTERN } from '../market-data.constant.js';
-import { TIMEFRAME } from '../timeframe.constant.js';
+import { MARKET_CANDLE_TIMEFRAME } from '../timeframe.constant.js';
 import type { RawCandle } from './ticker.types.js';
 
 // Campos documentados do `kline` da Binance; o que não é usado aqui é descartado. A vela ABERTA também é lida (`x` falso):
@@ -18,7 +18,7 @@ const candleEnvelopeSchema = z.object({
     k: z.object({
       t: TIMESTAMP_SCHEMA,
       s: z.string().regex(SYMBOL_PATTERN),
-      i: z.enum(TIMEFRAME),
+      i: z.enum(MARKET_CANDLE_TIMEFRAME),
       o: DECIMAL_STRING_SCHEMA,
       h: DECIMAL_STRING_SCHEMA,
       l: DECIMAL_STRING_SCHEMA,

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { Candle } from './candle.types.js';
+import type { MarketCandle } from './candle.types.js';
 import type { ServerClock } from './server-clock.js';
-import type { Timeframe } from './timeframe.constant.js';
+import type { MarketCandleTimeframe } from './timeframe.constant.js';
 
 export type FetchImplementation = (
   url: string,
@@ -27,7 +27,7 @@ export type MarketDataClientSettings = {
 
 export type FetchKlinesParams = {
   readonly symbol: string;
-  readonly timeframe: Timeframe;
+  readonly timeframe: MarketCandleTimeframe;
   readonly startTime?: number;
   readonly endTime?: number;
   readonly limit?: number;
@@ -35,16 +35,16 @@ export type FetchKlinesParams = {
 
 export type FetchKlinesRangeParams = {
   readonly symbol: string;
-  readonly timeframe: Timeframe;
+  readonly timeframe: MarketCandleTimeframe;
   readonly from: number;
   readonly to: number;
   // Com `onPage` as páginas vão ao consumidor e o retorno fica vazio: nada se acumula em memória.
-  readonly onPage?: (page: readonly Candle[]) => Promise<void>;
+  readonly onPage?: (page: readonly MarketCandle[]) => Promise<void>;
 };
 
 export type MarketDataClient = {
-  readonly fetchKlines: (params: FetchKlinesParams) => Promise<readonly Candle[]>;
-  readonly fetchKlinesRange: (params: FetchKlinesRangeParams) => Promise<readonly Candle[]>;
+  readonly fetchKlines: (params: FetchKlinesParams) => Promise<readonly MarketCandle[]>;
+  readonly fetchKlinesRange: (params: FetchKlinesRangeParams) => Promise<readonly MarketCandle[]>;
 };
 
 export type ResolvedMarketDataSettings = Required<

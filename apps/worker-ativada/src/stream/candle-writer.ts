@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { CandleRepository } from '@ativada/database';
 import { readErrorName } from '@ativada/environment';
-import { formatPairLabel, type Candle } from '@ativada/market-data-crypto';
+import { formatPairLabel, type MarketCandle } from '@ativada/market-data-crypto';
 
 import type { WorkerLogger } from '../logging/worker-logger.js';
 import {
@@ -20,11 +20,13 @@ export type CandleWriterDependencies = {
 };
 
 export type CandleWriter = {
-  readonly write: (candle: Candle) => Promise<void>;
+  readonly write: (candle: MarketCandle) => Promise<void>;
   readonly drain: () => Promise<void>;
 };
 
-export function buildCandleId(candle: Pick<Candle, 'symbol' | 'timeframe' | 'openTime'>): string {
+export function buildCandleId(
+  candle: Pick<MarketCandle, 'symbol' | 'timeframe' | 'openTime'>,
+): string {
   return `${formatPairLabel(candle)}/${candle.openTime}`;
 }
 
@@ -42,7 +44,7 @@ function sleepUnlessAborted(
 
 async function writeWithRetries(
   dependencies: CandleWriterDependencies,
-  candle: Candle,
+  candle: MarketCandle,
 ): Promise<void> {
   const candleId = buildCandleId(candle);
   for (let attempt = 1; ; attempt += 1) {

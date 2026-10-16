@@ -1,18 +1,18 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@ativada/environment';
 
-import type { Candle } from './candle.types.js';
+import type { MarketCandle } from './candle.types.js';
 import { DECIMAL_STRING_SCHEMA, TIMESTAMP_SCHEMA } from './decimal.schema.js';
 import { KLINE_EVENT_TYPE, MALFORMED_REASON } from './kline-stream.constant.js';
 import { SYMBOL_PATTERN } from './market-data.constant.js';
-import { TIMEFRAME } from './timeframe.constant.js';
+import { MARKET_CANDLE_TIMEFRAME } from './timeframe.constant.js';
 
 // Campos documentados do payload `kline` da Binance; o que não é usado aqui é descartado.
 const klineSchema = z.object({
   t: TIMESTAMP_SCHEMA,
   T: TIMESTAMP_SCHEMA,
   s: z.string().regex(SYMBOL_PATTERN),
-  i: z.enum(TIMEFRAME),
+  i: z.enum(MARKET_CANDLE_TIMEFRAME),
   o: DECIMAL_STRING_SCHEMA,
   c: DECIMAL_STRING_SCHEMA,
   h: DECIMAL_STRING_SCHEMA,
@@ -35,7 +35,7 @@ const envelopeSchema = z.object({
 type MalformedReason = (typeof MALFORMED_REASON)[keyof typeof MALFORMED_REASON];
 
 export type KlineMessage =
-  | { readonly kind: 'closed'; readonly candle: Candle }
+  | { readonly kind: 'closed'; readonly candle: MarketCandle }
   | { readonly kind: 'open' }
   | { readonly kind: 'malformed'; readonly reason: MalformedReason };
 
