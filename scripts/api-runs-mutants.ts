@@ -274,6 +274,45 @@ const MUTANTS: readonly Mutant[] = [
       'WHERE p.run_id = ${runId}',
     ),
   },
+  {
+    name: 'NOTICE_RUN_FILTER_IGNORES_THE_OWNER',
+    edit: WITHOUT('src/notices/notice-feed-sql.ts', 'r.user_id = ${owner} AND r.kind', 'r.kind'),
+  },
+  {
+    name: 'NOTICE_ORDERS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/notices/notice-feed-sql.ts',
+      'WHERE o.user_id = ${owner} AND o.side',
+      'WHERE o.side',
+    ),
+    also: WITHOUT('src/notices/notice-feed-sql.ts', 'r.user_id = ${owner} AND r.kind', 'r.kind'),
+  },
+  {
+    name: 'NOTICE_EXITS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/notices/notice-feed-sql.ts',
+      'WHERE p.user_id = ${owner} AND p.status',
+      'WHERE p.status',
+    ),
+    also: WITHOUT('src/notices/notice-feed-sql.ts', 'r.user_id = ${owner} AND r.kind', 'r.kind'),
+  },
+  {
+    name: 'NOTICE_RESUMES_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/notices/notice-feed-sql.ts',
+      'WHERE a.user_id = ${owner} AND a.side',
+      'WHERE a.side',
+    ),
+    also: WITHOUT('src/notices/notice-feed-sql.ts', 'r.user_id = ${owner} AND r.kind', 'r.kind'),
+  },
+  {
+    name: 'NOTICE_PRICE_ALERTS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/notices/notice-feed-sql.ts',
+      'WHERE pa.user_id = ${owner} AND pa.last_fired_at',
+      'WHERE pa.last_fired_at',
+    ),
+  },
 ];
 
 type Verdict = { readonly name: string; readonly exitCode: number; readonly output: string };

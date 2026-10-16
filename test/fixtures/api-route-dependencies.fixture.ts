@@ -110,6 +110,7 @@ export function buildApiRouteDependencies(
       deletePriceAlert: notUsed,
       clearFiredPriceAlerts: notUsed,
     },
+    listNotices: notUsed,
     runs: {
       routes: {
         enabled: ENABLED_MARKETS,

@@ -78,6 +78,11 @@ import type * as AssetUseCasesModule from '../../../apps/api-ativada/src/assets/
 import type * as AssetRoutesModule from '../../../apps/api-ativada/src/assets/assets.routes.js';
 import type * as PriceAlertEvaluatorModule from '../../../apps/api-ativada/src/price-alerts/price-alert-evaluator.js';
 import type * as PriceAlertEventDispatcherModule from '../../../apps/api-ativada/src/price-alerts/price-alert-event-dispatcher.js';
+import type * as NoticesRouteModule from '../../../apps/api-ativada/src/notices/notices.route.js';
+import type * as NoticesUseCaseModule from '../../../apps/api-ativada/src/notices/list-notices.use-case.js';
+import type * as NoticeViewModule from '../../../apps/api-ativada/src/notices/notice-view.js';
+import type * as NoticeMessagesModule from '../../../apps/api-ativada/src/notices/notice-messages.js';
+import type * as NoticeContentModule from '../../../apps/api-ativada/src/notices/notice-content.js';
 import type * as PriceAlertRoutesModule from '../../../apps/api-ativada/src/price-alerts/price-alerts.routes.js';
 import type * as PriceAlertUseCasesModule from '../../../apps/api-ativada/src/price-alerts/price-alert.use-cases.js';
 import type * as HorizonBestModule from '../../../apps/api-ativada/src/horizons/horizon-best.js';
@@ -175,6 +180,11 @@ export type ApiApp = {
   readonly assetRoutes: typeof AssetRoutesModule;
   readonly priceAlertEvaluator: typeof PriceAlertEvaluatorModule;
   readonly priceAlertEventDispatcher: typeof PriceAlertEventDispatcherModule;
+  readonly noticesRoute: typeof NoticesRouteModule;
+  readonly noticesUseCase: typeof NoticesUseCaseModule;
+  readonly noticeView: typeof NoticeViewModule;
+  readonly noticeMessages: typeof NoticeMessagesModule;
+  readonly noticeContent: typeof NoticeContentModule;
   readonly priceAlertRoutes: typeof PriceAlertRoutesModule;
   readonly priceAlertUseCases: typeof PriceAlertUseCasesModule;
   readonly horizonBest: typeof HorizonBestModule;
@@ -286,6 +296,11 @@ export async function loadApiApp(): Promise<ApiApp> {
     assetRoutes: await load('assets/assets.routes'),
     priceAlertEvaluator: await load('price-alerts/price-alert-evaluator'),
     priceAlertEventDispatcher: await load('price-alerts/price-alert-event-dispatcher'),
+    noticesRoute: await load('notices/notices.route'),
+    noticesUseCase: await load('notices/list-notices.use-case'),
+    noticeView: await load('notices/notice-view'),
+    noticeMessages: await load('notices/notice-messages'),
+    noticeContent: await load('notices/notice-content'),
     priceAlertRoutes: await load('price-alerts/price-alerts.routes'),
     priceAlertUseCases: await load('price-alerts/price-alert.use-cases'),
     horizonBest: await load('horizons/horizon-best'),

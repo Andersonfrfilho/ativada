@@ -14,6 +14,8 @@ import {
   createSentimentRoutes,
   type SentimentRouteDependencies,
 } from '../markets/sentiment.routes.js';
+import { createNoticesRoute } from '../notices/notices.route.js';
+import type { ListNoticesUseCase } from '../notices/list-notices.use-case.js';
 import { createProfileRoutes, type ProfileRouteDependencies } from '../profile/profile.routes.js';
 import type { Route } from '../router/route.types.js';
 import { createRunChartRoute } from '../runs/chart/run-chart.route.js';
@@ -77,6 +79,7 @@ export type ApiRouteDependencies = HealthRouteDependencies & {
   readonly horizons: HorizonRouteDependencies;
   readonly priceAlerts: PriceAlertRouteDependencies;
   readonly assets: AssetRouteDependencies;
+  readonly listNotices: ListNoticesUseCase;
   readonly runs: RunRoutesBundle;
   // `/v1/openapi.json` e `/v1/docs` existem só fora de produção: em produção nem entram na tabela.
   readonly isDocumentationEnabled: boolean;
@@ -98,6 +101,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     ...createHorizonRoutes(dependencies.horizons),
     ...createPriceAlertRoutes(dependencies.priceAlerts),
     ...createAssetRoutes(dependencies.assets),
+    createNoticesRoute(dependencies.listNotices),
     ...createRunRoutes(dependencies.runs.routes),
     ...createRunSeriesRoutes(dependencies.runs.series),
     createRunChartRoute(dependencies.runs.chart),

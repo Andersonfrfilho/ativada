@@ -27,6 +27,8 @@ import {
   createAssetDependencies,
   createPriceAlertDependencies,
 } from './create-portfolio-route-dependencies.js';
+import { createNoticeDependencies } from '../notices/create-notice-dependencies.js';
+import type { ListNoticesUseCase } from '../notices/list-notices.use-case.js';
 import { createListCandlesUseCase } from '../markets/list-candles.use-case.js';
 import type { MarketRouteDependencies } from '../markets/markets.routes.js';
 import { createCreateRunUseCase } from '../runs/create-run.use-case.js';
@@ -68,6 +70,7 @@ export type DomainRouteDependencies = {
   readonly horizons: ReturnType<typeof createHorizonRouteDependencies>;
   readonly priceAlerts: PriceAlertRouteDependencies;
   readonly assets: AssetRouteDependencies;
+  readonly listNotices: ListNoticesUseCase;
   readonly runs: RunRoutesBundle;
 };
 
@@ -202,6 +205,7 @@ export function createDomainRouteDependencies(params: DomainRouteParams): Domain
     horizons: createHorizonRouteDependencies({ ...params, coldGate: cold.horizonGate }),
     priceAlerts: createPriceAlertDependencies(params),
     assets: createAssetDependencies(params),
+    listNotices: createNoticeDependencies(params),
     runs: createRunDependencies(params, enabled),
   };
 }

@@ -4,6 +4,7 @@ import { closeDatabase, openDatabase } from '../src/database-handle.js';
 import { applyMigrations } from '../src/migrate.js';
 import { readDatabaseUrl } from '../src/read-database-url.js';
 import { checkAnalystReads } from './analyst-reads-checks.js';
+import { checkNoticeFeed } from './notice-feed-checks.js';
 import { checkPersistenceIsolation } from './persistence-isolation-checks.js';
 import { checkChartIsolation } from './run-chart-isolation-checks.js';
 import { checkLiveStatusReads } from './run-live-status-checks.js';
@@ -37,6 +38,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkLiveStatusReads(context);
     await checkProjectionReads(context);
     await checkAnalystReads(context);
+    await checkNoticeFeed(context);
   } finally {
     await client.close();
     await closeDatabase(handle);

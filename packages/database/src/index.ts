@@ -197,3 +197,4 @@ export { createAnalystDecisionRepository } from './analyst/analyst-decision.repo
 export type * from './analyst/analyst-decision.types.js';
 export type * from './analyst/analyst-goal-snapshot.js';
 export type * from './analyst/analyst-history.js';
+export * from './notices/notice-feed.exports.js';

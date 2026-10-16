@@ -70,6 +70,14 @@ export const RATE_LIMIT_POLICY = {
     keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
     maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
+  // O aviso do WebSocket refaz a lista de avisos (e o resumo ao voltar à aba) a cada passo de vela: 60 por minuto, uma consulta cada.
+  NOTICES: {
+    name: 'notices',
+    limit: 60,
+    windowMilliseconds: ONE_MINUTE_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
+  },
   RUN_EXPORT: {
     name: 'run-export',
     limit: 10,
