@@ -710,3 +710,170 @@
 .olderButton {
   margin: var(--space-3) var(--space-5);
 }
+
+/* ---------- Ficha do sinal e régua ---------- */
+.signal {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.signalHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.seal {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 56px;
+  height: 56px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-control);
+  background: var(--tone, var(--accent));
+  color: var(--on-tone, var(--on-accent));
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.buy .seal {
+  --on-tone: var(--on-buy);
+}
+
+.sell .seal {
+  --on-tone: var(--on-sell);
+}
+
+.cancel .seal {
+  --on-tone: var(--surface);
+  background: var(--bench);
+}
+
+.bigPrice {
+  font: 800 34px / 1.1 var(--font-data);
+  letter-spacing: -0.02em;
+}
+
+.signalTime {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.result {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.result-gain {
+  color: var(--buy);
+}
+
+.result-loss {
+  color: var(--sell);
+}
+
+.result-flat {
+  color: var(--ink-2);
+}
+
+.ruler {
+  container-type: inline-size;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.rulerSvg {
+  width: 100%;
+  height: auto;
+}
+
+.rulerList {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.rulerList li {
+  padding: 2px 0 2px var(--space-3);
+  border-left: 4px solid var(--ink-3);
+}
+
+.row-target {
+  border-left-color: var(--buy) !important;
+}
+
+.row-stop {
+  border-left-color: var(--sell) !important;
+}
+
+.rulerLegend {
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+}
+
+.axis {
+  fill: var(--ink-3);
+}
+
+.zoneLoss {
+  fill: var(--zone-loss);
+}
+
+.zoneGain {
+  fill: var(--zone-gain);
+}
+
+.tick-stop {
+  stroke: var(--sell);
+  stroke-width: 2;
+}
+
+.tick-entry {
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.tick-target {
+  stroke: var(--buy);
+  stroke-width: 2;
+}
+
+.rulerText {
+  fill: var(--ink-2);
+  font: 600 11px var(--font-body);
+}
+
+.rulerTextStrong {
+  fill: var(--ink);
+  font: 800 12px var(--font-data);
+}
+
+.cursorMark {
+  fill: var(--ink);
+}
+
+@container (max-width: 279px) {
+  .rulerSvg {
+    display: none;
+  }
+
+  .rulerList {
+    display: grid;
+  }
+}
+
+@media (max-width: 639px) {
+  .toast .ruler {
+    display: none;
+  }
+}

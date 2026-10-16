@@ -7,6 +7,7 @@ import styles from './Notices.module.css';
 import type { Notice } from './notice.validation.js';
 import { describeNoticePair, describeWhen, fillTimeTokens } from './notice-text.js';
 import { buildChartLink, describeTone } from './notice-tone.js';
+import { buildNoticeRuler, SignalCard } from './SignalCard.component.js';
 import { useNoticeCenter } from './useNoticeCenter.hook.js';
 
 function ItemTop(props: { readonly notice: Notice; readonly isUnread: boolean }): ReactElement {
@@ -19,6 +20,21 @@ function ItemTop(props: { readonly notice: Notice; readonly isUnread: boolean })
       {props.isUnread ? <span className={styles['newTag']}>Novo</span> : null}
       <span className={styles['itemTime']}>{when}</span>
     </div>
+  );
+}
+
+// O texto do item: a ficha com a régua para compra executada e venda; a frase simples para os demais.
+function ItemSummary({ notice }: { readonly notice: Notice }): ReactElement {
+  const { timeZone, now } = useNoticeCenter();
+  const ruler = buildNoticeRuler(notice);
+  if (ruler !== undefined) {
+    return <SignalCard notice={notice} ruler={ruler} now={now} timeZone={timeZone} />;
+  }
+  return (
+    <>
+      <p className={styles['pair']}>{describeNoticePair(notice)}</p>
+      <p className={styles['detail']}>{fillTimeTokens(notice.message, notice, timeZone)}</p>
+    </>
   );
 }
 
@@ -37,10 +53,7 @@ export function NoticeItem({ notice }: { readonly notice: Notice }): ReactElemen
       </span>
       <div>
         <ItemTop notice={notice} isUnread={isUnread} />
-        <p className={styles['pair']}>{describeNoticePair(notice)}</p>
-        <p className={styles['detail']}>
-          {fillTimeTokens(notice.message, notice, center.timeZone)}
-        </p>
+        <ItemSummary notice={notice} />
         {detail === null ? null : (
           <details className={styles['disclosure']}>
             <summary>Ver detalhe</summary>

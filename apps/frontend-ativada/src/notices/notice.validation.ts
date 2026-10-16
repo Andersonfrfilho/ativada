@@ -22,6 +22,7 @@ export const noticeSchema = z.object({
   fee: decimalText.nullable(),
   resultRate: decimalText.nullable(),
   targetPrice: decimalText.nullable(),
+  entryPrice: decimalText.nullable(),
   stopPrice: decimalText.nullable(),
   reasonCode: z.string(),
   title: z.string(),

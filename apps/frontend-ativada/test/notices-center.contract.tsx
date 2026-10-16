@@ -139,6 +139,29 @@ describe('o ciclo da ordem é um toast que muda de estado (RF03, RF05)', () => {
     );
   });
 
+  test('a ficha: selo COMPRA, preço em destaque e a régua com os três níveis', async () => {
+    const rig = mount();
+    await bell();
+    pushEvent(rig, [filled()]);
+    const stack = await waitFor(() => within(screen.getByRole('list', { name: STACK })));
+    await stack.findByText('COMPRA');
+    expect(stack.getByText('12,458', { selector: 'p' })).toBeDefined();
+    const ruler = stack.getByRole('img', { name: /^Níveis da operação:/ });
+    expect(ruler.getAttribute('aria-label')).toBe(
+      'Níveis da operação: Proteção 12,379 (−0,63%), Entrada 12,458, Alvo 12,590 (+1,06%). Perda possível −0,63% · Ganho possível +1,06% · Ganho ÷ perda 1,7 : 1.',
+    );
+  });
+
+  test('a venda: selo VENDA, cursor "Saiu" no preço de saída e o resultado com seta e sinal', async () => {
+    const rig = mount();
+    await bell();
+    pushEvent(rig, [buildExitNotice({ ...recent(1) })]);
+    const stack = await waitFor(() => within(screen.getByRole('list', { name: STACK })));
+    await stack.findByText('VENDA');
+    expect(stack.getByRole('img', { name: /Saiu 12,372/ })).toBeDefined();
+    expect(stack.getByText('−0,13% no saldo da simulação')).toBeDefined();
+  });
+
   test('cancelada por sinal contrário: palavra "Cancelada" e a frase em cinza, sem erro', async () => {
     const rig = mount();
     await bell();

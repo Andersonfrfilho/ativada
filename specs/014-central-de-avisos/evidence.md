@@ -123,3 +123,22 @@ código e a varredura de palavras proibidas e de horas estão em `test/api-notic
   no mesmo toast com anúncio, cancelada em cinza, 8 s com pausa, teto de 3, fechar não marca como lido, desligar o tipo e
   silenciar mantêm o sino, tela da própria simulação sem toast, gaveta com foco/Esc/Tab, "Marcar todos", filtro, reconexão
   com UM resumo, notificação só no clique).
+
+### T2.6 — Ficha do sinal e régua dos níveis
+
+- `SignalCard`: selo de 56 px (seta + COMPRA ou VENDA + cor `--buy`/`--sell`, texto em `--on-buy`/`--on-sell`), preço em
+  `--font-data` a 34 px no tick do par, hora, a linha direta do servidor ("Sinal de compra: LINK/USDT a 12,458 · vender no
+  alvo 12,590 · sair se cair a 12,379."), o resultado na venda (▲/▼/= com sinal e cor) e a régua. Aparece no toast e no item
+  da gaveta para compra executada e venda; cancelada, recusada e as demais ficam como frase simples, em cinza.
+- `LevelRuler` em SVG com atributos (`x`, `width`, nunca `style=`): proteção, entrada e alvo rotulados com % (−0,63% e
+  +1,06% no exemplo), zonas de perda e ganho (`--zone-loss`, `--zone-gain`), cursor "Saiu 12,372" no preço de saída (mesmo fora
+  da faixa) e a legenda "Perda possível −0,63% · Ganho possível +1,06% · Ganho ÷ perda 1,7 : 1". Abaixo de 280 px do contêiner
+  (`@container`) vira a lista vertical; no toast abaixo de 640 px a régua some (fica na gaveta). `role="img"` com a descrição
+  textual dos três níveis. Os únicos `Number(` do módulo são os dois da posição de desenho (`level-ruler.ts`, provado por teste).
+- Preços no tick do par: `symbol-filters.ts` é o espelho do painel da tabela de produção (`test/panel-symbol-filters.contract.test.ts`
+  prende a igualdade): LINK/USDT 3 casas, para cima quando sobra casa; BTC e ETH, 2.
+- A rota ganhou o campo aditivo `entryPrice` (de `positions.entry_price`): a venda não tem a ordem de entrada ao lado.
+- Gates: `typecheck`, `lint`, `format:check`; painel inteiro 1.325 testes verdes (`level-ruler.contract.ts` com 15, mais 2 na tela:
+  ficha da compra e da venda); `api-notices` 37 e `route-isolation-test` com `entryPrice`; contraste dos tokens novos já em T2.3.
+- Pendência: o cartão "Sinal em andamento" da tela da simulação e o cursor "agora" ao vivo (COMPRADO) ficam na T4.1, que
+  mexe nos arquivos das specs 009 e 011.

@@ -8,7 +8,8 @@ import { NOTICE_STATE } from './notice.constant.js';
 import type { Notice } from './notice.validation.js';
 import type { ToastEntry } from './notice-center.types.js';
 import { NoticeBadge } from './NoticeBadge.component.js';
-import { NoticeBody } from './NoticeBody.component.js';
+import { FIXED_LINE, NoticeBody } from './NoticeBody.component.js';
+import { buildNoticeRuler, SignalCard } from './SignalCard.component.js';
 import { buildChartLink, describeTone } from './notice-tone.js';
 import { describeWhen } from './notice-text.js';
 import { withMutedRun } from './notice-preferences.js';
@@ -31,6 +32,21 @@ function MuteButton(props: { readonly runId: string; readonly onDone: () => void
     >
       Silenciar esta simulação
     </button>
+  );
+}
+
+function ToastContent({ notice }: { readonly notice: Notice }): ReactElement {
+  const { timeZone, now } = useNoticeCenter();
+  const ruler = buildNoticeRuler(notice);
+  return (
+    <>
+      {ruler === undefined ? (
+        <NoticeBody notice={notice} timeZone={timeZone} hasFixedLine={false} />
+      ) : (
+        <SignalCard notice={notice} ruler={ruler} now={now} timeZone={timeZone} />
+      )}
+      <p className={styles['fixedLine']}>{FIXED_LINE}</p>
+    </>
   );
 }
 
@@ -83,7 +99,7 @@ export function NoticeToast({ entry, isCompact }: ToastProps): ReactElement {
         <span className={styles['when']}>{when}</span>
         <ToastCloseButton onClose={dismiss} />
       </div>
-      <NoticeBody notice={notice} timeZone={center.timeZone} hasFixedLine />
+      <ToastContent notice={notice} />
       <ToastActions notice={notice} onDone={dismiss} />
     </li>
   );
