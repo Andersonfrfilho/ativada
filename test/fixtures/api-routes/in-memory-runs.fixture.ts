@@ -32,7 +32,7 @@ import {
   createInMemoryAnalystDecisions,
   type InMemoryAnalystDecisions,
 } from './in-memory-analyst-decisions.fixture.js';
-import { createInMemoryLiveStatus } from './in-memory-live-status.fixture.js';
+import { createInMemoryLiveStatus, type LiveRunHead } from './in-memory-live-status.fixture.js';
 import { createInMemoryProjections } from './in-memory-projections.fixture.js';
 import {
   referenceFillClusters,
@@ -136,8 +136,23 @@ function pageOf<TRow, TCursor>(
   };
 }
 
+function readField(value: RunRecord['request'], key: string): RunRecord['request'] {
+  if (typeof value !== 'object' || value === null) return undefined;
+  return Object.entries(value).find(([name]) => name === key)?.[1];
+}
+
+function readAnalystMode(request: RunRecord['request']): string | undefined {
+  const mode = readField(readField(request, 'analyst'), 'mode');
+  return typeof mode === 'string' ? mode : undefined;
+}
+
+function readInitialBalance(parameters: RunRecord['runParameters']): string {
+  const balance = readField(parameters, 'initialBalance');
+  return typeof balance === 'string' ? balance : '10000';
+}
+
 export function createInMemoryRuns(
-  strategies: Pick<StrategyRepository, 'findVersion'>,
+  strategies: Pick<StrategyRepository, 'findVersion' | 'findStrategy'>,
   // Chamado quando uma execução fica atrelada a uma meta: a FK RESTRICT do banco, que impede apagar a meta.
   onGoalLinked: (goalId: string) => void = () => undefined,
   // As velas que o preço do gráfico lê (a mesma semente do repositório de velas do harness).
@@ -543,11 +558,42 @@ export function createInMemoryRuns(
   };
 
   const liveCalls: string[] = [];
+  const liveHeadsOf = async (scope: OwnerScope): Promise<readonly LiveRunHead[]> => {
+    const active = runs
+      .filter(
+        (stored) =>
+          stored.userId === scope.ownerUserId &&
+          stored.deletedAt === undefined &&
+          stored.record.kind === 'live_paper' &&
+          (stored.record.status === RUN_STATUS.QUEUED ||
+            stored.record.status === RUN_STATUS.RUNNING),
+      )
+      .sort((left, right) => right.sequence - left.sequence);
+    return Promise.all(
+      active.map(async (stored): Promise<LiveRunHead> => {
+        const { record } = stored;
+        const version = await strategies.findVersion(scope, record.strategyVersionId);
+        const strategy =
+          version === undefined
+            ? undefined
+            : await strategies.findStrategy(scope, version.strategyId);
+        return {
+          runId: record.id,
+          strategyName: strategy?.name ?? '',
+          timeframe: record.timeframe,
+          analystMode: readAnalystMode(record.request),
+          initialBalance: readInitialBalance(record.runParameters),
+          isWaitingForData: record.waitingSince !== undefined,
+        };
+      }),
+    );
+  };
   const liveStatus = createInMemoryLiveStatus({
     isOwned: (scope, runId) => ownedRun(scope, runId) !== undefined,
     storeOf,
     candleSeed,
     calls: liveCalls,
+    liveRunsOf: (scope) => liveHeadsOf(scope),
   });
 
   const projections = createInMemoryProjections({

@@ -9,6 +9,7 @@ import { equityPoints } from '../schema/equity-points.schema.js';
 import { positions } from '../schema/positions.schema.js';
 import { signals } from '../schema/signals.schema.js';
 import { POSITION_STATUS, SIGNAL_ACTION, type SignalAction } from './run-result.constant.js';
+import { listLiveSummaries } from './run-live-summary.js';
 import { toPositionInput, toSignalInput } from './run-result-record.mapper.js';
 import type {
   DecisionMarkerRow,
@@ -166,5 +167,6 @@ export function createRunLiveStatusRepository(handle: DatabaseHandle): RunLiveSt
       listPositionsAround({ executor: database, scope, runId, params }),
     listDecisionMarkers: (scope, runId, params) =>
       listDecisionMarkers({ executor: database, scope, runId, params }),
+    listLiveSummaries: (scope) => listLiveSummaries(database, scope),
   };
 }

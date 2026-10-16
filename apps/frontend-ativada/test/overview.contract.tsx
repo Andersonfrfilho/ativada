@@ -118,6 +118,21 @@ function candleResponder(): FakeResponder {
   };
 }
 
+const SUMMARY = {
+  runId: RUN_ID,
+  strategyName: 'Placar clássico',
+  analystMode: null,
+  initialBalance: '10000',
+  balance: '10420.00',
+  result: '420',
+  resultRate: '0.042',
+  buyAndHold: { resultRate: '0.01', differencePoints: '3.2', comparison: 'above' },
+  buyCount: 1,
+  sellCount: 0,
+  lastDecisionAt: NOW - HOUR,
+  isWaitingForData: false,
+};
+
 function overviewRoutes(overrides: {
   readonly waitingForData?: unknown;
   readonly runs?: FakeResponder;
@@ -184,6 +199,11 @@ function overviewRoutes(overrides: {
           }),
         ),
     },
+    {
+      method: 'GET',
+      path: '/v1/runs/live-summary',
+      respond: (): Response => dataResponse({ items: [SUMMARY] }),
+    },
     { method: 'GET', path: '/v1/markets/candles', respond: candleResponder() },
   ];
 }
@@ -206,7 +226,7 @@ describe('overview page', () => {
     expect(balance.textContent).toContain('10.420,00');
     expect(balance.textContent).toContain('+4,20%');
     expect(balance.textContent).toContain('10.000,00');
-    expect((await screen.findByText('Rodando')).tagName).toBeDefined();
+    expect((await screen.findAllByText('Rodando')).length).toBeGreaterThan(0);
   });
 
   test('marks the buys and sells on the balance curve, by shape and not only by colour', async () => {

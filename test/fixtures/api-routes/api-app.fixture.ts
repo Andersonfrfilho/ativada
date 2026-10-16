@@ -26,6 +26,8 @@ import type * as TradeSummaryUseCaseModule from '../../../apps/api-ativada/src/r
 import type * as TradeSummaryMessageModule from '../../../apps/api-ativada/src/runs/trade-summary/trade-summary-message.js';
 import type * as LiveStatusRouteModule from '../../../apps/api-ativada/src/runs/live-status/live-status.route.js';
 import type * as LiveStatusUseCaseModule from '../../../apps/api-ativada/src/runs/live-status/live-status.use-case.js';
+import type * as LiveSummaryRouteModule from '../../../apps/api-ativada/src/runs/live-summary/live-summary.route.js';
+import type * as LiveSummaryUseCaseModule from '../../../apps/api-ativada/src/runs/live-summary/live-summary.use-case.js';
 import type * as RunDecisionsRouteModule from '../../../apps/api-ativada/src/runs/live-status/run-decisions.route.js';
 import type * as RunDecisionsUseCaseModule from '../../../apps/api-ativada/src/runs/live-status/run-decisions.use-case.js';
 import type * as StrategyLayersRouteModule from '../../../apps/api-ativada/src/runs/projections/strategy-layers.route.js';
@@ -137,6 +139,8 @@ export type ApiApp = {
   readonly tradeSummaryMessage: typeof TradeSummaryMessageModule;
   readonly liveStatusRoute: typeof LiveStatusRouteModule;
   readonly liveStatusUseCase: typeof LiveStatusUseCaseModule;
+  readonly liveSummaryRoute: typeof LiveSummaryRouteModule;
+  readonly liveSummaryUseCase: typeof LiveSummaryUseCaseModule;
   readonly runDecisionsRoute: typeof RunDecisionsRouteModule;
   readonly runDecisionsUseCase: typeof RunDecisionsUseCaseModule;
   readonly strategyLayersRoute: typeof StrategyLayersRouteModule;
@@ -253,6 +257,8 @@ export async function loadApiApp(): Promise<ApiApp> {
     tradeSummaryMessage: await load('runs/trade-summary/trade-summary-message'),
     liveStatusRoute: await load('runs/live-status/live-status.route'),
     liveStatusUseCase: await load('runs/live-status/live-status.use-case'),
+    liveSummaryRoute: await load('runs/live-summary/live-summary.route'),
+    liveSummaryUseCase: await load('runs/live-summary/live-summary.use-case'),
     runDecisionsRoute: await load('runs/live-status/run-decisions.route'),
     runDecisionsUseCase: await load('runs/live-status/run-decisions.use-case'),
     strategyLayersRoute: await load('runs/projections/strategy-layers.route'),

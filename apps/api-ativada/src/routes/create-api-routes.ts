@@ -25,6 +25,8 @@ import { createAnalystDecisionsRoute, createAnalystRoute } from '../runs/analyst
 import type { AnalystUseCase } from '../runs/analyst/analyst.use-case.js';
 import { createLiveStatusRoute } from '../runs/live-status/live-status.route.js';
 import type { LiveStatusUseCase } from '../runs/live-status/live-status.use-case.js';
+import { createLiveSummaryRoute } from '../runs/live-summary/live-summary.route.js';
+import type { LiveSummaryUseCase } from '../runs/live-summary/live-summary.use-case.js';
 import { createRunDecisionsRoute } from '../runs/live-status/run-decisions.route.js';
 import { createProjectionsRoute } from '../runs/projections/projections.route.js';
 import type { ProjectionsUseCase } from '../runs/projections/projections.use-case.js';
@@ -58,12 +60,19 @@ export type RunRoutesBundle = {
   readonly chart: RunChartUseCase;
   readonly tradeSummary: TradeSummaryUseCase;
   readonly liveStatus: LiveStatusUseCase;
+  readonly liveSummary: LiveSummaryUseCase;
   readonly decisions: RunDecisionsUseCase;
   readonly strategyLayers: StrategyLayersUseCase;
   readonly projections: ProjectionsUseCase;
   readonly analyst: AnalystUseCase;
   readonly analystDecisions: AnalystDecisionsUseCase;
 };
+
+// O que as leituras do acompanhamento ao vivo entregam ao pacote de rotas de execuções.
+export type LiveAwareUseCases = Pick<
+  RunRoutesBundle,
+  'chart' | 'liveStatus' | 'liveSummary' | 'decisions' | 'strategyLayers' | 'projections'
+>;
 
 export type ApiRouteDependencies = HealthRouteDependencies & {
   readonly session: SessionRouteDependencies;
@@ -107,6 +116,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     createRunChartRoute(dependencies.runs.chart),
     createTradeSummaryRoute(dependencies.runs.tradeSummary),
     createLiveStatusRoute(dependencies.runs.liveStatus),
+    createLiveSummaryRoute(dependencies.runs.liveSummary),
     createRunDecisionsRoute(dependencies.runs.decisions),
     createStrategyLayersRoute(dependencies.runs.strategyLayers),
     createProjectionsRoute(dependencies.runs.projections),

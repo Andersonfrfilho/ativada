@@ -37,6 +37,7 @@ import type { RunDispatcher } from '../runs/run-dispatcher.js';
 import { createRunChartUseCase } from '../runs/chart/run-chart.use-case.js';
 import { createAnalystUseCases } from '../runs/analyst/create-analyst-use-cases.js';
 import { createLiveStatusUseCase } from '../runs/live-status/live-status.use-case.js';
+import { createLiveSummaryUseCase } from '../runs/live-summary/live-summary.use-case.js';
 import { createRunDecisionsUseCase } from '../runs/live-status/run-decisions.use-case.js';
 import { createProjectionsUseCase } from '../runs/projections/projections.use-case.js';
 import { createStrategyLayersUseCase } from '../runs/projections/strategy-layers.use-case.js';
@@ -49,7 +50,7 @@ import {
   createDeleteRunUseCase,
 } from '../runs/run.use-cases.js';
 import type { RunRouteDependencies } from '../runs/runs.routes.js';
-import type { RunRoutesBundle } from './create-api-routes.js';
+import type { LiveAwareUseCases, RunRoutesBundle } from './create-api-routes.js';
 import {
   createAddVersionUseCase,
   createDeleteStrategyUseCase,
@@ -116,7 +117,7 @@ function createLiveAwareUseCases(
     readonly results: RunResultRepository;
     readonly exchange: string;
   },
-): Pick<RunRoutesBundle, 'chart' | 'liveStatus' | 'decisions' | 'strategyLayers' | 'projections'> {
+): LiveAwareUseCases {
   const readers = {
     strategies: createStrategyRepository(params.database),
     live: createRunLiveStatusRepository(params.database),
@@ -125,6 +126,7 @@ function createLiveAwareUseCases(
   return {
     chart: createRunChartUseCase({ ...shared, ...readers }),
     liveStatus: createLiveStatusUseCase({ ...dependencies, now: params.now }),
+    liveSummary: createLiveSummaryUseCase(readers),
     decisions: createRunDecisionsUseCase(dependencies),
     projections: createProjectionsUseCase({
       ...dependencies,

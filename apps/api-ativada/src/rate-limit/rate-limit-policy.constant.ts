@@ -101,6 +101,14 @@ export const RATE_LIMIT_POLICY = {
     keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
     maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
+  // A Visão geral refaz o resumo de todas as simulações a cada aviso do stream: uma consulta só, 60 por minuto sobram.
+  RUN_LIVE_SUMMARY: {
+    name: 'run-live-summary',
+    limit: 60,
+    windowMilliseconds: ONE_MINUTE_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
+  },
   RUN_TRADE_SUMMARY: {
     name: 'run-trade-summary',
     limit: 30,

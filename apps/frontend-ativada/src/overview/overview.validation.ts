@@ -10,6 +10,7 @@ export const runSchema = z.object({
   symbol: z.string(),
   timeframe: z.string(),
   periodStart: z.number().optional(),
+  stalledSince: z.number().optional(),
   goalId: z.string().nullish(),
   goalOutcome: z.string().nullish(),
 });

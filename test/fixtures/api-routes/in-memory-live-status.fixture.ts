@@ -3,6 +3,8 @@ import type {
   CandleRecord,
   DecisionRow,
   EquityPointInput,
+  FillInput,
+  LiveRunSummaryRow,
   PositionInput,
   RunLiveStatusRepository,
   SignalInput,
@@ -15,7 +17,14 @@ export type LiveStatusStore = {
   readonly signals: readonly SignalInput[];
   readonly positions: readonly PositionInput[];
   readonly equity: readonly EquityPointInput[];
+  readonly fills: readonly FillInput[];
 };
+
+// O que a execução ativa guarda além dos resultados: o restante do resumo sai das listas em memória.
+export type LiveRunHead = Pick<
+  LiveRunSummaryRow,
+  'runId' | 'strategyName' | 'timeframe' | 'analystMode' | 'initialBalance' | 'isWaitingForData'
+>;
 
 export type InMemoryLiveStatusParams = {
   readonly isOwned: (scope: OwnerScope, runId: string) => boolean;
@@ -30,9 +39,12 @@ type Reader<TName extends keyof RunLiveStatusRepository> = RunLiveStatusReposito
 // As leituras do acompanhamento sobre as listas em memória, com a mesma semântica do Postgres: filtro de dono em cada uma,
 // decrescente por vela, junção com a vela pela chave, posições que cruzam a faixa.
 export function createInMemoryLiveStatus(
-  params: InMemoryLiveStatusParams,
+  params: InMemoryLiveStatusParams & {
+    // As simulações ao vivo ativas do dono, da mais recente para a mais antiga.
+    readonly liveRunsOf: (scope: OwnerScope) => Promise<readonly LiveRunHead[]>;
+  },
 ): RunLiveStatusRepository {
-  const { isOwned, storeOf, candleSeed, calls } = params;
+  const { isOwned, storeOf, candleSeed, calls, liveRunsOf } = params;
 
   const readLatestEquityPoint: Reader<'readLatestEquityPoint'> = (scope, runId) => {
     calls.push('readLatestEquityPoint');
@@ -102,5 +114,33 @@ export function createInMemoryLiveStatus(
     return Promise.resolve(rows);
   };
 
-  return { readLatestEquityPoint, listDecisionRows, listPositionsAround, listDecisionMarkers };
+  const listLiveSummaries: Reader<'listLiveSummaries'> = async (scope) => {
+    calls.push('listLiveSummaries');
+    const heads = await liveRunsOf(scope);
+    return heads.map((head): LiveRunSummaryRow => {
+      const store = storeOf(head.runId);
+      const latest = [...store.equity].sort((left, right) => right.candleTime - left.candleTime)[0];
+      const lastDecision = store.signals.reduce<number | undefined>(
+        (current, signal) =>
+          current === undefined || signal.candleTime > current ? signal.candleTime : current,
+        undefined,
+      );
+      return {
+        ...head,
+        latestEquity: latest?.equity,
+        latestBenchmark: latest?.benchmark,
+        buyCount: store.fills.filter((fill) => fill.side === 'buy').length,
+        sellCount: store.fills.filter((fill) => fill.side === 'sell').length,
+        lastDecisionCandleTime: lastDecision,
+      };
+    });
+  };
+
+  return {
+    readLatestEquityPoint,
+    listDecisionRows,
+    listPositionsAround,
+    listDecisionMarkers,
+    listLiveSummaries,
+  };
 }

@@ -272,6 +272,9 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     app.liveStatusRoute.createLiveStatusRoute(
       app.liveStatusUseCase.createLiveStatusUseCase({ ...liveStatusDeps, now: () => clock.now }),
     ),
+    app.liveSummaryRoute.createLiveSummaryRoute(
+      app.liveSummaryUseCase.createLiveSummaryUseCase({ live: runs.liveStatus }),
+    ),
     app.runDecisionsRoute.createRunDecisionsRoute(
       app.runDecisionsUseCase.createRunDecisionsUseCase(liveStatusDeps),
     ),

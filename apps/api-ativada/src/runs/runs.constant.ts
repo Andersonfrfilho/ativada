@@ -57,6 +57,7 @@ export const TRADE_STATUS_FILTER = ['open', 'closed'] as const;
 export const RUN_CHART_PATH = '/v1/runs/:runId/chart';
 export const RUN_TRADE_SUMMARY_PATH = '/v1/runs/:runId/trade-summary';
 export const RUN_LIVE_STATUS_PATH = '/v1/runs/:runId/live-status';
+export const RUN_LIVE_SUMMARY_PATH = '/v1/runs/live-summary';
 export const RUN_DECISIONS_PATH = '/v1/runs/:runId/decisions';
 export const RUN_STRATEGY_LAYERS_PATH = '/v1/runs/:runId/strategy-layers';
 export const RUN_PROJECTIONS_PATH = '/v1/runs/:runId/projections';

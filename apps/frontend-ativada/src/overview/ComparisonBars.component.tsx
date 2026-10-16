@@ -27,7 +27,7 @@ function absolute(value: bigint): bigint {
 }
 
 // A menor escala redonda que cabe nas duas barras: com ±3% a diferença pequena ainda aparece.
-function pickScaleLimit(rates: readonly bigint[]): bigint {
+export function pickScaleLimit(rates: readonly bigint[]): bigint {
   const largest = rates.reduce(
     (current, rate) => (absolute(rate) > current ? absolute(rate) : current),
     ZERO,

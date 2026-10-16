@@ -44,6 +44,22 @@ export type ListPositionsAroundParams = {
   readonly limit: number;
 };
 
+// O resumo de uma simulação ao vivo ativa para a Visão geral: o último ponto do saldo, as contagens e a última decisão.
+export type LiveRunSummaryRow = {
+  readonly runId: string;
+  readonly strategyName: string;
+  readonly timeframe: string;
+  // `shadow` ou `govern` quando a simulação tem analista; ausente sem ele.
+  readonly analystMode: string | undefined;
+  readonly initialBalance: string;
+  readonly latestEquity: string | undefined;
+  readonly latestBenchmark: string | undefined;
+  readonly buyCount: number;
+  readonly sellCount: number;
+  readonly lastDecisionCandleTime: number | undefined;
+  readonly isWaitingForData: boolean;
+};
+
 // As leituras do acompanhamento ao vivo (ADR 0002, spec 008, L19): cada uma filtra o dono nela mesma, por chave e com LIMIT.
 export type RunLiveStatusRepository = {
   readonly readLatestEquityPoint: (
@@ -66,4 +82,6 @@ export type RunLiveStatusRepository = {
     runId: string,
     params: ListDecisionMarkersParams,
   ) => Promise<readonly DecisionMarkerRow[]>;
+  // Todas as simulações ao vivo ativas do dono numa consulta só (sem uma leitura por simulação).
+  readonly listLiveSummaries: (scope: OwnerScope) => Promise<readonly LiveRunSummaryRow[]>;
 };
