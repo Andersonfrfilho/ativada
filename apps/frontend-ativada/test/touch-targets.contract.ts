@@ -36,6 +36,9 @@ const TARGETS: readonly (readonly [string, string])[] = [
   ['runs/live-tracking/Decisions.module.css', '.expand'],
   ['runs/live-tracking/Decisions.module.css', '.more'],
   ['runs/live-tracking/LiveTracking.module.css', '.link'],
+  ['runs/team-room/TeamRoomCard.module.css', '.tool'],
+  ['runs/team-room/TeamRoomCard.module.css', '.switchButton'],
+  ['runs/team-room/TeamRoomCard.module.css', '.linesSummary'],
 ];
 
 describe('alvos de toque', () => {
