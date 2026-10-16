@@ -16,6 +16,8 @@ import {
   ENGINE_TIMEFRAME_DURATION_MILLISECONDS,
   ENTRY_RISK_SCALE,
   formatEngineDecimal,
+  ORDER_PURPOSE,
+  ORDER_STATUS,
   toEngineDecimal,
   type EngineCandle,
   type EngineState,
@@ -41,9 +43,13 @@ export type SimulationParams = {
   // A primeira vela passada ao motor: o início do período menos o aquecimento da estratégia.
   readonly firstIndex: number;
   readonly withAnalyst: boolean;
+  // `gate_only` desliga o corte de tamanho (¼, ½ viram 1×) para medir quanto o tamanho muda o resultado; o padrão é o analista inteiro.
+  readonly sizeMode?: SizeMode;
   // Recebe o resultado FINAL de cada passo (a paridade com o ao vivo grava as linhas dele).
   readonly onStep?: (result: StepResult) => void;
 };
+
+export type SizeMode = 'cap' | 'gate_only';
 
 export type SimulationRun = { readonly outcome: SimulationOutcome; readonly tally: AnalystTally };
 
@@ -51,13 +57,22 @@ type MutableTally = {
   decisions: number;
   failed: number;
   gateClosed: number;
+  entryOrders: Record<string, number>;
   postures: Record<string, number>;
   reasons: Record<string, number>;
   commands: Record<string, number>;
 };
 
 function createTally(): MutableTally {
-  return { decisions: 0, failed: 0, gateClosed: 0, postures: {}, reasons: {}, commands: {} };
+  return {
+    decisions: 0,
+    failed: 0,
+    gateClosed: 0,
+    entryOrders: {},
+    postures: {},
+    reasons: {},
+    commands: {},
+  };
 }
 
 function bump(counts: Record<string, number>, key: string): void {
@@ -107,6 +122,11 @@ function tallyDecision(tally: MutableTally, verdict: AnalystVerdict, inputs: Gov
   for (const command of inputs.commands) bump(tally.commands, command.kind);
 }
 
+function withSizeMode(inputs: GovernInputs, sizeMode: SizeMode | undefined): GovernInputs {
+  if (sizeMode !== 'gate_only' || inputs.entryRiskScale === ENTRY_RISK_SCALE.NONE) return inputs;
+  return { ...inputs, entryRiskScale: ENTRY_RISK_SCALE.FULL };
+}
+
 // O analista do worker (a mesma série por âncora, o mesmo `analyzeStep`) governando uma carteira em memória.
 function createAnalystDriver(params: SimulationParams, cache: AnalystSeriesCache): AnalystDriver {
   const tally = createTally();
@@ -139,12 +159,15 @@ function createAnalystDriver(params: SimulationParams, cache: AnalystSeriesCache
       };
       const context = { setup: params.setup, strategy: params.strategy };
       const verdict = await analyzeStep(kit, { context, candle, result });
-      const inputs = toGovernInputs({
-        decision: 'decision' in verdict ? verdict.decision : undefined,
-        wallet: { hasPosition: result.state.wallet.position !== null },
-        candle,
-        isGoalEnded: false,
-      });
+      const inputs = withSizeMode(
+        toGovernInputs({
+          decision: 'decision' in verdict ? verdict.decision : undefined,
+          wallet: { hasPosition: result.state.wallet.position !== null },
+          candle,
+          isGoalEnded: false,
+        }),
+        params.sizeMode,
+      );
       tallyDecision(tally, verdict, inputs);
       return inputs;
     },
@@ -192,6 +215,15 @@ function createRecorder(): Recorder {
   };
 }
 
+// Quantas ordens de entrada nasceram com cada teto de entrada (o tamanho que o analista deixou passar).
+function countEntryOrders(tally: MutableTally, result: StepResult, inputs: GovernInputs): void {
+  for (const order of result.decisions.orders) {
+    const isNewEntry =
+      order.purpose === ORDER_PURPOSE.ENTRY && order.status === ORDER_STATUS.CREATED;
+    if (isNewEntry) bump(tally.entryOrders, inputs.entryRiskScale);
+  }
+}
+
 function isNeutral(inputs: GovernInputs): boolean {
   return inputs.commands.length === 0 && inputs.entryRiskScale === ENTRY_RISK_SCALE.FULL;
 }
@@ -226,6 +258,8 @@ export async function simulate(
     let result = step();
     const inputs = await driver?.decide(candle, result);
     if (inputs !== undefined && !isNeutral(inputs)) result = step(inputs);
+    if (driver !== undefined && inputs !== undefined)
+      countEntryOrders(driver.tally, result, inputs);
     driver?.record(candle, result);
     recorder.add(result);
     params.onStep?.(result);

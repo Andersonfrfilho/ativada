@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 
 import { computeWilsonInterval } from '../packages/statistics/src/index.js';
 import {
@@ -12,6 +12,7 @@ import type {
   WindowResult,
 } from '../scripts/analyst-counterfactual/counterfactual.types.js';
 import { COUNTERFACTUAL_STRATEGIES, runJob } from '../scripts/analyst-counterfactual/job.js';
+import { simulate } from '../scripts/analyst-counterfactual/simulation.js';
 import {
   describeVerdict,
   formatNumber,
@@ -30,6 +31,7 @@ import {
   ANALYST_REAL_SENTIMENT,
 } from './fixtures/live/analyst-real-data.fixture.js';
 import { classicSetup, runReference } from './fixtures/live/live-scenarios.fixture.js';
+import { buildReferenceRun } from './fixtures/strategy-engine/engine-scenarios.fixture.js';
 
 // T2.4 da spec 007: o contrafactual em memória. A estratégia sozinha é o passo do produto, o analista só entra pelos
 // comandos que o motor já tem, o veredito D11 sai do Wilson único e NADA é gravado (o script só lê).
@@ -192,12 +194,14 @@ describe('texto do relatório', () => {
       candles: 17_568,
       baseline: summary('9000', '2000', 300),
       withAnalyst: summary(toEngineDecimal('9000').plus(delta).toString(), '500', 40),
+      gateOnly: summary(toEngineDecimal('9000').plus(delta).minus(100).toString(), '500', 40),
       tally: {
         decisions: 100,
         failed: 0,
         postures: { pause: 80, caution: 10, normal: 5, confident: 5 },
         reasons: { move_cost: 70, quiet_market: 10 },
         gateClosed: 90,
+        entryOrders: { '0.25': 7, '0.5': 3, '1': 2 },
         commands: { halt: 12 },
       },
       windows: windows({
@@ -215,6 +219,9 @@ describe('texto do relatório', () => {
     expect(text).toContain('Dos 2 casos');
     expect(text).toContain('ajudou em 1, atrapalhou em 1');
     expect(text).toContain('Falhas do analista: 0');
+    expect(text).toContain(
+      'LINKUSDT | Placar clássico | −600,00 (−6,00%) | −500,00 (−5,00%) | 1,00 p.p. | 7 | 3 | 2',
+    );
     expect(text).toContain('negativo em 2, ou seja, pior que não operar (líquido zero) em 2');
   });
 });
@@ -302,5 +309,40 @@ describe('a tradução da decisão', () => {
     const code = await Bun.file(`${root}scripts/analyst-counterfactual/simulation.ts`).text();
     expect(code).toContain('toGovernInputs(');
     expect(code).not.toMatch(/COMMAND_KIND\.(HALT|RESUME)|decideShadowStep|ENGINE_REASON_OF/);
+  });
+});
+
+describe('o corte de tamanho (¼ e ½) do analista', () => {
+  setDefaultTimeout(180_000);
+  // Com o custo do exemplo o recorte real é pausa em toda vela; com taxas mínimas a regra libera a cautela de ¼.
+  const cheapSetup = buildReferenceRun({
+    symbol: ANALYST_REAL_DATASET.market.symbol,
+    timeframe: ANALYST_REAL_DATASET.market.timeframe,
+    feeRate: '0.00001',
+    slippageRate: '0.00001',
+  });
+  const common = {
+    strategy: COUNTERFACTUAL_STRATEGIES.classic.version,
+    setup: cheapSetup,
+    pair: {
+      market: ANALYST_REAL_DATASET.market,
+      candles: ANALYST_REAL_DATASET.candles,
+      observations: ANALYST_REAL_SENTIMENT,
+    },
+    firstIndex: 0,
+    withAnalyst: true,
+  };
+
+  test('o analista inteiro cria ordens em ¼ e o corte desligado só em tamanho cheio; as entradas não somem', async () => {
+    const capped = await simulate(common);
+    const gateOnly = await simulate({ ...common, sizeMode: 'gate_only' });
+    expect(capped.tally.entryOrders['0.25'] ?? 0).toBeGreaterThan(0);
+    expect(gateOnly.tally.entryOrders['0.25'] ?? 0).toBe(0);
+    expect(gateOnly.tally.entryOrders['0.5'] ?? 0).toBe(0);
+    expect(gateOnly.tally.entryOrders['1'] ?? 0).toBeGreaterThan(0);
+    const total = (counts: Readonly<Record<string, number>>): number =>
+      Object.values(counts).reduce((sum, count) => sum + count, 0);
+    expect(total(gateOnly.tally.entryOrders)).toBeGreaterThan(0);
+    expect(capped.outcome.finalEquity).not.toBe(gateOnly.outcome.finalEquity);
   });
 });

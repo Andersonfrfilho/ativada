@@ -85,6 +85,7 @@ export async function runJob(params: RunJobParams): Promise<JobResult> {
   const common = { strategy: entry.version, setup, pair, firstIndex };
   const baseline = await simulate({ ...common, withAnalyst: false });
   const withAnalyst = await simulate({ ...common, withAnalyst: true });
+  const gateOnly = await simulate({ ...common, withAnalyst: true, sizeMode: 'gate_only' });
   if (
     baseline.outcome.equity[0]?.candleTime !== periodStart.openTime ||
     withAnalyst.outcome.equity[0]?.candleTime !== periodStart.openTime
@@ -101,6 +102,7 @@ export async function runJob(params: RunJobParams): Promise<JobResult> {
     candles: periodCandles,
     baseline: summaryOf(baseline.outcome),
     withAnalyst: summaryOf(withAnalyst.outcome),
+    gateOnly: summaryOf(gateOnly.outcome),
     tally: withAnalyst.tally,
     windows: computeWindows({
       baseline: baseline.outcome.equity,

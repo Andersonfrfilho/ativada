@@ -109,6 +109,33 @@ export function describeVerdict(judgement: WindowJudgement): string {
   }
 }
 
+const SIZE_HEADER = [
+  'Par',
+  'Estratégia',
+  'Líquido só com pausa e saída por tempo, tamanho cheio (USDT)',
+  'Líquido com o teto de entrada (USDT)',
+  'O que o tamanho mudou',
+  'Ordens de entrada em ¼',
+  'Ordens de entrada em ½',
+  'Ordens de entrada em 1×',
+];
+
+function sizeRow(job: JobResult): string {
+  const { gateOnly, withAnalyst, initialBalance, tally } = job;
+  const gateRate = netRateOf(gateOnly, initialBalance);
+  const capRate = netRateOf(withAnalyst, initialBalance);
+  return [
+    job.symbol,
+    job.strategyLabel,
+    `${formatNumber(netOf(gateOnly, initialBalance), 2)} (${formatPercent(gateRate)})`,
+    `${formatNumber(netOf(withAnalyst, initialBalance), 2)} (${formatPercent(capRate)})`,
+    `${formatNumber(capRate.minus(gateRate).times(HUNDRED), PERCENT_PLACES)} p.p.`,
+    String(tally.entryOrders['0.25'] ?? 0),
+    String(tally.entryOrders['0.5'] ?? 0),
+    String(tally.entryOrders['1'] ?? 0),
+  ].join(' | ');
+}
+
 const VERDICT_HEADER = [
   'Par',
   'Estratégia',
@@ -178,6 +205,10 @@ export function renderReport(jobs: readonly JobResult[]): string {
     `Período medido: ${new Date(first.periodStart).toISOString()} a ${new Date(first.periodEnd).toISOString()} (${first.candles} velas de 15 min, 183 dias), saldo inicial ${first.initialBalance} USDT, taxa 0,1% e slippage 0,05% por lado.`,
     '',
     table(RESULT_HEADER, jobs.map(resultRow)),
+    '',
+    'O que o corte de tamanho (¼ e ½) mudou: a mesma execução do analista sem o corte (só pausa e saída por tempo) contra a inteira.',
+    '',
+    table(SIZE_HEADER, jobs.map(sizeRow)),
     '',
     table(
       VERDICT_HEADER,

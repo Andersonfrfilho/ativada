@@ -39,6 +39,8 @@ export type AnalystTally = {
   readonly postures: Readonly<Record<string, number>>;
   readonly reasons: Readonly<Record<string, number>>;
   readonly gateClosed: number;
+  // Ordens de entrada criadas, pelo teto de entrada daquela vela (`0.25`, `0.5`, `1`); a escala `0` não cria ordem.
+  readonly entryOrders: Readonly<Record<string, number>>;
   readonly commands: Readonly<Record<string, number>>;
 };
 
@@ -60,6 +62,8 @@ export type JobResult = {
   readonly candles: number;
   readonly baseline: SimulationSummary;
   readonly withAnalyst: SimulationSummary;
+  // O analista sem o corte de tamanho: só a pausa e a saída por tempo (toda entrada liberada sai no tamanho cheio).
+  readonly gateOnly: SimulationSummary;
   readonly tally: AnalystTally;
   readonly windows: readonly WindowResult[];
 };

@@ -2109,7 +2109,7 @@ Conferido no código e medido em 2026-10-15:
 | Chave | Texto |
 |---|---|
 | Postura (rótulo) | `pause` "PAUSA" · `caution` "CAUTELA" · `normal` "MODERADA" · `confident` "LIBERADA" (o analista não corta o tamanho; nunca "confiante", que soa como promessa) |
-| Postura (linha) | "Postura agora: {rótulo} · olha o mercado a cada {15 min \| 1 hora \| 4 horas} · arrisca {¼ \| ½ \| o mesmo} do que a estratégia arriscaria ({x}% do saldo por operação) · cada operação dura no máximo 60 min." · pausa: "Postura agora: PAUSA · nenhuma entrada nova; as saídas da estratégia continuam valendo." |
+| Postura (linha) | "Postura agora: {rótulo} · olha o mercado a cada {15 min \| 1 hora \| 4 horas} · teto de risco da entrada nesta vela: {¼ \| ½ \| o mesmo} do que a estratégia arriscaria ({x}% do saldo por operação) · cada operação dura no máximo 60 min." · pausa: "Postura agora: PAUSA · nenhuma entrada nova; as saídas da estratégia continuam valendo." |
 | Fora da janela | "Fora da janela de entrada: com o ritmo de 1 hora, só a vela que fecha na hora cheia pode abrir operação." · "… com o ritmo de 4 horas, só a vela que fecha num múltiplo de 4 horas (UTC) pode abrir operação." |
 | `no_data` | `waiting_for_data` "Faltam velas recentes: o analista espera os dados chegarem." · `late_candle` "A simulação está atrasada em relação ao mercado: o analista não libera entrada até ela alcançar." · `missing_candles` "Falta vela nas últimas 24 horas: sem a média de volume completa, o analista não libera entrada." · `warming_up` "O analista ainda está juntando histórico do par (pelo menos 24 horas de velas de 15 min)." |
 | Travas | `daily_loss` "A perda das últimas 24 horas chegou a {x}% do saldo inicial (o limite é 1%): pausa até a janela de 24 horas liberar." · `loss_streak` "{n} operações seguidas terminaram em perda: pausa de 1 hora depois da última." · `trade_count` "Já foram {n} operações nas últimas 24 horas (o teto é 8): pausa até a janela liberar." · `goal_room` "Falta pouco para a perda máxima da meta: cabem {x}% do saldo, menos que o risco de 2 operações." · `move_cost` "O movimento típico de 15 min ({x}%) não paga com folga a ida e volta das taxas ({x}%): precisa ser pelo menos o dobro." |
@@ -2270,6 +2270,15 @@ colunas em `candles`, livro de ofertas e fontes externas (A22); (d) o desvio da 
   tarde em rondas de uma vela pode dar outra decisão nessas velas; a linha de cada vela diz o motivo e nada é escondido. Por isso
   o `live-test` do governar entrega as velas UMA POR VEZ.
 - **Sem `halt` próprio.** O analista no governar nunca fecha nem reabre a porta (`haltReason` é sempre nulo): a pausa é a escala 0.
+
+**T4.2d e T4.3 — liberar o `govern` e o que a medição disse.** (1) `POST /v1/runs` aceita `analyst.mode = govern` com os mesmos
+requisitos da sombra (`live_paper`, 15 min); o painel oferece "Só observar (sombra)" (padrão) × "Decidir de verdade (governar)" e o selo
+da tela vira "o analista está decidindo". (2) A linha de postura passou a dizer "teto de risco da entrada nesta vela: ¼ …" (o tamanho
+vale para a entrada aberta naquela vela, não para a operação já aberta nem para a saída); o dourado `analyst-1` foi regravado só nesse
+texto, sem mudar decisão nem versão. (3) Contrafactual com o teto de entrada nos 8 casos (183 dias, 15 min): governar não piorou nenhum
+caso contra a sombra, mas o líquido segue negativo nos 8; o corte de tamanho vale +1,06 a +9,54 p.p. do saldo sobre "só pausa e saída por
+tempo" (relatório literal em `specs/007-analista-de-risco-senior/evidence.md`, T4.3). (4) Deploy em dev na ordem da A21: banco
+(`0025`), worker (dormente), API, painel.
 
 ## Lucro mínimo por operação (spec 013)
 

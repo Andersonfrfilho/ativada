@@ -60,7 +60,7 @@ export function buildPostureLine(decision: AnalystDecision, riskPerTrade: string
   return [
     `Postura agora: ${POSTURE_LABEL[decision.posture]}`,
     `olha o mercado a cada ${CADENCE_LABEL[decision.cadenceMinutes]}`,
-    `arrisca ${fraction} do que a estratégia arriscaria (${formatTextPercent(riskRate, UP)}% do saldo por operação)`,
+    `teto de risco da entrada nesta vela: ${fraction} do que a estratégia arriscaria (${formatTextPercent(riskRate, UP)}% do saldo por operação)`,
     `cada operação dura no máximo ${decision.maxTradeMinutes} min.`,
   ].join(' · ');
 }

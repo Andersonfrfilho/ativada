@@ -59,19 +59,19 @@ describe('rótulos e linha de postura', () => {
 
   test('LIBERADA: o mesmo risco da estratégia (1,00% do saldo), olhando de hora em hora', () => {
     expect(buildPostureLine(decide(), '0.01')).toBe(
-      'Postura agora: LIBERADA · olha o mercado a cada 1 hora · arrisca o mesmo do que a estratégia arriscaria (1,00% do saldo por operação) · cada operação dura no máximo 60 min.',
+      'Postura agora: LIBERADA · olha o mercado a cada 1 hora · teto de risco da entrada nesta vela: o mesmo do que a estratégia arriscaria (1,00% do saldo por operação) · cada operação dura no máximo 60 min.',
     );
   });
 
   test('MODERADA: metade (0,50%)', () => {
     expect(buildPostureLine(decide({ currentVolume: '9' }), '0.01')).toBe(
-      'Postura agora: MODERADA · olha o mercado a cada 1 hora · arrisca ½ do que a estratégia arriscaria (0,50% do saldo por operação) · cada operação dura no máximo 60 min.',
+      'Postura agora: MODERADA · olha o mercado a cada 1 hora · teto de risco da entrada nesta vela: ½ do que a estratégia arriscaria (0,50% do saldo por operação) · cada operação dura no máximo 60 min.',
     );
   });
 
   test('CAUTELA: um quarto (0,25%), a cada 15 min com volume alto e a cada 4 horas com volume baixo', () => {
     expect(buildPostureLine(decide({ winners: [], currentVolume: '15' }), '0.01')).toBe(
-      'Postura agora: CAUTELA · olha o mercado a cada 15 min · arrisca ¼ do que a estratégia arriscaria (0,25% do saldo por operação) · cada operação dura no máximo 60 min.',
+      'Postura agora: CAUTELA · olha o mercado a cada 15 min · teto de risco da entrada nesta vela: ¼ do que a estratégia arriscaria (0,25% do saldo por operação) · cada operação dura no máximo 60 min.',
     );
     expect(buildPostureLine(decide({ winners: [], currentVolume: '5' }), '0.01')).toContain(
       'olha o mercado a cada 4 horas',
