@@ -54,14 +54,18 @@ export {
   buildPostureLine,
   buildReasonMessage,
   buildTimeExitMessage,
+  lockMessage,
   type GoalProgressMessageParams,
 } from './analyst-messages.js';
 export {
+  buildActiveLockMessages,
   buildAnalystMessages,
   type AnalystMessages,
   type BuildAnalystMessagesParams,
 } from './analyst-view-messages.js';
 export { buildSpecialistRow, type SpecialistRow } from './specialist-messages.js';
+export * from './specialist-motive.constant.js';
+export { describeSpecialistMotive, type SpecialistMotiveParams } from './specialist-motive.js';
 export {
   chooseCadence,
   choosePosture,

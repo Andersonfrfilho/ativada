@@ -48,6 +48,9 @@ function viewOf(params: ViewParams): SpecialistView {
     lower: summary.lower,
     upper: summary.upper,
     weight: key === STRATEGY_AUDIT_KEY ? '0' : summary.weight,
+    ...(key === STRATEGY_AUDIT_KEY || current?.ruleVotes === undefined
+      ? {}
+      : { ruleVotes: current.ruleVotes }),
   };
 }
 

@@ -33,6 +33,7 @@ import { createCreateRunUseCase } from '../runs/create-run.use-case.js';
 import { createExportRunCsvUseCase } from '../runs/export-run-csv.use-case.js';
 import type { RunDispatcher } from '../runs/run-dispatcher.js';
 import { createRunChartUseCase } from '../runs/chart/run-chart.use-case.js';
+import { createAnalystUseCases } from '../runs/analyst/create-analyst-use-cases.js';
 import { createLiveStatusUseCase } from '../runs/live-status/live-status.use-case.js';
 import { createRunDecisionsUseCase } from '../runs/live-status/run-decisions.use-case.js';
 import { createProjectionsUseCase } from '../runs/projections/projections.use-case.js';
@@ -172,6 +173,7 @@ function createRunDependencies(
     exportRunCsv: createExportRunCsvUseCase({ results, now: params.now }),
     tradeSummary: createTradeSummaryUseCase({ results }),
     ...createLiveAwareUseCases(params, shared),
+    ...createAnalystUseCases({ ...params, ...shared }),
   };
 }
 

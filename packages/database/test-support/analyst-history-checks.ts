@@ -106,4 +106,18 @@ export async function checkAnalystHistory(context: LifecycleCheckContext): Promi
   reportCheck(
     'histórico do analista: placar e patrimônio desde a vela, posições abertas + fechadas desde ela + as 3 últimas fechadas; outro dono não lê nada',
   );
+  const snapshot = await repository.readAnalystGoalSnapshot(owner.scope, run.id);
+  assertCondition(
+    snapshot.latestEquity === `${10_000 + SEEDED_CANDLES - 1}.12345678` &&
+      snapshot.closedPositions === 4,
+    `meta somada: ${snapshot.latestEquity} e ${snapshot.closedPositions} fechadas, esperado o último patrimônio e 4`,
+  );
+  const emptySnapshot = await repository.readAnalystGoalSnapshot(stranger.scope, run.id);
+  assertCondition(
+    emptySnapshot.latestEquity === undefined && emptySnapshot.closedPositions === 0,
+    'outro dono leu o patrimônio ou as operações da execução',
+  );
+  reportCheck(
+    'meta somada do analista: último patrimônio e operações fechadas numa consulta; outro dono não lê nada',
+  );
 }

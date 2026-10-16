@@ -393,3 +393,37 @@ bun run lint         → verde
 bun run format:check → All matched files use Prettier code style!
 bun test test/analyst-counterfactual.contract.test.ts → 19 pass / 0 fail
 ```
+
+## T3.1 — rotas do analista e votos por regra (2026-10-16)
+
+- **Rotas** (`apps/api-ativada/src/runs/analyst/`): `GET /v1/runs/:runId/analyst` e `/analyst/decisions?cursor=&limit=`, `access: USER`, `documentation`
+  (Zod de entrada e de saída no OpenAPI), política `RUN_LIVE_STATUS` (cinco rotas no balde de 60/min). As frases saem do catálogo da A17 do
+  `@ativada/risk-analyst` sobre a linha gravada pelo worker; nada é recalculado por pedido. Detalhe da forma e dos desvios no ADR 0002
+  ("T3.1 — as rotas do analista como ficaram"). A API passou a depender do pacote (`package.json` e `bun.lock`, workspace).
+- **Consultas:** `/analyst` = 3 sem meta (execução, versão, última decisão) e 4 com meta (`readAnalystGoalSnapshot`: o último patrimônio e as
+  operações fechadas numa consulta só); `/analyst/decisions` = 3. Novo no repositório de dono: `readAnalystGoalSnapshot` (sem migration), com
+  checagem no `database-test` e no `route-isolation-test` (`analyst-reads-checks.ts`).
+- **Contrato** (`test/api-run-analyst.contract.test.ts`, 29 testes, `loadApiApp()` + repositório em memória): feliz em sombra com as frases IGUAIS às
+  do dourado `analyst-1` (postura, motivo, ritmo, travas, tabela da equipe, aviso fixo), sem vela, aquecendo, simulação parada, esperando velas,
+  encerrada, última vela com falha (frase de falha, sem o código nem o texto do erro), meta somada (+3,00% em 1 operação, falta 7,00%), histórico por
+  cursor sem repetir nem pular, `failed` só com o código estável, `404` igual (outro usuário, inexistente, apagada, malformada), `401`, `409
+  RUN_NOT_LIVE` (backtest e walk-forward), `409 ANALYST_NOT_ENABLED`, `400` sem eco de valor (todos os erros de uma vez), ≤ 4 consultas e o balde de 60/min.
+- **Mutantes de dono:** `scripts/api-runs-mutants.ts` ganhou +2 (`ANALYST_DECISIONS_READ_EVERY_OWNER`, `ANALYST_GOAL_SNAPSHOT_READS_EVERY_OWNER`): `make
+  api-runs-mutants` (Postgres embutido do WSL, porta 56441, cópia do espelho) → `api-runs-mutants: OK - 30 mutantes de filtro de dono reprovados`.
+- **D4-A da spec 011 (motivo por regra) FEITA como mudança aditiva:** `ruleVotes` em `VoteReading`/`SpecialistView` (gravado no `jsonb specialists`, sem
+  migration), `describeSpecialistMotive` com o catálogo de 7 regras × 3 frases + 3 extras, `motive` por especialista na resposta. **Dourado `analyst-1`
+  regravado SEM mudar número:** comparado com o anterior depois de tirar o campo `ruleVotes`, 12 casos, 0 diferentes, 48 campos novos. Contrato
+  `test/risk-analyst-specialist-motive.contract.test.ts` (11): tabela da §5 literal, igualdade com `describeRuleCondition` da 008, escolha da regra,
+  anulação, sem leitura, os 3.300 candles reais de 15 min e o corte da série no meio; 6 mutantes novos (58 no total, todos mortos, controle verde).
+
+Gates (WSL, espelho próprio `~/gates/ativada-spec7`, rodadas longas na cópia `ativada-spec7-run`):
+
+```text
+bun run typecheck    → verde (tsc raiz e painel)
+bun run lint         → verde
+bun run format:check → All matched files use Prettier code style!
+bun test (api-*, ownership*, risk-analyst-*, live-analyst-*, app-import-boundary, code-size-limits, strategy-engine-boundary, database.contract) → 1194 pass / 0 fail
+test/risk-analyst-mutants.contract.test.ts → 60 pass / 0 fail (58 mutantes mortos, controle verde)
+db:database-test + route-isolation-test (Postgres embutido) → OK
+scripts/api-runs-mutants.ts → OK - 30 mutantes de filtro de dono reprovados
+```

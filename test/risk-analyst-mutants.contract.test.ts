@@ -30,6 +30,8 @@ const CATALOG = 'specialist-catalog.ts';
 const CONSTANT = 'analyst.constant.ts';
 const MESSAGES = 'analyst-messages.ts';
 const MESSAGE_CONSTANT = 'analyst-messages.constant.ts';
+const MOTIVE = 'specialist-motive.ts';
+const MOTIVE_CONSTANT = 'specialist-motive.constant.ts';
 
 function edit(file: string, find: string, replace: string, occurrences = 1): SourceEdit[] {
   return [{ file, find, replace, occurrences }];
@@ -366,6 +368,46 @@ const DECISION_MUTANTS: readonly SourceMutant[] = [
   },
 ];
 
+// Spec 011, D4-A: o motivo curto de cada especialista (a regra que decidiu o voto).
+const MOTIVE_MUTANTS: readonly SourceMutant[] = [
+  {
+    name: 'MOTIVE_PICKS_THE_LAST_RULE_THAT_VOTED',
+    edits: edit(
+      MOTIVE,
+      'const decisive = ordered.find((candidate) => candidate.vote === vote);',
+      'const decisive = [...ordered].reverse().find((candidate) => candidate.vote === vote);',
+    ),
+  },
+  {
+    name: 'MOTIVE_IGNORES_THE_CANCELLED_RULES',
+    edits: edit(
+      MOTIVE,
+      'if (hasBothSides) return',
+      'if (hasBothSides && ordered.length < 0) return',
+    ),
+  },
+  {
+    name: 'MOTIVE_READING_HAS_TWO_PLACES',
+    edits: edit(MOTIVE, 'const READING_DECIMAL_PLACES = 1;', 'const READING_DECIMAL_PLACES = 2;'),
+  },
+  {
+    name: 'MOTIVE_FAVOR_AND_AGAINST_SWAPPED',
+    edits: edit(MOTIVE, "vote === 1 ? 'favor' : 'against'", "vote === 1 ? 'against' : 'favor'"),
+  },
+  {
+    name: 'MOTIVE_CATALOG_CHANGES_THE_EMA_PHRASE',
+    edits: edit(
+      MOTIVE_CONSTANT,
+      "favor: 'a média rápida (EMA 9) está acima da lenta (EMA 21)',",
+      "favor: 'a média rápida (EMA 9) cruzou a lenta (EMA 21)',",
+    ),
+  },
+  {
+    name: 'RULE_VOTES_DROP_THE_SENTIMENT_READING',
+    edits: edit(SPECIALISTS, 'return signal.sentiment?.value ?? null;', 'return null;'),
+  },
+];
+
 const MESSAGE_MUTANTS: readonly SourceMutant[] = [
   {
     name: 'LIBERADA_LABEL_IS_CONFIANTE',
@@ -396,6 +438,7 @@ const MUTANTS: readonly SourceMutant[] = [
   ...LOCK_MUTANTS,
   ...DECISION_MUTANTS,
   ...MESSAGE_MUTANTS,
+  ...MOTIVE_MUTANTS,
 ];
 
 describe('analyst-1: o contrato reprova cada mutante do código de produção', () => {

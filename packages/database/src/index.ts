@@ -195,4 +195,5 @@ export { createRunStallRepository } from './run-stall/run-stall.repository.js';
 export type * from './run-stall/run-stall.types.js';
 export { createAnalystDecisionRepository } from './analyst/analyst-decision.repository.js';
 export type * from './analyst/analyst-decision.types.js';
+export type * from './analyst/analyst-goal-snapshot.js';
 export type * from './analyst/analyst-history.js';

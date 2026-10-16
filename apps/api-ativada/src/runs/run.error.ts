@@ -89,3 +89,14 @@ export class LiveRunLimitReachedError extends DomainError {
     });
   }
 }
+
+// A simulação ao vivo existe, mas foi criada sem o analista de risco (spec 007, A20): nada a mostrar nas rotas dele.
+export class AnalystNotEnabledError extends DomainError {
+  constructor() {
+    super({
+      code: RUN_ERROR_CODE.ANALYST_NOT_ENABLED,
+      message: 'Esta simulação foi criada sem o analista de risco.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}

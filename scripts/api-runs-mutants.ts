@@ -253,6 +253,27 @@ const MUTANTS: readonly Mutant[] = [
       'JOIN signals s ON s.run_id = ${runId}',
     ),
   },
+  {
+    name: 'ANALYST_DECISIONS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/analyst/analyst-decision.repository.ts',
+      '  return and(ownerCondition(scope, analystDecisions.userId), eq(analystDecisions.runId, runId));',
+      '  return and(eq(analystDecisions.runId, runId));',
+    ),
+  },
+  {
+    name: 'ANALYST_GOAL_SNAPSHOT_READS_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/analyst/analyst-goal-snapshot.ts',
+      'WHERE e.user_id = ${scope.ownerUserId} AND e.run_id = ${runId}',
+      'WHERE e.run_id = ${runId}',
+    ),
+    also: WITHOUT(
+      'src/analyst/analyst-goal-snapshot.ts',
+      'WHERE p.user_id = ${scope.ownerUserId} AND p.run_id = ${runId}',
+      'WHERE p.run_id = ${runId}',
+    ),
+  },
 ];
 
 type Verdict = { readonly name: string; readonly exitCode: number; readonly output: string };

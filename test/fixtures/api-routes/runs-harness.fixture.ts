@@ -207,6 +207,8 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     },
     projections: runs.projections,
   };
+  // O analista de risco (spec 007): as mesmas consultas anotadas em `queries`.
+  const analystDeps = { ...liveStatusDeps, analyst: runs.analyst.repository };
   const series = app.runSeriesUseCases.createRunSeriesUseCases({ results: runs.results });
   const routes: readonly Route[] = [
     ...app.marketRoutes.createMarketRoutes({
@@ -285,6 +287,12 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
         now: () => clock.now,
         ...(options.csvLimits === undefined ? {} : { limits: options.csvLimits }),
       }),
+    ),
+    app.analystRoute.createAnalystRoute(
+      app.analystUseCase.createAnalystUseCase({ ...analystDeps, now: () => clock.now }),
+    ),
+    app.analystRoute.createAnalystDecisionsRoute(
+      app.analystDecisionsUseCase.createAnalystDecisionsUseCase(analystDeps),
     ),
     ...(options.extraRoutes?.(app, { strategies, goals, candles, clock }) ?? []),
   ];

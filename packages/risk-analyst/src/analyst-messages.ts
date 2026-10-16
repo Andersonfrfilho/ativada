@@ -78,7 +78,7 @@ export function buildCadenceLine(decision: AnalystDecision): string | null {
   return `Volume ${volume}× o normal das últimas 24 horas: olha o mercado a cada ${CADENCE_LABEL[decision.cadenceMinutes]}.`;
 }
 
-function lockMessage(decision: AnalystDecision, key: RiskLock['key']): string {
+export function lockMessage(decision: AnalystDecision, key: RiskLock['key']): string {
   const { current } = lockOf(decision, key);
   const { atrRate, roundTripCost } = decision.readings;
   switch (key) {

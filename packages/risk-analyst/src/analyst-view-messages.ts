@@ -6,6 +6,7 @@ import {
   buildPostureLine,
   buildReasonMessage,
   buildTimeExitMessage,
+  lockMessage,
 } from './analyst-messages.js';
 import { ANALYST_DISCLAIMER } from './analyst-messages.constant.js';
 import type { AnalystDecision } from './analyst-decision.types.js';
@@ -43,4 +44,11 @@ export function buildAnalystMessages(params: BuildAnalystMessagesParams): Analys
       : null,
     disclaimer: ANALYST_DISCLAIMER,
   };
+}
+
+// A frase de cada trava ATIVA (A17), na ordem da A10; sem trava ativa a lista é vazia.
+export function buildActiveLockMessages(decision: AnalystDecision): readonly string[] {
+  return decision.locks
+    .filter((lock) => lock.isActive)
+    .map((lock) => lockMessage(decision, lock.key));
 }

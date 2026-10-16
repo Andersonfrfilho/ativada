@@ -30,6 +30,12 @@ import type * as RunDecisionsRouteModule from '../../../apps/api-ativada/src/run
 import type * as RunDecisionsUseCaseModule from '../../../apps/api-ativada/src/runs/live-status/run-decisions.use-case.js';
 import type * as StrategyLayersRouteModule from '../../../apps/api-ativada/src/runs/projections/strategy-layers.route.js';
 import type * as StrategyLayersUseCaseModule from '../../../apps/api-ativada/src/runs/projections/strategy-layers.use-case.js';
+import type * as AnalystRouteModule from '../../../apps/api-ativada/src/runs/analyst/analyst.route.js';
+import type * as AnalystUseCaseModule from '../../../apps/api-ativada/src/runs/analyst/analyst.use-case.js';
+import type * as AnalystDecisionsUseCaseModule from '../../../apps/api-ativada/src/runs/analyst/analyst-decisions.use-case.js';
+import type * as AnalystViewModule from '../../../apps/api-ativada/src/runs/analyst/analyst-view.js';
+import type * as AnalystCurrentModule from '../../../apps/api-ativada/src/runs/analyst/analyst-current.js';
+import type * as AnalystGoalProgressModule from '../../../apps/api-ativada/src/runs/analyst/analyst-goal-progress.js';
 import type * as ProjectionsRouteModule from '../../../apps/api-ativada/src/runs/projections/projections.route.js';
 import type * as ProjectionsUseCaseModule from '../../../apps/api-ativada/src/runs/projections/projections.use-case.js';
 import type * as ProjectionRuleModule from '../../../apps/api-ativada/src/runs/projections/projection-rule.js';
@@ -130,6 +136,12 @@ export type ApiApp = {
   readonly runDecisionsUseCase: typeof RunDecisionsUseCaseModule;
   readonly strategyLayersRoute: typeof StrategyLayersRouteModule;
   readonly strategyLayersUseCase: typeof StrategyLayersUseCaseModule;
+  readonly analystRoute: typeof AnalystRouteModule;
+  readonly analystUseCase: typeof AnalystUseCaseModule;
+  readonly analystDecisionsUseCase: typeof AnalystDecisionsUseCaseModule;
+  readonly analystView: typeof AnalystViewModule;
+  readonly analystCurrent: typeof AnalystCurrentModule;
+  readonly analystGoalProgress: typeof AnalystGoalProgressModule;
   readonly projectionsRoute: typeof ProjectionsRouteModule;
   readonly projectionsUseCase: typeof ProjectionsUseCaseModule;
   readonly projectionRule: typeof ProjectionRuleModule;
@@ -235,6 +247,12 @@ export async function loadApiApp(): Promise<ApiApp> {
     runDecisionsUseCase: await load('runs/live-status/run-decisions.use-case'),
     strategyLayersRoute: await load('runs/projections/strategy-layers.route'),
     strategyLayersUseCase: await load('runs/projections/strategy-layers.use-case'),
+    analystRoute: await load('runs/analyst/analyst.route'),
+    analystUseCase: await load('runs/analyst/analyst.use-case'),
+    analystDecisionsUseCase: await load('runs/analyst/analyst-decisions.use-case'),
+    analystView: await load('runs/analyst/analyst-view'),
+    analystCurrent: await load('runs/analyst/analyst-current'),
+    analystGoalProgress: await load('runs/analyst/analyst-goal-progress'),
     projectionsRoute: await load('runs/projections/projections.route'),
     projectionsUseCase: await load('runs/projections/projections.use-case'),
     projectionRule: await load('runs/projections/projection-rule'),

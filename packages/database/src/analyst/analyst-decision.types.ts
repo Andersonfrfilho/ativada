@@ -2,6 +2,7 @@
 import type { DatabaseExecutor } from '../database-executor.js';
 import type { JsonContainer, JsonValue } from '../json-value.types.js';
 import type { OwnerScope } from '../ownership/owner-scope.js';
+import type { AnalystGoalSnapshot } from './analyst-goal-snapshot.js';
 import type { AnalystHistory, ReadAnalystHistoryParams } from './analyst-history.js';
 
 // Os blocos jsonb (previsão, leituras, equipe, travas e comandos) são objeto ou lista; `undefined` grava `NULL`.
@@ -85,6 +86,11 @@ export type AnalystDecisionRepository = {
     scope: OwnerScope,
     params: ReadAnalystHistoryParams,
   ) => Promise<AnalystHistory>;
+  // O último patrimônio e as operações fechadas da execução, numa consulta só (a meta somada da rota do analista).
+  readonly readAnalystGoalSnapshot: (
+    scope: OwnerScope,
+    runId: string,
+  ) => Promise<AnalystGoalSnapshot>;
 };
 
 // Para o passo do worker gravar na MESMA transação do candle (T2.3).

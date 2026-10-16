@@ -8,12 +8,14 @@ import {
   RISK_ATR_INDICATOR_ID,
   selectAvailableSentiment,
   signalStep,
+  STRATEGY_FAMILY,
   toEngineDecimal,
   type EngineCandle,
   type EngineMarket,
   type SentimentObservation,
   type SignalDecision,
   type StoredSentimentObservation,
+  type SignalVote,
   type StrategyVersion,
 } from '@ativada/strategy-engine';
 
@@ -23,7 +25,7 @@ import {
   SPECIALIST_KEY,
   type SpecialistKey,
 } from './analyst.constant.js';
-import type { AnalystVote, TeamSeries, VoteReading } from './analyst.types.js';
+import type { AnalystVote, RuleVote, TeamSeries, VoteReading } from './analyst.types.js';
 import { SPECIALIST_CATALOG } from './specialist-catalog.js';
 
 export const SPECIALIST_VERSIONS: Readonly<Record<SpecialistKey, StrategyVersion>> = {
@@ -68,6 +70,21 @@ function atrOf(signal: SignalDecision): string | null {
   return formatEngineDecimal(decimalFromIndicator(atr));
 }
 
+// O que a frase da regra mostra: o RSI (indicador da própria regra) ou o Fear & Greed usado pelo passo; as demais, nada.
+function ruleReadingOf(signal: SignalDecision, vote: SignalVote): number | null {
+  if (vote.family === STRATEGY_FAMILY.SENTIMENT) return signal.sentiment?.value ?? null;
+  const indicator = signal.indicators[`rule:${vote.ruleId}`];
+  return typeof indicator === 'number' ? indicator : null;
+}
+
+function ruleVotesOf(signal: SignalDecision): readonly RuleVote[] {
+  return signal.votes.map((vote) => ({
+    ruleId: vote.ruleId,
+    vote: vote.vote,
+    reading: ruleReadingOf(signal, vote),
+  }));
+}
+
 function readingOf(candle: EngineCandle, signal: SignalDecision | null): VoteReading {
   if (signal === null) {
     return {
@@ -84,6 +101,7 @@ function readingOf(candle: EngineCandle, signal: SignalDecision | null): VoteRea
     vote: voteOfScore(signal.score),
     isMissing: signal.votes.length > 0 && signal.votes.every((vote) => vote.isMissing),
     atr: atrOf(signal),
+    ruleVotes: ruleVotesOf(signal),
   };
 }
 

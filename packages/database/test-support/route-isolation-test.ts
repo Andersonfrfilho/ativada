@@ -3,6 +3,7 @@ import { MIGRATIONS_FOLDER } from '../src/database.constant.js';
 import { closeDatabase, openDatabase } from '../src/database-handle.js';
 import { applyMigrations } from '../src/migrate.js';
 import { readDatabaseUrl } from '../src/read-database-url.js';
+import { checkAnalystReads } from './analyst-reads-checks.js';
 import { checkPersistenceIsolation } from './persistence-isolation-checks.js';
 import { checkChartIsolation } from './run-chart-isolation-checks.js';
 import { checkLiveStatusReads } from './run-live-status-checks.js';
@@ -35,6 +36,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkChartIsolation(context);
     await checkLiveStatusReads(context);
     await checkProjectionReads(context);
+    await checkAnalystReads(context);
   } finally {
     await client.close();
     await closeDatabase(handle);

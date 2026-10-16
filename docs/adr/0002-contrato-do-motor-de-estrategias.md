@@ -2193,3 +2193,47 @@ colunas em `candles`, livro de ofertas e fontes externas (A22); (d) o desvio da 
   comparação de preço por dígitos (`compareDecimalTexts`), ordenação dos percentis por inteiro exato (`sortDecimalTexts`) e o
   `atrRate` de cada leitura memorizado pelo próprio objeto (`WeakMap`). Cada um tem paridade com o decimal em sorteios
   (`test/risk-analyst-decimal-texts.contract.test.ts`) e o dourado e os 52 mutantes seguem iguais.
+
+**T3.1 — as rotas do analista como ficaram (registro de desvios da A20; o contrato da regra não mudou).**
+
+- **Rotas** (`apps/api-ativada/src/runs/analyst/`): `GET /v1/runs/:runId/analyst` e `GET /v1/runs/:runId/analyst/decisions?cursor=&limit=`,
+  `access: USER`, `documentation`, política `RUN_LIVE_STATUS` (agora cinco rotas no balde de 60/min: live-status, decisões,
+  projeções e as duas do analista). Alheia, inexistente, apagada e malformada dão o MESMO `404 RUN_NOT_FOUND`; backtest
+  e walk-forward `409 RUN_NOT_LIVE`; `live_paper` sem `runs.request.analyst` `409 ANALYST_NOT_ENABLED` (código novo em
+  `RUN_ERROR_CODE`); parâmetro no `/analyst` e `limit`/`cursor` inválidos `400` com todos os erros e sem eco do valor.
+- **Consultas** (≤ 4, todas por chave, sem cache): `/analyst` = execução (PK + dono) e, em paralelo, a versão da estratégia (para o
+  `riskPerTrade` da frase da postura), a última linha de `analyst_decisions` e, SÓ com meta, `readAnalystGoalSnapshot` (UMA
+  consulta com duas leituras por chave: o último `equity_points` e a contagem de `positions` fechadas); 3 consultas sem meta, 4 com.
+  `/analyst/decisions` = execução, versão e a página (`LIMIT limit + 1`): 3. O repositório de dono ganhou
+  `readAnalystGoalSnapshot` (sem migration); `make api-runs-mutants` ganhou +2 filtros de dono (decisões e meta somada).
+- **Forma da resposta** (Zod de saída = o documento OpenAPI): `{ version, mode, modeMessage, current, goalProgress, locks }`.
+  `current` é a decisão (`status: 'decided'`) ou `{ status: 'unavailable', reason, message }` com `reason` em
+  `not_running | stalled | waiting_for_data | no_candle | warming_up | failed` (nesta precedência; `failed` usa a frase de falha da
+  A17, sem o código nem o texto do erro). A decisão traz o que a A20 lista e, de forma ADITIVA, as frases prontas
+  (`cadenceLine`, `offCadenceMessage`, `timeExitMessage`), as cinco travas com a linha de cada uma e a frase nas ativas
+  (`locks[].line`, `locks[].message`) e, em cada especialista, os rótulos do catálogo (`label`, `voteLabel`, `accuracyText`,
+  `verdictLabel`, `weightText`) e o `motive`. No histórico, a vela em que o analista falhou vem como `status: 'failed'` com
+  `failureCode`. `goalProgress` = `{ targetRate, summedRate, remainingRate, trades, message }` (o resultado do saldo, o que falta da
+  meta da spec 008 e as operações fechadas; `null` sem meta). Nada é recalculado por pedido: as frases saem do catálogo da A17 sobre
+  a linha gravada pelo worker (`isOnCadence` é derivado de `candleTime` e do ritmo; a frase do motivo é a gravada em `message`,
+  porque a tabela não guarda o detalhe do motivo).
+- **A API passou a depender de `@ativada/risk-analyst`** (workspace; só `package.json` e `bun.lock`, nenhuma dependência de fora): as
+  frases do catálogo vivem num lugar só e a rota não as copia. A T2.2 evitava isso por causa do `bun.lock`; aqui a rota PRECISA do
+  catálogo para não duplicar texto.
+
+**D4-A da spec 011 (motivo curto por regra), autorizada na T3.1 e feita como mudança aditiva do contrato.**
+
+- **Votos por regra.** `VoteReading` e `SpecialistView` ganham `ruleVotes?: [{ ruleId, vote, reading }]` (os votos que o
+  `signalStep` já calcula; `reading` = o RSI da própria regra ou o Fear & Greed usado pelo passo, `null` nas demais). Nada muda
+  na decisão (postura, tamanho, comandos, travas, equipe): o campo só acompanha o voto. A linha da estratégia (`key: 'strategy'`)
+  não tem `ruleVotes`. O `jsonb` `specialists` os recebe sem migration; decisão gravada antes deles → `motive: null`.
+- **Catálogo do motivo** (`specialist-motive.constant.ts`, `describeSpecialistMotive`): 7 regras × a favor (novo) / contra e neutro
+  (as da spec 008, letra por letra, provadas por contrato contra `describeRuleCondition`), "As regras dele se anulam nesta vela.",
+  "ainda juntando histórico do par" e "sem leitura do Fear & Greed há mais de 48 horas". Voto ±1 → a primeira regra do catálogo que
+  votou no mesmo sinal; voto 0 → anulação (houve +1 e −1) ou a frase neutra da primeira regra. O painel põe a maiúscula e o ponto.
+- **Dourado `analyst-1` regravado SEM mudar nenhum número:** `scripts/record-risk-analyst-golden.ts` com o código novo, comparado
+  com o dourado anterior após tirar o campo `ruleVotes` de cada decisão: 12 casos, 0 diferentes, 48 campos `ruleVotes` novos (12
+  casos × 4 especialistas). Mudar o motivo ou o catálogo exige regravar de novo; mudar a regra segue exigindo `analyst-2`.
+- **Provas:** `test/risk-analyst-specialist-motive.contract.test.ts` (tabela da §5 literal, igualdade com a spec 008, escolha da regra,
+  anulação, sem leitura, os 3.300 candles reais de 15 min com votos por regra em toda vela lida, corte da série no meio dando os
+  mesmos votos) e 6 mutantes novos em `test/risk-analyst-mutants.contract.test.ts`.

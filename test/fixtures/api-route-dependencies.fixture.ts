@@ -134,6 +134,8 @@ export function buildApiRouteDependencies(
       decisions: notUsed,
       strategyLayers: notUsed,
       projections: notUsed,
+      analyst: notUsed,
+      analystDecisions: notUsed,
     },
     isDocumentationEnabled,
   };

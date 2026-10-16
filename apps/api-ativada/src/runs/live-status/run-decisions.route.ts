@@ -13,7 +13,7 @@ import { RUN_DECISIONS_DOCUMENTATION, runDecisionsQuerySchema } from './run-deci
 import type { RunDecisionsInput, RunDecisionsUseCase } from './run-decisions.use-case.js';
 
 // `limit` (1 a 100, padrão 24) e `cursor` opaco; cursor adulterado é 400, nunca um filtro montado de texto cru.
-function readDecisionsInput(request: Request): RunDecisionsInput {
+export function readDecisionsInput(request: Request): RunDecisionsInput {
   const query = readValidatedQuery(request, runDecisionsQuerySchema);
   const before = query.cursor === undefined ? undefined : decodeTimeCursor(query.cursor);
   if (query.cursor !== undefined && before === undefined) throw invalidCursorError();

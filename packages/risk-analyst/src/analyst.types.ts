@@ -12,6 +12,13 @@ export type ReadingCandle = {
   readonly volume: string;
 };
 
+// O voto de UMA regra do especialista naquela vela e a leitura que a frase mostra (RSI ou Fear & Greed; `null` nas demais).
+export type RuleVote = {
+  readonly ruleId: string;
+  readonly vote: AnalystVote;
+  readonly reading: number | null;
+};
+
 // O voto de UM especialista numa vela. `vote: null` = sem leitura (aquecimento); `isMissing` = o dado da regra faltou
 // (sentimento velho) e o motor votou 0; `atr` é a leitura de oscilação do próprio `signalStep` (texto decimal).
 export type VoteReading = {
@@ -20,6 +27,8 @@ export type VoteReading = {
   readonly vote: AnalystVote | null;
   readonly isMissing: boolean;
   readonly atr: string | null;
+  // Os votos por regra (spec 011, D4-A); ausente em decisão gravada antes deles existirem.
+  readonly ruleVotes?: readonly RuleVote[];
 };
 
 export type TeamSeries = Readonly<Record<SpecialistKey, readonly VoteReading[]>>;
@@ -78,4 +87,6 @@ export type SpecialistView = {
   readonly lower: string | null;
   readonly upper: string | null;
   readonly weight: string;
+  // Os votos por regra desta vela (D4-A); ausente em decisão gravada antes deles existirem e na linha da estratégia.
+  readonly ruleVotes?: readonly RuleVote[];
 };

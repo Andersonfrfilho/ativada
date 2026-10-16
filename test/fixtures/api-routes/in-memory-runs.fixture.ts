@@ -28,6 +28,10 @@ import type {
   WalkForwardWindowInput,
 } from '../../../packages/database/src/index.js';
 import type { OwnerScope } from '../../../packages/database/src/ownership/owner-scope.js';
+import {
+  createInMemoryAnalystDecisions,
+  type InMemoryAnalystDecisions,
+} from './in-memory-analyst-decisions.fixture.js';
 import { createInMemoryLiveStatus } from './in-memory-live-status.fixture.js';
 import { createInMemoryProjections } from './in-memory-projections.fixture.js';
 import {
@@ -88,6 +92,8 @@ export type InMemoryRuns = {
   readonly liveStatus: RunLiveStatusRepository;
   // As leituras da previsão e das camadas (spec 009): anotam o nome em `liveCalls` como as do acompanhamento.
   readonly projections: RunProjectionRepository;
+  // As leituras do analista de risco (spec 007): anotam o nome em `liveCalls` e guardam as decisões semeadas.
+  readonly analyst: InMemoryAnalystDecisions;
   readonly liveCalls: string[];
   // Cada leitura de resultado anota o `limit` pedido: provam que a rota lê por página, nunca a série inteira.
   readonly listCalls: Record<ResultKind | 'log', number[]>;
@@ -545,6 +551,12 @@ export function createInMemoryRuns(
     calls: liveCalls,
   });
 
+  const analyst = createInMemoryAnalystDecisions({
+    isOwned: (scope, runId) => ownedRun(scope, runId) !== undefined,
+    resultsOf: storeOf,
+    calls: liveCalls,
+  });
+
   const results: InMemoryRuns['results'] = {
     readTradeTotals,
     listPriceColumns,
@@ -588,6 +600,7 @@ export function createInMemoryRuns(
     results,
     liveStatus,
     projections,
+    analyst,
     liveCalls,
     listCalls,
     fillLookups,

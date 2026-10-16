@@ -27,7 +27,7 @@ import type {
 
 const canonical = (text: string): string => formatEngineDecimal(toEngineDecimal(text));
 
-function readGoalSnapshot(request: unknown): unknown {
+export function readGoalSnapshot(request: unknown): unknown {
   if (typeof request !== 'object' || request === null || Array.isArray(request)) return undefined;
   return Object.getOwnPropertyDescriptor(request, 'goal')?.value;
 }
