@@ -115,6 +115,10 @@ export type SurfaceTheme = {
   readonly coneNeutral: string;
 };
 
+// O ponto do gráfico que um agente comenta, em pixels do contêiner do gráfico (só desenho).
+export type SurfaceAnchorKind = 'band_lower' | 'ema_fast' | 'volume' | 'protection';
+export type SurfaceAnchor = { readonly x: number; readonly y: number };
+
 export type SurfaceLogicalRange = { readonly from: number; readonly to: number };
 
 export type ChartSurface = {
@@ -127,6 +131,8 @@ export type ChartSurface = {
   ) => void;
   readonly setMarkers: (markers: readonly SurfaceMarker[]) => void;
   readonly setLevels: (boxes: readonly SurfaceLevelBox[]) => void;
+  // Onde está, agora, o ponto que o agente comenta (`null` sem a camada); refeito a cada mudança de faixa ou tamanho.
+  readonly anchorOf: (kind: SurfaceAnchorKind) => SurfaceAnchor | null;
   readonly setZones: (zones: readonly SurfaceZone[]) => void;
   readonly setPriceLevels: (levels: readonly SurfacePriceLevel[]) => void;
   // Pontinhos discretos de "esperou" (camada desligada por padrão).

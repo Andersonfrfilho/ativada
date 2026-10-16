@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { useId, type ReactElement } from 'react';
+import { useId, useRef, type ReactElement } from 'react';
 
 import { formatSymbol } from '../../format/format.js';
 import { describeChart } from '../chart-description.js';
@@ -11,6 +11,8 @@ import { ChartToolbar } from './ChartToolbar.component.js';
 import { ClusterButtons } from './ClusterButtons.component.js';
 import { LayerBar } from './LayerBar.component.js';
 import { BesideTeam } from '../team-room/BesideTeam.component.js';
+import { LeaderFocusProvider } from '../team-room/balcony/leader-focus.context.js';
+import { LeaderOverlay } from '../team-room/balcony/LeaderOverlay.component.js';
 import { TeamAside } from '../team-room/TeamAside.context.js';
 import { LayerNotices } from './LayerNotices.component.js';
 import { LiveCandleNotice } from './LiveCandleNotice.component.js';
@@ -97,26 +99,10 @@ function ChartSide({ chart, model }: CanvasViewProps): ReactElement {
   );
 }
 
-function CanvasView(props: CanvasViewProps): ReactElement {
-  const { chart, view, selection, model } = props;
-  const hasSide = view.isLive && model.isLayerOn(CHART_LAYER.FORECAST);
-  const ids: DescriptionIds = { help: useId(), caption: useId() };
+function CanvasFooter(props: CanvasViewProps & { readonly ids: DescriptionIds }): ReactElement {
+  const { chart, selection, model, ids } = props;
   return (
-    <figure className={styles.wrapper}>
-      <TeamAside pointedOpenTime={model.pointedOpenTime} />
-      <CanvasHeader {...props} />
-      <div className={hasSide ? styles.chartLayout : styles.chartAlone}>
-        <SurfaceBox {...props} ids={ids} />
-        {hasSide ? <ChartSide {...props} /> : null}
-      </div>
-      <LayerNotices
-        data={model.layerData}
-        decisions={chart.decisions}
-        isOn={model.isLayerOn}
-        isLive={view.isLive}
-        hasLevels={model.levels.length > 0}
-        zones={model.zones}
-      />
+    <>
       {chart.clusters === null ? null : (
         <ClusterButtons
           clusters={chart.clusters}
@@ -132,7 +118,40 @@ function CanvasView(props: CanvasViewProps): ReactElement {
         {model.keyboard.announcement}
       </p>
       <ChartCredit />
-    </figure>
+    </>
+  );
+}
+
+function CanvasView(props: CanvasViewProps): ReactElement {
+  const { chart, view, model } = props;
+  const hasSide = view.isLive && model.isLayerOn(CHART_LAYER.FORECAST);
+  const ids: DescriptionIds = { help: useId(), caption: useId() };
+  const figureRef = useRef<HTMLElement>(null);
+  return (
+    <LeaderFocusProvider>
+      <figure ref={figureRef} className={styles.wrapper}>
+        <TeamAside pointedOpenTime={model.pointedOpenTime} />
+        <CanvasHeader {...props} />
+        <div className={hasSide ? styles.chartLayout : styles.chartAlone}>
+          <SurfaceBox {...props} ids={ids} />
+          {hasSide ? <ChartSide {...props} /> : null}
+        </div>
+        <LayerNotices
+          data={model.layerData}
+          decisions={chart.decisions}
+          isOn={model.isLayerOn}
+          isLive={view.isLive}
+          hasLevels={model.levels.length > 0}
+          zones={model.zones}
+        />
+        <CanvasFooter {...props} ids={ids} />
+        <LeaderOverlay
+          surface={model.surface}
+          canvasRef={model.containerRef}
+          figureRef={figureRef}
+        />
+      </figure>
+    </LeaderFocusProvider>
   );
 }
 

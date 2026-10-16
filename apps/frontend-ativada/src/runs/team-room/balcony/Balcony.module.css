@@ -779,3 +779,28 @@
   display: none;
   position: relative;
 }
+
+/* Linha tracejada do balão ao ponto do gráfico (uma por vez); some em janela baixa e com a varanda recolhida. */
+.leader {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.leaderLine {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.leaderArrow {
+  fill: var(--accent);
+}
+
+:global([data-viewport='short']) .leader {
+  display: none;
+}

@@ -75,6 +75,16 @@ export const BALCONY_AGENTS: readonly BalconyAgentDefinition[] = [
   },
 ];
 
+// Que ponto do gráfico cada agente comenta (Sofia e Otávio não têm linha).
+export const LEADER_ANCHOR: Readonly<
+  Record<string, 'band_lower' | 'ema_fast' | 'volume' | 'protection'>
+> = {
+  [BALCONY_SLOT.RENATA]: 'band_lower',
+  [BALCONY_SLOT.TIAGO]: 'ema_fast',
+  [BALCONY_SLOT.VITOR]: 'volume',
+  [BALCONY_SLOT.ALICE]: 'protection',
+};
+
 export type BalconyModel = { readonly name: string; readonly role: string };
 
 // Agentes de modelo que ainda não existem: aparecem marcados e apagados, sem voto nem fala.

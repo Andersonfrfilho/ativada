@@ -392,3 +392,14 @@ aparecem "—" com o peso da estratégia e a frase "sem número, sem posição",
   no sinal (escritório completo, fase 3).
 - Remedição com tudo (modelos, ranking, pausa): 1366×650, 1366×768, 1536×730, 1440×700, 1280×720, 1280×600 e 1136×600 com o gráfico inteiro no viewport e scrollY = 0; 1024×540 e
   853×480 (zoom 125% e 150%) não cabem (gráfico no mínimo de 240 px, base 28 px e 0 px além, respectivamente 568 > 540 e 635 > 480).
+
+### Bloco 3 (B, C2, H, J): linhas balão→gráfico, ranking por especialista, faixa de compra, chip dos modelos
+
+- **(B) Linhas tracejadas:** `ChartSurface.anchorOf(kind)` (aditivo; `lightweight-anchor.ts`) devolve, em pixels do contêiner, o ponto da vela mais recente que cada agente comenta
+  (Renata → banda de baixo, Tiago → média rápida, Vitor → barra de volume, Alice → nível de proteção). `LeaderOverlay` (SVG com atributos, sem estilo inline) liga o balão do agente em
+  foco (mouse, foco, toque) ao ponto, com seta, uma por vez; refaz a conta só ao mudar foco, faixa visível (`onVisibleRangeChange`), rolagem ou tamanho, um quadro por vez
+  (`requestAnimationFrame`). Some em janela baixa (`data-viewport='short'`) e não existe sem a camada (Renata sem Bollinger e Alice sem posição ficam sem linha, como Sofia e Otávio).
+  App real (1440×900): Tiago e Vitor desenham a linha. Contrato `balcony-leader.contract.ts` (geometria e ausência de linha). **Não medido:** quadros por segundo com a linha ligada.
+- **(C2)** ranking por especialista com `/analyst` (N de M, Wilson, veredito, peso do servidor, janela de 30 dias); sem analista, "—" e a frase. Sem seletor de janela (o servidor tem uma) e
+  sem melhor/pior dica (sem dado).
+- **(H)** a régua da ficha do sinal (spec 014) já traz as zonas de ganho e perda; a faixa de compra agora cobre todos os gatilhos de preço. **(J)** chip "◆ 3 em breve" no celular, com a lista na ficha.

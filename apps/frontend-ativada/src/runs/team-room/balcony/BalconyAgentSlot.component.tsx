@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { useId, type ReactElement } from 'react';
+import { useId, useRef, type ReactElement } from 'react';
 
 import { GLOSSARY_TERM } from '../../../glossary/glossary.constant.js';
 import { Term } from '../../../glossary/Term.component.js';
@@ -10,6 +10,7 @@ import { TeamFigure } from '../TeamFigure.component.js';
 import type { BalconyAgent } from './balcony-agents.js';
 import { BALCONY_TEXT, type BalconySlot } from './balcony.constant.js';
 import styles from './Balcony.module.css';
+import { useLeaderFocus } from './leader-focus.context.js';
 import { useBadgeSheet } from './useBadgeSheet.hook.js';
 
 export type BalconyAgentSlotProps = {
@@ -75,10 +76,11 @@ function Sheet({
 type BadgeProps = {
   readonly agent: BalconyAgent;
   readonly onActivate: (slot: BalconySlot) => void;
+  readonly onLeave: () => void;
 };
 
 // O crachá no parapeito: sempre visível (nome, selo e cargo curto); clique ou Enter abre a ficha.
-function Badge({ agent, onActivate }: BadgeProps): ReactElement {
+function Badge({ agent, onActivate, onLeave }: BadgeProps): ReactElement {
   const sheetId = useId();
   const sheet = useBadgeSheet();
   return (
@@ -96,6 +98,8 @@ function Badge({ agent, onActivate }: BadgeProps): ReactElement {
         }}
         onFocus={() => onActivate(agent.slot)}
         onMouseEnter={() => onActivate(agent.slot)}
+        onMouseLeave={onLeave}
+        onBlur={onLeave}
       >
         <span className={styles.badgeName}>
           <span aria-hidden="true">{BALCONY_TEXT.KIND_RULE_MARK}</span> {agent.name}
@@ -118,12 +122,29 @@ export function BalconyAgentSlot({
   isActive,
   onActivate,
 }: BalconyAgentSlotProps): ReactElement {
+  const slotRef = useRef<HTMLLIElement>(null);
+  const leader = useLeaderFocus();
+  function handleActivate(slot: BalconySlot): void {
+    onActivate(slot);
+    const bubble = slotRef.current?.lastElementChild;
+    if (bubble instanceof HTMLElement) leader?.setFocus({ slot, element: bubble });
+  }
   return (
-    <li className={styles.slot} data-slot={agent.slot} data-state={state} data-active={isActive}>
+    <li
+      ref={slotRef}
+      className={styles.slot}
+      data-slot={agent.slot}
+      data-state={state}
+      data-active={isActive}
+    >
       <div className={styles.figure}>
         <TeamFigure role={agent.figureRole} tone={agent.tone} state={state} isRinging={false} />
       </div>
-      <Badge agent={agent} onActivate={onActivate} />
+      <Badge
+        agent={agent}
+        onActivate={handleActivate}
+        onLeave={() => leader?.setFocus(undefined)}
+      />
       <Bubble agent={agent} />
     </li>
   );
