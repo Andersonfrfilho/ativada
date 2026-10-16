@@ -10,6 +10,7 @@ import { decisionSchema } from '../src/runs/live-tracking/live-status.validation
 import { CompactTeam } from '../src/runs/team-room/CompactTeam.component.js';
 import { describeAnnouncement } from '../src/runs/team-room/team-room-lines.js';
 import { buildTeamRoomView } from '../src/runs/team-room/team-room-view.js';
+import { TEAM_ROOM_STORAGE_KEY } from '../src/runs/team-room/team-room.constant.js';
 import { TeamRoomSection } from '../src/runs/team-room/TeamRoomSection.component.js';
 import { useTeamRoomPreference } from '../src/runs/team-room/useTeamRoomPreference.hook.js';
 import {
@@ -55,6 +56,8 @@ function openWith(
   analyst: AnalystHarness,
   probe: ReactElement,
 ): ReturnType<typeof renderApp> {
+  // O escritório abre recolhido por padrão; estes testes olham o palco aberto.
+  localStorage.setItem(TEAM_ROOM_STORAGE_KEY, JSON.stringify({ isCollapsed: false }));
   return renderApp({
     path: '/',
     isAuthenticated: true,

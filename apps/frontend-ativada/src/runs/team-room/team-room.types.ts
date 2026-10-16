@@ -25,6 +25,8 @@ export type RuleLine = {
   // A frase do servidor para a regra (só na vela mais recente) e a leitura gravada na decisão.
   readonly motive: string | undefined;
   readonly reading: string | undefined;
+  // A leitura gravada, nome por nome, em texto decimal (os monitores do escritório desenham a partir dela).
+  readonly values?: Readonly<Record<string, string>> | undefined;
 };
 
 export type SpecialistView = {

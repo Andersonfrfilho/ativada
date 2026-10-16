@@ -11,6 +11,7 @@ import type {
   SpecialistView,
   TeamRoomView,
 } from '../team-room.types.js';
+import type { TeamFamily } from '../team-room.constant.js';
 import { BALCONY_AGENTS, BALCONY_TEXT, type BalconySlot } from './balcony.constant.js';
 
 export type BalconyAgent = {
@@ -19,6 +20,7 @@ export type BalconyAgent = {
   readonly roleShort: string;
   readonly roleFull: string;
   readonly figureRole: FigureRole;
+  readonly family: TeamFamily | undefined;
   readonly tone: SeatTone;
   readonly seal: { readonly icon: IconName; readonly word: string };
   readonly vote: SeatLook | undefined;

@@ -8,7 +8,7 @@ import styles from './TeamRoom.module.css';
 import { TEAM_ROOM_TEXT } from './team-room.constant.js';
 import type { AuditorView } from './team-room.types.js';
 
-function AuditorSpeech({
+export function AuditorSpeech({
   auditor,
   isCompact,
 }: {

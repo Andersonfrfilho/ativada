@@ -10,6 +10,8 @@ export type TeamRoomControlsProps = {
   readonly preference: TeamRoomPreference;
   readonly onChange: (change: Partial<TeamRoomPreference>) => void;
   readonly onReplay: () => void;
+  readonly isPaused?: boolean;
+  readonly onTogglePause?: () => void;
 };
 
 type LayoutOption = { readonly layout: TeamLayout; readonly text: string };
@@ -40,6 +42,27 @@ export function LayoutSwitch({
   );
 }
 
+// Pausar e continuar a coreografia do escritório (só quando há uma para pausar).
+function PauseButton({
+  preference,
+  isPaused,
+  onTogglePause,
+}: TeamRoomControlsProps): ReactElement | null {
+  if (onTogglePause === undefined) return null;
+  return (
+    <button
+      type="button"
+      className={styles.tool}
+      aria-pressed={isPaused === true}
+      onClick={onTogglePause}
+      disabled={preference.isCollapsed || !preference.isAnimationOn}
+    >
+      <Icon name="pause" size={16} />
+      {isPaused === true ? TEAM_ROOM_TEXT.RESUME_ANIMATION : TEAM_ROOM_TEXT.PAUSE_ANIMATION}
+    </button>
+  );
+}
+
 // Repetir a animação, ligar e desligar a animação e recolher a sala: preferências de tela, lembradas neste navegador.
 export function TeamRoomControls(props: TeamRoomControlsProps): ReactElement {
   const { preference, onChange, onReplay } = props;
@@ -55,6 +78,7 @@ export function TeamRoomControls(props: TeamRoomControlsProps): ReactElement {
         <Icon name="replay" size={16} />
         {TEAM_ROOM_TEXT.REPLAY}
       </button>
+      <PauseButton {...props} />
       <button
         type="button"
         className={styles.tool}

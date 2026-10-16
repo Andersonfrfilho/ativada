@@ -84,6 +84,19 @@
   --office-wall: color-mix(in srgb, var(--accent) 9%, var(--surface));
   --desk-edge: color-mix(in srgb, var(--ink-3) 55%, var(--surface));
   --glass: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  --office-floor: color-mix(in srgb, var(--accent-soft) 45%, var(--surface));
+  --office-floor-line: color-mix(in srgb, var(--line) 80%, transparent);
+  --desk-top: color-mix(in srgb, var(--ink-3) 22%, var(--surface));
+  --desk-front: color-mix(in srgb, var(--ink-3) 12%, var(--surface));
+  --table-top: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  --bezel: #1a2033;
+  --screen: #0d1220;
+  --screen-ink: #e8ecf6;
+  --screen-ink-2: #9aa5c2;
+  --screen-good: #41cc94;
+  --screen-bad: #ff7d83;
+  --light: color-mix(in srgb, var(--accent) 30%, var(--surface));
+  --light-strip: color-mix(in srgb, var(--accent) 55%, var(--surface));
   color-scheme: light;
 }
 

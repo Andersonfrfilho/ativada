@@ -20,6 +20,8 @@ export type VoteSpec = {
   readonly vote: -1 | 0 | 1;
   readonly weight?: string;
   readonly isMissing?: boolean;
+  // A leitura gravada na decisão (os monitores do escritório desenham a partir dela); sem ela, { value: '55' }.
+  readonly reading?: Record<string, string>;
 };
 
 export const SERVER_MOTIVE = 'RSI: precisa ficar abaixo de 30 para votar a favor de comprar.';
@@ -46,7 +48,7 @@ function voteOf(spec: VoteSpec): Record<string, unknown> {
     vote: spec.vote,
     weight: spec.weight ?? '1',
     isMissing: spec.isMissing ?? false,
-    reading: spec.isMissing === true ? null : { value: '55' },
+    reading: spec.isMissing === true ? null : (spec.reading ?? { value: '55' }),
   };
 }
 

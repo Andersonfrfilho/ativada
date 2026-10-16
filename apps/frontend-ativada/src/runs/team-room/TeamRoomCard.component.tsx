@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { ReactElement } from 'react';
+import type { ReactElement, Ref } from 'react';
 
 import { Term } from '../../glossary/Term.component.js';
 import { Card } from '../../layout/Card.component.js';
@@ -8,7 +8,10 @@ import styles from './TeamRoomCard.module.css';
 import { TeamRoomControls, type TeamRoomControlsProps } from './TeamRoomControls.component.js';
 import { TeamRoomLines } from './TeamRoomLines.component.js';
 import { TeamRoomNavigator, type TeamRoomNavigatorProps } from './TeamRoomNavigator.component.js';
-import { TeamRoomStage } from './TeamRoomStage.component.js';
+import { OfficeBadgeList } from './office/OfficeBadgeList.component.js';
+import { OfficeStage } from './office/OfficeStage.component.js';
+import type { OfficeModel } from './office/useOfficeModel.hook.js';
+import type { OfficeSceneState } from './office/useOfficeScene.hook.js';
 import { TEAM_LEGEND, TEAM_ROOM_TEXT } from './team-room.constant.js';
 import type { AuditorView, TeamRoomView } from './team-room.types.js';
 
@@ -18,12 +21,14 @@ export type TeamRoomContent = {
   readonly closedText: string;
   // Uma frase de interface quando a simulação não está rodando (a sala mostra a última vela decidida).
   readonly notice: string | undefined;
+  readonly office: OfficeModel;
 };
 
 export type TeamRoomMotion = {
-  readonly step: number;
-  readonly isRinging: boolean;
+  readonly scene: OfficeSceneState;
   readonly isAnnounced: boolean;
+  // Para a pausa fora da tela (IntersectionObserver): o contêiner do escritório.
+  readonly boxRef: Ref<HTMLDivElement>;
 };
 
 export type TeamRoomCardProps = {
@@ -76,12 +81,14 @@ function RoomBody({ content, motion, navigator, monitor }: TeamRoomCardProps): R
           {monitor}
         </div>
       )}
-      <TeamRoomStage
+      <OfficeStage
         view={content.view}
         auditor={content.auditor}
-        step={motion.step}
-        isRinging={motion.isRinging}
+        office={content.office}
+        scene={motion.scene}
+        boxRef={motion.boxRef}
       />
+      <OfficeBadgeList view={content.view} auditor={content.auditor} />
       <Legend />
       <TeamRoomLines
         view={content.view}

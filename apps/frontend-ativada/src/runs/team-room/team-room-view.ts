@@ -70,6 +70,7 @@ function lineOf(vote: DecisionVote, triggers: Triggers | undefined): RuleLine {
     isCounted: !vote.isMissing && isCountedWeight(vote.weight),
     motive: motiveOf(vote.ruleId, triggers),
     reading: describeReading(vote.reading),
+    values: vote.reading ?? undefined,
   };
 }
 

@@ -11,7 +11,7 @@ export const TEAM_LAYOUT = {
 export type TeamLayout = (typeof TEAM_LAYOUT)[keyof typeof TEAM_LAYOUT];
 
 const DEFAULTS = {
-  isCollapsed: false,
+  isCollapsed: true,
   isAnimationOn: true,
   layout: TEAM_LAYOUT.CHART_AND_TEAM,
 } as const;

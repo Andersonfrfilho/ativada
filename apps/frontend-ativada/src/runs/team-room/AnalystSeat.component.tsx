@@ -16,7 +16,7 @@ export type AnalystSeatProps = {
 };
 
 // O resumo do placar da estratégia (simulação sem analista): pontuação contra o limiar e o que a estratégia fez.
-function StrategySummarySpeech({ view }: { readonly view: TeamRoomView }): ReactElement {
+export function StrategySummarySpeech({ view }: { readonly view: TeamRoomView }): ReactElement {
   const { analyst } = view;
   return (
     <>
@@ -34,7 +34,7 @@ function StrategySummarySpeech({ view }: { readonly view: TeamRoomView }): React
 }
 
 // O analista de risco de verdade: a postura (ícone + palavra + cor) e as frases do servidor, com o selo do modo sombra.
-function RiskAnalystSpeech({ risk }: { readonly risk: RiskAnalystView }): ReactElement {
+export function RiskAnalystSpeech({ risk }: { readonly risk: RiskAnalystView }): ReactElement {
   return (
     <>
       <strong className={styles.who}>{risk.name}</strong>

@@ -39,6 +39,7 @@ const TARGETS: readonly (readonly [string, string])[] = [
   ['runs/team-room/TeamRoomCard.module.css', '.tool'],
   ['runs/team-room/TeamRoomCard.module.css', '.switchButton'],
   ['runs/team-room/TeamRoomCard.module.css', '.linesSummary'],
+  ['runs/team-room/office/Office.module.css', '.badgeButton'],
   ['runs/analyst/Analyst.module.css', '.more'],
   ['backtests/run-switch/RunSwitcher.module.css', '.trigger'],
   ['backtests/run-switch/RunSwitcher.module.css', '.option'],

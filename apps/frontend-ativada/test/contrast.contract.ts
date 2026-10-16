@@ -133,7 +133,19 @@ const PERCENT_DIVISOR = 100;
 const CONE_TOKENS = ['cone-up', 'cone-down', 'cone-neutral'] as const;
 // Fundos suaves da central de avisos (spec 014): cancelada em cinza e as zonas de ganho e perda da régua.
 const NOTICE_FILL_TOKENS = ['cancel-soft', 'zone-gain', 'zone-loss'] as const;
-const BALCONY_FILL_TOKENS = ['model-soft', 'board', 'office-wall', 'desk-edge', 'glass'] as const;
+const BALCONY_FILL_TOKENS = [
+  'model-soft',
+  'board',
+  'office-wall',
+  'desk-edge',
+  'glass',
+  'office-floor',
+  'desk-top',
+  'desk-front',
+  'table-top',
+  'light',
+  'light-strip',
+] as const;
 // A grade só ajuda o olho: o valor está nos rótulos dos eixos (WCAG 1.4.11 não a cobra), então o piso é só "visível".
 const GRID_MINIMUM_RATIO = 1.5;
 
@@ -221,3 +233,22 @@ for (const [theme, read] of [
     }
   });
 }
+
+// As telas do escritório são sempre escuras, nos dois temas (spec 011, escritorio.md §11): tinta clara sobre a tela.
+describe('office screens stay legible (always dark)', () => {
+  const tokens = lightTokens();
+  for (const ink of ['screen-ink', 'screen-ink-2'] as const) {
+    test(`${ink} on screen is at least ${MINIMUM_RATIO}:1`, () => {
+      const front = tokens.get(ink) ?? '#000000';
+      expect(ratio(front, tokens.get('screen') ?? '#ffffff')).toBeGreaterThanOrEqual(MINIMUM_RATIO);
+    });
+  }
+  for (const mark of ['screen-good', 'screen-bad'] as const) {
+    test(`graphic ${mark} on screen is at least ${GRAPHIC_MINIMUM_RATIO}:1`, () => {
+      const front = tokens.get(mark) ?? '#000000';
+      expect(ratio(front, tokens.get('screen') ?? '#ffffff')).toBeGreaterThanOrEqual(
+        GRAPHIC_MINIMUM_RATIO,
+      );
+    });
+  }
+});

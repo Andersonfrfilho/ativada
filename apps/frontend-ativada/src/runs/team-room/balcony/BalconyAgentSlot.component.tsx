@@ -42,7 +42,7 @@ function Bubble({ agent }: { readonly agent: BalconyAgent }): ReactElement {
   );
 }
 
-function Sheet({
+export function Sheet({
   agent,
   id,
   isOpen,

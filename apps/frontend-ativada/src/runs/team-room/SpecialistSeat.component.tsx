@@ -16,7 +16,7 @@ export type SpecialistSeatProps = {
   readonly isRinging: boolean;
 };
 
-function RuleItem({ rule }: { readonly rule: RuleLine }): ReactElement {
+export function RuleItem({ rule }: { readonly rule: RuleLine }): ReactElement {
   const look = VOTE_LOOK[rule.voteKind];
   return (
     <li className={styles.rule}>

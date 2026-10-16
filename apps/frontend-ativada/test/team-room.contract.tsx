@@ -50,6 +50,10 @@ function open(
   summary: Record<string, unknown> = buildProjectionsSummary(),
   monitor?: ReactElement,
 ): RenderedApp {
+  // O escritório abre recolhido por padrão ("Ver o escritório"); estes testes olham o palco aberto.
+  if (localStorage.getItem(TEAM_ROOM_STORAGE_KEY) === null) {
+    localStorage.setItem(TEAM_ROOM_STORAGE_KEY, JSON.stringify({ isCollapsed: false }));
+  }
   return renderApp({
     path: '/',
     isAuthenticated: true,
@@ -210,7 +214,10 @@ describe('sala da equipe: movimento só na vela nova', () => {
   });
 
   test('with the animation turned off the new candle goes straight to the final state', async () => {
-    localStorage.setItem(TEAM_ROOM_STORAGE_KEY, JSON.stringify({ isAnimationOn: false }));
+    localStorage.setItem(
+      TEAM_ROOM_STORAGE_KEY,
+      JSON.stringify({ isAnimationOn: false, isCollapsed: false }),
+    );
     const harness = createRoomHarness();
     const app = open(harness);
     const stage = await stageOf();
@@ -263,13 +270,13 @@ describe('sala da equipe: rever velas, recolher e escolher o layout', () => {
     open(createRoomHarness(), buildProjectionsSummary(), <p>O gráfico aqui</p>);
     await stageOf();
     expect(screen.getByText('O gráfico aqui')).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: 'Esconder a sala' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Esconder o escritório' }));
     expect(document.querySelector('[data-motion]')).toBeNull();
     expect(screen.getByText('O gráfico aqui')).toBeDefined();
     expect(JSON.parse(localStorage.getItem(TEAM_ROOM_STORAGE_KEY) ?? '{}')).toMatchObject({
       isCollapsed: true,
     });
-    expect(screen.getByRole('button', { name: 'Mostrar a sala' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Ver o escritório' })).toBeDefined();
   });
 
   test('the layout switch offers both modes and remembers the choice', async () => {
