@@ -415,3 +415,22 @@ Rede (Visão geral, 25 s): 1 GET /v1/runs?kind&limit (eram 2), sem 429, sem aler
 ```
 
 Pendências: ver "O que ainda falta" por tela no `comparacao-preview-vs-real.md`; "Por que está assim" (recolhível de decisões de design), ícone de usuário no cabeçalho, abas do filtro do ranking e resumo em caixa tracejada da simulação ficam para uma próxima rodada.
+
+## Filtro por par (sonnet, 2026-10-16)
+
+**Problema.** Na tela de Backtests só aparecia LINK/USDT: o banco tem execuções de nove pares (BTC, ETH, DOGE, PEPE, SOL, XRP, BNB, LINK, SHIB), mas a lista carregava 20 por vez (mais novas primeiro) e filtrava só o que já estava na memória (pendência 1 da T4.1).
+
+**API (`GET /v1/runs`).** Filtros opcionais e combináveis por E: `kind` (já existia), `symbol` (só par habilitado em `MARKET_SYMBOLS`) e `strategyVersionId` (UUID). Esquema em `runs/list-runs-query.schema.ts` (Zod, `strictObject`, 400 com todos os erros e sem eco do valor). O filtro entra no `WHERE` de `listRuns` junto do dono (`ownerCondition`) e ANTES do cursor, então a paginação segue por `(created_at, id)` dentro do filtro; uma consulta só, sem N+1. OpenAPI regerado da tabela (a rota passa o esquema como `query`).
+
+**Provas.**
+- `test/api-runs.contract.test.ts` (`loadApiApp()`): par, versão, filtros combinados, versão de outro dono (lista vazia), dono B só vê o dele, cursor dentro do filtro; 400 para `symbol` fora dos habilitados, vazio ou repetido e `strategyVersionId` que não é UUID, sem o valor na resposta.
+- `test/api-routes-mutants.contract.test.ts`: dois mutantes novos (`RUN_LIST_IGNORES_THE_SYMBOL_FILTER`, `RUN_LIST_IGNORES_THE_STRATEGY_VERSION_FILTER`) reprovados.
+- `make database-test` contra o Postgres embutido do WSL (porta 56448, descartável): o filtro por par/versão no SQL real traz só o do dono e a versão de outro dono não aparece. `scripts/api-runs-mutants.ts` no mesmo Postgres: "OK - 30 mutantes de filtro de dono reprovados" (incluído `RUN_LIST_SHOWS_EVERY_OWNER`).
+- Gates no espelho Linux: contratos `api-runs`, `api-routes-mutants` e `api-openapi` (139 passam), lint e format da raiz limpos.
+
+**Painel (`/backtests`).** Duas fileiras de chips acima das listas: "Filtrar por moeda" (Todas as moedas + uma por par de `VITE_MARKET_SYMBOLS`, rótulo curto "BTC") e "Filtrar por tipo" (Todos, Backtests, Walk-forward). Um par e um tipo por vez, no estado da URL (`?par=BTCUSDT`, `?tipo=walk_forward`; valor fora dos habilitados é ignorado). O par vai à API em `symbol` e entra na chave da consulta (`['runs','list',kind,symbol]`), então "Carregar mais" continua dentro do filtro; o tipo esconde a outra lista. Sob cada lista: "N carregadas · há mais" enquanto houver outra página e "N no total" quando a última foi lida (a API não devolve o total, então nenhum M é inventado). O resumo do grupo ("N de M positivos", mediana, melhor e pior) é do que foi carregado COM o filtro; o agrupamento por estratégia, o filtro por estratégia (`?strategy=`) e a ordenação (`?order=`) seguem como estavam. Alvos de 44 px (mesmo `.chip` da barra de estratégia), estado = ícone de marca + texto + cor (`aria-pressed`).
+- Teste novo `test/backtests-filters.contract.tsx` (na lista explícita do script `test`): chips, par enviado à API e na URL, "Carregar mais" com o filtro e a contagem, par inválido ignorado, tipo esconde a outra lista. `bun run --cwd apps/frontend-ativada test`: 1185 passam, 0 falham; `tsc` e `eslint` do painel limpos.
+
+**App dev real (Playwright + Edge, API reiniciada com o código novo; só o processo da API, sem tocar no worker).** A lista sem filtro mostra os nove pares; cada chip chama `GET /v1/runs?kind=...&limit=20&symbol=<PAR>` (200) e a tela mostra só aquele par: BTC 5, ETH 5, DOGE 5, PEPE 8, SOL 5, XRP 5, BNB 5, LINK 6, SHIB 5 (contagem do cartão Backtests; "N no total"); a URL fica `?par=...`. Sem filtro: "20 carregadas · há mais".
+
+**Pendência que sobra.** A ordenação por resultado e o filtro por estratégia continuam locais ao que está carregado; filtro por versão já existe na API (`strategyVersionId`), falta o painel usá-lo.

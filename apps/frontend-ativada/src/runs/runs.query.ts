@@ -46,6 +46,12 @@ function pagePath(base: string, extra: Record<string, string>, cursor: string | 
   return `${base}?${query.toString()}`;
 }
 
+function listFilters(kind: RunKind, symbol: string | undefined): Record<string, string> {
+  const filters: Record<string, string> = { kind, limit: String(LIST_PAGE_SIZE) };
+  if (symbol !== undefined) filters['symbol'] = symbol;
+  return filters;
+}
+
 // Enquanto está na fila ou rodando, consulta de novo sozinho (o painel não depende de recarregar a página).
 export function useRunDetailQuery(runId: string): UseQueryResult<RunDetail> {
   const client = useApiClient();
@@ -60,15 +66,16 @@ export function useRunDetailQuery(runId: string): UseQueryResult<RunDetail> {
 
 export function useRunListQuery(
   kind: RunKind,
+  symbol?: string,
 ): UseInfiniteQueryResult<InfiniteData<Page<Run>, string | null>> {
   const client = useApiClient();
   const { runPollMilliseconds = RUN_POLL_MILLISECONDS } = useAppConfig();
   return useInfiniteQuery({
-    queryKey: [RUN_QUERY_ROOT, 'list', kind],
+    queryKey: [RUN_QUERY_ROOT, 'list', kind, symbol ?? null],
     initialPageParam: FIRST_PAGE,
     queryFn: ({ pageParam }) =>
       client.requestPage({
-        path: pagePath(API_PATH.RUNS, { kind, limit: String(LIST_PAGE_SIZE) }, pageParam),
+        path: pagePath(API_PATH.RUNS, listFilters(kind, symbol), pageParam),
         schema: runSchema,
       }),
     getNextPageParam: (last) => last.nextCursor ?? undefined,

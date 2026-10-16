@@ -3,18 +3,20 @@ import { useState, type ReactElement } from 'react';
 import { Link } from 'react-router';
 
 import { ROUTE_PATH } from '../app/app.constant.js';
-import { RUN_KIND } from '../runs/run.constant.js';
 import runStyles from '../runs/Runs.module.css';
 import controls from '../styles/Controls.module.css';
 import styles from './Backtests.module.css';
+import { FilteredRunLists } from './FilteredRunLists.component.js';
 import { LiveRunCard } from './LiveRunCard.component.js';
 import { NewBacktestCard } from './NewBacktestCard.component.js';
-import { RunListCard } from './RunListCard.component.js';
+import { RunFilterBar } from './RunFilterBar.component.js';
+import { useRunFilters } from './useRunFilters.hook.js';
 
 const MAX_COMPARED = 2;
 
 export function BacktestsPage(): ReactElement {
   const [selected, setSelected] = useState<readonly string[]>([]);
+  const filters = useRunFilters();
 
   function handleToggle(runId: string): void {
     setSelected((current) =>
@@ -41,17 +43,8 @@ export function BacktestsPage(): ReactElement {
           </p>
         )}
       </div>
-      <RunListCard
-        kind={RUN_KIND.BACKTEST}
-        title="Backtests"
-        moreLabel="Carregar mais backtests"
-        selection={{ selected, onToggle: handleToggle }}
-      />
-      <RunListCard
-        kind={RUN_KIND.WALK_FORWARD}
-        title="Walk-forward"
-        moreLabel="Carregar mais walk-forwards"
-      />
+      <RunFilterBar filters={filters} />
+      <FilteredRunLists filters={filters} selection={{ selected, onToggle: handleToggle }} />
     </div>
   );
 }
