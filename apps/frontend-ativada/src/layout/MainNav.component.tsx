@@ -28,11 +28,19 @@ const LINKS: readonly NavLinkItem[] = [
   { to: ROUTE_PATH.ACCOUNT, label: 'Conta', isExact: false, icon: 'account' },
 ];
 
-export function MainNav(): ReactElement {
+export type MainNavProps = { readonly onNavigate: () => void };
+
+export function MainNav({ onNavigate }: MainNavProps): ReactElement {
   return (
     <nav aria-label="Principal" className={styles.nav}>
       {LINKS.map((link) => (
-        <NavLink key={link.to} to={link.to} end={link.isExact} className={navClassName}>
+        <NavLink
+          key={link.to}
+          to={link.to}
+          end={link.isExact}
+          className={navClassName}
+          onClick={onNavigate}
+        >
           <Icon name={link.icon} />
           {link.label}
         </NavLink>

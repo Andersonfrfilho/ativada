@@ -21,6 +21,7 @@
     'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
   --font-data: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   --gutter: 16px;
+  --page-width: 1200px;
   --text-xs: 12px;
   --text-sm: 13px;
   --text-md: 15px;
