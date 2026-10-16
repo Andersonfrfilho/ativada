@@ -726,3 +726,32 @@
 .frame[data-density='compact'] .modelText span {
   display: none;
 }
+
+.rankingBox {
+  display: grid;
+  gap: var(--space-1);
+  overflow-x: auto;
+}
+
+.rankingTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.rankingTable th,
+.rankingTable td {
+  padding: 2px 4px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.rankingTable thead th {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.rankingTable tbody tr {
+  border-top: 1px solid var(--line);
+}

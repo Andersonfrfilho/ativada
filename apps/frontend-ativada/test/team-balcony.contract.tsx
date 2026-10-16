@@ -135,6 +135,8 @@ describe('a varanda: a equipe em pé acima do gráfico (spec 011, escritório)',
     const team = await openBalcony();
     fireEvent.click(within(team).getByRole('tab', { name: 'Ranking' }));
     expect(within(team).getByRole('tab', { name: 'Ranking', selected: true })).toBeDefined();
+    await waitFor(() => expect(team.textContent).toContain('Placar da estratégia'));
+    expect(team.textContent).toContain('Ranking é desempenho passado, não garantia.');
     expect(
       within(team).getByRole('button', { name: 'Lousa da equipe: proteções e ranking' }),
     ).toBeDefined();

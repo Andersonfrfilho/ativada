@@ -377,3 +377,10 @@ Crachás 6/6 e balão ativo dentro do viewport em todos; a lousa fica fora na va
   e falha (sem dado). Escondidos na varanda recolhida e no celular (a legenda "● Regra ◆ Modelo" segue). Ícone `chip` novo. Teste no `team-balcony.contract.tsx`.
 - **Horizonte:** o balão ("vale até HH:MM"), a ficha e agora o cabeçalho da varanda ("opiniões valem até HH:MM"); ao apontar uma vela, "vela das …".
   **Pendente:** a coluna sombreada da vela em formação no gráfico e a "janela de acerto" do Otávio (o servidor não devolve a janela).
+
+### Bloco 2 (C): ranking na lousa
+
+Aba Ranking com tabela: posição, agente, "N de M" e taxa contra a moeda ao ar (50%), intervalo de Wilson (pior a melhor caso), veredito (ícone + palavra + cor), peso, coroa só para
+"Acima da moeda ao ar", ordem pelo limite inferior de Wilson. O servidor só mede o resumo do placar (`/projections`), então essa é a única linha com número; Tiago, Renata, Vitor e Sofia
+aparecem "—" com o peso da estratégia e a frase "sem número, sem posição", e os modelos como "ainda não existem". Rodapé "Ranking é desempenho passado, não garantia." Contrato `balcony-ranking.contract.ts` (4).
+**Pendente (precisa do servidor):** ranking por especialista, janela selecionável, tendência da semana e melhor/pior dica com botão que leva o gráfico à vela.

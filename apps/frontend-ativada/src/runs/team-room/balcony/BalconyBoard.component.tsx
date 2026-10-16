@@ -7,7 +7,7 @@ import { BALCONY_TEXT } from './balcony.constant.js';
 import styles from './Balcony.module.css';
 import { BoardProtections, type BoardProtectionsProps } from './BoardProtections.component.js';
 import { BoardNotes } from './BoardNotes.component.js';
-import { BoardRankingSummary } from './BoardRankingSummary.component.js';
+import { BoardRanking } from './BoardRanking.component.js';
 
 export type BoardTab = 'protections' | 'ranking' | 'notes';
 
@@ -77,7 +77,7 @@ export function BalconyBoard(props: BalconyBoardProps): ReactElement {
         <BoardTabs tab={tab} onChange={setTab} />
         <div role="tabpanel" className={styles.boardPanel}>
           {tab === 'protections' ? <BoardProtections {...props} /> : null}
-          {tab === 'ranking' ? <BoardRankingSummary auditor={auditor} /> : null}
+          {tab === 'ranking' ? <BoardRanking runId={props.runId} agents={agents} /> : null}
           {tab === 'notes' ? <BoardNotes agents={agents} auditor={auditor} /> : null}
         </div>
       </div>

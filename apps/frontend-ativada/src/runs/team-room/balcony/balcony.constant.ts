@@ -107,6 +107,10 @@ export const BALCONY_TEXT = {
   COMFORTABLE: 'Confortável',
   EXPAND: 'Expandir equipe',
   MODEL_NOT_YET: 'Agente de modelo: ainda não existe. Não fala nem vota.',
+  RANKING_FOOTER: 'Ranking é desempenho passado, não garantia.',
+  RANKING_UNMEASURED:
+    'O servidor ainda não mede o acerto por especialista: sem número, sem posição.',
+  RANKING_MODELS: 'Nina, Lucas e Clara: os agentes de modelo ainda não existem.',
   NET_WORD: 'líquido',
   PROTECTION_TITLE: 'PROTEÇÃO CONTRA QUEDA',
   TARGET_TITLE: 'Alvo de ganho',

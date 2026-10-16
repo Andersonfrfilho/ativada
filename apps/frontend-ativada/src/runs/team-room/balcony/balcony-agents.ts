@@ -26,6 +26,8 @@ export type BalconyAgent = {
   readonly line: string | undefined;
   // O termo técnico da leitura (RSI, EMA...), para a dica no balão.
   readonly lineTerm: GlossaryTerm | undefined;
+  // "peso 1" ou "fora do placar": o que a estratégia deu a este especialista nesta vela.
+  readonly placard: string | undefined;
   readonly horizon: string | undefined;
   // A ficha: frases do servidor e fatos da tela, uma por linha.
   readonly facts: readonly string[];
@@ -95,6 +97,7 @@ function specialistAgent(
     vote: specialist === undefined ? NOT_VOTING_LOOK : voteOf(specialist),
     line: rules.map(ruleLineOf).find((text) => text !== undefined),
     lineTerm: termOf(specialist),
+    placard: specialist?.placard,
     horizon,
     facts: specialist === undefined ? [BALCONY_TEXT.NO_MEASURE_NOTE] : specialistFacts(specialist),
     ariaLabel: ariaOf(definition.name, definition.roleFull, seal.word),
@@ -116,6 +119,7 @@ function aliceAgent(
     vote: riskAnalyst?.look ?? analyst.outcome,
     line: riskAnalyst === undefined ? `pontuação ${analyst.scoreText}` : lines[0],
     lineTerm: undefined,
+    placard: undefined,
     horizon,
     facts: lines,
     ariaLabel: ariaOf(definition.name, definition.roleFull, seal.word),
@@ -137,6 +141,7 @@ function auditorAgent(
         ? BALCONY_TEXT.MEASURING
         : `${auditor.rateText} · moeda ${auditor.coinText}`,
     lineTerm: undefined,
+    placard: undefined,
     horizon: undefined,
     facts: auditor === undefined ? [] : [auditor.lead, auditor.verdictMessage],
     ariaLabel: ariaOf(definition.name, definition.roleFull, seal.word),
