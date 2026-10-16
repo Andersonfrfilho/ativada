@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { stamp, type Context, type Render } from './lightweight-context.js';
-import type { SeriesPartialOptionsMap } from './lightweight-surface.js';
+import type { ISeriesApi, SeriesPartialOptionsMap } from './lightweight-surface.js';
 import { pricePriceFormat, SCORE_PRICE_FORMAT } from './surface-format.js';
 import {
   buildCandleColors,
@@ -43,8 +43,20 @@ export function applyPricePrecision(ctx: Context): void {
   );
 }
 
+// Remover o que a biblioteca já removeu lança; a lista fica vazia de qualquer jeito, então a próxima pintura recomeça limpa.
+function removeAll(ctx: Context, series: readonly ISeriesApi<'Line'>[]): void {
+  for (const item of series) {
+    try {
+      ctx.chart.removeSeries(item);
+    } catch {
+      // já removida
+    }
+  }
+}
+
 export const renderLines: Render = (ctx, theme) => {
-  ctx.layers.lines.forEach((series) => ctx.chart.removeSeries(series));
+  removeAll(ctx, ctx.layers.lines);
+  ctx.layers.lines = [];
   ctx.layers.lines = ctx.state.lines.map((line) => {
     const look = { ...chooseLineStyle(line.role, theme), width: 1 } as const;
     const series = ctx.chart.addSeries(ctx.kit.LineSeries, lineOptions(ctx, look));
@@ -54,7 +66,11 @@ export const renderLines: Render = (ctx, theme) => {
 };
 
 function dropScore(ctx: Context): void {
-  if (ctx.layers.score !== undefined) ctx.chart.removeSeries(ctx.layers.score);
+  try {
+    if (ctx.layers.score !== undefined) ctx.chart.removeSeries(ctx.layers.score);
+  } catch {
+    // já removida
+  }
   ctx.layers.score = undefined;
 }
 
@@ -79,7 +95,8 @@ export const renderScore: Render = (ctx, theme) => {
 };
 
 export const renderProjection: Render = (ctx, theme) => {
-  ctx.layers.cone.forEach((series) => ctx.chart.removeSeries(series));
+  removeAll(ctx, ctx.layers.cone);
+  ctx.layers.cone = [];
   const { projection } = ctx.state;
   const edges = projection === null ? [] : buildConeEdges(projection, theme);
   ctx.layers.cone = edges.map((edge) => {

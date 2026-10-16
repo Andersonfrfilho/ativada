@@ -49,3 +49,7 @@ export const DISPLAY_TEXT = {
 
 // Saídas que o motor decide dentro de uma vela da execução, sem saber o minuto (ADR 0002, V8).
 export const BRACKET_EXIT_REASONS: readonly string[] = ['target', 'stop', 'gap'];
+
+// Contexto antes do início da simulação nas velas de exibição: o que for maior entre 40 velas e 2 horas.
+export const DISPLAY_CONTEXT_BARS = 40;
+export const DISPLAY_CONTEXT_MILLISECONDS = 2 * 3_600_000;

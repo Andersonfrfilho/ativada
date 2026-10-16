@@ -34,6 +34,7 @@ export type SurfaceState = {
   projection: SurfaceProjection | null;
   live: SurfaceCandle | null;
   formingSlot: SurfaceFormingSlot | null;
+  runStart: SurfaceTime | null;
 };
 
 export function createSurfaceState(): SurfaceState {
@@ -54,5 +55,6 @@ export function createSurfaceState(): SurfaceState {
     projection: null,
     live: null,
     formingSlot: null,
+    runStart: null,
   };
 }

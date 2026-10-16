@@ -120,7 +120,13 @@ export type SurfaceTheme = {
 
 // O ponto do gráfico que um agente comenta, em pixels do contêiner do gráfico (só desenho).
 export type SurfaceAnchorKind =
-  'band_lower' | 'ema_fast' | 'volume' | 'protection' | 'forming_left' | 'forming_right';
+  | 'band_lower'
+  | 'ema_fast'
+  | 'volume'
+  | 'protection'
+  | 'forming_left'
+  | 'forming_right'
+  | 'run_start';
 export type SurfaceAnchor = { readonly x: number; readonly y: number };
 
 // A vela da execução em formação, em segundos UTC: o intervalo que a faixa sombreada cobre sobre as velas de exibição.
@@ -152,6 +158,8 @@ export type ChartSurface = {
   readonly setProjection: (projection: SurfaceProjection | null) => void;
   readonly setLiveCandle: (candle: SurfaceCandle | null) => void;
   // Com vela de exibição, a coluna da vela em formação cobre as velas da vela da execução inteira (`null`: só a vela viva).
+  // O instante em que a simulação começou (a marca vertical "começa aqui"); `null` sem marca.
+  readonly setRunStart: (time: SurfaceTime | null) => void;
   readonly setFormingSlot: (slot: SurfaceFormingSlot | null) => void;
   readonly setCrosshair: (index: number | null) => void;
   readonly onCrosshairMove: (listener: (index: number | null) => void) => () => void;

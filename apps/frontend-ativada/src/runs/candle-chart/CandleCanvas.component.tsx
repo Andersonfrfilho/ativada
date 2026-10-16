@@ -9,13 +9,12 @@ import { CHART_KEYBOARD_HELP } from './chart-key-plan.js';
 import { ChartCredit } from './ChartCredit.component.js';
 import { ChartTooltip } from './ChartTooltip.component.js';
 import { useChartTooltip } from './useChartTooltip.hook.js';
-import { ChartToolbar } from './ChartToolbar.component.js';
 import { ClusterButtons } from './ClusterButtons.component.js';
 import { LayerBar } from './LayerBar.component.js';
 import { BesideTeam } from '../team-room/BesideTeam.component.js';
 import { LeaderFocusProvider } from '../team-room/balcony/leader-focus.context.js';
-import { FormingBand } from '../team-room/balcony/FormingBand.component.js';
-import { LeaderOverlay } from '../team-room/balcony/LeaderOverlay.component.js';
+import { CandleToolbar } from './CandleToolbar.component.js';
+import { CanvasOverlays } from './CanvasOverlays.component.js';
 import { TeamAside } from '../team-room/TeamAside.context.js';
 import { LayerNotices } from './LayerNotices.component.js';
 import { LiveCandleNotice } from './LiveCandleNotice.component.js';
@@ -37,13 +36,7 @@ type CanvasViewProps = CandleCanvasInput & { readonly model: CandleCanvasModel }
 function CanvasHeader({ chart, view, source, model }: CanvasViewProps): ReactElement {
   return (
     <>
-      <ChartToolbar
-        timeframe={source.timeframe}
-        options={source.timeframeOptions}
-        runTimeframe={chart.timeframe}
-        surface={model.surface}
-        onTimeframeChange={model.handleTimeframeChange}
-      />
+      <CandleToolbar {...{ chart, source, model }} />
       <LayerBar
         layers={source.preferences.preferences.layers}
         isLive={view.isLive}
@@ -172,18 +165,7 @@ function CanvasView(props: CanvasViewProps): ReactElement {
           displayMapping={props.source.displayMapping}
         />
         <CanvasFooter {...props} ids={ids} />
-        <FormingBand
-          runId={props.runId}
-          isLive={view.isLive}
-          surface={model.surface}
-          canvasRef={model.containerRef}
-          figureRef={figureRef}
-        />
-        <LeaderOverlay
-          surface={model.surface}
-          canvasRef={model.containerRef}
-          figureRef={figureRef}
-        />
+        <CanvasOverlays {...props} figureRef={figureRef} />
       </figure>
     </LeaderFocusProvider>
   );

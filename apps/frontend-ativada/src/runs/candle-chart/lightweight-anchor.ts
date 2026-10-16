@@ -44,10 +44,19 @@ function formingEdgeOf(ctx: Context, kind: 'forming_left' | 'forming_right'): Su
   };
 }
 
+// A marca do começo da simulação: só o x (a linha atravessa a altura inteira).
+function runStartOf(ctx: Context): SurfaceAnchor | null {
+  const { runStart } = ctx.state;
+  if (runStart === null) return null;
+  const x = ctx.chart.timeScale().timeToCoordinate(toTime(runStart));
+  return x === null ? null : { x, y: 0 };
+}
+
 export function buildAnchors(ctx: Context): Pick<ChartSurface, 'anchorOf'> {
   return {
     anchorOf: (kind): SurfaceAnchor | null => {
       if (kind === 'forming_left' || kind === 'forming_right') return formingEdgeOf(ctx, kind);
+      if (kind === 'run_start') return runStartOf(ctx);
       const spot = spotOf(ctx, kind);
       if (spot === undefined) return null;
       const x = ctx.chart.timeScale().timeToCoordinate(toTime(spot.time));

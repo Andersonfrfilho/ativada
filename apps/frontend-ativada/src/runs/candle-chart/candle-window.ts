@@ -19,10 +19,14 @@ export type CandleWindow = {
 };
 
 // Execução curta (a que começou há pouco): completa a abertura do gráfico com velas de ANTES do início, só como contexto.
-export function withLeadingContext(extent: PageRange, timeframeMilliseconds: number): PageRange {
+export function withLeadingContext(
+  extent: PageRange,
+  timeframeMilliseconds: number,
+  minContextBars = 0,
+): PageRange {
   if (timeframeMilliseconds <= 0) return extent;
   const runCandles = Math.ceil((extent.to - extent.from) / timeframeMilliseconds);
-  const missing = Math.max(0, INITIAL_VISIBLE_BARS - runCandles);
+  const missing = Math.max(0, INITIAL_VISIBLE_BARS - runCandles, minContextBars);
   return { from: Math.max(0, extent.from - missing * timeframeMilliseconds), to: extent.to };
 }
 

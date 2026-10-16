@@ -5,7 +5,11 @@ import { useAppConfig } from '../../app/useAppContext.hook.js';
 import { timeframeMilliseconds } from '../live-chart.js';
 import type { TradeChart } from '../trade-chart.validation.js';
 import type { ChartView } from '../useChartView.hook.js';
-import { DISPLAY_TIMEFRAMES } from './candle-chart.constant.js';
+import {
+  DISPLAY_CONTEXT_BARS,
+  DISPLAY_CONTEXT_MILLISECONDS,
+  DISPLAY_TIMEFRAMES,
+} from './candle-chart.constant.js';
 import { computeCandleWindow, withLeadingContext } from './candle-window.js';
 import { createDisplayMapping, type DisplayMapping } from './display-mapping.js';
 import { useDisplayTail } from './useDisplayTail.hook.js';
@@ -96,6 +100,10 @@ function keyOfRange(range: ChartView['range']): string {
   return range === undefined ? 'end' : `${range.from}-${range.to}`;
 }
 
+function displayContextBars(duration: number): number {
+  return Math.max(DISPLAY_CONTEXT_BARS, Math.ceil(DISPLAY_CONTEXT_MILLISECONDS / duration));
+}
+
 type SourceHistoryParams = {
   readonly chart: TradeChart;
   readonly view: ChartView;
@@ -113,7 +121,8 @@ function useSourceHistory(params: SourceHistoryParams): CandleHistory {
     mapping,
     isFollowing: view.isLive && view.range === undefined,
   });
-  const extent = withLeadingContext(runRange, duration);
+  const contextBars = mapping === undefined ? 0 : displayContextBars(duration);
+  const extent = withLeadingContext(runRange, duration, contextBars);
   const window = computeCandleWindow({
     extent,
     range: view.range,

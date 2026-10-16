@@ -31,6 +31,7 @@ type OverlaySetters = Pick<
   | 'setProjection'
   | 'setLiveCandle'
   | 'setFormingSlot'
+  | 'setRunStart'
   | 'setTheme'
 >;
 
@@ -108,6 +109,9 @@ export function buildOverlaySetters(ctx: Context): OverlaySetters {
     setLiveCandle: (candle): void => {
       state.live = candle;
       paint(ctx, renderLive);
+    },
+    setRunStart: (time): void => {
+      state.runStart = time;
     },
     setFormingSlot: (slot): void => {
       state.formingSlot = slot;

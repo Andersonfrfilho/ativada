@@ -63,5 +63,12 @@ export function stamp<TItem extends { readonly time: number }>(
 // Sem tema ainda (a superfície acabou de nascer) nada é desenhado; o `setTheme` repinta tudo.
 export function paint(ctx: Context, ...renders: readonly Render[]): void {
   const { theme } = ctx.state;
-  if (theme !== undefined) renders.forEach((render) => render(ctx, theme));
+  if (theme === undefined) return;
+  for (const render of renders) {
+    try {
+      render(ctx, theme);
+    } catch {
+      // A biblioteca recusa série já removida ou dado fora de ordem: uma camada que falha não derruba as velas nem as outras camadas.
+    }
+  }
 }

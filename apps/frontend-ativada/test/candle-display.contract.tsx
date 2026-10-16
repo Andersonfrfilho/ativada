@@ -428,3 +428,33 @@ describe('balão de valores ao passar o mouse', () => {
     expect(css).toMatch(/\.tipValues\s*\{[^}]*grid-template-columns/);
   });
 });
+
+describe('começo da simulação', () => {
+  test('a marca vertical é entregue à superfície e "Ir ao início" centraliza o começo (só em 3 min)', async () => {
+    const harness = show();
+    const surface = await ready(harness);
+    await waitFor(() =>
+      expect(surface.callsOf('setRunStart').at(-1)?.[0]).toBe(FIXTURE_FROM / 1_000),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Ir ao início da simulação/ }));
+    expect(surface.callsOf('centerOn').at(-1)?.[0]).toBe(FIXTURE_FROM / 1_000);
+    fireEvent.click(screen.getByRole('button', { name: /^15m/ }));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /Ir ao início da simulação/ })).toBeNull(),
+    );
+  });
+
+  test('uma simulação nova abre com ao menos 40 velas de contexto antes do começo', async () => {
+    const young = FIXTURE_FROM + 90 * MINUTE;
+    const harness = show({
+      build: (o) => ({
+        ...buildFixtureChart(o),
+        timeframe: '15m',
+        runRange: { from: FIXTURE_FROM, to: young },
+      }),
+    });
+    const surface = await ready(harness);
+    const candles = list(surface.callsOf('setCandles').at(-1)?.[0]);
+    expect(Number(candles[0]?.['time']) * 1_000).toBeLessThanOrEqual(FIXTURE_FROM - 40 * SHOWN);
+  });
+});

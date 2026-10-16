@@ -14,6 +14,8 @@ export type ChartToolbarProps = {
   // A vela em que a estratégia decide: vem marcada ao abrir.
   readonly runTimeframe: string;
   readonly onTimeframeChange: (timeframe: TimeframeChoice) => void;
+  // Leva o gráfico ao começo da simulação (só com vela de exibição, onde o começo fica longe da ponta).
+  readonly onGoToStart?: (() => void) | undefined;
   readonly surface: ChartSurface | undefined;
 };
 
@@ -30,10 +32,40 @@ const ZOOM_BUTTONS: readonly ZoomButton[] = [
   { label: 'Agora', symbol: '⇥', act: (surface) => surface.scrollToEnd() },
 ];
 
+type ZoomGroupProps = {
+  readonly surface: ChartSurface | undefined;
+  readonly onGoToStart: (() => void) | undefined;
+};
+
+function ZoomGroup({ surface, onGoToStart }: ZoomGroupProps): ReactElement {
+  return (
+    <div className={styles.row} role="group" aria-label="Zoom do gráfico">
+      {onGoToStart === undefined ? null : (
+        <button type="button" className={controls.button} onClick={onGoToStart}>
+          <span aria-hidden="true">⇤</span>
+          Ir ao início da simulação
+        </button>
+      )}
+      {ZOOM_BUTTONS.map((button) => (
+        <button
+          key={button.label}
+          type="button"
+          className={controls.button}
+          disabled={surface === undefined}
+          onClick={() => surface !== undefined && button.act(surface)}
+        >
+          <span aria-hidden="true">{button.symbol}</span>
+          {button.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // A vela do gráfico (15m, 1h, 4h, 1d) e os botões de aproximar, afastar, ajustar e ir ao fim: o que a roda e a pinça
 // fazem, sem gesto (RF02 e RF05). Alvos de 44 px.
 export function ChartToolbar(props: ChartToolbarProps): ReactElement {
-  const { timeframe, options, runTimeframe, onTimeframeChange, surface } = props;
+  const { timeframe, options, runTimeframe, onTimeframeChange, surface, onGoToStart } = props;
   return (
     <div className={styles.toolbar}>
       <div className={styles.row} role="group" aria-label="Vela do gráfico">
@@ -53,20 +85,7 @@ export function ChartToolbar(props: ChartToolbarProps): ReactElement {
           </button>
         ))}
       </div>
-      <div className={styles.row} role="group" aria-label="Zoom do gráfico">
-        {ZOOM_BUTTONS.map((button) => (
-          <button
-            key={button.label}
-            type="button"
-            className={controls.button}
-            disabled={surface === undefined}
-            onClick={() => surface !== undefined && button.act(surface)}
-          >
-            <span aria-hidden="true">{button.symbol}</span>
-            {button.label}
-          </button>
-        ))}
-      </div>
+      <ZoomGroup surface={surface} onGoToStart={onGoToStart} />
     </div>
   );
 }
