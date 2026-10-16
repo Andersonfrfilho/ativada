@@ -183,6 +183,13 @@
       "when": 1792129091167,
       "tag": "0025_run_commands_analyst",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792175192826,
+      "tag": "0026_candles_display_timeframes",
+      "breakpoints": true
     }
   ]
 }

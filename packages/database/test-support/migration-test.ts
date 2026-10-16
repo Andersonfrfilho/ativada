@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { join } from 'node:path';
+
 import { MIGRATIONS_FOLDER, ROLLBACK_SUFFIX } from '../src/database.constant.js';
 import { applyMigrations } from '../src/migrate.js';
 import { applyRollbacks } from './rollback.js';
@@ -23,6 +25,40 @@ async function readReasonCheck(databaseUrl: string): Promise<ConstraintRow | und
     const rows: unknown =
       await client`SELECT pg_get_constraintdef(oid) AS definition, convalidated FROM pg_constraint WHERE conname = ${REASON_CHECK}`;
     return (rows as readonly ConstraintRow[])[0];
+  } finally {
+    await client.close();
+  }
+}
+
+// A 0026 (spec 017) aceita 3m no CHECK de candles; o rollback dela ABORTA enquanto existir linha 3m.
+const TIMEFRAME_CHECK = 'candles_timeframe_check';
+const DISPLAY_TIMEFRAME_LITERAL = "'3m'";
+const ROLLBACK_0026_GUARD_MESSAGE = 'não apaga velas de exibição';
+const ROLLBACK_0026 = '0026_candles_display_timeframes.rollback.sql';
+const DISPLAY_CANDLE_INSERT = `INSERT INTO candles (exchange, symbol, timeframe, open_time, close_time, open, high, low, close, volume, trade_count)
+  VALUES ('binance', 'BTCUSDT', '3m', 0, 179999, 1, 2, 1, 2, 1, 1)`;
+
+async function checkDisplayTimeframeMigration(databaseUrl: string): Promise<void> {
+  const client = new Bun.SQL(databaseUrl);
+  try {
+    const rows: unknown =
+      await client`SELECT pg_get_constraintdef(oid) AS definition, convalidated FROM pg_constraint WHERE conname = ${TIMEFRAME_CHECK}`;
+    const check = (rows as readonly ConstraintRow[])[0];
+    if (check?.convalidated !== true || !check.definition.includes(DISPLAY_TIMEFRAME_LITERAL)) {
+      throw new Error(`${TIMEFRAME_CHECK} sem 3m validado`);
+    }
+    await client.unsafe(DISPLAY_CANDLE_INSERT);
+    const script = await Bun.file(join(MIGRATIONS_FOLDER, ROLLBACK_0026)).text();
+    const failure = await client
+      .begin((transaction) => transaction.unsafe(script))
+      .then(
+        () => undefined,
+        (error: unknown) => (error instanceof Error ? error.message : String(error)),
+      );
+    if (!failure?.includes(ROLLBACK_0026_GUARD_MESSAGE)) {
+      throw new Error('o rollback da 0026 não abortou pela guarda com linha 3m');
+    }
+    await client.unsafe("DELETE FROM candles WHERE timeframe = '3m'");
   } finally {
     await client.close();
   }
@@ -83,6 +119,7 @@ async function runMigrationTest(adminUrl: string): Promise<number> {
       throw new Error(`${REASON_CHECK} sem ${LATEST_REASON} validado`);
     }
 
+    await checkDisplayTimeframeMigration(temporary.url);
     await applyRollbacks({ databaseUrl: temporary.url, migrationsFolder: MIGRATIONS_FOLDER });
     const leftoverTables = await listPublicTables(temporary.url);
     if (leftoverTables.length > 0) {

@@ -11,11 +11,11 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 
-import { RUN_CANDLE_TIMEFRAMES } from '../candles/candle.constant.js';
+import { CANDLE_TIMEFRAMES } from '../candles/candle.constant.js';
 
 // Lista fixa de constantes do código, nunca entrada do usuário: por isso `sql.raw` é seguro aqui.
 const TIMEFRAME_LITERALS = sql.raw(
-  RUN_CANDLE_TIMEFRAMES.map((timeframe) => `'${timeframe}'`).join(', '),
+  CANDLE_TIMEFRAMES.map((timeframe) => `'${timeframe}'`).join(', '),
 );
 
 // A PK (exchange, symbol, timeframe, open_time) já serve a leitura do mais recente (varredura inversa).

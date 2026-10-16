@@ -17,6 +17,7 @@ import {
 } from './account-lifecycle-checks.js';
 import { checkCandleRepository } from './candle-checks.js';
 import { checkMissingOpenTimes } from './candle-gap-checks.js';
+import { checkDisplayCandles } from './display-candle-checks.js';
 import { checkSentimentRepository } from './sentiment-checks.js';
 import { checkSentimentObservations } from './sentiment-observation-checks.js';
 import { checkPersistenceIsolation } from './persistence-isolation-checks.js';
@@ -215,6 +216,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkAuditRetention(lifecycle);
     await checkCandleRepository(lifecycle);
     await checkMissingOpenTimes(lifecycle);
+    await checkDisplayCandles(lifecycle);
     await checkSentimentRepository(lifecycle);
     await checkSentimentObservations(lifecycle);
     await checkPersistence(lifecycle);

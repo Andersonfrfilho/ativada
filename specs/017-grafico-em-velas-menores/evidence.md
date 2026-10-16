@@ -24,3 +24,36 @@ A Fase 3 (painel) fica para depois: outro agente edita o painel agora.
   nas velas de exibição.
 - Desvio: `MARKET_DISPLAY_TIMEFRAMES` tem padrão VAZIO (o plan dizia `3m`); `envs/env.dev` liga `3m`.
 - Pendência: validação do ADR por `architect` (opus) não rodou nesta sessão.
+
+## T1.1 — constantes e fronteira (commit c2b7561)
+
+- Constantes: `DISPLAY_TIMEFRAME` (`3m`), `MARKET_CANDLE_TIMEFRAME`, `MARKET_CANDLE_DURATION_MILLISECONDS`, `isDisplayTimeframe`
+  (mercado); `RUN_CANDLE_TIMEFRAMES`, `DISPLAY_CANDLE_TIMEFRAMES`, `CANDLE_TIMEFRAMES` (banco). `TIMEFRAME`, `ENGINE_TIMEFRAME` e
+  `RUN_TIMEFRAMES` não mudaram.
+- `test/display-timeframe-boundary.contract.test.ts` (9 testes): interseção vazia, `MARKET_TIMEFRAMES` recusa `3m`,
+  `POST /v1/runs` com `3m` = 400 (backtest e live_paper), esquema do corpo recusa `3m` mesmo habilitado por engano, sonda de
+  importação nos 8 diretórios do motor, ligação `isCandleTimeframe(run.timeframe)` nas três bases.
+- Mutantes da fronteira: `3m` em `RUN_TIMEFRAMES` (morto), guarda `isCandleTimeframe` removida no ao vivo (morto) e no backtest
+  (morto), menção a `MARKET_DISPLAY_TIMEFRAMES` em `worker/src/live` (morto), `3m` na lista `MARKET_TIMEFRAMES` do ambiente
+  (morto). Mutante "esquema do corpo aceita `3m`" sobrevive POR DESIGN: há uma segunda barreira dentro da transformação do
+  corpo (o erro do `timeframe` continua), então um único defeito não basta.
+- `test/api-markets-display.contract.test.ts`: 3m aceita com `meta.retentionStart` alinhado à grade; vela de execução mantém o
+  corpo antigo (`{ data }`); teto de 5.000 velas contado em 3m; `5m` e `3m` desabilitada = 400.
+- Vizinhos verdes (542 testes em 47 arquivos): strategy-engine-boundary, timeframe-tables, ownership-registry, api-markets,
+  api-openapi, cron/worker/api environment, kline-stream, ticker, market-*, backfill, code-size-limits, app-import-boundary.
+  `database.contract` reprova a lista de exportações públicas por `EXIT_REASON`, `NOTICE_*`, `ORDER_*` e
+  `createNoticeFeedRepository` (spec 014, já no HEAD; fora desta spec). `ticker-mutants` falhou uma vez sob carga (mutante
+  `NEW_TICK_DOES_NOT_CLEAR_THE_SEAL`, temporização) e passou isolado.
+
+## T2.1 — migration 0026
+
+- `0026_candles_display_timeframes.sql`: recria `candles_timeframe_check` com `3m` (`NOT VALID` + `VALIDATE`); snapshot e
+  journal gerados pelo `drizzle-kit generate` num espelho. O `CHECK` aceita SÓ `3m` (`1m`/`5m` não foram autorizados; o teste
+  prova que `5m` é recusada, código 23514).
+- `.rollback.sql` ABORTA (`restrict_violation`) com qualquer linha `3m`.
+- `make migration-test` equivalente no Postgres embutido do WSL (porta 56455): "27 migrations aplicadas e desfeitas", com a
+  verificação nova (CHECK validado com `3m`; rollback aborta pela guarda com linha 3m; sem linha, o rollback completo passa).
+  Mutante "rollback sem guarda" morto.
+- `database-test` (mesmo Postgres): expurgo só de `3m` anterior ao corte (exclusivo), em lotes (3), 15m/1h/4h/1d intactos;
+  mesma abertura em 3m e 15m, cada leitura traz só a sua; 5 velas de 3 min (bigint, escala 8) = a vela de 15 min (OHLCV e
+  `trade_count`). Mutantes mortos: expurgo sem filtro de vela, corte `<=`, leitura sem filtro de vela, expurgo sem laço.
