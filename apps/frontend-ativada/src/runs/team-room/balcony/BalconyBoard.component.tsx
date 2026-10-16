@@ -5,15 +5,20 @@ import type { AuditorView } from '../team-room.types.js';
 import type { BalconyAgent } from './balcony-agents.js';
 import { BALCONY_TEXT } from './balcony.constant.js';
 import styles from './Balcony.module.css';
+import { BoardProtections, type BoardProtectionsProps } from './BoardProtections.component.js';
 import { BoardNotes } from './BoardNotes.component.js';
 import { BoardRankingSummary } from './BoardRankingSummary.component.js';
 
-export type BoardTab = 'ranking' | 'notes';
+export type BoardTab = 'protections' | 'ranking' | 'notes';
 
-const TAB_LABEL: Readonly<Record<BoardTab, string>> = { ranking: 'Ranking', notes: 'Notas' };
-const TABS: readonly BoardTab[] = ['ranking', 'notes'];
+const TAB_LABEL: Readonly<Record<BoardTab, string>> = {
+  protections: 'Proteções',
+  ranking: 'Ranking',
+  notes: 'Notas',
+};
+const TABS: readonly BoardTab[] = ['protections', 'ranking', 'notes'];
 
-export type BalconyBoardProps = {
+export type BalconyBoardProps = BoardProtectionsProps & {
   readonly agents: readonly BalconyAgent[];
   readonly auditor: AuditorView | undefined;
 };
@@ -51,8 +56,9 @@ function BoardTabs({ tab, onChange }: TabsProps): ReactElement {
 }
 
 // A lousa: o que é longo demais para o balão. No celular vira uma folha que abre pelo botão do rodapé da varanda.
-export function BalconyBoard({ agents, auditor }: BalconyBoardProps): ReactElement {
-  const [tab, setTab] = useState<BoardTab>('ranking');
+export function BalconyBoard(props: BalconyBoardProps): ReactElement {
+  const { agents, auditor } = props;
+  const [tab, setTab] = useState<BoardTab>('protections');
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const panelId = useId();
   return (
@@ -70,11 +76,9 @@ export function BalconyBoard({ agents, auditor }: BalconyBoardProps): ReactEleme
         <h4 className={styles.boardTitle}>{BALCONY_TEXT.BOARD_TITLE}</h4>
         <BoardTabs tab={tab} onChange={setTab} />
         <div role="tabpanel" className={styles.boardPanel}>
-          {tab === 'ranking' ? (
-            <BoardRankingSummary auditor={auditor} />
-          ) : (
-            <BoardNotes agents={agents} auditor={auditor} />
-          )}
+          {tab === 'protections' ? <BoardProtections {...props} /> : null}
+          {tab === 'ranking' ? <BoardRankingSummary auditor={auditor} /> : null}
+          {tab === 'notes' ? <BoardNotes agents={agents} auditor={auditor} /> : null}
         </div>
       </div>
     </section>

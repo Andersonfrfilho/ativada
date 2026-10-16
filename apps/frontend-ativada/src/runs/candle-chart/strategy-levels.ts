@@ -16,6 +16,8 @@ function levelOf(role: SurfacePriceLevel['role'], text: string, label: string): 
   return { key: role, role, price: toDrawingNumber(text), title: `${label} ${formatPrice(text)}` };
 }
 
+const STOP_LABEL = 'PROTEÇÃO CONTRA QUEDA · sugestão de venda aqui';
+
 // A regra de PREÇO que ainda não votou a favor: o fechamento que ela espera (só vale para o fechamento, não para o placar).
 function triggerLevel(status: LiveStatus): SurfacePriceLevel | undefined {
   const { triggers } = status;
@@ -36,7 +38,7 @@ export function buildStrategyLevels(status: LiveStatus): SurfacePriceLevel[] {
     return [
       levelOf('entry', openPosition.entryPrice, 'Entrada'),
       levelOf('target', openPosition.targetPrice, 'Alvo'),
-      levelOf('stop', openPosition.stopPrice, 'Stop'),
+      levelOf('stop', openPosition.stopPrice, STOP_LABEL),
     ];
   }
   const trigger = triggerLevel(status);

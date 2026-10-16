@@ -66,7 +66,7 @@ describe('níveis da estratégia nesta simulação', () => {
     expect(levels.map((level) => [level.role, level.title, level.price])).toEqual([
       ['entry', 'Entrada 12,45', 12.45],
       ['target', 'Alvo 12,90', 12.9],
-      ['stop', 'Stop 12,10', 12.1],
+      ['stop', 'PROTEÇÃO CONTRA QUEDA · sugestão de venda aqui 12,10', 12.1],
     ]);
   });
 

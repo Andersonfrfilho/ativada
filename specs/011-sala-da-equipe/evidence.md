@@ -224,3 +224,81 @@ Referência: `docs/preview/escritorio/index.html` (`#cena=grafico-equipe`).
 - **Tokens novos** (`global.css`, claro e escuro): `--motion-walk`, `--model` (+ `--model-soft`), `--board`, `--board-ink`, `--postit`,
   `--postit-ink`, `--office-wall`, `--desk-edge`, `--glass`; pares `model/surface` e `postit-ink/postit` no `contrast.contract.ts`.
 - **Testes:** `test/team-balcony.contract.tsx` (5), `team-beside-chart` ajustado à nova ordem (gráfico antes do resumo).
+
+## Equipe em backtests (2026-10-16)
+
+Relato: "não vejo a equipe" no backtest da PEPE 15 min (`01a131cd…`): a coluna só trazia a frase "a equipe só opina nas simulações ao vivo".
+
+**Viabilidade (conferida antes de mexer).** O backtest e o walk-forward gravam UMA linha de `signals` por vela com `votes` (voto, peso e
+ausência por regra) e `indicators` (as leituras), pelo mesmo `appendDecisions` do ao vivo (`packages/run-recording`); no walk-forward
+`createTestCollection` grava só as velas das janelas de TESTE (o candle-âncora e o ajuste ficam de fora). São as linhas que o
+`listDecisionRows` já lia no ao vivo. Portanto não foi preciso mudar `strategy-engine` nem `run-recording`, nem migration.
+
+**API (aditiva).**
+
+- `GET /v1/runs/:runId/decisions` passa a valer para `live_paper`, `backtest` e `walk_forward` (`findSignalRun`, tipos em
+  `SIGNAL_RUN_KINDS`; tipo sem sinais gravados continua `409 RUN_NOT_LIVE`). `live-status` e analista seguem só ao vivo
+  (`findLiveRun`). O contrato antigo do ao vivo não mudou (mesmo envelope, mesmas 4 consultas, mesmo `404` para alheia, inexistente
+  e apagada).
+- `?at=<ms>` novo: a página começa na vela de abertura pedida, inclusive, e segue para as anteriores (`before = at + 1` no mesmo
+  `listDecisionRows`; zero consulta nova). `at` junto com `cursor`, ou malformado, é `400`. Vela sem decisão devolve a anterior mais
+  próxima (o painel confere se ela cobre a vela apontada).
+- Nas históricas a última vela não vira "compra pendente": a execução terminou, não há "vela seguinte que ainda não abriu"
+  (`lastCandleTime` só entra para `live_paper`).
+- OpenAPI e esquema Zod de query (`runDecisionsQuerySchema`) atualizados. Frases do servidor, `scoreThreshold` e votos saem do mesmo
+  código do ao vivo. Limite conhecido: no walk-forward os rótulos e limiares vêm da configuração da VERSÃO da estratégia; a grade
+  do walk-forward ajusta parâmetros das regras (nunca `thresholds`), então os limiares batem; um rótulo com o período ajustado
+  de uma janela pode mostrar o período da versão.
+- Provas: `test/api-run-decisions-history.contract.test.ts` (8: backtest e walk-forward, paridade com o ao vivo, última vela,
+  `at`, `at`+`cursor` e malformado 400, `404` igual entre usuários), `api-run-live-status` ajustado (live-status segue 409 para
+  histórica), 7 mutantes novos em `api-run-live-status-mutants` (tipos recusados, `at` ignorado ou exclusivo, `at`+`cursor`
+  aceito, compra pendente na histórica, `live-status` aceitando histórica); o teste novo entra no julgamento dos mutantes.
+
+**Painel.** `renderHistoricalTeam(runId, timeframe)` (`HistoricalTeam.component.tsx`, no lugar de `BacktestTeam`) mostra os crachás
+e balões (voto + leitura gravada + frase do servidor da vela), o resumo do placar como "analista" (sem analista de risco) e o auditor
+com o resumo de `/projections`; "Última vela da execução, fechou …" por padrão e "Vela apontada no gráfico, fechou …" ao apontar
+outra (mouse ou teclado). Sem decisão para a vela (aquecimento, ajuste do walk-forward, antes do início) diz a frase honesta; o
+servidor recusando mantém a coluna com "Tentar de novo". Consultas: `decisions?limit=1` para a última e UMA janela de 100 velas por
+bloco alinhado (`at` = fim do bloco, `windowAnchorFor`) que serve todas as velas vizinhas apontadas (cache, sem consulta por vela
+apontada; respeita o balde de 60/min compartilhado). Não recalcula nada no navegador. `CompactTeamSeats` e `CompactTeamMoment`
+foram extraídos de `CompactTeam` (sem mudar o ao vivo) e a grade `wide` põe os assentos lado a lado quando a equipe está acima do
+gráfico em largura total. `RunTeamAside` ganhou `timeframe`.
+
+**No app dev real (Edge, 1280 px, claro, usuário de teste), por DOM e rede:**
+
+- Backtest PEPE 15 min `01a131cd…`: última vela "fechou 30/09/2026 21:00" com Tendência (EMA 20×50: contra), Reversão (RSI 14:
+  neutro), Sentimento (sem leitura, fora do placar), resumo "Esperou, pontuação −1 de +2" e Auditor "Abaixo da moeda ao ar, 48,72%
+  (5546 de 11382)"; 6 velas para trás pelo teclado: "Vela apontada no gráfico, fechou 30/09/2026 19:45" com RSI (53,4) e a
+  frase da vela. Rede: `decisions?limit=1` e `decisions?limit=100&at=…` (uma só janela para as 6 velas).
+- Walk-forward `01a131c6-f8e3…`: última vela com EMA 9×21 a favor, MACD contra, "já está comprada; a venda pede pontuação −2 e
+  está em −1", e a vela apontada 20 h antes com outra pontuação.
+- Captura final (claro, 1280): equipe com a vela apontada, assentos em grade e auditor.
+
+**Verificação.** typecheck limpo; testes do painel (`historical-team.contract.tsx` novo, na lista do script `test`;
+`team-always-beside-chart` ajustado); API: `api-run-decisions-history`, `api-run-live-status*`, `api-runs*`, `api-openapi`,
+`ownership-registry`, `code-size-limits` verdes. Falhas vistas no `lint`, `format` e no `overview` do painel são de arquivos de
+outras frentes em andamento (notices, overview, varanda).
+
+### Pendências
+
+- A coluna histórica usa a moldura `CompactTeamFrame` (não a varanda da spec 013, em obra): quando a varanda estabilizar, o
+  `HistoricalTeam` pode trocar a moldura mantendo `useHistoricalTeamModel` (mesmos campos que o balão consome).
+
+### (2) Plaquinhas de compra e venda
+
+- `balcony/TradePlaques` (abaixo do gráfico, `LiveChartArea`): **COMPRA** (líquido no alvo grande, bruto, USDT pequeno, proteção e ganho ÷ risco),
+  **COMPRADO desde HH:MM** (líquido se vender agora, com o preço de agora) e a última saída (**VENDA** no alvo ou **SAÍDA PELA PROTEÇÃO**, com o
+  líquido que o servidor gravou). Ícone + palavra + cor; zero é cinza com "=".
+- Conta em `protection-math.ts` (BigInt, escala 8, sem `Number` em dinheiro): custo da compra com deslizamento e taxa para cima, receita da venda com os
+  dois para baixo, divisão para baixo (ganho nunca sobra, perda nunca encolhe), menos tipográfico. Taxa e deslizamento vêm de `runParameters` da execução;
+  sem eles a plaquinha da compra e a da operação aberta não aparecem (nada inventado). Contrato `balcony-protection.contract.ts` (11), com oráculo independente.
+- A ficha do sinal e a régua Proteção · Entrada · Alvo já existiam (spec 014, `SignalCard` e `LevelRuler`): não foram duplicadas.
+
+### (3) Proteções explícitas
+
+- **Gráfico:** a linha do stop passou a se chamar "PROTEÇÃO CONTRA QUEDA · sugestão de venda aqui" (rótulo da linha de preço, com o valor no eixo).
+- **Lousa, aba "Proteções"** (primeira): proteção contra queda (preço, líquido e USDT), a frase "Se cair a X, vende aqui (−Y% da entrada) para limitar a perda. É a
+  regra da simulação, não uma ordem.", barra de distância até a proteção (ícone + palavra + cor: longe acima de 50% da folga, perto de 20% a 50%, muito perto
+  abaixo de 20%; "faltam N% até a proteção") e o alvo de ganho com o líquido. Sem operação aberta a aba diz isso.
+- **Pendente:** proteção por tempo, trava e lucro mínimo na lousa (o `live-status` não os traz por operação; ficam para quando a spec 007 expuser), e o botão
+  "Copiar" da proteção (a spec 014 já tem "Copiar" na ficha do sinal).

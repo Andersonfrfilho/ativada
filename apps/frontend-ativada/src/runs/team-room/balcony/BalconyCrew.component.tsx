@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { useState, type ReactElement } from 'react';
 
+import type { LiveStatus } from '../../live-tracking/live-status.validation.js';
 import { analystStateOf, REST_STEP, seatStateOf, type SeatState } from '../team-room-sequence.js';
 import type { AuditorView, TeamRoomView } from '../team-room.types.js';
 import { buildBalconyAgents } from './balcony-agents.js';
@@ -10,6 +11,9 @@ import { BalconyAgentSlot } from './BalconyAgentSlot.component.js';
 import { BalconyBoard } from './BalconyBoard.component.js';
 
 export type BalconyCrewProps = {
+  readonly runId: string;
+  readonly symbol: string;
+  readonly position: LiveStatus['openPosition'];
   readonly view: TeamRoomView;
   readonly auditor: AuditorView | undefined;
   readonly horizon: string | undefined;
@@ -23,7 +27,7 @@ function stateOf(slot: BalconySlot, index: number, props: BalconyCrewProps): Sea
 
 // Os seis agentes em pé, a lousa ao lado e, no celular, um balão ativo por vez (o do último crachá tocado).
 export function BalconyCrew(props: BalconyCrewProps): ReactElement {
-  const { view, auditor, horizon, step } = props;
+  const { view, auditor, horizon, step, runId, symbol, position } = props;
   const [activeSlot, setActiveSlot] = useState<BalconySlot>(BALCONY_SLOT.ALICE);
   const agents = buildBalconyAgents({ view, auditor, horizon });
   return (
@@ -39,7 +43,13 @@ export function BalconyCrew(props: BalconyCrewProps): ReactElement {
           />
         ))}
       </ul>
-      <BalconyBoard agents={agents} auditor={auditor} />
+      <BalconyBoard
+        agents={agents}
+        auditor={auditor}
+        runId={runId}
+        symbol={symbol}
+        position={position}
+      />
     </div>
   );
 }

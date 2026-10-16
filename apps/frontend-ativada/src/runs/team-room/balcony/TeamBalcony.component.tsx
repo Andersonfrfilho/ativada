@@ -90,6 +90,9 @@ function LoadedBalcony(props: LoadedProps): ReactElement {
       <BalconyHeader model={model} />
       {view === undefined ? null : (
         <BalconyCrew
+          runId={props.runId}
+          symbol={props.status.run.symbol}
+          position={props.status.openPosition}
           view={view}
           auditor={model.auditor}
           horizon={horizonOf(model, props.status, timeZone)}

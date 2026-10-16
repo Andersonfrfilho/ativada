@@ -1,8 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { cleanup, fireEvent, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 
+import { LiveMarketProvider } from '../src/live/LiveMarketProvider.component.js';
 import { TeamBalcony } from '../src/runs/team-room/balcony/TeamBalcony.component.js';
 import { findLoadedTeam } from './support/loaded-team.js';
 import { LIVE_RUN_ID } from './support/live-tracking-harness.js';
@@ -19,7 +20,11 @@ async function openBalcony(): Promise<HTMLElement> {
     path: '/',
     isAuthenticated: true,
     routes: roomRoutes(createRoomHarness()),
-    probe: <TeamBalcony runId={LIVE_RUN_ID} />,
+    probe: (
+      <LiveMarketProvider>
+        <TeamBalcony runId={LIVE_RUN_ID} />
+      </LiveMarketProvider>
+    ),
   });
   return findLoadedTeam();
 }
@@ -72,8 +77,44 @@ describe('a varanda: a equipe em pé acima do gráfico (spec 011, escritório)',
     expect(document.activeElement).toBe(badge);
   });
 
+  test('the board opens on the protections tab and says why when there is no open position', async () => {
+    const team = await openBalcony();
+    expect(within(team).getByRole('tab', { name: 'Proteções', selected: true })).toBeDefined();
+    expect(team.textContent).toContain('Sem operação aberta');
+  });
+
+  test('with an open position the board shows the protection against a drop, the sentence and the target', async () => {
+    const harness = createRoomHarness();
+    harness.liveStatus = {
+      ...harness.liveStatus,
+      openPosition: {
+        entryPrice: '61000',
+        quantity: '0.1',
+        targetPrice: '62000',
+        stopPrice: '60500',
+        openedCandleTime: 1,
+      },
+    };
+    renderApp({
+      path: '/',
+      isAuthenticated: true,
+      routes: roomRoutes(harness),
+      probe: (
+        <LiveMarketProvider>
+          <TeamBalcony runId={LIVE_RUN_ID} />
+        </LiveMarketProvider>
+      ),
+    });
+    const team = await findLoadedTeam();
+    await waitFor(() => expect(team.textContent).toContain('PROTEÇÃO CONTRA QUEDA'));
+    expect(team.textContent).toContain('Se cair a 60.500,00, vende aqui');
+    expect(team.textContent).toContain('É a regra da simulação, não uma ordem.');
+    expect(team.textContent).toContain('Alvo de ganho');
+  });
+
   test('the board keeps the auditor summary on the ranking tab and the sheet toggle for phones', async () => {
     const team = await openBalcony();
+    fireEvent.click(within(team).getByRole('tab', { name: 'Ranking' }));
     expect(within(team).getByRole('tab', { name: 'Ranking', selected: true })).toBeDefined();
     expect(
       within(team).getByRole('button', { name: 'Lousa da equipe: proteções e ranking' }),
