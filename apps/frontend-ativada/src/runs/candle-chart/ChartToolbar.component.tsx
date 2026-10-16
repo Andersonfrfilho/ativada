@@ -41,9 +41,14 @@ function ZoomGroup({ surface, onGoToStart }: ZoomGroupProps): ReactElement {
   return (
     <div className={styles.row} role="group" aria-label="Zoom do gráfico">
       {onGoToStart === undefined ? null : (
-        <button type="button" className={controls.button} onClick={onGoToStart}>
+        <button
+          type="button"
+          className={controls.button}
+          aria-label="Ir ao início da simulação"
+          onClick={onGoToStart}
+        >
           <span aria-hidden="true">⇤</span>
-          Ir ao início da simulação
+          Início
         </button>
       )}
       {ZOOM_BUTTONS.map((button) => (

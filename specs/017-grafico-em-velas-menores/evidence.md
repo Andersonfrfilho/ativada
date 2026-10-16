@@ -118,3 +118,36 @@ SOL, XRP), `candles` = 15m 634.247 · 1h 158.555 · 4h 39.629 · 1d 6.597 (nenhu
    SHIBUSDT (2026-07-23 02:15 e 2026-07-24 09:00 UTC): a 1ª vela de 3 min não teve negócio (volume 0, `trade_count` 0) e traz o
    fechamento anterior. A regra correta (ADR V9) ignora a vela sem negócio para abertura, máxima e mínima. Prova no banco de
    teste: `display-candle-checks.ts` ("vela de 3 min sem negócio não define a abertura").
+
+## Fase 3 — painel (T3.1, T3.2, T3.3), 2026-10-16
+
+Commits: 5691843 (mapeamento e composição), b95e57f (seletor, abertura em 3 min, retenção, camadas em degraus), os seguintes
+(colchete, opinião, vela de 15 min composta, vagas de 3 min, ponta com o relógio, balão de valores, contexto e marca do começo,
+tabela no celular). Gates no espelho `ativada-spec17`: typecheck, lint, format e panel-test (1.482 testes) verdes.
+
+- **Contratos (superfície falsa):** `test/candle-display.contract.tsx` (abertura em 3 min ao vivo com UMA página de 1.000 velas, seletor
+  e ambiente, degraus de 5 velas a partir do fechamento, "esperou", retenção, colchete e dica da saída, opinião e equipe na vela
+  decidida, vela de 15 min composta e kline de 15 min como fonte, 5 vagas, balão, início da simulação, tabela no celular); a visão de 15 min
+  segue igual à da 009 (os 1.400+ contratos antigos continuam verdes e há teste dedicado).
+- **Propriedades e oráculo:** `display-mapping.contract.ts` (2.000 sorteios: opinião nunca antes do fechamento; toda vela de exibição sabe a
+  opinião que valia) e `compose-candles.contract.ts` (2.000 sorteios com o oráculo independente: negócios → vela de 3 min pela definição
+  da corretora e vela de 15 min direto; caso SHIB sem negócio).
+- **App dev real (Edge, painel 127.0.0.1:56100, LINK ao vivo):** abre em 3m com a legenda, a frase fixa, "Opinião das 18:45 · vale até 19:00",
+  "Vela de 15 min em formação (19:00–19:15)", as 5 vagas (fechada/em formação/falta, ícone + palavra) e a faixa da vela em formação
+  cobrindo a coluna dos 5 degraus; captura única em `capturas/grafico-3min-1280-claro.png`. O painel precisou ser reiniciado só para
+  enxergar `VITE_MARKET_DISPLAY_TIMEFRAMES` (o processo antigo não tinha a variável).
+- **Pedidos:** 1 chamada `strategy-layers` por carga (antes ~12 por causa da referência instável de `displayMapping`); 5 páginas de
+  1.000 velas de 3 min = 5 chamadas de `candles` (balde `CANDLE_QUERY`), nenhum 429 nas rodadas; ponta nova = 1 chamada a cada 3 min.
+- **Desempenho (backtest BTC de 15 min, 183 dias, 5 páginas = 5.000 velas de 3 min, Edge, app dev em modo desenvolvimento):** arrasto
+  mediana 238 fps; p5 60–80 fps; pior quadro 7–12 fps (vista de 15 min na mesma máquina e no mesmo app: p5 60–119, pior 12–34). Antes da
+  correção da referência instável: p5 8–12. Ressalva: não é o harness estático da 009 (p5 232), e a máquina tem ruído de ±2x entre rodadas.
+- **Valores na vertical (relato do usuário):** achado no app real a 375 px: a tabela de operações (`TradesTable.module.css`) tinha
+  `overflow-wrap: anywhere` e colunas de 28 px (números empilhados, linhas de 228 px). Corrigido (`overflow-wrap: normal`, `min-width: 760px`
+  e rolagem lateral) com teste de contrato; o balão do gráfico nasceu com o mesmo risco (coluna de valor comprida espremia os rótulos) e
+  ficou em duas colunas (rótulo flexível | valor `nowrap`), com a regra do placar numa frase à parte. Varredura de `getBoundingClientRect`
+  em página, balão, gaveta de avisos, "Trocar execução", fichas dos agentes e dica `Term` a 1.280 e 375 px: nenhum valor quebrado (restam linhas
+  de 72 px na tabela de operações por texto de motivo que quebra em várias linhas; a janela virtual assume 44 px: pendência).
+- **Pendências:** botão de 3m não desabilita quando a execução inteira é anterior à retenção (o aviso aparece e a página vem vazia);
+  balão sem opinião curta de cada agente e sem distância até os níveis (a equipe ao lado já fala da vela apontada); revisão em tema escuro
+  e `design-review`/`contrast`/`touch-targets` rodaram verdes no panel-test, mas a captura é só do tema claro a 1.280 px; `code-reviewer` (T4.1)
+  não rodou; `make panel-e2e` não foi rodado (infra descartável usa Docker).
