@@ -19,7 +19,10 @@ const LAYOUT_OPTIONS: readonly LayoutOption[] = [
   { layout: TEAM_LAYOUT.ROOM_WITH_CHART, text: TEAM_ROOM_TEXT.LAYOUT_ROOM_WITH_CHART },
 ];
 
-function LayoutSwitch({ preference, onChange }: TeamRoomControlsProps): ReactElement {
+export function LayoutSwitch({
+  preference,
+  onChange,
+}: Pick<TeamRoomControlsProps, 'preference' | 'onChange'>): ReactElement {
   return (
     <div className={styles.switch} role="group" aria-label="Como mostrar a equipe">
       {LAYOUT_OPTIONS.map((option) => (
