@@ -33,10 +33,13 @@ function compare(symbol: string, fifteen: Row, parts: readonly Row[]): readonly 
   const last = parts[SLOTS - 1];
   if (first === undefined || last === undefined) return [];
   const openTime = Number(fifteen.open_time);
-  const highs = parts.map((part) => toScaled(part.high));
-  const lows = parts.map((part) => toScaled(part.low));
+  // Vela sem negócio (volume 0, trade_count 0) carrega o fechamento anterior: não define abertura, máxima nem mínima.
+  const active = parts.filter((part) => part.trade_count > 0);
+  const priced = active.length > 0 ? active : parts;
+  const highs = priced.map((part) => toScaled(part.high));
+  const lows = priced.map((part) => toScaled(part.low));
   const checks: readonly (readonly [string, boolean])[] = [
-    ['open', toScaled(first.open) === toScaled(fifteen.open)],
+    ['open', toScaled((priced[0] ?? first).open) === toScaled(fifteen.open)],
     ['close', toScaled(last.close) === toScaled(fifteen.close)],
     ['high', highs.reduce((a, b) => (b > a ? b : a)) === toScaled(fifteen.high)],
     ['low', lows.reduce((a, b) => (b < a ? b : a)) === toScaled(fifteen.low)],

@@ -92,3 +92,29 @@ A Fase 3 (painel) fica para depois: outro agente edita o painel agora.
 - `envs/env.dev`: `MARKET_DISPLAY_TIMEFRAMES=3m`, `CANDLE_DISPLAY_RETENTION_DAYS=90`. `dev-lib.ps1`/`.sh` repassam
   `VITE_MARKET_DISPLAY_TIMEFRAMES` (variável NOVA; `VITE_MARKET_TIMEFRAMES` NÃO mudou, para não mexer no seletor do painel
   que outro agente edita: a Fase 3 decide como consumi-la). `docs/runbook-dev-local.md` §8.
+
+## Ambiente DEV (2026-10-16, autorizado)
+
+Estado ANTES (por `SELECT`): 11 simulações `live_paper` em execução (todas 15 min: BNB, BTC, DOGE, ETH, 3 de LINK, PEPE, SHIB,
+SOL, XRP), `candles` = 15m 634.247 · 1h 158.555 · 4h 39.629 · 1d 6.597 (nenhuma 3m), 26 migrations.
+
+1. **Migration pelo caminho oficial:** `bun --env-file=envs/env.dev scripts/dev-migrate.ts <pasta absoluta>` aplicou a
+   `0026_candles_display_timeframes` (26 → 27). `pg_constraint`: `candles_timeframe_check` com `convalidated = true` e `3m` na
+   lista.
+2. **Recarga de 3 min (90 dias, 9 pares)** pela tarefa do cron do repositório
+   (`CRON_TASKS=backfill-display-candles`, `bun run apps/cron-ativada/src/main.ts`, Binance pública `data-api.binance.vision`):
+   `{"pairs":9,"inserted":388791,"unfillable":0,"failures":0}`, 9 × 43.199 velas (cada par: 44 pedidos de 1.000, peso 2 cada),
+   saída 0, **nenhum 418** (log de erro vazio), cerca de 5 minutos no relógio.
+3. **Reinício só da API e do worker** (o painel e os containers ficaram como estavam; `dev-up.ps1` reconheceu "painel já está no
+   ar"), saída em arquivo: o worker subiu com `timeframes: 5` (4 de execução + `3m`), `stream connected`, e as 11 simulações
+   foram retomadas ("live run taken over from a stopped worker"); `api.err.log` e `worker.err.log` vazios.
+4. **Estado DEPOIS (`SELECT`):** as mesmas 11 `live_paper` em `running`, cada uma com +1 decisão na vela de 15 min seguinte
+   (87 → 88 nas antigas, 16 → 17 nas novas); `candles` 15m +9, 1h +9 (gravação normal do stream), `3m` 388.809.
+   Por par: **43.201 velas de 3 min** em 9 de 9 (de 2026-07-18 18:57 UTC a 2026-10-16 18:57 UTC, e o worker segue gravando as
+   fechadas pelo stream).
+5. **Soma 5×3 → 15 (`scripts/display-candles-measure.ts`, só `SELECT`, bigint escala 8, sem importar o `src`):** 8.639 janelas de
+   15 min conferidas por par (77.751 no total; 1 incompleta por par, a mais antiga, que começa no meio da janela),
+   **0 divergências**. Achado: com a regra ingênua (abertura = abertura da 1ª vela de 3 min) houve 2 divergências, ambas
+   SHIBUSDT (2026-07-23 02:15 e 2026-07-24 09:00 UTC): a 1ª vela de 3 min não teve negócio (volume 0, `trade_count` 0) e traz o
+   fechamento anterior. A regra correta (ADR V9) ignora a vela sem negócio para abertura, máxima e mínima. Prova no banco de
+   teste: `display-candle-checks.ts` ("vela de 3 min sem negócio não define a abertura").

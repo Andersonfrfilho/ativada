@@ -122,23 +122,72 @@ function buildFiveThreeMinuteCandles(origin: number): readonly Row[] {
   }));
 }
 
-function sumScaled(values: readonly string[]): bigint {
-  return values.reduce((sum, value) => sum + toScaled(value), 0n);
+const COMPOSITION_FIELDS = ['open', 'high', 'low', 'close', 'volume', 'tradeCount'] as const;
+
+type Composition = Readonly<
+  Record<'open' | 'high' | 'low' | 'close' | 'volume' | 'tradeCount', bigint>
+>;
+
+// Vela sem negócio (trade_count 0) carrega o fechamento anterior: não define abertura, máxima nem mínima.
+function compose(parts: readonly Row[]): Composition {
+  const traded = parts.filter((part) => part.tradeCount > 0);
+  const priced = traded.length > 0 ? traded : parts;
+  const first = priced[0];
+  const last = parts[parts.length - 1];
+  if (first === undefined || last === undefined) throw new Error('janela sem velas');
+  const pick = (values: readonly bigint[], isBetter: (a: bigint, b: bigint) => boolean): bigint =>
+    values.reduce((best, value) => (isBetter(value, best) ? value : best));
+  return {
+    open: toScaled(first.open),
+    high: pick(
+      priced.map((part) => toScaled(part.high)),
+      (a, b) => a > b,
+    ),
+    low: pick(
+      priced.map((part) => toScaled(part.low)),
+      (a, b) => a < b,
+    ),
+    close: toScaled(last.close),
+    volume: parts.reduce((sum, part) => sum + toScaled(part.volume), 0n),
+    tradeCount: BigInt(parts.reduce((sum, part) => sum + part.tradeCount, 0)),
+  };
 }
 
-function extremeScaled(values: readonly string[], pick: 'max' | 'min'): bigint {
-  const scaled = values.map(toScaled);
-  return scaled.reduce((best, value) => {
-    const isBetter = pick === 'max' ? value > best : value < best;
-    return isBetter ? value : best;
-  });
+function expectedOf(stored: Row): Composition {
+  return {
+    open: toScaled(stored.open),
+    high: toScaled(stored.high),
+    low: toScaled(stored.low),
+    close: toScaled(stored.close),
+    volume: toScaled(stored.volume),
+    tradeCount: BigInt(stored.tradeCount),
+  };
+}
+
+async function readWindow(
+  context: CandleCheckContext,
+  origin: number,
+): Promise<{ readonly parts: readonly Row[]; readonly stored: Row }> {
+  const repository = createCandleRepository(context.handle, { now: () => NOW_MILLISECONDS });
+  const range = { from: origin, to: origin + FIFTEEN_MINUTES };
+  const parts = await repository.findCandles({ ...KEY, timeframe: '3m', ...range });
+  const [stored] = await repository.findCandles({ ...KEY, timeframe: '15m', ...range });
+  if (parts.length !== 5 || stored === undefined)
+    throw new Error('faltam velas na janela de 15 min');
+  return { parts, stored };
+}
+
+function assertSame(context: CandleCheckContext, parts: readonly Row[], stored: Row): void {
+  const composed = compose(parts);
+  const expected = expectedOf(stored);
+  const diverging = COMPOSITION_FIELDS.filter((field) => composed[field] !== expected[field]);
+  context.assertCondition(diverging.length === 0, `5x3 diverge de 15 em: ${diverging.join(', ')}`);
 }
 
 async function checkFiveThreeMinuteCandlesMakeTheFifteen(
   context: CandleCheckContext,
 ): Promise<void> {
-  const { handle, assertCondition, reportCheck } = context;
-  const repository = createCandleRepository(handle, { now: () => NOW_MILLISECONDS });
+  const repository = createCandleRepository(context.handle, { now: () => NOW_MILLISECONDS });
   const origin = CUTOFF + 20 * FIFTEEN_MINUTES;
   const fifteen: Row = {
     ...candle('15m', origin, 60),
@@ -149,37 +198,43 @@ async function checkFiveThreeMinuteCandlesMakeTheFifteen(
     volume: '16.50000000',
   };
   await repository.upsertCandles([...buildFiveThreeMinuteCandles(origin), fifteen]);
-  const range = { from: origin, to: origin + FIFTEEN_MINUTES };
-  const read = await repository.findCandles({ ...KEY, timeframe: '3m', ...range });
-  const [stored] = await repository.findCandles({ ...KEY, timeframe: '15m', ...range });
-  const first = read[0];
-  const last = read[4];
-  if (read.length !== 5 || stored === undefined || first === undefined || last === undefined) {
-    throw new Error('faltam velas na janela de 15 min');
-  }
-  const fields = {
-    open: toScaled(first.open) === toScaled(stored.open),
-    close: toScaled(last.close) === toScaled(stored.close),
-    high:
-      extremeScaled(
-        read.map((row) => row.high),
-        'max',
-      ) === toScaled(stored.high),
-    low:
-      extremeScaled(
-        read.map((row) => row.low),
-        'min',
-      ) === toScaled(stored.low),
-    volume: sumScaled(read.map((row) => row.volume)) === toScaled(stored.volume),
-    tradeCount: read.reduce((sum, row) => sum + row.tradeCount, 0) === stored.tradeCount,
-  };
-  const diverging = Object.entries(fields).filter(([, isEqual]) => !isEqual);
-  assertCondition(
-    diverging.length === 0,
-    `5x3 diverge de 15 em: ${diverging.map(([name]) => name).join(', ')}`,
-  );
-  reportCheck(
+  const { parts, stored } = await readWindow(context, origin);
+  assertSame(context, parts, stored);
+  context.reportCheck(
     '5 velas de 3 min (bigint, escala 8) = a vela de 15 min gravada: OHLCV e trade_count',
+  );
+}
+
+// Caso real da Binance (SHIBUSDT, 2026-07-23): a 1ª vela de 3 min não teve negócio e traz o fechamento anterior.
+async function checkEmptyFirstSubCandle(context: CandleCheckContext): Promise<void> {
+  const repository = createCandleRepository(context.handle, { now: () => NOW_MILLISECONDS });
+  const origin = CUTOFF + 30 * FIFTEEN_MINUTES;
+  const normal = buildFiveThreeMinuteCandles(origin);
+  const empty: Row = {
+    ...candle('3m', origin, 0),
+    open: '10.60000000',
+    high: '10.60000000',
+    low: '10.60000000',
+    close: '10.60000000',
+    volume: '0.00000000',
+  };
+  const second = normal[1];
+  if (second === undefined) throw new Error('semente sem a 2ª vela');
+  const fifteen: Row = {
+    ...candle('15m', origin, 50),
+    open: second.open,
+    high: '12.25000000',
+    low: '8.75000000',
+    close: '10.05000000',
+    volume: '15.40000000',
+  };
+  await repository.upsertCandles([empty, ...normal.slice(1), fifteen]);
+  const { parts, stored } = await readWindow(context, origin);
+  assertSame(context, parts, stored);
+  const naiveOpen = toScaled(parts[0]?.open ?? '0');
+  context.assertCondition(naiveOpen !== toScaled(stored.open), 'a regra ingênua deveria divergir');
+  context.reportCheck(
+    'vela de 3 min sem negócio não define a abertura: composição = vela de 15 min',
   );
 }
 
@@ -188,4 +243,5 @@ export async function checkDisplayCandles(context: CandleCheckContext): Promise<
   await checkSeriesStayApart(context);
   await checkCheckConstraint(context);
   await checkFiveThreeMinuteCandlesMakeTheFifteen(context);
+  await checkEmptyFirstSubCandle(context);
 }
