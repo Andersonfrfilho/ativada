@@ -211,3 +211,34 @@ código e a varredura de palavras proibidas e de horas estão em `test/api-notic
   provado em `notices-center.contract.tsx` ("reconectando além do prazo… ao voltar, UM resumo"). Desvio: em vez de `after=<cursor>`
   o resumo compara a lista refeita pelo `resync` com a anterior (o cursor do servidor é opaco para o painel e a consulta já é
   refeita pelo stream); a rota segue aceitando `after` para quem precisar.
+
+### T4.3 — Revisão de design e prova no app dev real
+
+- App dev real (painel `http://127.0.0.1:56100`, API `http://127.0.0.1:56101`, Playwright + Edge, sessão local `teste`): o sino mostra
+  "Avisos: 8 não lidos" (44×44 px), a gaveta abre com o foco no título, lista por dia ("Hoje", "Ontem") as compras e vendas
+  reais das simulações ao vivo com a ficha (selo COMPRA/VENDA, preço no tick, régua com proteção, entrada e alvo, cursor
+  "Saiu 102,83" fora da faixa, resultado "▼ −1,17% no saldo da simulação"), "Operar à mão" com as ordens, custo 0,30%, líquido, o
+  ponto de desistência, o histórico do par ("Últimos 183 dias, SOL/USDT 15 min, com taxas: −25,68%") e a honestidade; Esc devolve o
+  foco ao sino. O link é `https://www.binance.com/pt-BR/trade/SOL_USDT`. Nenhum erro de console além dos 401 da renovação de sessão.
+- Achado e corrigido na revisão a 375 px: o balão do primeiro uso (fixo) cobria o sino porque o cabeçalho começa abaixo do aviso
+  de simulação (59 px); agora o balão fica abaixo do cabeçalho (`top: 128px`). Verificado de novo a 375 px com o tema escuro.
+- Capturas finais (uma por tema): `specs/014-central-de-avisos/capturas/gaveta-1280-claro.png` e `gaveta-375-escuro.png`.
+- O que ainda difere do preview `docs/preview/central-de-avisos/`: a gaveta lista a ficha em todos os itens (o preview mostrava
+  detalhes só no primeiro) e "Operar à mão" vem recolhido (aberto por quem clica); a linha de acerto "acerto X de N" (RF16) e a
+  coluna do analista ainda não aparecem (precisam de `projections`/`analyst`, ver pendências).
+
+### T4.4 — `CLAUDE.md`
+
+- Dois itens novos: o painel (pasta `src/notices/`, stream sem mudança, preferências por `sub`, `aria-live` único, ficha, Operar à
+  mão, perto de comprar e tokens) e a API (rota, `UNION ALL`, catálogo, bloco `manual`, `completesScore`, mutantes de dono).
+
+## Pendências e fora do que foi feito nesta rodada
+
+- **T4.1** (balão do agente falando o sinal, destaque na sala/"Equipe agora", "Novo" na linha de pulso e a camada "Níveis" com a faixa
+  da operação): NÃO feita. Mexe em arquivos das specs 011, 008 e 009 e o `git status` tinha mudanças alheias não commitadas nessas
+  áreas (`runs/team-room/balcony/*`, `CompactTeam`, `run-decisions.*`, `live-status-context.ts`, `decision-page.ts`).
+- **T4.2** (E2E `make panel-e2e`): NÃO feita, pois sobe infra Docker de teste, vetada nesta rodada. A prova de tela está nos
+  contratos do painel (1.3xx testes) e na verificação no app dev real acima.
+- **RF16** (linha "acerto X de N" em cada aviso, de `projections`/`analyst`) e a ficha "Sinal em andamento" com o cursor "agora"
+  ao vivo (COMPRADO) ficam para a T4.1, pelo mesmo motivo.
+- D2-B (migration `notice_preferences`, T1.4) não existe (D2-A); nenhuma migration foi criada.

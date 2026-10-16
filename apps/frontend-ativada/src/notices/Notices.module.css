@@ -110,7 +110,7 @@
 @media (max-width: 639px) {
   .coach {
     position: fixed;
-    top: 72px;
+    top: 128px;
     left: 16px;
     right: 16px;
     width: auto;
