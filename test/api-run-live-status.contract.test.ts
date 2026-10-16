@@ -710,17 +710,15 @@ describe('acesso e validação', () => {
     }
   });
 
-  test('dono certo com backtest ou walk-forward: 409 RUN_NOT_LIVE nas duas rotas', async () => {
+  test('dono certo com backtest ou walk-forward: o live-status é 409 RUN_NOT_LIVE (as decisões por vela valem, ver api-run-decisions-history)', async () => {
     for (const kind of ['backtest', 'walk_forward'] as const) {
       const runId = await createLiveRun(harness, { subject: SUBJECT_A, kind, status: 'completed' });
-      for (const suffix of [LIVE_STATUS_PATH, DECISIONS_PATH]) {
-        const response = await harness.call({
-          subject: SUBJECT_A,
-          path: `${RUNS}/${runId}${suffix}`,
-        });
-        expect(response.status).toBe(409);
-        expect(((await response.json()) as ErrorBody).error.code).toBe('RUN_NOT_LIVE');
-      }
+      const response = await harness.call({
+        subject: SUBJECT_A,
+        path: `${RUNS}/${runId}${LIVE_STATUS_PATH}`,
+      });
+      expect(response.status).toBe(409);
+      expect(((await response.json()) as ErrorBody).error.code).toBe('RUN_NOT_LIVE');
     }
   });
 

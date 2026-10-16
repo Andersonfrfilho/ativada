@@ -5,7 +5,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 
-import { renderHistoricalTeam } from '../src/runs/team-room/BacktestTeam.component.js';
+import { renderHistoricalTeam } from '../src/runs/team-room/HistoricalTeam.component.js';
 import { CompactTeam } from '../src/runs/team-room/CompactTeam.component.js';
 import { RunTeamAside } from '../src/runs/team-room/RunTeamAside.component.js';
 import { TeamAside } from '../src/runs/team-room/TeamAside.context.js';
@@ -82,12 +82,11 @@ describe('a equipe junto do gráfico nunca some', () => {
 describe('o gráfico reserva a coluna da equipe em todo estado', () => {
   const aside = (): ReactElement => <p data-testid="team">equipe</p>;
 
-  test('a backtest chart gets the team column with an honest sentence', async () => {
-    showCandleCard({ aside: renderHistoricalTeam });
+  test('a backtest chart gets the team column, and it stays even when the server refuses', async () => {
+    showCandleCard({ aside: renderHistoricalTeam(LIVE_RUN_ID, '1h') });
     await screen.findByRole('img', { name: 'Gráfico de velas de BNB/USDT' });
     const team = await screen.findByRole('complementary', TEAM_NAME);
-    expect(team.textContent).toContain('roda sobre o passado');
-    expect(team.textContent).toContain('compras e vendas estão marcadas no gráfico');
+    expect(team).toBeDefined();
   });
 
   test('a run with no candle yet keeps the team beside the chart drawn with context candles', async () => {
@@ -128,7 +127,7 @@ describe('RunTeamAside: a execução terminada', () => {
       isAuthenticated: true,
       routes: roomRoutes(createRoomHarness()),
       probe: (
-        <RunTeamAside runId={LIVE_RUN_ID} kind={kind}>
+        <RunTeamAside runId={LIVE_RUN_ID} kind={kind} timeframe="1h">
           <TeamAside pointedOpenTime={undefined} />
         </RunTeamAside>
       ),
@@ -136,11 +135,11 @@ describe('RunTeamAside: a execução terminada', () => {
   }
 
   test.each(['backtest', 'walk_forward'])(
-    'a %s says the team only speaks on live runs',
+    'a %s with no recorded opinion says so instead of leaving the column empty',
     async (kind) => {
       renderWithKind(kind);
       const team = await screen.findByRole('complementary', TEAM_NAME);
-      expect(team.textContent).toContain('roda sobre o passado');
+      await waitFor(() => expect(team.textContent).toContain('não gravou nenhuma opinião'));
     },
   );
 

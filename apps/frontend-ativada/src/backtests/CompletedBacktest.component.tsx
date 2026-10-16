@@ -17,7 +17,7 @@ export function CompletedBacktest({ run }: { readonly run: RunDetail }): ReactEl
       <HistoryNote />
       <MetricsCard title="Resultado" metrics={metrics} />
       <RunCurve runId={run.id} />
-      <RunTeamAside runId={run.id} kind={run.kind}>
+      <RunTeamAside runId={run.id} kind={run.kind} timeframe={run.timeframe}>
         <TradeChartCard runId={run.id} hasSummary={run.kind !== RUN_KIND.LIVE_PAPER} />
       </RunTeamAside>
       <CostsCard run={run} metrics={metrics} />

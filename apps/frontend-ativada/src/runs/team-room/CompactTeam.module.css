@@ -39,6 +39,12 @@
   padding: var(--space-2);
 }
 
+/* Acima do gráfico, em largura total: os assentos lado a lado em vez de empilhados. */
+.wide {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  align-items: start;
+}
+
 /* O assento em versão estreita: bonequinho menor e sem o nome de baixo (o balão já diz quem fala). */
 .seats > div[data-state] {
   grid-template-columns: 44px minmax(0, 1fr);

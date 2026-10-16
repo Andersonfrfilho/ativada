@@ -33,15 +33,48 @@ export type LiveRunContext = {
   readonly market: DecisionMarket;
 };
 
-// Execução alheia, inexistente ou apagada é o mesmo 404; o dono certo com outro tipo de execução é 409 (ADR 0002, L17).
-export async function findLiveRun(
+type FindRunParams = {
+  readonly scope: OwnerScope;
+  readonly runId: string;
+  readonly kinds: ReadonlySet<string>;
+};
+
+// Execução alheia, inexistente ou apagada é o mesmo 404; o dono certo com tipo fora de `kinds` é 409 (ADR 0002, L17).
+async function findRunOfKinds(
   dependencies: LiveStatusRunDependencies,
-  params: { readonly scope: OwnerScope; readonly runId: string },
+  params: FindRunParams,
 ): Promise<RunRecord> {
   const run = await dependencies.runs.findRun(params.scope, params.runId);
   if (run === undefined) throw new RunNotFoundError();
-  if (run.kind !== RUN_KIND.LIVE_PAPER) throw new RunNotLiveError();
+  if (!params.kinds.has(run.kind)) throw new RunNotLiveError();
   return run;
+}
+
+const LIVE_RUN_KINDS: ReadonlySet<string> = new Set([RUN_KIND.LIVE_PAPER]);
+
+// Os tipos que gravam um sinal por vela (votos e leituras): hoje todos; quem não gravar continua em 409.
+const SIGNAL_RUN_KINDS: ReadonlySet<string> = new Set([
+  RUN_KIND.LIVE_PAPER,
+  RUN_KIND.BACKTEST,
+  RUN_KIND.WALK_FORWARD,
+]);
+
+type FindRunParamsWithoutKinds = Omit<FindRunParams, 'kinds'>;
+
+// O acompanhamento (`live-status`, analista) só existe para a simulação ao vivo.
+export function findLiveRun(
+  dependencies: LiveStatusRunDependencies,
+  params: FindRunParamsWithoutKinds,
+): Promise<RunRecord> {
+  return findRunOfKinds(dependencies, { ...params, kinds: LIVE_RUN_KINDS });
+}
+
+// As decisões por vela (`/decisions`) valem para toda execução que grava sinais, ao vivo ou histórica.
+export function findSignalRun(
+  dependencies: LiveStatusRunDependencies,
+  params: FindRunParamsWithoutKinds,
+): Promise<RunRecord> {
+  return findRunOfKinds(dependencies, { ...params, kinds: SIGNAL_RUN_KINDS });
 }
 
 // A vela de cada decisão se acha pela PK de candles: a corretora do ambiente, o par e o timeframe da execução.

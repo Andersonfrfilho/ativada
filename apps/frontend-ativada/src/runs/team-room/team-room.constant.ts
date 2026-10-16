@@ -76,8 +76,12 @@ export const TEAM_ROOM_TEXT = {
   MONITOR: 'Monitor da sala: o gráfico da simulação',
   COMPACT_LOADING: 'Carregando a equipe…',
   COMPACT_ERROR: 'Não deu para carregar a equipe agora.',
-  COMPACT_HISTORICAL:
-    'Esta execução roda sobre o passado: a equipe só opina nas simulações ao vivo. As compras e vendas estão marcadas no gráfico.',
+  HISTORICAL_LATEST_CANDLE: 'Última vela da execução, fechou',
+  HISTORICAL_POINTED_WITHOUT_SPEECH:
+    'A equipe não opinou nesta vela: ela fica fora do que a execução avaliou (aquecimento, ajuste do walk-forward ou antes do início).',
+  HISTORICAL_EMPTY: 'Esta execução não gravou nenhuma opinião da equipe.',
+  HISTORICAL_NOTE:
+    'Opiniões gravadas pela execução sobre o passado, vela a vela. Não há analista de risco aqui.',
   COMPACT_STOPPED:
     'Esta simulação não está rodando e ainda não registrou nenhuma opinião da equipe.',
   COMPACT_WAITING: 'A equipe ainda está olhando o mercado.',

@@ -64,14 +64,14 @@ const OWNER_ACCESS_AND_KIND: readonly SourceMutant[] = [
   },
   {
     name: 'LIVE_STATUS_ACCEPTS_BACKTEST_AND_WALK_FORWARD',
-    edits: edit(CONTEXT, 'if (run.kind !== RUN_KIND.LIVE_PAPER) throw new RunNotLiveError();', ''),
+    edits: edit(CONTEXT, 'if (!params.kinds.has(run.kind)) throw new RunNotLiveError();', ''),
   },
   {
     name: 'LIVE_STATUS_NOT_LIVE_IS_A_404',
     edits: edit(
       CONTEXT,
-      'if (run.kind !== RUN_KIND.LIVE_PAPER) throw new RunNotLiveError();',
-      'if (run.kind !== RUN_KIND.LIVE_PAPER) throw new RunNotFoundError();',
+      'if (!params.kinds.has(run.kind)) throw new RunNotLiveError();',
+      'if (!params.kinds.has(run.kind)) throw new RunNotFoundError();',
     ),
   },
   { name: 'LIVE_STATUS_ROUTE_IS_PUBLIC', edits: edit(STATUS_ROUTE, USER_ACCESS, PUBLIC_ACCESS) },
@@ -89,11 +89,7 @@ const VALIDATION_AND_LIMITS: readonly SourceMutant[] = [
   },
   {
     name: 'DECISIONS_ACCEPTS_ANY_QUERY',
-    edits: edit(
-      DECISIONS_DOCS,
-      'z.strictObject(PAGE_QUERY_SHAPE)',
-      'z.looseObject(PAGE_QUERY_SHAPE)',
-    ),
+    edits: edit(DECISIONS_DOCS, 'z.strictObject({', 'z.looseObject({'),
   },
   {
     name: 'DECISIONS_LIMIT_NOT_CAPPED_AT_100',
@@ -125,7 +121,7 @@ const VALIDATION_AND_LIMITS: readonly SourceMutant[] = [
   },
   {
     name: 'DECISIONS_IGNORE_THE_CURSOR',
-    edits: edit(DECISIONS_USE_CASE, 'before: input.before,', 'before: undefined,'),
+    edits: edit(DECISIONS_USE_CASE, '? input.before :', '? undefined :'),
   },
   {
     name: 'DECISIONS_NEVER_RETURN_A_NEXT_CURSOR',
@@ -432,6 +428,46 @@ const PHRASES_AND_STATES: readonly SourceMutant[] = [
 ];
 
 const MUTANTS: readonly SourceMutant[] = [
+  {
+    name: 'DECISIONS_REFUSE_WALK_FORWARD',
+    edits: edit(CONTEXT, 'RUN_KIND.WALK_FORWARD,', ''),
+  },
+  {
+    name: 'DECISIONS_REFUSE_BACKTEST',
+    edits: edit(CONTEXT, 'RUN_KIND.BACKTEST,', ''),
+  },
+  {
+    name: 'LIVE_STATUS_ACCEPTS_THE_HISTORICAL_KINDS',
+    edits: edit(CONTEXT, 'kinds: LIVE_RUN_KINDS', 'kinds: SIGNAL_RUN_KINDS'),
+  },
+  {
+    name: 'DECISIONS_AT_IS_IGNORED',
+    edits: edit(
+      DECISIONS_USE_CASE,
+      'input.at === undefined ? input.before : input.at + 1',
+      'input.before',
+    ),
+  },
+  {
+    name: 'DECISIONS_AT_EXCLUDES_THE_REQUESTED_CANDLE',
+    edits: edit(DECISIONS_USE_CASE, 'input.at + 1', 'input.at'),
+  },
+  {
+    name: 'DECISIONS_AT_WITH_CURSOR_IS_ACCEPTED',
+    edits: edit(
+      DECISIONS_ROUTE,
+      'if (query.at !== undefined && query.cursor !== undefined) {',
+      'if (query.at === Infinity) {',
+    ),
+  },
+  {
+    name: 'HISTORICAL_LAST_CANDLE_BUY_STAYS_PENDING',
+    edits: edit(
+      DECISION_PAGE,
+      'context.run.kind === RUN_KIND.LIVE_PAPER ? context.run.lastCandleTime : undefined',
+      'context.run.lastCandleTime',
+    ),
+  },
   ...OWNER_ACCESS_AND_KIND,
   ...VALIDATION_AND_LIMITS,
   ...ROUNDING_AND_ARITHMETIC,

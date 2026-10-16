@@ -21,7 +21,7 @@ export function CompletedWalkForward({ run }: { readonly run: RunDetail }): Reac
       <OverfittingCard overfitting={parseOverfitting(run.overfitting)} />
       <WindowsCard runId={run.id} />
       <RunCurve runId={run.id} />
-      <RunTeamAside runId={run.id} kind={run.kind}>
+      <RunTeamAside runId={run.id} kind={run.kind} timeframe={run.timeframe}>
         <TradeChartCard runId={run.id} />
       </RunTeamAside>
       <CostsCard run={run} metrics={metrics} />

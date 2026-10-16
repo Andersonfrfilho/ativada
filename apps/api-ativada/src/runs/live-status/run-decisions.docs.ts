@@ -9,13 +9,26 @@ import { PAGE_QUERY_SHAPE } from '../../shared/pagination/page-query.schema.js';
 import { RUN_ID_PARAM } from '../runs.constant.js';
 import { DECISION_SCHEMA } from './live-status.schema.js';
 
-export const runDecisionsQuerySchema = z.strictObject(PAGE_QUERY_SHAPE);
+const AT_PATTERN = /^\d{1,15}$/;
+
+// `at`: o instante de abertura (ms) da vela pedida; a página começa nela (inclusive) e segue para as anteriores.
+const atSchema = z
+  .string()
+  .regex(AT_PATTERN)
+  .transform(Number)
+  .pipe(z.number().int().nonnegative());
+
+export const runDecisionsQuerySchema = z.strictObject({
+  ...PAGE_QUERY_SHAPE,
+  at: atSchema.optional(),
+});
 
 export const RUN_DECISIONS_DOCUMENTATION: RouteDocumentation = {
   summary:
-    'Decisões da simulação ao vivo, uma por vela fechada (esperas incluídas), da mais recente para a mais antiga, por ' +
-    'cursor (padrão 24, máximo 100). São as mesmas linhas da primeira página do `live-status`, com a frase do motivo e o ' +
-    'voto de cada regra. Só `live_paper`; outro tipo responde 409 `RUN_NOT_LIVE`.',
+    'Decisões da execução, uma por vela (esperas incluídas), da mais recente para a mais antiga, por cursor (padrão 24, ' +
+    'máximo 100). São as mesmas linhas da primeira página do `live-status`, com a frase do motivo e o voto de cada regra. ' +
+    'Vale para a simulação ao vivo, o backtest e o walk-forward (só as velas das janelas de TESTE); `at` (ms) começa a ' +
+    'página na vela de abertura pedida, inclusive, e `at` com `cursor` é 400. Tipo sem sinais gravados responde 409 `RUN_NOT_LIVE`.',
   tag: 'Execuções — acompanhamento',
   params: pathIdSchema(RUN_ID_PARAM),
   query: runDecisionsQuerySchema,

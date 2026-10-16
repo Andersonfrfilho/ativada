@@ -2,7 +2,7 @@
 import type { ReactElement, ReactNode } from 'react';
 
 import { RUN_KIND } from '../run.constant.js';
-import { renderHistoricalTeam } from './BacktestTeam.component.js';
+import { renderHistoricalTeam } from './HistoricalTeam.component.js';
 import { TeamBalcony } from './balcony/TeamBalcony.component.js';
 import { TeamAsideProvider, type TeamAsideRenderer } from './TeamAside.context.js';
 import type { TeamRoomPreference } from './team-room-preference.js';
@@ -23,15 +23,23 @@ export function renderCompactTeam(
 }
 
 export type RunTeamAsideProps = {
+  readonly timeframe: string;
   readonly runId: string;
   readonly kind: string;
   readonly children: ReactNode;
 };
 
-// A coluna da equipe ao lado do gráfico de uma execução já terminada: a simulação ao vivo mostra a equipe, a histórica diz por que não há.
-export function RunTeamAside({ runId, kind, children }: RunTeamAsideProps): ReactElement {
+// A coluna da equipe ao lado do gráfico de uma execução já terminada: a ao vivo mostra a equipe de agora, a histórica a opinião gravada em cada vela.
+export function RunTeamAside({
+  runId,
+  kind,
+  timeframe,
+  children,
+}: RunTeamAsideProps): ReactElement {
   const { preference } = useTeamRoomPreference();
   const aside =
-    kind === RUN_KIND.LIVE_PAPER ? renderCompactTeam(runId, preference) : renderHistoricalTeam;
+    kind === RUN_KIND.LIVE_PAPER
+      ? renderCompactTeam(runId, preference)
+      : renderHistoricalTeam(runId, timeframe);
   return <TeamAsideProvider aside={aside}>{children}</TeamAsideProvider>;
 }

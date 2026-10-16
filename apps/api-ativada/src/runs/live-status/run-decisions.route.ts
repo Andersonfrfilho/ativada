@@ -4,7 +4,9 @@ import { ROUTE_ACCESS } from '../../router/route-access.constant.js';
 import type { Route } from '../../router/route.types.js';
 import { HTTP_METHOD, HTTP_STATUS } from '../../shared/http/http.constant.js';
 import { readValidatedQuery } from '../../shared/http/read-validated-query.js';
+import { RequestValidationError } from '../../shared/http/request-validation.error.js';
 import type { RouteResult } from '../../shared/http/response-envelope.js';
+import { CURSOR_FIELD } from '../../shared/pagination/pagination.constant.js';
 import { invalidCursorError } from '../../shared/pagination/page-query.schema.js';
 import { decodeTimeCursor } from '../run-cursor.js';
 import { readRunId } from '../run-id.js';
@@ -12,12 +14,17 @@ import { LIVE_DECISIONS_PAGE_SIZE, RUN_DECISIONS_PATH } from '../runs.constant.j
 import { RUN_DECISIONS_DOCUMENTATION, runDecisionsQuerySchema } from './run-decisions.docs.js';
 import type { RunDecisionsInput, RunDecisionsUseCase } from './run-decisions.use-case.js';
 
+const AT_WITH_CURSOR_REASON = 'at_with_cursor';
+
 // `limit` (1 a 100, padrão 24) e `cursor` opaco; cursor adulterado é 400, nunca um filtro montado de texto cru.
 export function readDecisionsInput(request: Request): RunDecisionsInput {
   const query = readValidatedQuery(request, runDecisionsQuerySchema);
   const before = query.cursor === undefined ? undefined : decodeTimeCursor(query.cursor);
   if (query.cursor !== undefined && before === undefined) throw invalidCursorError();
-  return { before, limit: query.limit ?? LIVE_DECISIONS_PAGE_SIZE.DEFAULT };
+  if (query.at !== undefined && query.cursor !== undefined) {
+    throw new RequestValidationError([{ field: CURSOR_FIELD, reason: AT_WITH_CURSOR_REASON }]);
+  }
+  return { before, at: query.at, limit: query.limit ?? LIVE_DECISIONS_PAGE_SIZE.DEFAULT };
 }
 
 export function createRunDecisionsRoute(decisions: RunDecisionsUseCase): Route {

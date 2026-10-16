@@ -1,9 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type {
-  DecisionRow,
-  DecisionRowPage,
-  ListPositionsAroundParams,
-  PositionInput,
+import {
+  RUN_KIND,
+  type DecisionRow,
+  type DecisionRowPage,
+  type ListPositionsAroundParams,
+  type PositionInput,
 } from '@ativada/database';
 
 import { encodeTimeCursor } from '../run-cursor.js';
@@ -42,7 +43,9 @@ export function toDecisionsPageView(params: {
     items: toDecisionViews({
       config: context.config,
       durationMilliseconds: context.durationMilliseconds,
-      lastCandleTime: context.run.lastCandleTime,
+      // Só o ao vivo tem "a vela seguinte ainda não abriu"; a histórica já terminou.
+      lastCandleTime:
+        context.run.kind === RUN_KIND.LIVE_PAPER ? context.run.lastCandleTime : undefined,
       positions: params.positions,
       rows: page.items,
     }),
