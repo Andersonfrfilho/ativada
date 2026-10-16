@@ -11,7 +11,7 @@ const READING_FORMAT = { minimumFraction: 0, maximumFraction: 4 } as const;
 const SINGLE_OUTPUT = 'value';
 
 // O valor que a regra leu naquela vela ("55" ou "macd 0,12 · signal 0,09"); sem leitura, nada.
-function describeReading(reading: DecisionVote['reading']): string | undefined {
+export function describeReading(reading: DecisionVote['reading']): string | undefined {
   if (reading === null) return undefined;
   const parts = Object.entries(reading).map(([name, value]) => {
     const formatted = formatDecimalText(value, READING_FORMAT);

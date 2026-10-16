@@ -24,7 +24,7 @@ const EVERY_TIMEFRAME: Readonly<Record<string, string>> = {
 
 export type DecisionsTableProps = { readonly runId: string; readonly status: LiveStatus };
 
-type OlderDecisions = {
+export type OlderDecisions = {
   readonly decisions: readonly Decision[];
   readonly hasMore: boolean;
   readonly isLoading: boolean;
@@ -32,7 +32,7 @@ type OlderDecisions = {
 };
 
 // O live-status traz as 24 mais novas; as anteriores vêm sob demanda, por cursor, e se juntam sem repetir vela.
-function useOlderDecisions(runId: string, status: LiveStatus): OlderDecisions {
+export function useOlderDecisions(runId: string, status: LiveStatus): OlderDecisions {
   const [isRequested, setIsRequested] = useState(false);
   const older = useDecisionsQuery(runId, isRequested);
   const olderItems = older.data?.pages.flatMap((page) => page.items) ?? [];

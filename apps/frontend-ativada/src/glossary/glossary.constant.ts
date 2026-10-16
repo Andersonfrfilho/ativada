@@ -19,6 +19,9 @@ export const GLOSSARY_TERM = {
   ATR_BAND: 'atrBand',
   SIDE_HIT_RATE: 'sideHitRate',
   COIN_FLIP: 'coinFlip',
+  TEAM: 'team',
+  SPECIALIST: 'specialist',
+  AUDITOR: 'auditor',
 } as const;
 
 export type GlossaryTerm = (typeof GLOSSARY_TERM)[keyof typeof GLOSSARY_TERM];
@@ -108,5 +111,20 @@ export const GLOSSARY: Readonly<Record<GlossaryTerm, GlossaryEntry>> = {
   [GLOSSARY_TERM.COIN_FLIP]: {
     label: 'Moeda ao ar',
     phrase: 'A referência de 50%: o acerto esperado de quem escolhe o lado jogando uma moeda.',
+  },
+  [GLOSSARY_TERM.TEAM]: {
+    label: 'Equipe',
+    phrase:
+      'As famílias de regras da estratégia (tendência, reversão, volume e sentimento), cada uma com o seu voto.',
+  },
+  [GLOSSARY_TERM.SPECIALIST]: {
+    label: 'Especialista',
+    phrase:
+      'Uma família de regras da estratégia. Vota a favor, contra ou fica neutra; não prevê o preço.',
+  },
+  [GLOSSARY_TERM.AUDITOR]: {
+    label: 'Auditor',
+    phrase:
+      'Confere em quantas velas a estratégia acertou o lado e compara com a moeda ao ar (50%).',
   },
 };

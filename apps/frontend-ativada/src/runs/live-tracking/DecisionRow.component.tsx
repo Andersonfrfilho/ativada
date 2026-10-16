@@ -13,7 +13,7 @@ const DAY_WORDS = /^(\d{2}:\d{2}) de (hoje|ontem|amanhã)$/;
 
 type OutcomeLook = { readonly tone: ChipTone; readonly icon: IconName; readonly word: string };
 
-const OUTCOME_LOOK: Readonly<Record<Decision['outcome'], OutcomeLook>> = {
+export const OUTCOME_LOOK: Readonly<Record<Decision['outcome'], OutcomeLook>> = {
   waited: { tone: CHIP_TONE.NEUTRAL, icon: 'pause', word: 'Esperou' },
   bought: { tone: CHIP_TONE.BUY, icon: 'arrowUp', word: 'Comprou' },
   buy_pending: { tone: CHIP_TONE.NEUTRAL, icon: 'pause', word: 'Pediu compra' },

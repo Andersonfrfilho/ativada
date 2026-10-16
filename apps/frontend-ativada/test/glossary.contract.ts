@@ -30,6 +30,9 @@ describe('glossary', () => {
         'Faixa (ATR)',
         'Acerto do lado',
         'Moeda ao ar',
+        'Equipe',
+        'Especialista',
+        'Auditor',
       ].sort(),
     );
   });
