@@ -59,6 +59,14 @@ export type SurfaceMarker = {
   readonly isSelected: boolean;
 };
 
+// Níveis da estratégia desenhados como linha horizontal rotulada (camada "Níveis"); o texto da etiqueta vem pronto.
+export type SurfacePriceLevel = {
+  readonly key: string;
+  readonly role: 'entry' | 'target' | 'stop' | 'trigger';
+  readonly price: number;
+  readonly title: string;
+};
+
 // Caixas "Stop e alvo": da entrada ao alvo e da entrada ao stop; `exitTime` nulo = posição aberta (vai até a ponta).
 export type SurfaceLevelBox = {
   readonly key: string;
@@ -110,6 +118,7 @@ export type ChartSurface = {
   ) => void;
   readonly setMarkers: (markers: readonly SurfaceMarker[]) => void;
   readonly setLevels: (boxes: readonly SurfaceLevelBox[]) => void;
+  readonly setPriceLevels: (levels: readonly SurfacePriceLevel[]) => void;
   // Pontinhos discretos de "esperou" (camada desligada por padrão).
   readonly setWaited: (times: readonly SurfaceTime[]) => void;
   readonly setProjection: (projection: SurfaceProjection | null) => void;

@@ -11,6 +11,7 @@ const DEFAULT_LAYERS = {
   trades: true,
   strategyLines: true,
   stopTarget: false,
+  levels: true,
   waited: false,
 } as const;
 
@@ -20,6 +21,7 @@ const layersSchema = z
     trades: z.boolean().catch(DEFAULT_LAYERS.trades),
     strategyLines: z.boolean().catch(DEFAULT_LAYERS.strategyLines),
     stopTarget: z.boolean().catch(DEFAULT_LAYERS.stopTarget),
+    levels: z.boolean().catch(DEFAULT_LAYERS.levels),
     waited: z.boolean().catch(DEFAULT_LAYERS.waited),
   })
   .catch(DEFAULT_LAYERS);

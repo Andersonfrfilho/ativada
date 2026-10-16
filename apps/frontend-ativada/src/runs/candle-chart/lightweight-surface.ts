@@ -100,7 +100,7 @@ function createContext(chart: IChartApi): Context {
     marks,
     markers: createSeriesMarkers(candles, []),
     state: createSurfaceState(),
-    layers: { lines: [], cone: [], score: undefined, scoreLevels: [] },
+    layers: { lines: [], cone: [], score: undefined, scoreLevels: [], levelLines: [] },
     crosshairListeners: new Set(),
   };
 }

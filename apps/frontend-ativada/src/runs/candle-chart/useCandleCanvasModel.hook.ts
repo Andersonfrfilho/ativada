@@ -11,7 +11,7 @@ import { CHART_LAYER, INITIAL_VISIBLE_BARS, type ChartLayer } from './candle-cha
 import { toSurfaceTime } from './candle-series.js';
 import { describeForecast } from './forecast-description.js';
 import { judgeNextCandle } from './next-candle-state.js';
-import type { ChartSurface } from './chart-surface.types.js';
+import type { ChartSurface, SurfacePriceLevel } from './chart-surface.types.js';
 import { LAYERS_BLOCK_BARS } from './layer-series.js';
 import { buildLegendText } from './legend-text.js';
 import { describeTradesAt, findPositionKeyAt } from './marker-series.js';
@@ -22,6 +22,7 @@ import type { CandleSource, TimeframeChoice } from './useCandleSource.hook.js';
 import { useChartLayers, type ChartLayerData } from './useChartLayers.hook.js';
 import { useChartSurface } from './useChartSurface.hook.js';
 import { useFormingCandle } from './useFormingCandle.hook.js';
+import { useLevelLines } from './useLevelLines.hook.js';
 import { useLayerSurface } from './useLayerSurface.hook.js';
 import { useSurfaceData } from './useSurfaceData.hook.js';
 import { useSurfaceTheme } from './useSurfaceTheme.hook.js';
@@ -41,6 +42,8 @@ export type CandleCanvasModel = {
   readonly hasFailed: boolean;
   readonly legend: OhlcText | undefined;
   readonly live: LiveCandleView | undefined;
+  // Os níveis da estratégia desenhados agora (camada "Níveis"); vazio sem posição aberta nem gatilho.
+  readonly levels: readonly SurfacePriceLevel[];
   readonly layerData: ChartLayerData;
   readonly isLayerOn: (layer: ChartLayer) => boolean;
   readonly handleTimeframeChange: (next: TimeframeChoice) => void;
@@ -124,7 +127,7 @@ function forecastTextFor(
   return describeForecast({ state, now, timeZone });
 }
 
-type LayerModel = Pick<CandleCanvasModel, 'layerData' | 'isLayerOn' | 'live'>;
+type LayerModel = Pick<CandleCanvasModel, 'layerData' | 'isLayerOn' | 'live' | 'levels'>;
 
 // As camadas da estratégia na superfície e a vela em formação.
 function useLayerModel(
@@ -141,7 +144,11 @@ function useLayerModel(
     timeframe: source.timeframe,
     isFollowing: view.isLive && view.range === undefined,
   });
-  return { layerData, isLayerOn, live };
+  const levels = useLevelLines(base.surface, {
+    runId,
+    isOn: view.isLive && isLayerOn(CHART_LAYER.LEVELS),
+  });
+  return { layerData, isLayerOn, live, levels };
 }
 
 // A vela que a cruz aponta (a equipe fala dela) e, se tem operação, a dica "Compra a X · taxa Y".

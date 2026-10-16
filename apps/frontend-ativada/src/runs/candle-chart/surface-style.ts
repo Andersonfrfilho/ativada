@@ -2,6 +2,7 @@
 import type {
   SurfaceLineRole,
   SurfaceMarker,
+  SurfacePriceLevel,
   SurfaceProjection,
   SurfaceScoreBar,
   SurfaceThreshold,
@@ -131,6 +132,13 @@ export function buildMarkColors(theme: SurfaceTheme): MarkColors {
     halo: theme.background,
     onMark: theme.background,
   };
+}
+
+// As linhas de nível: alvo e stop na cor semântica de compra e venda, a entrada na cor do texto e o gatilho na cor da linha.
+export function buildLevelLineColors(
+  theme: SurfaceTheme,
+): Readonly<Record<SurfacePriceLevel['role'], string>> {
+  return { target: theme.up, stop: theme.down, entry: theme.text, trigger: theme.line };
 }
 
 export function buildLevelColors(theme: SurfaceTheme): {

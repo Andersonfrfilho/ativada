@@ -18,6 +18,7 @@ export const CHART_LAYER = {
   TRADES: 'trades',
   STRATEGY_LINES: 'strategyLines',
   STOP_TARGET: 'stopTarget',
+  LEVELS: 'levels',
   WAITED: 'waited',
 } as const;
 

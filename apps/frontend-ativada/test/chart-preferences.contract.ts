@@ -39,6 +39,7 @@ describe('chart preferences', () => {
         trades: true,
         strategyLines: true,
         stopTarget: false,
+        levels: true,
         waited: false,
       },
     });
@@ -73,6 +74,7 @@ describe('chart preferences', () => {
         trades: true,
         strategyLines: true,
         stopTarget: true,
+        levels: true,
         waited: false,
       },
     });

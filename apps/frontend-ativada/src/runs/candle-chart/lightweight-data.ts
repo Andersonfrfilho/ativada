@@ -5,6 +5,7 @@ import {
   applyPricePrecision,
   RENDER_ALL,
   renderLevels,
+  renderPriceLevels,
   renderLines,
   renderLive,
   renderMarkers,
@@ -22,7 +23,7 @@ type SeriesSetters = Pick<
 
 type OverlaySetters = Pick<
   ChartSurface,
-  'setWaited' | 'setLevels' | 'setProjection' | 'setLiveCandle' | 'setTheme'
+  'setWaited' | 'setLevels' | 'setPriceLevels' | 'setProjection' | 'setLiveCandle' | 'setTheme'
 >;
 
 function themeOptions(ctx: Context, theme: SurfaceTheme): DeepPartial<ChartOptions> {
@@ -83,6 +84,10 @@ export function buildOverlaySetters(ctx: Context): OverlaySetters {
     setLevels: (boxes): void => {
       state.levels = boxes;
       paint(ctx, renderLevels);
+    },
+    setPriceLevels: (levels): void => {
+      state.priceLevels = levels;
+      paint(ctx, renderPriceLevels);
     },
     setProjection: (projection): void => {
       state.projection = projection;

@@ -47,6 +47,7 @@ const LAYER_ITEMS: readonly LayerItem[] = [
     isLiveOnly: false,
     needsStrategyTimeframe: false,
   },
+  { layer: CHART_LAYER.LEVELS, label: 'Níveis', isLiveOnly: true, needsStrategyTimeframe: false },
   { layer: CHART_LAYER.WAITED, label: 'Esperou', isLiveOnly: true, needsStrategyTimeframe: true },
 ];
 

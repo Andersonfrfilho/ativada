@@ -7,6 +7,7 @@ import {
   buildConeEdges,
   buildFormingColors,
   buildLevelColors,
+  buildLevelLineColors,
   buildMarkColors,
   buildMarkerSpecs,
   buildScoreData,
@@ -119,6 +120,20 @@ export const renderLevels: Render = (ctx, theme) =>
 const renderCandleColors: Render = (ctx, theme) =>
   ctx.candles.applyOptions(buildCandleColors(theme));
 
+export const renderPriceLevels: Render = (ctx, theme) => {
+  ctx.layers.levelLines.forEach((line) => ctx.candles.removePriceLine(line));
+  ctx.layers.levelLines = ctx.state.priceLevels.map((level) =>
+    ctx.candles.createPriceLine({
+      price: level.price,
+      title: level.title,
+      color: buildLevelLineColors(theme)[level.role],
+      lineWidth: 2,
+      lineStyle: ctx.kit.LineStyle.Dashed,
+      axisLabelVisible: true,
+    }),
+  );
+};
+
 export const RENDER_ALL: readonly Render[] = [
   renderCandleColors,
   renderVolume,
@@ -128,4 +143,5 @@ export const RENDER_ALL: readonly Render[] = [
   renderProjection,
   renderLive,
   renderLevels,
+  renderPriceLevels,
 ];

@@ -4,6 +4,7 @@ import type {
   SurfaceLevelBox,
   SurfaceLine,
   SurfaceMarker,
+  SurfacePriceLevel,
   SurfaceProjection,
   SurfaceScoreBar,
   SurfaceThreshold,
@@ -26,6 +27,7 @@ export type SurfaceState = {
   markers: readonly SurfaceMarker[];
   waited: readonly SurfaceTime[];
   levels: readonly SurfaceLevelBox[];
+  priceLevels: readonly SurfacePriceLevel[];
   projection: SurfaceProjection | null;
   live: SurfaceCandle | null;
 };
@@ -43,6 +45,7 @@ export function createSurfaceState(): SurfaceState {
     markers: [],
     waited: [],
     levels: [],
+    priceLevels: [],
     projection: null,
     live: null,
   };

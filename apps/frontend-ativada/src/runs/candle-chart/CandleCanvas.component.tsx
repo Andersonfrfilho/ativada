@@ -114,6 +114,7 @@ function CanvasView(props: CanvasViewProps): ReactElement {
         decisions={chart.decisions}
         isOn={model.isLayerOn}
         isLive={view.isLive}
+        hasLevels={model.levels.length > 0}
       />
       {chart.clusters === null ? null : (
         <ClusterButtons

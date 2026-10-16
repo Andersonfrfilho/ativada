@@ -20,6 +20,7 @@ export type Layers = {
   cone: ISeriesApi<'Line'>[];
   score: ISeriesApi<'Histogram'> | undefined;
   scoreLevels: IPriceLine[];
+  levelLines: IPriceLine[];
 };
 
 export type Context = {

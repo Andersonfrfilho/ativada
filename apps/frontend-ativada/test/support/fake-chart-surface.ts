@@ -60,6 +60,7 @@ export function createFakeChartSurface(container: HTMLElement): FakeChartSurface
     setScore: record('setScore'),
     setMarkers: record('setMarkers'),
     setLevels: record('setLevels'),
+    setPriceLevels: record('setPriceLevels'),
     setWaited: record('setWaited'),
     setProjection: record('setProjection'),
     setLiveCandle: record('setLiveCandle'),
