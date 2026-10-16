@@ -38,7 +38,10 @@ function silentLogger(): Logger {
 }
 
 // O pipeline de produção inteiro: ticker real -> agregação -> publicação -> assinante, contra uma Binance falsa.
-function startPipeline(isKlineEnabled = false): {
+function startPipeline(
+  isKlineEnabled = false,
+  displayTimeframes: readonly '3m'[] = [],
+): {
   readonly received: Received[];
   readonly subscriber: FakeStreamSocket;
 } {
@@ -46,7 +49,7 @@ function startPipeline(isKlineEnabled = false): {
     environment: {
       MARKET_SYMBOLS: ['BTCUSDT', 'ETHUSDT'],
       MARKET_TIMEFRAMES: ['1h'],
-      MARKET_DISPLAY_TIMEFRAMES: [],
+      MARKET_DISPLAY_TIMEFRAMES: [...displayTimeframes],
       TICKER_KLINE_ENABLED: isKlineEnabled,
       BINANCE_BASE_URL: server.restUrl,
       BINANCE_STREAM_URL: server.streamUrl,
@@ -120,6 +123,33 @@ describe('forming candle through the same pipeline', () => {
 
   test('with the flag off the kline streams are not even subscribed', async () => {
     startPipeline(false);
+    await waitConnected();
+    expect(server.requestedStreams()).toStrictEqual(['btcusdt@miniTicker/ethusdt@miniTicker']);
+  });
+
+  test('a display timeframe is subscribed next to the execution ones, one message per pair and candle', async () => {
+    const { received } = startPipeline(true, ['3m']);
+    await waitConnected();
+    expect(server.requestedStreams()).toStrictEqual([
+      'btcusdt@miniTicker/ethusdt@miniTicker/btcusdt@kline_1h/btcusdt@kline_3m/ethusdt@kline_1h/ethusdt@kline_3m',
+    ]);
+    for (let index = 0; index < 30; index += 1) {
+      for (const timeframe of ['1h', '3m'] as const) {
+        server.sendEvent({ symbol: 'BTCUSDT', timeframe, openTime: OPEN_TIME, isClosed: false });
+      }
+    }
+    await waitFor(
+      () => received.filter((item) => item.message['type'] === 'candle').length >= 2,
+      'duas velas publicadas',
+      4_000,
+    );
+    await Bun.sleep(1_300);
+    const candles = received.filter((item) => item.message['type'] === 'candle');
+    expect(candles.map((item) => item.message['timeframe']).sort()).toStrictEqual(['1h', '3m']);
+  });
+
+  test('a display timeframe alone never turns the kline subscription on', async () => {
+    startPipeline(false, ['3m']);
     await waitConnected();
     expect(server.requestedStreams()).toStrictEqual(['btcusdt@miniTicker/ethusdt@miniTicker']);
   });

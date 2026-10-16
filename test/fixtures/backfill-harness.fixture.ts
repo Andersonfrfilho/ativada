@@ -7,7 +7,8 @@ import { createCronLogger } from '../../apps/cron-ativada/src/logging/cron-logge
 import type { CandleRecord, CandleTimeframe } from '../../packages/database/src/index.js';
 import {
   createMarketDataClient,
-  TIMEFRAME_DURATION_MILLISECONDS,
+  MARKET_CANDLE_DURATION_MILLISECONDS,
+  type MarketCandleTimeframe,
 } from '../../packages/market-data-crypto/src/index.js';
 import { createFakeClock } from './fake-binance.fixture.js';
 import {
@@ -25,8 +26,10 @@ export const BACKFILL_EXCHANGE = 'binance';
 
 export type BackfillHarnessOptions = {
   readonly symbols?: readonly string[];
-  readonly timeframes?: readonly CandleTimeframe[];
+  readonly timeframes?: readonly MarketCandleTimeframe[];
   readonly years?: number;
+  // Velas de exibição (spec 017): janela em dias no lugar de anos.
+  readonly days?: number;
   readonly seed?: readonly CandleRecord[];
   readonly withheld?: readonly WithheldRange[];
   readonly delayMilliseconds?: number;
@@ -45,7 +48,7 @@ export function buildGridCandle(params: {
   readonly timeframe: CandleTimeframe;
   readonly openTime: number;
 }): CandleRecord {
-  const duration = TIMEFRAME_DURATION_MILLISECONDS[params.timeframe];
+  const duration = MARKET_CANDLE_DURATION_MILLISECONDS[params.timeframe];
   return {
     exchange: BACKFILL_EXCHANGE,
     symbol: params.symbol,
@@ -93,7 +96,7 @@ export function createBackfillHarness(options: BackfillHarnessOptions = {}): Bac
     exchange: BACKFILL_EXCHANGE,
     symbols: options.symbols ?? ['BTCUSDT'],
     timeframes: options.timeframes ?? ['1h'],
-    years: options.years ?? 2,
+    ...(options.days === undefined ? { years: options.years ?? 2 } : { days: options.days }),
   });
   return { run: task, repository, grid, lines, events };
 }

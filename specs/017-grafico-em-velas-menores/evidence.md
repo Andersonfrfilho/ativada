@@ -57,3 +57,38 @@ A Fase 3 (painel) fica para depois: outro agente edita o painel agora.
 - `database-test` (mesmo Postgres): expurgo só de `3m` anterior ao corte (exclusivo), em lotes (3), 15m/1h/4h/1d intactos;
   mesma abertura em 3m e 15m, cada leitura traz só a sua; 5 velas de 3 min (bigint, escala 8) = a vela de 15 min (OHLCV e
   `trade_count`). Mutantes mortos: expurgo sem filtro de vela, corte `<=`, leitura sem filtro de vela, expurgo sem laço.
+
+## T2.2 / T2.3 — cron: recarga e limpeza das velas de exibição
+
+- `backfill-display-candles`: a mesma tarefa do backfill (sequencial por par, peso e 418 do cliente existente: o 418 aborta),
+  com janela em DIAS (`computeBackfillWindow({ days })`: `ceil((agora − retenção) ÷ d) × d` até a vela em formação).
+  `purge-display-candles`: `repository.purgeDisplayCandles` (lotes de 5.000, parametrizado, só `3m`, corte exclusivo). As duas
+  em `TASK_NAME`/`CRON_TASKS` e em `createProductionTasks`. Env novas validadas no `marketEnvironmentShape`
+  (`MARKET_DISPLAY_TIMEFRAMES`, padrão vazio, só `3m`; `CANDLE_DISPLAY_RETENTION_DAYS`, 7 a 365, padrão 90).
+- `test/backfill-display-candles.contract.test.ts` (12 testes): janela de 90 dias na grade de 3 min, 43.199 velas em 44 pedidos
+  de 1.000, segundo backfill sem pedido nenhum, 418 para tudo no terceiro pedido, corte da limpeza, env (padrão, faixa, nomes
+  das tarefas, recusas). Mutantes mortos: corte no futuro, janela ignora dias, `days` não repassado, teto da retenção.
+- Cron REAL (`scripts/display-candles-test.ts`, Postgres embutido porta 56455 + Binance falsa local, sem Docker):
+  "90 dias de 3m (43199) -> 44 chamadas de 1000, peso 88", segundo backfill "zero chamadas, zero inseridas", limpeza com 7
+  dias "ficaram 3359 velas 3m, 1h intacta". (`make backfill-test` NÃO foi usado: o alvo sobe Docker de teste, proibido aqui; e o
+  `scripts/backfill-test.ts` já falha no HEAD no primeiro cenário, `HOLEUSDT` sem filtros de par, fora desta spec.)
+
+## T2.4 — worker, ticker e rota
+
+- Worker: assina `<par>@kline_3m` (a lista é `MARKET_TIMEFRAMES` + `MARKET_DISPLAY_TIMEFRAMES`) e grava só as fechadas; vela de
+  exibição NÃO aciona `onCandleStored`. `test/worker-display-candles.contract.test.ts` (5): assinatura, gravação com decimais
+  exatos e imutável (reentrega e reescrita não mudam a vela), vela aberta não grava, 3m não acorda a simulação (1h acorda),
+  buraco de 3m na janela recuperado pelo REST. Mutantes mortos: 3m acorda a simulação, esquema do stream sem 3m.
+  (Mutante da duração em `unfillable` sobrevive: só altera a contabilidade de "inalcançável".)
+- Ticker da API: `test/market-stream-pipeline.contract.test.ts` +2: `kline_3m` assinado junto das velas de execução, UMA
+  mensagem por par e vela (1h e 3m separadas), exibição sozinha NÃO liga a assinatura de kline. Mutantes mortos: ticker sem
+  exibição, esquema do ticker sem 3m, exibição ligando o kline sozinha.
+- Rota: ver T1.1 (`meta.retentionStart`, teto de 5.000 em velas de 3 min).
+- Oráculo 5×3 = 15: `database-test` (bigint, Postgres embutido) e `scripts/display-candles-measure.ts` (só `SELECT`, valida
+  contra o banco real; provado contra uma janela adulterada: 1 divergência `high`, saída 1).
+
+## T2.5 — ambiente
+
+- `envs/env.dev`: `MARKET_DISPLAY_TIMEFRAMES=3m`, `CANDLE_DISPLAY_RETENTION_DAYS=90`. `dev-lib.ps1`/`.sh` repassam
+  `VITE_MARKET_DISPLAY_TIMEFRAMES` (variável NOVA; `VITE_MARKET_TIMEFRAMES` NÃO mudou, para não mexer no seletor do painel
+  que outro agente edita: a Fase 3 decide como consumi-la). `docs/runbook-dev-local.md` §8.

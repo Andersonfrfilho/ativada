@@ -2,6 +2,8 @@
 export const TEMPORARY_DATABASE_PREFIX = 'ativada_backfill_';
 export const CRON_ENTRYPOINT = 'apps/cron-ativada/src/main.ts';
 export const BACKFILL_TASK_NAME = 'backfill-candles';
+export const DISPLAY_BACKFILL_TASK_NAME = 'backfill-display-candles';
+export const DISPLAY_PURGE_TASK_NAME = 'purge-display-candles';
 export const KLINES_PATH = '/api/v3/klines';
 export const SERVER_TIME_PATH = '/api/v3/time';
 export const PAGE_SIZE = 1_000;
@@ -11,6 +13,7 @@ export const LOOPBACK_HOST = '127.0.0.1';
 
 export const MILLISECONDS_PER_HOUR = 3_600_000;
 export const DURATION_MILLISECONDS = {
+  '3m': 180_000,
   '15m': 900_000,
   '1h': MILLISECONDS_PER_HOUR,
   '4h': 4 * MILLISECONDS_PER_HOUR,

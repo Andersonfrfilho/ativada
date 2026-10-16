@@ -1,10 +1,13 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { CandleRecord } from '../../packages/database/src/index.js';
+import type { CandleRecord, StoredCandleTimeframe } from '../../packages/database/src/index.js';
 import { createWorker, type Worker } from '../../apps/worker-ativada/src/stream/create-worker.js';
 import type { RecoveryClock } from '../../apps/worker-ativada/src/stream/recovery-clock.js';
 import { createWorkerLogger } from '../../apps/worker-ativada/src/logging/worker-logger.js';
 import { WORKER_LOG } from '../../apps/worker-ativada/src/worker.constant.js';
-import { createMarketDataClient } from '../../packages/market-data-crypto/src/index.js';
+import {
+  createMarketDataClient,
+  type MarketCandleTimeframe,
+} from '../../packages/market-data-crypto/src/index.js';
 import {
   startFakeBinanceStreamServer,
   type FakeBinanceStreamServer,
@@ -34,6 +37,10 @@ export type PipelineOptions = {
   readonly seedSymbols?: readonly string[];
   readonly seedOpenTime?: number;
   readonly gapLookbackHours?: number;
+  // Velas de exibição (spec 017) assinadas junto da 1h; a semente delas fica por conta do teste.
+  readonly displayTimeframes?: readonly MarketCandleTimeframe[];
+  readonly onCandleStored?: () => void;
+  readonly seedDisplay?: readonly CandleRecord<StoredCandleTimeframe>[];
   readonly gapCheckIntervalMilliseconds?: number;
   // Quanto o relógio da Binance está à frente do local (negativo: atrás).
   readonly serverClockOffsetMilliseconds?: number;
@@ -84,7 +91,7 @@ export function startPipeline(options: PipelineOptions = {}): Pipeline {
     options.shouldPrefillWindow === false
       ? 0
       : (options.seedOpenTime ?? PIPELINE_BASE - PIPELINE_HOUR);
-  const seed = buildSeed(options, symbols);
+  const seed = [...buildSeed(options, symbols), ...(options.seedDisplay ?? [])];
   const repository = createInMemoryCandleRepository({ now: clock.now, seed });
   const entries: LogEntry[] = [];
   const abortController = new AbortController();
@@ -106,7 +113,8 @@ export function startPipeline(options: PipelineOptions = {}): Pipeline {
   const worker = createWorker({
     exchange: PIPELINE_EXCHANGE,
     symbols,
-    timeframes: ['1h'],
+    timeframes: ['1h', ...(options.displayTimeframes ?? [])],
+    onCandleStored: options.onCandleStored,
     repository: options.wrapRepository?.(repository) ?? repository,
     client: createMarketDataClient({
       baseUrl: server.restUrl,

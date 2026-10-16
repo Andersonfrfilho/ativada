@@ -26,6 +26,7 @@ function Import-DevEnvironment([string]$EnvFile) {
     $env:MARKET_SYMBOLS = $symbols
     $env:VITE_MARKET_SYMBOLS = $symbols
     $env:VITE_MARKET_TIMEFRAMES = $env:MARKET_TIMEFRAMES
+    $env:VITE_MARKET_DISPLAY_TIMEFRAMES = $env:MARKET_DISPLAY_TIMEFRAMES
 }
 
 function Get-DevComposeArguments([string]$EnvFile) {
