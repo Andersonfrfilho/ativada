@@ -5,6 +5,7 @@ export const HTTP_HEADER = {
   CONTENT_DISPOSITION: 'Content-Disposition',
   CONTENT_TYPE: 'Content-Type',
   REQUESTED_WITH: 'X-Requested-With',
+  RETRY_AFTER: 'Retry-After',
 } as const;
 
 // Defesa de CSRF da API: o painel manda este valor fixo em toda chamada (ADR 0001 §a).

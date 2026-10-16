@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { useEffect, useReducer, useRef, useState, type Dispatch } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState, type Dispatch } from 'react';
 
 import { useApiClient } from '../../app/useAppContext.hook.js';
 import type { ApiClient } from '../../http/api-client.js';
@@ -11,6 +11,7 @@ import {
   type HistoryPaging,
   type HistoryState,
 } from './candle-history.reducer.js';
+import { isRateLimitError } from '../../http/rate-limit.js';
 import { fetchMarketCandlesPage } from './candle-chart.query.js';
 import { previousPageRange, type PageRange } from './candle-paging.js';
 import type { CandleWindow } from './candle-window.js';
@@ -61,8 +62,11 @@ async function requestPage(request: PageRequest, toAction: ActionBuilder): Promi
       ...page,
     });
     return toAction(candles, { hasMore: page.from > earliestTime, reachedFrom: page.from });
-  } catch {
-    return { type: 'failed', scope: 'page' };
+  } catch (error) {
+    const rateLimit = isRateLimitError(error)
+      ? { retryAfterSeconds: error.retryAfterSeconds, now: Date.now() }
+      : undefined;
+    return { type: 'failed', scope: 'page', rateLimit };
   }
 }
 
@@ -138,6 +142,20 @@ export function useCandleHistory(params: CandleHistoryParams): CandleHistory {
   const [attempt, setAttempt] = useState(0);
   const seriesKey = seriesKeyOf(params);
   useSeriesLoader(params, { dispatch, loaded, attempt });
+  const retryAt = state.rateLimit?.retryAt;
+
+  const retry = useCallback((): void => {
+    loaded.current = undefined;
+    dispatch({ type: 'retry' });
+    setAttempt((count) => count + 1);
+  }, []);
+
+  // O 429 não vira tela vazia: repete sozinho na hora combinada (o botão antecipa).
+  useEffect(() => {
+    if (retryAt === undefined || state.status !== 'error') return undefined;
+    const timer = setTimeout(retry, Math.max(0, retryAt - Date.now()));
+    return (): void => clearTimeout(timer);
+  }, [retry, retryAt, state.status]);
 
   async function loadOlder(page: PageRange): Promise<void> {
     const request = { queryClient, client, symbol, timeframe, page, earliestTime };
@@ -154,11 +172,6 @@ export function useCandleHistory(params: CandleHistoryParams): CandleHistory {
     if (page === undefined) return;
     dispatch({ type: 'loadingPrevious' });
     void loadOlder(page);
-  }
-
-  function retry(): void {
-    dispatch({ type: 'retry' });
-    setAttempt((count) => count + 1);
   }
 
   return { ...state, loadPrevious, retry };

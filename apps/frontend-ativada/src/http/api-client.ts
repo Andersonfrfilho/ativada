@@ -65,12 +65,18 @@ function buildInit(attempt: Attempt, accessToken: string): RequestInit {
   };
 }
 
+function readRetryAfterSeconds(response: Response): number | undefined {
+  const seconds = Number(response.headers.get(HTTP_HEADER.RETRY_AFTER));
+  return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : undefined;
+}
+
 async function readApiError(response: Response): Promise<ApiError> {
   const parsed = errorEnvelopeSchema.safeParse(await response.json().catch(() => undefined));
   return new ApiError({
     status: response.status,
     code: parsed.success ? parsed.data.error.code : UNKNOWN_ERROR_CODE,
     message: parsed.success ? parsed.data.error.message : response.statusText,
+    retryAfterSeconds: readRetryAfterSeconds(response),
     ...(parsed.success && parsed.data.error.details !== undefined
       ? { details: parsed.data.error.details }
       : {}),

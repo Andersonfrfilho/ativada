@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 import controls from '../../styles/Controls.module.css';
 import styles from './CandleChart.module.css';
@@ -11,7 +11,8 @@ export type SimpleChartFallbackProps = {
   readonly chart: TradeChart;
   readonly timeZone: string;
   readonly selection: TradeSelection;
-  readonly reason: string;
+  // Um texto simples ou um aviso pronto (o do limite de pedidos).
+  readonly reason: ReactNode;
   // Pede as velas de novo; `undefined` quando pedir outra vez não adianta.
   readonly onRetry: (() => void) | undefined;
   // Sai de uma vela escolhida que o ambiente não tem: volta para a da execução.
@@ -24,7 +25,7 @@ export function SimpleChartFallback(props: SimpleChartFallbackProps): ReactEleme
   const { chart, timeZone, selection, reason, onRetry, onBackToRun } = props;
   return (
     <>
-      <p className={controls.muted}>{reason}</p>
+      {typeof reason === 'string' ? <p className={controls.muted}>{reason}</p> : reason}
       <div className={styles.row}>
         {onRetry === undefined ? null : (
           <button type="button" className={controls.button} onClick={onRetry}>

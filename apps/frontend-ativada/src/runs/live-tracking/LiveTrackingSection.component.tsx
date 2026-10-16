@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import { isRateLimitError } from '../../http/rate-limit.js';
+import { RateLimitNotice } from '../RateLimitNotice.component.js';
 import type { RunDetail } from '../run.validation.js';
 import controls from '../../styles/Controls.module.css';
 import { DecisionsTable } from './DecisionsTable.component.js';
@@ -18,6 +20,9 @@ export type LiveTrackingSectionProps = { readonly run: RunDetail };
 // Linha de pulso e o resumo curto "Sua simulação ao vivo": o topo do detalhe da simulação ao vivo, antes do gráfico.
 export function LiveSummarySection({ run }: LiveTrackingSectionProps): ReactElement {
   const status = useLiveStatusQuery(run.id, true);
+  if (status.data === undefined && isRateLimitError(status.error ?? status.failureReason)) {
+    return <RateLimitNotice retryAt={undefined} onRetry={() => void status.refetch()} />;
+  }
   if (status.data === undefined && status.isError) {
     return (
       <p role="alert" className={controls.error}>

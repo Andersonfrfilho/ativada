@@ -106,11 +106,15 @@ describe('candle paging', () => {
       }),
       { type: 'loadingPrevious' },
     );
-    const failed = reduceHistory(loading, { type: 'failed', scope: 'page' });
+    const failed = reduceHistory(loading, { type: 'failed', scope: 'page', rateLimit: undefined });
     expect(failed.hasMore).toBe(true);
     expect(failed.isLoadingPrevious).toBe(false);
     expect(failed.status).toBe('ready');
-    const seriesFailed = reduceHistory(failed, { type: 'failed', scope: 'series' });
+    const seriesFailed = reduceHistory(failed, {
+      type: 'failed',
+      scope: 'series',
+      rateLimit: undefined,
+    });
     expect(seriesFailed.status).toBe('error');
     expect(reduceHistory(seriesFailed, { type: 'retry' }).status).toBe('loading');
   });

@@ -14,14 +14,16 @@ import {
   readMarketTimeframes,
 } from './environment.js';
 import { createApiClient } from './http/api-client.js';
+import { queryRetryDelay, shouldRetryQuery } from './http/rate-limit.js';
 import { createStreamConnector } from './live/stream-connector.js';
 import { createSessionService } from './session/session-service.js';
 import './styles/global.css';
 import { applyStoredTheme } from './theme/theme-store.js';
 
+// Dado recém-buscado vale por alguns segundos: trocar de aba ou remontar um cartão não refaz o pedido (o aviso do stream refaz).
+const QUERY_STALE_MILLISECONDS = 10_000;
 const ROOT_ELEMENT_ID = 'root';
 const SERVICE_WORKER_PATH = '/sw.js';
-const QUERY_RETRY_COUNT = 1;
 
 function registerServiceWorker(): void {
   if (!isProductionBuild() || !('serviceWorker' in navigator)) return;
@@ -37,7 +39,13 @@ function start(): void {
   const session = createSessionService({ fetchImplementation, now: () => Date.now() });
   const apiClient = createApiClient({ fetchImplementation, session });
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: QUERY_RETRY_COUNT } },
+    defaultOptions: {
+      queries: {
+        retry: shouldRetryQuery,
+        retryDelay: queryRetryDelay,
+        staleTime: QUERY_STALE_MILLISECONDS,
+      },
+    },
   });
   const config = {
     authorizeUrl: environment.VITE_KEYCLOAK_AUTHORIZE_URL,

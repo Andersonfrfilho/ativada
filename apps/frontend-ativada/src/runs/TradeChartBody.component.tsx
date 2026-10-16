@@ -1,9 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import { isRateLimitError } from '../http/rate-limit.js';
 import controls from '../styles/Controls.module.css';
 import { BesideTeam } from './team-room/BesideTeam.component.js';
 import { CandleChart } from './candle-chart/CandleChart.component.js';
+import { RateLimitNotice } from './RateLimitNotice.component.js';
 import { EmptyChartNotice } from './EmptyChartNotice.component.js';
 import type { ChartView } from './useChartView.hook.js';
 import type { TradeSelection } from './useTradeSelection.hook.js';
@@ -18,11 +20,16 @@ export type TradeChartBodyProps = {
 export function TradeChartBody({ runId, view, selection }: TradeChartBodyProps): ReactElement {
   const { chart } = view;
   if (chart.data === undefined) {
+    const isRateLimited = isRateLimitError(chart.error ?? chart.failureReason);
     return (
       <BesideTeam>
-        <p className={controls.muted}>
-          {chart.isError ? 'Não foi possível carregar o gráfico.' : 'Carregando o gráfico…'}
-        </p>
+        {isRateLimited ? (
+          <RateLimitNotice retryAt={undefined} onRetry={() => void chart.refetch()} />
+        ) : (
+          <p className={controls.muted}>
+            {chart.isError ? 'Não foi possível carregar o gráfico.' : 'Carregando o gráfico…'}
+          </p>
+        )}
       </BesideTeam>
     );
   }

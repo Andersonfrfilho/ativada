@@ -137,15 +137,18 @@ export function useMarketCandlesQuery(params: MarketCandlesParams): UseQueryResu
   });
 }
 
-// Uma página de velas FECHADAS é imutável para o par de limites que a pediu: pode ficar no cache para sempre.
-export function fetchMarketCandlesPage(
+// Uma página de velas FECHADAS é imutável para o par de limites que a pediu: pode ficar no cache para sempre. Uma página
+// vazia não: ela pode ser só um atraso do provedor, então sai do cache e o próximo pedido vai à rede.
+export async function fetchMarketCandlesPage(
   queryClient: QueryClient,
   client: ApiClient,
   params: MarketCandlesParams,
 ): Promise<MarketCandle[]> {
-  return queryClient.fetchQuery({
+  const candles = await queryClient.fetchQuery({
     queryKey: marketCandlesKey(params),
     staleTime: Infinity,
     queryFn: () => requestMarketCandles(client, params),
   });
+  if (candles.length === 0) queryClient.removeQueries({ queryKey: marketCandlesKey(params) });
+  return candles;
 }
