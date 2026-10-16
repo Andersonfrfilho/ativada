@@ -10,7 +10,8 @@ import { ChartCredit } from './ChartCredit.component.js';
 import { ChartToolbar } from './ChartToolbar.component.js';
 import { ClusterButtons } from './ClusterButtons.component.js';
 import { LayerBar } from './LayerBar.component.js';
-import { TeamAside } from '../team-room/TeamAside.context.js';
+import { BesideTeam } from '../team-room/BesideTeam.component.js';
+import { TeamAside, useHasTeamAside } from '../team-room/TeamAside.context.js';
 import { LayerNotices } from './LayerNotices.component.js';
 import { LiveCandleNotice } from './LiveCandleNotice.component.js';
 import { NextCandlePanel } from './NextCandlePanel.component.js';
@@ -88,11 +89,11 @@ function ChartCaption(props: CanvasViewProps & { readonly id: string }): ReactEl
 }
 
 // A coluna ao lado do gráfico: a equipe colada nele e, com a camada "Previsão", a próxima vela de perto.
-function ChartSide({ chart, model }: Pick<CanvasViewProps, 'chart' | 'model'>): ReactElement {
+function ChartSide({ chart, model, view }: CanvasViewProps): ReactElement {
   return (
     <div className={styles.side}>
       <TeamAside pointedOpenTime={model.pointedOpenTime} />
-      {model.isLayerOn(CHART_LAYER.FORECAST) ? (
+      {view.isLive && model.isLayerOn(CHART_LAYER.FORECAST) ? (
         <NextCandlePanel chart={chart} layerData={model.layerData} />
       ) : null}
     </div>
@@ -101,13 +102,14 @@ function ChartSide({ chart, model }: Pick<CanvasViewProps, 'chart' | 'model'>): 
 
 function CanvasView(props: CanvasViewProps): ReactElement {
   const { chart, view, selection, model } = props;
+  const hasTeam = useHasTeamAside();
   const ids: DescriptionIds = { help: useId(), caption: useId() };
   return (
     <figure className={styles.wrapper}>
       <CanvasHeader {...props} />
       <div className={styles.chartLayout}>
         <SurfaceBox {...props} ids={ids} />
-        {view.isLive ? <ChartSide chart={chart} model={model} /> : null}
+        {view.isLive || hasTeam ? <ChartSide {...props} /> : null}
       </div>
       <LayerNotices
         data={model.layerData}
@@ -142,14 +144,16 @@ export function CandleCanvas(props: CandleCanvasInput): ReactElement {
   if (model.hasFailed) {
     const { chart, selection } = props;
     return (
-      <SimpleChartFallback
-        chart={chart}
-        timeZone={model.timeZone}
-        selection={selection}
-        reason={SURFACE_FAILED_REASON}
-        onRetry={undefined}
-        onBackToRun={undefined}
-      />
+      <BesideTeam>
+        <SimpleChartFallback
+          chart={chart}
+          timeZone={model.timeZone}
+          selection={selection}
+          reason={SURFACE_FAILED_REASON}
+          onRetry={undefined}
+          onBackToRun={undefined}
+        />
+      </BesideTeam>
     );
   }
   return <CanvasView {...props} model={model} />;

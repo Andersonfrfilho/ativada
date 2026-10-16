@@ -6,6 +6,7 @@ import controls from '../../styles/Controls.module.css';
 import type { TradeChart } from '../trade-chart.validation.js';
 import type { ChartView } from '../useChartView.hook.js';
 import type { TradeSelection } from '../useTradeSelection.hook.js';
+import { BesideTeam } from '../team-room/BesideTeam.component.js';
 import { CandleCanvas } from './CandleCanvas.component.js';
 import { SimpleChartFallback } from './SimpleChartFallback.component.js';
 import { useCandleSource } from './useCandleSource.hook.js';
@@ -27,18 +28,24 @@ export function CandleChart({ runId, chart, view, selection }: CandleChartProps)
   const source = useCandleSource(chart, view);
   if (!source.isSupported || source.history.status === 'error') {
     return (
-      <SimpleChartFallback
-        chart={chart}
-        timeZone={timeZone}
-        selection={selection}
-        reason={CANDLES_UNAVAILABLE_REASON}
-        onRetry={source.isSupported ? source.history.retry : undefined}
-        onBackToRun={source.isRunTimeframe ? undefined : source.backToRunTimeframe}
-      />
+      <BesideTeam>
+        <SimpleChartFallback
+          chart={chart}
+          timeZone={timeZone}
+          selection={selection}
+          reason={CANDLES_UNAVAILABLE_REASON}
+          onRetry={source.isSupported ? source.history.retry : undefined}
+          onBackToRun={source.isRunTimeframe ? undefined : source.backToRunTimeframe}
+        />
+      </BesideTeam>
     );
   }
   if (source.history.status === 'loading') {
-    return <p className={controls.muted}>Carregando as velas…</p>;
+    return (
+      <BesideTeam>
+        <p className={controls.muted}>Carregando as velas…</p>
+      </BesideTeam>
+    );
   }
   return (
     <CandleCanvas runId={runId} chart={chart} view={view} selection={selection} source={source} />

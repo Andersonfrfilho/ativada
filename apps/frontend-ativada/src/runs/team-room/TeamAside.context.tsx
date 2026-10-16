@@ -17,6 +17,11 @@ export function TeamAsideProvider({
   return <TeamAsideContext.Provider value={aside}>{children}</TeamAsideContext.Provider>;
 }
 
+// Quem desenha o gráfico precisa saber se há equipe para reservar a coluna ao lado dele.
+export function useHasTeamAside(): boolean {
+  return useContext(TeamAsideContext) !== undefined;
+}
+
 export function TeamAside({
   pointedOpenTime,
 }: {

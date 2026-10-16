@@ -2,6 +2,7 @@
 import type { ReactElement } from 'react';
 
 import controls from '../styles/Controls.module.css';
+import { BesideTeam } from './team-room/BesideTeam.component.js';
 import { CandleChart } from './candle-chart/CandleChart.component.js';
 import { EmptyChartNotice } from './EmptyChartNotice.component.js';
 import type { ChartView } from './useChartView.hook.js';
@@ -18,12 +19,20 @@ export function TradeChartBody({ runId, view, selection }: TradeChartBodyProps):
   const { chart } = view;
   if (chart.data === undefined) {
     return (
-      <p className={controls.muted}>
-        {chart.isError ? 'Não foi possível carregar o gráfico.' : 'Carregando o gráfico…'}
-      </p>
+      <BesideTeam>
+        <p className={controls.muted}>
+          {chart.isError ? 'Não foi possível carregar o gráfico.' : 'Carregando o gráfico…'}
+        </p>
+      </BesideTeam>
     );
   }
   const { runRange } = chart.data;
-  if (runRange.to <= runRange.from) return <EmptyChartNotice runId={runId} />;
+  if (runRange.to <= runRange.from) {
+    return (
+      <BesideTeam>
+        <EmptyChartNotice runId={runId} />
+      </BesideTeam>
+    );
+  }
   return <CandleChart runId={runId} chart={chart.data} view={view} selection={selection} />;
 }

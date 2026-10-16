@@ -1,0 +1,21 @@
+/* O que ocupa o lugar do gráfico (carregando, vazio, reserva) ganha a mesma coluna da equipe que o gráfico ganharia. */
+.layout {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.main {
+  min-width: 0;
+}
+
+.side {
+  min-width: 0;
+}
+
+@media (min-width: 1100px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) clamp(340px, 32%, 420px);
+    align-items: start;
+  }
+}
