@@ -520,3 +520,33 @@ panel-e2e (subconjunto, Edge) → 5 passed
 - **Spec**: D2 = "teto de entrada por passo (¼, ½, 1×)"; a frase "arrisca ¼" ganhou a nota (teto da entrada NESSA vela);
   RNF04 e a pergunta 2 do §9 registram o fechamento. **tasks.md**: a T4.1 virou T4.0 / T4.1a / T4.1b (a T4.2 e a T4.3 ficam
   para outros agentes).
+
+## T4.1a — motivo `analyst_timeout` e migration `0025_run_commands_analyst` (2026-10-16)
+
+- **Vocabulário**: `COMMAND_REASON.ANALYST_TIMEOUT = 'analyst_timeout'` no motor (`engine-vocabulary.constant.ts`) e na cópia do
+  banco (`run-result.constant.ts`). É o ÚNICO motivo novo (A21): `analyst_pause`/`analyst_resume` NÃO entram (a pausa no governar
+  é a escala `'0'`). Nenhuma versão mudou: `ENGINE_VERSION`/`ENGINE_STATE_VERSION` intactos.
+- **Migration `0025_run_commands_analyst`** (0025 conferido livre: a última era a 0024), gerada pelo `drizzle-kit` (snapshot e
+  `_journal.json`) e ajustada à mão para `ADD CONSTRAINT … NOT VALID` + `VALIDATE CONSTRAINT` (a troca do `CHECK` não
+  reescreve a tabela). **Rollback** (`.rollback.sql`): um bloco `DO` ABORTA com `restrict_violation` (23001) se existir
+  qualquer linha com `reason LIKE 'analyst\_%'`; sem trilha, volta o `CHECK` antigo (também `NOT VALID` + `VALIDATE`). Nunca
+  apaga trilha.
+- **Provas**: `migration-test` passou a conferir que `run_commands_reason_check` contém `analyst_timeout` e está validado
+  (`convalidated`) e continua aplicando e desfazendo TODAS as migrations (26) num banco vazio; `database-test` ganhou
+  `run-command-analyst-checks.ts` (grava `exit_position`/`analyst_timeout` pelo repositório e lê de volta; `analyst_pause` barrado
+  com 23514; o rollback da 0025 rodado numa transação ABORTA com 23001 e o `CHECK` continua aceitando `analyst_timeout`);
+  `strategy-persistence-schema` ganhou o contrato "cópia do banco = vocabulário do motor" (motivos e tipos) e o teto de
+  `varchar(16)`. O dourado `engine-2` (`classic-scoreboard-engine`) e o das métricas seguem verdes, sem regravar.
+- **Onde rodou**: Postgres EMBUTIDO do WSL (`~/pg-scratch/data-007-t41`, porta 56444, livre conferida antes), `DATABASE_URL`
+  direto; nenhum container nem volume `ativada-dev-*` tocado; **migration NÃO aplicada no banco dev**.
+
+```text
+bun run typecheck    → verde
+bun run lint         → verde
+bun run format:check → All matched files use Prettier code style!
+db:migration-test    → migration-test: OK (26 migrations aplicadas e desfeitas)
+db:database-test     → database-test: OK (inclui "run_commands: analyst_timeout gravado, motivo fora do catálogo barrado e o
+                       rollback da 0025 aborta sem apagar a trilha")
+bun test (strategy-persistence-schema, classic-scoreboard-engine, metrics-golden, ownership-registry, database.contract,
+          code-size-limits, app-import-boundary, strategy-engine-boundary) → 161 pass / 0 fail
+```

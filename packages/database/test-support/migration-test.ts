@@ -6,11 +6,27 @@ import { readDatabaseUrl } from '../src/read-database-url.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
 
 const TEMPORARY_DATABASE_PREFIX = 'ativada_migration_';
-// Tabela da migration mais nova: existe depois de aplicar e some depois do rollback (o teste de tabelas sobrando cobre a volta).
+// Tabela mais nova criada por migration (0024): existe depois de aplicar e some depois do rollback (o teste de tabelas sobrando cobre a volta).
 const LATEST_MIGRATION_TABLE = 'analyst_decisions';
 
 type CountRow = { readonly total: number };
 type TableNameRow = { readonly table_name: string };
+type ConstraintRow = { readonly definition: string; readonly convalidated: boolean };
+
+// A 0025 (spec 007) acrescenta analyst_timeout ao CHECK de run_commands.reason, validado (NOT VALID + VALIDATE).
+const REASON_CHECK = 'run_commands_reason_check';
+const LATEST_REASON = 'analyst_timeout';
+
+async function readReasonCheck(databaseUrl: string): Promise<ConstraintRow | undefined> {
+  const client = new Bun.SQL(databaseUrl);
+  try {
+    const rows: unknown =
+      await client`SELECT pg_get_constraintdef(oid) AS definition, convalidated FROM pg_constraint WHERE conname = ${REASON_CHECK}`;
+    return (rows as readonly ConstraintRow[])[0];
+  } finally {
+    await client.close();
+  }
+}
 
 async function listMigrationFileNames(migrationsFolder: string): Promise<string[]> {
   const glob = new Bun.Glob('*.sql');
@@ -60,6 +76,11 @@ async function runMigrationTest(adminUrl: string): Promise<number> {
     const appliedTables = await listPublicTables(temporary.url);
     if (!appliedTables.includes(LATEST_MIGRATION_TABLE)) {
       throw new Error(`a migration mais nova não criou ${LATEST_MIGRATION_TABLE}`);
+    }
+
+    const reasonCheck = await readReasonCheck(temporary.url);
+    if (reasonCheck?.convalidated !== true || !reasonCheck.definition.includes(LATEST_REASON)) {
+      throw new Error(`${REASON_CHECK} sem ${LATEST_REASON} validado`);
     }
 
     await applyRollbacks({ databaseUrl: temporary.url, migrationsFolder: MIGRATIONS_FOLDER });

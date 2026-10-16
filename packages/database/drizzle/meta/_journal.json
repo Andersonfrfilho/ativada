@@ -176,6 +176,13 @@
       "when": 1792113967206,
       "tag": "0024_analyst_decisions",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792129091167,
+      "tag": "0025_run_commands_analyst",
+      "breakpoints": true
     }
   ]
 }

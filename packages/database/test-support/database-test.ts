@@ -25,6 +25,7 @@ import {
   checkPersistencePurge,
   seedPersistenceOwners,
 } from './persistence-lgpd-checks.js';
+import { checkAnalystCommandReason } from './run-command-analyst-checks.js';
 import { checkRunEvents } from './run-event-checks.js';
 import { checkRunDataWait } from './run-data-wait-checks.js';
 import { checkReconnection } from './reconnect-checks.js';
@@ -163,6 +164,7 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkWindowNamespace(context);
   await checkWalkForwardWindowRules(context);
   await checkCommandsAndForeignKey(context);
+  await checkAnalystCommandReason(context);
   await checkPersistenceIsolation(context);
   await checkRunOwnerResolution(context);
   await checkBatchCommitAndRollback(context);

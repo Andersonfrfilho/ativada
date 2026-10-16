@@ -104,6 +104,7 @@ export const COMMAND_REASON = {
   KILL_SWITCH: 'kill_switch',
   WINDOW_END: 'window_end',
   USER_RESUME: 'user_resume',
+  ANALYST_TIMEOUT: 'analyst_timeout',
 } as const;
 export type CommandReason = (typeof COMMAND_REASON)[keyof typeof COMMAND_REASON];
 
