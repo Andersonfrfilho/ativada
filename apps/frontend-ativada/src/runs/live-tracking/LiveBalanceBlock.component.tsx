@@ -117,7 +117,7 @@ function isBenchmarkFalling(buyAndHold: NonNullable<LiveStatus['buyAndHold']>): 
 }
 
 // A frase do servidor diz quanto acima ou abaixo; sem compra e com o preço caindo, o painel acrescenta de onde vem a vantagem.
-function describeVerdict(status: LiveStatus): string | undefined {
+export function describeVerdict(status: LiveStatus): string | undefined {
   const { buyAndHold, balance } = status;
   if (buyAndHold === null) return undefined;
   const isFlat = parseScaled(balance.result) === ZERO;

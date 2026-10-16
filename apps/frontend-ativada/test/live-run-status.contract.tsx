@@ -206,22 +206,20 @@ function overviewRoutes(
 describe('on the overview balance card', () => {
   test('waiting for the first candle: when it closes, no old phrase, the zone of the user', async () => {
     renderApp({ path: '/', isAuthenticated: true, routes: overviewRoutes(() => ({})) });
-    const card = await screen.findByRole('region', { name: 'Saldo da simulação' });
+    const card = await screen.findByRole('region', { name: 'Sua simulação ao vivo' });
     await waitFor(() => expect(card.textContent).toContain(FIRST_CANDLE));
     expect(card.textContent).toContain('Horários em GMT−3.');
     expect(card.textContent).toContain('O saldo aparece quando a primeira vela fechar.');
     expect(card.textContent).not.toMatch(/primeiro[ ]candle/);
   });
 
-  test('shows the last decision in one sentence and links to the full tracking', async () => {
+  test('lists the latest decisions with their reason and links to the full tracking', async () => {
     renderApp({ path: '/', isAuthenticated: true, routes: overviewRoutes(() => ({})) });
-    const card = await screen.findByRole('region', { name: 'Saldo da simulação' });
-    await waitFor(() =>
-      expect(card.textContent).toContain(
-        'Última decisão: esperou às 31/12/2025 22:00. Faltou 1 ponto: o RSI (55) está entre 30 e 70.',
-      ),
-    );
-    const link = within(card).getByRole('link', { name: 'Ver o acompanhamento' });
+    const card = await screen.findByRole('region', { name: 'Sua simulação ao vivo' });
+    const list = await screen.findByRole('list', { name: 'Últimas decisões' });
+    expect(list.textContent).toContain('Esperou');
+    expect(list.textContent).toContain('Faltou 1 ponto: o RSI (55) está entre 30 e 70.');
+    const link = within(card).getByRole('link', { name: 'Ver o acompanhamento completo' });
     expect(link.getAttribute('href')).toBe('/backtests/run-live#acompanhamento');
     expect(screen.getByRole('region', { name: 'Simulação rodando agora' })).toBeDefined();
   });
@@ -236,7 +234,7 @@ describe('on the overview balance card', () => {
         lastCandleTime,
       })),
     });
-    const card = await screen.findByRole('region', { name: 'Saldo da simulação' });
+    const card = await screen.findByRole('region', { name: 'Sua simulação ao vivo' });
     await waitFor(() => expect(card.textContent).toContain(RUNNING));
   });
 
@@ -247,7 +245,7 @@ describe('on the overview balance card', () => {
       isAuthenticated: true,
       routes: overviewRoutes(() => ({ lastCandleTime })),
     });
-    const card = await screen.findByRole('region', { name: 'Saldo da simulação' });
+    const card = await screen.findByRole('region', { name: 'Sua simulação ao vivo' });
     await waitFor(() => expect(card.textContent).toContain(FIRST_CANDLE));
     expect(card.textContent).not.toContain('Última decisão às');
   });
@@ -260,7 +258,7 @@ describe('on the overview balance card', () => {
       routes: overviewRoutes(() => ({ waitingForData })),
     });
     expect((await screen.findAllByText('Aguardando dados do mercado')).length).toBe(2);
-    const card = screen.getByRole('region', { name: 'Saldo da simulação' });
+    const card = screen.getByRole('region', { name: 'Sua simulação ao vivo' });
     expect(card.textContent).toContain('desde 13/10/2026 13:30');
   });
 
@@ -271,9 +269,9 @@ describe('on the overview balance card', () => {
       isAuthenticated: true,
       routes: overviewRoutes(() => ({ stalledSince })),
     });
-    const card = await screen.findByRole('region', { name: 'Saldo da simulação' });
+    const card = await screen.findByRole('region', { name: 'Sua simulação ao vivo' });
     await waitFor(() => expect(card.textContent).toContain(STALLED));
-    expect(card.querySelector('p')?.textContent).toBe('Parada');
+    expect(within(card).getByText('Parada')).toBeDefined();
     expect(card.textContent).not.toContain('Rodando');
   });
 
@@ -313,7 +311,7 @@ describe('on the active goal card', () => {
     const pulse = await screen.findByRole('region', { name: 'Simulação parada' });
     expect(within(pulse).getByText('Parada')).toBeDefined();
     await waitFor(() => expect(screen.getAllByText(STALLED)).toHaveLength(1));
-    const balance = screen.getByRole('region', { name: 'Saldo da simulação' });
+    const balance = screen.getByRole('region', { name: 'Sua simulação ao vivo' });
     expect(within(balance).getByText(STALLED)).toBeDefined();
   });
 });

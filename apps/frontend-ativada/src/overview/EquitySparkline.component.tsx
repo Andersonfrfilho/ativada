@@ -6,7 +6,7 @@ import styles from './Overview.module.css';
 import type { EquityPoint, Signal } from './overview.validation.js';
 
 const WIDTH = 300;
-const HEIGHT = 80;
+const HEIGHT = 100;
 const PADDING = 4;
 
 export type EquitySparklineProps = {
@@ -97,6 +97,9 @@ export function EquitySparkline({ points, signals = [] }: EquitySparklineProps):
       role="img"
       aria-label={`Curva do saldo comparada a comprar e segurar, com ${buys} compra(s) e ${sells} venda(s) marcadas`}
     >
+      {[PADDING, HEIGHT / 2, HEIGHT - PADDING].map((y) => (
+        <line key={y} className={styles.gridLine} x1={0} x2={WIDTH} y1={y} y2={y} />
+      ))}
       <polyline className={styles.benchmarkLine} points={buildPolyline(benchmark, range)} />
       <polyline className={styles.equityLine} points={buildPolyline(equity, range)} />
       {marks.map((mark) => (

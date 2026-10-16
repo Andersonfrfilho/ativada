@@ -29,7 +29,7 @@ export type DecisionRowProps = {
 };
 
 // "10:00" em destaque e "hoje" ao lado; mais longe, a data completa.
-function ClosingMoment({ text }: { readonly text: string }): ReactElement {
+export function ClosingMoment({ text }: { readonly text: string }): ReactElement {
   const match = DAY_WORDS.exec(text);
   if (match === null) return <strong className={styles.num}>{text}</strong>;
   return (

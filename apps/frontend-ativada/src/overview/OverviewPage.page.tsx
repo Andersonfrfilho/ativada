@@ -11,9 +11,9 @@ import { BalanceCard } from './BalanceCard.component.js';
 import { CoinCard } from './CoinCard.component.js';
 import { MarketStatusBadge } from '../live/MarketStatusBadge.component.js';
 import { SentimentCard } from './SentimentCard.component.js';
+import { LatestDecisionsCard } from './LatestDecisionsCard.component.js';
 import { DataSourcesNote } from './DataSourcesNote.component.js';
 import styles from './Overview.module.css';
-import { SignalsCard } from './SignalsCard.component.js';
 import {
   useActiveRunQuery,
   useEquitySeriesQuery,
@@ -38,8 +38,20 @@ function ActiveSimulation({ run }: { readonly run: Run }): ReactElement {
   return (
     <>
       <BalanceCard run={detail.data} points={equity.data} signals={signals.data} />
-      <SignalsCard signals={signals.data} />
+      <LatestDecisionsCard runId={run.id} />
     </>
+  );
+}
+
+function OverviewColumns({ run }: { readonly run: Run | null }): ReactElement {
+  return (
+    <div className={styles.columns}>
+      <div className={styles.column}>{run === null ? null : <ActiveSimulation run={run} />}</div>
+      <div className={styles.column}>
+        <ActiveGoalCard />
+        <SentimentCard />
+      </div>
+    </div>
   );
 }
 
@@ -63,21 +75,16 @@ export function OverviewPage(): ReactElement {
         </Card>
       ) : null}
       {activeRun.data === undefined || activeRun.data === null ? null : (
-        <>
-          <LivePulseLine runId={activeRun.data.id} symbol={activeRun.data.symbol} />
-          <ActiveSimulation run={activeRun.data} />
-        </>
+        <LivePulseLine runId={activeRun.data.id} symbol={activeRun.data.symbol} />
       )}
-      <ActiveGoalCard />
-      <div className={styles.marketBar}>
-        <MarketStatusBadge />
-      </div>
-      <div className={styles.coins}>
-        {marketSymbols.map((symbol) => (
-          <CoinCard key={symbol} symbol={symbol} />
-        ))}
-      </div>
-      <SentimentCard />
+      <OverviewColumns run={activeRun.data ?? null} />
+      <Card title="Preços agora" aside={<MarketStatusBadge />}>
+        <div className={styles.coins}>
+          {marketSymbols.map((symbol) => (
+            <CoinCard key={symbol} symbol={symbol} />
+          ))}
+        </div>
+      </Card>
       <DataSourcesNote />
     </div>
   );
