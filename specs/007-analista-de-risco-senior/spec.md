@@ -38,6 +38,8 @@ No detalhe de uma simulação ao vivo com o analista ligado, um cartão **"Anali
 > 0,8× o normal das últimas 24 h; o movimento típico de 15 min (0,42%) paga as taxas (0,30%) com folga pequena.
 > **Travas:** perda de hoje 0,12% de 1% permitida · 1 de 3 perdas seguidas · 3 de 8 operações hoje · ainda cabem 4,1% até
 > a perda máxima da meta.
+> (T4.0: "arrisca ¼" é o TETO de risco da entrada aberta NESSA vela — ¼ do valor em risco que a estratégia usaria;
+> não muda a operação já aberta nem a saída, e a vela seguinte traz o próprio teto.)
 > **Meta da semana:** +3% em 7 dias. Somado até aqui: +0,64% em 5 operações. Falta +2,36%.
 >
 > **Equipe de especialistas** (votos na última vela de 15 min):
@@ -146,7 +148,8 @@ Tudo é **simulado localmente**: dinheiro fictício, nenhuma ordem real, nenhuma
   (dourado literal). Mudar a regra exige `analyst-2` e o dourado regravado.
 - **RNF04 — Motor.** Fase 1 em **sombra não muda** `packages/strategy-engine` nem `packages/run-recording`. O modo
   **governar** muda o motor (motivos de comando novos e, com D2-A, o comando de tamanho): versão nova do motor, dourado,
-  harness de 21 verificações e mutantes — **só com autorização**.
+  harness de 21 verificações e mutantes — **só com autorização**. *(T4.0: autorizado e fechado como teto de entrada por
+  passo SEM versão nova do motor — o dourado `engine-2` fica idêntico; único motivo novo `analyst_timeout`; ADR 0002 A21.)*
 - **RNF05 — Migrations (todas aditivas, com `.rollback.sql`, e a execução PARA E PERGUNTA antes de cada uma):**
   `analyst_decisions` (D3-A, Fase 1); `run_commands` com os motivos novos (governar); colunas novas em `candles` (RF17);
   fotos do livro (RF18).
@@ -168,7 +171,7 @@ Tudo é **simulado localmente**: dinheiro fictício, nenhuma ordem real, nenhuma
 | # | Decisão | Por quê | Alternativa |
 |---|---|---|---|
 | D1 | **Sombra primeiro**: o analista calcula, grava e mostra; só governa a simulação depois da sua autorização **e** do relatório contrafactual (RF12) | O que a casa mediu até hoje (49,4%; 15 min perdendo para as taxas) não autoriza confiar no analista antes de medir | **B:** governar desde o início (exige já a mudança no motor e a migration de `run_commands`) |
-| D2 | **Tamanho em quatro degraus** (0, ¼, ½, 1 × o risco da estratégia) por um comando novo do motor — **exige autorização: muda o motor** | É o pedido ("quanto arriscar"); o comando é a porta de entrada que o motor já tem para controle externo (`halt`, `resume`, `exit_position`) | **B:** só "opera ou não opera" (pausa/libera) e saída por tempo; o motor ganha só os motivos novos |
+| D2 | **D2 = teto de entrada por passo (¼, ½, 1×)** do risco da estratégia, e `0` = nenhuma entrada naquela vela (a pausa). Autorizada (2026-10-15) e fechada na T4.0 pela revisão do arquiteto (ADR 0002 A21, variante "1c"): campo opcional `entryRiskScale` na entrada do passo do motor, SEM estado novo nem versão nova do motor; vale só para a entrada nova daquela vela e nunca para a saída | É o pedido ("quanto arriscar") sem quebrar simulações em andamento: o dourado `engine-2` fica idêntico e nada vaza de uma vela para a outra | **B:** só "opera ou não opera" (pausa/libera) e saída por tempo; o motor ganha só os motivos novos |
 | D3 | **Tabela `analyst_decisions`** (uma linha por simulação e vela) — **exige autorização: migration** | Toda decisão fica registrada (regra do repo); histórico congelado mesmo se a regra mudar; tela barata | **B:** recalcular sob demanda a partir de velas públicas + estado da simulação (sem migration; tela lenta; nada congelado) |
 | D4 | **Auditor estrito**: só vota quem provou (Wilson inferior > 50% com ≥ 30 contadas) | Não deixa o acaso decidir tamanho de operação | **B:** "em observação" vota com meio peso |
 | D5 | **Vela base de 15 min**; operações de 1 a 4 velas (15 a 60 min). "10 min" não existe com velas de 15 min | É a menor vela que o motor, o backfill e o stream já têm | **B:** velas de 5 min (muda o motor: `ENGINE_TIMEFRAME`, backfill, stream; e as taxas pesam ainda mais) |
@@ -224,7 +227,8 @@ Tudo é **simulado localmente**: dinheiro fictício, nenhuma ordem real, nenhuma
 1. **Como o analista age (D1):** A) sombra primeiro; governa só depois da sua autorização e do relatório contrafactual ·
    B) governa desde o início. *Sem resposta: A.*
 2. **Tamanho da operação (D2):** A) quatro degraus (0, ¼, ½, 1×) — **muda o motor, exige autorização** · B) só pausa/libera
-   e saída por tempo. *Sem resposta: nada no motor até você decidir; a sombra grava o tamanho que usaria.*
+   e saída por tempo. *Sem resposta: nada no motor até você decidir; a sombra grava o tamanho que usaria.* **Respondida
+   (2026-10-15, A) e fechada na T4.0 como teto de entrada por passo (ADR 0002 A21).**
 3. **Registro das decisões (D3):** A) tabela nova `analyst_decisions` — **migration aditiva, exige autorização** · B) sem
    tabela, recalcular ao abrir a tela. *Sem resposta: a execução para na T2.1 e pergunta.*
 4. **Auditor (D4):** A) estrito, só vota quem provou · B) "em observação" vota com meio peso. *Sem resposta: A.*

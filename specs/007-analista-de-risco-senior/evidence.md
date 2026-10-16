@@ -502,3 +502,21 @@ bun run --cwd apps/frontend-ativada test → 1178 pass / 0 fail
 bun run typecheck / lint / format:check → verdes
 panel-e2e (subconjunto, Edge) → 5 passed
 ```
+
+## T4.0 🧠 — A21 reescrita pela revisão do arquiteto (2026-10-16)
+
+- **Revisão do `architect` (opus): APROVADO COM AJUSTES**, recomendando a variante "1c: teto de entrada por passo, sem
+  estado" no lugar do `scale_risk` + `riskScale` no estado da A21 original. Seguida à letra.
+- **ADR 0002 A21 reescrita**: sem `ENGINE_VERSION`/`ENGINE_STATE_VERSION` novos (o dourado `engine-2` tem de ficar idêntico
+  byte a byte); `entryRiskScale?: '0' | '0.25' | '0.5' | '1'` em `StepInput`/`WalletStepInput` e no `advanceCandle`,
+  conjunto fechado validado na guarda (`ENTRY_RISK_SCALE_INVALID`); `'0'` não coloca entrada; os outros dão
+  `moneyDown(caixa × riskPerTrade × escala)` com um arredondamento; ausente = `'1'`; fora de `configHash`/`runHash`; pausa =
+  escala `'0'` (sem `halt`/`resume` do analista); único motivo novo `analyst_timeout` (migration `0025_run_commands_analyst`,
+  `NOT VALID` + `VALIDATE`, rollback que aborta com trilha `analyst_%`); `analyst_decisions` como entrada do passo no
+  governar (mesma transação, única por vela); falha ou versão desconhecida em `govern` = `'0'`; meta decidida = sem comandos;
+  ordem de deploy (banco → worker dormente → API libera `govern` → painel) e de reversão (API, encerrar `govern`, worker,
+  banco opcional); `isCatchingUp` pelo relógio do worker (atraso = pausa, divergência aceita e registrada); chave de
+  reprodução `(configHash, runHash, request.analyst.{version, mode})`. A15 e A18 ganharam a remissão à A21.
+- **Spec**: D2 = "teto de entrada por passo (¼, ½, 1×)"; a frase "arrisca ¼" ganhou a nota (teto da entrada NESSA vela);
+  RNF04 e a pergunta 2 do §9 registram o fechamento. **tasks.md**: a T4.1 virou T4.0 / T4.1a / T4.1b (a T4.2 e a T4.3 ficam
+  para outros agentes).

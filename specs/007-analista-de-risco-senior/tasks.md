@@ -66,7 +66,10 @@ executor: **não tocar** em `specs/008*`, `specs/009*` nem nos arquivos que elas
 
 | Task | O quê | Aceite |
 |---|---|---|
-| T4.1 🧠 ⚠ | **Parar e perguntar.** Autorizado: motivos `analyst_*` e, com D2-A, `scale_risk`/`riskScale` no motor (plan D8); versão nova do motor; migration dos `CHECK` de `run_commands` | Dourado regravado, harness de 21 verificações, diferencial contra a referência, mutantes do motor novos mortos; `make migration-test` |
+| T4.0 🧠 | Reescrever a A21 do ADR 0002 pela revisão do arquiteto (variante "1c": teto de entrada por passo, sem estado nem versão nova) e a D2 da spec | ADR e spec atualizados |
+| T4.1a | Motivo `analyst_timeout` no vocabulário do motor e do banco + migration `0025_run_commands_analyst` (`NOT VALID` + `VALIDATE`; rollback que aborta com trilha `analyst_%`) | Dourado `engine-2` inalterado; `migration-test`; `database-test` gravando `analyst_timeout`; rollback testado; `strategy-persistence-schema` |
+| T4.1b | `entryRiskScale` (`'0' \| '0.25' \| '0.5' \| '1'`) em `StepInput`/`WalletStepInput` e no `advanceCandle`; referência com escala, diferencial com gerador separado, cenário no harness, propriedade de risco, mutantes novos | Dourado `engine-2` idêntico; dourado de escala novo; harness verde; os 51 mutantes antigos e ≥ 6 novos mortos; backtest/walk-forward/ao vivo inalterados |
+| ~~T4.1~~ | *(substituída por T4.0/T4.1a/T4.1b; texto original:)* Autorizado: motivos `analyst_*` e, com D2-A, `scale_risk`/`riskScale` no motor (plan D8); versão nova do motor; migration dos `CHECK` de `run_commands` | — |
 | T4.2 | Modo `govern` no worker (comandos no `advanceCandle`, falha → `pause`) e liberação do `govern` no `POST /v1/runs` | Contratos: pausa barra entrada e nunca saída; saída por tempo na 5ª vela; tamanho ¼ dá risco ≤ ¼; `make live-test` com paridade backtest × ao vivo com o analista nos conjuntos reais |
 | T4.3 | Contrafactual de novo com o comando de tamanho (D9 c) e o painel trocando o selo para "o analista está decidindo" | Relatório em `evidence.md`; contrato do selo |
 
