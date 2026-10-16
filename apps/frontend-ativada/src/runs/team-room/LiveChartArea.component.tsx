@@ -3,10 +3,10 @@ import type { ReactElement, ReactNode } from 'react';
 
 import { ProjectionCards } from '../projection-cards/ProjectionCards.component.js';
 import { TradeChartCard } from '../TradeChartCard.component.js';
-import { CompactTeam } from './CompactTeam.component.js';
-import { TeamAsideProvider, type TeamAsideRenderer } from './TeamAside.context.js';
+import { renderCompactTeam } from './RunTeamAside.component.js';
+import { TeamAsideProvider } from './TeamAside.context.js';
 import { TeamRoomSection } from './TeamRoomSection.component.js';
-import { TEAM_LAYOUT, type TeamRoomPreference } from './team-room-preference.js';
+import { TEAM_LAYOUT } from './team-room-preference.js';
 import { useTeamRoomPreference } from './useTeamRoomPreference.hook.js';
 
 export type LiveChartAreaProps = {
@@ -17,17 +17,6 @@ export type LiveChartAreaProps = {
   readonly children?: ReactNode;
 };
 
-function renderTeam(runId: string, preference: TeamRoomPreference): TeamAsideRenderer {
-  return (pointedOpenTime) => (
-    <CompactTeam
-      runId={runId}
-      pointedOpenTime={pointedOpenTime}
-      isAnimationOn={preference.isAnimationOn}
-      shouldAnnounce={preference.isCollapsed}
-    />
-  );
-}
-
 // A alternância "Gráfico + equipe" (o gráfico no alto, a equipe compacta colada nele, a sala grande por último) e
 // "Sala com o gráfico" (o gráfico vira o monitor da sala): o mesmo gráfico, as mesmas frases do servidor.
 export function LiveChartArea({ runId, hasChart, children }: LiveChartAreaProps): ReactElement {
@@ -36,7 +25,7 @@ export function LiveChartArea({ runId, hasChart, children }: LiveChartAreaProps)
   const chart = hasChart ? (
     <TradeChartCard runId={runId} hasSummary={false} hasProjections={false} />
   ) : undefined;
-  const aside = isRoomLayout ? undefined : renderTeam(runId, preference);
+  const aside = isRoomLayout ? undefined : renderCompactTeam(runId, preference);
   const room = (
     <TeamRoomSection
       runId={runId}
