@@ -8,6 +8,7 @@ import {
 } from '../../packages/database/src/index.js';
 import type { FakeBinanceStreamServer } from '../../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 import { parseJsonContainer } from '../../packages/run-recording/src/index.js';
+import { isAnalystScenario, pushAnalystDecision, type AnalystScenario } from './control-analyst.js';
 import { createLongBacktest } from './long-run.js';
 import { EXCHANGE, HOUR_MILLISECONDS, SYMBOLS } from './panel-e2e.constant.js';
 import { DECISION_INDICATORS, DECISION_VOTES, votesFor } from './panel-e2e-decision.constant.js';
@@ -273,6 +274,14 @@ async function readFillSide(request: Request): Promise<FillSide> {
   return side;
 }
 
+async function readAnalystScenario(request: Request): Promise<AnalystScenario> {
+  const body: unknown = await request.json();
+  const scenario: unknown =
+    typeof body === 'object' && body !== null ? Reflect.get(body, 'scenario') : undefined;
+  if (!isAnalystScenario(scenario)) throw new Error('corpo do /analyst-decision inválido');
+  return scenario;
+}
+
 async function createLongRun(params: ControlParams): Promise<string> {
   return createLongBacktest({
     handle: params.handle,
@@ -285,6 +294,7 @@ async function createLongRun(params: ControlParams): Promise<string> {
 export function startControlServer(params: ControlParams): ControlServer {
   let signals = 0;
   let decisions = 0;
+  let analystDecisions = 0;
   let longRun: Promise<string> | undefined;
   const server = Bun.serve({
     hostname: '127.0.0.1',
@@ -301,6 +311,13 @@ export function startControlServer(params: ControlParams): ControlServer {
       else if (pathname === '/long-run')
         return Response.json({ runId: await (longRun ??= createLongRun(params)) });
       else if (pathname === '/stall') await pushStall(params, await readStallAction(request));
+      else if (pathname === '/analyst-decision')
+        return Response.json({
+          runId: await pushAnalystDecision(params, {
+            scenario: await readAnalystScenario(request),
+            sequence: (analystDecisions += 1),
+          }),
+        });
       else return new Response(null, { status: 404 });
       return Response.json({ ok: true });
     },

@@ -481,3 +481,24 @@ bun run lint         → verde
 bun run format:check → All matched files use Prettier code style!
 bun run --cwd apps/frontend-ativada test → 1178 pass / 0 fail
 ```
+
+## T3.4 — E2E do analista no Edge (2026-10-16)
+
+- **Como rodou** (à mão, como nas specs 009 e 010): infra de TESTE (`ativada-test-*`, `docker compose --env-file envs/env.test`) subida e derrubada com `--volumes` ao fim
+  (conferido: só `ativada-dev-*` seguem de pé); `scripts/panel-e2e.ts` no `bun` do WSL, `vite` pelo `bun.exe` do Windows, `playwright.exe` abrindo o Microsoft Edge
+  (`PANEL_E2E_BROWSER_CHANNEL=msedge`). Junções novas no `node_modules` do Windows, sem baixar nada: `@ativada/risk-analyst` em `apps/api-ativada` e `apps/worker-ativada` e as
+  duas do próprio pacote (`statistics`, `strategy-engine`).
+- **Dois testes novos** (`apps/frontend-ativada/e2e/flows/analyst.flow.ts`, ligados em `panel.e2e.ts`): (1) pela tela de Metas, "Deixar o analista de risco decidir" trava a vela
+  em 15 min, mostra a taxa de 0,30% por ida e volta e o modo sombra, e "Simular esta meta" cria pela API de verdade a simulação ao vivo de 15 min com `runs.request.analyst`;
+  (2) o servidor de controle (`POST /analyst-decision`, no papel do worker: põe a simulação para rodar, grava a linha real do dourado `analyst-1` e dá o `pg_notify` `analyst`)
+  traz o cartão "Analista de risco" em PAUSA (selo "modo sombra", aviso fixo "Tendência, não promessa… dinheiro fictício", tabela com Reversão, cinco travas) e uma segunda
+  decisão troca para LIBERADA e acrescenta a linha ao histórico, sem recarregar (a marca posta na janela sobrevive).
+- **Resultado:** `5 passed (1,8 min)` no subconjunto (`PANEL_E2E_GREP`, novo e opcional em `scripts/panel-e2e/run-playwright.ts`: login, metas e os dois do analista). O comando
+  termina com "a conta apagada pelo painel não foi marcada" só porque o teste de apagar a conta não está no subconjunto.
+- **Pendência que NÃO é desta task:** a suíte inteira para no 3º teste, "visão geral mostra saldo, estado, sinais…": a região "Saldo da simulação" não existe mais depois do
+  redesenho da Visão geral (commit `1a9a6af`, de outro executor) e o teste não foi atualizado; os 23 testes seguintes não rodam enquanto isso. Não mexi nele.
+
+```text
+bun run typecheck / lint / format:check → verdes
+panel-e2e (subconjunto, Edge) → 5 passed
+```

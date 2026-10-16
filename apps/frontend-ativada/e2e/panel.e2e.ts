@@ -5,6 +5,10 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { readE2eEnvironment } from './e2e-environment.js';
 import { receiveLiveAlertsWithoutReloading } from './flows/alerts.flow.js';
+import {
+  createASimulationWithTheAnalyst,
+  watchTheAnalystCardChange,
+} from './flows/analyst.flow.js';
 import { registerAPurchaseAndWatchThePrice } from './flows/assets.flow.js';
 import {
   compareTheTwoBacktests,
@@ -257,6 +261,17 @@ test('gráfico de velas: arrastar pede a página anterior de velas e mede os qua
 
 test('metas: declarar a meta, ver o ranking estratégia x moeda e simular, com o cartão de meta ativa no painel', async () => {
   await declareGoalRankAndSimulate(page);
+});
+
+test('analista de risco: criar a simulação com o analista pela tela (vela de 15 min travada, modo sombra)', async () => {
+  // As rodadas anteriores esgotam o limite de 120 requisições por minuto.
+  await page.waitForTimeout(RATE_WINDOW_PAUSE_MILLISECONDS);
+  await createASimulationWithTheAnalyst(page);
+});
+
+test('analista de risco: a decisão chega pelo NOTIFY do servidor de controle e o cartão muda sem recarregar', async () => {
+  await page.waitForTimeout(RATE_WINDOW_PAUSE_MILLISECONDS);
+  await watchTheAnalystCardChange(page, { request: page.request, url: environment.controlUrl });
 });
 
 test('simulação parada: a faixa aparece pelo NOTIFY do servidor de controle e some quando a simulação volta, sem recarregar', async () => {

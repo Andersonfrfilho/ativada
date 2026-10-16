@@ -50,3 +50,20 @@ export async function createLongRun(control: Control): Promise<string> {
   if (typeof runId !== 'string') throw new Error('o /long-run não devolveu o runId');
   return runId;
 }
+
+// A decisão do analista de risco entra pelo banco e pelo NOTIFY reais (servidor de controle no papel do worker: a simulação criada
+// pelo painel passa a rodar); devolve o id da simulação. Só a origem do dado é do teste.
+export async function sendAnalystDecision(
+  control: Control,
+  scenario: 'pause' | 'confident',
+): Promise<string> {
+  const response = await control.request.post(`${control.url}/analyst-decision`, {
+    data: { scenario },
+  });
+  expect(response.ok()).toBe(true);
+  const body: unknown = await response.json();
+  const runId: unknown =
+    typeof body === 'object' && body !== null ? Reflect.get(body, 'runId') : undefined;
+  if (typeof runId !== 'string') throw new Error('o /analyst-decision não devolveu o runId');
+  return runId;
+}
