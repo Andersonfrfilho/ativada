@@ -95,3 +95,9 @@ painel foi tocado.
 - Contas da spec §8 conferidas por teste: Nina 0,0214, Lucas 0,0109, Olívia 0,0159 por chamada (0,0482 juntas, US$ 4,6272 por dia, US$ 138,816 por mês a 15 min); Nina em raciocínio alto 0,0478; Haiku 5.5 0,000545 e GPT-6 Luna 0,000795.
 - Decisão de borda, sem mudar o spec: `refused` e `bad_request` fecham o circuito como `ok` e `invalid_output` (o provedor respondeu).
 - Gates: typecheck OK; lint OK; format:check OK; 48 testes passam (3 arquivos: custo/teto, circuito, fronteira).
+
+### T1.4 — Tradução da decisão gravada em sinal (`team-signal.ts`) (2026-10-17)
+
+- `toTeamSignal({ record, hasPosition, candleOpenTime })`: função pura, tipos próprios do pacote (não importa o motor). Matriz do plan D9: compra sem posição → BUY (+100); venda com posição → SELL (−100); compra com posição → HOLD "ignorada: já comprada"; venda sem posição → HOLD "ignorada: sem posição"; espera → HOLD com o motivo do gestor; sem linha, pendente, falha ou pulo → HOLD "equipe sem leitura" com o código da falha. O sinal leva o id da linha gravada e os níveis da equipe (opção A: exibidos e medidos).
+- Testes: `test/model-agents-team-signal.contract.test.ts` (matriz completa, quatro casos sem leitura com e sem posição, a vela do sinal é a de decisão, determinismo byte a byte, entrada não alterada).
+- Gates: typecheck OK; lint OK; format:check OK; 22 testes passam (sinal e fronteira).

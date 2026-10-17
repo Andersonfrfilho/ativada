@@ -106,3 +106,15 @@ export {
   type CircuitView,
   type OpenCause,
 } from './provider-circuit.js';
+export {
+  NO_READING_CODE,
+  TEAM_SIGNAL_ACTION,
+  TEAM_SIGNAL_SOURCE,
+  toTeamSignal,
+  type TeamDecisionRecord,
+  type TeamSignal,
+  type TeamSignalAction,
+  type TeamSignalLevels,
+  type TeamSignalSource,
+  type ToTeamSignalParams,
+} from './team-signal.js';
