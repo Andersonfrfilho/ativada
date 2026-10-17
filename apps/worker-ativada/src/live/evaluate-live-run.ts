@@ -76,6 +76,7 @@ export async function evaluateLiveRun(params: EvaluateLiveRunParams): Promise<Li
       alerting: dependencies.alerting,
       gapPolicy: dependencies.gapPolicy,
       analystSeries: params.analystSeries,
+      teamSettings: dependencies.team,
     });
     if (outcome.kind === LIVE_PASS_KIND.WAITING) {
       dependencies.logger.info(LIVE_LOG.RUN_WAITING_FOR_GAP, { runId });

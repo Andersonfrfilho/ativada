@@ -33,11 +33,12 @@ export const LIVE_ERROR_CODE = {
 export type LiveErrorCode = (typeof LIVE_ERROR_CODE)[keyof typeof LIVE_ERROR_CODE];
 
 // Como uma ronda de uma execução termina: `idle` (nada novo), `advanced` (processou candles), `waiting` (um buraco ainda
-// pode ser preenchido pela recuperação), `ended` (cancelada, apagada, conta inativa) ou `failed` (falha tipada gravada).
+// pode ser preenchido pela recuperação), `awaiting_team` (a decisão da equipe ainda vem), `ended` (cancelada, apagada, conta inativa) ou `failed` (falha tipada gravada).
 export const LIVE_PASS_KIND = {
   IDLE: 'idle',
   ADVANCED: 'advanced',
   WAITING: 'waiting',
+  AWAITING_TEAM: 'awaiting_team',
   ENDED: 'ended',
   FAILED: 'failed',
 } as const;
@@ -47,6 +48,8 @@ export const LIVE_COMMIT_OUTCOME = {
   STOPPED: 'stopped',
   VANISHED: 'vanished',
   ALREADY_RECORDED: 'already_recorded',
+  // A decisão gravada da equipe ainda não chegou e o prazo não passou: o passo devolve SEM commit e a ronda seguinte tenta de novo.
+  AWAITING_TEAM: 'awaiting_team',
 } as const;
 
 export const LIVE_LOG = {

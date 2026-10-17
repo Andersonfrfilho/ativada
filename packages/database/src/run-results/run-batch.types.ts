@@ -2,6 +2,7 @@
 import type { AlertInput } from '../alerts/alert.types.js';
 import type { AnalystDecisionInput } from '../analyst/analyst-decision.types.js';
 import type { JsonContainer } from '../json-value.types.js';
+import type { TeamRunInputWrite } from '../model-teams/team-run-input.types.js';
 import type { OwnerScope } from '../ownership/owner-scope.js';
 import type { DataWaitState, RecordDataWaitParams } from '../runs/run-data-wait.js';
 import type { RecordGoalOutcomeParams } from '../runs/run-goal.js';
@@ -59,6 +60,8 @@ export type RunBatchWriter = {
   readonly publishStepEvents: (candleTime: number) => Promise<number>;
   // A decisão do analista de risco da vela (spec 007), na MESMA transação do passo; avisa a API só se a linha é nova.
   readonly appendAnalystDecision: (input: AnalystDecisionInput) => Promise<boolean>;
+  // A entrada gravada da vela numa execução de equipe (plan D9), na MESMA transação; `false` se a vela já tinha a sua.
+  readonly appendTeamRunInput: (input: TeamRunInputWrite) => Promise<boolean>;
 };
 
 export type RunBatchRepository = {

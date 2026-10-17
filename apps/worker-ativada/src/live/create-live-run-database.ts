@@ -7,6 +7,7 @@ import {
   createRunRepository,
   createSentimentObservationRepository,
   createStrategyRepository,
+  createTeamRunInputRepository,
   resolveRunOwnerScope,
   RUN_KIND,
   RUN_STATUS,
@@ -27,6 +28,7 @@ import type {
   LiveRunDatabase,
   LiveRunSession,
   LiveStepCommit,
+  TeamInputPort,
 } from './live-run.types.js';
 
 // O passo gravou o checkpoint de um candle que já estava gravado: outro processo foi mais rápido. A transação é desfeita.
@@ -65,6 +67,8 @@ async function commitStep(
         await writer.publishStepEvents(commit.checkpoint.lastCandleTime);
         // A sombra do analista nasce com o passo: reentrega é idempotente por (execução, vela) e o aviso só sai se a linha é nova.
         if (commit.analyst !== undefined) await writer.appendAnalystDecision(commit.analyst);
+        // A decisão da equipe que a vela usou nasce com o passo: o replay lê desta linha, nunca do relógio nem do provedor.
+        if (commit.teamInput !== undefined) await writer.appendTeamRunInput(commit.teamInput);
         return LIVE_COMMIT_OUTCOME.COMMITTED;
       },
     );
@@ -96,6 +100,16 @@ function createReaders(
   };
 }
 
+function createTeamPort(target: SessionTarget): TeamInputPort {
+  const inputs = createTeamRunInputRepository(target.handle);
+  return {
+    readStoredInput: (candleTime) =>
+      inputs.readStoredInput(target.scope, { runId: target.runId, candleTime }),
+    readReportById: (reportId) => inputs.readReportById(reportId),
+    lookupScheduledReport: (params) => inputs.lookupScheduledReport(params),
+  };
+}
+
 function createSession(target: SessionTarget): LiveRunSession {
   const { handle, scope, runId } = target;
   const runs = createRunRepository(handle);
@@ -109,6 +123,7 @@ function createSession(target: SessionTarget): LiveRunSession {
       return version === undefined ? undefined : { run, version };
     },
     readCheckpoint: () => runs.readCheckpoint(scope, runId),
+    team: createTeamPort(target),
     findHitRate: async (): Promise<HistoricalHitRate | undefined> =>
       parseHitRate(
         await createRunMetricsRepository(handle).findLatestMetrics(scope, {

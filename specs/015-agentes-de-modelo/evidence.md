@@ -234,3 +234,28 @@ opção B (motor / `ENGINE_VERSION`), chaves reais, rede a provedor real, `git p
   alvo a 3×ATR da configuração de risco; nenhuma ordem antes da vela de decisão; a guarda ainda recusa sinal de outra versão. Resultado: a guarda ACEITA, então
   nenhum ajuste aditivo (export no `run-recording` ou relaxar `votes`) é necessário. O desenho do D9 já tinha a validação do `architect` (opus).
 - Gates: typecheck, lint, format:check OK; testes do pacote (65) OK.
+
+### T3.2 — O passo da execução de equipe no worker (2026-10-17)
+
+- `apps/worker-ativada/src/live/`: `team-decision.ts` (a decisão da vela: replay da entrada gravada, ou o relatório agendado `(equipe, par, t, team-prompt-1, scheduled)`;
+  `awaiting` enquanto `pending` ou ainda não enfileirado e dentro do prazo; fora da grade do ritmo não há o que esperar; prazo vencido, falha, `pending` vencido ou
+  decisão tardia = "equipe sem leitura" com o código `MISSING`/`PENDING`/`LATE`/`NOT_SCHEDULED`/o da falha), `team-candle-step.ts` (puro: `signalStep` real da
+  `model-team-1`, sonda de posição com "esperar", `toTeamSignal`, `applyTeamSignal`, `walletStep` avulso), `team-step.ts` (`stepTeamOnce`: o commit leva as linhas,
+  o checkpoint e a `team_run_inputs` da vela na MESMA transação), `create-team-kit.ts` (recusa em voz alta: sem o ambiente das equipes no worker = `INVALID_RUN_DATA`,
+  estratégia diferente da fixa = `HASH_MISMATCH`, antes de ler qualquer vela). `live-step.ts` ganhou UMA linha (`run.team !== undefined` desvia para o passo de
+  equipe); a execução de regra não passa por nenhum arquivo novo.
+- Nova saída `AWAITING_TEAM` (`LIVE_COMMIT_OUTCOME` e `LIVE_PASS_KIND`): o passo devolve SEM commit e sem dormir; a ronda seguinte (5 s) tenta de novo do mesmo
+  candle; as outras execuções da mesma ronda seguem. O prazo (`MODEL_TEAM_DECISION_DEADLINE_SECONDS`) é conferido pelo `clock_timestamp()` do BANCO na mesma consulta
+  que lê o relatório (`team-run-input.repository.ts`), e a decisão tardia é a que tem `decided_at` depois do prazo (nunca usada para `t`).
+- A posição que a tradução vê é a de DEPOIS das execuções de `t`: uma sonda do `walletStep` com sinal "esperar" a revela (por exemplo, a posição que sai pelo stop em
+  `t` não faz a compra de `t` virar "ignorada: já comprada"). Sinal `null` do aquecimento segue `null` e não procura relatório.
+- Banco: `RunBatchWriter.appendTeamRunInput` (idempotente por `(execução, vela)`, preso ao dono) e `createTeamRunInputRepository` (`readStoredInput` com `OwnerScope`,
+  `readReportById`, `lookupScheduledReport`). `main.ts` passa o prazo e o ritmo do ambiente ao avaliador.
+- Limitação conhecida: o `walletStep` avulso confere a contiguidade com o sinal; uma lacuna CONFIRMADA durante o aquecimento (sinal `null`) faria a guarda recusar o
+  candle (`CANDLE_GAP_UNCONFIRMED`, a execução falha com código tipado) em vez de seguir como no `step` composto. A lacuna depois do aquecimento ecoa a contagem e passa.
+- Testes: `test/live-team-step.contract.test.ts` (17: compra e venda em `t + 1`, motivo do gestor e votos vazios, entrada gravada, compra com posição e venda sem posição
+  ignoradas com o motivo, MISSING/falha/PENDING/LATE/NOT_SCHEDULED, `AWAITING_TEAM` sem commit e retomada do mesmo ponto, uma execução à espera não atrasa outra,
+  aquecimento sem relatório, candle repetido pulado, recusas) sobre o banco em memória; `make database-test` com as checagens novas (busca do relatório com o prazo
+  pelo relógio do banco, entrada gravada idempotente, presa ao dono, CHECK da origem).
+- Gates: typecheck, lint, format:check OK; `database-test` OK; 220 testes dos arquivos de ao vivo, worker, banco e pacote OK (1 falha anterior e alheia:
+  `test/risk-analyst-boundary.contract.test.ts` contém `export default`, listada na regressão da Fase 2).

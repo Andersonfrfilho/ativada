@@ -10,7 +10,12 @@ import type {
   LiveRunRepository,
   RunRecord,
   RunResultRows,
+  ScheduledReportLookup,
+  StoredTeamRunInput,
   StrategyVersionRecord,
+  LookupScheduledReportParams,
+  TeamReportView,
+  TeamRunInputWrite,
 } from '@ativada/database';
 import type {
   Engine,
@@ -52,6 +57,8 @@ export type LiveStepCommit = {
   readonly shouldClearWait?: boolean;
   // A decisão do analista de risco em sombra (spec 007): entra na mesma transação e some junto com ela se o passo for desfeito.
   readonly analyst?: AnalystDecisionInput;
+  // A entrada gravada da vela numa execução de equipe (plan D9): some junto com o passo se ele for desfeito.
+  readonly teamInput?: TeamRunInputWrite;
 };
 
 // Taxa de acerto fora da amostra do último walk-forward concluído da versão (texto decimal exato) e as operações dela.
@@ -64,6 +71,21 @@ export type LiveAlertingSettings = {
 };
 
 export type LiveCommitOutcome = (typeof LIVE_COMMIT_OUTCOME)[keyof typeof LIVE_COMMIT_OUTCOME];
+
+// O que a execução de equipe lê do banco para decidir a vela (plan D9); o relógio do prazo é o do BANCO.
+export type TeamInputPort = {
+  readonly readStoredInput: (candleTime: number) => Promise<StoredTeamRunInput | undefined>;
+  readonly readReportById: (reportId: string) => Promise<TeamReportView | undefined>;
+  readonly lookupScheduledReport: (
+    params: LookupScheduledReportParams,
+  ) => Promise<ScheduledReportLookup>;
+};
+
+// O prazo da decisão e o ritmo das equipes, do ambiente do worker.
+export type TeamStepSettings = {
+  readonly deadlineMilliseconds: number;
+  readonly cadenceMinutes: number;
+};
 
 // O que o avaliador pode fazer com UMA simulação, já presa ao dono dela.
 export type LiveRunSession = {
@@ -82,6 +104,8 @@ export type LiveRunSession = {
   readonly readAnalystHistory: (params: {
     readonly fromCandleTime: number;
   }) => Promise<AnalystHistory>;
+  // Só a execução de equipe lê; ausente em quem não tem equipes (testes em memória).
+  readonly team?: TeamInputPort;
 };
 
 export type RecordDataWaitInput = {
@@ -122,6 +146,8 @@ export type LiveEvaluatorDependencies = {
   readonly maxStepsPerPass?: number;
   // Ausente = alertas desligados (Telegram sem token): o passo não monta nem enfileira alerta algum.
   readonly alerting?: LiveAlertingSettings;
+  // Ausente = execução de equipe recusada (o worker sem equipes); a produção sempre o liga.
+  readonly team?: TeamStepSettings;
 };
 
 export type LivePassOutcome = {

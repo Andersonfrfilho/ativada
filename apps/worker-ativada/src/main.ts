@@ -89,6 +89,11 @@ function createConfiguredLiveScheduler(params: {
       heartbeatTimeoutSeconds: environment.LIVE_HEARTBEAT_TIMEOUT_SECONDS,
       isGapConfirmed: createGapConfirmation(params.unfillable),
       gapPolicy: createGapPolicy({ environment, recoveryClock: params.recoveryClock }),
+      team: {
+        deadlineMilliseconds:
+          environment.MODEL_TEAM_DECISION_DEADLINE_SECONDS * MILLISECONDS_PER_SECOND,
+        cadenceMinutes: Number(environment.MODEL_TEAM_CADENCE_MINUTES),
+      },
       logger,
       ...(params.alerting === undefined ? {} : { alerting: params.alerting }),
     }),

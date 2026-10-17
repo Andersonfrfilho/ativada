@@ -8,6 +8,7 @@ import type {
   LiveRunDatabase,
   LiveRunSession,
   RecordDataWaitInput,
+  TeamInputPort,
 } from '../../../apps/worker-ativada/src/live/live-run.types.js';
 import type {
   AlertInput,
@@ -21,6 +22,7 @@ import type {
   RunRecord,
   RunStatus,
   StrategyVersionRecord,
+  TeamRunInputWrite,
 } from '../../../packages/database/src/index.js';
 import {
   ENGINE_VERSION,
@@ -80,6 +82,11 @@ export type LiveScenario = {
   readonly hitRate?: HistoricalHitRate | 'error';
   // O analista de risco em sombra pedido na criação da simulação (`runs.request.analyst`).
   readonly analyst?: { readonly version: string; readonly mode: string };
+  // A execução de equipe (spec 015): `signalSource` no pedido gravado e a leitura dos relatórios gravados.
+  readonly signalSource?: { readonly kind: string; readonly team: string };
+  readonly team?: Pick<TeamInputPort, 'lookupScheduledReport' | 'readReportById'>;
+  // Entradas já gravadas (o replay de outra execução com as mesmas decisões).
+  readonly initialTeamInputs?: readonly TeamRunInputWrite[];
   // A execução nasce atrelada a uma meta: a fotografia dela mora no pedido, como a API a grava.
   readonly goal?: {
     readonly goalId: string;
@@ -113,6 +120,8 @@ export type InMemoryLiveState = {
   waitClears: number;
   // As decisões do analista dos passos CONFIRMADOS, por vela (único por vela, como o banco).
   analystDecisions: Map<number, AnalystDecisionInput>;
+  // As entradas gravadas da equipe dos passos CONFIRMADOS, por vela (única por vela, como o banco).
+  teamInputs: Map<number, TeamRunInputWrite>;
 };
 
 export type StoredWait = {
@@ -141,8 +150,10 @@ export type InMemoryLive = {
 
 // O pedido gravado na execução: a meta e o analista, como a API os grava.
 function buildRequest(scenario: LiveScenario): RunRecord['request'] {
-  if (scenario.goal === undefined && scenario.analyst === undefined) return undefined;
+  const { goal, analyst, signalSource } = scenario;
+  if (goal === undefined && analyst === undefined && signalSource === undefined) return undefined;
   return {
+    ...(signalSource === undefined ? {} : { signalSource: { ...signalSource } }),
     ...(scenario.goal === undefined ? {} : { goal: structuredClone(scenario.goal.spec) }),
     ...(scenario.analyst === undefined ? {} : { analyst: { ...scenario.analyst } }),
   };
@@ -242,6 +253,10 @@ function commitStep(
   appendRows(stage, commit.rows);
   const stagedAlerts = new Map(state.alerts);
   const stagedAnalyst = new Map(state.analystDecisions);
+  const stagedTeamInputs = new Map(state.teamInputs);
+  if (commit.teamInput !== undefined && !stagedTeamInputs.has(commit.teamInput.candleTime)) {
+    stagedTeamInputs.set(commit.teamInput.candleTime, structuredClone(commit.teamInput));
+  }
   if (commit.analyst !== undefined && !stagedAnalyst.has(commit.analyst.candleTime)) {
     stagedAnalyst.set(commit.analyst.candleTime, structuredClone(commit.analyst));
   }
@@ -255,6 +270,7 @@ function commitStep(
   state.results = stage;
   state.alerts = stagedAlerts;
   state.analystDecisions = stagedAnalyst;
+  state.teamInputs = stagedTeamInputs;
   state.checkpoint = {
     engineState: structuredClone(commit.checkpoint.engineState),
     lastCandleTime: commit.checkpoint.lastCandleTime,
@@ -378,6 +394,25 @@ function createSession(context: Context): LiveRunSession {
       if (failure !== undefined) return Promise.reject(failure);
       return Promise.resolve(readAnalystHistory(state, fromCandleTime));
     },
+    ...(scenario.team === undefined
+      ? {}
+      : {
+          team: {
+            ...scenario.team,
+            readStoredInput: (candleTime): ReturnType<TeamInputPort['readStoredInput']> => {
+              const stored = state.teamInputs.get(candleTime);
+              return Promise.resolve(
+                stored === undefined
+                  ? undefined
+                  : {
+                      reportId: stored.reportId,
+                      failureCode: stored.failureCode,
+                      appliedAction: stored.appliedAction,
+                    },
+              );
+            },
+          },
+        }),
     failRun: (errorCode): Promise<boolean> => {
       if (state.status !== 'running' && state.status !== 'queued') return Promise.resolve(false);
       state.status = 'failed';
@@ -444,6 +479,9 @@ export function createInMemoryLive(scenario: LiveScenario): InMemoryLive {
     waitWarnings: 0,
     waitClears: 0,
     analystDecisions: new Map(),
+    teamInputs: new Map(
+      (scenario.initialTeamInputs ?? []).map((input) => [input.candleTime, structuredClone(input)]),
+    ),
   };
   const controls: LiveControls = {
     cancel: () => {

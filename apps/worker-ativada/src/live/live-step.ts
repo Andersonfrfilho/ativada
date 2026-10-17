@@ -40,6 +40,8 @@ import type { AnalystRunKit } from './load-analyst-context.js';
 import type { LiveContext } from './load-live-context.js';
 import type { LiveCursor } from './resolve-live-cursor.js';
 import { collectStepAlerts, type HitRateReader } from './step-alerts.js';
+import type { TeamRunKit } from './team-decision.js';
+import { stepTeamOnce } from './team-step.js';
 
 // A meta da simulação: o acompanhamento (lido do pedido) e se o desfecho já foi gravado, o que muda de um passo para o seguinte.
 export type GoalProgress = {
@@ -60,6 +62,8 @@ export type StepRun = {
   readonly waiting: { isPending: boolean };
   // O analista de risco em sombra desta simulação nesta ronda; ausente = não pedido (ou fora da vela de 15 min).
   readonly analyst?: AnalystRunKit | undefined;
+  // A execução cuja decisão vem da linha gravada de uma equipe de modelo (spec 015); ausente = execução de regra.
+  readonly team?: TeamRunKit | undefined;
 };
 
 export type PassRunStep = { readonly commit: LiveCommitOutcome; readonly next: LiveCursor };
@@ -179,6 +183,7 @@ export async function stepOnce(
   cursor: LiveCursor,
   candle: EngineCandle,
 ): Promise<PassRunStep> {
+  if (run.team !== undefined) return stepTeamOnce({ ...run, team: run.team }, cursor, candle);
   const { settled, analyst } = await settleAnalyst(run, {
     cursor,
     candle,

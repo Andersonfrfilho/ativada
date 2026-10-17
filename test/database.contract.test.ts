@@ -87,6 +87,7 @@ const PUBLIC_RUNTIME_EXPORTS: readonly string[] = [
   'createSentimentRepository',
   'createStrategyRepository',
   'createTeamReportRepository',
+  'createTeamRunInputRepository',
   'createTelegramLinkConsumer',
   'createTelegramLinkRepository',
   'createUserAssetRepository',

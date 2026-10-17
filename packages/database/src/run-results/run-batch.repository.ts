@@ -20,6 +20,7 @@ import {
   writeSignals,
   writeWindows,
 } from './run-result-append.js';
+import { insertTeamRunInput } from '../model-teams/team-run-input.repository.js';
 import { publishAnalystEvent } from '../run-events/publish-analyst-event.js';
 import { publishStepEvents } from '../run-events/publish-step-events.js';
 import { writeOrders, writePositions } from './run-result-upsert.js';
@@ -108,6 +109,8 @@ function createWriter(target: BatchTarget, status: RunStatus): RunBatchWriter {
       }
       return isNew;
     },
+    appendTeamRunInput: (input) =>
+      insertTeamRunInput(target.executor, target.scope, { runId: target.runId, ...input }),
     ...createRunControlWriter(target),
   };
 }

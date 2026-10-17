@@ -6,7 +6,9 @@ import { MIGRATIONS_FOLDER } from '../src/database.constant.js';
 import { MODEL_TEAM_REPORT_STATUS } from '../src/model-teams/model-team.constant.js';
 import { createTeamReportRepository } from '../src/model-teams/team-report.repository.js';
 import type { TeamReportSlot } from '../src/model-teams/team-report.types.js';
+import { createTeamRunInputRepository } from '../src/model-teams/team-run-input.repository.js';
 import { createUserModelTeamRepository } from '../src/model-teams/user-model-team.repository.js';
+import { createRunBatchRepository } from '../src/run-results/run-batch.repository.js';
 import { RUN_KIND, RUN_STATUS } from '../src/runs/run.constant.js';
 import { createRunRepository } from '../src/runs/run.repository.js';
 import type { LifecycleCheckContext } from './account-lifecycle-checks.js';
@@ -220,11 +222,140 @@ async function checkReadingsAndOwners(context: LifecycleCheckContext): Promise<v
   reportCheck('equipes: leituras públicas e interruptor preso ao dono');
 }
 
+const DEADLINE_FAR = 4_102_444_800_000;
+const DEADLINE_PAST = 946_684_800_000;
+const ROLES_JSON = JSON.stringify({
+  trend: { stance: 'up', reason: 'a' },
+  risk: { level: 'low', reason: 'b' },
+  decision: { reason: 'c' },
+});
+
+async function seedScheduledReport(
+  client: Bun.SQL,
+  params: { readonly symbol: string; readonly status: 'decided' | 'pending' },
+): Promise<string> {
+  const id = Bun.randomUUIDv7();
+  const isDecided = params.status === 'decided';
+  await client`INSERT INTO model_team_reports (id, team_key, provider, model_id, prompt_version, kind, symbol, timeframe, candle_time, status, action, entry_price, target_price, stop_price, confidence, roles, decided_at)
+    VALUES (${id}, 'lucas', 'anthropic', 'm', 'team-prompt-1', 'scheduled', ${params.symbol}, '15m', ${CANDLE_TIME}, ${params.status},
+      ${isDecided ? 'buy' : null}, ${isDecided ? '100.5' : null}, ${isDecided ? '102' : null}, ${isDecided ? '99.5' : null},
+      ${isDecided ? 62 : null}, ${isDecided ? ROLES_JSON : null}::jsonb, ${isDecided ? new Date() : null})`;
+  return id;
+}
+
+async function checkTeamRunLookup(context: LifecycleCheckContext): Promise<string> {
+  const { handle, client, assertCondition, reportCheck } = context;
+  const inputs = createTeamRunInputRepository(handle);
+  const reportId = await seedScheduledReport(client, { symbol: 'LOOKUPUSDT', status: 'decided' });
+  const base = { teamKey: 'lucas', symbol: 'LOOKUPUSDT', candleTime: CANDLE_TIME };
+  const inTime = await inputs.lookupScheduledReport({ ...base, deadlineAt: DEADLINE_FAR });
+  assertCondition(
+    !inTime.isPastDeadline && inTime.report?.isDecidedInTime === true,
+    'prazo no futuro: não vencido e decidido a tempo',
+  );
+  assertCondition(
+    inTime.report?.decision?.entryPrice === '100.5' && inTime.report.decision.confidence === 62,
+    'o relatório volta com os preços em texto e a confiança',
+  );
+  const late = await inputs.lookupScheduledReport({ ...base, deadlineAt: DEADLINE_PAST });
+  assertCondition(
+    late.isPastDeadline && late.report?.isDecidedInTime === false,
+    'prazo vencido pelo relógio do banco: decisão tardia não conta como a tempo',
+  );
+  const missing = await inputs.lookupScheduledReport({
+    ...base,
+    symbol: 'NOTHINGUSDT',
+    deadlineAt: DEADLINE_PAST,
+  });
+  assertCondition(
+    missing.isPastDeadline && missing.report === undefined,
+    'vela sem relatório: devolve só o veredito do prazo',
+  );
+  const pendingId = await seedScheduledReport(client, { symbol: 'PENDINGUSDT', status: 'pending' });
+  const pending = await inputs.lookupScheduledReport({
+    ...base,
+    symbol: 'PENDINGUSDT',
+    deadlineAt: DEADLINE_FAR,
+  });
+  assertCondition(
+    pending.report?.id === pendingId && pending.report.decision === undefined,
+    'relatório pendente não traz decisão',
+  );
+  reportCheck('equipes: busca do relatório agendado com o prazo pelo relógio do banco');
+  return reportId;
+}
+
+async function checkTeamRunInputs(context: LifecycleCheckContext, reportId: string): Promise<void> {
+  const { handle, client, assertCondition, reportCheck } = context;
+  const inputs = createTeamRunInputRepository(handle);
+  const owner = await seedRunning(context, 'subject-team-run-input', 'LOOKUPUSDT');
+  const stranger = await resolvePersistenceOwner(handle, 'subject-team-run-input-stranger');
+  const batches = createRunBatchRepository(handle);
+  const write = (
+    candleTime: number,
+    extra: { reportId: string | null; failureCode: string | null },
+  ): Promise<boolean | undefined> =>
+    batches.runInBatch(owner.scope, owner.runId, (writer) =>
+      writer.appendTeamRunInput({ candleTime, appliedAction: 'hold', ...extra }),
+    );
+  assertCondition(
+    (await write(CANDLE_TIME, { reportId, failureCode: null })) === true,
+    'a entrada da vela grava',
+  );
+  assertCondition(
+    (await write(CANDLE_TIME, { reportId, failureCode: null })) === false,
+    'gravar a mesma vela de novo é idempotente',
+  );
+  const stored = await inputs.readStoredInput(owner.scope, {
+    runId: owner.runId,
+    candleTime: CANDLE_TIME,
+  });
+  assertCondition(
+    stored?.reportId === reportId && stored.appliedAction === 'hold',
+    'o dono lê a entrada gravada',
+  );
+  assertCondition(
+    (await inputs.readStoredInput(stranger.scope, {
+      runId: owner.runId,
+      candleTime: CANDLE_TIME,
+    })) === undefined,
+    'outro usuário não lê a entrada alheia',
+  );
+  const report = await inputs.readReportById(reportId);
+  assertCondition(
+    report?.status === 'decided' && report.decision?.action === 'buy',
+    'o relatório referenciado volta pelo id',
+  );
+  const code = await captureErrorCode(
+    Promise.resolve(write(CANDLE_TIME + 900_000, { reportId: null, failureCode: null })),
+  );
+  assertCondition(
+    code === CHECK_VIOLATION_SQLSTATE,
+    'sem relatório e sem código é recusado pelo CHECK',
+  );
+  await write(CANDLE_TIME + 1_800_000, { reportId: null, failureCode: 'MISSING' });
+  assertCondition(
+    (
+      await inputs.readStoredInput(owner.scope, {
+        runId: owner.runId,
+        candleTime: CANDLE_TIME + 1_800_000,
+      })
+    )?.failureCode === 'MISSING',
+    'a vela sem leitura grava o código',
+  );
+  const rows = rowsOf<CountRow>(
+    await client`SELECT count(*)::int AS total FROM team_run_inputs WHERE run_id = ${owner.runId}`,
+  );
+  assertCondition(rows[0]?.total === 2, 'uma linha por vela');
+  reportCheck('equipes: entrada gravada da execução (idempotente, preso ao dono, CHECK da origem)');
+}
+
 export async function checkModelTeams(context: LifecycleCheckContext): Promise<void> {
   await checkEnqueue(context);
   await checkClaim(context);
   await checkBudgetAndFinish(context);
   await checkReadingsAndOwners(context);
+  await checkTeamRunInputs(context, await checkTeamRunLookup(context));
 }
 
 const ROLLBACK_0027 = '0027_model_teams.rollback.sql';
