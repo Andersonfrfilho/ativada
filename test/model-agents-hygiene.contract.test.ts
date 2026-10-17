@@ -122,9 +122,7 @@ describe('catálogo fechado das frases da tela (RF17, RNF07)', () => {
     expect(api.buildGeneratedByFooter('lucas')).toBe(
       'gerado por modelo: Claude Sonnet · pode errar',
     );
-    expect(api.buildGeneratedByFooter('clara')).toBe(
-      'gerado por modelo: Claude Haiku · pode errar',
-    );
+    expect(api.buildGeneratedByFooter('olivia')).toBe('gerado por modelo: GPT · pode errar');
   });
 
   test('as frases fixas do spec, literais', () => {

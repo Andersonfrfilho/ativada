@@ -3,82 +3,201 @@ import { describe, expect, test } from 'bun:test';
 
 import { loadModelAgentsApi } from './fixtures/model-agents/model-agents-api.fixture.js';
 import { buildPromptInput } from './fixtures/model-agents/prompt-input.fixture.js';
+import { buildReport } from './fixtures/model-agents/team-report.fixture.js';
 
-// T1.1 da spec 015: o catálogo fechado, o esquema da opinião (RF07), a entrada do prompt (RF09) e o resultado da porta (RF01).
+// T1.1b da spec 015: o catálogo fechado das equipes, o esquema do relatório (RF07), a entrada do prompt (RF09) e o
+// resultado da porta (RF01).
 
 const api = await loadModelAgentsApi();
-const VALID = { posture: 'up', reason: 'Três velas fecharam acima da EMA.', confidence: 62 };
 
-function opinionAccepts(overrides: Record<string, unknown>): boolean {
-  return api.modelOpinionSchema.safeParse({ ...VALID, ...overrides }).success;
+function reportAccepts(path: readonly string[], value: unknown): boolean {
+  const { trend, risk, decision } = buildReport();
+  const [first = '', second] = path;
+  if (second === undefined) {
+    return api.teamReportSchema.safeParse({ trend, risk, decision, [first]: value }).success;
+  }
+  const sections: Record<string, object> = { trend, risk, decision };
+  const replaced = { ...sections, [first]: { ...(sections[first] ?? {}), [second]: value } };
+  return api.teamReportSchema.safeParse(replaced).success;
 }
 
 function inputAccepts(overrides: Record<string, unknown>): boolean {
-  return api.modelPromptInputSchema.safeParse({ ...buildPromptInput(), ...overrides }).success;
+  return api.teamPromptInputSchema.safeParse({ ...buildPromptInput(), ...overrides }).success;
 }
 
-describe('catálogo fechado de agentes (RF03)', () => {
-  test('são três agentes, com o provedor e o cargo do spec', () => {
-    expect(api.MODEL_AGENT_KEYS).toStrictEqual(['nina', 'lucas', 'clara']);
-    expect(api.MODEL_AGENTS.nina.provider).toBe('google');
-    expect(api.MODEL_AGENTS.lucas.provider).toBe('anthropic');
-    expect(api.MODEL_AGENTS.clara.provider).toBe('anthropic');
-    expect(api.MODEL_AGENTS.nina.modelFamily).toBe('Gemini Pro');
-    expect(api.MODEL_AGENTS.lucas.modelFamily).toBe('Claude Sonnet');
-    expect(api.MODEL_AGENTS.clara.modelFamily).toBe('Claude Haiku');
-    expect(api.MODEL_AGENT_ROLE).toBe('Analista de modelo');
+describe('catálogo fechado de equipes (RF03)', () => {
+  test('são três equipes, uma por provedor', () => {
+    expect(api.MODEL_TEAM_KEYS).toStrictEqual(['nina', 'lucas', 'olivia']);
+    expect(api.MODEL_TEAMS.nina.provider).toBe('google');
+    expect(api.MODEL_TEAMS.lucas.provider).toBe('anthropic');
+    expect(api.MODEL_TEAMS.olivia.provider).toBe('openai');
+    expect(api.MODEL_TEAMS.nina.modelFamily).toBe('Gemini Pro');
+    expect(api.MODEL_TEAMS.lucas.modelFamily).toBe('Claude Sonnet');
+    expect(api.MODEL_TEAMS.olivia.modelFamily).toBe('GPT');
+    expect(api.MODEL_TEAMS.olivia.displayName).toBe('Olívia');
   });
 
-  test('onde cada um roda, em palavras', () => {
-    expect(api.MODEL_AGENTS.nina.cloudLabel).toBe('nuvem do Google');
-    expect(api.MODEL_AGENTS.lucas.cloudLabel).toBe('nuvem da Anthropic');
-    expect(api.MODEL_AGENTS.clara.cloudLabel).toBe('nuvem da Anthropic');
+  test('onde cada uma roda, em palavras', () => {
+    expect(api.MODEL_TEAMS.nina.cloudLabel).toBe('nuvem do Google');
+    expect(api.MODEL_TEAMS.lucas.cloudLabel).toBe('nuvem da Anthropic');
+    expect(api.MODEL_TEAMS.olivia.cloudLabel).toBe('nuvem da OpenAI');
+  });
+
+  test('os três papéis internos, com o rótulo da tela', () => {
+    expect(Object.values(api.TEAM_ROLE)).toStrictEqual(['trend', 'risk', 'decision']);
+    expect(api.TEAM_ROLE_LABEL).toStrictEqual({
+      trend: 'Analista de tendência',
+      risk: 'Analista de risco',
+      decision: 'Gestor',
+    });
   });
 
   test('nenhuma definição carrega id de modelo nem preço (vêm do env)', () => {
-    for (const agent of Object.values(api.MODEL_AGENTS)) {
-      expect(Object.keys(agent).sort()).toStrictEqual(
+    for (const team of Object.values(api.MODEL_TEAMS)) {
+      expect(Object.keys(team).sort()).toStrictEqual(
         ['cloudLabel', 'displayName', 'key', 'modelFamily', 'provider'].sort(),
       );
     }
   });
 
   test('o guarda aceita só chave do catálogo', () => {
-    expect(api.isModelAgentKey('nina')).toBe(true);
-    expect(api.isModelAgentKey('Nina')).toBe(false);
-    expect(api.isModelAgentKey('ana')).toBe(false);
-    expect(api.isModelAgentKey(undefined)).toBe(false);
+    expect(api.isModelTeamKey('nina')).toBe(true);
+    expect(api.isModelTeamKey('clara')).toBe(false);
+    expect(api.isModelTeamKey('Nina')).toBe(false);
+    expect(api.isModelTeamKey(undefined)).toBe(false);
   });
 });
 
-describe('esquema da opinião (RF07)', () => {
-  test('aceita a opinião válida', () => {
-    expect(opinionAccepts({})).toBe(true);
+describe('esquema do relatório da equipe (RF07)', () => {
+  test('aceita o relatório válido de compra, de venda e de espera', () => {
+    for (const action of ['buy', 'sell', 'hold'] as const) {
+      expect(api.teamReportSchema.safeParse(buildReport(action)).success).toBe(true);
+    }
   });
 
-  test.each([0, 100])('confiança %i está dentro', (confidence) => {
-    expect(opinionAccepts({ confidence })).toBe(true);
+  test.each([0, 100])('confiança %i está dentro', (value) => {
+    expect(reportAccepts(['decision', 'confidence'], value)).toBe(true);
   });
 
-  test.each([-1, 101, 62.5])('confiança %p está fora', (confidence) => {
-    expect(opinionAccepts({ confidence })).toBe(false);
+  test.each([-1, 101, 62.5])('confiança %p está fora', (value) => {
+    expect(reportAccepts(['decision', 'confidence'], value)).toBe(false);
   });
 
-  test('motivo: 1 e 160 caracteres passam; vazio e 161 reprovam', () => {
-    expect(opinionAccepts({ reason: 'a' })).toBe(true);
-    expect(opinionAccepts({ reason: 'a'.repeat(160) })).toBe(true);
-    expect(opinionAccepts({ reason: '' })).toBe(false);
-    expect(opinionAccepts({ reason: 'a'.repeat(161) })).toBe(false);
+  test.each([
+    ['trend', 'reason'],
+    ['risk', 'reason'],
+    ['decision', 'reason'],
+  ])('motivo de %s: 1 e 160 caracteres passam; vazio e 161 reprovam', (role, field) => {
+    expect(reportAccepts([role, field], 'a')).toBe(true);
+    expect(reportAccepts([role, field], 'a'.repeat(160))).toBe(true);
+    expect(reportAccepts([role, field], '')).toBe(false);
+    expect(reportAccepts([role, field], 'a'.repeat(161))).toBe(false);
   });
 
-  test('só up, down e neutral', () => {
-    for (const posture of ['up', 'down', 'neutral']) expect(opinionAccepts({ posture })).toBe(true);
-    expect(opinionAccepts({ posture: 'buy' })).toBe(false);
+  test('só os valores do catálogo em tendência, risco e ação', () => {
+    expect(reportAccepts(['trend', 'stance'], 'down')).toBe(true);
+    expect(reportAccepts(['trend', 'stance'], 'sideways')).toBe(false);
+    expect(reportAccepts(['risk', 'level'], 'high')).toBe(true);
+    expect(reportAccepts(['risk', 'level'], 'extreme')).toBe(false);
+    expect(reportAccepts(['decision', 'action'], 'short')).toBe(false);
   });
 
-  test('chave a mais e chave faltando reprovam', () => {
-    expect(opinionAccepts({ extra: 1 })).toBe(false);
-    expect(api.modelOpinionSchema.safeParse({ posture: 'up', reason: 'x' }).success).toBe(false);
+  test('preço: texto decimal ou nulo; notação científica e negativo reprovam', () => {
+    expect(reportAccepts(['decision', 'entryPrice'], '61700.5')).toBe(true);
+    expect(reportAccepts(['decision', 'entryPrice'], null)).toBe(true);
+    expect(reportAccepts(['decision', 'entryPrice'], '1e5')).toBe(false);
+    expect(reportAccepts(['decision', 'entryPrice'], '-1')).toBe(false);
+    expect(reportAccepts(['decision', 'entryPrice'], 61700)).toBe(false);
+  });
+
+  test('chave a mais e chave faltando reprovam, em qualquer nível', () => {
+    expect(reportAccepts(['extra'], 1)).toBe(false);
+    expect(reportAccepts(['trend', 'extra'], 1)).toBe(false);
+    expect(reportAccepts(['decision', 'extra'], 1)).toBe(false);
+    const { decision } = buildReport();
+    const withoutStop = Object.fromEntries(
+      Object.entries(decision).filter(([key]) => key !== 'stopPrice'),
+    );
+    expect(
+      api.teamReportSchema.safeParse({ ...buildReport(), decision: withoutStop }).success,
+    ).toBe(false);
+  });
+});
+
+describe('coerência dos preços (RF07)', () => {
+  const limits = { lastClose: '100', entryTolerancePercent: '1.5', minStopPercent: '0.2' };
+
+  function verdict(
+    prices: Partial<{
+      entryPrice: string | null;
+      targetPrice: string | null;
+      stopPrice: string | null;
+    }>,
+    action: 'buy' | 'sell' | 'hold' = 'buy',
+  ): string {
+    const decision = { ...buildReport(action).decision, ...prices };
+    return api.checkTeamLevels({ decision, ...limits });
+  }
+
+  test('compra coerente vale', () => {
+    expect(verdict({})).toBe('valid');
+  });
+
+  test('compra exige os três preços', () => {
+    expect(verdict({ entryPrice: null })).toBe('invalid_levels');
+    expect(verdict({ targetPrice: null })).toBe('invalid_levels');
+    expect(verdict({ stopPrice: null })).toBe('invalid_levels');
+  });
+
+  test('a ordem é proteção < entrada < alvo, sem igualdade', () => {
+    expect(verdict({ stopPrice: '100', entryPrice: '100' })).toBe('invalid_levels');
+    expect(verdict({ entryPrice: '102', targetPrice: '102' })).toBe('invalid_levels');
+    expect(verdict({ stopPrice: '101', entryPrice: '100.5', targetPrice: '103' })).toBe(
+      'invalid_levels',
+    );
+  });
+
+  test('entrada no limite de 1,5% do fechamento vale; um pouco além, não', () => {
+    expect(verdict({ entryPrice: '101.5', targetPrice: '104', stopPrice: '100' })).toBe('valid');
+    expect(verdict({ entryPrice: '98.5', targetPrice: '102', stopPrice: '97' })).toBe('valid');
+    expect(verdict({ entryPrice: '101.51', targetPrice: '104', stopPrice: '100' })).toBe(
+      'invalid_levels',
+    );
+    expect(verdict({ entryPrice: '98.49', targetPrice: '102', stopPrice: '97' })).toBe(
+      'invalid_levels',
+    );
+  });
+
+  test('proteção a 0,2% da entrada vale; mais colada, não', () => {
+    expect(verdict({ entryPrice: '100', targetPrice: '101', stopPrice: '99.8' })).toBe('valid');
+    expect(verdict({ entryPrice: '100', targetPrice: '101', stopPrice: '99.81' })).toBe(
+      'invalid_levels',
+    );
+  });
+
+  test('venda e espera exigem os três preços nulos', () => {
+    expect(verdict({ entryPrice: null, targetPrice: null, stopPrice: null }, 'sell')).toBe('valid');
+    expect(verdict({ entryPrice: null, targetPrice: null, stopPrice: null }, 'hold')).toBe('valid');
+    expect(verdict({ entryPrice: '100' }, 'sell')).toBe('invalid_levels');
+    expect(verdict({ targetPrice: '101' }, 'hold')).toBe('invalid_levels');
+    expect(verdict({ stopPrice: '99' }, 'hold')).toBe('invalid_levels');
+  });
+
+  test('a conta é decimal exata, sem erro de ponto flutuante', () => {
+    const decision = {
+      ...buildReport('buy').decision,
+      entryPrice: '100.3',
+      targetPrice: '105',
+      stopPrice: '99',
+    };
+    expect(
+      api.checkTeamLevels({
+        decision,
+        lastClose: '100',
+        entryTolerancePercent: '0.3',
+        minStopPercent: '1.2',
+      }),
+    ).toBe('valid');
   });
 });
 
@@ -93,9 +212,12 @@ describe('entrada do prompt (RF09)', () => {
     expect(inputAccepts({ candles: [] })).toBe(false);
   });
 
-  test.each(['userId', 'runId', 'goalId', 'balance', 'email'])('recusa a chave %s', (key) => {
-    expect(inputAccepts({ [key]: 'x' })).toBe(false);
-  });
+  test.each(['userId', 'runId', 'goalId', 'balance', 'email', 'position'])(
+    'recusa a chave %s',
+    (key) => {
+      expect(inputAccepts({ [key]: 'x' })).toBe(false);
+    },
+  );
 
   test('recusa chave a mais dentro das leituras e do Fear & Greed', () => {
     const { readings } = buildPromptInput();

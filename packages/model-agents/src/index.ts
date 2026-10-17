@@ -1,29 +1,39 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 export {
-  isModelAgentKey,
-  MODEL_AGENT_KEY,
-  MODEL_AGENT_KEYS,
-  MODEL_AGENT_ROLE,
-  MODEL_AGENTS,
+  isModelTeamKey,
   MODEL_PROVIDER,
-  type ModelAgentDefinition,
-  type ModelAgentKey,
+  MODEL_TEAM_KEY,
+  MODEL_TEAM_KEYS,
+  MODEL_TEAMS,
+  TEAM_ROLE,
+  TEAM_ROLE_LABEL,
   type ModelProvider,
-} from './model-agent-catalog.constant.js';
+  type ModelTeamDefinition,
+  type ModelTeamKey,
+  type TeamRole,
+} from './model-team-catalog.constant.js';
 export {
-  modelOpinionSchema,
-  OPINION_CONFIDENCE_MAX,
-  OPINION_POSTURE,
-  OPINION_REASON_MAX_LENGTH,
-  type ModelOpinion,
-  type OpinionPosture,
-} from './model-opinion.schema.js';
+  REPORT_CONFIDENCE_MAX,
+  REPORT_TEXT_MAX_LENGTH,
+  RISK_LEVEL,
+  TEAM_ACTION,
+  teamReportSchema,
+  TREND_STANCE,
+  type TeamAction,
+  type TeamReport,
+} from './team-report.schema.js';
 export {
-  modelPromptInputSchema,
+  checkTeamLevels,
+  LEVELS_VERDICT,
+  type CheckTeamLevelsParams,
+  type LevelsVerdict,
+} from './team-levels.js';
+export {
   PROMPT_CANDLE_COUNT,
   PROMPT_TIMEFRAME,
-  type ModelPromptInput,
-} from './prompt-input.schema.js';
+  teamPromptInputSchema,
+  type TeamPromptInput,
+} from './team-prompt-input.schema.js';
 export {
   MODEL_CALL_STATUS,
   type ModelCallLimits,
@@ -31,7 +41,7 @@ export {
   type ModelCallResult,
   type ModelCallStatus,
   type ModelTokenUsage,
-  type RequestOpinionParams,
+  type RequestTeamReportParams,
 } from './model-call-result.types.js';
 export { PROVIDER_STATE, type ProviderState } from './provider-state.constant.js';
 export { hashPrompt, PROMPT_INSTRUCTION, PROMPT_VERSION, renderPrompt } from './prompt-template.js';

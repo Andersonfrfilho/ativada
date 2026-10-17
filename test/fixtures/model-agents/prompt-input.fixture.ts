@@ -1,11 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { ModelPromptInput } from '../../../packages/model-agents/src/index.js';
+import type { TeamPromptInput } from '../../../packages/model-agents/src/index.js';
 
 const STEP = 900_000;
 const FIRST_OPEN = 1_760_000_000_000 - (1_760_000_000_000 % STEP);
 
 // Vela sintética e determinística: o fechamento sobe 0,5 por vela.
-export function buildCandle(index: number): ModelPromptInput['candles'][number] {
+export function buildCandle(index: number): TeamPromptInput['candles'][number] {
   const base = 100 + index / 2;
   return [
     FIRST_OPEN + index * STEP,
@@ -17,7 +17,7 @@ export function buildCandle(index: number): ModelPromptInput['candles'][number] 
   ];
 }
 
-export function buildPromptInput(candleCount = 48): ModelPromptInput {
+export function buildPromptInput(candleCount = 48): TeamPromptInput {
   return {
     symbol: 'LINKUSDT',
     timeframe: '15m',

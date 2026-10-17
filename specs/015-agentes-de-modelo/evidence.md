@@ -74,3 +74,10 @@ painel foi tocado.
 
 - T0.1b: a tabela de fatos da OpenAI e do motor já está acima ("Revisão 2 do desenho", commit `4f301f2`).
 - T0.2b: a seção "Agentes de modelo (spec 015)" do ADR 0002 foi substituída por "Equipes de modelo (spec 015)" (M1 a M12: decisão gravada como entrada, execução em `t + 1`, DT1 a DT12 e a opção A × B). Nenhuma decisão fora do plan. Pendente: validação do D9 por `architect` (opus), pré-requisito da T3.1.
+
+### T1.1b — Equipes, relatório e coerência dos preços (2026-10-17)
+
+- Catálogo `nina` (Google), `lucas` (Anthropic), `olivia` (OpenAI), papéis `trend`/`risk`/`decision` (`model-team-catalog.constant.ts`); `team-report.schema.ts` (`strictObject`, três preços sempre presentes e nulos quando não se aplicam, a forma do esquema estrito da OpenAI); `team-levels.ts` (`stop < entrada < alvo`, entrada a no máximo X% do fechamento, proteção a no mínimo Y% da entrada, bordas inclusivas, decimal exato); `team-prompt-input.schema.ts`; `model-call-result.types.ts` com `team` e `report`.
+- Renomeações nos arquivos da T1.2 (agente → equipe) só para compilar; a mudança de comportamento é a T1.2b.
+- Testes: `model-agents-schemas.contract.test.ts` (bordas 0/100, 160/161 nos três textos, chave a mais em todo nível, preço nulo em `sell`/`hold` e obrigatório em `buy`, bordas exatas da tolerância e da proteção, `userId`/`position` recusados), fronteira.
+- Gates: typecheck OK; lint OK; format:check OK; 84 testes passam (4 arquivos).

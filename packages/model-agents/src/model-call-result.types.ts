@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { ModelAgentKey } from './model-agent-catalog.constant.js';
-import type { ModelOpinion } from './model-opinion.schema.js';
+import type { ModelTeamKey } from './model-team-catalog.constant.js';
+import type { TeamReport } from './team-report.schema.js';
 
 export const MODEL_CALL_STATUS = {
   OK: 'ok',
@@ -27,7 +27,7 @@ export type ModelCallMeasure = Partial<ModelTokenUsage> & { readonly latencyMill
 export type ModelCallResult =
   | {
       readonly status: typeof MODEL_CALL_STATUS.OK;
-      readonly opinion: ModelOpinion;
+      readonly report: TeamReport;
       readonly usage: ModelTokenUsage;
       readonly latencyMilliseconds: number;
     }
@@ -48,8 +48,8 @@ export type ModelCallLimits = {
   readonly maxOutputTokens: number;
 };
 
-export type RequestOpinionParams = {
-  readonly agent: ModelAgentKey;
+export type RequestTeamReportParams = {
+  readonly team: ModelTeamKey;
   readonly prompt: string;
   readonly limits: ModelCallLimits;
   readonly signal: AbortSignal;

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { createHash } from 'node:crypto';
 
-import { modelPromptInputSchema, type ModelPromptInput } from './prompt-input.schema.js';
+import { teamPromptInputSchema, type TeamPromptInput } from './team-prompt-input.schema.js';
 
 // Mudar qualquer palavra do template exige `prompt-2`: a chave única das opiniões e o placar contam POR versão.
 export const PROMPT_VERSION = 'prompt-1';
@@ -18,7 +18,7 @@ export const PROMPT_INSTRUCTION = [
 ].join('\n');
 
 // Bloco de dados em ordem fixa de chaves: a mesma entrada dá sempre o mesmo texto e o mesmo hash.
-function buildDataBlock(input: ModelPromptInput): string {
+function buildDataBlock(input: TeamPromptInput): string {
   const { readings } = input;
   return JSON.stringify({
     symbol: input.symbol,
@@ -38,8 +38,8 @@ function buildDataBlock(input: ModelPromptInput): string {
 }
 
 // Lança com entrada de chave de fora: o prompt só nasce de dado público de mercado (RF09).
-export function renderPrompt(input: ModelPromptInput): string {
-  const validInput = modelPromptInputSchema.parse(input);
+export function renderPrompt(input: TeamPromptInput): string {
+  const validInput = teamPromptInputSchema.parse(input);
   return `${PROMPT_INSTRUCTION}\n\nDADOS:\n${buildDataBlock(validInput)}`;
 }
 

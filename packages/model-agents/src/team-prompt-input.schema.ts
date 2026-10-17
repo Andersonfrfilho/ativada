@@ -31,7 +31,7 @@ const fearGreedSchema = z.strictObject({
 });
 
 // RF09: SÓ dado público de mercado. `strictObject` recusa `userId`, saldo, meta ou qualquer chave a mais.
-export const modelPromptInputSchema = z.strictObject({
+export const teamPromptInputSchema = z.strictObject({
   symbol: z.string().regex(/^[A-Z0-9]{5,20}$/),
   timeframe: z.literal(PROMPT_TIMEFRAME),
   lastCandleCloseTime: z.iso.datetime(),
@@ -39,4 +39,4 @@ export const modelPromptInputSchema = z.strictObject({
   readings: readingsSchema,
   fearGreed: fearGreedSchema.nullable(),
 });
-export type ModelPromptInput = z.infer<typeof modelPromptInputSchema>;
+export type TeamPromptInput = z.infer<typeof teamPromptInputSchema>;

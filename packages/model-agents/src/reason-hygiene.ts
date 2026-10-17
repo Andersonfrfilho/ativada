@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { HIDDEN_REASON_PHRASE } from './model-agents-messages.js';
-import { OPINION_REASON_MAX_LENGTH } from './model-opinion.schema.js';
+import { REPORT_TEXT_MAX_LENGTH } from './team-report.schema.js';
 
 // RF08 / RNF07: palavra que soa a promessa ou a conselho. A busca é por trecho, sem diferenciar maiúscula.
 export const FORBIDDEN_REASON_WORDS: readonly string[] = [
@@ -35,7 +35,7 @@ function stripControls(text: string): string {
 }
 
 function cutToLimit(text: string): string {
-  const cut = text.slice(0, OPINION_REASON_MAX_LENGTH);
+  const cut = text.slice(0, REPORT_TEXT_MAX_LENGTH);
   const lastCode = cut.charCodeAt(cut.length - 1);
   const isSplitPair = lastCode >= HIGH_SURROGATE_START && lastCode <= HIGH_SURROGATE_END;
   return isSplitPair ? cut.slice(0, -1) : cut;

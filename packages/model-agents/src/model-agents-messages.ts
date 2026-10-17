@@ -1,9 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import {
-  MODEL_AGENT_KEYS,
-  MODEL_AGENTS,
-  type ModelAgentKey,
-} from './model-agent-catalog.constant.js';
+import { MODEL_TEAM_KEYS, MODEL_TEAMS, type ModelTeamKey } from './model-team-catalog.constant.js';
 import { PROVIDER_STATE, type ProviderState } from './provider-state.constant.js';
 
 // Catálogo FECHADO das frases da tela (RF17, RNF07). A única fala fora dele é o motivo do modelo (RF08).
@@ -47,8 +43,8 @@ export const SHADOW_MODE_LABEL = 'sombra';
 export const SHADOW_MODE_EXPLANATION = 'só observa; não decide nada na simulação';
 export const GOVERN_LOCKED_NOTICE = 'Disponível depois da sua autorização e de 30 opiniões medidas';
 
-export function buildGeneratedByFooter(agent: ModelAgentKey): string {
-  return `gerado por modelo: ${MODEL_AGENTS[agent].modelFamily} · pode errar`;
+export function buildGeneratedByFooter(team: ModelTeamKey): string {
+  return `gerado por modelo: ${MODEL_TEAMS[team].modelFamily} · pode errar`;
 }
 
 export function describeProviderState(state: ProviderState, retryTime: string): string {
@@ -61,7 +57,7 @@ export function listAllPhrases(): readonly string[] {
   return [
     ...Object.values(OPINION_BADGE).map((badge) => badge.label),
     ...Object.values(PROVIDER_STATE_BADGE).map((badge) => badge.label),
-    ...MODEL_AGENT_KEYS.map((agent) => buildGeneratedByFooter(agent)),
+    ...MODEL_TEAM_KEYS.map((team) => buildGeneratedByFooter(team)),
     HIDDEN_REASON_PHRASE,
     AGENT_NOTICE,
     COST_ESTIMATE_NOTICE,
