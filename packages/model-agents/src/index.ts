@@ -75,3 +75,34 @@ export {
   TEAM_NOTICE,
   WALLET_RESULT_NOTICE,
 } from './model-agents-messages.js';
+export {
+  CHARACTERS_PER_ESTIMATED_TOKEN,
+  computeCallCost,
+  computeReservation,
+  COST_DECIMAL_PLACES,
+  estimateInputTokens,
+  TOKENS_PER_MEGA_TOKEN,
+  type ComputeCallCostParams,
+  type ComputeReservationParams,
+  type ModelPrice,
+} from './model-cost.js';
+export {
+  BUDGET_DECISION,
+  decideBudget,
+  type BudgetDecision,
+  type BudgetLimits,
+  type BudgetUsage,
+  type DecideBudgetParams,
+} from './budget-policy.js';
+export {
+  CIRCUIT_RULES,
+  createClosedCircuit,
+  describeCircuit,
+  recordOutcome,
+  requestPermission,
+  type CircuitOutcome,
+  type CircuitPermission,
+  type CircuitState,
+  type CircuitView,
+  type OpenCause,
+} from './provider-circuit.js';

@@ -88,3 +88,10 @@ painel foi tocado.
 - Removidos os textos do modo sombra e do governar (não existem mais na revisão 2).
 - A varredura de linguagem das frases da tela usa as quatro palavras do RNF07; a lista de sete palavras vale só para o texto livre do modelo (a frase fixa da equipe diz "compra, venda ou espera").
 - Gates: typecheck OK; lint OK; format:check OK; 88 testes passam (4 arquivos).
+
+### T1.3b — Custo, teto e circuito (2026-10-17)
+
+- `model-cost.ts` (custo e reserva em decimal, para cima a 8 casas, raciocínio cobrado como saída), `budget-policy.ts` (teto do dia e do mês em decimal exato, igual ao teto ainda cabe), `provider-circuit.ts` (máquina de estados com relógio por parâmetro; 3 falhas abrem 10 min, uma prova por vez, 429 com teto de 15 min, chave recusada e modelo inexistente 1 h, resposta do provedor fecha).
+- Contas da spec §8 conferidas por teste: Nina 0,0214, Lucas 0,0109, Olívia 0,0159 por chamada (0,0482 juntas, US$ 4,6272 por dia, US$ 138,816 por mês a 15 min); Nina em raciocínio alto 0,0478; Haiku 5.5 0,000545 e GPT-6 Luna 0,000795.
+- Decisão de borda, sem mudar o spec: `refused` e `bad_request` fecham o circuito como `ok` e `invalid_output` (o provedor respondeu).
+- Gates: typecheck OK; lint OK; format:check OK; 48 testes passam (3 arquivos: custo/teto, circuito, fronteira).
