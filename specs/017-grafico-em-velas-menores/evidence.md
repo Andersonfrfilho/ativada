@@ -170,3 +170,12 @@ tabela no celular). Gates no espelho `ativada-spec17`: typecheck, lint, format e
 - **Balão com distância até alvo e proteção:** `position-distance.ts` (BigInt escala 8: `parseScaled`, `divideFloor`, `formatSignedPercentDown`; sem `Number`) acrescenta "Até o alvo" e "Até a proteção" (valor e % do fechamento da vela apontada) quando há posição aberta e a vela é de `openedCandleTime` em diante. Contratos: `position-distance.contract.ts` (valores à mão, arredondamento para baixo, casos sem dado) e `candle-display.contract.tsx`.
 - **Pendência real (não inventada):** a "opinião curta de cada agente" no balão. A API entrega a opinião da equipe só na ficha lateral (`aside`, para a vela decidida); o balão não tem um resumo por agente por vela, e montar um exigiria dado novo (por exemplo, o voto de cada agente por decisão em `strategy-layers` ou `decisions`). Fica para uma spec de API; o painel não calcula nem imita.
 - **Gates (espelho `ativada-spec17`, 2026-10-17):** typecheck, lint e format verdes; panel-test 1.494 testes, 0 falhas.
+
+## Auditoria final (§15 do code-standart e revisão de código)
+
+Verificado sem achado: mapeamento 15→3 min sem lookahead (`expandLayers`, `opinionWindowAt`), retenção igual na API e no cron, corrida de respostas
+em `useSeriesLoader`, limpeza de listeners e timers, dinheiro em `bigint`, sem log nem PII.
+
+Pendente (baixa):
+- `tooltip-model.ts` (`decisionNote`) diz "na vela de 15 min decidida" também numa execução de 1 h vista em 1 h; usar a vela da execução ou só falar de 15 min com `mapping`.
+- `useTooltipHotkey.hook.ts`: a tecla `V` é global (alterna todos os gráficos montados) e não confere `event.repeat`.

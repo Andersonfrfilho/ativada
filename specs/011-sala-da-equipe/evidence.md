@@ -465,3 +465,10 @@ Capturas finais: `capturas/escritorio-app-1280-claro.png` e `capturas/escritorio
 - A pausa congela as fases e as animações em curso (`animation-play-state`); uma transição de CSS já iniciada termina sozinha.
 - O telão da parede mostra o gráfico da simulação em linha (fechamentos do servidor); o gráfico completo é o cartão "Preço e operações".
 - CSS do palco antigo em `TeamRoom.module.css` (`.stage`, `.back`, `.frontRow`) ficou sem uso; os balões ainda usam o restante do módulo.
+
+## Auditoria final (§15 do code-standart e revisão de código)
+
+Verificado sem achado: limpeza de timers, observers e `scene-runner` (pausa/retomada/fim), pedidos de decisões históricas agrupados em blocos de 100 velas, sem log nem PII, sem `Promise.all` novo.
+
+Pendente (baixa): `FormingBand.component.tsx` e `LeaderOverlay.component.tsx` refazem os listeners e medem de novo a cada render do pai
+(`props` é objeto novo a cada movimento da cruz); depender dos campos primitivos ou ler `props` por ref e evitar `setState` quando a caixa não muda.

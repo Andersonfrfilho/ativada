@@ -242,3 +242,17 @@ código e a varredura de palavras proibidas e de horas estão em `test/api-notic
 - **RF16** (linha "acerto X de N" em cada aviso, de `projections`/`analyst`) e a ficha "Sinal em andamento" com o cursor "agora"
   ao vivo (COMPRADO) ficam para a T4.1, pelo mesmo motivo.
 - D2-B (migration `notice_preferences`, T1.4) não existe (D2-A); nenhuma migration foi criada.
+
+## Auditoria final (§15 do code-standart e revisão de código)
+
+Corrigido: **(alta)** o toast nunca sumia sozinho: `onExpire` novo a cada render (o contexto muda a cada 1 s pelo relógio) reiniciava o
+`setTimeout` de 8 s; `useToastLifetime` agora guarda o `onExpire` numa ref (contrato `toast-lifetime.contract.tsx`, que reprova o código antigo).
+Verificado sem achado: dono em todo ramo do `UNION`, históricos em UMA consulta (sem N+1), cursor validado, sem log nem PII em `notices`,
+sem `Promise.all` novo, dinheiro em `EngineDecimal` contra o usuário, sem `dangerouslySetInnerHTML`.
+
+Pendente (não corrigido):
+- **(média, latente)** `GET /v1/notices?after=` com mais avisos novos que `limit` devolve os N mais RECENTES e `nextCursor: null`: os do meio
+  somem sem aviso (`notice-feed.repository.ts` e `list-notices.use-case.ts`). O painel não usa `after`. Correção: ordenar ASC com `newer`, devolver cursor e inverter.
+- **(média, desempenho)** `occurred_at` é expressão calculada, então a janela de 30 dias e o `ORDER BY` varrem o `UNION` inteiro do dono, e o painel
+  refaz todas as páginas carregadas a cada evento do stream. Correção: cortar por tempo na coluna crua dentro de cada ramo e `maxPages` no painel.
+- (baixa) `NoticeEventRouter.known` cresce sem limite numa aba aberta por dias (`notice-router.ts`).

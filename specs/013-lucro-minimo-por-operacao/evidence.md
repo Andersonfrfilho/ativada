@@ -190,3 +190,9 @@ em todos os pares e reduz a perda), com o aviso de que barra a maior parte das c
 visível e a medição publicada no painel. Recomendação do executor: **1,0% para 15 min** como padrão de pré-preenchimento, porque é o único mínimo que
 reduz taxa ≥ 50% em 6 de 8 combinações e melhora o líquido em todos os pares; e **a regra deixa de ser pré-preenchida em 1 h** (efeito nulo ou levemente
 negativo). Isso exige decisão do dono (muda o D2); a T3.1 não deve fixar 0,6% antes dela. Fase 1 em diante NÃO foi iniciada.
+
+## Auditoria final (T0.1 e T0.2, revisão de código)
+
+Sem achado de severidade alta ou média. Pendente (baixa): em `scripts/minimum-profit-measure.ts` as colunas "compras pedidas/barradas" contam todo
+BUY com ATR > 0, mesmo com posição aberta ou ordem pendente (taxas, líquido e operações vêm do motor e não são afetados);
+`formatHundredths` do oráculo `test/fixtures/minimum-profit/minimum-profit-oracle.ts` formata mal valores negativos (hoje inalcançável).

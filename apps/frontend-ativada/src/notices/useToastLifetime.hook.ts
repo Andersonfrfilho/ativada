@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type LifetimeParams = {
   readonly milliseconds: number;
@@ -22,11 +22,13 @@ export function useToastLifetime(params: LifetimeParams): HoldHandlers {
   const { milliseconds, version, isPending, onExpire } = params;
   const [isHeld, setIsHeld] = useState(false);
   const isPaused = isHeld || isPending;
+  const expireReference = useRef(onExpire);
+  expireReference.current = onExpire;
   useEffect(() => {
     if (isPaused) return undefined;
-    const timer = setTimeout(onExpire, milliseconds);
+    const timer = setTimeout(() => expireReference.current(), milliseconds);
     return (): void => clearTimeout(timer);
-  }, [milliseconds, version, isPaused, onExpire]);
+  }, [milliseconds, version, isPaused]);
   return {
     onMouseEnter: (): void => setIsHeld(true),
     onMouseLeave: (): void => setIsHeld(false),
