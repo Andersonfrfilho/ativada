@@ -165,3 +165,23 @@ a marca para esconder a `model-team-1` fica como PROPOSTA para a Fase 3.
 - Pendência de confirmação real (T6.2, com o usuário): o formato do `responseSchema` do Gemini (`nullable`, tipos em maiúsculas), o campo
   `thinkingLevel` e o cabeçalho/endpoint da OpenAI vêm da documentação; um `bad_request` no teste real revelaria divergência.
 - Gates: typecheck OK; lint OK; format:check OK; os testes novos e os de ambiente do worker passam.
+
+### T2.3 — Enfileirador, despachante, estado do provedor e ligação no worker, em modo sombra (2026-10-17)
+
+- `apps/worker-ativada/src/model-teams/`: `report-scheduler.ts` (enfileira a última vela de 15 min FECHADA e GRAVADA de cada par, numa transação curta
+  PRÓPRIA no início do ciclo; ajuste do architect: fora da transação do passo ao vivo), `report-dispatcher.ts` (reivindica até `MODEL_TEAM_CONCURRENCY`
+  linhas com arrendamento e `SKIP LOCKED`; cada linha roda isolada com `allSettled`), `report-processor.ts` + `report-input.ts` + `report-decision.ts` +
+  `report-outcome.ts` (STALE, chave, entrada pública das 48 velas + leituras do analista + Fear & Greed, varredura de privacidade do prompt, reserva do
+  teto sob trava, circuito, chamada, coerência dos preços, higiene dos três textos, custo pelos tokens), `team-circuits.ts` (circuito por equipe em memória e
+  "parado pelo teto"), `provider-status.ts` (resumo só com booleanos, estado e instante, gravado em `worker_heartbeats.model_teams`),
+  `model-team-loop.ts` (laço próprio, com a guarda de queda do banco) e `create-model-teams-wiring.ts` (sem chave nenhuma nada sobe e nenhuma chamada sai).
+- A permissão do circuito é pedida por último, depois da reserva: o estado meio aberto libera UMA prova e ela precisa chamar de fato. Uma reserva de linha
+  pulada por circuito é zerada pelo `finish`.
+- **Modo sombra:** nenhuma execução depende das equipes e nenhuma ordem sai. O passo ao vivo (`apps/worker-ativada/src/live/`) NÃO foi alterado
+  (`git diff` vazio nessa pasta), então as execuções de regra são idênticas com e sem equipes por construção; o `live-step.ts` não ganhou a chamada
+  de enfileirar que o plano original previa. O `main.ts` só liga o laço, passa o resumo ao batimento e dispara o ciclo quando uma vela é gravada.
+- Testes: `test/model-team-dispatcher.contract.test.ts` (15: caminho feliz com custo à mão, prompt sem dado de usuário nem chave, palavra proibida
+  trocada, preços incoerentes, `hold`, STALE, avulso sem idade, NO_KEY, teto, circuito abrindo na 3ª falha e pulando na 4ª sem chamar, cada código de
+  falha com e sem tokens, erro numa linha sem derrubar as outras, enfileirador, resumo do batimento) e, no `database-test` da T2.1, a idempotência do
+  enfileirar, a reivindicação concorrente, o arrendamento e o teto com duas reservas simultâneas sob a trava.
+- Gates: typecheck OK; lint OK; format:check OK; testes novos e de batimento passam.

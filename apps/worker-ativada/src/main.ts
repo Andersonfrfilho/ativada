@@ -16,6 +16,7 @@ import { createLiveRunDatabase } from './live/create-live-run-database.js';
 import { createGapConfirmation } from './live/gap-confirmation.js';
 import { createGapPolicy } from './live/create-gap-policy.js';
 import { createHeartbeatWiring } from './heartbeat/create-heartbeat-wiring.js';
+import { createModelTeamsWiring } from './model-teams/create-model-teams-wiring.js';
 import { createLiveEvaluator } from './live/live-evaluator.js';
 import type { LiveAlertingSettings } from './live/live-run.types.js';
 import { createLiveScheduler, type LiveScheduler } from './live/live-scheduler.js';
@@ -130,7 +131,10 @@ function registerWorkerShutdown(params: {
   );
 }
 
-function startWorker(environment: Environment): void {
+function openWorkerResources(environment: Environment): {
+  readonly logger: WorkerLogger;
+  readonly database: ReturnType<typeof openDatabase>;
+} {
   const logger = createWorkerLogger({
     appName: WORKSPACE_NAME,
     write: (line) => process.stdout.write(line),
@@ -139,9 +143,15 @@ function startWorker(environment: Environment): void {
     sslRootCertificate: environment.DATABASE_SSL_ROOT_CERT,
     queryTimeoutSeconds: environment.DATABASE_QUERY_TIMEOUT_SECONDS,
   });
+  return { logger, database };
+}
+
+function startWorker(environment: Environment): void {
+  const { logger, database } = openWorkerResources(environment);
   const unfillable = new Set<string>();
   const recoveryClock = createRecoveryClock(() => Date.now());
   const alerts = createAlertWiring({ environment, database, logger });
+  const modelTeams = createModelTeamsWiring({ environment, database, logger });
   const live = createConfiguredLiveScheduler({
     environment,
     database,
@@ -156,18 +166,24 @@ function startWorker(environment: Environment): void {
     logger,
     abortController: new AbortController(),
     unfillable,
-    onCandleStored: live.trigger,
+    onCandleStored: () => {
+      live.trigger();
+      modelTeams.loop?.trigger();
+    },
     recoveryClock,
   });
-  const heartbeat = createHeartbeatWiring({ environment, database, logger });
-  live.start();
-  alerts.scheduler?.start();
-  heartbeat.start();
+  const heartbeat = createHeartbeatWiring({
+    environment,
+    database,
+    logger,
+    readModelTeams: modelTeams.readStatus,
+  });
+  for (const starter of [live, modelTeams.loop, alerts.scheduler, heartbeat]) starter?.start();
   reportStarted({ logger, environment, isAlertingEnabled: alerts.scheduler !== undefined });
   registerWorkerShutdown({
     logger,
     database,
-    stoppables: [live, alerts.scheduler, worker, heartbeat],
+    stoppables: [live, alerts.scheduler, modelTeams, worker, heartbeat],
   });
 }
 
