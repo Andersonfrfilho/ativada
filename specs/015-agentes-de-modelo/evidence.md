@@ -34,3 +34,10 @@ Gates no WSL, espelho próprio `~/gates/ativada-spec15`.
 - `model-agent-catalog.constant.ts`, `model-opinion.schema.ts`, `prompt-input.schema.ts`, `model-call-result.types.ts`.
 - Testes: `test/model-agents-schemas.contract.test.ts` (bordas 0/100, 160/161, chave a mais, `userId` e outras chaves recusadas) e `test/model-agents-boundary.contract.test.ts` (só `zod`, `node:crypto` e os dois pacotes da casa; sem relógio, I/O, `console`, `as`, `export default` nem regex com lookahead; sondas).
 - Gates: `bun run typecheck` OK; `bun run lint` OK; `bun run format:check` OK; 33 testes passam (2 arquivos).
+
+### T1.2 — Prompt, higiene do motivo e frases da tela (2026-10-17)
+
+- `prompt-template.ts` (`prompt-1`, `renderPrompt`, `hashPrompt` SHA-256 via `node:crypto`, bloco de dados em ordem fixa de chaves), `prompt-privacy.ts` (varredura de UUID, `@`, palavras sensíveis e chave fora da lista), `reason-hygiene.ts` (RF08), `model-agents-messages.ts` (catálogo fechado, RF17/RNF07) e `provider-state.constant.ts`.
+- Decisões de borda, sem mudar o spec: motivo que fica vazio depois da limpeza (só controle) vira a frase fixa; a busca da palavra proibida roda no texto limpo inteiro, antes do corte de 160; quebra de linha e tabulação viram espaço, os demais controles somem; `renderPrompt` lança se a entrada tiver chave de fora.
+- Testes: `test/model-agents-prompt.contract.test.ts` (prompt dourado literal, hash `717b3563...027d` conferido contra `node:crypto`, ordem de chaves, privacidade) e `test/model-agents-hygiene.contract.test.ts` (cada palavra proibida, controle, corte, par substituto, varredura das frases da tela).
+- Gates: typecheck OK; lint OK; format:check OK; 72 testes passam (4 arquivos do pacote).
