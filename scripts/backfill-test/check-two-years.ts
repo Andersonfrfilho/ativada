@@ -10,7 +10,7 @@ import {
 } from './backfill-test-context.js';
 import { computeGridWindow, pagesFor, waitForSafeClock } from './grid-oracle.js';
 
-const SYMBOL = 'TWOYEARUSDT';
+const SYMBOL = 'BNBUSDT';
 const YEARS = 2;
 
 export async function checkTwoYearsOfDailyAndHourly(context: BackfillContext): Promise<void> {
