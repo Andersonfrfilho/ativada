@@ -136,3 +136,11 @@ chaves reais, rede a provedor real, `git push`. Gates no WSL, espelho `~/gates/a
   teto sob trava com duas reservas simultâneas, CHECK dos preços, leituras públicas, interruptor preso ao dono, guarda do rollback) e as de
   exportação/purga LGPD com as duas tabelas novas (`checkPersistenceExport`/`checkPersistencePurge`). `make lgpd-test` (precisa de Docker no WSL)
   não rodou; a cobertura LGPD veio do `database-test`.
+
+### Ajustes do architect ao D9 (2026-10-17)
+
+O `architect` (opus) aprovou a opção A com ajustes, aplicados em `plan.md` (D2, D6, D9, D12 e tabela de peças) e no ADR 0002 (M4, M10):
+`team_run_inputs` na 0027; enfileirar em transação curta própria; esperar a decisão = `AWAITING_TEAM`, sem commit e sem dormir, com prazo
+pelo `clock_timestamp()` do banco; replay lê `team_run_inputs`; o passo de equipe usa o `signalStep` da `model-team-1` e troca
+`action`/`score`/`votes`/`reason`; sem export novo no `run-recording` nem mudança de motor; `goalId` e analista proibidos com `signalSource`;
+a marca para esconder a `model-team-1` fica como PROPOSTA para a Fase 3.

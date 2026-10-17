@@ -82,7 +82,8 @@
 ## D2. Fluxo de um relatório `scheduled`
 
 1. **Enfileirar.** A ronda do worker fecha a vela `t` de uma `live_paper` que dependa de equipe (execução de equipe, ou
-   usuário com a equipe ligada e analista no par). Na MESMA transação do passo,
+   usuário com a equipe ligada e analista no par). No INÍCIO da ronda, numa transação curta PRÓPRIA (nunca dentro da transação do
+   passo, para não travar nem dar deadlock com ele),
    `enqueueTeamReports({ symbol, timeframe: '15m', candleTime: t })` insere uma linha `pending` por equipe que esteja (a)
    ligada por algum dono com simulação `running` naquele par e (b) dentro do ritmo, com
    `(t + d) mod (cadence × 60.000) = 0`. A chave única parcial `(team_key, symbol, timeframe, candle_time, prompt_version)
@@ -192,14 +193,28 @@ CREATE TABLE user_model_teams (
   PRIMARY KEY (user_id, team_key)
 );
 
+CREATE TABLE team_run_inputs (
+  run_id uuid NOT NULL,
+  candle_time bigint NOT NULL,
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  report_id uuid NULL REFERENCES model_team_reports (id) ON DELETE RESTRICT,
+  failure_code varchar(48) NULL,
+  applied_action varchar(4) NULL CHECK (applied_action IN ('buy','sell','hold')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (run_id, candle_time),
+  FOREIGN KEY (run_id, user_id) REFERENCES runs (id, user_id) ON DELETE RESTRICT,
+  CHECK (report_id IS NOT NULL OR failure_code IS NOT NULL)
+);
+
 ALTER TABLE worker_heartbeats ADD COLUMN model_teams jsonb NULL;
 ```
 
 - **Rollback**: `DROP TABLE user_model_teams; DROP TABLE model_team_reports; ALTER TABLE worker_heartbeats DROP COLUMN
   model_teams;` com o aviso de que os relatórios gravados se perdem (e, com eles, a reprodução das execuções de equipe: o
   rollback ABORTA se existir execução com `signalSource` de equipe).
-- **Sem ENUM nativo.** `model_team_reports` não tem `user_id`: é pública como `candles`, sem PII. `user_model_teams` entra no
-  `ownership-registry`, na exportação e na purga, antes de `users`. Retenção (DT10): tarefa `expire-model-team-reports` do
+- **Sem ENUM nativo.** `model_team_reports` não tem `user_id`: é pública como `candles`, sem PII. `user_model_teams` e `team_run_inputs`
+  (a entrada gravada de cada vela da execução de equipe, do dono) entram no `ownership-registry`, na exportação e na purga, antes de
+  `users` e de `runs`. Retenção (DT10): tarefa `expire-model-team-reports` do
   cron, 365 dias, mas **não apaga relatório referenciado por execução de equipe ainda guardada** (a reprodução depende dele).
 - **O que NÃO exige migration**: o vínculo da execução de equipe e do duelo mora em `runs.request`
   (`signalSource`, `duel.groupId`), que já é `jsonb` validado na criação; `signals`, `orders`, `fills`, `positions` e
@@ -254,35 +269,42 @@ função pura calculou da linha gravada.
 **Fluxo da vela `t` numa execução de equipe** (`apps/worker-ativada/src/live/team-step.ts`):
 
 1. A ronda reivindica a execução como toda `live_paper` (`claimLiveRuns`) e fecha a vela `t`.
-2. **Espera da decisão** (RF14): lê `(team_key, symbol, '15m', t, team-prompt-1, kind = 'scheduled')`. Se a linha está
-   `pending`, o passo da execução fica **adiado na ronda** (como a espera por dado, sem bloquear outras simulações) até
-   `MODEL_TEAM_DECISION_DEADLINE_SECONDS` depois do fechamento de `t`. Passado o prazo, ou com a linha `failed`/`skipped`
-   ou ausente, a decisão é **esperar**, com o motivo "equipe sem leitura" e o código da falha. A linha que ficar `decided`
-   depois do prazo NÃO é usada para `t`.
-3. **Tradução pura** (`team-signal.ts` em `@ativada/model-agents`): `toTeamSignal({ report, position, candle,
-   strategyHash })` devolve um `SignalDecision` com `action`:
-   - `buy` e carteira zerada → `BUY`; `buy` com posição → `HOLD` ("ignorada: já comprada");
-   - `sell` com posição → `SELL`; `sell` sem posição → `HOLD` ("ignorada: sem posição");
-   - `hold` ou sem leitura → `HOLD`.
+2. **Espera da decisão** (RF14): lê `(team_key, symbol, '15m', t, team-prompt-1, kind = 'scheduled')`. Se a linha está `pending`
+   e o prazo não passou, o passo **devolve sem commit** com a nova saída `AWAITING_TEAM` (a execução fica como está e a ronda
+   seguinte tenta de novo): o passo **nunca dorme** nem segura transação. O prazo (`MODEL_TEAM_DECISION_DEADLINE_SECONDS` depois do
+   fechamento de `t`) é conferido com `clock_timestamp()` do BANCO, não com o relógio do processo. Passado o prazo, ou com a linha
+   `failed`/`skipped` ou ausente, a decisão é **esperar**, com o motivo "equipe sem leitura" e o código da falha. A linha que ficar
+   `decided` depois do prazo NÃO é usada para `t`. **O que foi decidido para `t` é gravado em `team_run_inputs`** (`report_id` ou
+   `failure_code`, mais a `applied_action`) na MESMA transação do passo.
+3. **Tradução pura** (`team-signal.ts` em `@ativada/model-agents`): o passo de equipe roda o `signalStep` da estratégia `model-team-1`
+   (a regra de período ≤ ATR existe só para o motor calcular os indicadores; é avaliada e descartada) e SUBSTITUI no sinal resultante
+   `action`, `score` (`'100'` | `'-100'` | `'0'`), `votes: []` e `reason` (o motivo do Gestor já higienizado), MANTENDO `indicators`
+   (inclui o ATR), `regime`, `configHash`, `confirmedGapCandles` e `candleOpenTime`. Sinal `null` do motor (aquecimento) segue `null`.
+   O mapeamento é 1:1: `buy` → `BUY`, `sell` → `SELL`, `hold` ou sem leitura → `HOLD`; o que não cabe (compra com posição, venda sem
+   posição) **a política de sinal do motor já ignora**, e a linha de decisão registra "ignorada: já comprada" ou "ignorada: sem
+   posição" (a ação aplicada fica em `team_run_inputs.applied_action`). `votes` fica vazio: a família é vocabulário fechado do motor,
+   então os papéis ficam em `model_team_reports.roles`.
 
-   `score` = `+100`, `-100` ou `0` em texto; `votes` = `[]` (a família é vocabulário fechado do motor, então os papéis ficam
-   em `model_team_reports.roles`, não nos votos); `reason` = o motivo do Gestor já higienizado; `configHash` = o hash da
-   estratégia da execução; `confirmedGapCandles` como o passo normal.
 4. **Carteira existente**: `engine.walletStep({ strategy, run, state, candle, signal, ... })` (avulso, o mesmo do
    walk-forward). A ordem de entrada ou de saída executa na **abertura de `t + 1`**, pela mesma política de preenchimento,
    taxa, slippage e participação no volume de toda execução. Nada de lookahead: o sinal de `t` só enxerga o fechamento de
    `t` e a linha gravada sobre `t`.
-5. **Gravação**: as linhas de `signals` (o sinal sintético, com `reason` e o `opinionId` num campo do `indicators` ou na
-   `reason`), `orders`, `fills`, `positions` e `equity_points` saem do mesmo mapeamento de `map-decisions.ts`, na MESMA
-   transação do passo, com `engine_state` e `last_candle_time`.
-6. **Replay e retomada**: o mesmo passo, com as mesmas linhas gravadas, dá `fills` e `equity_points` iguais byte a byte, **sem
-   provedor ligado e sem chave**. Reiniciar o worker não repete nem duplica (candle repetido é pulado, como na `live_paper`).
+5. **Gravação**: as linhas de `signals` (o sinal substituído), `orders`, `fills`, `positions` e `equity_points` saem do `appendDecisions` e do
+   `toRunResultRows` que o `run-recording` JÁ exporta (as decisões vêm do `walletStep` avulso), na MESMA transação do passo, com `engine_state`, `last_candle_time` e a linha de
+   `team_run_inputs`. **Nenhum export novo no `run-recording` e nenhuma mudança no motor.**
+6. **Replay e retomada**: o mesmo passo lê `team_run_inputs` (e o relatório que ela aponta), NUNCA o relógio nem o provedor, e dá
+   `fills` e `equity_points` iguais byte a byte, **sem provedor ligado e sem chave**. Reiniciar o worker não repete nem duplica (candle repetido é pulado, como na `live_paper`).
 
 **Estratégia da execução de equipe.** O `walletStep` exige uma `StrategyVersion`. A execução de equipe usa uma versão fixa
 `model-team-1` (a mesma estrutura do Placar clássico, com a configuração de risco e de entrada dela e UMA regra qualquer
 que nunca é avaliada, porque o sinal vem de fora). Ela é uma estratégia do sistema, não editável, com hash preso por teste
-de hash-dourado. **A verificar na T3.1:** que o `walletStep` aceita o sinal sintético com esse `configHash` e que `votes: []`
-passa pela guarda; se não passar, o ajuste é aditivo (ver tabela).
+de hash-dourado. O `POST /v1/runs` com `signalSource` cria ou acha a versão `model-team-1` DO USUÁRIO pelo hash (como o exemplo do Placar
+clássico), e o worker RECUSA uma versão com `configHash` diferente do preso. A regra de período ≤ ATR é a que o `signalStep` precisa
+para calcular os indicadores (inclui o ATR do risco); o sinal dela é descartado (passo 3). **Proibido com `signalSource`:** `goalId`
+e analista (`analyst`), com `400`. `live-status`, `projections` e `strategy-layers` devolvem `unavailable`/`team_run` para a execução
+de equipe (o placar e as camadas de regra não se aplicam). **Proposta (não presumida):** uma marca que esconda a versão
+`model-team-1` da lista de estratégias do usuário e a deixe fora de `STRATEGY_MAX_PER_USER`; a decisão fica para a Fase 3
+(a 0027 não cria coluna para isso).
 
 **Opção A × opção B para os níveis (DT5).**
 
@@ -302,9 +324,10 @@ passa pela guarda; se não passar, o ajuste é aditivo (ver tabela).
 | Relatórios das equipes, despachante, adaptadores, teto, circuito | migration `0027`, worker novo (`model-teams/`) | Não | Sim (`0027`) |
 | Tradução decisão → sinal (`team-signal.ts`) | só o pacote puro | Não | Não |
 | `signalSource` em `runs.request` e o duelo | mudança na API (`POST /v1/runs`, `POST /v1/model-duels`), validação Zod | Não | Não |
-| Passo da execução de equipe (`team-step.ts`) | mudança no worker (`live-step.ts` escolhe o caminho pela `signalSource`) | Não | Não |
-| Gravar as linhas sem `advanceCandle` | provável export ADITIVO de `mapSignal`/mapeamentos no `index.ts` do `run-recording`, ou um `advanceWithSignal` aditivo (sem tocar `advanceCandle`) | Não (só o pacote de gravação) | Não |
-| Versão `model-team-1` da estratégia | constante no pacote do motor ou do `model-agents` (conferir na T3.1 qual o `walletStep` aceita) | Não, se `votes: []` e a regra não avaliada passarem na guarda; senão ajuste aditivo | Não |
+| Passo da execução de equipe (`team-step.ts`) | mudança no worker (`live-step.ts` escolhe o caminho pela `signalSource`; saída nova `AWAITING_TEAM`, sem commit e sem dormir; `enqueueTeamReports` numa transação curta própria no início da ronda) | Não | Não |
+| Gravar as linhas | `appendDecisions` e `toRunResultRows` já exportados; **sem export novo no `run-recording` e sem mudança no motor** | Não | Não |
+| Versão `model-team-1` da estratégia | criada ou achada pelo hash na criação da execução (`POST /v1/runs`); o worker recusa `configHash` diferente | Não | Não |
+| Entrada gravada por vela (`team_run_inputs`) | tabela da 0027, FK composta `(run_id, user_id)`; o replay lê dela, nunca do relógio | Não | Sim (`0027`) |
 | Níveis do modelo comandando a ordem (opção B) | comando novo no motor, `ENGINE_VERSION`, dourado, ADR | **Sim** | Não |
 
 ## D10. Gráfico, duelo e ranking (painel)
@@ -354,4 +377,6 @@ passa pela guarda; se não passar, o ajuste é aditivo (ver tabela).
 | Decisão atrasada aplicada depois | Lookahead | Prazo + a linha tardia nunca usada para `t`; sinal de `t` só com dado até `t` |
 | Provedor lento ou fora | Execução de equipe parada | Fila durável, tempo-limite, circuito, `STALE`, "esperar" gravado |
 | Injeção de prompt | Saída manipulada | A entrada é só número de fonte pública; saída passa por Zod, coerência de preços e higiene |
-| Sinal sintético recusado pela guarda do `walletStep` | Plano D9 não cabe | Verificado na T3.1 ANTES de qualquer outra tarefa da Fase 3; ajuste aditivo proposto; senão a opção "equipe só indica" continua valendo |
+| Sinal substituído recusado pela guarda do `walletStep` | Plano D9 não cabe | O sinal mantém `configHash`, `candleOpenTime` e `confirmedGapCandles` do `signalStep` real da `model-team-1`; verificado na T3.1 ANTES do resto da Fase 3; sem export novo nem mudança de motor |
+| Passo à espera segura a transação ou dorme | Trava a vela e as outras execuções | `AWAITING_TEAM` devolve sem commit; prazo pelo `clock_timestamp()` do banco; enfileirar em transação curta própria, fora do passo |
+| Replay lê o relógio | Resultado diverge | O replay lê `team_run_inputs`, nunca o relógio nem o provedor |
