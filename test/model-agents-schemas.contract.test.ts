@@ -134,9 +134,10 @@ describe('coerência dos preços (RF07)', () => {
       stopPrice: string | null;
     }>,
     action: 'buy' | 'sell' | 'hold' = 'buy',
+    minStopPercent = limits.minStopPercent,
   ): string {
     const decision = { ...buildReport(action).decision, ...prices };
-    return api.checkTeamLevels({ decision, ...limits });
+    return api.checkTeamLevels({ decision, ...limits, minStopPercent });
   }
 
   test('compra coerente vale', () => {
@@ -149,11 +150,22 @@ describe('coerência dos preços (RF07)', () => {
     expect(verdict({ stopPrice: null })).toBe('invalid_levels');
   });
 
-  test('a ordem é proteção < entrada < alvo, sem igualdade', () => {
-    expect(verdict({ stopPrice: '100', entryPrice: '100' })).toBe('invalid_levels');
-    expect(verdict({ entryPrice: '102', targetPrice: '102' })).toBe('invalid_levels');
-    expect(verdict({ stopPrice: '101', entryPrice: '100.5', targetPrice: '103' })).toBe(
+  test('a ordem é proteção < entrada < alvo, sem igualdade (cada lado isolado)', () => {
+    // Tolerância e proteção mínima satisfeitas: só a ordem decide.
+    expect(verdict({ entryPrice: '101', targetPrice: '101', stopPrice: '100' })).toBe(
       'invalid_levels',
+    );
+    expect(verdict({ entryPrice: '101', targetPrice: '100.5', stopPrice: '100' })).toBe(
+      'invalid_levels',
+    );
+    expect(verdict({ entryPrice: '100', targetPrice: '102', stopPrice: '100' }, 'buy', '0')).toBe(
+      'invalid_levels',
+    );
+    expect(verdict({ entryPrice: '100', targetPrice: '102', stopPrice: '101' }, 'buy', '0')).toBe(
+      'invalid_levels',
+    );
+    expect(verdict({ entryPrice: '100', targetPrice: '102', stopPrice: '99' }, 'buy', '0')).toBe(
+      'valid',
     );
   });
 

@@ -118,3 +118,13 @@ export {
   type TeamSignalSource,
   type ToTeamSignalParams,
 } from './team-signal.js';
+export {
+  auditOpinions,
+  OPINION_KIND,
+  OPINION_STATUS,
+  type AuditParams,
+  type AuditReading,
+  type OpinionAuditSummary,
+  type OpinionKind,
+  type OpinionStatus,
+} from './opinion-auditor.js';
