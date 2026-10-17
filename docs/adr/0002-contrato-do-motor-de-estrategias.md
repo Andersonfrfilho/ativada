@@ -2453,3 +2453,29 @@ prazos continuam em velas de execução. **O motor, o `run-recording` e o `risk-
 **Validação.** Esta seção foi escrita por quem implementou as Fases 0 a 2; a validação por `architect` (opus) pedida na T0.1
 não rodou nesta sessão e fica registrada como pendência em `evidence.md`. Nada aqui exige mudar o motor, o
 `run-recording` ou o analista.
+
+## Agentes de modelo (spec 015)
+
+Adendo da T0.2 da spec 015 (`specs/015-agentes-de-modelo/`), copiado do plan (D2 a D9) e do spec (RF05 a RF16); nenhuma decisão
+nova. **O motor, o `run-recording` e a regra `analyst-1` não mudam.** Fatos externos conferidos em 2026-10-17 estão em
+`specs/015-agentes-de-modelo/evidence.md` (T0.1).
+
+**Regra central: a opinião do modelo é ENTRADA GRAVADA**, como a decisão do analista (A21 §4). Um LLM não é determinístico e
+custa por chamada; o motor é determinístico e o replay dá o mesmo resultado byte a byte. Logo a opinião é uma linha de
+`model_opinions`; quem a usa um dia lê a linha e **nunca chama o modelo de novo**.
+
+| # | Decisão | Fonte |
+|---|---|---|
+| M1 | **Modo sombra obrigatório.** A opinião nunca entra em `advanceCandle`, `analyst_decisions`, no motor nem em `analyst-1`; a comparação byte a byte de `fills`, `signals` e `analyst_decisions` com e sem os agentes é prova obrigatória. Governar é só desenho (M9) | RF11, D3 |
+| M2 | **Catálogo fechado:** Nina = Gemini Pro (Google), Lucas = Claude Sonnet, Clara = Claude Haiku (Anthropic), cargo "Analista de modelo" e o mesmo prompt `prompt-1` para os três. Id do modelo e preço por milhão de tokens vêm do env, sem padrão no código | RF03, D1, D2 |
+| M3 | **Uma opinião por (agente, par, vela de 15 min), compartilhada** entre as simulações do par. A entrada é só dado público de mercado (`ModelPromptInput`, `strictObject`: 48 velas, leituras públicas do analista, Fear & Greed); nada do usuário nem os votos dos outros agentes | RF05, RF09, D4 |
+| M4 | **Fila durável fora do passo:** o passo ao vivo só insere a linha `pending` (`ON CONFLICT DO NOTHING`, na transação da vela); um despachante do worker reivindica por arrendamento (`FOR UPDATE SKIP LOCKED`), chama o provedor e grava. Falha de provedor nunca chega ao passo | RF06, D2 |
+| M5 | **Saída validada e higienizada:** `posture` (`up/down/neutral`), `reason` de 1 a 160 caracteres, `confidence` 0 a 100; fora disso `failed`/`INVALID_OUTPUT`, sem nova chamada. O motivo perde controle e quebra de linha e é trocado por frase fixa se tiver palavra proibida (`reasonHidden`) | RF07, RF08, D8 |
+| M6 | **Prompt versionado:** `prompt-1` com hash gravado; mudar o template exige `prompt-2`; a chave única inclui a versão e o placar é contado por versão | D3 |
+| M7 | **Custo e teto:** custo e reserva em decimal, para cima a 8 casas; reserva do máximo da chamada antes de chamar, sob trava consultiva; acima do teto do dia (UTC) ou do mês a linha vira `skipped`/`BUDGET_EXHAUSTED`. Padrão de tetos US$ 3/dia e US$ 60/mês | RF16, D4, D6 |
+| M8 | **Circuito por provedor** (máquina de estados, relógio por parâmetro, estado em memória do worker): 3 falhas seguidas de `timeout`/`unavailable` abrem por 10 min; `rate_limited` até `Retry-After` (teto 15 min); `key_rejected` e `model_not_found` abrem por 60 min; `ok` e `invalid_output` fecham. Linha `scheduled` com mais de 2 velas vira `skipped`/`STALE` | RF12, D5 |
+| M9 | **Placar igual ao dos outros agentes:** `scheduled` `decided` dos últimos 30 dias, postura ≠ `neutral`, vela seguinte fechada; acerto/erro/não conta como o auditor da spec 007; veredito só por `judgeAgainstCoinFlip` (`@ativada/statistics`, único lugar do Wilson); `on_demand` nunca conta; confiança declarada não entra no veredito. Na sombra o peso é sempre "não vota" | RF13, RF14 |
+| M10 | **Governar (Fase 6, só desenho, exige autorização):** o ◆ vira especialista com voto +1/−1/0 e peso A7 só com `above`; a opinião de `t` entra na decisão de `t` com espera até um prazo (padrão 45 s); o voto usado é gravado em `analyst_decisions.specialists`; exige `analyst-2` e migration dos `CHECK` | D9 |
+| M11 | **Segredos e privacidade:** chaves só no worker (`secretVariables`), `redirect: 'error'`, códigos de erro sem texto, estado do provedor publicado no batimento só com booleanos e códigos; `model_opinions` é pública (sem PII) e `user_model_agents` entra no registro LGPD | RF04, RF22, RNF02, RNF09, D10 |
+
+**Pendência de validação.** A validação por `architect` (opus) não rodou nesta sessão; fica registrada em `evidence.md`.

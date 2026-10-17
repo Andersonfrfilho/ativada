@@ -51,14 +51,18 @@
   - preço do 3.1 Pro: US$ 2 / 12 por 1M (≤ 200k), com o raciocínio cobrado como saída e sem plano gratuito. O plano
     gratuito (de outros modelos) usa os dados; o pago não;
   - SDK oficial `@google/genai`, NÃO usado (RNF03);
-  - **[a conferir na T0.1]** o nome exato do campo de nível de raciocínio no REST v1beta (`thinkingConfig.thinkingLevel`)
-    e se o `responseSchema` aceita o esquema da opinião. O fixture do provedor falso copia a forma real da documentação.
+  - **Conferido na T0.1 (2026-10-17):** o nível de raciocínio no REST `generateContent` é
+    `generationConfig.thinkingConfig.thinkingLevel` (`low | medium | high` no 3.1 Pro; sem `minimal`; não desliga). O
+    esquema da opinião usa `responseSchema` com só `type`, `properties`, `required`, `enum`, `minimum`, `maximum`; **sem
+    `maxLength`** (não consta na lista aceita), então os 160 caracteres do motivo valem só no Zod da casa. A documentação
+    marca `generateContent` como "Legacy" ao lado da API Interactions; o adaptador segue em `generateContent` (RF02).
+    Ver `evidence.md` (T0.1).
 - **Anthropic**:
   - `POST https://api.anthropic.com/v1/messages`, cabeçalhos `x-api-key` e `anthropic-version: 2023-06-01`;
   - saída por `tools` + `tool_choice: { type: 'tool', name: 'give_opinion' }`;
   - uso em `usage.input_tokens` e `usage.output_tokens`;
   - preços: Haiku 5.5 US$ 0,10 / 0,50 (≤ 100k), Haiku 4.5 US$ 1 / 5, Sonnet 5.5 (`claude-sonnet-5-5`) US$ 2 / 10;
-  - **[a conferir na T0.1]** o id exato do Haiku 5.5 na página de modelos.
+  - **Conferido na T0.1:** id do Haiku 5.5 = `claude-haiku-5-5` (Sonnet 5.5 = `claude-sonnet-5-5`); o id segue no env.
 
 ## D1. Onde mora cada peça
 
