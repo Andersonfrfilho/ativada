@@ -29,6 +29,12 @@ import {
   DEFAULT_TELEGRAM_API_BASE_URL,
 } from './alerts/alerts.constant.js';
 import {
+  checkModelTeamEnvironment,
+  MODEL_TEAM_SECRET_VARIABLES,
+  MODEL_TEAM_URL_VARIABLES,
+  modelTeamEnvironmentShape,
+} from './model-teams/model-team-environment.js';
+import {
   LIVE_DEFAULT_GAP_CONFIRM_RECOVERIES,
   LIVE_DEFAULT_HEARTBEAT_TIMEOUT_SECONDS,
   LIVE_MAXIMUM_GAP_CONFIRM_RECOVERIES,
@@ -63,9 +69,9 @@ const ALERT_DAILY_LIMIT_EXPECTATION = `inteiro de ${ALERT_MINIMUM_DAILY_LIMIT_PE
 const MAXIMUM_TELEGRAM_TOKEN_LENGTH = 256;
 
 const PRODUCTION_PROFILE: ProductionProfile = {
-  urlVariables: ['BINANCE_BASE_URL', 'TELEGRAM_API_BASE_URL'],
+  urlVariables: ['BINANCE_BASE_URL', 'TELEGRAM_API_BASE_URL', ...MODEL_TEAM_URL_VARIABLES],
   webSocketUrlVariables: ['BINANCE_STREAM_URL'],
-  secretVariables: ['TELEGRAM_BOT_TOKEN'],
+  secretVariables: ['TELEGRAM_BOT_TOKEN', ...MODEL_TEAM_SECRET_VARIABLES],
   databaseUrlVariable: 'DATABASE_URL',
 };
 
@@ -131,9 +137,11 @@ export const environmentSchema = z
       .min(ALERT_MINIMUM_DAILY_LIMIT_PER_USER, { error: ALERT_DAILY_LIMIT_EXPECTATION })
       .max(ALERT_MAXIMUM_DAILY_LIMIT_PER_USER, { error: ALERT_DAILY_LIMIT_EXPECTATION })
       .default(ALERT_DEFAULT_DAILY_LIMIT_PER_USER),
+    ...modelTeamEnvironmentShape,
   })
   .superRefine((values, context) => {
     checkProductionRules(values, PRODUCTION_PROFILE, context);
+    checkModelTeamEnvironment(values, context);
     if (values.LIVE_HEARTBEAT_TIMEOUT_SECONDS <= values.LIVE_POLL_SECONDS) {
       context.addIssue({
         code: 'custom',

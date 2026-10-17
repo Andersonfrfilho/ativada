@@ -144,3 +144,24 @@ O `architect` (opus) aprovou a opção A com ajustes, aplicados em `plan.md` (D2
 pelo `clock_timestamp()` do banco; replay lê `team_run_inputs`; o passo de equipe usa o `signalStep` da `model-team-1` e troca
 `action`/`score`/`votes`/`reason`; sem export novo no `run-recording` nem mudança de motor; `goalId` e analista proibidos com `signalSource`;
 a marca para esconder a `model-team-1` fica como PROPOSTA para a Fase 3.
+
+### T2.2 — Ambiente, porta e adaptadores dos três provedores (2026-10-17)
+
+- Ambiente do worker (`model-teams/model-team-environment.ts`): chaves opcionais (`ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`) em
+  `secretVariables`; os três `*_BASE_URL` exigem https em produção; chave presente exige id do modelo e os dois preços (sem padrão no código);
+  qualquer chave exige os tetos diário e mensal, com o diário ≤ mensal; padrões: ritmo 60 min (autorização do usuário), tempo-limite 30 s, saída 900,
+  concorrência 3, consulta 2 s, prazo 45 s, raciocínio `low`. Mensagens de erro citam só o NOME da variável. A variável da API
+  (`MODEL_TEAM_ON_DEMAND_PER_USER_PER_DAY`) fica para a Fase 4. Exemplo comentado em `envs/env.dev`, sem chave.
+- Porta `ModelProviderPort` (`model-provider.port.ts`, `completeCall` valida a saída pelo Zod da casa) e `provider-http.ts` (`fetch` direto,
+  `redirect: 'error'`, tempo-limite, o erro do `fetch` é engolido e vira `timeout`/`unavailable`; 429 com `Retry-After`; 401/403, 404, 5xx e 408, outros 4xx).
+- Adaptadores `anthropic-provider.ts` (ferramenta forçada, temperatura 0), `gemini-provider.ts` (`responseSchema` em maiúsculas com `nullable`,
+  `thinkingLevel`) e `openai-provider.ts` (Responses API, `text.format` estrito, `reasoning.effort`, `store: false`, `max_output_tokens` somado ao
+  teto de raciocínio; o raciocínio sai de `output_tokens` para não ser cobrado duas vezes). Recusa e `incomplete`/`MAX_TOKENS`/`max_tokens` mapeados.
+- Provedores falsos locais em `packages/model-agents/test-support/` (`Bun.serve` em 127.0.0.1, porta 0; conferem chave e id do modelo; comportamentos:
+  relatório, saída inválida, recusa, truncado, status com `Retry-After`, travado e redirecionamento). Nenhuma chamada de rede real.
+- Testes: `test/model-team-adapters.contract.test.ts` (cada código do RF01 contra cada falso; redirecionamento falha; servidor fora do ar; forma do
+  pedido de cada provedor; esquema estrito sem `maxLength`; a chave sentinela `sk-test-SENTINEL` só no cabeçalho e ausente de TODO resultado, dos três
+  adaptadores) e `test/worker-model-team-environment.contract.test.ts` (boot sem chave, chave sem id/preço/tetos, faixas, produção).
+- Pendência de confirmação real (T6.2, com o usuário): o formato do `responseSchema` do Gemini (`nullable`, tipos em maiúsculas), o campo
+  `thinkingLevel` e o cabeçalho/endpoint da OpenAI vêm da documentação; um `bad_request` no teste real revelaria divergência.
+- Gates: typecheck OK; lint OK; format:check OK; os testes novos e os de ambiente do worker passam.
