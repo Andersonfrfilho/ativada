@@ -41,3 +41,31 @@ Gates no WSL, espelho próprio `~/gates/ativada-spec15`.
 - Decisões de borda, sem mudar o spec: motivo que fica vazio depois da limpeza (só controle) vira a frase fixa; a busca da palavra proibida roda no texto limpo inteiro, antes do corte de 160; quebra de linha e tabulação viram espaço, os demais controles somem; `renderPrompt` lança se a entrada tiver chave de fora.
 - Testes: `test/model-agents-prompt.contract.test.ts` (prompt dourado literal, hash `717b3563...027d` conferido contra `node:crypto`, ordem de chaves, privacidade) e `test/model-agents-hygiene.contract.test.ts` (cada palavra proibida, controle, corte, par substituto, varredura das frases da tela).
 - Gates: typecheck OK; lint OK; format:check OK; 72 testes passam (4 arquivos do pacote).
+
+## Revisão 2 do desenho (2026-10-17): equipes de modelo
+
+O usuário corrigiu o desenho: cada I.A. (Gemini, Claude, OpenAI) é uma EQUIPE que indica compras e vendas e participa da
+simulação com carteira fictícia própria. `spec.md`, `plan.md` e `tasks.md` foram reescritos; as Fases 0 e 1 da revisão 1
+(commits `6dd45ff`, `184a6de`, `a11fd1a`) ficam como base e são retrabalhadas pelas tasks T0.1b, T0.2b, T1.1b a T1.5. O
+código de custo, teto e circuito (T1.3) está no working tree sem commit, esperando a T1.3b. Nada de banco, API, worker ou
+painel foi tocado.
+
+### T0.1b — Fatos da OpenAI e do motor (2026-10-17)
+
+| Fato | Fonte (URL) | Data | Observação |
+|---|---|---|---|
+| Responses API: `text.format = { type: "json_schema", name, strict: true, schema }` | https://developers.openai.com/api/docs/guides/structured-outputs | 2026-10-17 | Confirmado |
+| Esquema estrito: todos os campos em `required`; `additionalProperties: false` em todo objeto; `enum`, `minimum`, `maximum` e união com `null` aceitos; `minLength`/`maxLength` NÃO aceitos | mesma página (seção de esquemas aceitos) | 2026-10-17 | Confirmado; limites de texto valem no Zod da casa |
+| Recusa = item de conteúdo `{ type: "refusal", refusal }`, que não segue o esquema | mesma página | 2026-10-17 | Mapeia para `refused` |
+| Raciocínio: `reasoning.effort` (Responses) / `reasoning_effort` (Chat Completions); valores variam por modelo (`gpt-6-astra` recusa `none`; `gpt-6.1-sol` não aceita `none` nem `minimal`, padrão `medium`) | https://developers.openai.com/api/docs/guides/reasoning e /api/docs/models | 2026-10-17 | Nível por env; recusa do modelo vira `bad_request` |
+| Tokens de raciocínio em `usage.output_tokens_details.reasoning_tokens`, cobrados como saída; `max_output_tokens` INCLUI o raciocínio; estouro = `status: incomplete`, `incomplete_details.reason = max_output_tokens` | mesma página | 2026-10-17 | `incomplete` = `invalid_output` |
+| Modelos e preços (US$ por 1M, entrada / saída, ≤ 272k): `gpt-6-astra` 10/50, `gpt-6.1-sol` 2/10, `gpt-6-sol` 2/10, `gpt-6-luna` 0,10/0,50, `gpt-5.6-sol` 4/20, `gpt-5.6-terra` 2/12, `gpt-5.4` 2,50/15 | https://developers.openai.com/api/docs/pricing e /api/docs/models | 2026-10-17 | A página não rotula mini/nano; id e preço ficam no env, nenhum id presumido |
+| Gemini 3.1 Pro Preview: US$ 2 / 12 (≤ 200k), "incluindo tokens de raciocínio" | https://ai.google.dev/gemini-api/docs/pricing | 2026-10-17 | Confirmado |
+| Stop e alvo da posição vêm da configuração de risco da estratégia, não do sinal; comandos externos só `halt`/`resume`/`exit_position`; `STRATEGY_FAMILY` fechado; `STRATEGY_RULES_SCHEMA` `min(1)`; `walletStep` avulso confere `configHash` | `packages/strategy-engine/src/{wallet,engine-vocabulary.constant.ts,strategy-rule.schema.ts}` e `packages/risk-analyst/src/analyst-commands.ts` | 2026-10-17 | Base do plan D9: sem mudança de motor na opção A; níveis do modelo comandando a ordem = mudança de motor (opção B, Fase 7) |
+| Endpoint e cabeçalho da OpenAI: `POST /v1/responses`, `Authorization: Bearer` | página de structured outputs/reasoning (exemplos) | 2026-10-17 | Cabeçalho confirmado pelo padrão da API; o falso de teste copia a forma, e o teste manual T6.2 revela divergência |
+
+### Pendências da revisão 2
+
+- Validação do plan D9 por `architect` (opus): não rodou nesta sessão; é pré-requisito da T3.1.
+- Autorizações pendentes (spec §9): migration `0027_model_teams`; mudança de API e de worker (D9); mudança de motor (só opção B).
+- O `spec.md` §8 recalcula o custo: 3 equipes ≈ US$ 138,82/mês a 15 min e ≈ US$ 34,70/mês a 60 min por par (tetos padrão propostos: US$ 6/dia e US$ 150/mês).
