@@ -205,3 +205,14 @@ a marca para esconder a `model-team-1` fica como PROPOSTA para a Fase 3.
 - Gates da Fase 2: typecheck OK; lint OK; format:check OK; `migration-test` e `database-test` OK (T2.1); contratos novos OK (T2.2 e T2.3); `model-teams-test` OK.
 - Pendências: `make lgpd-test` (precisa de Docker/Keycloak no WSL; a cobertura LGPD das duas tabelas veio do `database-test`); validação do formato real dos
   provedores só na T6.2, com o usuário; API de equipes (variável `MODEL_TEAM_ON_DEMAND_PER_USER_PER_DAY` e rotas) fica para a Fase 4.
+
+### Regressão da Fase 2 (2026-10-17)
+
+- Suíte `bun test` sem os arquivos de mutantes (336 arquivos, 5.295 testes) no espelho próprio: 8 falhas na primeira rodada. Três eram desta fase e foram
+  corrigidas: o arquivo de restrições do esquema (`model-team-report-checks.ts`, nome reservado a código de teste) virou `model-team-report-constraints.ts`;
+  a lista de exportações públicas de `@ativada/database` ganhou as novas; e `test/model-agents-boundary.contract.test.ts` (da Fase 1) tinha o texto `export default`
+  que o contrato do workspace varre, reescrito sem mudar a sonda.
+- Pendências que NÃO são desta fase (as mesmas falham no espelho da spec 017, sem nenhuma mudança minha): 5 testes de cache por candle novo
+  (`api-goal-plan`, `api-goal-evaluation`, `api-assets-summary`, `horizon-evaluation`) e `test/risk-analyst-boundary.contract.test.ts`, que contém o texto
+  `export default` e reprova o contrato do workspace.
+- Mutantes (`*-mutants`) não rodaram nesta fase: ela não toca o passo ao vivo nem o filtro de dono das rotas.

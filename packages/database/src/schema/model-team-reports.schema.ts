@@ -25,7 +25,7 @@ import {
   MODEL_TEAM_REPORT_STATUS,
 } from '../model-teams/model-team.constant.js';
 import { literalList } from './check-literals.js';
-import { buildReportChecks } from './model-team-report-checks.js';
+import { buildReportChecks } from './model-team-report-constraints.js';
 
 const NUMERIC_COST = { precision: 14, scale: 8 } as const;
 

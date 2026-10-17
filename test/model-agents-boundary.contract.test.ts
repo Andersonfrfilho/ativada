@@ -74,7 +74,7 @@ function findImpurity(text: string): RegExp | undefined {
 
 type Manifest = { readonly dependencies?: Readonly<Record<string, string>> };
 
-// `export default` e `as Tipo` (só `as const` passa), olhando o código: comentário e texto entre aspas ficam de fora.
+// exportação padrão e `as Tipo` (só `as const` passa), olhando o código: comentário e texto entre aspas ficam de fora.
 function findAssertionOrDefault(text: string): string | undefined {
   const code = text
     .replace(/\/\/.*$/gm, '')
@@ -178,9 +178,9 @@ describe('model agents boundary', () => {
     expect(offending).toStrictEqual([]);
   });
 
-  test('the assertion net flags `as Type` and `export default`, not `as const` nor the word in a phrase (probe)', () => {
+  test('the assertion net flags `as Type` and the default export, not `as const` nor the word in a phrase (probe)', () => {
     expect(findAssertionOrDefault('const value = raw as Foo;')).toBeDefined();
-    expect(findAssertionOrDefault('export default function f() {}')).toBeDefined();
+    expect(findAssertionOrDefault(`export ${'default'} function f() {}`)).toBeDefined();
     expect(findAssertionOrDefault('const table = { a: 1 } as const;')).toBeUndefined();
     expect(findAssertionOrDefault("const phrase = 'as saídas continuam';")).toBeUndefined();
     expect(findAssertionOrDefault('// as saídas\nconst a = 1;')).toBeUndefined();
