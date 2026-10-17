@@ -6,6 +6,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-libra
 import { STREAM_STATUS } from '../src/live/stream.constant.js';
 import type { StreamCandle } from '../src/live/stream.validation.js';
 import { dataResponse, errorResponse } from './support/fake-fetch.js';
+import { buildLiveStatusResponse } from './support/live-status-fixtures.js';
 import {
   showCandleCard,
   type CandleCardHarness,
@@ -257,5 +258,51 @@ describe('quando o painel existe', () => {
     await waitFor(() =>
       expect(screen.queryByRole('complementary', { name: 'Próxima vela de perto' })).toBeNull(),
     );
+  });
+});
+
+describe('painel: posição aberta', () => {
+  function openWithStatus(openPosition: Record<string, unknown> | null): CandleCardHarness {
+    return openPanel(undefined, {
+      extraRoutes: [
+        {
+          method: 'GET',
+          path: '/v1/runs/run-1/live-status',
+          respond: () => dataResponse(buildLiveStatusResponse({ openPosition })),
+        },
+      ],
+    });
+  }
+
+  test('com posição aberta diz onde a simulação vende, com os termos do glossário', async () => {
+    const harness = openWithStatus({
+      entryPrice: '12.5',
+      quantity: '8',
+      targetPrice: '13.75',
+      stopPrice: '11.9',
+      openedCandleTime: FIRST_CANDLE_TIME,
+    });
+    await ready(harness);
+    const line = await within(panel()).findByText(/Você está comprado:/);
+    const text = line.parentElement?.textContent ?? '';
+    expect(text).toContain('vende no alvo');
+    expect(text).toContain('13,75');
+    expect(text).toContain('na proteção');
+    expect(text).toContain('11,90');
+    expect(text).toMatch(/ou se o placar.*virar venda./);
+    expect(within(panel()).getByRole('button', { name: 'O que é Alvo?' })).toBeDefined();
+    expect(within(panel()).getByRole('button', { name: 'O que é Stop?' })).toBeDefined();
+  });
+
+  test('sem posição aberta a linha não existe', async () => {
+    const harness = openWithStatus(null);
+    await ready(harness);
+    await within(panel()).findByText('Tende a COMPRAR · fraco');
+    await waitFor(() =>
+      expect(harness.app.fake.callsTo('GET', '/v1/runs/run-1/live-status').length).toBeGreaterThan(
+        0,
+      ),
+    );
+    expect(panel().textContent).not.toContain('Você está comprado');
   });
 });

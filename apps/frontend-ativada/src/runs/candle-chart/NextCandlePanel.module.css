@@ -282,3 +282,14 @@
   align-items: center;
   gap: 4px;
 }
+
+.holding {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 6px 8px;
+  border-left: 3px solid var(--ink-2);
+  font-size: var(--text-sm);
+  color: var(--ink);
+}

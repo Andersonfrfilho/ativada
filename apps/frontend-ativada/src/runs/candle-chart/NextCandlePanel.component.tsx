@@ -9,6 +9,7 @@ import { useLiveCandle } from '../../live/useLiveCandle.hook.js';
 import type { DisplayMapping } from './display-mapping.js';
 import { buildSlots } from './display-slots.js';
 import type { MarketCandle } from './market-candles.validation.js';
+import { OpenPositionLine } from './OpenPositionLine.component.js';
 import { ThreeMinuteSlots } from './ThreeMinuteSlots.component.js';
 import { NextCandleChart } from './NextCandleChart.component.js';
 import styles from './NextCandlePanel.module.css';
@@ -25,6 +26,7 @@ export type PanelDisplay = {
 };
 
 export type NextCandlePanelProps = {
+  readonly runId: string;
   readonly chart: TradeChart;
   readonly layerData: ChartLayerData;
   // Com vela de exibição na tela, o painel mostra as velas de 3 min que compõem a vela de 15 min (spec 017, RF07).
@@ -123,7 +125,12 @@ function DisplaySlots(props: {
 
 // "Próxima vela de perto" (D13): o desenho pequeno da vela que se forma, a tendência do placar com a faixa, o resultado da
 // previsão anterior e o aviso de que é tendência, não promessa. Estado é ícone + palavra + cor; sem tendência, sem faixa.
-export function NextCandlePanel({ chart, layerData, display }: NextCandlePanelProps): ReactElement {
+export function NextCandlePanel({
+  runId,
+  chart,
+  layerData,
+  display,
+}: NextCandlePanelProps): ReactElement {
   const headingId = useId();
   const view = useNextCandle({ chart, layerData });
   const { state, drawing } = view;
@@ -143,6 +150,7 @@ export function NextCandlePanel({ chart, layerData, display }: NextCandlePanelPr
       ) : (
         <NoForecast view={view} />
       )}
+      <OpenPositionLine runId={runId} />
       <Result result={view.result} />
       <p className={styles.promise}>
         <Icon name="info" size={14} />

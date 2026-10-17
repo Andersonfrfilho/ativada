@@ -108,7 +108,7 @@ function ChartCaption(props: CanvasViewProps & { readonly id: string }): ReactEl
 }
 
 // A coluna ao lado do gráfico: com a camada "Previsão", a próxima vela de perto (a equipe fica na varanda, acima do gráfico).
-function ChartSide({ chart, model, source }: CanvasViewProps): ReactElement {
+function ChartSide({ runId, chart, model, source }: CanvasViewProps): ReactElement {
   const { displayMapping, history } = source;
   const display =
     displayMapping === undefined
@@ -116,7 +116,7 @@ function ChartSide({ chart, model, source }: CanvasViewProps): ReactElement {
       : { mapping: displayMapping, candles: history.candles };
   return (
     <div className={styles.side}>
-      <NextCandlePanel chart={chart} layerData={model.layerData} display={display} />
+      <NextCandlePanel runId={runId} chart={chart} layerData={model.layerData} display={display} />
     </div>
   );
 }
