@@ -12,7 +12,12 @@ import {
 } from './fake-provider-payloads.js';
 
 export type FakeBehavior =
-  | { readonly kind: 'report'; readonly report?: unknown; readonly usage?: FakeUsage }
+  | {
+      readonly kind: 'report';
+      readonly report?: unknown;
+      readonly usage?: FakeUsage;
+      readonly delayMilliseconds?: number;
+    }
   | { readonly kind: 'invalid_output' }
   | { readonly kind: 'refusal' }
   | { readonly kind: 'truncated' }
@@ -103,6 +108,9 @@ export function startFakeProvider(settings: FakeProviderSettings): FakeProviderS
       }
       if (readModel(settings.kind, path, body) !== settings.expectedModel) {
         return new Response('{}', { status: HTTP_NOT_FOUND });
+      }
+      if (state.behavior.kind === 'report' && state.behavior.delayMilliseconds !== undefined) {
+        await Bun.sleep(state.behavior.delayMilliseconds);
       }
       const response = buildResponse(settings, state.behavior);
       if (response !== undefined) return response;

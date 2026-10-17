@@ -185,3 +185,23 @@ a marca para esconder a `model-team-1` fica como PROPOSTA para a Fase 3.
   falha com e sem tokens, erro numa linha sem derrubar as outras, enfileirador, resumo do batimento) e, no `database-test` da T2.1, a idempotência do
   enfileirar, a reivindicação concorrente, o arrendamento e o teto com duas reservas simultâneas sob a trava.
 - Gates: typecheck OK; lint OK; format:check OK; testes novos e de batimento passam.
+
+### T2.4 — `make model-teams-test` (2026-10-17)
+
+- `scripts/model-teams-test.ts` (+ `scripts/model-teams-test/`): Postgres de teste descartável (banco temporário), migrations, a Binance falsa existente
+  (só para o worker subir), TRÊS provedores falsos locais (`Bun.serve` em 127.0.0.1) e o worker REAL em subprocesso (`apps/worker-ativada/src/main.ts`), com
+  as chaves `sk-test-SENTINEL-*`. Uma simulação `live_paper` rodando no par e as três equipes ligadas pelo dono (a execução é marcada como de outro worker,
+  para o avaliador do worker de teste não a reivindicar; o teste é do despachante, não do motor). Alvo novo no `Makefile` com o mesmo `trap` de `down --volumes`
+  dos outros alvos de teste.
+- Cenários e resultado (rodado no WSL contra o Postgres embutido próprio, porta 56465, sem Docker; o alvo `make` usa o mesmo script):
+  1. o enfileirador achou a última vela gravada e as 3 equipes decidiram UMA vez cada (3 linhas `scheduled`, uma chamada por provedor), com custo à mão
+     (Lucas 0,0109; Nina e Olívia 0,0139), latência ≥ 150 ms do falso, hash do prompt, reserva zerada, batimento `ready` das 3, e a chave sentinela AUSENTE de
+     todas as linhas, da saída do worker e do batimento; o pedido ao provedor sem dado de usuário;
+  2. teto diário (linha de US$ 1,99999 semeada): `BUDGET_EXHAUSTED` sem nenhuma chamada a mais, batimento `budget_exhausted`, nenhuma reserva sobrando;
+  3. 5xx em série: 3 falhas `UNAVAILABLE` (3 chamadas), a 4ª vela `CIRCUIT_OPEN` sem chamar o provedor, batimento `circuit_open`;
+  4. 429 com `Retry-After`: `RATE_LIMITED` e a vela seguinte `CIRCUIT_OPEN`; 401: `KEY_REJECTED` e batimento `key_rejected`;
+  5. SIGTERM: o worker sai com 0 dentro do orçamento.
+- A volta do circuito (fechar depois dos 10 min) e o meio aberto estão provados nos testes puros do pacote (`provider-circuit`); aqui não se espera 10 min.
+- Gates da Fase 2: typecheck OK; lint OK; format:check OK; `migration-test` e `database-test` OK (T2.1); contratos novos OK (T2.2 e T2.3); `model-teams-test` OK.
+- Pendências: `make lgpd-test` (precisa de Docker/Keycloak no WSL; a cobertura LGPD das duas tabelas veio do `database-test`); validação do formato real dos
+  provedores só na T6.2, com o usuário; API de equipes (variável `MODEL_TEAM_ON_DEMAND_PER_USER_PER_DAY` e rotas) fica para a Fase 4.
