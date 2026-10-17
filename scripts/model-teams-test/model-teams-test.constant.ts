@@ -5,7 +5,7 @@ export const EXCHANGE = 'binance';
 export const SYMBOL = 'BTCUSDT';
 export const TIMEFRAME = '15m';
 export const CANDLE_MILLISECONDS = 900_000;
-export const SEEDED_CANDLES = 48;
+export const SEEDED_CANDLES = 130;
 export const SEED_PRICE = '100.00000000';
 
 export const MODEL_ID = 'fake-model-1';

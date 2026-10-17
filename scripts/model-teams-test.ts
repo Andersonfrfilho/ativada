@@ -10,6 +10,7 @@ import {
 import { startFakeBinanceStreamServer } from '../packages/market-data-crypto/test-support/fake-binance-stream-server.js';
 import { assertCondition } from './identity-test/identity-test.error.js';
 import { checkCircuitsAndBudget, checkScheduledReports } from './model-teams-test/check-reports.js';
+import { checkTeamRun } from './model-teams-test/check-team-run.js';
 import {
   lastClosedOpenTime,
   reportCheck,
@@ -58,6 +59,7 @@ async function runChecks(
     const context = { client, providers, lastOpen, worker };
     await checkScheduledReports(context);
     await checkCircuitsAndBudget(context);
+    await checkTeamRun({ handle, client, lastOpen });
     await checkShutdown(worker);
     worker = undefined;
   } finally {

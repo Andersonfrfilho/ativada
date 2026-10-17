@@ -16,7 +16,12 @@ const JUDGE_TIMEOUT_MILLISECONDS = 420_000;
 const TIMEOUT_EXIT_CODE = 124;
 
 type Edit = { readonly file: string; readonly find: string; readonly replace: string };
-type Mutant = { readonly name: string; readonly edits: readonly Edit[] };
+// `only`: o juiz roda só essa parte do `live-test` (a execução de equipe, T3.3), em vez dele inteiro.
+type Mutant = {
+  readonly name: string;
+  readonly edits: readonly Edit[];
+  readonly only?: 'team';
+};
 
 function edit(file: string, find: string, replace: string): Edit[] {
   return [{ file, find, replace }];
@@ -113,6 +118,38 @@ const MUTANTS: readonly Mutant[] = [
     ),
   },
   {
+    name: 'TEAM_INPUT_NOT_WRITTEN_IN_THE_STEP',
+    only: 'team',
+    edits: edit(
+      DATABASE_FILE,
+      '        if (commit.teamInput !== undefined) await writer.appendTeamRunInput(commit.teamInput);\n',
+      '',
+    ),
+  },
+  {
+    name: 'TEAM_INPUT_READ_FOR_ANOTHER_RUN',
+    only: 'team',
+    edits: edit(
+      DATABASE_FILE,
+      'inputs.readStoredInput(target.scope, { runId: target.runId, candleTime }),',
+      "inputs.readStoredInput(target.scope, { runId: '00000000-0000-0000-0000-000000000000', candleTime }),",
+    ),
+  },
+  {
+    name: 'TEAM_REPORT_BY_ID_NEVER_FOUND',
+    only: 'team',
+    edits: edit(
+      DATABASE_FILE,
+      'readReportById: (reportId) => inputs.readReportById(reportId),',
+      'readReportById: () => Promise.resolve(undefined),',
+    ),
+  },
+  {
+    name: 'TEAM_PORT_NOT_ATTACHED_TO_THE_SESSION',
+    only: 'team',
+    edits: edit(DATABASE_FILE, '    team: createTeamPort(target),\n', ''),
+  },
+  {
     name: 'GOVERN_ENTRY_SCALE_NOT_HANDED_TO_THE_ENGINE',
     edits: edit('live-step.ts', '    entryRiskScale: params.entryRiskScale,\n', ''),
   },
@@ -162,6 +199,7 @@ async function judge(mutant: Mutant): Promise<Verdict> {
       HOME: Bun.env['HOME'] ?? '',
       DATABASE_URL: Bun.env['DATABASE_URL'] ?? '',
       [LIVE_SOURCE_VARIABLE]: directory,
+      ...(mutant.only === undefined ? {} : { LIVE_TEST_ONLY: mutant.only }),
     },
     stdout: 'pipe',
     stderr: 'pipe',
@@ -188,11 +226,13 @@ function describeVerdict(isControl: boolean, isCaught: boolean): string {
 
 async function main(): Promise<void> {
   const selected = (Bun.env['LIVE_MUTANTS'] ?? '').split(',').filter((name) => name.length > 0);
+  const chosen =
+    selected.length === 0 ? MUTANTS : MUTANTS.filter((mutant) => selected.includes(mutant.name));
+  // O controle roda a mesma parte do juiz que os mutantes escolhidos (só a equipe, se todos forem dela).
+  const controlOnly = chosen.every((mutant) => mutant.only === 'team') ? 'team' : undefined;
   const cases: readonly Mutant[] = [
-    { name: 'CONTROL', edits: [] },
-    ...(selected.length === 0
-      ? MUTANTS
-      : MUTANTS.filter((mutant) => selected.includes(mutant.name))),
+    { name: 'CONTROL', edits: [], ...(controlOnly === undefined ? {} : { only: controlOnly }) },
+    ...chosen,
   ];
   const failures: string[] = [];
   try {

@@ -230,16 +230,18 @@ const ROLES_JSON = JSON.stringify({
   decision: { reason: 'c' },
 });
 
+// O JSON entra como literal do SQL: um parâmetro de texto com `::jsonb` seria gravado como texto JSON dentro do jsonb.
 async function seedScheduledReport(
   client: Bun.SQL,
   params: { readonly symbol: string; readonly status: 'decided' | 'pending' },
 ): Promise<string> {
   const id = Bun.randomUUIDv7();
   const isDecided = params.status === 'decided';
-  await client`INSERT INTO model_team_reports (id, team_key, provider, model_id, prompt_version, kind, symbol, timeframe, candle_time, status, action, entry_price, target_price, stop_price, confidence, roles, decided_at)
-    VALUES (${id}, 'lucas', 'anthropic', 'm', 'team-prompt-1', 'scheduled', ${params.symbol}, '15m', ${CANDLE_TIME}, ${params.status},
-      ${isDecided ? 'buy' : null}, ${isDecided ? '100.5' : null}, ${isDecided ? '102' : null}, ${isDecided ? '99.5' : null},
-      ${isDecided ? 62 : null}, ${isDecided ? ROLES_JSON : null}::jsonb, ${isDecided ? new Date() : null})`;
+  const decision = isDecided
+    ? `'buy', 100.5, 102, 99.5, 62, '${ROLES_JSON}'::jsonb, now()`
+    : 'NULL, NULL, NULL, NULL, NULL, NULL, NULL';
+  await client.unsafe(`INSERT INTO model_team_reports (id, team_key, provider, model_id, prompt_version, kind, symbol, timeframe, candle_time, status, action, entry_price, target_price, stop_price, confidence, roles, decided_at)
+    VALUES ('${id}', 'lucas', 'anthropic', 'm', 'team-prompt-1', 'scheduled', '${params.symbol}', '15m', ${CANDLE_TIME}, '${params.status}', ${decision})`);
   return id;
 }
 
@@ -323,8 +325,10 @@ async function checkTeamRunInputs(context: LifecycleCheckContext, reportId: stri
   );
   const report = await inputs.readReportById(reportId);
   assertCondition(
-    report?.status === 'decided' && report.decision?.action === 'buy',
-    'o relatório referenciado volta pelo id',
+    report?.status === 'decided' &&
+      report.decision?.action === 'buy' &&
+      typeof report.decision.roles === 'object',
+    'o relatório referenciado volta pelo id, com os papéis como objeto',
   );
   const code = await captureErrorCode(
     Promise.resolve(write(CANDLE_TIME + 900_000, { reportId: null, failureCode: null })),

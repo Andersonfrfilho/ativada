@@ -8,7 +8,10 @@ import {
   type TickTotals,
 } from './fixtures/live/live-scenarios.fixture.js';
 import type { InMemoryLive } from './fixtures/live/in-memory-live-database.fixture.js';
-import { teamCandleOpenTime } from './fixtures/model-teams/team-candles.fixture.js';
+import {
+  buildTeamCandles,
+  teamCandleOpenTime,
+} from './fixtures/model-teams/team-candles.fixture.js';
 import {
   buildTeamLive,
   cadenceIndex,
@@ -181,6 +184,19 @@ describe('sem decisão no prazo a equipe espera, com o motivo gravado', () => {
 });
 
 describe('saída AWAITING_TEAM: sem commit, sem dormir', () => {
+  test('relatório ainda não enfileirado dentro do prazo também espera, e a ronda não conta como encerrada', async () => {
+    const script = createTeamScript();
+    script.byCandle.set(teamCandleOpenTime(BUY_INDEX), {
+      isPastDeadline: false,
+      report: undefined,
+    });
+    const live = buildTeamLive({ script });
+    const { totals } = await runToIdle(live);
+    expect(totals.ended).toBe(0);
+    expect(totals.failed).toBe(0);
+    expect(live.state.checkpoint?.lastCandleTime).toBe(teamCandleOpenTime(BUY_INDEX - 1));
+  });
+
   test('relatório pendente dentro do prazo para a ronda na vela e o resto fica como estava', async () => {
     const script = createTeamScript();
     script.setReport(BUY_INDEX, pendingView('slow'));
@@ -220,6 +236,35 @@ describe('saída AWAITING_TEAM: sem commit, sem dormir', () => {
     await tickUntilIdle(evaluator);
     expect(slow.state.checkpoint?.lastCandleTime).toBe(teamCandleOpenTime(BUY_INDEX - 1));
     expect(quick.state.checkpoint?.lastCandleTime).toBe(teamCandleOpenTime(TEAM_CANDLE_COUNT - 1));
+  });
+});
+
+describe('a consulta do relatório', () => {
+  test('pede a equipe da execução, o par e o prazo contado do FECHAMENTO da vela', async () => {
+    const script = scriptWithTrades();
+    const live = buildTeamLive({ script });
+    await runToIdle(live);
+    expect(script.calls.length).toBeGreaterThan(0);
+    for (const call of script.calls) {
+      expect(call.teamKey).toBe('lucas');
+      expect(call.symbol).toBe('LINKUSDT');
+      expect(call.deadlineAt).toBe(call.candleTime + 900_000 + TEAM_SETTINGS.deadlineMilliseconds);
+    }
+  });
+});
+
+describe('lacuna confirmada', () => {
+  test('depois do aquecimento a execução de equipe atravessa a lacuna com a contagem exata e segue', async () => {
+    const gapIndex = cadenceIndex(1) + 1;
+    const candles = buildTeamCandles(TEAM_CANDLE_COUNT).filter(
+      (_candle, index) => index !== gapIndex,
+    );
+    const live = buildTeamLive({ script: scriptWithTrades(), candles });
+    const { totals } = await runToIdle(live, { ...OPTIONS, isGapConfirmed: () => true });
+    expect(totals.failed).toBe(0);
+    expect(live.state.status).toBe('running');
+    expect(live.state.checkpoint?.lastCandleTime).toBe(teamCandleOpenTime(TEAM_CANDLE_COUNT - 1));
+    expect(live.state.results.signals.get(teamCandleOpenTime(gapIndex + 1))).toBeDefined();
   });
 });
 

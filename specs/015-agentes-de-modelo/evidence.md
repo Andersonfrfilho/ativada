@@ -259,3 +259,30 @@ opção B (motor / `ENGINE_VERSION`), chaves reais, rede a provedor real, `git p
   pelo relógio do banco, entrada gravada idempotente, presa ao dono, CHECK da origem).
 - Gates: typecheck, lint, format:check OK; `database-test` OK; 220 testes dos arquivos de ao vivo, worker, banco e pacote OK (1 falha anterior e alheia:
   `test/risk-analyst-boundary.contract.test.ts` contém `export default`, listada na regressão da Fase 2).
+
+### T3.3 — Prova de determinismo da execução de equipe (2026-10-17)
+
+- **Replay byte a byte, sem provedor e sem chave** (`test/live-team-determinism.contract.test.ts`, 10 testes sobre o banco em memória): uma execução de equipe com compra, venda
+  e uma falha de provedor; uma execução NOVA com as entradas gravadas copiadas e a consulta do relatório agendado PROIBIDA (lança) dá os mesmos `signals`, `orders`, `fills`,
+  `positions`, `equity_points`, o mesmo estado do motor e as mesmas entradas. O relatório gravado manda: com o mundo mudado (outro relatório para a vela) o replay não muda;
+  entrada que aponta para relatório que sumiu vira "sem leitura", sem derrubar a execução.
+- **Retomada no meio sem duplicar**: queda dentro do passo 1, 30, 100 e 130 (hook `afterAppend`, depois da gravação das linhas e da entrada) e retomada por outra instância dão o
+  mesmo resultado da execução contínua (linhas, estado, entradas, número de passos); a queda desfaz a entrada junto com o passo.
+- **Execução de REGRA inalterada**: com o ambiente das equipes ligado (e a porta de equipe que lança se tocada), a execução de regra do conjunto real sai igual ao fluxo contínuo e não
+  toca a equipe.
+- **A posição que a tradução vê é a de depois das execuções de `t`**: a posição que sai pela proteção em `t` não faz a compra de `t` virar "ignorada: já comprada" (teste que derruba
+  a proteção numa vela e confere BUY + segunda compra).
+- **Contra o Postgres** (`scripts/live-test/check-team.ts`, dentro de `make live-test`; `LIVE_TEST_ONLY=team` roda só ele): o avaliador de PRODUÇÃO com o banco de verdade; compra e
+  venda decididas em `t` executam em `t + 1`; MISSING e NOT_SCHEDULED gravados; o aquecimento não grava entrada; o replay a partir das entradas copiadas deixa o mesmo digest de linhas
+  e o mesmo estado do motor, MESMO depois de `decided_at` dos relatórios ser empurrado 2 h (quem recalculasse trataria como "tarde"). `make model-teams-test` ganhou a mesma
+  prova com o worker REAL em subprocesso (execução de equipe criada com a versão `model-team-1`, relatório decidido semeado, compra em `t + 1`, replay com 31 linhas iguais) e
+  continua passando nos cenários da Fase 2 (130 velas semeadas em vez de 48).
+- **Mutantes do passo** (`test/live-team-mutants.contract.test.ts`, 19 mutantes + controle, todos reprovados): caminho de regra no lugar do de equipe, entrada não gravada no passo,
+  espera que grava, espera tratada como encerrada, aquecimento que pede relatório, ação aplicada sempre `hold`, entrada gravada ignorada no replay, relatório pendente ou ausente que
+  nunca espera, decisão tardia aplicada, vela fora do ritmo que espera, código da falha perdido, prazo contado da abertura, relatório pedido de outra equipe, posição vista antes das
+  execuções de `t`, sinal da equipe nunca aplicado, lacuna não declarada, execução com outra estratégia ou sem o ambiente aceita, `signalSource` nunca lido. `make live-mutants` (Postgres)
+  ganhou 4 mutantes do adaptador do banco (entrada não gravada no passo, lida de outra execução, relatório por id que nunca acha, porta não ligada), todos reprovados contra o
+  `live-test` da equipe (o controle e os mutantes de equipe rodam só ele; os 12 antigos seguem contra o `live-test` inteiro).
+- Os suítes de mutantes antigos (`live-mutants`, `live-analyst-mutants`, `live-goal-mutants`) não foram reexecutados por inteiro (horas de CPU); conferi que TODA edição deles ainda se aplica
+  à fonte (nenhuma ficou velha) e rodei por inteiro os contratos de ao vivo que os julgam (220 testes, todos verdes).
+- Gates: typecheck, lint, format:check OK.

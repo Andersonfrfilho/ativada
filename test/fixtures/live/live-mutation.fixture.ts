@@ -33,6 +33,12 @@ export const LIVE_ANALYST_JUDGE_TEST_FILES: readonly string[] = [
   'test/live-analyst-govern.contract.test.ts',
 ];
 
+// Os testes que reprovam o mutante do passo da execução de equipe (spec 015): o passo, a espera, o replay e a retomada.
+export const LIVE_TEAM_JUDGE_TEST_FILES: readonly string[] = [
+  'test/live-team-step.contract.test.ts',
+  'test/live-team-determinism.contract.test.ts',
+];
+
 export type LiveSourceEdit = {
   readonly file: string;
   readonly find: string;

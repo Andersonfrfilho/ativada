@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { TeamStepSettings } from '../../../apps/worker-ativada/src/live/live-run.types.js';
 import type {
+  LookupScheduledReportParams,
   ScheduledReportLookup,
   TeamReportView,
   TeamRunInputWrite,
@@ -13,6 +14,7 @@ import {
   type LiveScenario,
 } from '../live/in-memory-live-database.fixture.js';
 import { buildTeamCandles, buildTeamRunSetup, teamCandleOpenTime } from './team-candles.fixture.js';
+import type { EngineCandle } from '../../../packages/strategy-engine/src/index.js';
 
 export const TEAM_SETTINGS: TeamStepSettings = { deadlineMilliseconds: 45_000, cadenceMinutes: 60 };
 export const TEAM_LEAD_IN = computeStrategyLeadInCandles(MODEL_TEAM_STRATEGY.config);
@@ -67,6 +69,7 @@ export type TeamScript = {
   readonly byCandle: Map<number, ScheduledReportLookup>;
   readonly byId: Map<string, TeamReportView>;
   readonly lookups: number[];
+  readonly calls: LookupScheduledReportParams[];
   readonly reads: string[];
   setReport: (index: number, view: TeamReportView, isPastDeadline?: boolean) => void;
   setPastDeadline: (index: number) => void;
@@ -77,6 +80,7 @@ export function createTeamScript(): TeamScript {
     byCandle: new Map(),
     byId: new Map(),
     lookups: [],
+    calls: [],
     reads: [],
     setReport: (index, view, isPastDeadline = false) => {
       script.byCandle.set(teamCandleOpenTime(index), { isPastDeadline, report: view });
@@ -93,10 +97,12 @@ export type TeamLiveOptions = {
   readonly script: TeamScript;
   readonly overrides?: Partial<Omit<LiveScenario, 'candles'>>;
   readonly candleCount?: number;
+  // Série própria no lugar da sintética (por exemplo, uma vela que derruba a proteção).
+  readonly candles?: readonly EngineCandle[];
 };
 
 export function buildTeamLive(options: TeamLiveOptions): InMemoryLive {
-  const candles = buildTeamCandles(options.candleCount ?? TEAM_CANDLE_COUNT);
+  const candles = options.candles ?? buildTeamCandles(options.candleCount ?? TEAM_CANDLE_COUNT);
   const setup = buildTeamRunSetup();
   const { script } = options;
   return createInMemoryLive({
@@ -109,6 +115,7 @@ export function buildTeamLive(options: TeamLiveOptions): InMemoryLive {
     team: {
       lookupScheduledReport: (params) => {
         script.lookups.push(params.candleTime);
+        script.calls.push(params);
         return Promise.resolve(
           script.byCandle.get(params.candleTime) ?? { isPastDeadline: true, report: undefined },
         );

@@ -33,6 +33,7 @@ import type {
   LiveRunDatabase,
   LiveRunSession,
   LiveTickSummary,
+  TeamStepSettings,
 } from '../../apps/worker-ativada/src/live/live-run.types.js';
 import type { WorkerLogger } from '../../apps/worker-ativada/src/logging/worker-logger.js';
 import {
@@ -273,6 +274,8 @@ export type EvaluatorOptions = {
   readonly heartbeatTimeoutSeconds?: number;
   readonly maxStepsPerPass?: number;
   readonly alerting?: LiveAlertingSettings;
+  // O prazo e o ritmo das equipes (execução de equipe); ausente = o worker as recusa.
+  readonly team?: TeamStepSettings;
   // Roda antes de cada passo ser gravado (por exemplo, apagar a conta no meio).
   readonly beforeCommit?: (runId: string) => Promise<void>;
 };
@@ -321,6 +324,7 @@ export function createProductionEvaluator(
     ...(options.maxStepsPerPass === undefined ? {} : { maxStepsPerPass: options.maxStepsPerPass }),
     ...(options.alerting === undefined ? {} : { alerting: options.alerting }),
     ...(options.gapPolicy === undefined ? {} : { gapPolicy: options.gapPolicy }),
+    ...(options.team === undefined ? {} : { team: options.team }),
   });
   return { evaluator, entries, committed };
 }
