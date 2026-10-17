@@ -128,3 +128,16 @@ export {
   type OpinionKind,
   type OpinionStatus,
 } from './opinion-auditor.js';
+export {
+  MODEL_TEAM_STRATEGY,
+  MODEL_TEAM_STRATEGY_CONFIG,
+  MODEL_TEAM_STRATEGY_NAME,
+} from './model-team-strategy.js';
+export {
+  readSignalSource,
+  SIGNAL_SOURCE_KIND,
+  SIGNAL_SOURCE_PROPERTY,
+  signalSourceSchema,
+  type SignalSource,
+} from './team-signal-source.js';
+export { applyTeamSignal, toHoldProbe } from './team-signal-decision.js';

@@ -216,3 +216,21 @@ a marca para esconder a `model-team-1` fica como PROPOSTA para a Fase 3.
   (`api-goal-plan`, `api-goal-evaluation`, `api-assets-summary`, `horizon-evaluation`) e `test/risk-analyst-boundary.contract.test.ts`, que contém o texto
   `export default` e reprova o contrato do workspace.
 - Mutantes (`*-mutants`) não rodaram nesta fase: ela não toca o passo ao vivo nem o filtro de dono das rotas.
+
+## Fase 3 — A equipe na simulação (worker) e API
+
+Autorização do usuário (2026-10-17): migration 0027 (commitada), mudanças em API e worker, opinião a cada 60 min, teto de US$ 2 por dia. Não autorizados:
+opção B (motor / `ENGINE_VERSION`), chaves reais, rede a provedor real, `git push`, aplicar a migration no banco de dev. Gates no WSL (espelho
+`~/gates/ativada-spec15`, Postgres embutido próprio, porta 56465).
+
+### T3.1 — Prova de viabilidade do plan D9 (2026-10-17)
+
+- `packages/model-agents/src/model-team-strategy.ts`: a `StrategyVersion` fixa `model-team-1` (RSI de período 2, menor que o ATR de 14; sem regime; entrada a
+  mercado; risco 2×ATR de stop, 3×ATR de alvo, 1% por operação), hash preso por teste: `8dad5fe7c154715ff07018b9d6fb7c9711decc25a1acbff9e858fea0585fe289`.
+  Mora no pacote puro (que já depende do motor) para a API e o worker lerem a MESMA definição; `packages/strategy-engine` não foi tocado.
+- `team-signal-decision.ts` (`applyTeamSignal`, `toHoldProbe`) e `team-signal-source.ts` (`readSignalSource` do `runs.request.signalSource`).
+- `test/model-team-wallet-feasibility.contract.test.ts` (7 testes): `signalStep` real da `model-team-1`, decisão trocada por `toTeamSignal` (votos vazios,
+  `configHash`, lacuna e ATR mantidos), `walletStep` AVULSO aceita; a compra de `t` cria a ordem em `t` e preenche na ABERTURA de `t + 1`, com stop a 2×ATR e
+  alvo a 3×ATR da configuração de risco; nenhuma ordem antes da vela de decisão; a guarda ainda recusa sinal de outra versão. Resultado: a guarda ACEITA, então
+  nenhum ajuste aditivo (export no `run-recording` ou relaxar `votes`) é necessário. O desenho do D9 já tinha a validação do `architect` (opus).
+- Gates: typecheck, lint, format:check OK; testes do pacote (65) OK.
