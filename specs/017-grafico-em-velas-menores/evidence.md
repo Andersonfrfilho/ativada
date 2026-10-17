@@ -151,3 +151,14 @@ tabela no celular). Gates no espelho `ativada-spec17`: typecheck, lint, format e
   balão sem opinião curta de cada agente e sem distância até os níveis (a equipe ao lado já fala da vela apontada); revisão em tema escuro
   e `design-review`/`contrast`/`touch-targets` rodaram verdes no panel-test, mas a captura é só do tema claro a 1.280 px; `code-reviewer` (T4.1)
   não rodou; `make panel-e2e` não foi rodado (infra descartável usa Docker).
+
+## Balão de valores opcional (pedido do usuário: "deixa o modal opcional para aparecer")
+
+- Interruptor na barra do gráfico "Balão de valores: ligado/desligado" (ícone + palavra, `aria-pressed`, botão de 44 px), preferência
+  `isTooltipOn` no mesmo `localStorage` das camadas (try/catch, padrão LIGADO, valor inválido volta ao padrão) e atalho `V` (ignora campo de
+  texto e Ctrl/Alt/Meta). Desligado: o mouse não abre nada; clicar numa vela abre e fixa o balão (o toque faz isso em qualquer modo), Esc fecha.
+  A legenda OHLC fixa e o anúncio por teclado não mudam.
+- Contratos em `candle-display.contract.tsx` (padrão ligado, interruptor, persistência ao remontar, desligado + clique + Esc, tecla V com e sem foco
+  em campo, toque) e `chart-preferences.contract.ts` (campo novo).
+- NÃO feito: o menu "Gráfico ▾" da janela baixa não existe no código, e não agrupei "Janelas automáticas" nas preferências da central de avisos
+  (são arquivos de `src/notices/`, de outro agente); a ficha do agente e a gaveta não são pop-ups sobre o gráfico, então só o balão ganhou interruptor.

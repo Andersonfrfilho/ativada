@@ -9,6 +9,7 @@ import { CHART_KEYBOARD_HELP } from './chart-key-plan.js';
 import { ChartCredit } from './ChartCredit.component.js';
 import { ChartTooltip } from './ChartTooltip.component.js';
 import { useChartTooltip } from './useChartTooltip.hook.js';
+import { useTooltipHotkey } from './useTooltipHotkey.hook.js';
 import { ClusterButtons } from './ClusterButtons.component.js';
 import { LayerBar } from './LayerBar.component.js';
 import { BesideTeam } from '../team-room/BesideTeam.component.js';
@@ -74,7 +75,9 @@ function SurfaceBox({
   model,
   ids,
 }: CanvasViewProps & { readonly ids: DescriptionIds }): ReactElement {
-  const tooltip = useChartTooltip({ chart, source, model });
+  const isOn = source.preferences.preferences.isTooltipOn;
+  const tooltip = useChartTooltip({ chart, source, model, isOn });
+  useTooltipHotkey(source.preferences.toggleTooltip);
   return (
     <div className={styles.canvasFrame}>
       <div

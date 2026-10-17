@@ -31,6 +31,8 @@ export type ChartTooltipInput = {
   readonly chart: TradeChart;
   readonly source: CandleSource;
   readonly model: CandleCanvasModel;
+  // O balão ao passar o mouse está ligado; desligado, só abre e fixa ao clicar ou tocar numa vela (Esc fecha).
+  readonly isOn: boolean;
 };
 
 function useTooltipModel(input: ChartTooltipInput, isHidden: boolean): TooltipModel | undefined {
@@ -98,6 +100,24 @@ function usePlacement(
   };
 }
 
+type Kept = {
+  readonly last: RefObject<TooltipModel | undefined>;
+  readonly frozen: RefObject<TooltipModel | undefined>;
+};
+
+// Guarda o último balão mostrado e o balão fixado (o primeiro que aparece depois do clique ou do toque); solto, nada fica fixo.
+function useKeptModels(live: TooltipModel | undefined, isPinned: boolean, place: () => void): Kept {
+  const last = useRef<TooltipModel | undefined>(undefined);
+  const frozen = useRef<TooltipModel | undefined>(undefined);
+  useEffect(() => {
+    if (live !== undefined) last.current = live;
+    if (!isPinned) frozen.current = undefined;
+    else if (frozen.current === undefined) frozen.current = live;
+    place();
+  }, [live, place, isPinned, last, frozen]);
+  return { last, frozen };
+}
+
 function track(event: PointerEvent<HTMLElement>): Frame {
   const box = event.currentTarget.getBoundingClientRect();
   return {
@@ -115,19 +135,19 @@ export function useChartTooltip(input: ChartTooltipInput): ChartTooltipState {
   const [isPinned, setIsPinned] = useState(false);
   const opened = input.model.pointedOpenTime;
   const live = useTooltipModel(input, dismissedFor === opened);
-  const lastShown = useRef<TooltipModel | undefined>(undefined);
   const place = usePlacement(tipRef, pointerRef);
-  useEffect(() => {
-    if (live !== undefined) lastShown.current = live;
-    place();
-  }, [live, place]);
+  const kept = useKeptModels(live, isPinned, place);
   useDismissWithEscape(live !== undefined || isPinned, () => {
     setIsPinned(false);
     setDismissedFor(opened);
   });
   return {
     id,
-    model: live ?? (isPinned ? lastShown.current : undefined),
+    model: isPinned
+      ? (kept.frozen.current ?? live ?? kept.last.current)
+      : input.isOn
+        ? live
+        : undefined,
     tipRef,
     handlers: {
       onPointerMove: (event): void => {
@@ -140,7 +160,8 @@ export function useChartTooltip(input: ChartTooltipInput): ChartTooltipState {
       onPointerDown: (event): void => {
         pointerRef.current = track(event);
         setDismissedFor(undefined);
-        setIsPinned(event.pointerType === 'touch');
+        kept.frozen.current = undefined;
+        setIsPinned(event.pointerType === 'touch' || !input.isOn);
       },
     },
   };

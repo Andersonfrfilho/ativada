@@ -23,6 +23,8 @@ export function CandleToolbar({ chart, source, model }: CandleToolbarProps): Rea
       options={source.timeframeOptions}
       runTimeframe={chart.timeframe}
       surface={surface}
+      isTooltipOn={source.preferences.preferences.isTooltipOn}
+      onToggleTooltip={source.preferences.toggleTooltip}
       onTimeframeChange={model.handleTimeframeChange}
       onGoToStart={
         source.displayMapping === undefined

@@ -11,6 +11,7 @@ import {
 export type ChartPreferenceControls = {
   readonly preferences: ChartPreferences;
   readonly toggleLayer: (layer: ChartLayer) => void;
+  readonly toggleTooltip: () => void;
 };
 
 // As camadas escolhidas ficam neste navegador (preferência de tela, RF10); sem armazenamento valem só na sessão.
@@ -22,6 +23,7 @@ export function useChartPreferences(): ChartPreferenceControls {
   }
   return {
     preferences,
+    toggleTooltip: (): void => save({ ...preferences, isTooltipOn: !preferences.isTooltipOn }),
     toggleLayer: (layer): void =>
       save({
         ...preferences,

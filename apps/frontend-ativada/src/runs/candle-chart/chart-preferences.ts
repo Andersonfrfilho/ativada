@@ -26,13 +26,18 @@ const layersSchema = z
   })
   .catch(DEFAULT_LAYERS);
 
-const preferencesSchema = z.object({ layers: layersSchema });
+// O balão de valores ao passar o mouse é opcional (pedido do usuário): ligado por padrão, e a escolha fica lembrada.
+const preferencesSchema = z.object({
+  layers: layersSchema,
+  isTooltipOn: z.boolean().catch(true),
+});
 
 export type ChartPreferences = z.infer<typeof preferencesSchema>;
 export type PreferenceStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
 export const DEFAULT_CHART_PREFERENCES: ChartPreferences = {
   layers: DEFAULT_LAYERS,
+  isTooltipOn: true,
 };
 
 // O acesso ao `localStorage` pode lançar (janela privada, dados do site bloqueados): sem ele, vale o padrão.

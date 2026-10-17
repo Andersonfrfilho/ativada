@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 
 import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 
+import { CHART_PREFERENCES_STORAGE_KEY } from '../src/runs/candle-chart/candle-chart.constant.js';
 import { formatTimeInZone } from '../src/format/zoned-time.js';
 import { STREAM_STATUS } from '../src/live/stream.constant.js';
 import type { StreamCandle } from '../src/live/stream.validation.js';
@@ -467,5 +468,75 @@ describe('tabela de operações no celular', () => {
     );
     expect(css).not.toMatch(/overflow-wrap:\s*anywhere/);
     expect(css).toMatch(/\.scroller table\s*\{[^}]*min-width:\s*\d+px/);
+  });
+});
+
+describe('balão de valores opcional', () => {
+  const TOGGLE = /Balão de valores/;
+
+  async function pointAt(harness: CandleCardHarness, index: number): Promise<FakeChartSurface> {
+    const surface = await ready(harness);
+    act(() => surface.emitCrosshair(index));
+    return surface;
+  }
+
+  test('ligado por padrão; o interruptor desliga, mostra a palavra, aria-pressed e é lembrado', async () => {
+    const harness = show();
+    await pointAt(harness, 500);
+    await waitFor(() => expect(chartTip().hidden).toBe(false));
+    const toggle = screen.getByRole('button', { name: TOGGLE });
+    expect(toggle.textContent).toContain('ligado');
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(toggle);
+    await waitFor(() => expect(chartTip().hidden).toBe(true));
+    expect(screen.getByRole('button', { name: TOGGLE }).textContent).toContain('desligado');
+    expect(screen.getByRole('button', { name: TOGGLE }).getAttribute('aria-pressed')).toBe('false');
+    expect(localStorage.getItem(CHART_PREFERENCES_STORAGE_KEY)).toContain('"isTooltipOn":false');
+    cleanup();
+    await ready(show());
+    expect(screen.getByRole('button', { name: TOGGLE }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  test('desligado, o mouse não abre nada; clicar numa vela abre e fixa; Esc fecha; a legenda fixa continua', async () => {
+    localStorage.setItem(
+      CHART_PREFERENCES_STORAGE_KEY,
+      JSON.stringify({ layers: {}, isTooltipOn: false }),
+    );
+    const harness = show();
+    const surface = await pointAt(harness, 500);
+    expect(chartTip().hidden).toBe(true);
+    expect(screen.getByText(/^LINK|^BNB\/USDT · 3m/)).toBeDefined();
+    const canvas = screen.getByRole('img', { name: /Gráfico de velas/ });
+    fireEvent.pointerDown(canvas, { pointerType: 'mouse' });
+    await waitFor(() => expect(chartTip().hidden).toBe(false));
+    const pinned = chartTip().textContent;
+    act(() => surface.emitCrosshair(10));
+    await waitFor(() => expect(chartTip().textContent).toBe(pinned));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(chartTip().hidden).toBe(true));
+  });
+
+  test('a tecla V alterna, menos com o foco num campo', async () => {
+    const harness = show();
+    await ready(harness);
+    const toggle = (): HTMLElement => screen.getByRole('button', { name: TOGGLE });
+    fireEvent.keyDown(document.body, { key: 'v' });
+    await waitFor(() => expect(toggle().getAttribute('aria-pressed')).toBe('false'));
+    const field = document.createElement('input');
+    document.body.append(field);
+    fireEvent.keyDown(field, { key: 'v' });
+    expect(toggle().getAttribute('aria-pressed')).toBe('false');
+    field.remove();
+    fireEvent.keyDown(document.body, { key: 'V' });
+    await waitFor(() => expect(toggle().getAttribute('aria-pressed')).toBe('true'));
+  });
+
+  test('um toque abre e fixa mesmo com o balão ligado', async () => {
+    const harness = show();
+    const surface = await pointAt(harness, 500);
+    const canvas = screen.getByRole('img', { name: /Gráfico de velas/ });
+    fireEvent.pointerDown(canvas, { pointerType: 'touch' });
+    act(() => surface.emitCrosshair(null));
+    await waitFor(() => expect(chartTip().hidden).toBe(false));
   });
 });

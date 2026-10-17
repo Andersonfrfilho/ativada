@@ -42,6 +42,7 @@ describe('chart preferences', () => {
         levels: true,
         waited: false,
       },
+      isTooltipOn: true,
     });
     expect(DEFAULT_CHART_PREFERENCES.layers.stopTarget).toBe(false);
   });
@@ -50,6 +51,7 @@ describe('chart preferences', () => {
     const storage = memoryStorage();
     const chosen = {
       layers: { ...DEFAULT_CHART_PREFERENCES.layers, stopTarget: true, forecast: false },
+      isTooltipOn: false,
     } as const;
     writeChartPreferences(chosen, storage);
     expect(readChartPreferences(storage)).toStrictEqual(chosen);
@@ -77,6 +79,7 @@ describe('chart preferences', () => {
         levels: true,
         waited: false,
       },
+      isTooltipOn: true,
     });
   });
 

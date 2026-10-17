@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import { Icon } from '../../layout/Icon.component.js';
 import controls from '../../styles/Controls.module.css';
 import type { ChartSurface } from './chart-surface.types.js';
 import styles from './CandleChart.module.css';
@@ -16,6 +17,9 @@ export type ChartToolbarProps = {
   readonly onTimeframeChange: (timeframe: TimeframeChoice) => void;
   // Leva o gráfico ao começo da simulação (só com vela de exibição, onde o começo fica longe da ponta).
   readonly onGoToStart?: (() => void) | undefined;
+  // O balão de valores é opcional: ligado, segue o mouse; desligado, só abre ao clicar ou tocar numa vela.
+  readonly isTooltipOn?: boolean | undefined;
+  readonly onToggleTooltip?: (() => void) | undefined;
   readonly surface: ChartSurface | undefined;
 };
 
@@ -71,6 +75,7 @@ function ZoomGroup({ surface, onGoToStart }: ZoomGroupProps): ReactElement {
 // fazem, sem gesto (RF02 e RF05). Alvos de 44 px.
 export function ChartToolbar(props: ChartToolbarProps): ReactElement {
   const { timeframe, options, runTimeframe, onTimeframeChange, surface, onGoToStart } = props;
+  const { isTooltipOn, onToggleTooltip } = props;
   return (
     <div className={styles.toolbar}>
       <div className={styles.row} role="group" aria-label="Vela do gráfico">
@@ -91,6 +96,17 @@ export function ChartToolbar(props: ChartToolbarProps): ReactElement {
         ))}
       </div>
       <ZoomGroup surface={surface} onGoToStart={onGoToStart} />
+      {onToggleTooltip === undefined ? null : (
+        <button
+          type="button"
+          className={`${controls.button} ${isTooltipOn === true ? styles.pressed : ''}`}
+          aria-pressed={isTooltipOn === true}
+          onClick={onToggleTooltip}
+        >
+          <Icon name="info" size={16} />
+          Balão de valores: {isTooltipOn === true ? 'ligado' : 'desligado'}
+        </button>
+      )}
     </div>
   );
 }
