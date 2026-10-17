@@ -2454,28 +2454,30 @@ prazos continuam em velas de execução. **O motor, o `run-recording` e o `risk-
 não rodou nesta sessão e fica registrada como pendência em `evidence.md`. Nada aqui exige mudar o motor, o
 `run-recording` ou o analista.
 
-## Agentes de modelo (spec 015)
+## Equipes de modelo (spec 015)
 
-Adendo da T0.2 da spec 015 (`specs/015-agentes-de-modelo/`), copiado do plan (D2 a D9) e do spec (RF05 a RF16); nenhuma decisão
-nova. **O motor, o `run-recording` e a regra `analyst-1` não mudam.** Fatos externos conferidos em 2026-10-17 estão em
-`specs/015-agentes-de-modelo/evidence.md` (T0.1).
+Adendo da T0.2b da spec 015 (`specs/015-agentes-de-modelo/`, revisão 2), copiado do `plan.md` (D2 a D9) e do `spec.md`
+(DT1 a DT12, RF05 a RF17); nenhuma decisão nova. **O motor, o `advanceCandle` das execuções de regra e a regra `analyst-1`
+não mudam.** Fatos externos conferidos em 2026-10-17 estão em `specs/015-agentes-de-modelo/evidence.md` (T0.1 e T0.1b).
 
-**Regra central: a opinião do modelo é ENTRADA GRAVADA**, como a decisão do analista (A21 §4). Um LLM não é determinístico e
-custa por chamada; o motor é determinístico e o replay dá o mesmo resultado byte a byte. Logo a opinião é uma linha de
-`model_opinions`; quem a usa um dia lê a linha e **nunca chama o modelo de novo**.
+**Regra central: a decisão do modelo é ENTRADA GRAVADA**, como a decisão do analista (A21 §4). Um LLM não é determinístico e
+custa por chamada; o motor é determinístico e o replay dá o mesmo resultado byte a byte. Logo a decisão é uma linha de
+`model_team_reports`; o passo da execução de equipe a LÊ e **nunca chama o modelo**.
 
 | # | Decisão | Fonte |
 |---|---|---|
-| M1 | **Modo sombra obrigatório.** A opinião nunca entra em `advanceCandle`, `analyst_decisions`, no motor nem em `analyst-1`; a comparação byte a byte de `fills`, `signals` e `analyst_decisions` com e sem os agentes é prova obrigatória. Governar é só desenho (M9) | RF11, D3 |
-| M2 | **Catálogo fechado:** Nina = Gemini Pro (Google), Lucas = Claude Sonnet, Clara = Claude Haiku (Anthropic), cargo "Analista de modelo" e o mesmo prompt `prompt-1` para os três. Id do modelo e preço por milhão de tokens vêm do env, sem padrão no código | RF03, D1, D2 |
-| M3 | **Uma opinião por (agente, par, vela de 15 min), compartilhada** entre as simulações do par. A entrada é só dado público de mercado (`ModelPromptInput`, `strictObject`: 48 velas, leituras públicas do analista, Fear & Greed); nada do usuário nem os votos dos outros agentes | RF05, RF09, D4 |
-| M4 | **Fila durável fora do passo:** o passo ao vivo só insere a linha `pending` (`ON CONFLICT DO NOTHING`, na transação da vela); um despachante do worker reivindica por arrendamento (`FOR UPDATE SKIP LOCKED`), chama o provedor e grava. Falha de provedor nunca chega ao passo | RF06, D2 |
-| M5 | **Saída validada e higienizada:** `posture` (`up/down/neutral`), `reason` de 1 a 160 caracteres, `confidence` 0 a 100; fora disso `failed`/`INVALID_OUTPUT`, sem nova chamada. O motivo perde controle e quebra de linha e é trocado por frase fixa se tiver palavra proibida (`reasonHidden`) | RF07, RF08, D8 |
-| M6 | **Prompt versionado:** `prompt-1` com hash gravado; mudar o template exige `prompt-2`; a chave única inclui a versão e o placar é contado por versão | D3 |
-| M7 | **Custo e teto:** custo e reserva em decimal, para cima a 8 casas; reserva do máximo da chamada antes de chamar, sob trava consultiva; acima do teto do dia (UTC) ou do mês a linha vira `skipped`/`BUDGET_EXHAUSTED`. Padrão de tetos US$ 3/dia e US$ 60/mês | RF16, D4, D6 |
-| M8 | **Circuito por provedor** (máquina de estados, relógio por parâmetro, estado em memória do worker): 3 falhas seguidas de `timeout`/`unavailable` abrem por 10 min; `rate_limited` até `Retry-After` (teto 15 min); `key_rejected` e `model_not_found` abrem por 60 min; `ok` e `invalid_output` fecham. Linha `scheduled` com mais de 2 velas vira `skipped`/`STALE` | RF12, D5 |
-| M9 | **Placar igual ao dos outros agentes:** `scheduled` `decided` dos últimos 30 dias, postura ≠ `neutral`, vela seguinte fechada; acerto/erro/não conta como o auditor da spec 007; veredito só por `judgeAgainstCoinFlip` (`@ativada/statistics`, único lugar do Wilson); `on_demand` nunca conta; confiança declarada não entra no veredito. Na sombra o peso é sempre "não vota" | RF13, RF14 |
-| M10 | **Governar (Fase 6, só desenho, exige autorização):** o ◆ vira especialista com voto +1/−1/0 e peso A7 só com `above`; a opinião de `t` entra na decisão de `t` com espera até um prazo (padrão 45 s); o voto usado é gravado em `analyst_decisions.specialists`; exige `analyst-2` e migration dos `CHECK` | D9 |
-| M11 | **Segredos e privacidade:** chaves só no worker (`secretVariables`), `redirect: 'error'`, códigos de erro sem texto, estado do provedor publicado no batimento só com booleanos e códigos; `model_opinions` é pública (sem PII) e `user_model_agents` entra no registro LGPD | RF04, RF22, RNF02, RNF09, D10 |
+| M1 | **Três equipes, uma por provedor:** Nina = Gemini Pro (Google), Lucas = Claude Sonnet (Anthropic), Olívia = GPT (OpenAI). Id do modelo e preço por milhão de tokens vêm do env, sem padrão no código | DT1, RF03 |
+| M2 | **Três papéis internos fixos** (tendência, risco, gestor) numa ÚNICA chamada estruturada por vela, o mesmo prompt `team-prompt-1` nas três | DT2, RF07 |
+| M3 | **Uma chamada por (equipe, par, vela de 15 min), compartilhada** entre usuários e execuções. A entrada é só dado público de mercado (`TeamPromptInput`, `strictObject`); sem posição, saldo, usuário nem votos de outros agentes. A recomendação é uma leitura de mercado: `buy` = boa entrada, `sell` = sair ou ficar fora, `hold` = esperar | DT3, RF05, RF09 |
+| M4 | **Fila durável fora do passo:** o passo ao vivo só insere a linha `pending` (`ON CONFLICT DO NOTHING`, na transação da vela); um despachante do worker reivindica por arrendamento, chama o provedor e grava. Falha de provedor nunca chega a outra simulação | RF06, D2 |
+| M5 | **Relatório validado e coerente:** esquema estrito, `buy` com `stop < entrada < alvo` (texto decimal), `sell`/`hold` com preços nulos, entrada perto do fechamento e proteção a uma distância mínima; textos higienizados (controle, 160 caracteres, palavra proibida trocada por frase fixa) | RF07, RF08 |
+| M6 | **Prompt versionado:** `team-prompt-1` com hash gravado; mudar o template exige `team-prompt-2`; a chave única inclui a versão e o placar conta por versão | D3 |
+| M7 | **Custo e teto:** custo e reserva em decimal, para cima a 8 casas; reserva do máximo da chamada (inclui o teto do raciocínio) antes de chamar, sob trava consultiva; acima do teto do dia (UTC) ou do mês a linha vira `skipped`/`BUDGET_EXHAUSTED` | RF17, D4 |
+| M8 | **Circuito por provedor** (máquina de estados, relógio por parâmetro, estado em memória do worker): 3 falhas seguidas de `timeout`/`unavailable` abrem por 10 min; `rate_limited` até `Retry-After` (teto 15 min); `key_rejected` e `model_not_found` abrem por 60 min; resposta do provedor fecha. Linha com mais de 2 velas vira `skipped`/`STALE` | RF12, D5 |
+| M9 | **Placar igual ao dos outros agentes:** `scheduled` `decided` dos últimos 30 dias, ação `buy` ou `sell`, vela seguinte fechada; veredito só por `judgeAgainstCoinFlip` (`@ativada/statistics`, único lugar do Wilson); `hold`, `on_demand`, `failed` e `skipped` não contam; a confiança declarada não entra no veredito | RF16 |
+| M10 | **A equipe participa por uma execução própria** (`live_paper` com `runs.request.signalSource = { kind: 'model_team', team }`, saldo fictício próprio). A decisão gravada de `t` vira um sinal (`buy` sem posição → BUY; `sell` com posição → SELL; o resto → HOLD, com o motivo da ignorada) por função pura, entregue ao `walletStep` avulso existente, que executa na abertura de `t + 1`. Prazo de espera da decisão; passado o prazo, "equipe sem leitura" (esperar) gravado, e a decisão tardia nunca é usada | DT4, DT12, RF14, D9 |
+| M11 | **Níveis (opção A × B):** na opção A a posição usa o stop e o alvo da configuração de risco da execução (o motor não recebe nível de fora) e os níveis da equipe são exibidos e medidos; a opção B (o modelo comanda entrada, alvo e proteção) exige comando de entrada novo, `ENGINE_VERSION`, dourado regravado e ADR, e fica fora desta entrega | DT5, D9 |
+| M12 | **Segredos e privacidade:** chaves só no worker (`secretVariables`), `redirect: 'error'`, códigos de erro sem texto, estado do provedor publicado no batimento só com booleanos e códigos; `model_team_reports` é pública (sem PII) e `user_model_teams` entra no registro LGPD | RF04, RF23, RNF02, RNF09 |
 
-**Pendência de validação.** A validação por `architect` (opus) não rodou nesta sessão; fica registrada em `evidence.md`.
+**Pendência de validação.** A validação do D9 por `architect` (opus) não rodou nesta sessão e fica registrada em
+`evidence.md`; é pré-requisito da T3.1.
