@@ -540,3 +540,36 @@ describe('balão de valores opcional', () => {
     await waitFor(() => expect(chartTip().hidden).toBe(false));
   });
 });
+
+describe('botão 3m quando a execução inteira é anterior à retenção', () => {
+  const RETENTION_TEXT = 'Velas de 3 min existem só dos últimos 90 dias.';
+
+  async function leaveThreeMinutes(harness: CandleCardHarness): Promise<void> {
+    await ready(harness);
+    fireEvent.click(screen.getByRole('button', { name: /^3m/ }));
+    await screen.findByText(RETENTION_TEXT);
+    fireEvent.click(screen.getByRole('button', { name: /^15m/ }));
+    await waitFor(() => expect(pressed(/^15m/)).toBe('true'));
+  }
+
+  test('com o corte depois do fim da execução, o 3m fica desabilitado e a dica explica', async () => {
+    const harness = show({
+      kind: 'backtest',
+      retentionStart: FIXTURE_FROM + 41 * 24 * FIXTURE_HOUR,
+    });
+    await leaveThreeMinutes(harness);
+    const button = screen.getByRole('button', { name: /^3m/ });
+    expect(button.hasAttribute('disabled')).toBe(true);
+    expect(button.getAttribute('title')).toBe(RETENTION_TEXT);
+    expect(screen.getByText(RETENTION_TEXT)).toBeDefined();
+  });
+
+  test('com o corte no meio da execução, o 3m continua disponível', async () => {
+    const harness = show({
+      kind: 'backtest',
+      retentionStart: FIXTURE_FROM + 20 * 24 * FIXTURE_HOUR,
+    });
+    await leaveThreeMinutes(harness);
+    expect(screen.getByRole('button', { name: /^3m/ }).hasAttribute('disabled')).toBe(false);
+  });
+});

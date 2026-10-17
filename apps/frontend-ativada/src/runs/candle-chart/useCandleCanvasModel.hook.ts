@@ -194,8 +194,8 @@ export function useCandleCanvasModel(input: CandleCanvasInput): CandleCanvasMode
     forecastText: forecastTextFor(chart.timeframe, layers, base.timeZone),
     legend: legendFor(input, { hoverIndex: pointed, live: layers.live, timeZone: base.timeZone }),
     handleTimeframeChange: (next): void => {
-      const center = interactions.centerTime();
-      if (center !== undefined) source.changeTimeframe(next, center);
+      // Sem velas na tela (ex.: 3 min antes da retenção) não há centro: o fim da execução evita ficar preso na vela vazia.
+      source.changeTimeframe(next, interactions.centerTime() ?? chart.runRange.to);
     },
   };
 }
