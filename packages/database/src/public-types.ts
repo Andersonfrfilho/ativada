@@ -23,3 +23,4 @@ export type * from './analyst/analyst-decision.types.js';
 export type * from './analyst/analyst-goal-snapshot.js';
 export type * from './analyst/analyst-history.js';
 export type * from './notices/notice-feed.exports.js';
+export type * from './model-teams/team-report.types.js';

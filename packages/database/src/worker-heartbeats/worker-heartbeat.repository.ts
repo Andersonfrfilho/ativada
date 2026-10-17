@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { desc, sql } from 'drizzle-orm';
 
+import { toNullableJsonb } from '../jsonb.js';
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import { workerHeartbeats } from '../schema/worker-heartbeats.schema.js';
 import { WORKER_HEARTBEAT_RETENTION_HOURS } from './worker-heartbeat.constant.js';
@@ -19,10 +20,18 @@ export function createWorkerHeartbeatRepository(handle: DatabaseHandle): WorkerH
     recordBeat: async (params: RecordWorkerBeatParams): Promise<void> => {
       await database
         .insert(workerHeartbeats)
-        .values({ instanceId: params.instanceId, version: params.version ?? null })
+        .values({
+          instanceId: params.instanceId,
+          version: params.version ?? null,
+          modelTeams: toNullableJsonb(params.modelTeams),
+        })
         .onConflictDoUpdate({
           target: workerHeartbeats.instanceId,
-          set: { lastBeatAt: sql`now()`, version: params.version ?? null },
+          set: {
+            lastBeatAt: sql`now()`,
+            version: params.version ?? null,
+            modelTeams: toNullableJsonb(params.modelTeams),
+          },
         });
       await database
         .delete(workerHeartbeats)

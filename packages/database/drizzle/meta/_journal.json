@@ -190,6 +190,13 @@
       "when": 1792175192826,
       "tag": "0026_candles_display_timeframes",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1792266815244,
+      "tag": "0027_model_teams",
+      "breakpoints": true
     }
   ]
 }

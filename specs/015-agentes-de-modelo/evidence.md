@@ -108,3 +108,31 @@ painel foi tocado.
 - Oráculo independente em `test/fixtures/model-agents/auditor-oracle.fixture.ts` (só `bigint`, sem importar o `src`): o veredito bate em TODAS as contagens de 0 a 120 e em 2.000 cenários sorteados (contagens, empates, lacunas, janela, avulsos, falhas e confiança). Bordas: 29 contadas = poucas; 30 com 21 acertos = acima; 20 = igual; 10 = igual; 9 = abaixo.
 - Mutantes (`test/model-agents-mutants.contract.test.ts`): 41 mutantes do pacote (auditor 9, sinal 6, preços 6, higiene e esquema 6, dinheiro 6, circuito 7), cada um numa cópia de `packages/model-agents/src` julgada pelos 7 contratos do pacote. Na primeira rodada 4 sobreviveram (taxa arredondada para cima, empate contado como acerto, e igualdade entre proteção/entrada e entrada/alvo, esta última por um teste que falhava por outro motivo); corrigidos com testes novos. Resultado final: o controle passa e os 41 morrem.
 - Gates: typecheck OK; lint OK; format:check OK; 201 testes passam (9 arquivos do pacote, incluindo fronteira e mutantes) e mais 60 contratos de fronteira e tamanho do repo.
+
+## Fase 2 — Banco, adaptadores e despachante (worker)
+
+Autorização do usuário (mensagem na thread, 2026-10-17): migration aditiva `0027_model_teams`, API e worker; padrões: opinião a cada 60 min
+(`MODEL_TEAM_CADENCE_MINUTES`, configurável) e teto diário de US$ 2 (mensal proporcional: US$ 50). Não autorizados: opção B (motor),
+chaves reais, rede a provedor real, `git push`. Gates no WSL, espelho `~/gates/ativada-spec15`, Postgres embutido próprio (porta 56465).
+
+### T2.1 — Migration `0027_model_teams`, repositórios e registro LGPD (2026-10-17)
+
+- `0027_model_teams.sql` (gerada pelo `drizzle-kit`, com snapshot e journal) e `.rollback.sql`: `model_team_reports` (pública, sem `user_id`),
+  `user_model_teams` (PK `(user_id, team_key)`), `team_run_inputs` (PK `(run_id, candle_time)`, FK composta `(run_id, user_id)` para `runs`,
+  `report_id` NULL com FK `RESTRICT` para o relatório, `failure_code`, `applied_action`; ajuste do architect) e a coluna
+  `worker_heartbeats.model_teams jsonb`. Sem ENUM nativo; CHECKs de chaves, estados, `buy` (`stop < entrada < alvo`), coerência de `decided` e
+  código de falha. O rollback ABORTA (`restrict_violation`) enquanto existir execução com `signalSource` de equipe.
+- Repositórios em `packages/database/src/model-teams/`: `team-report.repository.ts` (enfileirar em transação curta própria, idempotente pela
+  chave única parcial e só com dono ativo que ligou a equipe e simulação `live_paper` rodando no par, na grade do ritmo; reivindicar com
+  arrendamento e `SKIP LOCKED`, 2 tentativas e `ATTEMPTS_EXHAUSTED`; reserva do teto sob `pg_advisory_xact_lock` com a soma exata do dia e do
+  mês UTC; `finish` zera a reserva; leituras públicas do analista; expiração que não apaga relatório referenciado) e
+  `user-model-team.repository.ts` (`OwnerScope`).
+- Registro: `team_run_inputs` e `user_model_teams` em `OWNED_TABLES`, exportação (`model-team-export-steps.ts`) e ordem de exclusão (a entrada
+  gravada antes de `runs`); `model_team_reports` em `UNOWNED_PUBLIC_TABLES`. Tarefa `expire-model-team-reports` no cron (365 dias).
+- Proposta (não presumida, para a Fase 3): uma marca para esconder a estratégia `model-team-1` da lista e fora de `STRATEGY_MAX_PER_USER`
+  (coluna ou regra por hash). Nenhuma coluna foi criada para isso na 0027.
+- Gates: typecheck OK; lint OK; format:check OK; `migration-test` (embutido, 28 migrations aplicadas e desfeitas); `database-test` OK, incluindo
+  as checagens novas (`model-team-checks.ts`: enfileirar idempotente e por ritmo, reivindicação concorrente sem repetir, arrendamento e tentativas,
+  teto sob trava com duas reservas simultâneas, CHECK dos preços, leituras públicas, interruptor preso ao dono, guarda do rollback) e as de
+  exportação/purga LGPD com as duas tabelas novas (`checkPersistenceExport`/`checkPersistencePurge`). `make lgpd-test` (precisa de Docker no WSL)
+  não rodou; a cobertura LGPD veio do `database-test`.

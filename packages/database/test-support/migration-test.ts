@@ -8,8 +8,8 @@ import { readDatabaseUrl } from '../src/read-database-url.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
 
 const TEMPORARY_DATABASE_PREFIX = 'ativada_migration_';
-// Tabela mais nova criada por migration (0024): existe depois de aplicar e some depois do rollback (o teste de tabelas sobrando cobre a volta).
-const LATEST_MIGRATION_TABLE = 'analyst_decisions';
+// Tabela mais nova criada por migration (0027): existe depois de aplicar e some depois do rollback (o teste de tabelas sobrando cobre a volta).
+const LATEST_MIGRATION_TABLE = 'model_team_reports';
 
 type CountRow = { readonly total: number };
 type TableNameRow = { readonly table_name: string };

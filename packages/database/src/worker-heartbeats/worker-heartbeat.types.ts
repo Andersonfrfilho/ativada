@@ -1,7 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import type { JsonContainer } from '../json-value.types.js';
+
 export type RecordWorkerBeatParams = {
   readonly instanceId: string;
   readonly version: string | undefined;
+  // Resumo das equipes de modelo (só booleanos e códigos); ausente = grava nulo.
+  readonly modelTeams?: JsonContainer | undefined;
 };
 
 export type LatestWorkerHeartbeat = {

@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { index, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { index, jsonb, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 
 import {
   WORKER_HEARTBEAT_INSTANCE_ID_MAX_LENGTH,
@@ -17,6 +17,8 @@ export const workerHeartbeats = pgTable(
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
     lastBeatAt: timestamp('last_beat_at', { withTimezone: true }).notNull().defaultNow(),
     version: varchar('version', { length: WORKER_HEARTBEAT_VERSION_MAX_LENGTH }),
+    // Resumo das equipes de modelo (spec 015): só booleanos e códigos por equipe, nunca segredo.
+    modelTeams: jsonb('model_teams'),
   },
   (table) => [index('worker_heartbeats_last_beat_at_idx').on(table.lastBeatAt.desc())],
 );

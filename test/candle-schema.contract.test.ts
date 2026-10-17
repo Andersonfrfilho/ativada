@@ -115,6 +115,7 @@ describe('public tables without an owner', () => {
   test('are declared in an explicit list, so a future ownerless table cannot slip in', () => {
     expect(UNOWNED_PUBLIC_TABLES.map((table) => getTableName(table)).sort()).toStrictEqual([
       'candles',
+      'model_team_reports',
       'sentiment_daily',
       'sentiment_observations',
       'worker_heartbeats',

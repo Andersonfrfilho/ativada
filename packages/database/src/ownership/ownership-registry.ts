@@ -22,6 +22,9 @@ import { telegramLinkCodes } from '../schema/telegram-link-codes.schema.js';
 import { userAssets } from '../schema/user-assets.schema.js';
 import { users } from '../schema/users.schema.js';
 import { walkForwardWindows } from '../schema/walk-forward-windows.schema.js';
+import { modelTeamReports } from '../schema/model-team-reports.schema.js';
+import { teamRunInputs } from '../schema/team-run-inputs.schema.js';
+import { userModelTeams } from '../schema/user-model-teams.schema.js';
 import { workerHeartbeats } from '../schema/worker-heartbeats.schema.js';
 
 export {
@@ -49,9 +52,11 @@ export const OWNED_TABLES: readonly PgTable[] = [
   walkForwardWindows,
   alerts,
   analystDecisions,
+  teamRunInputs,
   goals,
   priceAlerts,
   userAssets,
+  userModelTeams,
 ];
 
 // Ordem da exclusão (ADR 0001 §h passo 3): filhas antes dos pais, porque a FK é ON DELETE RESTRICT.
@@ -59,6 +64,7 @@ export const OWNED_TABLE_DELETION_ORDER: readonly PgTable[] = [
   telegramLinkCodes,
   alerts,
   analystDecisions,
+  teamRunInputs,
   equityPoints,
   runCommands,
   walkForwardWindows,
@@ -70,6 +76,7 @@ export const OWNED_TABLE_DELETION_ORDER: readonly PgTable[] = [
   goals,
   priceAlerts,
   userAssets,
+  userModelTeams,
   strategyVersions,
   strategies,
 ];
@@ -86,6 +93,7 @@ export const UNOWNED_PUBLIC_TABLES: readonly PgTable[] = [
   sentimentDaily,
   sentimentObservations,
   workerHeartbeats,
+  modelTeamReports,
 ];
 
 export function tableNameOf(table: PgTable): string {
