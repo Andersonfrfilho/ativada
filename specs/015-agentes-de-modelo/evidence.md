@@ -81,3 +81,10 @@ painel foi tocado.
 - Renomeações nos arquivos da T1.2 (agente → equipe) só para compilar; a mudança de comportamento é a T1.2b.
 - Testes: `model-agents-schemas.contract.test.ts` (bordas 0/100, 160/161 nos três textos, chave a mais em todo nível, preço nulo em `sell`/`hold` e obrigatório em `buy`, bordas exatas da tolerância e da proteção, `userId`/`position` recusados), fronteira.
 - Gates: typecheck OK; lint OK; format:check OK; 84 testes passam (4 arquivos).
+
+### T1.2b — Prompt `team-prompt-1`, higiene dos três textos e frases da equipe (2026-10-17)
+
+- `prompt-template.ts` (`team-prompt-1`, instrução da equipe de três papéis, hash `2f207d45...b368` conferido contra `node:crypto`), `reason-hygiene.ts` (`sanitizeReport` limpa tendência, risco e gestor e acusa os papéis escondidos), `model-agents-messages.ts` (selos comprar/vender/esperar/pensando/desligada, estados do provedor, `TEAM_NOTICE`, `DUEL_NOTICE`, motivos "equipe sem leitura", "ignorada: já comprada" e "ignorada: sem posição").
+- Removidos os textos do modo sombra e do governar (não existem mais na revisão 2).
+- A varredura de linguagem das frases da tela usa as quatro palavras do RNF07; a lista de sete palavras vale só para o texto livre do modelo (a frase fixa da equipe diz "compra, venda ou espera").
+- Gates: typecheck OK; lint OK; format:check OK; 88 testes passam (4 arquivos).

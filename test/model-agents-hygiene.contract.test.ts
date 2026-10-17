@@ -2,8 +2,9 @@
 import { describe, expect, test } from 'bun:test';
 
 import { loadModelAgentsApi } from './fixtures/model-agents/model-agents-api.fixture.js';
+import { buildReport } from './fixtures/model-agents/team-report.fixture.js';
 
-// T1.2 da spec 015 (RF08, RNF07): higiene do motivo e catálogo fechado das frases da tela.
+// T1.2b da spec 015 (RF08, RNF07): higiene do motivo e catálogo fechado das frases da tela.
 
 const api = await loadModelAgentsApi();
 const HIDDEN = {
@@ -74,9 +75,41 @@ describe('higiene do motivo (RF08)', () => {
   });
 });
 
-describe('catálogo fechado das frases da tela (RF17, RNF07)', () => {
+describe('higiene dos três textos do relatório (RF08)', () => {
+  test('relatório limpo passa intacto, sem papel escondido', () => {
+    const result = api.sanitizeReport(buildReport());
+    expect(result.report).toStrictEqual(buildReport());
+    expect(result.hiddenRoles).toStrictEqual([]);
+  });
+
+  test('cada papel é limpo e acusado separadamente', () => {
+    const dirty = buildReport();
+    const result = api.sanitizeReport({
+      trend: { ...dirty.trend, reason: 'Sobe com certeza' },
+      risk: { ...dirty.risk, reason: 'linha um\nlinha dois' },
+      decision: { ...dirty.decision, reason: 'Compre agora' },
+    });
+    expect(result.hiddenRoles).toStrictEqual(['trend', 'decision']);
+    expect(result.report.trend.reason).toBe(HIDDEN.reason);
+    expect(result.report.risk.reason).toBe('linha um linha dois');
+    expect(result.report.decision.reason).toBe(HIDDEN.reason);
+  });
+
+  test('só o texto muda: ação, preços, tendência, risco e confiança ficam como vieram', () => {
+    const dirty = buildReport('buy');
+    const result = api.sanitizeReport({
+      ...dirty,
+      decision: { ...dirty.decision, reason: 'garantido' },
+    });
+    expect(result.report.decision).toStrictEqual({ ...dirty.decision, reason: HIDDEN.reason });
+    expect(result.report.trend.stance).toBe(dirty.trend.stance);
+    expect(result.report.risk.level).toBe(dirty.risk.level);
+  });
+});
+
+describe('catálogo fechado das frases da tela (RF19, RNF07)', () => {
   test('nenhuma frase tem linguagem de promessa ou conselho', () => {
-    const banned = [...SCREEN_BANNED, ...api.FORBIDDEN_REASON_WORDS];
+    const banned = SCREEN_BANNED;
     const offending = api
       .listAllPhrases()
       .filter((phrase) => banned.some((word) => phrase.toLowerCase().includes(word)));
@@ -92,17 +125,17 @@ describe('catálogo fechado das frases da tela (RF17, RNF07)', () => {
     }
   });
 
-  test('os selos de opinião: ícone e palavra do spec', () => {
-    expect(api.OPINION_BADGE.up).toStrictEqual({ icon: '↗', label: 'a favor' });
-    expect(api.OPINION_BADGE.down).toStrictEqual({ icon: '↘', label: 'contra' });
-    expect(api.OPINION_BADGE.neutral).toStrictEqual({ icon: '—', label: 'neutro' });
-    expect(api.OPINION_BADGE.pending).toStrictEqual({ icon: '◷', label: 'pensando' });
-    expect(api.OPINION_BADGE.disabled.label).toBe('desligado');
+  test('os selos da equipe: ícone e palavra do spec', () => {
+    expect(api.TEAM_BADGE.buy).toStrictEqual({ icon: '↗', label: 'comprar' });
+    expect(api.TEAM_BADGE.sell).toStrictEqual({ icon: '↘', label: 'vender' });
+    expect(api.TEAM_BADGE.hold).toStrictEqual({ icon: '—', label: 'esperar' });
+    expect(api.TEAM_BADGE.pending).toStrictEqual({ icon: '◷', label: 'pensando' });
+    expect(api.TEAM_BADGE.disabled.label).toBe('desligada');
   });
 
   test('os seis estados do provedor, com ícone e palavra', () => {
     expect(api.describeProviderState('no_key', '')).toBe('⚠ sem chave configurada');
-    expect(api.describeProviderState('budget_exhausted', '')).toBe('⏸ parado pelo teto de custo');
+    expect(api.describeProviderState('budget_exhausted', '')).toBe('⏸ parada pelo teto de custo');
     expect(api.describeProviderState('circuit_open', '14:35')).toBe(
       '⚡ provedor fora (tentando de novo às 14:35)',
     );
@@ -117,7 +150,7 @@ describe('catálogo fechado das frases da tela (RF17, RNF07)', () => {
     }
   });
 
-  test('o rodapé de cada agente cita a família do modelo', () => {
+  test('o rodapé de cada equipe cita a família do modelo', () => {
     expect(api.buildGeneratedByFooter('nina')).toBe('gerado por modelo: Gemini Pro · pode errar');
     expect(api.buildGeneratedByFooter('lucas')).toBe(
       'gerado por modelo: Claude Sonnet · pode errar',
@@ -126,8 +159,8 @@ describe('catálogo fechado das frases da tela (RF17, RNF07)', () => {
   });
 
   test('as frases fixas do spec, literais', () => {
-    expect(api.AGENT_NOTICE).toBe(
-      'Agente de modelo: um modelo de linguagem lê os mesmos dados públicos de mercado e opina. Pode errar; o auditor mede o acerto. Não é recomendação. Tudo simulado.',
+    expect(api.TEAM_NOTICE).toBe(
+      'Equipe de modelo: um modelo de linguagem lê os mesmos dados públicos de mercado, com três papéis, e indica compra, venda ou espera. Pode errar; o auditor mede o acerto. Não é recomendação. Tudo simulado.',
     );
     expect(api.COST_ESTIMATE_NOTICE).toBe(
       'Estimativa pelos tokens e pelo preço configurado; a fatura do provedor é a palavra final.',
@@ -135,10 +168,16 @@ describe('catálogo fechado das frases da tela (RF17, RNF07)', () => {
     expect(api.COMPARISON_NOTICE).toBe(
       'Comparação de acerto do lado da próxima vela; não mede lucro e não é recomendação.',
     );
-    expect(api.GOVERN_LOCKED_NOTICE).toBe(
-      'Disponível depois da sua autorização e de 30 opiniões medidas',
+    expect(api.DUEL_NOTICE).toBe(
+      'Mesmo par, mesma vela e mesmo saldo fictício. Período curto não prova nada.',
     );
     expect(api.ON_DEMAND_MARK).toBe('pedido avulso · não entra no placar');
     expect(api.HIDDEN_REASON_PHRASE).toBe(HIDDEN.reason);
+  });
+
+  test('os motivos gravados na linha de decisão (RF14)', () => {
+    expect(api.NO_READING_REASON).toBe('equipe sem leitura');
+    expect(api.IGNORED_ALREADY_LONG_REASON).toBe('ignorada: já comprada');
+    expect(api.IGNORED_NO_POSITION_REASON).toBe('ignorada: sem posição');
   });
 });

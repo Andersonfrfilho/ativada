@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { HIDDEN_REASON_PHRASE } from './model-agents-messages.js';
-import { REPORT_TEXT_MAX_LENGTH } from './team-report.schema.js';
+import { TEAM_ROLE, type TeamRole } from './model-team-catalog.constant.js';
+import { REPORT_TEXT_MAX_LENGTH, type TeamReport } from './team-report.schema.js';
 
 // RF08 / RNF07: palavra que soa a promessa ou a conselho. A busca é por trecho, sem diferenciar maiúscula.
 export const FORBIDDEN_REASON_WORDS: readonly string[] = [
@@ -53,4 +54,30 @@ export function sanitizeReason(rawReason: string): SanitizedReason {
     return { reason: HIDDEN_REASON_PHRASE, reasonHidden: true };
   }
   return { reason: cutToLimit(cleaned), reasonHidden: false };
+}
+
+export type SanitizedReport = {
+  readonly report: TeamReport;
+  // Quais papéis tiveram o texto trocado pela frase fixa.
+  readonly hiddenRoles: readonly TeamRole[];
+};
+
+// RF08 nos três textos do relatório: tendência, risco e gestor.
+export function sanitizeReport(report: TeamReport): SanitizedReport {
+  const trend = sanitizeReason(report.trend.reason);
+  const risk = sanitizeReason(report.risk.reason);
+  const decision = sanitizeReason(report.decision.reason);
+  const roleResults: readonly (readonly [TeamRole, SanitizedReason])[] = [
+    [TEAM_ROLE.TREND, trend],
+    [TEAM_ROLE.RISK, risk],
+    [TEAM_ROLE.DECISION, decision],
+  ];
+  return {
+    report: {
+      trend: { ...report.trend, reason: trend.reason },
+      risk: { ...report.risk, reason: risk.reason },
+      decision: { ...report.decision, reason: decision.reason },
+    },
+    hiddenRoles: roleResults.filter(([, result]) => result.reasonHidden).map(([role]) => role),
+  };
 }

@@ -6,24 +6,25 @@ import { describe, expect, test } from 'bun:test';
 import { loadModelAgentsApi } from './fixtures/model-agents/model-agents-api.fixture.js';
 import { buildPromptInput } from './fixtures/model-agents/prompt-input.fixture.js';
 
-// T1.2 da spec 015 (plan D3, RF09): o `prompt-1` literal com o hash, e a varredura de privacidade do prompt pronto.
+// T1.2b da spec 015 (plan D3, RF09): o `team-prompt-1` literal com o hash, e a varredura de privacidade do prompt pronto.
 
 const api = await loadModelAgentsApi();
 
 const GOLDEN_PROMPT = [
-  'Você é um analista de mercado de criptomoedas e lê apenas dados de velas de 15 minutos.',
-  'Pergunta única: a próxima vela de 15 min do par fecha acima, abaixo ou sem opinião em relação ao fechamento da última vela?',
-  'Responda só pelo formato pedido (ferramenta ou JSON) com os campos posture, reason e confidence.',
-  'posture: up (fecha acima), down (fecha abaixo) ou neutral (sem leitura clara).',
-  'reason: uma linha de até 160 caracteres, sem prometer nada e sem recomendar compra ou venda.',
-  'confidence: inteiro de 0 a 100.',
-  'Use neutral quando não houver leitura clara.',
+  'Você é uma equipe de três papéis: analista de tendência, analista de risco e gestor. Leia só os dados de velas de 15 minutos abaixo.',
+  'Pergunta única ao gestor: a próxima vela de 15 min do par é uma boa entrada de compra (buy), pede sair ou ficar fora (sell) ou esperar (hold)?',
+  'Responda só pelo formato pedido (ferramenta ou JSON) com os campos trend, risk e decision.',
+  'trend: stance (up, down ou neutral) e reason. risk: level (low, medium ou high) e reason.',
+  'decision: action (buy, sell ou hold), entryPrice, targetPrice, stopPrice, confidence (inteiro de 0 a 100) e reason.',
+  'buy exige os três preços em texto decimal, com stopPrice < entryPrice < targetPrice e entryPrice perto do último fechamento. sell e hold exigem os três preços nulos (null).',
+  'Cada reason tem uma linha de até 160 caracteres, sem prometer nada e sem recomendar compra ou venda.',
+  'Use hold quando não houver leitura clara.',
   'Os dados vêm em JSON: candles = [abertura em ms UTC, abertura, máxima, mínima, fechamento, volume]; readings = leituras públicas; fearGreed = índice de 0 a 100 ou null.',
   '',
   'DADOS:',
   '{"symbol":"LINKUSDT","timeframe":"15m","lastCandleCloseTime":"2026-10-17T00:00:00.000Z","candles":[[1760000000000,"100.00","101.00","99.00","100.50","1000"],[1760000900000,"100.50","101.50","99.50","101.00","1001"]],"readings":{"relativeVolume":"1.25","atrRate":"0.004","atrPercentile90":"0.0051","atrPercentile95":null,"momentumShort":"0.002","momentumLong":"-0.01"},"fearGreed":{"value":42,"observedAt":"2026-10-17T00:00:00.000Z"}}',
 ].join('\n');
-const GOLDEN_HASH = '717b35633d17de92e96f4e5dff30b9019da9d01912d2d5878832d1b0877b027d';
+const GOLDEN_HASH = '2f207d454c835b251c58af3cfa0391d9683b279926f52bf0c6f755082f31b368';
 
 function goldenInput(): ReturnType<typeof buildPromptInput> {
   return {
@@ -36,9 +37,9 @@ function goldenInput(): ReturnType<typeof buildPromptInput> {
   };
 }
 
-describe('prompt-1 (dourado literal)', () => {
-  test('a versão é prompt-1', () => {
-    expect(api.PROMPT_VERSION).toBe('prompt-1');
+describe('team-prompt-1 (dourado literal)', () => {
+  test('a versão é team-prompt-1', () => {
+    expect(api.PROMPT_VERSION).toBe('team-prompt-1');
   });
 
   test('o texto renderizado é exatamente o dourado', () => {

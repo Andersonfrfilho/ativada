@@ -50,20 +50,28 @@ export {
   findPromptPrivacyViolations,
   PROMPT_VIOLATION,
 } from './prompt-privacy.js';
-export { FORBIDDEN_REASON_WORDS, sanitizeReason, type SanitizedReason } from './reason-hygiene.js';
 export {
-  AGENT_NOTICE,
+  FORBIDDEN_REASON_WORDS,
+  sanitizeReason,
+  sanitizeReport,
+  type SanitizedReason,
+  type SanitizedReport,
+} from './reason-hygiene.js';
+export {
   buildGeneratedByFooter,
   COMPARISON_NOTICE,
   COST_ESTIMATE_NOTICE,
   describeProviderState,
-  GOVERN_LOCKED_NOTICE,
+  DUEL_NOTICE,
   HIDDEN_REASON_PHRASE,
+  IGNORED_ALREADY_LONG_REASON,
+  IGNORED_NO_POSITION_REASON,
   listAllPhrases,
+  NO_READING_REASON,
   ON_DEMAND_MARK,
-  OPINION_BADGE,
   PROVIDER_STATE_BADGE,
   RETRY_TIME_MARK,
-  SHADOW_MODE_EXPLANATION,
-  SHADOW_MODE_LABEL,
+  TEAM_BADGE,
+  TEAM_NOTICE,
+  WALLET_RESULT_NOTICE,
 } from './model-agents-messages.js';
