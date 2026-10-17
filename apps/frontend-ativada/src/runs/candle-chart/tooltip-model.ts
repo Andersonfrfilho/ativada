@@ -8,6 +8,7 @@ import { decidedOpenAt, opinionWindowAt, type DisplayMapping } from './display-m
 import { formatThreshold } from './layer-series.js';
 import type { MarketCandle } from './market-candles.validation.js';
 import { buildOhlcText, type OhlcText } from './ohlc-text.js';
+import { describePositionDistance, type OpenPosition } from './position-distance.js';
 import type { StrategyLayers } from './strategy-layers.validation.js';
 
 export type TooltipRow = { readonly label: string; readonly value: string };
@@ -36,6 +37,8 @@ export type TooltipParams = {
   readonly durationMilliseconds: number;
   // A frase do colchete de uma saída decidida dentro da vela de 15 min, quando a vela apontada está nele.
   readonly bracketText: string | undefined;
+  // A posição aberta da simulação ao vivo (alvo e proteção); `undefined` sem posição.
+  readonly openPosition: OpenPosition | undefined;
 };
 
 const OUTCOME_WORD: Readonly<Record<ChartDecision['outcome'], string>> = {
@@ -167,7 +170,10 @@ export function buildTooltipModel(params: TooltipParams): TooltipModel {
     title: `${formatInZone(candle.openTime, timeZone)} · vela de ${phrase}`,
     ohlc,
     context: contextOf(params),
-    rows: layerRows(params.layers, candle.openTime),
+    rows: [
+      ...layerRows(params.layers, candle.openTime),
+      ...describePositionDistance(params.openPosition, candle),
+    ],
     notes: notes.filter((note) => note !== undefined),
   };
 }

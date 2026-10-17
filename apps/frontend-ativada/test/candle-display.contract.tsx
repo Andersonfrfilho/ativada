@@ -13,6 +13,7 @@ import { buildFixtureChart, FIXTURE_DAY, fillTime } from './fixtures/trade-chart
 import type { FakeChartSurface } from './support/fake-chart-surface.js';
 import { buildProjectionsResponse } from './support/candle-chart-fixtures.js';
 import { dataResponse, type RecordedCall } from './support/fake-fetch.js';
+import { buildLiveStatusResponse } from './support/live-status-fixtures.js';
 import {
   FIXTURE_FROM,
   FIXTURE_HOUR,
@@ -571,5 +572,44 @@ describe('botão 3m quando a execução inteira é anterior à retenção', () =
     });
     await leaveThreeMinutes(harness);
     expect(screen.getByRole('button', { name: /^3m/ }).hasAttribute('disabled')).toBe(false);
+  });
+});
+
+describe('balão de valores com posição aberta', () => {
+  function withPosition(openPosition: Record<string, unknown> | null): CandleCardHarness {
+    return show({
+      extraRoutes: [
+        {
+          method: 'GET',
+          path: '/v1/runs/run-1/live-status',
+          respond: () => dataResponse(buildLiveStatusResponse({ openPosition })),
+        },
+      ],
+    });
+  }
+
+  test('mostra a distância até o alvo e a proteção; sem posição, as linhas não existem', async () => {
+    const harness = withPosition({
+      entryPrice: '600',
+      quantity: '1',
+      targetPrice: '700',
+      stopPrice: '500',
+      openedCandleTime: FIXTURE_FROM,
+    });
+    const surface = await ready(harness);
+    act(() => surface.emitCrosshair(500));
+    await waitFor(() => expect(chartTip().textContent).toContain('Até o alvo'));
+    expect(chartTip().textContent).toContain('Até a proteção');
+    cleanup();
+    const without = withPosition(null);
+    const other = await ready(without);
+    act(() => other.emitCrosshair(500));
+    await waitFor(() => expect(chartTip().hidden).toBe(false));
+    await waitFor(() =>
+      expect(without.app.fake.callsTo('GET', '/v1/runs/run-1/live-status').length).toBeGreaterThan(
+        0,
+      ),
+    );
+    expect(chartTip().textContent).not.toContain('Até o alvo');
   });
 });

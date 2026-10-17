@@ -70,13 +70,15 @@ type DescriptionIds = { readonly help: string; readonly caption: string };
 // O gráfico é UMA parada de Tab (RF20): setas, Shift+seta, mais e menos, Home, End, Esc e Enter agem na cruz; a ajuda de
 // teclado e a descrição textual são lidas pelo leitor de tela ao chegar nele.
 function SurfaceBox({
+  runId,
+  view,
   chart,
   source,
   model,
   ids,
 }: CanvasViewProps & { readonly ids: DescriptionIds }): ReactElement {
   const isOn = source.preferences.preferences.isTooltipOn;
-  const tooltip = useChartTooltip({ chart, source, model, isOn });
+  const tooltip = useChartTooltip({ runId, isLive: view.isLive, chart, source, model, isOn });
   useTooltipHotkey(source.preferences.toggleTooltip);
   return (
     <div className={styles.canvasFrame}>

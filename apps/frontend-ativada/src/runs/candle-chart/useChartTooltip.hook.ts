@@ -10,6 +10,7 @@ import {
 } from 'react';
 
 import { formatSymbol } from '../../format/format.js';
+import { useLiveStatusQuery } from '../live-tracking/live-status.query.js';
 import type { TradeChart } from '../trade-chart.validation.js';
 import { placeTooltip, type TooltipPoint } from './tooltip-placement.js';
 import { buildTooltipModel, indexOfOpenTime, type TooltipModel } from './tooltip-model.js';
@@ -28,6 +29,9 @@ export type ChartTooltipState = {
 };
 
 export type ChartTooltipInput = {
+  readonly runId: string;
+  // Simulação ao vivo: só ela tem posição aberta para medir a distância até o alvo e a proteção.
+  readonly isLive: boolean;
   readonly chart: TradeChart;
   readonly source: CandleSource;
   readonly model: CandleCanvasModel;
@@ -36,7 +40,8 @@ export type ChartTooltipInput = {
 };
 
 function useTooltipModel(input: ChartTooltipInput, isHidden: boolean): TooltipModel | undefined {
-  const { chart, source, model } = input;
+  const { runId, isLive, chart, source, model } = input;
+  const openPosition = useLiveStatusQuery(runId, isLive).data?.openPosition ?? undefined;
   const { pointedOpenTime, timeZone, bracketText } = model;
   const { candles } = source.history;
   const layers = model.layerData.layers;
@@ -57,8 +62,19 @@ function useTooltipModel(input: ChartTooltipInput, isHidden: boolean): TooltipMo
       mapping: source.displayMapping,
       durationMilliseconds: source.durationMilliseconds,
       bracketText,
+      openPosition,
     });
-  }, [isHidden, pointedOpenTime, candles, layers, chart, source, timeZone, bracketText]);
+  }, [
+    isHidden,
+    pointedOpenTime,
+    candles,
+    layers,
+    chart,
+    source,
+    timeZone,
+    bracketText,
+    openPosition,
+  ]);
 }
 
 function useDismissWithEscape(isVisible: boolean, dismiss: () => void): void {
