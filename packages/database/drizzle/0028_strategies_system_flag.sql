@@ -1,0 +1,2 @@
+ALTER TABLE "strategies" ADD COLUMN "is_system" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "strategies_user_id_system_unique" ON "strategies" USING btree ("user_id") WHERE "strategies"."is_system";

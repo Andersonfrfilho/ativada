@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { JsonContainer } from '../json-value.types.js';
+import type { JsonContainer, JsonValue } from '../json-value.types.js';
 
 export type RecordWorkerBeatParams = {
   readonly instanceId: string;
@@ -13,6 +13,8 @@ export type LatestWorkerHeartbeat = {
   readonly lastBeatAt: Date;
   // Idade pelo relógio do banco, a mesma régua que gravou a batida.
   readonly ageMilliseconds: number;
+  // O resumo das equipes de modelo que a batida levou (só booleanos e códigos); `null` quando o worker não o mandou.
+  readonly modelTeams?: JsonValue | undefined;
 };
 
 export type WorkerHeartbeatRepository = {

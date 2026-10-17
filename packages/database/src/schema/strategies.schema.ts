@@ -29,6 +29,8 @@ export const strategies = pgTable(
       .references(() => users.id, { onDelete: 'restrict' }),
     name: varchar('name', { length: STRATEGY_NAME_MAX_LENGTH }).notNull(),
     isExample: boolean('is_example').notNull().default(false),
+    // A estratégia fixa do sistema (spec 015: `model-team-1`): fora da lista do usuário e do teto de estratégias.
+    isSystem: boolean('is_system').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
@@ -39,6 +41,9 @@ export const strategies = pgTable(
     uniqueIndex('strategies_user_id_example_unique')
       .on(table.userId)
       .where(sql`${table.isExample}`),
+    uniqueIndex('strategies_user_id_system_unique')
+      .on(table.userId)
+      .where(sql`${table.isSystem}`),
     check('strategies_name_not_blank_check', sql`length(btrim(${table.name})) > 0`),
   ],
 );

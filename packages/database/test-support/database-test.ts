@@ -33,6 +33,7 @@ import { checkReconnection } from './reconnect-checks.js';
 import { checkRunStall } from './run-stall-checks.js';
 import { checkRunStallSweep } from './run-stall-sweep-checks.js';
 import { checkModelTeams, checkRollbackGuard } from './model-team-checks.js';
+import { checkModelTeamApi } from './model-team-api-checks.js';
 import { checkWorkerHeartbeats } from './worker-heartbeat-checks.js';
 import { checkRunLog } from './run-log-checks.js';
 import { checkRunDeletion } from './run-delete-checks.js';
@@ -227,6 +228,7 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkRunStall(lifecycle);
     await checkRunStallSweep(lifecycle, databaseUrl);
     await checkModelTeams(lifecycle);
+    await checkModelTeamApi(lifecycle);
     await checkReconnection(lifecycle, databaseUrl);
     await checkRollbackGuard(lifecycle);
   } finally {

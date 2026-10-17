@@ -58,6 +58,8 @@ export type ReserveBudgetResult = { readonly usage: SpendUsage; readonly isReser
 
 export type SaveReportInputParams = {
   readonly reportId: string;
+  // O id do modelo que de fato vai ser chamado (do ambiente do worker): grava junto da entrada.
+  readonly modelId?: string | undefined;
   readonly input: JsonContainer;
   readonly promptHash: string;
 };
@@ -91,9 +93,20 @@ export type FinishTeamReportParams = {
 
 export type ExpireTeamReportsParams = { readonly olderThanDays: number };
 
+export type EnqueueOnDemandReportParams = {
+  readonly teamKey: string;
+  readonly provider: string;
+  readonly symbol: string;
+  // Abertura da última vela de 15 min FECHADA do par.
+  readonly candleTime: number;
+};
+
 export type TeamReportRepository = {
   // Transação curta própria, `ON CONFLICT DO NOTHING`: devolve quantas linhas `pending` nasceram.
   readonly enqueueTeamReports: (params: EnqueueTeamReportsParams) => Promise<number>;
+  // O pedido avulso (RF20): uma linha `pending` do tipo `on_demand`, sem dono (dado público). Devolve o id. O id do modelo é
+  // preenchido pelo worker, que é quem o conhece (`saveInput`).
+  readonly enqueueOnDemandReport: (params: EnqueueOnDemandReportParams) => Promise<string>;
   readonly claimPending: (params: ClaimTeamReportsParams) => Promise<readonly ClaimedTeamReport[]>;
   readonly readPublicReadings: (params: {
     readonly symbol: string;
@@ -109,8 +122,16 @@ export type TeamReportRepository = {
 
 export type UserModelTeamRecord = { readonly teamKey: string; readonly isEnabled: boolean };
 
+export type ClaimOnDemandParams = {
+  readonly teamKey: string;
+  // Teto de pedidos avulsos do usuário no dia (UTC), somando as equipes.
+  readonly dailyLimit: number;
+};
+
 export type UserModelTeamRepository = {
   readonly listTeams: (scope: OwnerScope) => Promise<readonly UserModelTeamRecord[]>;
+  // Conta UM pedido avulso do dia, de forma atômica: `false` quando o usuário já usou o teto de hoje.
+  readonly claimOnDemand: (scope: OwnerScope, params: ClaimOnDemandParams) => Promise<boolean>;
   readonly setEnabled: (
     scope: OwnerScope,
     params: { readonly teamKey: string; readonly isEnabled: boolean },

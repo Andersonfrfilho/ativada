@@ -26,7 +26,8 @@ export async function saveInput(
   params: SaveReportInputParams,
 ): Promise<void> {
   await executor.execute(sql`
-    UPDATE model_team_reports SET input = ${toJsonb(params.input)}, prompt_hash = ${params.promptHash}
+    UPDATE model_team_reports SET input = ${toJsonb(params.input)}, prompt_hash = ${params.promptHash},
+      model_id = COALESCE(${params.modelId ?? null}, model_id)
     WHERE id = ${params.reportId}`);
 }
 

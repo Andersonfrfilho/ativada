@@ -99,6 +99,7 @@ export async function processReport(
     reportId: report.id,
     input: loaded.input,
     promptHash: hashPrompt(prompt),
+    modelId: runtime.modelId,
   });
   if (!(await reserve(context, prompt))) {
     return skipReport(context, MODEL_TEAM_FAILURE.BUDGET_EXHAUSTED);

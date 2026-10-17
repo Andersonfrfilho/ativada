@@ -86,6 +86,12 @@ export type SeedExampleStrategyParams = {
   readonly configHash: string;
 };
 
+export type EnsureSystemStrategyParams = {
+  readonly name: string;
+  readonly config: JsonContainer;
+  readonly configHash: string;
+};
+
 export type StrategyRepository = {
   readonly createStrategy: (
     scope: OwnerScope,
@@ -102,6 +108,12 @@ export type StrategyRepository = {
     scope: OwnerScope,
     params: SeedExampleStrategyParams,
   ) => Promise<ExampleSeedOutcome>;
+  // A estratégia FIXA do sistema (spec 015, `model-team-1`): acha ou cria, numa transação, a estratégia marcada do dono e a versão
+  // do hash dado. Fora da lista, do teto de estratégias e das rotas de estratégia; o dono nunca a edita nem apaga.
+  readonly ensureSystemStrategyVersion: (
+    scope: OwnerScope,
+    params: EnsureSystemStrategyParams,
+  ) => Promise<StrategyVersionRecord>;
   readonly listStrategiesPage: (
     scope: OwnerScope,
     params: ListStrategiesParams,

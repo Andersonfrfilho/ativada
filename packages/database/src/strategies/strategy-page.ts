@@ -43,6 +43,7 @@ export async function listStrategiesPage(
       and(
         ownerCondition(scope, strategies.userId),
         isNull(strategies.deletedAt),
+        eq(strategies.isSystem, false),
         isBeforeCursor(params.after),
       ),
     )
@@ -79,6 +80,7 @@ export async function listVersionsPage(
         ownerCondition(scope, strategies.userId),
         eq(strategies.id, params.strategyId),
         isNull(strategies.deletedAt),
+        eq(strategies.isSystem, false),
       ),
     )
     .limit(1);

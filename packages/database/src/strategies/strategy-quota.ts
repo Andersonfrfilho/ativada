@@ -22,7 +22,13 @@ export async function assertStrategyRoom(
   const owned = await executor
     .select({ total: count() })
     .from(strategies)
-    .where(and(ownerCondition(scope, strategies.userId), isNull(strategies.deletedAt)));
+    .where(
+      and(
+        ownerCondition(scope, strategies.userId),
+        isNull(strategies.deletedAt),
+        eq(strategies.isSystem, false),
+      ),
+    );
   if ((owned[0]?.total ?? 0) >= params.maxStrategies) {
     throw new StorageQuotaReachedError(STORAGE_QUOTA_RESOURCE.STRATEGIES);
   }

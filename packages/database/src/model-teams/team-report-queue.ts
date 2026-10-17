@@ -14,6 +14,7 @@ import {
 import type {
   ClaimedTeamReport,
   ClaimTeamReportsParams,
+  EnqueueOnDemandReportParams,
   EnqueueTeamReportsParams,
   TeamReportSlot,
 } from './team-report.types.js';
@@ -61,6 +62,23 @@ async function enqueueOne(
     ON CONFLICT (team_key, symbol, timeframe, candle_time, prompt_version) WHERE kind = 'scheduled' DO NOTHING
     RETURNING 1`);
   return inserted.length;
+}
+
+// O id do modelo de um pedido avulso nasce vazio de sentido: o worker o grava ao montar a entrada.
+const UNASSIGNED_MODEL_ID = 'unassigned';
+
+export async function enqueueOnDemand(
+  executor: DatabaseExecutor,
+  params: EnqueueOnDemandReportParams,
+): Promise<string> {
+  const id = Bun.randomUUIDv7();
+  await executor.execute(sql`
+    INSERT INTO model_team_reports
+      (id, team_key, provider, model_id, prompt_version, kind, symbol, timeframe, candle_time, status)
+    VALUES (${id}::uuid, ${params.teamKey}, ${params.provider}, ${UNASSIGNED_MODEL_ID}, ${PROMPT_VERSION},
+      ${MODEL_TEAM_REPORT_KIND.ON_DEMAND}, ${params.symbol}, ${TIMEFRAME}, ${params.candleTime},
+      ${MODEL_TEAM_REPORT_STATUS.PENDING})`);
+  return id;
 }
 
 export async function enqueueReports(

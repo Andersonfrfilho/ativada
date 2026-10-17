@@ -2,7 +2,7 @@
 import { sql } from 'drizzle-orm';
 
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
-import { claimReports, enqueueReports } from './team-report-queue.js';
+import { claimReports, enqueueOnDemand, enqueueReports } from './team-report-queue.js';
 import { finishReport, reserveBudget, saveInput } from './team-report-write.js';
 import type { PublicReadings, TeamReportRepository } from './team-report.types.js';
 
@@ -41,6 +41,7 @@ export function createTeamReportRepository(handle: DatabaseHandle): TeamReportRe
   return {
     enqueueTeamReports: (params) =>
       database.transaction((transaction) => enqueueReports(transaction, params)),
+    enqueueOnDemandReport: (params) => enqueueOnDemand(database, params),
     claimPending: (params) =>
       database.transaction((transaction) => claimReports(transaction, params)),
     // As leituras são iguais entre simulações do par (ADR A3): qualquer linha decidida daquela vela serve.
