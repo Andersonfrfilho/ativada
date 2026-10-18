@@ -14,6 +14,10 @@ import {
   createSentimentRoutes,
   type SentimentRouteDependencies,
 } from '../markets/sentiment.routes.js';
+import { createMyModelTeamsRoutes } from '../model-teams/me-model-teams.routes.js';
+import { createModelDuelRoutes } from '../model-teams/model-duels.routes.js';
+import type { ModelTeamRouteDependencies } from '../model-teams/create-model-team-dependencies.js';
+import { createRunModelTeamsRoutes } from '../model-teams/run-model-teams.routes.js';
 import { createNoticesRoute } from '../notices/notices.route.js';
 import type { ListNoticesUseCase } from '../notices/list-notices.use-case.js';
 import { createProfileRoutes, type ProfileRouteDependencies } from '../profile/profile.routes.js';
@@ -89,6 +93,7 @@ export type ApiRouteDependencies = HealthRouteDependencies & {
   readonly priceAlerts: PriceAlertRouteDependencies;
   readonly assets: AssetRouteDependencies;
   readonly listNotices: ListNoticesUseCase;
+  readonly modelTeams: ModelTeamRouteDependencies;
   readonly runs: RunRoutesBundle;
   // `/v1/openapi.json` e `/v1/docs` existem só fora de produção: em produção nem entram na tabela.
   readonly isDocumentationEnabled: boolean;
@@ -111,6 +116,9 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     ...createPriceAlertRoutes(dependencies.priceAlerts),
     ...createAssetRoutes(dependencies.assets),
     createNoticesRoute(dependencies.listNotices),
+    ...createMyModelTeamsRoutes(dependencies.modelTeams.me),
+    ...createRunModelTeamsRoutes(dependencies.modelTeams.runs),
+    ...createModelDuelRoutes(dependencies.modelTeams.duels),
     ...createRunRoutes(dependencies.runs.routes),
     ...createRunSeriesRoutes(dependencies.runs.series),
     createRunChartRoute(dependencies.runs.chart),

@@ -36,6 +36,8 @@ const NOT_RUNNING_STATE: Readonly<Record<RunStatus, string>> = {
 };
 
 const UNAVAILABLE_MESSAGE = {
+  [TRIGGER_UNAVAILABLE_REASON.TEAM_RUN]:
+    'Sem gatilhos de regra: esta simulação segue a leitura de uma equipe de modelo.',
   [TRIGGER_UNAVAILABLE_REASON.NO_CANDLE]: 'Aguardando a primeira vela fechar.',
   [TRIGGER_UNAVAILABLE_REASON.WARMING_UP]:
     'O gatilho do rompimento precisa de duas velas decididas; aparece no próximo fechamento.',

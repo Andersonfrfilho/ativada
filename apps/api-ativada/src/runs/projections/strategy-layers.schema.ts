@@ -40,6 +40,8 @@ export const STRATEGY_LAYERS_SCHEMA = z.strictObject({
   atr: z.array(decimalTextSchema.nullable()),
   lines: z.array(LINE_SCHEMA),
   thresholds: z.array(THRESHOLD_SCHEMA),
+  // Presente (`team_run`) quando a simulação segue uma equipe de modelo: não há regras a desenhar (spec 015).
+  unavailable: z.literal('team_run').optional(),
 });
 
 export type StrategyLayersView = z.infer<typeof STRATEGY_LAYERS_SCHEMA>;

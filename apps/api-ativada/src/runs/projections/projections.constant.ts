@@ -46,6 +46,8 @@ export const PROJECTION_UNAVAILABLE_REASON = {
   NO_CANDLE: 'no_candle',
   WARMING_UP: 'warming_up',
   NEUTRAL: 'neutral',
+  // A simulação segue a leitura de uma equipe de modelo (spec 015): a tendência do placar não existe nela.
+  TEAM_RUN: 'team_run',
 } as const;
 export type ProjectionUnavailableReason =
   (typeof PROJECTION_UNAVAILABLE_REASON)[keyof typeof PROJECTION_UNAVAILABLE_REASON];

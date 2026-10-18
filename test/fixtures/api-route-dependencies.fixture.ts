@@ -92,6 +92,11 @@ export function buildApiRouteDependencies(
       getGoalPlan: notUsed,
     },
     horizons: { enabledSymbols: ENABLED_MARKETS.symbols, evaluateHorizons: notUsed },
+    modelTeams: {
+      me: { listMyModelTeams: notUsed, setMyModelTeam: notUsed },
+      runs: { runModelTeams: notUsed, comparison: notUsed, requestOpinion: notUsed },
+      duels: { enabled: ENABLED_MARKETS, createDuel: notUsed, readDuel: notUsed },
+    },
     assets: {
       enabledSymbols: ENABLED_MARKETS.symbols,
       listAssets: notUsed,

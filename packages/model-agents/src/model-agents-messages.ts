@@ -30,6 +30,9 @@ export const PROVIDER_STATE_BADGE: Readonly<
   },
 };
 
+// O worker não deu notícia (parado ou nunca ligado): não se sabe o estado dos provedores.
+export const WORKER_OFFLINE_PHRASE =
+  '⚠ sem notícia do serviço das equipes; o estado volta quando ele responder';
 export const HIDDEN_REASON_PHRASE =
   'O modelo deu um motivo fora das regras de linguagem da casa; o texto foi ocultado.';
 export const TEAM_NOTICE =
@@ -63,6 +66,7 @@ export function listAllPhrases(): readonly string[] {
     ...Object.values(PROVIDER_STATE_BADGE).map((badge) => badge.label),
     ...MODEL_TEAM_KEYS.map((team) => buildGeneratedByFooter(team)),
     HIDDEN_REASON_PHRASE,
+    WORKER_OFFLINE_PHRASE,
     TEAM_NOTICE,
     COST_ESTIMATE_NOTICE,
     COMPARISON_NOTICE,

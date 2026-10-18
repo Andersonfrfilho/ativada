@@ -27,6 +27,8 @@ export const TRIGGER_UNAVAILABLE_REASON = {
   NOT_RUNNING: 'not_running',
   NO_CANDLE: 'no_candle',
   WARMING_UP: 'warming_up',
+  // A simulação segue a leitura gravada de uma equipe de modelo (spec 015): não há régua de placar a mostrar.
+  TEAM_RUN: 'team_run',
 } as const;
 export type TriggerUnavailableReason =
   (typeof TRIGGER_UNAVAILABLE_REASON)[keyof typeof TRIGGER_UNAVAILABLE_REASON];

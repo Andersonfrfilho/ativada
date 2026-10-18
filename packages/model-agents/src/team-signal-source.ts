@@ -27,3 +27,13 @@ export function readSignalSource(request: unknown): SignalSource | undefined {
   const parsed = signalSourceSchema.safeParse(readOwnProperty(request, SIGNAL_SOURCE_PROPERTY));
   return parsed.success ? parsed.data : undefined;
 }
+
+export const DUEL_PROPERTY = 'duel';
+
+const duelRequestSchema = z.strictObject({ groupId: z.uuid() });
+
+// O grupo do duelo gravado em `runs.request.duel`: o vínculo entre as execuções de um mesmo duelo (spec 015 RF13).
+export function readDuelGroupId(request: unknown): string | undefined {
+  const parsed = duelRequestSchema.safeParse(readOwnProperty(request, DUEL_PROPERTY));
+  return parsed.success ? parsed.data.groupId : undefined;
+}

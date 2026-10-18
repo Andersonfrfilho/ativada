@@ -6,6 +6,8 @@ import type {
   RunProjectionRepository,
 } from '@ativada/database';
 
+import { readSignalSource } from '@ativada/model-agents';
+
 import { encodeTimeCursor } from '../run-cursor.js';
 import {
   buildCurrent,
@@ -95,6 +97,19 @@ async function readCurrent(
   });
 }
 
+// Execução de equipe: a decisão vem do relatório gravado, então não há tendência do placar nem acertos dela para contar. A primeira
+// página diz por quê e as demais vêm vazias; nenhuma consulta de previsão é feita.
+function teamRunView(context: ProjectionContext, input: ProjectionsInput): ProjectionsView {
+  const body = {
+    version: PROJECTION_RULE_VERSION,
+    timeframe: context.run.timeframe,
+    items: [],
+    nextCursor: null,
+  } as const;
+  if (input.before !== undefined) return body;
+  return { ...body, current: unavailable(PROJECTION_UNAVAILABLE_REASON.TEAM_RUN, true) };
+}
+
 // As previsões da execução (ADR 0002, spec 009, P3 a P9): nada é recalculado pelo motor. Primeira página: no máximo 5
 // consultas (execução, versão, janelas só no walk-forward, resumo e página juntos, posições). Página por cursor: execução,
 // versão, janelas e a página — sem resumo nem tendência (M7).
@@ -103,6 +118,7 @@ export function createProjectionsUseCase(
 ): ProjectionsUseCase {
   return async (scope, runId, input) => {
     const context = await readProjectionContext(dependencies, { scope, runId });
+    if (readSignalSource(context.run.request) !== undefined) return teamRunView(context, input);
     const read = toReadParams(context);
     const isFirstPage = input.before === undefined;
     const [counts, page] = await Promise.all([

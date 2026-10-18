@@ -29,6 +29,8 @@ export const RUN_FIELD = {
   GOAL_ID: 'goalId',
   ANALYST: 'analyst',
   MODE: 'mode',
+  STRATEGY_VERSION_ID: 'strategyVersionId',
+  SIGNAL_SOURCE: 'signalSource',
 } as const;
 
 export const RUN_REASON = {
@@ -41,6 +43,8 @@ export const RUN_REASON = {
   UNKNOWN_FIELD: 'unknown_field',
   GOAL_SYMBOL_MISMATCH: 'goal_symbol_mismatch',
   ANALYST_REQUIRES_15M: 'analyst_requires_15m_timeframe',
+  NOT_ALLOWED_WITH_SIGNAL_SOURCE: 'not_allowed_with_signal_source',
+  SIGNAL_SOURCE_REQUIRES_15M: 'signal_source_requires_15m_timeframe',
 } as const;
 
 export const INVALID_GRID_MESSAGE =

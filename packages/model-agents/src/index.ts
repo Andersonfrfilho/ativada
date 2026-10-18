@@ -69,6 +69,7 @@ export {
   listAllPhrases,
   NO_READING_REASON,
   ON_DEMAND_MARK,
+  WORKER_OFFLINE_PHRASE,
   PROVIDER_STATE_BADGE,
   RETRY_TIME_MARK,
   TEAM_BADGE,
@@ -134,6 +135,8 @@ export {
   MODEL_TEAM_STRATEGY_NAME,
 } from './model-team-strategy.js';
 export {
+  DUEL_PROPERTY,
+  readDuelGroupId,
   readSignalSource,
   SIGNAL_SOURCE_KIND,
   SIGNAL_SOURCE_PROPERTY,

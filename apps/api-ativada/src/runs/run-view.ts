@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { GoalRunOutcome, JsonValue, RunKind, RunRecord, RunStatus } from '@ativada/database';
+import { readDuelGroupId, readSignalSource, type SignalSource } from '@ativada/model-agents';
 import type { BalanceSurvival } from '@ativada/strategy-engine';
 import { RUN_KIND, RUN_STATUS } from '@ativada/database';
 
@@ -30,6 +31,10 @@ export type RunView = {
   // A meta a que a simulação ao vivo está atrelada e como terminou (`null` enquanto não terminou ou sem meta).
   readonly goalId: string | null;
   readonly goalOutcome: GoalRunOutcome | null;
+  // A equipe de modelo cuja decisão a simulação segue (spec 015); `null` na execução de regra.
+  readonly signalSource: SignalSource | null;
+  // O duelo de que a simulação faz parte (as execuções do grupo); `null` fora de duelo.
+  readonly duelId: string | null;
   // Início (ms UTC) da parada da simulação ao vivo; ausente quando ela está em dia (e em qualquer execução que não esteja rodando).
   readonly stalledSince?: number;
 };
@@ -89,6 +94,8 @@ export function toRunView(record: RunRecord): RunView {
     finishedAt: record.finishedAt?.toISOString() ?? null,
     goalId: record.goalId ?? null,
     goalOutcome: record.goalOutcome ?? null,
+    signalSource: readSignalSource(record.request) ?? null,
+    duelId: readDuelGroupId(record.request) ?? null,
     ...toStalledSince(record),
   };
 }

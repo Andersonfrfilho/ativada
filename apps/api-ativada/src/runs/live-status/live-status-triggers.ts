@@ -7,6 +7,8 @@ import {
   type TriggerState,
 } from '@ativada/strategy-engine';
 
+import { readSignalSource } from '@ativada/model-agents';
+
 import type { LiveRunContext } from './live-status-context.js';
 import type { RuleTriggerView, TriggersView } from './live-status-view.js';
 import {
@@ -70,13 +72,22 @@ function toRuleViews(context: LiveRunContext, triggers: NextTriggers): readonly 
   });
 }
 
+// Execução de equipe não tem gatilhos de regra (a decisão vem do relatório da equipe); fora de `running` não há o que esperar.
+function closedReason(context: LiveRunContext): TriggerUnavailableReason | undefined {
+  if (readSignalSource(context.run.request) !== undefined) {
+    return TRIGGER_UNAVAILABLE_REASON.TEAM_RUN;
+  }
+  return context.run.status === RUN_STATUS.RUNNING
+    ? undefined
+    : TRIGGER_UNAVAILABLE_REASON.NOT_RUNNING;
+}
+
 // O que falta para comprar (ou vender, se comprada) AGORA, das leituras gravadas das duas últimas velas, sem reexecutar o
 // motor (ADR 0002, L1 a L3). A precedência do "porquê não há gatilho" é: não está rodando, sem vela, aquecendo.
 export function buildTriggersSection(params: LiveTriggersParams): TriggersView {
   const { context, rows } = params;
-  if (context.run.status !== RUN_STATUS.RUNNING) {
-    return unavailable(context, TRIGGER_UNAVAILABLE_REASON.NOT_RUNNING);
-  }
+  const closed = closedReason(context);
+  if (closed !== undefined) return unavailable(context, closed);
   const [latest, previous] = rows;
   if (latest === undefined) return unavailable(context, TRIGGER_UNAVAILABLE_REASON.NO_CANDLE);
   const state: TriggerState = params.hasOpenPosition

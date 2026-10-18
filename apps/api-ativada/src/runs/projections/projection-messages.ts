@@ -35,6 +35,8 @@ const SIDE_VERB = {
 
 const UNAVAILABLE_MESSAGE: Readonly<Record<ProjectionUnavailableReason, string>> = {
   [PROJECTION_UNAVAILABLE_REASON.NEUTRAL]: 'O placar está em 0: nenhuma regra puxa para um lado.',
+  [PROJECTION_UNAVAILABLE_REASON.TEAM_RUN]:
+    'Esta simulação segue a leitura de uma equipe de modelo: não há tendência do placar.',
   [PROJECTION_UNAVAILABLE_REASON.WARMING_UP]:
     'A estratégia ainda está juntando velas para calcular as regras.',
   [PROJECTION_UNAVAILABLE_REASON.NO_CANDLE]: 'Aguardando a primeira vela fechar.',

@@ -185,4 +185,16 @@ export {
   ORDER_STATUS,
   ORDER_TYPE,
 } from './notices/notice-feed.exports.js';
-export * from './model-teams/model-teams.exports.js';
+export {
+  createModelDuelRepository,
+  createModelTeamReadRepository,
+  createTeamReportRepository,
+  createTeamRunInputRepository,
+  createUserModelTeamRepository,
+  MODEL_DUEL_CURVE_MAXIMUM_POINTS,
+  MODEL_TEAM_REPORT_ACTION,
+  MODEL_TEAM_REPORT_KIND,
+  MODEL_TEAM_REPORT_STATUS,
+  MODEL_TEAM_RETENTION_DAYS,
+} from './model-teams/model-teams.exports.js';
+export type * from './model-teams/model-teams.exports.js';

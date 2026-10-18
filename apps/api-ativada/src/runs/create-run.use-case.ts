@@ -9,7 +9,6 @@ import {
   type OwnerScope,
   type RunRecord,
   type RunRepository,
-  type StrategyRepository,
 } from '@ativada/database';
 import {
   createStrategyVersion,
@@ -25,6 +24,12 @@ import { RequestValidationError } from '../shared/http/request-validation.error.
 import { StrategyVersionNotFoundError } from '../strategies/strategy.error.js';
 import { checkWalkForwardRequest } from './check-walk-forward-request.js';
 import type { CreateRunBody } from './create-run-request.schema.js';
+import {
+  assertTeamEnabled,
+  ensureTeamVersion,
+  findRequestedVersion,
+  type RunVersionDependencies,
+} from './create-run-version.js';
 import { admitRun, type RunAdmissionDependencies } from './run-admission.js';
 import type { RunDispatcher } from './run-dispatcher.js';
 import { readQueuePosition, type RunQueuePositionDependencies } from './run-queue-position.js';
@@ -35,8 +40,8 @@ import { RUN_FIELD, RUN_REASON, RUN_STORED_ERROR_CODE } from './runs.constant.js
 
 export type CreateRunDependencies = RunWarningDependencies &
   RunAdmissionDependencies &
-  RunQueuePositionDependencies & {
-    readonly strategies: Pick<StrategyRepository, 'findVersion'>;
+  RunQueuePositionDependencies &
+  RunVersionDependencies & {
     readonly goals: Pick<GoalRepository, 'findGoal'>;
     readonly runs: Pick<RunRepository, 'createRun' | 'transitionRun'>;
     readonly dispatcher: RunDispatcher;
@@ -61,6 +66,8 @@ function toRequest(body: CreateRunBody, goal: GoalRecord | undefined): CreateRun
   const request = {
     ...(body.survival === undefined ? {} : { survival: body.survival }),
     ...(body.analyst === undefined ? {} : { analyst: body.analyst }),
+    ...(body.signalSource === undefined ? {} : { signalSource: body.signalSource }),
+    ...(body.duelGroupId === undefined ? {} : { duel: { groupId: body.duelGroupId } }),
     ...(goal === undefined
       ? {}
       : {
@@ -78,11 +85,15 @@ function toRequest(body: CreateRunBody, goal: GoalRecord | undefined): CreateRun
 
 function toCreateParams(
   body: CreateRunBody,
-  context: { readonly now: number; readonly goal: GoalRecord | undefined },
+  context: {
+    readonly now: number;
+    readonly goal: GoalRecord | undefined;
+    readonly strategyVersionId: string;
+  },
 ): CreateRunParams {
   const { parameters } = body.setup;
   return {
-    strategyVersionId: body.strategyVersionId,
+    strategyVersionId: context.strategyVersionId,
     kind: body.kind,
     symbol: parameters.symbol,
     timeframe: parameters.timeframe,
@@ -168,14 +179,15 @@ async function resolveGoal(
 
 export function createCreateRunUseCase(dependencies: CreateRunDependencies): CreateRunUseCase {
   return async (scope, body) => {
-    const version = await dependencies.strategies.findVersion(scope, body.strategyVersionId);
-    if (version === undefined) throw new StrategyVersionNotFoundError();
+    const requested = await findRequestedVersion(dependencies, scope, body);
+    await assertTeamEnabled(dependencies, scope, body.signalSource);
     const goal = await resolveGoal(dependencies, scope, body);
     await admitRun(dependencies, { scope, kind: body.kind });
+    const version = requested ?? (await ensureTeamVersion(dependencies, scope));
     assertWalkForward(dependencies, body, version.config);
     const created = await dependencies.runs.createRun(
       scope,
-      toCreateParams(body, { now: dependencies.now(), goal }),
+      toCreateParams(body, { now: dependencies.now(), goal, strategyVersionId: version.id }),
     );
     if (created === undefined) throw new StrategyVersionNotFoundError();
     // A simulação ao vivo não passa pelo despachante: o worker a reivindica no banco (ADR 0002, T4.1).

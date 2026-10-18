@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { RUN_KIND, type RunKind } from '@ativada/database';
 import { hasKnownSymbolFilters } from '@ativada/market-data-crypto';
+import { signalSourceSchema, type SignalSource } from '@ativada/model-agents';
 import { z } from '@ativada/environment';
 import { ENGINE_TIMEFRAME, type RunSetup, type SurvivalSettings } from '@ativada/strategy-engine';
 
@@ -18,6 +19,7 @@ import {
 } from './create-run-setup.js';
 import { resolveSurvival } from './run-survival-request.js';
 import { RUN_FIELD, RUN_REASON } from './runs.constant.js';
+import { checkSignalSource } from './run-signal-source-request.js';
 
 const MONTHS_MAXIMUM = 120;
 const MIN_TRADES_MAXIMUM = 10_000;
@@ -46,7 +48,8 @@ export type WalkForwardBody = {
 };
 
 export type CreateRunBody = {
-  readonly strategyVersionId: string;
+  // Ausente só na execução de equipe (`signalSource`): a versão fixa `model-team-1` do usuário é achada ou criada pelo hash.
+  readonly strategyVersionId: string | undefined;
   readonly kind: RunKind;
   readonly setup: RunSetup;
   // Ausentes na simulação ao vivo: ela começa no candle corrente e não tem fim.
@@ -59,10 +62,15 @@ export type CreateRunBody = {
   readonly goalId: string | undefined;
   // O analista de risco em sombra (spec 007); só na simulação ao vivo de 15 min.
   readonly analyst: AnalystRequest | undefined;
+  // A execução cuja decisão vem da linha gravada de uma equipe de modelo (spec 015).
+  readonly signalSource: SignalSource | undefined;
+  // O grupo do duelo: nasce DENTRO da API (`POST /v1/model-duels`), nunca do corpo público.
+  readonly duelGroupId?: string | undefined;
 };
 
 type ParsedBody = {
-  readonly strategyVersionId: string;
+  readonly strategyVersionId?: string | undefined;
+  readonly signalSource?: SignalSource | undefined;
   readonly kind: RunKind;
   readonly symbol: string;
   readonly timeframe: string;
@@ -111,6 +119,7 @@ function checkKindFields(body: ParsedBody, context: RefinementContext): void {
   }
   checkPeriod(body, context);
   checkGoal(body, context);
+  checkSignalSource(body, context);
 }
 
 function toWalkForward(body: ParsedBody): WalkForwardBody | undefined {
@@ -142,13 +151,15 @@ function toCreateRunBody(body: ParsedBody, context: RefinementContext): CreateRu
     survival,
     goalId: body.goalId,
     analyst,
+    signalSource: body.signalSource,
   };
 }
 
 export function createRunRequestSchema(enabled: EnabledMarkets): z.ZodType<CreateRunBody> {
   return z
     .strictObject({
-      strategyVersionId: resourceIdSchema,
+      strategyVersionId: resourceIdSchema.optional(),
+      signalSource: signalSourceSchema.optional(),
       kind: z.enum(RUN_KIND),
       symbol: z
         .string()

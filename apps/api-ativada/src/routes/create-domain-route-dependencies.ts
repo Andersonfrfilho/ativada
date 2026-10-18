@@ -3,14 +3,11 @@ import {
   createCandleRepository,
   createGoalRepository,
   createRunRepository,
-  type RunRepository,
-  type RunResultRepository,
   createRunQueueRepository,
-  createRunLiveStatusRepository,
-  createRunProjectionRepository,
   createRunResultRepository,
   createSentimentRepository,
   createStrategyRepository,
+  createUserModelTeamRepository,
   type DatabaseHandle,
 } from '@ativada/database';
 
@@ -27,6 +24,10 @@ import {
   createAssetDependencies,
   createPriceAlertDependencies,
 } from './create-portfolio-route-dependencies.js';
+import {
+  createModelTeamDependencies,
+  type ModelTeamRouteDependencies,
+} from '../model-teams/create-model-team-dependencies.js';
 import { createNoticeDependencies } from '../notices/create-notice-dependencies.js';
 import type { ListNoticesUseCase } from '../notices/list-notices.use-case.js';
 import { createMarketDependencies } from '../markets/create-market-dependencies.js';
@@ -34,13 +35,7 @@ import type { MarketRouteDependencies } from '../markets/markets.routes.js';
 import { createCreateRunUseCase } from '../runs/create-run.use-case.js';
 import { createExportRunCsvUseCase } from '../runs/export-run-csv.use-case.js';
 import type { RunDispatcher } from '../runs/run-dispatcher.js';
-import { createRunChartUseCase } from '../runs/chart/run-chart.use-case.js';
 import { createAnalystUseCases } from '../runs/analyst/create-analyst-use-cases.js';
-import { createLiveStatusUseCase } from '../runs/live-status/live-status.use-case.js';
-import { createLiveSummaryUseCase } from '../runs/live-summary/live-summary.use-case.js';
-import { createRunDecisionsUseCase } from '../runs/live-status/run-decisions.use-case.js';
-import { createProjectionsUseCase } from '../runs/projections/projections.use-case.js';
-import { createStrategyLayersUseCase } from '../runs/projections/strategy-layers.use-case.js';
 import { createTradeSummaryUseCase } from '../runs/trade-summary/trade-summary.use-case.js';
 import { createRunSeriesUseCases } from '../runs/run-series.use-cases.js';
 import {
@@ -49,8 +44,9 @@ import {
   createStopRunUseCase,
   createDeleteRunUseCase,
 } from '../runs/run.use-cases.js';
+import { createLiveAwareUseCases } from './create-live-aware-use-cases.js';
+import type { RunRoutesBundle } from './create-api-routes.js';
 import type { RunRouteDependencies } from '../runs/runs.routes.js';
-import type { LiveAwareUseCases, RunRoutesBundle } from './create-api-routes.js';
 import {
   createAddVersionUseCase,
   createDeleteStrategyUseCase,
@@ -72,6 +68,7 @@ export type DomainRouteDependencies = {
   readonly priceAlerts: PriceAlertRouteDependencies;
   readonly assets: AssetRouteDependencies;
   readonly listNotices: ListNoticesUseCase;
+  readonly modelTeams: ModelTeamRouteDependencies;
   readonly runs: RunRoutesBundle;
 };
 
@@ -108,49 +105,15 @@ function createStrategyDependencies(
   };
 }
 
-// As leituras do acompanhamento ao vivo (spec 008): o gráfico, o live-status e as decisões compartilham o repositório por
-// dono e a versão da estratégia; a hora vem do relógio injetado.
-function createLiveAwareUseCases(
-  params: DomainRouteParams,
-  shared: {
-    readonly runs: RunRepository;
-    readonly results: RunResultRepository;
-    readonly exchange: string;
-  },
-): LiveAwareUseCases {
-  const readers = {
-    strategies: createStrategyRepository(params.database),
-    live: createRunLiveStatusRepository(params.database),
-  };
-  const dependencies = { ...readers, runs: shared.runs, exchange: shared.exchange };
-  return {
-    chart: createRunChartUseCase({ ...shared, ...readers }),
-    liveStatus: createLiveStatusUseCase({ ...dependencies, now: params.now }),
-    liveSummary: createLiveSummaryUseCase(readers),
-    decisions: createRunDecisionsUseCase(dependencies),
-    projections: createProjectionsUseCase({
-      ...dependencies,
-      results: shared.results,
-      projections: createRunProjectionRepository(params.database),
-    }),
-    strategyLayers: createStrategyLayersUseCase({
-      ...dependencies,
-      results: shared.results,
-      projections: createRunProjectionRepository(params.database),
-    }),
-  };
-}
-
 function createRunDependencies(
   params: DomainRouteParams,
   enabled: MarketRouteDependencies['enabled'],
 ): RunRoutesBundle {
   const { database, environment } = params;
-  const candles = createCandleRepository(database);
   const results = createRunResultRepository(database);
   const shared = {
     runs: createRunRepository(database),
-    candles,
+    candles: createCandleRepository(database),
     exchange: environment.MARKET_EXCHANGE,
     queue: createRunQueueRepository(database),
     results,
@@ -160,6 +123,7 @@ function createRunDependencies(
     createRun: createCreateRunUseCase({
       ...shared,
       strategies: createStrategyRepository(database),
+      teams: createUserModelTeamRepository(database),
       goals: createGoalRepository(database),
       dispatcher: params.dispatcher,
       queuePerUserLimit: environment.RUN_QUEUE_PER_USER_LIMIT,
@@ -191,6 +155,7 @@ export function createDomainRouteDependencies(params: DomainRouteParams): Domain
     symbols: environment.MARKET_SYMBOLS,
     timeframes: environment.MARKET_TIMEFRAMES,
   };
+  const runs = createRunDependencies(params, enabled);
   return {
     markets: createMarketDependencies({ database, environment, now: params.now }),
     sentiment: {
@@ -202,6 +167,13 @@ export function createDomainRouteDependencies(params: DomainRouteParams): Domain
     priceAlerts: createPriceAlertDependencies(params),
     assets: createAssetDependencies(params),
     listNotices: createNoticeDependencies(params),
-    runs: createRunDependencies(params, enabled),
+    modelTeams: createModelTeamDependencies({
+      environment,
+      database,
+      now: params.now,
+      enabled,
+      createRun: runs.routes.createRun,
+    }),
+    runs,
   };
 }

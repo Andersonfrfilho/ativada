@@ -33,6 +33,8 @@ export function createInMemoryStrategies(): InMemoryStrategies {
   const versions: StoredVersion[] = [];
   const calls = { listStrategiesPage: 0, listVersionsPage: 0 };
   const seededUsers = new Set<UserId>();
+  // A estratégia fixa do sistema fica FORA da lista, do teto e das rotas de estratégia (a coluna `is_system`).
+  const systemStrategies = new Map<UserId, string>();
   let sequence = 0;
 
   function nextDate(): Date {
@@ -92,6 +94,15 @@ export function createInMemoryStrategies(): InMemoryStrategies {
       const strategy = insertStrategy(scope, params.name, params.isExample);
       const version = insertVersion(scope, { strategyId: strategy.id, ...params });
       return Promise.resolve({ strategy, version });
+    },
+    ensureSystemStrategyVersion: (scope, params) => {
+      const strategyId = systemStrategies.get(scope.ownerUserId) ?? crypto.randomUUID();
+      systemStrategies.set(scope.ownerUserId, strategyId);
+      const existing = versions.find(
+        (stored) =>
+          stored.record.strategyId === strategyId && stored.record.configHash === params.configHash,
+      );
+      return Promise.resolve(existing?.record ?? insertVersion(scope, { strategyId, ...params }));
     },
     seedExampleStrategy: (scope, params) => {
       if (seededUsers.has(scope.ownerUserId)) return Promise.resolve(EXAMPLE_SEED_OUTCOME.SKIPPED);

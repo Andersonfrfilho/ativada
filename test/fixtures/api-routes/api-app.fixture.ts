@@ -104,6 +104,16 @@ import type * as StallPolicyModule from '../../../apps/api-ativada/src/runs/stal
 import type * as StallSweeperModule from '../../../apps/api-ativada/src/runs/stall/stall-sweeper.js';
 import type * as StallSweepLoopModule from '../../../apps/api-ativada/src/runs/stall/stall-sweep-loop.js';
 import type * as StallAlertPayloadModule from '../../../apps/api-ativada/src/runs/stall/stall-alert-payload.js';
+import type * as MeModelTeamsRoutesModule from '../../../apps/api-ativada/src/model-teams/me-model-teams.routes.js';
+import type * as MeModelTeamsUseCaseModule from '../../../apps/api-ativada/src/model-teams/me-model-teams.use-case.js';
+import type * as RunModelTeamsRoutesModule from '../../../apps/api-ativada/src/model-teams/run-model-teams.routes.js';
+import type * as RunModelTeamsUseCaseModule from '../../../apps/api-ativada/src/model-teams/run-model-teams.use-case.js';
+import type * as RunModelTeamsComparisonModule from '../../../apps/api-ativada/src/model-teams/run-model-teams-comparison.use-case.js';
+import type * as ModelOpinionRequestModule from '../../../apps/api-ativada/src/model-teams/model-opinion-request.use-case.js';
+import type * as ModelDuelRoutesModule from '../../../apps/api-ativada/src/model-teams/model-duels.routes.js';
+import type * as ModelDuelCreateModule from '../../../apps/api-ativada/src/model-teams/model-duel-create.use-case.js';
+import type * as ModelDuelReadModule from '../../../apps/api-ativada/src/model-teams/model-duel-read.use-case.js';
+import type * as ProviderStateModule from '../../../apps/api-ativada/src/model-teams/provider-state.js';
 
 const PRODUCTION_APP_SOURCE = new URL('../../../apps/api-ativada/src', import.meta.url).pathname;
 
@@ -209,6 +219,16 @@ export type ApiApp = {
   readonly stallSweeper: typeof StallSweeperModule;
   readonly stallSweepLoop: typeof StallSweepLoopModule;
   readonly stallAlertPayload: typeof StallAlertPayloadModule;
+  readonly meModelTeamsRoutes: typeof MeModelTeamsRoutesModule;
+  readonly meModelTeamsUseCase: typeof MeModelTeamsUseCaseModule;
+  readonly runModelTeamsRoutes: typeof RunModelTeamsRoutesModule;
+  readonly runModelTeamsUseCase: typeof RunModelTeamsUseCaseModule;
+  readonly runModelTeamsComparison: typeof RunModelTeamsComparisonModule;
+  readonly modelOpinionRequest: typeof ModelOpinionRequestModule;
+  readonly modelDuelRoutes: typeof ModelDuelRoutesModule;
+  readonly modelDuelCreate: typeof ModelDuelCreateModule;
+  readonly modelDuelRead: typeof ModelDuelReadModule;
+  readonly providerState: typeof ProviderStateModule;
   readonly openApi: typeof BuildOpenApiModule;
   readonly undocumentedError: typeof UndocumentedErrorModule;
   readonly apiRoutes: typeof CreateApiRoutesModule;
@@ -327,6 +347,16 @@ export async function loadApiApp(): Promise<ApiApp> {
     stallSweeper: await load('runs/stall/stall-sweeper'),
     stallSweepLoop: await load('runs/stall/stall-sweep-loop'),
     stallAlertPayload: await load('runs/stall/stall-alert-payload'),
+    meModelTeamsRoutes: await load('model-teams/me-model-teams.routes'),
+    meModelTeamsUseCase: await load('model-teams/me-model-teams.use-case'),
+    runModelTeamsRoutes: await load('model-teams/run-model-teams.routes'),
+    runModelTeamsUseCase: await load('model-teams/run-model-teams.use-case'),
+    runModelTeamsComparison: await load('model-teams/run-model-teams-comparison.use-case'),
+    modelOpinionRequest: await load('model-teams/model-opinion-request.use-case'),
+    modelDuelRoutes: await load('model-teams/model-duels.routes'),
+    modelDuelCreate: await load('model-teams/model-duel-create.use-case'),
+    modelDuelRead: await load('model-teams/model-duel-read.use-case'),
+    providerState: await load('model-teams/provider-state'),
     openApi: await load('openapi/build-openapi-document'),
     undocumentedError: await load('openapi/undocumented-route.error'),
     apiRoutes: await load('routes/create-api-routes'),

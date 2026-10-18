@@ -6,6 +6,8 @@ import {
   toEngineDecimal,
 } from '@ativada/strategy-engine';
 
+import { readSignalSource } from '@ativada/model-agents';
+
 import { RequestValidationError } from '../../shared/http/request-validation.error.js';
 import { clipRange } from '../chart/run-chart-range.js';
 import {
@@ -107,11 +109,12 @@ function toView(params: {
 }
 
 // Execução na fila (ou ao vivo antes da primeira vela): listas vazias, não erro.
-function emptyView(context: ProjectionContext): StrategyLayersView {
+function emptyView(context: ProjectionContext, unavailable?: 'team_run'): StrategyLayersView {
   const empty = { from: context.run.periodStart, to: context.run.periodStart };
   return {
     ...toView({ context: { ...context, segments: [] }, range: empty, rows: [] }),
     lines: [],
+    ...(unavailable === undefined ? {} : { unavailable }),
   };
 }
 
@@ -122,6 +125,7 @@ export function createStrategyLayersUseCase(
 ): StrategyLayersUseCase {
   return async (scope, runId, query) => {
     const context = await readProjectionContext(dependencies, { scope, runId });
+    if (readSignalSource(context.run.request) !== undefined) return emptyView(context, 'team_run');
     if (context.runRange === undefined) return emptyView(context);
     const range = resolveLayerRange({
       runRange: context.runRange,

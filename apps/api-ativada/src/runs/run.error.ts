@@ -45,6 +45,17 @@ export class RunNotLiveError extends DomainError {
   }
 }
 
+// A execução existe e é ao vivo, mas não está rodando (parada, concluída, na fila): o pedido que depende dela não se aplica.
+export class RunNotRunningError extends DomainError {
+  constructor() {
+    super({
+      code: RUN_ERROR_CODE.RUN_NOT_RUNNING,
+      message: 'A simulação não está rodando agora.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}
+
 export class RunStorageQuotaReachedError extends DomainError {
   constructor() {
     super({

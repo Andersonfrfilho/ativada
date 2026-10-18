@@ -116,6 +116,30 @@ export const RATE_LIMIT_POLICY = {
     keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
     maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
+  // Equipes de modelo (spec 015): o painel refaz o estado a cada aviso do stream e a cada 2 s enquanto há pedido avulso pendente.
+  MODEL_TEAMS_READ: {
+    name: 'model-teams-read',
+    limit: 60,
+    windowMilliseconds: ONE_MINUTE_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
+  },
+  // Cada pedido avulso custa uma chamada ao provedor: 5 por 10 minutos, além do teto diário por usuário.
+  MODEL_OPINION_REQUEST: {
+    name: 'model-opinion-request',
+    limit: 5,
+    windowMilliseconds: 10 * ONE_MINUTE_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
+  },
+  // O duelo cria várias simulações de uma vez.
+  MODEL_DUEL_CREATE: {
+    name: 'model-duel-create',
+    limit: 3,
+    windowMilliseconds: ONE_HOUR_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
+  },
   ADMIN_INVITATION: {
     name: 'admin-invitation',
     limit: 10,

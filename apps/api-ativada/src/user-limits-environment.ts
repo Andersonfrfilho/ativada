@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@ativada/environment';
 
+import { modelTeamEnvironmentShape } from './model-teams/model-team-environment.js';
+
 const ALERTS_EXPECTATION = 'inteiro entre 1 e 500';
 const ASSETS_EXPECTATION = 'inteiro entre 1 e 200';
 const MAX_ENABLED_PRICE_ALERTS = 500;
@@ -38,6 +40,7 @@ const DEFAULT_MIN_REFIRE_SECONDS = 300;
 
 // Tetos de uso por usuário (RF00b) dos alertas de preço ligados (RF14) e dos ativos cadastrados (RF15).
 export const userLimitsEnvironmentShape = {
+  ...modelTeamEnvironmentShape,
   PRICE_ALERT_MAX_ENABLED_PER_USER: boundedInteger({
     expectation: ALERTS_EXPECTATION,
     maximum: MAX_ENABLED_PRICE_ALERTS,
