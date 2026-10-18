@@ -5,6 +5,7 @@ import { formatDate, formatSymbol } from '../format/format.js';
 import { shortHash } from '../strategies/strategy.validation.js';
 import { describeLookup, lookupVersion } from '../strategies/version-index.js';
 import { useVersionIndexQuery } from '../strategies/strategy.query.js';
+import { LiveBadge } from '../wayfinding/LiveBadge.component.js';
 import { teamRunLabel, TEAM_RUN_NOTE } from './model-teams/run-source-label.js';
 import { RUN_KIND, statusLabel } from './run.constant.js';
 import styles from './Runs.module.css';
@@ -24,6 +25,7 @@ export function RunHeader({ run }: RunHeaderProps): ReactElement {
   const teamLabel = teamRunLabel(run.signalSource);
   return (
     <header>
+      {run.kind === RUN_KIND.LIVE_PAPER ? <LiveBadge /> : null}
       <h1 className={styles.title}>
         {KIND_LABEL[run.kind] ?? run.kind}: {formatSymbol(run.symbol)} · {run.timeframe}
       </h1>

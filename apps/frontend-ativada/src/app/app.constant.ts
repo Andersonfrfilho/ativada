@@ -6,6 +6,7 @@ export const APP_NAME = 'AtivAdA';
 
 export const ROUTE_PATH = {
   OVERVIEW: '/',
+  LIVE: '/ao-vivo',
   ACCOUNT: '/conta',
   BACKTESTS: '/backtests',
   BACKTEST: '/backtests/:runId',

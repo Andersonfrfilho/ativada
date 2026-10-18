@@ -4,6 +4,7 @@ import { NavLink } from 'react-router';
 
 import { ROUTE_PATH } from '../app/app.constant.js';
 import styles from './AppShell.module.css';
+import { LiveNavCount } from '../wayfinding/LiveNavCount.component.js';
 import { Icon, type IconName } from './Icon.component.js';
 
 function navClassName({ isActive }: { readonly isActive: boolean }): string | undefined {
@@ -19,6 +20,7 @@ type NavLinkItem = {
 
 const LINKS: readonly NavLinkItem[] = [
   { to: ROUTE_PATH.OVERVIEW, label: 'Visão geral', isExact: true, icon: 'overview' },
+  { to: ROUTE_PATH.LIVE, label: 'Ao vivo', isExact: false, icon: 'activity' },
   { to: ROUTE_PATH.GOALS, label: 'Metas', isExact: false, icon: 'goals' },
   { to: ROUTE_PATH.HORIZONS, label: 'Prazos', isExact: false, icon: 'horizons' },
   { to: ROUTE_PATH.ASSETS, label: 'Ativos', isExact: false, icon: 'assets' },
@@ -43,6 +45,7 @@ export function MainNav({ onNavigate }: MainNavProps): ReactElement {
         >
           <Icon name={link.icon} />
           {link.label}
+          {link.to === ROUTE_PATH.LIVE ? <LiveNavCount /> : null}
         </NavLink>
       ))}
     </nav>

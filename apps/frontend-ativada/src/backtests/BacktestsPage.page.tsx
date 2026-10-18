@@ -30,7 +30,7 @@ export function BacktestsPage(): ReactElement {
   const [first, second] = selected;
   return (
     <div className={runStyles.page}>
-      <h1 className={runStyles.title}>Backtests</h1>
+      <h1 className={runStyles.title}>Backtests (histórico)</h1>
       <LiveRunCard />
       <NewBacktestCard />
       <DuelCreateCard />

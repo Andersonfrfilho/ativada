@@ -21,7 +21,7 @@ export type LiveSimulationCardProps = {
   readonly simulation: LiveSimulation;
   readonly now: number;
   readonly isFeatured: boolean;
-  readonly onFeature: (runId: string) => void;
+  readonly onFeature?: ((runId: string) => void) | undefined;
 };
 
 function describeOperations(simulation: LiveSimulation): string {
@@ -73,6 +73,25 @@ function strategyOf(
   return label === undefined ? '' : ` · ${label}`;
 }
 
+type FeatureButtonProps = Pick<LiveSimulationCardProps, 'isFeatured' | 'onFeature'> & {
+  readonly run: LiveSimulation['run'];
+};
+
+function FeatureButton({ run, isFeatured, onFeature }: FeatureButtonProps): ReactElement | null {
+  if (onFeature === undefined) return null;
+  return (
+    <button
+      type="button"
+      className={styles.featureButton}
+      aria-pressed={isFeatured}
+      onClick={() => onFeature(run.id)}
+    >
+      <Icon name={isFeatured ? 'check' : 'eye'} size={16} />
+      {isFeatured ? 'Em destaque abaixo' : 'Ver em destaque'}
+    </button>
+  );
+}
+
 // O cartão inteiro abre o detalhe (o link do título cobre a área); o botão "Destacar" fica acima dele.
 export function LiveSimulationCard(props: LiveSimulationCardProps): ReactElement {
   const { simulation, isFeatured } = props;
@@ -93,15 +112,7 @@ export function LiveSimulationCard(props: LiveSimulationCardProps): ReactElement
       </p>
       <AnalystBadge mode={summary?.analystMode ?? null} />
       <CardBody simulation={simulation} now={props.now} />
-      <button
-        type="button"
-        className={styles.featureButton}
-        aria-pressed={isFeatured}
-        onClick={() => props.onFeature(run.id)}
-      >
-        <Icon name={isFeatured ? 'check' : 'eye'} size={16} />
-        {isFeatured ? 'Em destaque abaixo' : 'Ver em destaque'}
-      </button>
+      <FeatureButton run={run} isFeatured={isFeatured} onFeature={props.onFeature} />
     </li>
   );
 }

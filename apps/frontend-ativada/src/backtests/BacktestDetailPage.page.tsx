@@ -23,6 +23,7 @@ import { isActiveRun, type RunDetail } from '../runs/run.validation.js';
 import { useRunDetailQuery } from '../runs/runs.query.js';
 import { CompletedBacktest } from './CompletedBacktest.component.js';
 import { CompletedWalkForward } from './CompletedWalkForward.component.js';
+import { HistoricRunBanner } from '../wayfinding/HistoricRunBanner.component.js';
 import { RunSwitcher } from './run-switch/RunSwitcher.component.js';
 
 function failureMessage(run: RunDetail): string {
@@ -116,6 +117,7 @@ function RunDetailView({ runId }: { readonly runId: string }): ReactElement {
   return (
     <>
       <RunSwitcher runId={runId} run={run.data} isFailed={false} />
+      {run.data.kind === RUN_KIND.LIVE_PAPER ? null : <HistoricRunBanner kind={run.data.kind} />}
       {isLivePaperRun(run.data) ? null : <RunHeader run={run.data} />}
       <RunBody run={run.data} />
     </>

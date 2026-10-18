@@ -48,10 +48,11 @@ function Legend(): ReactElement {
   );
 }
 
-export type LiveSimulationsPanelProps = LiveSimulations &
-  Pick<FeaturedRun, 'select'> & {
-    readonly featuredId: string | undefined;
-  };
+export type LiveSimulationsPanelProps = LiveSimulations & {
+  // Sem `select` (página Ao vivo) o cartão não oferece o botão de destaque da Visão geral.
+  readonly select?: FeaturedRun['select'] | undefined;
+  readonly featuredId: string | undefined;
+};
 
 // Todas as simulações ao vivo lado a lado: a Visão geral não esconde nenhuma atrás da "primeira".
 export function LiveSimulationsPanel(props: LiveSimulationsPanelProps): ReactElement {

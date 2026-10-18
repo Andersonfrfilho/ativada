@@ -18,6 +18,7 @@ import { NotFoundPage } from '../layout/NotFoundPage.page.js';
 import { RootLayout } from '../layout/RootLayout.component.js';
 import { OverviewPage } from '../overview/OverviewPage.page.js';
 import { DuelPage } from '../runs/duel/DuelPage.page.js';
+import { LiveRunsPage } from '../wayfinding/LiveRunsPage.page.js';
 import { AuthCallbackPage } from '../session/AuthCallbackPage.page.js';
 import { LoginPage } from '../session/LoginPage.page.js';
 import { RequireSession } from '../session/RequireSession.component.js';
@@ -38,6 +39,7 @@ export function createAppRoutes(): RouteObject[] {
               element: <AppShell />,
               children: [
                 { index: true, element: <OverviewPage /> },
+                { path: ROUTE_PATH.LIVE, element: <LiveRunsPage /> },
                 { path: ROUTE_PATH.BACKTESTS, element: <BacktestsPage /> },
                 { path: ROUTE_PATH.BACKTEST_COMPARE, element: <ComparePage /> },
                 { path: ROUTE_PATH.BACKTEST, element: <BacktestDetailPage /> },

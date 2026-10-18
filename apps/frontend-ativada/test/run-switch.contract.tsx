@@ -197,7 +197,10 @@ describe('troca rápida de execução: a lista', () => {
 
   test('the coin chip goes to the API and only the opened list asks for the other kinds', async () => {
     const app = await openDetail('/backtests/btc-hour');
-    const before = app.fake.callsTo('GET', '/v1/runs').length;
+    // O contador do menu "Ao vivo" pede a lista ao vivo; a lista de trocar execução só pede ao abrir.
+    const before = app.fake
+      .callsTo('GET', '/v1/runs')
+      .filter((call) => call.query.get('kind') !== 'live_paper').length;
     expect(before).toBe(1);
     await openPanel();
     await waitFor(() => expect(optionNames().length).toBeGreaterThan(3));
