@@ -9,12 +9,7 @@ import type {
   TeamView,
 } from './model-teams.validation.js';
 import { useModelTeamsRunId } from './ModelTeamsRun.context.js';
-import {
-  BADGE_OFF,
-  describeProviderBadge,
-  describeTeamBadge,
-  type TeamBadge,
-} from './team-badge.js';
+import { describeProviderBadge, describeTeamBadge, type TeamBadge } from './team-badge.js';
 
 export type TeamCardModel = {
   readonly key: ModelTeamKey;
@@ -32,6 +27,7 @@ export type ModelTeamsView = {
   readonly status: 'idle' | 'loading' | 'absent' | 'error' | 'ready';
   readonly runId: string | undefined;
   readonly run: RunModelTeams | undefined;
+  // Só as equipes LIGADAS pelo usuário: as desligadas não aparecem (ficam em Conta → Equipes de modelo).
   readonly teams: readonly TeamCardModel[];
 };
 
@@ -54,8 +50,12 @@ function badgeOf(
   latest: Recommendation | undefined,
 ): TeamBadge | undefined {
   if (state !== undefined) return describeTeamBadge({ team: state.team, latest, timeZone });
-  if (mine === undefined) return undefined;
-  return mine.isEnabled ? describeProviderBadge(mine, timeZone) : BADGE_OFF;
+  return mine === undefined ? undefined : describeProviderBadge(mine, timeZone);
+}
+
+// Ligada pelo usuário: o estado da execução manda; sem ele vale a preferência de hoje; sem nenhum dos dois, não aparece.
+function isOn({ state, mine }: CardInput): boolean {
+  return (state?.team ?? mine)?.isEnabled === true;
 }
 
 function buildCard(input: CardInput): TeamCardModel {
@@ -75,9 +75,13 @@ function buildCard(input: CardInput): TeamCardModel {
 function statusOf(
   runId: string | undefined,
   query: ReturnType<typeof useRunModelTeamsQuery>,
+  mine: ReturnType<typeof useMyModelTeamsQuery>,
 ): ModelTeamsView['status'] {
   if (runId === undefined) return 'idle';
-  if (query.data === null) return 'absent';
+  if (query.data === null) {
+    if (mine.data !== undefined) return 'absent';
+    return mine.isError ? 'error' : 'loading';
+  }
   if (query.data !== undefined) return 'ready';
   return query.isError ? 'error' : 'loading';
 }
@@ -85,20 +89,19 @@ function statusOf(
 export function useModelTeamsView(): ModelTeamsView {
   const runId = useModelTeamsRunId();
   const query = useRunModelTeamsQuery(runId ?? '', runId !== undefined);
-  const mine = useMyModelTeamsQuery(query.data === null).data?.teams;
+  const mineQuery = useMyModelTeamsQuery(query.data === null);
   const timeZone = useUserTimeZone();
   const run = query.data ?? undefined;
+  const inputs = MODEL_TEAM_KEYS.map((key): CardInput => ({
+    key,
+    state: run?.teams.find((item) => item.team.teamKey === key),
+    mine: mineQuery.data?.teams.find((item) => item.teamKey === key),
+    timeZone,
+  }));
   return {
-    status: statusOf(runId, query),
+    status: statusOf(runId, query, mineQuery),
     runId,
     run,
-    teams: MODEL_TEAM_KEYS.map((key) =>
-      buildCard({
-        key,
-        state: run?.teams.find((item) => item.team.teamKey === key),
-        mine: mine?.find((item) => item.teamKey === key),
-        timeZone,
-      }),
-    ),
+    teams: inputs.filter(isOn).map(buildCard),
   };
 }

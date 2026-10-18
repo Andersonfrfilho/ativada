@@ -116,7 +116,6 @@ export const BALCONY_TEXT = {
     'As opiniões das equipes de modelo só aparecem nas simulações ao vivo; aqui, o estado de cada uma hoje (sem olhar o futuro da execução).',
   MODEL_HIDDEN: 'Motivo ocultado pelas regras de linguagem da casa.',
   MODEL_NO_OPINION: 'Sem opinião gravada ainda.',
-  MODEL_OFF_LINE: 'Desligada nas preferências: não opina.',
   MODEL_PAST_LINE: 'Equipes de modelo não opinam sobre o passado.',
   MODELS_ERROR: 'Não foi possível carregar as equipes de modelo agora.',
   MODELS_LOADING: 'carregando',

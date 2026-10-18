@@ -1,6 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { SeatLook } from '../team-room.types.js';
-import { BADGE_OFF } from '../../model-teams/team-badge.js';
 import type { ModelTeamsView, TeamCardModel } from '../../model-teams/useModelTeamsView.hook.js';
 import type { BalconyAgent } from './balcony-agents.js';
 import { BALCONY_SLOT, BALCONY_TEXT, type BalconySlot } from './balcony.constant.js';
@@ -13,10 +12,10 @@ const SLOT_OF: Readonly<Record<TeamCardModel['key'], BalconySlot>> = {
 
 const LOADING_SEAL = { icon: 'info', word: BALCONY_TEXT.MODELS_LOADING } as const;
 
-// Desligada ou com problema no provedor: o personagem fica esmaecido, mas o motivo aparece.
+// Ligada com problema no provedor (sem chave, teto, provedor fora): o personagem fica esmaecido, mas o motivo aparece.
 function isQuiet(card: TeamCardModel): boolean {
   const { badge } = card;
-  return badge === undefined || badge === BADGE_OFF || badge.tone === 'warn';
+  return badge === undefined || badge.tone === 'warn';
 }
 
 function lineOf(card: TeamCardModel, status: ModelTeamsView['status']): string {
@@ -27,7 +26,6 @@ function lineOf(card: TeamCardModel, status: ModelTeamsView['status']): string {
       : latest.roles.decision.reason;
   }
   if (status === 'absent') return BALCONY_TEXT.MODEL_PAST_LINE;
-  if (badge === BADGE_OFF) return BALCONY_TEXT.MODEL_OFF_LINE;
   if (badge?.tone === 'warn') return `${badge.word}: não opina.`;
   return BALCONY_TEXT.MODEL_NO_OPINION;
 }

@@ -3,14 +3,13 @@ import type { ReactElement } from 'react';
 
 import { useUserTimeZone } from '../../account/useUserTimeZone.hook.js';
 import { Icon } from '../../layout/Icon.component.js';
+import { EnableTeamsLink } from '../model-teams/EnableTeamsLink.component.js';
 import { MODEL_TEAM_VISUAL, type ModelTeamKey } from '../model-teams/model-teams.constant.js';
 import { useMyModelTeamsQuery } from '../model-teams/model-teams.query.js';
 import type { TeamView } from '../model-teams/model-teams.validation.js';
 import { describeProviderBadge } from '../model-teams/team-badge.js';
 import controls from '../../styles/Controls.module.css';
 import styles from './Duel.module.css';
-
-const OFF_PHRASE = 'desligada: ligue nas preferências para entrar no duelo';
 
 type PickProps = {
   readonly team: TeamView;
@@ -22,7 +21,7 @@ function Pick({ team, isPicked, onToggle }: PickProps): ReactElement {
   const timeZone = useUserTimeZone();
   const provider = describeProviderBadge(team, timeZone);
   const visual = MODEL_TEAM_VISUAL[team.teamKey];
-  const isBlocked = !team.isEnabled || !team.providerStatus.isAvailable;
+  const isBlocked = !team.providerStatus.isAvailable;
   return (
     <li>
       <label className={styles.pick}>
@@ -36,20 +35,15 @@ function Pick({ team, isPicked, onToggle }: PickProps): ReactElement {
           <span aria-hidden="true">◆</span> <strong>{visual.name}</strong> ({visual.provider})
         </span>
         <span className={styles.why}>
-          {team.isEnabled ? (
-            <>
-              <Icon name={provider.icon} size={12} /> {provider.word}
-            </>
-          ) : (
-            OFF_PHRASE
-          )}
+          <Icon name={provider.icon} size={12} /> {provider.word}
         </span>
       </label>
     </li>
   );
 }
 
-// As equipes que podem entrar: ligadas e com o provedor pronto. As outras aparecem com a frase do motivo.
+// As equipes LIGADAS; as desligadas não aparecem (nenhuma ligada: só o link para Conta). Ligada sem provedor pronto
+// aparece bloqueada, com a palavra do motivo.
 export function DuelTeamPicker({
   picked,
   onToggle,
@@ -65,11 +59,13 @@ export function DuelTeamPicker({
       </p>
     );
   }
+  const teams = (query.data?.teams ?? []).filter((team) => team.isEnabled);
+  if (query.data !== undefined && teams.length === 0) return <EnableTeamsLink />;
   return (
     <fieldset className={styles.fieldset}>
       <legend>Equipes ◆ no duelo</legend>
       <ul className={styles.runLinks}>
-        {(query.data?.teams ?? []).map((team) => (
+        {teams.map((team) => (
           <Pick
             key={team.teamKey}
             team={team}

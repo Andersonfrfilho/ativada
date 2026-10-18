@@ -74,6 +74,8 @@ export function useRunModelTeamsQuery(
   return useQuery({
     queryKey: [RUN_QUERY_ROOT, runId, MODEL_TEAMS_QUERY_ROOT, tracked.join(',')],
     enabled: isEnabled,
+    // Pedir uma opinião muda a chave (os ids acompanhados): sem isto os ◆ sumiriam e voltariam a cada pedido.
+    placeholderData: (previous) => previous,
     queryFn: async (): Promise<RunModelTeams | null> => {
       const query = tracked.length === 0 ? '' : `?opinionIds=${tracked.join(',')}`;
       try {

@@ -12,6 +12,8 @@ export type LayerBarProps = {
   readonly isLive: boolean;
   // As camadas da estratégia só existem na vela em que ela decide.
   readonly isStrategyTimeframe: boolean;
+  // Alguma equipe de modelo ligada; sem nenhuma, a camada "Equipes ◆" não aparece.
+  readonly hasTeams: boolean;
   readonly onToggle: (layer: ChartLayer) => void;
 };
 
@@ -82,10 +84,12 @@ function LayerButton({ item, isOn, isDisabled, onToggle }: LayerButtonProps): Re
 }
 
 export function LayerBar(props: LayerBarProps): ReactElement {
-  const { layers, isLive, isStrategyTimeframe, onToggle } = props;
+  const { layers, isLive, isStrategyTimeframe, hasTeams, onToggle } = props;
   const [isOpen, setIsOpen] = useState(false);
   const listId = useId();
-  const items = LAYER_ITEMS.filter((item) => isLive || !item.isLiveOnly);
+  const items = LAYER_ITEMS.filter(
+    (item) => (isLive || !item.isLiveOnly) && (hasTeams || item.layer !== CHART_LAYER.TEAMS),
+  );
   return (
     <div className={styles.layerBar}>
       <button

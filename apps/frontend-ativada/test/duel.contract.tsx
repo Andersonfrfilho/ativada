@@ -5,6 +5,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/re
 import { createMemoryRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 
+import type { TeamView } from '../src/runs/model-teams/model-teams.validation.js';
 import { duelSchema } from '../src/runs/duel/duel.validation.js';
 import { buildDuelChart } from '../src/runs/duel/duel-chart.js';
 import { buildRanking } from '../src/runs/duel/duel-ranking.js';
@@ -112,13 +113,16 @@ describe('tela do duelo (/duelo/:duelId)', () => {
   });
 });
 
-function openCreate(created: CreatedBodies): void {
-  const harness = createModelTeamsHarness(buildRunModelTeams());
-  harness.myTeams = [
+function openCreate(
+  created: CreatedBodies,
+  teams: readonly TeamView[] = [
     buildTeamView('nina'),
     buildNoKeyTeam('lucas'),
     buildTeamView('olivia', { isEnabled: false }),
-  ];
+  ],
+): void {
+  const harness = createModelTeamsHarness(buildRunModelTeams());
+  harness.myTeams = teams;
   const router = createMemoryRouter(
     [
       { path: '/', element: <DuelCreateCard /> },
@@ -141,9 +145,9 @@ describe('criar duelo (POST /v1/model-duels)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Montar um duelo' }));
     const nina = await screen.findByRole('checkbox', { name: /Nina/ });
     expect(screen.getByRole('checkbox', { name: /Lucas/ })).toHaveProperty('disabled', true);
-    expect(screen.getByRole('checkbox', { name: /Olívia/ })).toHaveProperty('disabled', true);
+    expect(screen.queryByRole('checkbox', { name: /Olívia/ })).toBeNull();
     expect(document.body.textContent).toContain('sem chave configurada');
-    expect(document.body.textContent).toContain('desligada: ligue nas preferências');
+    expect(document.body.textContent).not.toContain('desligada');
     const submit = screen.getByRole('button', { name: 'Criar duelo' });
     expect(submit).toHaveProperty('disabled', true);
     fireEvent.click(nina);
@@ -158,6 +162,21 @@ describe('criar duelo (POST /v1/model-duels)', () => {
       withMyStrategy: { strategyVersionId: 'v1' },
     });
     expect(await screen.findByText('duelo aberto')).toBeDefined();
+  });
+
+  test('nenhuma equipe ligada: o seletor mostra só o link para Conta', async () => {
+    const created: CreatedBodies = { bodies: [], failWith: undefined };
+    openCreate(created, [
+      buildTeamView('nina', { isEnabled: false }),
+      buildTeamView('lucas', { isEnabled: false }),
+      buildTeamView('olivia', { isEnabled: false }),
+    ]);
+    fireEvent.click(screen.getByRole('button', { name: 'Montar um duelo' }));
+    const link = await screen.findByRole('link', {
+      name: 'Equipes de modelo (desligadas) · ligar em Conta',
+    });
+    expect(link.getAttribute('href')).toBe('/conta#equipes');
+    expect(screen.queryByRole('checkbox', { name: /Nina|Lucas|Olívia/ })).toBeNull();
   });
 
   test('sem vaga de simulação ao vivo: nada é criado e a tela explica', async () => {

@@ -25,11 +25,17 @@ export function useTeamLayer(params: TeamLayerParams): TeamLayer | undefined {
     [comparison.data],
   );
   const teams = state.data?.teams;
+  // Só as equipes LIGADAS desenham plaquinhas, faixas e linhas do balão.
   return useMemo(() => {
     if (!isEnabled || items === undefined) return undefined;
+    const on = (teams ?? []).filter((item) => item.team.isEnabled);
+    const keys = on.map((item) => item.team.teamKey);
     return buildTeamLayer({
-      comparison: items,
-      teams: teams ?? [],
+      comparison: items.map((item) => ({
+        ...item,
+        teams: item.teams.filter((row) => keys.includes(row.teamKey)),
+      })),
+      teams: on,
       mapping,
       runMilliseconds,
       chartEnd,

@@ -11,6 +11,7 @@ import { ChartTooltip } from './ChartTooltip.component.js';
 import { useChartTooltip } from './useChartTooltip.hook.js';
 import { useTooltipHotkey } from './useTooltipHotkey.hook.js';
 import { ClusterButtons } from './ClusterButtons.component.js';
+import { useEnabledTeamKeys } from '../model-teams/useEnabledTeamKeys.hook.js';
 import { LayerBar } from './LayerBar.component.js';
 import { BesideTeam } from '../team-room/BesideTeam.component.js';
 import { LeaderFocusProvider } from '../team-room/balcony/leader-focus.context.js';
@@ -34,7 +35,8 @@ const SURFACE_FAILED_REASON =
 
 type CanvasViewProps = CandleCanvasInput & { readonly model: CandleCanvasModel };
 
-function CanvasHeader({ chart, view, source, model }: CanvasViewProps): ReactElement {
+function CanvasHeader({ runId, chart, view, source, model }: CanvasViewProps): ReactElement {
+  const teamKeys = useEnabledTeamKeys(runId, view.isLive);
   return (
     <>
       <CandleToolbar {...{ chart, source, model }} />
@@ -42,6 +44,7 @@ function CanvasHeader({ chart, view, source, model }: CanvasViewProps): ReactEle
         layers={source.preferences.preferences.layers}
         isLive={view.isLive}
         isStrategyTimeframe={model.layerData.isStrategyTimeframe}
+        hasTeams={teamKeys !== undefined && teamKeys.length > 0}
         onToggle={source.preferences.toggleLayer}
       />
       <TimeframeNotice

@@ -4,8 +4,9 @@ import { useId, useState, type ReactElement } from 'react';
 import { useUserTimeZone } from '../../account/useUserTimeZone.hook.js';
 import { formatTimeInZone } from '../../format/zoned-time.js';
 import controls from '../../styles/Controls.module.css';
-import { MODEL_TEAM_KEYS, MODEL_TEAM_VISUAL } from './model-teams.constant.js';
+import { MODEL_TEAM_VISUAL, type ModelTeamKey } from './model-teams.constant.js';
 import { useComparisonQuery, useRunModelTeamsQuery } from './model-teams.query.js';
+import { useEnabledTeamKeys } from './useEnabledTeamKeys.hook.js';
 import type { ComparisonItem } from './model-teams.validation.js';
 import {
   COMPARE_TEXT,
@@ -34,20 +35,20 @@ function CellView({ cell }: { readonly cell: Cell }): ReactElement {
   );
 }
 
-function Row({
-  item,
-  timeZone,
-}: {
+type RowProps = {
   readonly item: ComparisonItem;
   readonly timeZone: string;
-}): ReactElement {
+  readonly teamKeys: readonly ModelTeamKey[];
+};
+
+function Row({ item, timeZone, teamKeys }: RowProps): ReactElement {
   return (
     <tr>
       <th scope="row">{formatTimeInZone(item.closedAt, timeZone)}</th>
       {RULE_COLUMNS.map((rule) => (
         <CellView key={rule.key} cell={describeRuleCell(item, rule.key)} />
       ))}
-      {MODEL_TEAM_KEYS.map((key) => (
+      {teamKeys.map((key) => (
         <CellView key={key} cell={describeTeamCell(item, key)} />
       ))}
       <td>{NEXT_WORD[item.next]}</td>
@@ -55,7 +56,7 @@ function Row({
   );
 }
 
-function Header(): ReactElement {
+function Header({ teamKeys }: { readonly teamKeys: readonly ModelTeamKey[] }): ReactElement {
   return (
     <thead>
       <tr>
@@ -65,7 +66,7 @@ function Header(): ReactElement {
             <span aria-hidden="true">●</span> {rule.label}
           </th>
         ))}
-        {MODEL_TEAM_KEYS.map((key) => (
+        {teamKeys.map((key) => (
           <th key={key} scope="col">
             <span aria-hidden="true">◆</span> {MODEL_TEAM_VISUAL[key].name}
           </th>
@@ -76,7 +77,9 @@ function Header(): ReactElement {
   );
 }
 
-function Body({ runId }: { readonly runId: string }): ReactElement {
+type BodyProps = { readonly runId: string; readonly teamKeys: readonly ModelTeamKey[] };
+
+function Body({ runId, teamKeys }: BodyProps): ReactElement {
   const timeZone = useUserTimeZone();
   const query = useComparisonQuery(runId, true);
   const state = useRunModelTeamsQuery(runId, true).data;
@@ -94,10 +97,10 @@ function Body({ runId }: { readonly runId: string }): ReactElement {
       <div className={styles.scroll}>
         <table className={styles.table}>
           <caption className={styles.srOnly}>{COMPARE_TEXT.TITLE}</caption>
-          <Header />
+          <Header teamKeys={teamKeys} />
           <tbody>
             {items.map((item) => (
-              <Row key={item.candleTime} item={item} timeZone={timeZone} />
+              <Row key={item.candleTime} item={item} timeZone={timeZone} teamKeys={teamKeys} />
             ))}
           </tbody>
         </table>
@@ -117,9 +120,12 @@ function Body({ runId }: { readonly runId: string }): ReactElement {
 }
 
 // "Equipes × regras" (RF21): recolhível; só consulta quando aberto. Compara o acerto do LADO da vela seguinte (✓/✗), não o lucro.
-export function TeamComparison({ runId }: { readonly runId: string }): ReactElement {
+// Só as equipes LIGADAS têm coluna; sem nenhuma ligada o cartão some (o link para Conta fica na varanda).
+export function TeamComparison({ runId }: { readonly runId: string }): ReactElement | null {
   const [isOpen, setIsOpen] = useState(false);
   const bodyId = useId();
+  const teamKeys = useEnabledTeamKeys(runId, true);
+  if (teamKeys === undefined || teamKeys.length === 0) return null;
   return (
     <details
       className={styles.card}
@@ -131,7 +137,7 @@ export function TeamComparison({ runId }: { readonly runId: string }): ReactElem
       </summary>
       <div id={bodyId} className={styles.body}>
         <p className={controls.muted}>{COMPARE_TEXT.HINT}</p>
-        {isOpen ? <Body runId={runId} /> : null}
+        {isOpen ? <Body runId={runId} teamKeys={teamKeys} /> : null}
       </div>
     </details>
   );

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { useState, type ReactElement } from 'react';
 
+import { EnableTeamsLink } from '../../model-teams/EnableTeamsLink.component.js';
 import { ModelTeamSheet } from '../../model-teams/ModelTeamSheet.component.js';
 import { OnDemandButton } from '../../model-teams/OnDemandButton.component.js';
 import {
@@ -52,11 +53,17 @@ export type ModelTeamChipsProps = {
   readonly onActivate?: ((slot: BalconySlot) => void) | undefined;
 };
 
-// As equipes de MODELO (◆) como personagens, no mesmo molde dos agentes de regra: figura, crachá com nome e provedor,
-// estado em ícone + palavra, balão curto com o motivo gravado e a ficha. Desligada ou sem chave fica esmaecida, nunca some.
-export function ModelTeamChips({ activeSlot, onActivate }: ModelTeamChipsProps): ReactElement {
+// As equipes de MODELO (◆) LIGADAS como personagens, no mesmo molde dos agentes de regra: figura, crachá com nome e
+// provedor, estado em ícone + palavra, balão curto com o motivo gravado e a ficha. As desligadas não aparecem; ligada sem
+// chave, parada pelo teto ou com o provedor fora fica esmaecida com a palavra. Nenhuma ligada: só o link para Conta.
+export function ModelTeamChips({
+  activeSlot,
+  onActivate,
+}: ModelTeamChipsProps): ReactElement | null {
   const view = useModelTeamsView();
   const [own, setOwn] = useState<BalconySlot | undefined>(undefined);
+  if (view.status === 'idle' || view.status === 'loading') return null;
+  if (view.status !== 'error' && view.teams.length === 0) return <EnableTeamsLink />;
   return (
     <div className={styles.models}>
       <p className={styles.modelsHead}>

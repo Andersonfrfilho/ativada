@@ -73,7 +73,7 @@ async function openBalcony(
 }
 
 describe('as equipes ◆ na varanda (RF19)', () => {
-  test('cada equipe tem inicial, nome e o estado em ícone + palavra: comprar, pensando, desligada', async () => {
+  test('cada equipe tem inicial, nome e o estado em ícone + palavra: comprar, pensando; a desligada não aparece', async () => {
     const team = await openBalcony(mixedState());
     const nina = await within(team).findByRole('button', {
       name: /^Nina, equipe de modelo Gemini, comprar/,
@@ -84,10 +84,8 @@ describe('as equipes ◆ na varanda (RF19)', () => {
       name: /^Lucas, equipe de modelo Claude, pensando/,
     });
     expect(lucas.getAttribute('data-team')).toBe('lucas');
-    const olivia = within(team).getByRole('button', {
-      name: /^Olívia, equipe de modelo OpenAI, desligada/,
-    });
-    expect(olivia.getAttribute('data-team')).toBe('olivia');
+    expect(within(team).queryByRole('button', { name: /^Olívia, / })).toBeNull();
+    expect(team.textContent).not.toContain('desligada');
     expect(team.textContent).toContain('EQUIPES DE MODELO');
     expect(team.textContent).not.toContain('em breve');
   });

@@ -24,7 +24,7 @@ function TeamCard({ card }: { readonly card: TeamCardModel }): ReactElement {
   );
 }
 
-// O cantinho do café e a sala de vidro das equipes de modelo (◆): cada uma com a inicial, a palavra do estado e a palavra MODELO.
+// O cantinho do café e a sala de vidro das equipes de modelo LIGADAS (◆; sem nenhuma ligada a sala some): cada uma com a inicial, a palavra do estado e a palavra MODELO.
 export function OfficeCorners(): ReactElement {
   const view = useModelTeamsView();
   return (
@@ -33,16 +33,18 @@ export function OfficeCorners(): ReactElement {
         <span className={styles.coffeeMachine} />
         <span>{OFFICE_TEXT.COFFEE}</span>
       </div>
-      <div className={styles.models}>
-        <p className={styles.modelsHead}>
-          <span aria-hidden="true">{BALCONY_TEXT.KIND_MODEL_MARK}</span> {OFFICE_TEXT.MODELS_ROOM}
-        </p>
-        <ul className={styles.modelList}>
-          {view.teams.map((card) => (
-            <TeamCard key={card.key} card={card} />
-          ))}
-        </ul>
-      </div>
+      {view.teams.length === 0 ? null : (
+        <div className={styles.models}>
+          <p className={styles.modelsHead}>
+            <span aria-hidden="true">{BALCONY_TEXT.KIND_MODEL_MARK}</span> {OFFICE_TEXT.MODELS_ROOM}
+          </p>
+          <ul className={styles.modelList}>
+            {view.teams.map((card) => (
+              <TeamCard key={card.key} card={card} />
+            ))}
+          </ul>
+        </div>
+      )}
     </>
   );
 }
