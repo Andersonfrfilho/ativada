@@ -408,3 +408,37 @@ Autorização (usuário): tela das equipes. Não autorizados e não usados: chav
 - Teste: `test/team-run.contract.tsx` (5: contratos com e sem `signalSource`, `team_run` em live-status e projeções, rótulo, cabeçalho, varanda). Painel inteiro: 1.543 passam, 0 falham (131 arquivos); `bun run lint` limpo;
   `prettier --check` de `apps/frontend-ativada` e da spec limpo; `test/code-size-limits.contract.test.ts` verde.
 - Pendência pequena (só rótulo, sem mudança de API): a lista da barra de troca de execuções ("recentes") ainda nomeia a execução de equipe pelo id da versão fixa (a lista guarda só o id da versão). O título do botão já mostra a equipe.
+
+### Fechamento da Fase 5 (painel das equipes) — como testar, gates e pendências (2026-10-17)
+
+**Gates (Linux, `~/personal/ativada`):** `bun run typecheck` OK; `bun run lint` OK (zero erros); `prettier --check` de `apps/frontend-ativada` e da spec OK (o `format:check` da raiz só reclama de `graphify-out/`, ignorado pelo
+git, como já registrado na T3.4); `bun run --cwd apps/frontend-ativada test` (panel-test): **1.543 passam, 0 falham** (131 arquivos, 14 contratos novos ou ampliados desta fase); `test/code-size-limits.contract.test.ts` verde.
+Nenhuma mudança em API, banco, worker, `packages/strategy-engine` ou `packages/run-recording`; nenhuma chave, nenhuma rede a provedor real, nenhum `git push`.
+
+**Verificação no navegador do app:** o painel (http://127.0.0.1:56100) abriu na tela de login do Keycloak ("acesso por convite"). Não há usuário de teste no repositório e senha de login não é algo que eu digite, então **não entrei**; a tela foi
+verificada pelos contratos (texto literal de cada estado, `getByRole`, `textContent`) e confirmei que o Vite do app serve os módulos novos (`/src/runs/duel/DuelPage.page.tsx`, `ModelTeamChips`, `ModelTeamsCard`, `team-layer`: HTTP 200).
+Nenhuma captura de tela (a captura final por tema é da T6.3, que não foi pedida). Não rodei `make panel-e2e` (precisa de Docker/Keycloak, ausentes no WSL).
+
+**Como o usuário testa, passo a passo** (já logado em http://127.0.0.1:56100, com a stack dev de pé):
+
+1. **Conta → "Equipes de modelo"** (`/conta#equipes`): as três equipes (◆ Nina, ◆ Lucas, ◆ Olívia) vêm **Desligadas**; cada uma mostra a família do modelo, a nuvem e o estado do provedor em ícone + palavra
+   (sem chaves reais: "sem chave configurada"). Ligue uma (Espaço ou clique no interruptor): a palavra vira "Ligada" e o servidor guarda.
+2. **Simulação ao vivo** (Backtests → abra a simulação ao vivo → "Equipe agora", a varanda acima do gráfico, e "Sala da equipe"): a faixa **EQUIPES DE MODELO** mostra os ◆ com a inicial, o nome e o estado em palavra
+   ("desligada", "sem chave configurada", "pensando", "parada pelo teto de custo", "comprar/vender/esperar"). Clique num ◆: a **ficha** traz modelo e nuvem, última recomendação com entrada/alvo/proteção, os três papéis
+   (tendência, risco, gestor), acertos "N de M" com Wilson e "poucas previsões (menos de 30)", custo de hoje e do mês, taxa de falha de 24 h e o link para as preferências. No celular (375 px) vira "◆ 3 equipes".
+3. **"Pedir opinião agora"** (dentro da ficha): desabilitado com a frase do motivo (equipe desligada, sem chave/teto, simulação sem analista). Com uma equipe ligada e com chave (T6.2, manual) o pedido avulso aparece marcado
+   "pedido avulso · não entra no placar".
+4. **Camada "Equipes ◆" no gráfico** (botão em "Camadas do gráfico", **desligada por padrão** e lembrada): plaquinhas "◆N ↗ comprar" na vela decidida e a faixa de entrada/alvo/proteção da última compra, em `[t+15, t+30)`;
+   na vela de 3 min a plaquinha cai na primeira vela depois do fechamento. O balão de valores traz a recomendação da vela.
+5. **"Equipes × regras"** (cartão recolhível abaixo da sala): últimas 24 velas com o voto de cada regra, a indicação de cada equipe e ↗/↘/=/"ainda aberta" com ✓ acertou / ✗ errou.
+6. **Duelo**: Backtests → "Duelo: equipes × regras" → "Montar um duelo" (só equipes ligadas e prontas entram; sem vaga de simulação ao vivo nada é criado) → `/duelo/:duelId`: gráfico único de patrimônio com legenda ◆/●,
+   ranking com retorno, perda máxima, acerto de lado com Wilson e **custo de API**, e as frases "Período curto não prova nada" e "não mede lucro e não é recomendação".
+7. **Execução de equipe**: a simulação criada pelo duelo mostra "◆ Equipe Nina (Gemini)" no cartão de Backtests, na Visão geral e no cabeçalho, com a frase de que não há placar nem gatilhos de regra.
+
+**Pendências (nada foi mudado fora do painel):**
+
+- **Dado novo da API** (parado aqui, como combinado): a ficha mostra a FAMÍLIA do modelo, não o id do modelo (`modelId`), e o custo de hoje/mês sem a barra "contra o teto de custo" (`budget { dailyUsd, monthlyUsd }`). A camada do gráfico cobre
+  as últimas 24 velas (comparação) e as 3 últimas recomendações por equipe (faixa); mais histórico no gráfico precisa de rota nova.
+- Lista de "recentes" da barra de troca de execuções ainda nomeia a execução de equipe pelo id da versão fixa (o título do botão já mostra a equipe).
+- T6.1 (E2E `make panel-e2e` com servidor de controle), T6.2 (teste real com chaves, manual com o usuário), T6.3 (revisão de design 375/1280 px nos dois temas e a captura final) e T6.4 (`CLAUDE.md`) ficam abertas.
+- A API não expõe a coluna `requested_by` do pedido avulso (pendência (3) da T3.4, inalterada).
