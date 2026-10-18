@@ -79,7 +79,7 @@
   position: relative;
   display: grid;
   flex-basis: 100%;
-  grid-template-columns: 96px minmax(0, 1fr) clamp(280px, 27%, 380px);
+  grid-template-columns: minmax(0, 1fr) clamp(280px, 27%, 380px);
   gap: var(--space-3);
   padding: var(--space-2) var(--space-2) 0;
   border-radius: var(--radius-control);
@@ -641,9 +641,9 @@
   padding-bottom: 0;
 }
 
-/* Agentes de modelo: forma (cantos assimétricos e moldura tracejada), ícone (losango com chip), palavra e cor própria. */
 .models {
   display: grid;
+  grid-column: 1 / -1;
   align-content: start;
   gap: var(--space-1);
   min-width: 0;
@@ -658,53 +658,6 @@
   color: var(--model);
 }
 
-.modelList {
-  display: grid;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.modelRoot {
-  position: relative;
-}
-
-.modelButton {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  width: 100%;
-  min-height: 44px;
-  padding: 2px 4px;
-  border: 1.5px dashed var(--model);
-  border-radius: 4px 14px 4px 14px;
-  background: var(--model-soft);
-  color: var(--ink-2);
-  font: inherit;
-  font-size: 11px;
-  line-height: 14px;
-  text-align: left;
-  cursor: pointer;
-}
-
-/* Marca de forma por equipe (nunca só cor): Nina tracejada, Lucas pontilhada, Olívia dupla. */
-.modelButton[data-team='lucas'] {
-  border-style: dotted;
-  border-radius: 14px 4px 14px 4px;
-}
-
-.modelButton[data-team='olivia'] {
-  border-style: double;
-  border-width: 3px;
-  border-radius: 14px;
-}
-
-.modelButton:focus-visible {
-  outline: 2px solid var(--model);
-  outline-offset: 2px;
-}
-
 .modelsNote {
   margin: 0;
   font-size: 11px;
@@ -712,70 +665,61 @@
   color: var(--ink-2);
 }
 
-.modelState {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  align-items: center;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.diamond {
+.modelCrew {
   display: grid;
-  flex: none;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  transform: rotate(45deg);
-  border: 1.5px solid var(--model);
-  background: var(--surface);
-  color: var(--model);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.diamondLetter {
-  transform: rotate(-45deg);
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.modelText {
-  display: grid;
-  min-width: 0;
-}
-
-.modelText strong {
-  color: var(--ink);
-}
-
-@media (max-width: 699px) {
-  .models {
-    display: none;
-  }
-
-  .modelsSummary {
-    display: block;
-    padding-bottom: 4px;
-  }
-}
-
-.frame[data-density='collapsed'] .models {
-  display: none;
-}
-
-.frame[data-density='collapsed'] .balcony {
+/* Marca de forma por equipe (nunca só cor): Nina tracejada, Lucas pontilhada, Olívia dupla. */
+.slot[data-kind='model'] .badge {
   grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  border: 1.5px dashed var(--model);
+  border-top-width: 3px;
+  border-radius: 4px 14px 4px 14px;
+  background: var(--model-soft);
+  text-align: center;
 }
 
-.frame[data-density='compact'] .modelButton {
-  min-height: 28px;
+.slot[data-kind='model'][data-slot='lucas'] .badge {
+  border-style: dotted;
+  border-radius: 14px 4px 14px 4px;
 }
 
-.frame[data-density='compact'] .modelText span {
-  display: none;
+.slot[data-kind='model'][data-slot='olivia'] .badge {
+  border-style: double;
+  border-width: 3px;
+  border-radius: 14px;
 }
 
+.slot[data-kind='model'] .badgeName {
+  white-space: normal;
+}
+
+.slot[data-kind='model'] .seal {
+  color: var(--ink);
+  white-space: normal;
+}
+
+.slot[data-kind='model'] .figure {
+  transform: none;
+}
+
+.slot[data-slot='olivia'] .sheet {
+  right: 0;
+  left: auto;
+}
+
+/* Janela baixa e celular: o estado em palavra continua no crachá das equipes de modelo, só o cargo some. */
+@media (max-width: 699px) {
+  .slot[data-kind='model'] .seal {
+    display: inline-flex;
+  }
+}
 .rankingBox {
   display: grid;
   gap: var(--space-1);
@@ -803,11 +747,6 @@
 
 .rankingTable tbody tr {
   border-top: 1px solid var(--line);
-}
-
-.modelsSummary {
-  display: none;
-  position: relative;
 }
 
 /* Linha tracejada do balão ao ponto do gráfico (uma por vez); some em janela baixa e com a varanda recolhida. */

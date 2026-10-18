@@ -116,10 +116,11 @@ export function useComparisonQuery(
   });
 }
 
-export function useMyModelTeamsQuery(): UseQueryResult<MyModelTeams> {
+export function useMyModelTeamsQuery(isEnabled = true): UseQueryResult<MyModelTeams> {
   const client = useApiClient();
   return useQuery({
     queryKey: MY_MODEL_TEAMS_KEY,
+    enabled: isEnabled,
     queryFn: () => client.request({ path: MODEL_TEAM_PATH.MINE, schema: myModelTeamsSchema }),
   });
 }

@@ -162,3 +162,9 @@
     animation: none;
   }
 }
+
+.roleModel {
+  --shirt: var(--model);
+  --skin: var(--skin-4);
+  --hair: var(--hair-5);
+}

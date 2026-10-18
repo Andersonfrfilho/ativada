@@ -1,6 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import { ModelTeamChips } from './balcony/ModelTeamChips.component.js';
+import { ModelTeamsRunProvider } from '../model-teams/ModelTeamsRun.context.js';
+import { OfficeBadgeList } from './office/OfficeBadgeList.component.js';
 import styles from './CompactTeam.module.css';
 import { CompactTeamFrame } from './CompactTeamFrame.component.js';
 import { CompactTeamMoment } from './CompactTeamMoment.component.js';
@@ -33,6 +36,13 @@ function HistoricalTeamBody(input: HistoricalTeamInput): ReactElement {
     <>
       <CompactTeamMoment text={momentText(state)} isPointed={state.isPointed} />
       <CompactTeamSeats view={state.view} auditor={state.auditor} step={state.step} isWide />
+      <ModelTeamsRunProvider runId={input.runId}>
+        {state.view === undefined ? (
+          <ModelTeamChips />
+        ) : (
+          <OfficeBadgeList view={state.view} auditor={state.auditor} />
+        )}
+      </ModelTeamsRunProvider>
       <p className={styles.disclaimer}>{TEAM_ROOM_TEXT.HISTORICAL_NOTE}</p>
       <p className={styles.disclaimer}>{TEAM_ROOM_TEXT.DISCLAIMER}</p>
     </>

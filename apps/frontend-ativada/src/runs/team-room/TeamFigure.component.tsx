@@ -6,7 +6,7 @@ import type { SeatState } from './team-room-sequence.js';
 import type { SeatTone } from './team-room.types.js';
 
 export type FigureRole =
-  'trend' | 'reversion' | 'volume' | 'sentiment' | 'other' | 'analyst' | 'auditor';
+  'trend' | 'reversion' | 'volume' | 'sentiment' | 'other' | 'analyst' | 'auditor' | 'model';
 
 const ROLE_CLASS: Readonly<Record<FigureRole, string | undefined>> = {
   trend: styles.roleTrend,
@@ -16,6 +16,7 @@ const ROLE_CLASS: Readonly<Record<FigureRole, string | undefined>> = {
   other: styles.roleOther,
   analyst: styles.roleAnalyst,
   auditor: styles.roleAuditor,
+  model: styles.roleModel,
 };
 
 function Legs(): ReactElement {
@@ -84,6 +85,8 @@ function Accessory({ role }: { readonly role: FigureRole }): ReactElement | null
           d="M11 56h13v17H11zM57 62a6 6 0 1 0 12 0 6 6 0 1 0-12 0M67 66.5l5 5"
         />
       );
+    case 'model':
+      return <path className={styles.mark} d="M40 50l6 8-6 8-6-8z" />;
     case 'other':
       return null;
   }

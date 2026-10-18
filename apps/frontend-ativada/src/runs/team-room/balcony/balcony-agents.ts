@@ -12,10 +12,14 @@ import type {
   TeamRoomView,
 } from '../team-room.types.js';
 import type { TeamFamily } from '../team-room.constant.js';
+import type { ModelTeamKey } from '../../model-teams/model-teams.constant.js';
 import { BALCONY_AGENTS, BALCONY_TEXT, type BalconySlot } from './balcony.constant.js';
 
 export type BalconyAgent = {
   readonly slot: BalconySlot;
+  // Regra (●) ou equipe de modelo (◆): a equipe de modelo indica, não vota.
+  readonly kind: 'rule' | 'model';
+  readonly teamKey: ModelTeamKey | undefined;
   readonly name: string;
   readonly roleShort: string;
   readonly roleFull: string;
@@ -94,6 +98,8 @@ function specialistAgent(
   const rules = specialist?.rules ?? [];
   return {
     ...definition,
+    kind: 'rule',
+    teamKey: undefined,
     tone: specialist?.tone ?? 'quiet',
     seal,
     vote: specialist === undefined ? NOT_VOTING_LOOK : voteOf(specialist),
@@ -115,6 +121,8 @@ function aliceAgent(
   const lines = riskAnalyst?.lines ?? [analyst.message];
   return {
     ...definition,
+    kind: 'rule',
+    teamKey: undefined,
     roleShort: riskAnalyst === undefined ? 'Resumo do placar' : definition.roleShort,
     tone: 'normal',
     seal,
@@ -135,6 +143,8 @@ function auditorAgent(
   const seal = { icon: 'search', word: BALCONY_TEXT.MEASURES } as const;
   return {
     ...definition,
+    kind: 'rule',
+    teamKey: undefined,
     tone: 'normal',
     seal,
     vote: auditor?.look,

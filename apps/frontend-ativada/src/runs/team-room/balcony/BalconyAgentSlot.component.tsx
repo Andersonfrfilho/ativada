@@ -13,12 +13,20 @@ import styles from './Balcony.module.css';
 import { useLeaderFocus } from './leader-focus.context.js';
 import { useBadgeSheet } from './useBadgeSheet.hook.js';
 
+export type SheetRenderer = (id: string, isOpen: boolean) => ReactElement;
+
 export type BalconyAgentSlotProps = {
   readonly agent: BalconyAgent;
   readonly state: SeatState;
   readonly isActive: boolean;
   readonly onActivate: (slot: BalconySlot) => void;
+  // A ficha própria do agente (equipes de modelo); sem ela vale a ficha de regra.
+  readonly renderSheet?: SheetRenderer | undefined;
 };
+
+function markOf(agent: BalconyAgent): string {
+  return agent.kind === 'model' ? BALCONY_TEXT.KIND_MODEL_MARK : BALCONY_TEXT.KIND_RULE_MARK;
+}
 
 function Bubble({ agent }: { readonly agent: BalconyAgent }): ReactElement {
   const { vote, line, horizon } = agent;
@@ -76,11 +84,13 @@ export function Sheet({
 type BadgeProps = {
   readonly agent: BalconyAgent;
   readonly onActivate: (slot: BalconySlot) => void;
+  // A ficha própria do agente (equipes de modelo); sem ela vale a ficha de regra.
+  readonly renderSheet?: SheetRenderer | undefined;
   readonly onLeave: () => void;
 };
 
 // O crachá no parapeito: sempre visível (nome, selo e cargo curto); clique ou Enter abre a ficha.
-function Badge({ agent, onActivate, onLeave }: BadgeProps): ReactElement {
+function Badge({ agent, onActivate, onLeave, renderSheet }: BadgeProps): ReactElement {
   const sheetId = useId();
   const sheet = useBadgeSheet();
   return (
@@ -89,6 +99,7 @@ function Badge({ agent, onActivate, onLeave }: BadgeProps): ReactElement {
         ref={sheet.buttonRef}
         type="button"
         className={styles.badge}
+        data-team={agent.teamKey}
         aria-label={agent.ariaLabel}
         aria-expanded={sheet.isOpen}
         aria-controls={sheetId}
@@ -102,7 +113,7 @@ function Badge({ agent, onActivate, onLeave }: BadgeProps): ReactElement {
         onBlur={onLeave}
       >
         <span className={styles.badgeName}>
-          <span aria-hidden="true">{BALCONY_TEXT.KIND_RULE_MARK}</span> {agent.name}
+          <span aria-hidden="true">{markOf(agent)}</span> {agent.name}
         </span>
         <span className={styles.seal}>
           <Icon name={agent.seal.icon} size={12} />
@@ -110,7 +121,11 @@ function Badge({ agent, onActivate, onLeave }: BadgeProps): ReactElement {
         </span>
         <span className={styles.role}>{agent.roleShort}</span>
       </button>
-      <Sheet agent={agent} id={sheetId} isOpen={sheet.isOpen} />
+      {renderSheet === undefined ? (
+        <Sheet agent={agent} id={sheetId} isOpen={sheet.isOpen} />
+      ) : (
+        renderSheet(sheetId, sheet.isOpen)
+      )}
     </div>
   );
 }
@@ -121,6 +136,7 @@ export function BalconyAgentSlot({
   state,
   isActive,
   onActivate,
+  renderSheet,
 }: BalconyAgentSlotProps): ReactElement {
   const slotRef = useRef<HTMLLIElement>(null);
   const leader = useLeaderFocus();
@@ -136,6 +152,7 @@ export function BalconyAgentSlot({
       data-slot={agent.slot}
       data-state={state}
       data-active={isActive}
+      data-kind={agent.kind}
     >
       <div className={styles.figure}>
         <TeamFigure role={agent.figureRole} tone={agent.tone} state={state} isRinging={false} />
@@ -144,6 +161,7 @@ export function BalconyAgentSlot({
         agent={agent}
         onActivate={handleActivate}
         onLeave={() => leader?.setFocus(undefined)}
+        renderSheet={renderSheet}
       />
       <Bubble agent={agent} />
     </li>

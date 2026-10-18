@@ -1,10 +1,20 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { useUserTimeZone } from '../../account/useUserTimeZone.hook.js';
 import { MODEL_TEAM_KEYS, MODEL_TEAM_VISUAL, type ModelTeamKey } from './model-teams.constant.js';
-import { useRunModelTeamsQuery } from './model-teams.query.js';
-import type { Recommendation, RunModelTeams, TeamState } from './model-teams.validation.js';
+import { useMyModelTeamsQuery, useRunModelTeamsQuery } from './model-teams.query.js';
+import type {
+  Recommendation,
+  RunModelTeams,
+  TeamState,
+  TeamView,
+} from './model-teams.validation.js';
 import { useModelTeamsRunId } from './ModelTeamsRun.context.js';
-import { describeTeamBadge, type TeamBadge } from './team-badge.js';
+import {
+  BADGE_OFF,
+  describeProviderBadge,
+  describeTeamBadge,
+  type TeamBadge,
+} from './team-badge.js';
 
 export type TeamCardModel = {
   readonly key: ModelTeamKey;
@@ -31,22 +41,34 @@ export function pickLatest(state: TeamState): Recommendation | undefined {
   return pending ?? state.recent.find((item) => item.status === 'decided');
 }
 
-function buildCard(
-  key: ModelTeamKey,
-  state: TeamState | undefined,
-  timeZone: string,
-): TeamCardModel {
-  const visual = MODEL_TEAM_VISUAL[key];
-  const latest = state === undefined ? undefined : pickLatest(state);
+type CardInput = {
+  readonly key: ModelTeamKey;
+  readonly state: TeamState | undefined;
+  // Execução sem equipes (backtest): só o estado de hoje, vindo das preferências, sem opinião do passado.
+  readonly mine: TeamView | undefined;
+  readonly timeZone: string;
+};
+
+function badgeOf(
+  { state, mine, timeZone }: CardInput,
+  latest: Recommendation | undefined,
+): TeamBadge | undefined {
+  if (state !== undefined) return describeTeamBadge({ team: state.team, latest, timeZone });
+  if (mine === undefined) return undefined;
+  return mine.isEnabled ? describeProviderBadge(mine, timeZone) : BADGE_OFF;
+}
+
+function buildCard(input: CardInput): TeamCardModel {
+  const visual = MODEL_TEAM_VISUAL[input.key];
+  const latest = input.state === undefined ? undefined : pickLatest(input.state);
   return {
-    key,
+    key: input.key,
     name: visual.name,
     initial: visual.initial,
     provider: visual.provider,
-    state,
+    state: input.state,
     latest,
-    badge:
-      state === undefined ? undefined : describeTeamBadge({ team: state.team, latest, timeZone }),
+    badge: badgeOf(input, latest),
   };
 }
 
@@ -63,6 +85,7 @@ function statusOf(
 export function useModelTeamsView(): ModelTeamsView {
   const runId = useModelTeamsRunId();
   const query = useRunModelTeamsQuery(runId ?? '', runId !== undefined);
+  const mine = useMyModelTeamsQuery(query.data === null).data?.teams;
   const timeZone = useUserTimeZone();
   const run = query.data ?? undefined;
   return {
@@ -70,11 +93,12 @@ export function useModelTeamsView(): ModelTeamsView {
     runId,
     run,
     teams: MODEL_TEAM_KEYS.map((key) =>
-      buildCard(
+      buildCard({
         key,
-        run?.teams.find((item) => item.team.teamKey === key),
+        state: run?.teams.find((item) => item.team.teamKey === key),
+        mine: mine?.find((item) => item.teamKey === key),
         timeZone,
-      ),
+      }),
     ),
   };
 }

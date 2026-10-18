@@ -1,7 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { useId, type ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 
-import { Icon } from '../../../layout/Icon.component.js';
 import { ModelTeamSheet } from '../../model-teams/ModelTeamSheet.component.js';
 import { OnDemandButton } from '../../model-teams/OnDemandButton.component.js';
 import {
@@ -9,106 +8,11 @@ import {
   type ModelTeamsView,
   type TeamCardModel,
 } from '../../model-teams/useModelTeamsView.hook.js';
+import type { SeatState } from '../team-room-sequence.js';
+import { BALCONY_TEXT, type BalconySlot } from './balcony.constant.js';
 import styles from './Balcony.module.css';
-import { BALCONY_TEXT } from './balcony.constant.js';
-import { useBadgeSheet } from './useBadgeSheet.hook.js';
-
-const LOADING_WORD = BALCONY_TEXT.MODELS_LOADING;
-
-function labelOf(card: TeamCardModel): string {
-  const word = card.badge?.word ?? LOADING_WORD;
-  return `${card.name}, equipe de modelo ${card.provider}, ${word}. Ver a ficha`;
-}
-
-function ChipFace({ card }: { readonly card: TeamCardModel }): ReactElement {
-  const { badge } = card;
-  return (
-    <>
-      <span className={styles.diamond} aria-hidden="true">
-        <span className={styles.diamondLetter}>{card.initial}</span>
-      </span>
-      <span className={styles.modelText}>
-        <strong>{card.name}</strong>
-        <span className={styles.modelState}>
-          {badge === undefined ? null : <Icon name={badge.icon} size={12} />}
-          {badge?.word ?? LOADING_WORD}
-        </span>
-      </span>
-    </>
-  );
-}
-
-function ModelChip({
-  card,
-  view,
-}: {
-  readonly card: TeamCardModel;
-  readonly view: ModelTeamsView;
-}): ReactElement {
-  const sheetId = useId();
-  const sheet = useBadgeSheet();
-  return (
-    <li className={styles.modelItem}>
-      <div ref={sheet.rootRef} className={styles.modelRoot}>
-        <button
-          ref={sheet.buttonRef}
-          type="button"
-          className={styles.modelButton}
-          data-team={card.key}
-          aria-expanded={sheet.isOpen}
-          aria-controls={sheetId}
-          aria-label={labelOf(card)}
-          onClick={sheet.toggle}
-        >
-          <ChipFace card={card} />
-        </button>
-        <ModelTeamSheet card={card} run={view.run} id={sheetId} isOpen={sheet.isOpen}>
-          <OnDemandButton card={card} view={view} />
-        </ModelTeamSheet>
-      </div>
-    </li>
-  );
-}
-
-// No celular as três viram um chip só, "◆ 3 equipes", com as três fichas empilhadas.
-function ModelsSummary({ view }: { readonly view: ModelTeamsView }): ReactElement {
-  const sheetId = useId();
-  const sheet = useBadgeSheet();
-  return (
-    <div ref={sheet.rootRef} className={styles.modelsSummary}>
-      <button
-        ref={sheet.buttonRef}
-        type="button"
-        className={styles.modelButton}
-        aria-expanded={sheet.isOpen}
-        aria-controls={sheetId}
-        onClick={sheet.toggle}
-      >
-        <span aria-hidden="true">{BALCONY_TEXT.KIND_MODEL_MARK}</span> {view.teams.length} equipes
-      </button>
-      <div
-        id={sheetId}
-        role="group"
-        aria-label="Equipes de modelo"
-        hidden={!sheet.isOpen}
-        className={styles.sheet}
-      >
-        {view.teams.map((card) => (
-          <ModelTeamSheet
-            key={card.key}
-            card={card}
-            run={view.run}
-            id={`${sheetId}-${card.key}`}
-            isOpen
-            isInline
-          >
-            <OnDemandButton card={card} view={view} />
-          </ModelTeamSheet>
-        ))}
-      </div>
-    </div>
-  );
-}
+import { BalconyAgentSlot } from './BalconyAgentSlot.component.js';
+import { buildModelAgent } from './model-agents.js';
 
 function NoTeams({ view }: { readonly view: ModelTeamsView }): ReactElement | null {
   if (view.status === 'absent')
@@ -118,24 +22,59 @@ function NoTeams({ view }: { readonly view: ModelTeamsView }): ReactElement | nu
   return null;
 }
 
-// As equipes de MODELO (◆): moldura tracejada, losango com a INICIAL, a palavra do estado e uma marca de forma por equipe.
-export function ModelTeamChips(): ReactElement {
-  const view = useModelTeamsView();
+type ModelSlotProps = {
+  readonly card: TeamCardModel;
+  readonly view: ModelTeamsView;
+  readonly isActive: boolean;
+  readonly onActivate: (slot: BalconySlot) => void;
+};
+
+function ModelSlot({ card, view, isActive, onActivate }: ModelSlotProps): ReactElement {
+  const state: SeatState = card.latest?.status === 'pending' ? 'thinking' : 'spoken';
   return (
-    <>
-      <ModelsSummary view={view} />
-      <div className={styles.models}>
-        <p className={styles.modelsHead}>
-          <span aria-hidden="true">{BALCONY_TEXT.KIND_MODEL_MARK}</span> {BALCONY_TEXT.MODELS_TITLE}
-        </p>
-        <NoTeams view={view} />
-        <p className={styles.modelsNote}>{BALCONY_TEXT.MODELS_NOTE}</p>
-        <ul className={styles.modelList}>
-          {view.teams.map((card) => (
-            <ModelChip key={card.key} card={card} view={view} />
-          ))}
-        </ul>
-      </div>
-    </>
+    <BalconyAgentSlot
+      agent={buildModelAgent(card, view.status)}
+      state={state}
+      isActive={isActive}
+      onActivate={onActivate}
+      renderSheet={(id, isOpen) => (
+        <ModelTeamSheet card={card} run={view.run} id={id} isOpen={isOpen}>
+          <OnDemandButton card={card} view={view} />
+        </ModelTeamSheet>
+      )}
+    />
+  );
+}
+
+export type ModelTeamChipsProps = {
+  // O balão ativo da varanda (um por vez no celular); sozinha, a lista guarda o seu.
+  readonly activeSlot?: BalconySlot | undefined;
+  readonly onActivate?: ((slot: BalconySlot) => void) | undefined;
+};
+
+// As equipes de MODELO (◆) como personagens, no mesmo molde dos agentes de regra: figura, crachá com nome e provedor,
+// estado em ícone + palavra, balão curto com o motivo gravado e a ficha. Desligada ou sem chave fica esmaecida, nunca some.
+export function ModelTeamChips({ activeSlot, onActivate }: ModelTeamChipsProps): ReactElement {
+  const view = useModelTeamsView();
+  const [own, setOwn] = useState<BalconySlot | undefined>(undefined);
+  return (
+    <div className={styles.models}>
+      <p className={styles.modelsHead}>
+        <span aria-hidden="true">{BALCONY_TEXT.KIND_MODEL_MARK}</span> {BALCONY_TEXT.MODELS_TITLE}
+      </p>
+      <NoTeams view={view} />
+      <p className={styles.modelsNote}>{BALCONY_TEXT.MODELS_NOTE}</p>
+      <ul className={styles.modelCrew}>
+        {view.teams.map((card) => (
+          <ModelSlot
+            key={card.key}
+            card={card}
+            view={view}
+            isActive={(activeSlot ?? own) === card.key}
+            onActivate={onActivate ?? setOwn}
+          />
+        ))}
+      </ul>
+    </div>
   );
 }

@@ -9,6 +9,9 @@ export const BALCONY_SLOT = {
   VITOR: 'vitor',
   SOFIA: 'sofia',
   OTAVIO: 'otavio',
+  NINA: 'nina',
+  LUCAS: 'lucas',
+  OLIVIA: 'olivia',
 } as const;
 
 export type BalconySlot = (typeof BALCONY_SLOT)[keyof typeof BALCONY_SLOT];
@@ -109,7 +112,12 @@ export const BALCONY_TEXT = {
   COMFORTABLE: 'Confortável',
   EXPAND: 'Expandir equipe',
   MODELS_TITLE: 'EQUIPES DE MODELO',
-  MODELS_ONLY_LIVE: 'As equipes de modelo só aparecem nas simulações ao vivo.',
+  MODELS_ONLY_LIVE:
+    'As opiniões das equipes de modelo só aparecem nas simulações ao vivo; aqui, o estado de cada uma hoje (sem olhar o futuro da execução).',
+  MODEL_HIDDEN: 'Motivo ocultado pelas regras de linguagem da casa.',
+  MODEL_NO_OPINION: 'Sem opinião gravada ainda.',
+  MODEL_OFF_LINE: 'Desligada nas preferências: não opina.',
+  MODEL_PAST_LINE: 'Equipes de modelo não opinam sobre o passado.',
   MODELS_ERROR: 'Não foi possível carregar as equipes de modelo agora.',
   MODELS_LOADING: 'carregando',
   MODELS_NOTE: 'Elas indicam, não votam: o placar das regras segue sozinho.',

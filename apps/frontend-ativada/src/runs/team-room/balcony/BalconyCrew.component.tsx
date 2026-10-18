@@ -34,9 +34,6 @@ export function BalconyCrew(props: BalconyCrewProps): ReactElement {
   const agents = buildBalconyAgents({ view, auditor, horizon });
   return (
     <div className={styles.balcony} data-motion={step === REST_STEP ? 'off' : 'on'}>
-      <ModelTeamsRunProvider runId={runId}>
-        <ModelTeamChips />
-      </ModelTeamsRunProvider>
       <ul className={styles.crew}>
         {agents.map((agent, index) => (
           <BalconyAgentSlot
@@ -55,6 +52,9 @@ export function BalconyCrew(props: BalconyCrewProps): ReactElement {
         symbol={symbol}
         position={position}
       />
+      <ModelTeamsRunProvider runId={runId}>
+        <ModelTeamChips activeSlot={activeSlot} onActivate={setActiveSlot} />
+      </ModelTeamsRunProvider>
     </div>
   );
 }
