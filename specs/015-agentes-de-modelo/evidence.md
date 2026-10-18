@@ -385,3 +385,15 @@ Autorização (usuário): tela das equipes. Não autorizados e não usados: chav
 - Testes: `test/team-layer.contract.tsx` (8: plaquinhas, sem lookahead em 3 min, faixa em `[t+15, t+30)`, só a última compra, notas do balão, camada desligada sem consulta, ligar/lembrar/desligar, backtest sem a camada);
   `chart-preferences` e `chart-surface-lifecycle` atualizados. Painel inteiro: 1.529 passam, 0 falham (129 arquivos).
 - Limite conhecido (não é mudança de API): as plaquinhas cobrem as últimas 24 velas de 15 min (a comparação da API) e a faixa usa as 3 últimas recomendações de cada equipe; mais histórico no gráfico precisaria de rota nova.
+
+### T5.5 — Duelo: criar, gráfico de patrimônio único e ranking com Wilson e custo de API
+
+- Rota `/duelo/:duelId` (`DuelPage`, `ROUTE_PATH.DUEL`) e o cartão "Duelo: equipes × regras" na página Backtests (botão "Montar um duelo" abre o formulário: par, saldo fictício, equipes ◆ ligadas e prontas — as outras
+  aparecem desabilitadas com a frase do motivo —, e "Incluir a minha estratégia de regras" com a primeira estratégia na versão mais nova). `POST /v1/model-duels` → navega para o duelo. Erros em frase: sem vaga
+  (`LIVE_RUN_LIMIT_REACHED`: "nada foi criado"), equipe desligada/indisponível, 429, 400.
+- Gráfico (`duel-chart.ts` puro + `DuelChart`): SVG à mão, UMA linha por execução (vão onde a execução ainda não tem ponto, nada é interpolado), legenda "◆ Nina (Gemini)" / "● Minha estratégia (regras)" e traço próprio por
+  execução (sólido, tracejado, pontilhado, traço-ponto — nunca só cor); `role="img"` com a descrição e os rótulos do eixo vêm do texto do servidor.
+- Ranking (`duel-ranking.ts`): ordenado pelo retorno em BigInt (sem retorno vai para o fim), retorno arredondado para baixo, perda máxima para cima, operações, acerto de lado "N de M" com a faixa de Wilson e o veredito
+  ("poucas previsões (menos de 30)"), custo de API de hoje e do mês por equipe ("sem custo de API" na execução de regras) e o link para a simulação de cada um. Frases fixas: "Mesmo par, mesma vela e mesmo saldo fictício. Período
+  curto não prova nada.", "Comparação de acerto do lado da próxima vela; não mede lucro e não é recomendação." e "Retorno e perda máxima: resultado de uma simulação curta, não prova de nada." Atualiza com o aviso do stream.
+- Teste: `test/duel.contract.tsx` (9: espelho Zod, gráfico e ranking puros, tela, 404, criação com o corpo exato, sem vaga, saldo inválido). Painel inteiro: 1.538 passam, 0 falham (130 arquivos).

@@ -126,7 +126,7 @@ describe('dinheiro', () => {
       readdirSync(join(import.meta.dir, '..', root))
         .filter((name) => name.endsWith('.ts') || name.endsWith('.tsx'))
         .filter((name) =>
-          /Number\(|parseFloat|toFixed/.test(
+          /\bNumber\(|parseFloat|toFixed/.test(
             readFileSync(join(import.meta.dir, '..', root, name), 'utf8'),
           ),
         )

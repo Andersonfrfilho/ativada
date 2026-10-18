@@ -3,6 +3,7 @@ import { useState, type ReactElement } from 'react';
 import { Link } from 'react-router';
 
 import { ROUTE_PATH } from '../app/app.constant.js';
+import { DuelCreateCard } from '../runs/duel/DuelCreateCard.component.js';
 import runStyles from '../runs/Runs.module.css';
 import controls from '../styles/Controls.module.css';
 import styles from './Backtests.module.css';
@@ -32,6 +33,7 @@ export function BacktestsPage(): ReactElement {
       <h1 className={runStyles.title}>Backtests</h1>
       <LiveRunCard />
       <NewBacktestCard />
+      <DuelCreateCard />
       <div className={styles.compareBar}>
         {first !== undefined && second !== undefined ? (
           <Link to={`${ROUTE_PATH.BACKTEST_COMPARE}?a=${first}&b=${second}`}>

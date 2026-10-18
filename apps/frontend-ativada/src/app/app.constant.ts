@@ -10,6 +10,7 @@ export const ROUTE_PATH = {
   BACKTESTS: '/backtests',
   BACKTEST: '/backtests/:runId',
   BACKTEST_COMPARE: '/backtests/comparar',
+  DUEL: '/duelo/:duelId',
   STRATEGIES: '/estrategias',
   STRATEGY: '/estrategias/:strategyId',
   ALERTS: '/alertas',
