@@ -162,6 +162,7 @@ describe('escritório: a planta e a lista equivalente', () => {
     expect(stage.querySelectorAll('[data-animated]').length).toBeLessThanOrEqual(
       OFFICE_LIMITS.MAX_ANIMATED_ELEMENTS,
     );
+    await waitFor(() => expect(stage.textContent).toContain('comprar'));
     const text = stage.textContent ?? '';
     for (const expected of [
       'Próximo fechamento',
@@ -169,14 +170,15 @@ describe('escritório: a planta e a lista equivalente', () => {
       'Mesa da Alice',
       'Prancheta · Wilson 95%',
       'Café',
-      'Sala dos modelos · em breve',
+      'Sala das equipes de modelo',
       'Nina',
       'Lucas',
-      'Clara',
+      'Olívia',
       'MODELO',
     ]) {
       expect(text).toContain(expected);
     }
+    expect(text).not.toContain('em breve');
   });
 
   test('the badge list repeats the six people as 44 px buttons with the sheet', async () => {

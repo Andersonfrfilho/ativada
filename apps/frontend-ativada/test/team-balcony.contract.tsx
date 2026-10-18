@@ -88,13 +88,11 @@ describe('a varanda: a equipe em pé acima do gráfico (spec 011, escritório)',
     expect(tip?.textContent).toContain('Exemplo:');
   });
 
-  test('the model agents are marked as models, coming soon, and never speak or vote', async () => {
+  test('the model teams are marked as models (◆), indicate but never vote, and are no longer "em breve"', async () => {
     const team = await openBalcony();
-    expect(team.textContent).toContain('MODELOS · em breve');
-    fireEvent.click(screen.getByRole('button', { name: /^Nina, Notícias, modelo, em breve/ }));
-    const sheet = screen.getByRole('group', { name: 'Ficha de Nina' });
-    expect(sheet.textContent).toContain('ainda não existe');
-    expect(sheet.textContent).toContain('Custo estimado por dia: —');
+    await waitFor(() => expect(team.textContent).toContain('EQUIPES DE MODELO'));
+    expect(team.textContent).toContain('Elas indicam, não votam');
+    expect(team.textContent).not.toContain('em breve');
   });
 
   test('the animation has its own pause button and the choice is remembered', async () => {

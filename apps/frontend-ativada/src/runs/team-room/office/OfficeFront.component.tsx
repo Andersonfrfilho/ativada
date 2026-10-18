@@ -6,7 +6,6 @@ import { Icon } from '../../../layout/Icon.component.js';
 import { StrategySummarySpeech, RiskAnalystSpeech } from '../AnalystSeat.component.js';
 import { AuditorSpeech } from '../AuditorSeat.component.js';
 import type { BalconyAgent } from '../balcony/balcony-agents.js';
-import { BALCONY_MODELS, BALCONY_TEXT } from '../balcony/balcony.constant.js';
 import { SpeechBubble } from '../SpeechBubble.component.js';
 import roomStyles from '../TeamRoom.module.css';
 import { TeamFigure } from '../TeamFigure.component.js';
@@ -115,35 +114,5 @@ export function OfficeAuditor({
       </div>
       <span className={styles.nameTag}>{TEAM_ROOM_TEXT.AUDITOR_NAME}</span>
     </div>
-  );
-}
-
-// O cantinho do café e a sala de vidro dos modelos (◆ "em breve"): apagados, nunca falam nem votam.
-export function OfficeCorners(): ReactElement {
-  return (
-    <>
-      <div className={styles.coffee}>
-        <span className={styles.coffeeMachine} />
-        <span>{OFFICE_TEXT.COFFEE}</span>
-      </div>
-      <div className={styles.models}>
-        <p className={styles.modelsHead}>
-          <span aria-hidden="true">{BALCONY_TEXT.KIND_MODEL_MARK}</span> {OFFICE_TEXT.MODELS_ROOM}
-        </p>
-        <ul className={styles.modelList}>
-          {BALCONY_MODELS.map((model) => (
-            <li key={model.name} className={styles.modelCard}>
-              <strong>
-                <span aria-hidden="true">{BALCONY_TEXT.KIND_MODEL_MARK}</span> {model.name}
-              </strong>
-              <span>{model.role}</span>
-              <span className={styles.modelTag}>
-                {OFFICE_TEXT.MODEL_TAG} · {OFFICE_TEXT.MODEL_NOTE}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </>
   );
 }

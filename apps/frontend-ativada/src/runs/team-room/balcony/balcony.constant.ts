@@ -85,15 +85,6 @@ export const LEADER_ANCHOR: Readonly<
   [BALCONY_SLOT.ALICE]: 'protection',
 };
 
-export type BalconyModel = { readonly name: string; readonly role: string };
-
-// Agentes de modelo que ainda não existem: aparecem marcados e apagados, sem voto nem fala.
-export const BALCONY_MODELS: readonly BalconyModel[] = [
-  { name: 'Nina', role: 'Notícias' },
-  { name: 'Lucas', role: 'Estatístico' },
-  { name: 'Clara', role: 'Repórter' },
-];
-
 export const BALCONY_TEXT = {
   KIND_RULE: 'Regra',
   KIND_RULE_MARK: '●',
@@ -117,12 +108,17 @@ export const BALCONY_TEXT = {
   COMPACT: 'Compacto',
   COMFORTABLE: 'Confortável',
   EXPAND: 'Expandir equipe',
-  MODEL_NOT_YET: 'Agente de modelo: ainda não existe. Não fala nem vota.',
+  MODELS_TITLE: 'EQUIPES DE MODELO',
+  MODELS_ONLY_LIVE: 'As equipes de modelo só aparecem nas simulações ao vivo.',
+  MODELS_ERROR: 'Não foi possível carregar as equipes de modelo agora.',
+  MODELS_LOADING: 'carregando',
+  MODELS_NOTE: 'Elas indicam, não votam: o placar das regras segue sozinho.',
   RANKING_FOOTER: 'Ranking é desempenho passado, não garantia.',
   RANKING_WINDOW: 'Janela: os últimos 30 dias, medidos pelo auditor do analista.',
   RANKING_UNMEASURED:
     'O servidor ainda não mede o acerto por especialista: sem número, sem posição.',
-  RANKING_MODELS: 'Nina, Lucas e Clara: os agentes de modelo ainda não existem.',
+  RANKING_MODELS:
+    'As equipes ◆ (Nina, Lucas e Olívia) não entram neste ranking: o acerto delas está na ficha de cada uma.',
   PAUSE: 'Pausar animação',
   RESUME: 'Continuar animação',
   NET_WORD: 'líquido',

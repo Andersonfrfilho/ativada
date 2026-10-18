@@ -1,0 +1,84 @@
+/* A ficha das equipes: o balão posicionado (absolute) vem da varanda; aqui só o conteúdo. */
+.sheet {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  display: grid;
+  gap: var(--space-2);
+  width: max-content;
+  max-width: min(340px, 86vw);
+  max-height: 70vh;
+  overflow: auto;
+  padding: var(--space-2) var(--space-3);
+  border: 1.5px dashed var(--model);
+  border-radius: 4px 14px 4px 14px;
+  background: var(--surface-2);
+  box-shadow: var(--toast-shadow);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.sheet[hidden] {
+  display: none;
+}
+
+.inline {
+  position: static;
+  width: auto;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  box-shadow: none;
+}
+
+.sheet ul {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: 16px;
+}
+
+.sheet p {
+  margin: 0;
+}
+
+.head {
+  color: var(--model);
+}
+
+.state {
+  font-weight: 700;
+}
+
+.sectionTitle {
+  font-weight: 700;
+}
+
+.roles {
+  list-style: none;
+  padding-left: 0;
+}
+
+.roles li {
+  display: grid;
+  gap: 1px;
+}
+
+.footer {
+  color: var(--ink-2);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--model);
+  font-weight: 700;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--model);
+  outline-offset: 2px;
+}

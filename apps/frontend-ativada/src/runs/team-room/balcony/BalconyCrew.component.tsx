@@ -8,7 +8,8 @@ import { buildBalconyAgents } from './balcony-agents.js';
 import { BALCONY_SLOT, type BalconySlot } from './balcony.constant.js';
 import styles from './Balcony.module.css';
 import { BalconyAgentSlot } from './BalconyAgentSlot.component.js';
-import { BalconyModels } from './BalconyModels.component.js';
+import { ModelTeamsRunProvider } from '../../model-teams/ModelTeamsRun.context.js';
+import { ModelTeamChips } from './ModelTeamChips.component.js';
 import { BalconyBoard } from './BalconyBoard.component.js';
 
 export type BalconyCrewProps = {
@@ -33,7 +34,9 @@ export function BalconyCrew(props: BalconyCrewProps): ReactElement {
   const agents = buildBalconyAgents({ view, auditor, horizon });
   return (
     <div className={styles.balcony} data-motion={step === REST_STEP ? 'off' : 'on'}>
-      <BalconyModels />
+      <ModelTeamsRunProvider runId={runId}>
+        <ModelTeamChips />
+      </ModelTeamsRunProvider>
       <ul className={styles.crew}>
         {agents.map((agent, index) => (
           <BalconyAgentSlot

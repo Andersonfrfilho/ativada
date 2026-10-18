@@ -6,6 +6,7 @@ import controls from '../../styles/Controls.module.css';
 import { OFFICE_ANCHOR } from '../live-tracking/live-anchors.js';
 import { useLiveStatusQuery } from '../live-tracking/live-status.query.js';
 import type { LiveStatus } from '../live-tracking/live-status.validation.js';
+import { ModelTeamsRunProvider } from '../model-teams/ModelTeamsRun.context.js';
 import { TeamRoomCard } from './TeamRoomCard.component.js';
 import { LayoutSwitch } from './TeamRoomControls.component.js';
 import { TEAM_ROOM_TEXT } from './team-room.constant.js';
@@ -57,6 +58,14 @@ function LoadedRoom(props: TeamRoomModelInput): ReactElement {
 
 // "Sala da equipe" (spec 011, versão 1): a mesma consulta do acompanhamento ao vivo; nenhum polling novo.
 export function TeamRoomSection(props: TeamRoomSectionProps): ReactElement {
+  return (
+    <ModelTeamsRunProvider runId={props.runId}>
+      <TeamRoomSectionBody {...props} />
+    </ModelTeamsRunProvider>
+  );
+}
+
+function TeamRoomSectionBody(props: TeamRoomSectionProps): ReactElement {
   const status = useLiveStatusQuery(props.runId, true);
   if (status.data === undefined) {
     return (

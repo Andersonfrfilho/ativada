@@ -485,6 +485,27 @@
     color: var(--model);
   }
 
+  .modelState {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    align-items: center;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* Marca de forma por equipe: Nina tracejada, Lucas pontilhada, Olívia dupla (além da inicial e do nome). */
+  .modelCard[data-team='lucas'] {
+    border-style: dotted;
+    border-radius: 10px 3px 10px 3px;
+  }
+
+  .modelCard[data-team='olivia'] {
+    border-style: double;
+    border-width: 3px;
+    border-radius: 10px;
+  }
+
   .coffee {
     grid-column: 1;
     grid-row: 4;

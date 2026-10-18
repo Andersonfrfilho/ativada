@@ -347,3 +347,17 @@ Autorização (usuário): tela das equipes. Não autorizados e não usados: chav
 - Glossário (RF23): `Equipe de modelo`, `Papel`, `Duelo`, `Custo estimado`, `Teto de custo`, `Pedido avulso` (uma frase de até 120 caracteres; o teste do glossário confere); o exemplo de "Em observação" deixou de citar a Clara.
 - Teste: `test/model-teams-preferences.contract.tsx` (3: desligadas por padrão, estado em palavra, PATCH `{enabled}`, foco, nenhuma palavra proibida); `account.contract.tsx` ganhou a rota falsa de `GET /v1/me/model-teams`.
   O teste de tema do `account.contract` só passa depois do `theme-store.contract` (dependência de ordem que já existia; o `package.json` os lista nessa ordem).
+
+### T5.2 — ◆ vivos na varanda e no escritório, estados por ícone + palavra e a ficha da equipe
+
+- Os ◆ "em breve" (Nina/Lucas/Clara) saíram: `BalconyModels.component.tsx` apagado, `BALCONY_MODELS` e `MODEL_NOT_YET` removidos. No lugar, `balcony/ModelTeamChips.component.tsx` (varanda e lista de crachás do escritório) e
+  `office/OfficeCorners.component.tsx` (a sala de vidro do palco decorativo), lendo `useModelTeamsView` (contexto `ModelTeamsRunProvider`, uma só consulta `GET /v1/runs/:id/model-teams`).
+- Marcação diferente por equipe, sem depender de cor: losango com a INICIAL (N, L, O), moldura tracejada (Nina), pontilhada (Lucas) ou dupla (Olívia), o nome e o provedor (Gemini, Claude, OpenAI).
+- Estado SEMPRE ícone + palavra (`team-badge.ts`): desligada, sem chave configurada, parada pelo teto de custo, provedor fora (tentando de novo às HH:MM no fuso do usuário), chave recusada, modelo indisponível,
+  pensando (relatório `pending`), comprar/vender/esperar (última recomendação decidida), aguardando a vela. Execução que não é ao vivo (409) diz "só aparecem nas simulações ao vivo".
+- Ficha (`ModelTeamSheet`): modelo (família) e onde roda ("nuvem do Google/da Anthropic/da OpenAI"), estado, última recomendação com entrada/alvo/proteção em texto decimal, os TRÊS papéis (tendência, risco, gestor)
+  com o motivo (ou a frase fixa quando a higiene o ocultou), acertos de lado "N de M (X%)" com a faixa de Wilson (arredondada para fora) e "poucas previsões (menos de 30)", custo de hoje e do mês (BigInt,
+  arredondado PARA CIMA em 4 casas), taxa de falha de 24 h, o rodapé "gerado por modelo … pode errar", o aviso fixo da equipe e o link "Ligar/desligar nas preferências". No celular as três fichas vão dentro de "◆ 3 equipes".
+- Termos com tooltip (glossário): Equipe de modelo, Papel, Acertos de lado, Intervalo de confiança, Custo estimado, Em observação.
+- Testes: `test/model-teams-room.contract.tsx` (9: estados em palavra, provedor, ficha completa, motivo ocultado, execução ao vivo ausente, selo, custo, placar, falhas); `team-balcony`/`office-stage` atualizados
+  (sem "em breve"); `touch-targets` ganhou `.modelButton`, o link da ficha e o interruptor da Conta. `bun run --cwd apps/frontend-ativada test`: 1.515 passam, 0 falham (127 arquivos).

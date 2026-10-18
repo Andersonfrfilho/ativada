@@ -56,6 +56,9 @@ const TARGETS: readonly (readonly [string, string])[] = [
   ['overview/LiveSimulations.module.css', '.featureButton'],
   ['overview/LiveSimulations.module.css', '.summaryToggle'],
   ['overview/LiveSimulations.module.css', '.pastLink'],
+  ['runs/team-room/balcony/Balcony.module.css', '.modelButton'],
+  ['runs/model-teams/ModelTeamSheet.module.css', '.link'],
+  ['account/model-teams/ModelTeamsCard.module.css', '.switch'],
 ];
 
 describe('alvos de toque', () => {

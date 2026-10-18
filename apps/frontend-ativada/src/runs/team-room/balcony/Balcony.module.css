@@ -686,12 +686,39 @@
   line-height: 14px;
   text-align: left;
   cursor: pointer;
-  opacity: 0.85;
+}
+
+/* Marca de forma por equipe (nunca só cor): Nina tracejada, Lucas pontilhada, Olívia dupla. */
+.modelButton[data-team='lucas'] {
+  border-style: dotted;
+  border-radius: 14px 4px 14px 4px;
+}
+
+.modelButton[data-team='olivia'] {
+  border-style: double;
+  border-width: 3px;
+  border-radius: 14px;
 }
 
 .modelButton:focus-visible {
   outline: 2px solid var(--model);
   outline-offset: 2px;
+}
+
+.modelsNote {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--ink-2);
+}
+
+.modelState {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .diamond {
@@ -706,8 +733,11 @@
   color: var(--model);
 }
 
-.diamond > svg {
+.diamondLetter {
   transform: rotate(-45deg);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .modelText {

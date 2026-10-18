@@ -7,9 +7,15 @@ import {
   createLiveHarness,
   HOUR,
   LIVE_BASE,
+  LIVE_RUN_ID,
   liveRoutes,
   type LiveHarness,
 } from './live-tracking-harness.js';
+import {
+  buildRunModelTeams,
+  createModelTeamsHarness,
+  modelTeamsRoutes,
+} from './model-teams-fixtures.js';
 import type { FakeRoute } from './fake-fetch.js';
 import { dataResponse } from './fake-fetch.js';
 
@@ -123,6 +129,7 @@ export function roomRoutes(
       path: `${LIVE_BASE}/projections`,
       respond: (): Response => dataResponse(buildProjectionsResponse({ summary })),
     },
+    ...modelTeamsRoutes(createModelTeamsHarness(buildRunModelTeams()), LIVE_RUN_ID),
   ];
 }
 

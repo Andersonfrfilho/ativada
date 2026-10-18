@@ -4,7 +4,8 @@ import { useId, type ReactElement } from 'react';
 import { Icon } from '../../../layout/Icon.component.js';
 import { buildBalconyAgents, type BalconyAgent } from '../balcony/balcony-agents.js';
 import { Sheet } from '../balcony/BalconyAgentSlot.component.js';
-import { BALCONY_MODELS, BALCONY_TEXT } from '../balcony/balcony.constant.js';
+import { BALCONY_TEXT } from '../balcony/balcony.constant.js';
+import { ModelTeamChips } from '../balcony/ModelTeamChips.component.js';
 import { useBadgeSheet } from '../balcony/useBadgeSheet.hook.js';
 import type { AuditorView, TeamRoomView } from '../team-room.types.js';
 import { OFFICE_TEXT } from './office.constant.js';
@@ -56,10 +57,7 @@ export function OfficeBadgeList({ view, auditor }: OfficeBadgeListProps): ReactE
           <BadgeItem key={agent.slot} agent={agent} />
         ))}
       </ul>
-      <p className={styles.badgesNote}>
-        <span aria-hidden="true">{BALCONY_TEXT.KIND_MODEL_MARK}</span>{' '}
-        {BALCONY_MODELS.map((model) => model.name).join(', ')}: {BALCONY_TEXT.MODEL_NOT_YET}
-      </p>
+      <ModelTeamChips />
     </section>
   );
 }
