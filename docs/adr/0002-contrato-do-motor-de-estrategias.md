@@ -2480,3 +2480,25 @@ custa por chamada; o motor é determinístico e o replay dá o mesmo resultado b
 | M12 | **Segredos e privacidade:** chaves só no worker (`secretVariables`), `redirect: 'error'`, códigos de erro sem texto, estado do provedor publicado no batimento só com booleanos e códigos; `model_team_reports` é pública (sem PII) e `user_model_teams` entra no registro LGPD | RF04, RF23, RNF02, RNF09 |
 
 **Validação.** O `architect` (opus) aprovou a opção A com os ajustes acima (entrada gravada por vela em `team_run_inputs`, enfileirar fora do passo, `AWAITING_TEAM`, replay sem relógio) em 2026-10-17.
+
+### API e banco das equipes (spec 015, T3.4)
+
+Autorizados em 2026-10-17 (migration, API e worker); o motor e `ENGINE_VERSION` não mudam.
+
+- **`model-team-1` é do sistema (migration 0028, aditiva, com rollback).** `strategies.is_system` e um índice único parcial por dono. A API a
+  acha ou cria PELO HASH (`ensureSystemStrategyVersion`, usuário travado numa transação), então duas criações juntas dão a mesma versão. Ela fica fora
+  de `GET /v1/strategies`, das rotas de estratégia (404) e do teto `STRATEGY_MAX_PER_USER`. Rollback da 0028: a coluna e o índice saem e a estratégia
+  volta a aparecer como comum.
+- **`POST /v1/runs` com `signalSource`**: só `live_paper` em 15 min; `strategyVersionId`, `goalId` e `analyst` são 400 `not_allowed_with_signal_source`;
+  equipe desligada é 409 `MODEL_TEAM_DISABLED`; `duelGroupId` não existe no corpo público (só `POST /v1/model-duels` o grava).
+- **Rotas novas** (todas com `access: USER` e `documentation`): `GET /v1/me/model-teams`, `PATCH /v1/me/model-teams/:teamKey`,
+  `GET /v1/runs/:runId/model-teams` (+ `/comparison`), `POST /v1/runs/:runId/model-teams/:teamKey/opinions`, `POST /v1/model-duels`,
+  `GET /v1/model-duels/:duelId`. Execução ou duelo alheio, inexistente ou id malformado é o mesmo 404.
+- **"Pedir opinião agora"**: a ordem das recusas é 404, `RUN_NOT_LIVE`, `ANALYST_NOT_ENABLED`, `RUN_NOT_RUNNING`, `MODEL_TEAM_DISABLED`,
+  `MODEL_TEAM_UNAVAILABLE` (batimento do worker) e, por último, 429 `MODEL_OPINION_LIMIT_REACHED`: o contador diário do USUÁRIO (soma das equipes,
+  UTC, `UPDATE` atômico sob trava) só gasta pedido depois de tudo o mais passar. O teto vem de `MODEL_TEAM_ON_DEMAND_PER_USER_PER_DAY` (padrão 20; 0 desliga).
+  A API só enfileira a linha `pending` avulsa; quem chama o provedor é o worker.
+- **Duelo**: uma `live_paper` por equipe (e, se pedido, uma da estratégia de regras do usuário) no mesmo par, vela e saldo, ligadas por
+  `runs.request.duel.groupId`; equipe desligada ou falta de vaga para TODAS é 409 e nada é criado; se uma criação falhar mesmo assim, as já criadas são canceladas.
+- **Execução de equipe nas leituras de regra**: `live-status` (`triggers.reason = team_run`), `projections` (`current.reason = team_run`, sem consulta
+  de previsões) e `strategy-layers` (`unavailable = team_run`, listas vazias) não inventam régua de placar.

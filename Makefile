@@ -125,7 +125,7 @@ api-runs-test: ## Prova as rotas REST de mercado, estratégias e execuções con
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/api-runs-test.ts
 
-api-runs-mutants: ## Prova que o isolamento entre usuários dos repositórios das rotas REST reprova 30 mutantes (filtro de dono removido, um por ponto dos repositórios, incluídas as leituras do acompanhamento ao vivo, das previsões e do analista de risco) contra um Postgres de teste descartável
+api-runs-mutants: ## Prova que o isolamento entre usuários dos repositórios das rotas REST reprova 43 mutantes (filtro de dono removido, um por ponto dos repositórios, incluídas as leituras do acompanhamento ao vivo, das previsões, do analista de risco, da estratégia do sistema e do duelo das equipes) contra um Postgres de teste descartável
 	set -a; . envs/env.test; set +a; \
 	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
 	trap 'exit 130' INT; \

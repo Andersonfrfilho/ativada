@@ -4,9 +4,16 @@ import { createModelTeamReadRepository } from '../src/model-teams/model-team-rea
 import { createTeamReportRepository } from '../src/model-teams/team-report.repository.js';
 import { createUserModelTeamRepository } from '../src/model-teams/user-model-team.repository.js';
 import { RUN_KIND } from '../src/runs/run.constant.js';
+import { createRunBatchRepository } from '../src/run-results/run-batch.repository.js';
 import { createStrategyRepository } from '../src/strategies/strategy.repository.js';
 import type { LifecycleCheckContext } from './account-lifecycle-checks.js';
-import { hashOf, resolvePersistenceOwner, seedRun } from './persistence-seed.js';
+import {
+  buildEquityPoints,
+  buildPositions,
+  hashOf,
+  resolvePersistenceOwner,
+  seedRun,
+} from './persistence-seed.js';
 
 const SYSTEM_NAME = 'model-team-1';
 const SYSTEM_CONFIG = { schemaVersion: 1, name: SYSTEM_NAME };
@@ -176,6 +183,24 @@ async function checkDuelRepository(context: LifecycleCheckContext): Promise<void
   assertCondition(
     (await duels.listDuelRuns(owner.scope, crypto.randomUUID())).length === 0,
     'grupo inexistente é vazio',
+  );
+  await createRunBatchRepository(handle).runInBatch(owner.scope, run.id, (writer) =>
+    writer.appendResults({
+      signals: [],
+      orders: [],
+      fills: [],
+      positions: buildPositions(2),
+      equityPoints: buildEquityPoints(3),
+      commands: [],
+    }),
+  );
+  assertCondition(
+    (await duels.readEquityCurves(owner.scope, [run.id])).length === 3,
+    'o dono lê a curva da execução',
+  );
+  assertCondition(
+    (await duels.countClosedTrades(owner.scope, [run.id]))[0]?.trades === 2,
+    'o dono conta as operações fechadas',
   );
   assertCondition(
     (await duels.readEquityCurves(other.scope, [run.id])).length === 0,

@@ -286,3 +286,37 @@ opção B (motor / `ENGINE_VERSION`), chaves reais, rede a provedor real, `git p
 - Os suítes de mutantes antigos (`live-mutants`, `live-analyst-mutants`, `live-goal-mutants`) não foram reexecutados por inteiro (horas de CPU); conferi que TODA edição deles ainda se aplica
   à fonte (nenhuma ficou velha) e rodei por inteiro os contratos de ao vivo que os julgam (220 testes, todos verdes).
 - Gates: typecheck, lint, format:check OK.
+
+### T3.4 — API e banco das equipes (2026-10-17, retomada no Linux em `~/personal/ativada`)
+
+Autorização do usuário (2026-10-17): migration, API e worker; 60 min; teto de US$ 2 por dia. Não autorizados e não usados: opção B (motor / `ENGINE_VERSION`),
+chaves reais, rede a provedor real, `git push`, aplicar a migration no banco de dev. Gates num Postgres embutido próprio (`~/pg-scratch/pgctl-015b.sh`, porta 56481,
+`fsync=off`); a porta 56465 do agente anterior não foi tocada.
+
+- **Banco (commit `T3.4a`).** Migration `0028_strategies_system_flag` (aditiva, com `.rollback.sql` e snapshot): `strategies.is_system` + índice único parcial por dono.
+  `ensureSystemStrategyVersion` acha ou cria a `model-team-1` do dono PELO HASH, travando o usuário numa transação. Fora da lista, da página, das rotas de estratégia e do
+  teto `STRATEGY_MAX_PER_USER` (`visibleStrategies`). Repositórios novos: `claimOnDemand` (contador do dia do USUÁRIO, soma das equipes, atômico), `enqueueOnDemandReport`,
+  leitura pública do par numa consulta (`model-team-read.repository.ts` + `model-team-read-sql.ts`) e as leituras do duelo presas ao dono. `migration-test` aplica e desfaz 29
+  migrations; `database-test` ganhou `model-team-api-checks.ts` (4 checagens) e roda também dentro de `route-isolation-test`.
+- **API (commit `T3.4b`).** `POST /v1/runs` aceita `signalSource` (só `live_paper` 15m; `strategyVersionId`, `goalId` e `analyst` juntos = 400
+  `not_allowed_with_signal_source`; equipe desligada = 409 `MODEL_TEAM_DISABLED`); `GET/PATCH /v1/me/model-teams`; `GET /v1/runs/:id/model-teams` (+ `/comparison`);
+  `POST /v1/runs/:id/model-teams/:teamKey/opinions` (limite diário `MODEL_TEAM_ON_DEMAND_PER_USER_PER_DAY`, política `MODEL_OPINION_REQUEST` de 5 por 10 min); `POST /v1/model-duels`
+  (política de 3 por hora) e `GET /v1/model-duels/:id`. Toda rota tem `access: USER` e `documentation`; `live-status`, `projections` e `strategy-layers` desviam a execução de equipe para
+  `team_run`. Refatorações só para caber no estilo (função ≤ 40, arquivo ≤ 200): `create-run-version.ts`, `create-live-aware-use-cases.ts`, `model-team-read-sql.ts`, `user-limits-environment.ts`
+  recebe o shape do env das equipes.
+- **Contratos** (todos verdes): `api-run-signal-source` (10), `api-run-team-run-views` (4), `api-model-teams` (16), `api-model-duels` (17), com contrato negativo entre usuários em cada rota
+  (execução/duelo alheio = mesmo 404 byte a byte pelo `expectIndistinguishableNotFound`; equipe ligada de outro usuário não vale; curva de outro usuário nunca entra), 400 sem eco,
+  429 de política e de teto diário, ✓/✗ da comparação contra a vela seguinte, ranking recalculado das curvas, esquema documentado conferido contra a resposta real.
+- **Mutantes (commit `T3.4c`).** `make api-runs-mutants` (DB, `route-isolation-test`): 43 mutantes de filtro de dono reprovados, +7 novos (estratégia do sistema de qualquer dono, na lista, no teto;
+  contador de pedido avulso de qualquer dono; execuções, curvas e operações do duelo de qualquer dono) e 3 edições antigas atualizadas para o texto novo de `strategy-page.ts`/`strategy.repository.ts`.
+  `api-routes-mutants` (REST): 95 testes, CONTROL passa e os 17 mutantes novos morrem (meta/analista/versão junto de `signalSource`, equipe desligada, teto diário, rajada, duelo com uma só vaga,
+  duelo que não cancela, estado do worker parado, desvios `team_run` etc.); a edição velha `USER_ID_ACCEPTED_IN_THE_RUN_BODY` foi atualizada.
+- **Gates.** `typecheck`, `lint` e `format:check` (arquivos versionados; `graphify-out/` é ignorado pelo git mas não pelo prettier) OK; `migration-test` OK; `database-test` OK
+  (a medição de gravação em lote oscila nesta máquina, 1,75 a 2,0 s contra a meta de 1,5 s, sem relação com esta mudança: passei a rodada completa com a meta temporariamente em 5 s e a restaurei, sem diff);
+  `model-teams-test` OK (worker real, 3 provedores falsos; replay de 37 linhas); suíte `bun test` sem os arquivos de mutantes: 5.372 passam e 7 falham, TODAS alheias a esta mudança
+  (as 5 de "candle novo muda a chave" de metas/prazos/ativos e `workspace contract > default export`, de `test/risk-analyst-boundary.contract.test.ts`, as mesmas da regressão da Fase 2)
+  mais uma minha, `database.contract` "sem wildcard re-export", corrigida em `packages/database/src/index.ts` (lista nomeada + `export type *`) e verde. `git diff` em `packages/strategy-engine` e
+  `packages/run-recording` desde o primeiro commit da spec 015: VAZIO.
+- **Pendências.** (1) Aplicar a `0028` no banco de dev (o usuário). (2) `make lgpd-test` (precisa de Docker/Keycloak): a `0028` só adiciona coluna em `strategies`, que já está no registro de exportação/exclusão.
+  (3) `opinionIds` do estado são ids aleatórios (uuidv7) devolvidos no `202`; a linha avulsa não guarda o dono, então quem soubesse o id de outro usuário leria aquela recomendação (dado público de mercado, sem
+  posição nem saldo). Se quiser fechar isso, é uma coluna `requested_by` aditiva. (4) `make live-mutants`/`queue-mutants` não foram reexecutados (não tocam o passo ao vivo nesta task).

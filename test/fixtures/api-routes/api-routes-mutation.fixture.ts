@@ -26,6 +26,10 @@ export const API_ROUTES_MUTANT_TARGET: MutantTarget = {
     'test/api-run-queue-dispatcher.contract.test.ts',
     'test/api-application-dispatcher.contract.test.ts',
     'test/api-run-admission.contract.test.ts',
+    'test/api-run-signal-source.contract.test.ts',
+    'test/api-run-team-run-views.contract.test.ts',
+    'test/api-model-teams.contract.test.ts',
+    'test/api-model-duels.contract.test.ts',
   ],
   sourceVariable: 'API_ROUTES_APP_SOURCE',
 };

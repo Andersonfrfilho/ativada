@@ -32,8 +32,8 @@ const MUTANTS: readonly Mutant[] = [
     name: 'STRATEGY_LIST_SHOWS_EVERY_OWNER',
     edit: WITHOUT(
       'src/strategies/strategy-page.ts',
-      '        ownerCondition(scope, strategies.userId),\n        isNull(strategies.deletedAt),\n        isBeforeCursor(params.after),',
-      '        isNull(strategies.deletedAt),\n        isBeforeCursor(params.after),',
+      '        ownerCondition(scope, strategies.userId),\n        isNull(strategies.deletedAt),\n        eq(strategies.isSystem, false),\n        isBeforeCursor(params.after),',
+      '        isNull(strategies.deletedAt),\n        eq(strategies.isSystem, false),\n        isBeforeCursor(params.after),',
     ),
   },
   {
@@ -48,8 +48,8 @@ const MUTANTS: readonly Mutant[] = [
     name: 'STRATEGY_READ_OF_ANY_OWNER',
     edit: WITHOUT(
       'src/strategies/strategy.repository.ts',
-      '  return and(\n    ownerCondition(scope, strategies.userId),\n    eq(strategies.id, strategyId),',
-      '  return and(\n    eq(strategies.id, strategyId),',
+      '  return and(visibleStrategies(scope), eq(strategies.id, strategyId));',
+      '  return and(eq(strategies.id, strategyId), isNull(strategies.deletedAt));',
     ),
   },
   {
@@ -319,6 +319,62 @@ const MUTANTS: readonly Mutant[] = [
       'src/notices/notice-feed-run-sql.ts',
       'WHERE pa.user_id = ${owner} AND pa.last_fired_at',
       'WHERE pa.last_fired_at',
+    ),
+  },
+  {
+    name: 'SYSTEM_STRATEGY_OF_ANY_OWNER',
+    edit: WITHOUT(
+      'src/strategies/system-strategy.ts',
+      '        ownerCondition(scope, strategies.userId),\n        eq(strategies.isSystem, true),',
+      '        eq(strategies.isSystem, true),',
+    ),
+  },
+  {
+    name: 'SYSTEM_STRATEGY_SHOWN_IN_THE_LIST',
+    edit: WITHOUT(
+      'src/strategies/strategy.repository.ts',
+      '    isNull(strategies.deletedAt),\n    eq(strategies.isSystem, false),\n  );',
+      '    isNull(strategies.deletedAt),\n  );',
+    ),
+  },
+  {
+    name: 'SYSTEM_STRATEGY_COUNTS_IN_THE_QUOTA',
+    edit: WITHOUT(
+      'src/strategies/strategy-quota.ts',
+      '        isNull(strategies.deletedAt),\n        eq(strategies.isSystem, false),\n',
+      '        isNull(strategies.deletedAt),\n',
+    ),
+  },
+  {
+    name: 'ON_DEMAND_CLAIM_OF_ANY_OWNER',
+    edit: WITHOUT(
+      'src/model-teams/user-model-team.repository.ts',
+      'WHERE user_id = ${scope.ownerUserId}::uuid AND team_key = ${params.teamKey}',
+      'WHERE team_key = ${params.teamKey}',
+    ),
+  },
+  {
+    name: 'DUEL_RUNS_OF_ANY_OWNER',
+    edit: WITHOUT(
+      'src/model-teams/model-duel.repository.ts',
+      '        ownerCondition(scope, runs.userId),\n        isNull(runs.deletedAt),',
+      '        isNull(runs.deletedAt),',
+    ),
+  },
+  {
+    name: 'DUEL_CURVES_OF_ANY_OWNER',
+    edit: WITHOUT(
+      'src/model-teams/model-duel.repository.ts',
+      'WHERE user_id = ${scope.ownerUserId}::uuid AND run_id IN',
+      'WHERE run_id IN',
+    ),
+  },
+  {
+    name: 'DUEL_TRADES_OF_ANY_OWNER',
+    edit: WITHOUT(
+      'src/model-teams/model-duel.repository.ts',
+      '        ownerCondition(scope, positions.userId),\n        inArray(',
+      '        inArray(',
     ),
   },
 ];
