@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { useRef, type ReactElement } from 'react';
 
+import { teamRunLabel } from '../../runs/model-teams/run-source-label.js';
 import type { Run } from '../../runs/run.validation.js';
 import { useVersionIndexQuery } from '../../strategies/strategy.query.js';
 import { describeLookup, lookupVersion } from '../../strategies/version-index.js';
@@ -29,7 +30,7 @@ export function RunSwitcher({ runId, run, isFailed }: RunSwitcherProps): ReactEl
       ? isFailed
         ? FAILED_LABEL
         : 'Carregando…'
-      : `${runTitle(run)} · ${describeLookup(lookupVersion(index, run.strategyVersionId))}`;
+      : `${runTitle(run)} · ${teamRunLabel(run.signalSource) ?? describeLookup(lookupVersion(index, run.strategyVersionId))}`;
 
   function leave(action: () => void): void {
     action();

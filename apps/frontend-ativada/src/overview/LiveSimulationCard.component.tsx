@@ -6,6 +6,7 @@ import { ROUTE_PATH } from '../app/app.constant.js';
 import { formatSymbol } from '../format/format.js';
 import { Icon } from '../layout/Icon.component.js';
 import { formatDirectedMoney } from '../runs/directed-money.js';
+import { teamRunLabel } from '../runs/model-teams/run-source-label.js';
 import {
   AnalystBadge,
   MiniComparison,
@@ -63,6 +64,15 @@ function CardBody({
   );
 }
 
+// A equipe de modelo ◆ no lugar da estratégia fixa do sistema; a execução de regras segue com o nome da estratégia.
+function strategyOf(
+  source: Parameters<typeof teamRunLabel>[0],
+  summary: { readonly strategyName: string } | undefined,
+): string {
+  const label = teamRunLabel(source) ?? summary?.strategyName;
+  return label === undefined ? '' : ` · ${label}`;
+}
+
 // O cartão inteiro abre o detalhe (o link do título cobre a área); o botão "Destacar" fica acima dele.
 export function LiveSimulationCard(props: LiveSimulationCardProps): ReactElement {
   const { simulation, isFeatured } = props;
@@ -79,7 +89,7 @@ export function LiveSimulationCard(props: LiveSimulationCardProps): ReactElement
       </div>
       <p className={styles.muted}>
         {describeCandle(run.timeframe)}
-        {summary === undefined ? '' : ` · ${summary.strategyName}`}
+        {strategyOf(run.signalSource, summary)}
       </p>
       <AnalystBadge mode={summary?.analystMode ?? null} />
       <CardBody simulation={simulation} now={props.now} />

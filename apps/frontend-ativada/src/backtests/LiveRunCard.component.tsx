@@ -7,6 +7,7 @@ import { Card } from '../layout/Card.component.js';
 import { useActiveRunQuery } from '../overview/overview.query.js';
 import type { Run } from '../overview/overview.validation.js';
 import { LivePulseLine } from '../runs/live-tracking/LivePulseLine.component.js';
+import { teamRunLabel } from '../runs/model-teams/run-source-label.js';
 import { TRACKING_ANCHOR } from '../runs/live-tracking/LiveTrackingCard.component.js';
 import { useRunDetailQuery } from '../runs/runs.query.js';
 import { useVersionIndexQuery } from '../strategies/strategy.query.js';
@@ -19,7 +20,7 @@ function LiveRunBody({ run }: { readonly run: Run }): ReactElement {
   const strategy =
     detail === undefined
       ? ''
-      : ` · ${describeLookup(lookupVersion(index, detail.strategyVersionId))}`;
+      : ` · ${teamRunLabel(detail.signalSource) ?? describeLookup(lookupVersion(index, detail.strategyVersionId))}`;
   return (
     <Card title="Simulação ao vivo" icon="activity">
       <div className={styles.liveRow}>

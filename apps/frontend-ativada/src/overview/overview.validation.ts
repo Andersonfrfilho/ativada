@@ -3,6 +3,7 @@ import { z } from '@ativada/environment';
 
 import { SIGNAL_ACTION } from './overview.constant.js';
 import { decimalText } from '../http/decimal.validation.js';
+import { signalSourceSchema } from '../runs/model-teams/model-teams.validation.js';
 
 export const runSchema = z.object({
   id: z.string(),
@@ -13,6 +14,8 @@ export const runSchema = z.object({
   stalledSince: z.number().optional(),
   goalId: z.string().nullish(),
   goalOutcome: z.string().nullish(),
+  // Execução de equipe de modelo ◆: o cartão mostra a equipe no lugar da estratégia fixa do sistema.
+  signalSource: signalSourceSchema.nullish(),
 });
 
 export const equityPointSchema = z.object({

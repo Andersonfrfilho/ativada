@@ -397,3 +397,14 @@ Autorização (usuário): tela das equipes. Não autorizados e não usados: chav
   ("poucas previsões (menos de 30)"), custo de API de hoje e do mês por equipe ("sem custo de API" na execução de regras) e o link para a simulação de cada um. Frases fixas: "Mesmo par, mesma vela e mesmo saldo fictício. Período
   curto não prova nada.", "Comparação de acerto do lado da próxima vela; não mede lucro e não é recomendação." e "Retorno e perda máxima: resultado de uma simulação curta, não prova de nada." Atualiza com o aviso do stream.
 - Teste: `test/duel.contract.tsx` (9: espelho Zod, gráfico e ranking puros, tela, 404, criação com o corpo exato, sem vaga, saldo inválido). Painel inteiro: 1.538 passam, 0 falham (130 arquivos).
+
+### T5.7 — Execução de equipe (`team_run`) em Backtests e na Visão geral, com o rótulo da equipe e sem régua de regra
+
+- Contratos: a execução ganhou `signalSource` e `duelId` (opcionais; ausente/nulo = execução de regras) nos esquemas de `GET /v1/runs*` e da Visão geral; os esquemas de `live-status` (gatilhos) e de `projections` aceitam o motivo `team_run`
+  (sem isso o `live-status` inteiro era recusado e a tela da simulação quebrava para uma execução de equipe).
+- Rótulo: `run-source-label.ts` (`◆ Equipe Nina (Gemini)`) no lugar de "model-team-1"/"Estratégia removida" no cartão "Simulação ao vivo" de Backtests (`LiveRunCard`), no cartão da Visão geral (`LiveSimulationCard`), no cabeçalho da
+  execução (`RunHeader`, sem o hash da versão) e na barra de troca de execução (`RunSwitcher`). O cabeçalho traz a frase "Esta simulação segue a leitura de uma equipe de modelo ◆: não há placar nem gatilhos de regra para mostrar."
+- Sem régua de regra: os gatilhos e a "Próxima vela de perto" mostram a frase do servidor para `team_run`; a varanda (`TeamRunBalcony`) mostra só as equipes ◆ e a explicação, em vez de esperar regras para sempre.
+- Teste: `test/team-run.contract.tsx` (5: contratos com e sem `signalSource`, `team_run` em live-status e projeções, rótulo, cabeçalho, varanda). Painel inteiro: 1.543 passam, 0 falham (131 arquivos); `bun run lint` limpo;
+  `prettier --check` de `apps/frontend-ativada` e da spec limpo; `test/code-size-limits.contract.test.ts` verde.
+- Pendência pequena (só rótulo, sem mudança de API): a lista da barra de troca de execuções ("recentes") ainda nomeia a execução de equipe pelo id da versão fixa (a lista guarda só o id da versão). O título do botão já mostra a equipe.

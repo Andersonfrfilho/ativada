@@ -64,7 +64,7 @@ const triggersSchema = z.discriminatedUnion('status', [
   }),
   z.object({
     status: z.literal('unavailable'),
-    reason: z.enum(['not_running', 'no_candle', 'warming_up']),
+    reason: z.enum(['not_running', 'no_candle', 'warming_up', 'team_run']),
     message: z.string(),
   }),
 ]);

@@ -55,6 +55,7 @@ const currentSchema = z.discriminatedUnion('status', [
       'no_candle',
       'warming_up',
       'neutral',
+      'team_run',
     ]),
     message: z.string(),
   }),

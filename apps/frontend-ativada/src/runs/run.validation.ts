@@ -3,6 +3,7 @@ import { z } from '@ativada/environment';
 
 import { RUN_STATUS } from './run.constant.js';
 import { decimalText } from '../http/decimal.validation.js';
+import { signalSourceSchema } from './model-teams/model-teams.validation.js';
 
 export const metricValueSchema = z.object({
   value: z.string().nullable(),
@@ -66,6 +67,9 @@ export const runSchema = z.object({
   goalId: z.string().nullish(),
   goalOutcome: z.string().nullish(),
   stalledSince: z.number().optional(),
+  // Execução de equipe de modelo ◆ (spec 015): de quem ela segue as decisões; ausente/nulo = execução de regras.
+  signalSource: signalSourceSchema.nullish(),
+  duelId: z.string().nullish(),
   // Abertura da última vela processada; nula até o primeiro passo da simulação ao vivo.
   lastCandleTime: z.number().nullish(),
   startedAt: z.string().nullish(),

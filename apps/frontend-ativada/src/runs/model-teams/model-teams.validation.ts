@@ -17,6 +17,9 @@ import {
 const teamKey = z.enum(MODEL_TEAM_KEYS);
 const instant = z.number();
 
+// De quem a execução segue as decisões (`runs.request.signalSource`): `null`/ausente = execução de regras.
+export const signalSourceSchema = z.object({ kind: z.literal('model_team'), team: teamKey });
+
 export const providerStatusSchema = z.object({
   state: z.enum(PROVIDER_STATES).nullable(),
   keyConfigured: z.boolean(),
@@ -92,7 +95,7 @@ const teamStateSchema = z.object({
 
 export const runModelTeamsSchema = z.object({
   symbol: z.string(),
-  signalSource: z.object({ kind: z.literal('model_team'), team: teamKey }).nullable(),
+  signalSource: signalSourceSchema.nullable(),
   notice: z.string(),
   costNotice: z.string(),
   comparisonNotice: z.string(),

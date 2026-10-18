@@ -18,6 +18,7 @@ import { DENSITY } from './balcony-density.js';
 import { useTeamRoomPreference } from '../useTeamRoomPreference.hook.js';
 import { useBalconyDensity } from './useBalconyDensity.hook.js';
 import { BalconyCrew } from './BalconyCrew.component.js';
+import { TeamRunBalcony } from './TeamRunBalcony.component.js';
 
 function momentText({ view, isPointed, closedText }: CompactTeamModel): string {
   if (view === undefined) return TEAM_ROOM_TEXT.POINTED_WITHOUT_SPEECH;
@@ -120,6 +121,10 @@ function LoadedBalcony(props: LoadedProps): ReactElement {
   const timeZone = useUserTimeZone();
   const model = useCompactTeamModel(props);
   if (model === undefined) {
+    const { triggers } = props.status;
+    if (triggers.status === 'unavailable' && triggers.reason === 'team_run') {
+      return <TeamRunBalcony runId={props.runId} />;
+    }
     return <CompactTeamNotice text={describeWaitingTeam({ run: props.status.run, timeZone })} />;
   }
   const { view, step } = model;
