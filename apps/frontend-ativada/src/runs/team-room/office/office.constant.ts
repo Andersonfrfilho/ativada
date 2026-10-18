@@ -132,6 +132,13 @@ export const OFFICE_TEXT = {
   PAUSE: 'Pausar',
   RESUME: 'Continuar',
   BADGES: 'Crachás da equipe',
+  ISO_NOTE:
+    'Cenário ilustrativo: as telas não mostram números. As leituras e os estados de cada pessoa estão nos crachás logo abaixo.',
+  VIEW_LABEL: 'Cenário do escritório',
+  VIEW_WALKING: 'Andando',
+  VIEW_FRONT: 'Frontal',
+  CALM: 'Calmo',
+  CALM_NOTE: 'Movimento mais devagar',
   STAGE_FOOTER:
     'Estado final sem animação: abertura da tela, animação desligada ou movimento reduzido.',
 } as const;

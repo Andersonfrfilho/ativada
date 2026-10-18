@@ -1,0 +1,35 @@
+/* O escritório isométrico: a caixa mede a largura (container query) e a planta inteira escala com ela (`--tw` = 1/12 da largura),
+   então a 375 px o cenário só encolhe e a lista de crachás abaixo carrega o detalhe. Posição por classes, sem estilo inline. */
+.box {
+  container-type: inline-size;
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+.stage {
+  --tw: calc(100cqw / 12);
+  --step: 450ms;
+  position: relative;
+  width: 100%;
+  height: calc(var(--tw) * 7.6);
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+  isolation: isolate;
+}
+
+/* O passo de uma célula espelha `RHYTHM.*.stepMilliseconds` (contrato confere); só existe com a cena se mexendo. */
+.stage[data-rhythm='lively'] {
+  --step: 450ms;
+}
+
+.stage[data-rhythm='calm'] {
+  --step: 700ms;
+}
+
+.note {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+}

@@ -10,17 +10,25 @@ export const TEAM_LAYOUT = {
 
 export type TeamLayout = (typeof TEAM_LAYOUT)[keyof typeof TEAM_LAYOUT];
 
+// O cenário do escritório: isométrico com a equipe andando (padrão) ou a vista frontal simples e mais leve.
+export const OFFICE_VIEW = { WALKING: 'walking', FRONT: 'front' } as const;
+
+export type OfficeView = (typeof OFFICE_VIEW)[keyof typeof OFFICE_VIEW];
+
 const DEFAULTS = {
   isCollapsed: true,
   isAnimationOn: true,
   layout: TEAM_LAYOUT.CHART_AND_TEAM,
+  officeView: OFFICE_VIEW.WALKING,
 } as const;
 
-// Preferência de tela, nada da simulação: sala recolhida, animação e a escolha entre "Gráfico + equipe" e "Sala com o gráfico".
+// Preferência de tela, nada da simulação: sala recolhida, animação, a escolha entre "Gráfico + equipe" e "Sala com o gráfico"
+// e o cenário do escritório.
 const preferenceSchema = z.object({
   isCollapsed: z.boolean().catch(DEFAULTS.isCollapsed),
   isAnimationOn: z.boolean().catch(DEFAULTS.isAnimationOn),
   layout: z.enum([TEAM_LAYOUT.CHART_AND_TEAM, TEAM_LAYOUT.ROOM_WITH_CHART]).catch(DEFAULTS.layout),
+  officeView: z.enum([OFFICE_VIEW.WALKING, OFFICE_VIEW.FRONT]).catch(DEFAULTS.officeView),
 });
 
 export type TeamRoomPreference = z.infer<typeof preferenceSchema>;

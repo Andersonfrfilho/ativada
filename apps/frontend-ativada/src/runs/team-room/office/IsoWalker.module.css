@@ -1,0 +1,59 @@
+/* Quem está no escritório: o bonequinho em pé no centro da célula e o crachá (nome + cargo) sempre à vista. A posição vem das
+   classes da célula (`IsoPlace`); o passo é a transição de `transform` entre duas células, só quando a cena se mexe. */
+.walker {
+  z-index: calc(var(--cx) + var(--cy) + 2);
+  pointer-events: none;
+}
+
+.sprite {
+  position: absolute;
+  top: calc(var(--tw) * -0.9);
+  left: calc(var(--tw) * -0.45);
+  width: calc(var(--tw) * 0.9);
+}
+
+.sprite svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.plate {
+  position: absolute;
+  top: calc(var(--tw) * -1.38);
+  left: 0;
+  display: grid;
+  justify-items: center;
+  min-width: calc(var(--tw) * 0.9);
+  padding: 1px calc(var(--tw) * 0.08);
+  transform: translateX(-50%);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: max(9px, calc(var(--tw) * 0.15));
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.plate[data-kind='model'] {
+  border: 1px dashed var(--model);
+}
+
+.role {
+  color: var(--ink-2);
+  font-size: max(8px, calc(var(--tw) * 0.12));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .walker[data-pose] {
+    transition: transform var(--step) linear;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .walker[data-pose] {
+    transition: none;
+  }
+}

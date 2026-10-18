@@ -9,6 +9,8 @@ export type SceneMotion = {
   // Só com isto verdadeiro a cena agenda o relógio e leva atributos de movimento; senão ficam as poses fixas.
   readonly isMoving: boolean;
   readonly rhythm: Rhythm;
+  // O nome do ritmo, para o CSS escolher a duração do passo (espelha `RHYTHM.*.stepMilliseconds`).
+  readonly rhythmName: 'lively' | 'calm';
 };
 
 export type SceneMotionInput = {
@@ -35,5 +37,6 @@ export function useSceneMotion({ isAnimationOn, isAutoPaused }: SceneMotionInput
   return {
     isMoving: isAnimationOn && !isReduced && isTabVisible && !isAutoPaused,
     rhythm: rhythmOf(isCalm),
+    rhythmName: isCalm ? 'calm' : 'lively',
   };
 }

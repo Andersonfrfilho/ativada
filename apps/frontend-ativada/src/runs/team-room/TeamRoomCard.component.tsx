@@ -10,7 +10,10 @@ import { TeamRoomControls, type TeamRoomControlsProps } from './TeamRoomControls
 import { TeamRoomLines } from './TeamRoomLines.component.js';
 import { TeamRoomNavigator, type TeamRoomNavigatorProps } from './TeamRoomNavigator.component.js';
 import { OfficeBadgeList } from './office/OfficeBadgeList.component.js';
+import { IsoOfficeLive } from './office/IsoOfficeLive.component.js';
 import { OfficeStage } from './office/OfficeStage.component.js';
+import { OfficeViewSwitch } from './office/OfficeViewSwitch.component.js';
+import { OFFICE_VIEW } from './team-room-preference.js';
 import type { OfficeModel } from './office/useOfficeModel.hook.js';
 import type { OfficeSceneState } from './office/useOfficeScene.hook.js';
 import { TEAM_LEGEND, TEAM_ROOM_TEXT } from './team-room.constant.js';
@@ -65,7 +68,35 @@ function Legend(): ReactElement {
   );
 }
 
-function RoomBody({ content, motion, navigator, monitor }: TeamRoomCardProps): ReactElement {
+// O cenário escolhido: isométrico com a equipe andando (padrão) ou a vista frontal simples, mais leve.
+function OfficeScene({ content, motion, controls }: TeamRoomCardProps): ReactElement {
+  const { preference, onChange } = controls;
+  return (
+    <>
+      <OfficeViewSwitch preference={preference} onChange={onChange} />
+      {preference.officeView === OFFICE_VIEW.FRONT ? (
+        <OfficeStage
+          view={content.view}
+          auditor={content.auditor}
+          office={content.office}
+          scene={motion.scene}
+          boxRef={motion.boxRef}
+        />
+      ) : (
+        <IsoOfficeLive
+          view={content.view}
+          auditor={content.auditor}
+          office={content.office}
+          isAnimationOn={preference.isAnimationOn}
+          meetingKey={motion.scene.announcedKey}
+        />
+      )}
+    </>
+  );
+}
+
+function RoomBody(props: TeamRoomCardProps): ReactElement {
+  const { content, motion, navigator, monitor } = props;
   return (
     <>
       <Subtitle />
@@ -82,13 +113,7 @@ function RoomBody({ content, motion, navigator, monitor }: TeamRoomCardProps): R
           {monitor}
         </div>
       )}
-      <OfficeStage
-        view={content.view}
-        auditor={content.auditor}
-        office={content.office}
-        scene={motion.scene}
-        boxRef={motion.boxRef}
-      />
+      <OfficeScene {...props} />
       <OfficeBadgeList view={content.view} auditor={content.auditor} />
       <Legend />
       <TeamRoomLines
