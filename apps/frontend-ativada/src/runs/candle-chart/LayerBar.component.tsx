@@ -49,6 +49,12 @@ const LAYER_ITEMS: readonly LayerItem[] = [
   },
   { layer: CHART_LAYER.LEVELS, label: 'Níveis', isLiveOnly: true, needsStrategyTimeframe: false },
   { layer: CHART_LAYER.WAITED, label: 'Esperou', isLiveOnly: true, needsStrategyTimeframe: true },
+  {
+    layer: CHART_LAYER.TEAMS,
+    label: 'Equipes ◆',
+    isLiveOnly: true,
+    needsStrategyTimeframe: true,
+  },
 ];
 
 // Botões de alternância com caixa marcada e palavra (nunca só cor), `aria-pressed` e 44 px (RF10). No celular ficam

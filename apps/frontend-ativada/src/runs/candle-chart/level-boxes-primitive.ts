@@ -9,7 +9,13 @@ export type BoxProjection = {
   readonly paneWidth: () => number;
 };
 
-export type BoxColors = { readonly target: string; readonly stop: string; readonly text: string };
+export type BoxColors = {
+  readonly target: string;
+  readonly stop: string;
+  readonly text: string;
+  // O contorno das faixas das equipes ◆.
+  readonly model?: string;
+};
 
 type BitmapScope = {
   readonly context: CanvasRenderingContext2D;
@@ -28,6 +34,7 @@ type PaneView = {
 
 const LABEL_FONT_PIXELS = 11;
 const LABEL_OFFSET_PIXELS = 4;
+const DASH_PIXELS = 4;
 
 function fillBand(
   scope: BitmapScope,
@@ -104,7 +111,35 @@ export class LevelBoxesPrimitive {
     fillBand(scope, [left, right, entryY, targetY], colors.target);
     fillBand(scope, [left, right, entryY, stopY], colors.stop);
     scope.context.fillStyle = colors.text;
-    writeLabel(scope, 'alvo', [left, targetY]);
-    writeLabel(scope, 'stop', [left, stopY]);
+    const prefix = box.tag === undefined ? '' : `${box.tag} `;
+    writeLabel(scope, `${prefix}alvo`, [left, targetY]);
+    writeLabel(scope, `${prefix}${box.tag === undefined ? 'stop' : 'proteção'}`, [left, stopY]);
+    if (box.tag !== undefined) this.outline(scope, [left, right, targetY, stopY], entryY);
+  }
+
+  // Contorno tracejado na cor do modelo e a linha da entrada: a faixa de uma equipe ◆ não se confunde com a de uma operação.
+  private outline(
+    scope: BitmapScope,
+    band: readonly [number, number, number, number],
+    entryY: number,
+  ): void {
+    const { context, horizontalPixelRatio: horizontal, verticalPixelRatio: vertical } = scope;
+    const [left, right, topY, bottomY] = band;
+    const color = this.colors?.model;
+    if (color === undefined) return;
+    context.save();
+    context.strokeStyle = color;
+    context.setLineDash([DASH_PIXELS * horizontal, DASH_PIXELS * horizontal]);
+    context.strokeRect(
+      Math.round(left * horizontal),
+      Math.round(Math.min(topY, bottomY) * vertical),
+      Math.max(1, Math.round((right - left) * horizontal)),
+      Math.max(1, Math.round(Math.abs(bottomY - topY) * vertical)),
+    );
+    context.beginPath();
+    context.moveTo(Math.round(left * horizontal), Math.round(entryY * vertical));
+    context.lineTo(Math.round(right * horizontal), Math.round(entryY * vertical));
+    context.stroke();
+    context.restore();
   }
 }

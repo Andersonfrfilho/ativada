@@ -372,3 +372,16 @@ Autorização (usuário): tela das equipes. Não autorizados e não usados: chav
   vota), as 3 equipes (◆ comprar/vender/esperar/sem leitura/pensando), ✓ acertou / ✗ errou em palavra para leitor de tela, "↗ subiu / ↘ desceu / = igual / ainda aberta" e a frase fixa "Comparação de acerto do lado da próxima vela; não
   mede lucro e não é recomendação." Paginação por cursor ("Ver velas anteriores"); sem analista as regras dizem "sem analista".
 - Testes: `test/model-teams-ondemand.contract.tsx` (6: pede e acompanha até decidir, três motivos de botão desabilitado, 429, tabela com ✓/✗ e "ainda aberta", regras nulas).
+
+### T5.3 — Camada "Equipes ◆" no gráfico
+
+- Botão "Equipes ◆" nas camadas do gráfico (só simulação ao vivo, na vela da execução ou em velas de exibição que a dividem), **desligado por padrão** e lembrado em `localStorage` como as outras (`chart-preferences.ts` ganhou `teams`).
+  Dados: `GET /v1/runs/:id/model-teams/comparison` (uma plaquinha por equipe e vela decidida) e `GET /v1/runs/:id/model-teams` (preços das últimas recomendações). Nada é consultado com a camada desligada.
+- `candle-chart/team-layer.ts` (puro): **plaquinha** "◆N ↗ comprar" / "◆L — esperar" (inicial + ícone + palavra; forma por ação; cor só o token `--model`), na vela decidida `t` (vela de 15 min) ou na PRIMEIRA vela de 3 min depois do
+  fechamento de `t` (`validityStart`, o mesmo do "esperou" da spec 017); **faixa** (entrada, alvo, proteção) da ÚLTIMA compra recomendada de cada equipe, valendo em `[t + 15 min, t + 30 min)`: uma caixa de `t + 15 min` a `t + 30 min`
+  (cobre as 5 velas de 3 min como um degrau) e, se ainda vale, vai até a ponta do gráfico. Nunca começa antes do fechamento (teste de propriedade). Contorno tracejado na cor do modelo e rótulos "◆N alvo", "◆N proteção".
+- Porta do gráfico: `setTeamPlaques` (nova) e `SurfaceLevelBox.tag`; o tema ganhou `model` (token `--model`, opcional). O balão de valores traz "◆ Nina: ↗ comprar · entrada … · alvo … · proteção …" na vela apontada (mesma chave da decisão da estratégia).
+  Frase da camada: "Equipes ◆ … Não é ordem nem recomendação: tendência, não promessa."
+- Testes: `test/team-layer.contract.tsx` (8: plaquinhas, sem lookahead em 3 min, faixa em `[t+15, t+30)`, só a última compra, notas do balão, camada desligada sem consulta, ligar/lembrar/desligar, backtest sem a camada);
+  `chart-preferences` e `chart-surface-lifecycle` atualizados. Painel inteiro: 1.529 passam, 0 falham (129 arquivos).
+- Limite conhecido (não é mudança de API): as plaquinhas cobrem as últimas 24 velas de 15 min (a comparação da API) e a faixa usa as 3 últimas recomendações de cada equipe; mais histórico no gráfico precisaria de rota nova.

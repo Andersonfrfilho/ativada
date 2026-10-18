@@ -64,6 +64,7 @@ export function createFakeChartSurface(container: HTMLElement): FakeChartSurface
     anchorOf: () => null,
     setPriceLevels: record('setPriceLevels'),
     setWaited: record('setWaited'),
+    setTeamPlaques: record('setTeamPlaques'),
     setProjection: record('setProjection'),
     setLiveCandle: record('setLiveCandle'),
     setFormingSlot: record('setFormingSlot'),

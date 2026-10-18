@@ -54,6 +54,7 @@ const LIGHT_TOKENS: Readonly<Record<string, string>> = {
   '--cone-up': 'rgb(40, 140, 100)',
   '--cone-down': 'rgb(200, 90, 95)',
   '--cone-neutral': 'rgb(120, 130, 150)',
+  '--model': 'rgb(138, 62, 168)',
 };
 
 function applyTokens(tokens: Readonly<Record<string, string>>): void {
@@ -141,6 +142,7 @@ describe('useSurfaceTheme: cores dos tokens', () => {
       coneUp: 'rgb(40, 140, 100)',
       coneDown: 'rgb(200, 90, 95)',
       coneNeutral: 'rgb(120, 130, 150)',
+      model: 'rgb(138, 62, 168)',
     });
   });
 

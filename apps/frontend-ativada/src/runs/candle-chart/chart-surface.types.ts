@@ -87,6 +87,16 @@ export type SurfaceLevelBox = {
   readonly entry: number;
   readonly stop: number;
   readonly target: number;
+  // Faixa de uma equipe de modelo ◆ ("◆N"): contorno tracejado na cor do modelo e o rótulo com a inicial.
+  readonly tag?: string | undefined;
+};
+
+// Plaquinha da recomendação de uma equipe na vela: ícone + palavra + inicial, nunca só cor.
+export type SurfaceTeamPlaque = {
+  readonly key: string;
+  readonly time: SurfaceTime;
+  readonly text: string;
+  readonly action: 'buy' | 'sell' | 'hold';
 };
 
 // Rótulos do eixo e da dica no fuso do usuário: a biblioteca desenha em UTC e só chama estas funções (segundos UTC).
@@ -116,6 +126,8 @@ export type SurfaceTheme = {
   readonly coneUp: string;
   readonly coneDown: string;
   readonly coneNeutral: string;
+  // A cor dos ◆ (token `--model`); ausente, vale a cor da linha.
+  readonly model?: string | undefined;
 };
 
 // O ponto do gráfico que um agente comenta, em pixels do contêiner do gráfico (só desenho).
@@ -155,6 +167,8 @@ export type ChartSurface = {
   readonly setPriceLevels: (levels: readonly SurfacePriceLevel[]) => void;
   // Pontinhos discretos de "esperou" (camada desligada por padrão).
   readonly setWaited: (times: readonly SurfaceTime[]) => void;
+  // As plaquinhas das equipes ◆ (camada "Equipes ◆", desligada por padrão).
+  readonly setTeamPlaques: (plaques: readonly SurfaceTeamPlaque[]) => void;
   readonly setProjection: (projection: SurfaceProjection | null) => void;
   readonly setLiveCandle: (candle: SurfaceCandle | null) => void;
   // Com vela de exibição, a coluna da vela em formação cobre as velas da vela da execução inteira (`null`: só a vela viva).

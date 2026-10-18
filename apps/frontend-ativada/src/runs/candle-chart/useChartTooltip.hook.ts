@@ -12,6 +12,7 @@ import {
 import { formatSymbol } from '../../format/format.js';
 import { useLiveStatusQuery } from '../live-tracking/live-status.query.js';
 import type { TradeChart } from '../trade-chart.validation.js';
+import { CHART_LAYER } from './candle-chart.constant.js';
 import { placeTooltip, type TooltipPoint } from './tooltip-placement.js';
 import { buildTooltipModel, indexOfOpenTime, type TooltipModel } from './tooltip-model.js';
 import type { CandleCanvasModel } from './useCandleCanvasModel.hook.js';
@@ -45,6 +46,7 @@ function useTooltipModel(input: ChartTooltipInput, isHidden: boolean): TooltipMo
   const { pointedOpenTime, timeZone, bracketText } = model;
   const { candles } = source.history;
   const layers = model.layerData.layers;
+  const teamNotes = model.isLayerOn(CHART_LAYER.TEAMS) ? model.layerData.team?.notes : undefined;
   return useMemo(() => {
     if (isHidden || pointedOpenTime === undefined) return undefined;
     const index = indexOfOpenTime(candles, pointedOpenTime);
@@ -63,6 +65,7 @@ function useTooltipModel(input: ChartTooltipInput, isHidden: boolean): TooltipMo
       durationMilliseconds: source.durationMilliseconds,
       bracketText,
       openPosition,
+      teamNotes,
     });
   }, [
     isHidden,
@@ -74,6 +77,7 @@ function useTooltipModel(input: ChartTooltipInput, isHidden: boolean): TooltipMo
     timeZone,
     bracketText,
     openPosition,
+    teamNotes,
   ]);
 }
 

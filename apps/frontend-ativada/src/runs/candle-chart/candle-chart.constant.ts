@@ -20,6 +20,8 @@ export const CHART_LAYER = {
   STOP_TARGET: 'stopTarget',
   LEVELS: 'levels',
   WAITED: 'waited',
+  // As plaquinhas e as faixas das equipes de modelo ◆ (spec 015); desligada por padrão.
+  TEAMS: 'teams',
 } as const;
 
 export type ChartLayer = (typeof CHART_LAYER)[keyof typeof CHART_LAYER];

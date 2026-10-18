@@ -39,6 +39,8 @@ export type TooltipParams = {
   readonly bracketText: string | undefined;
   // A posição aberta da simulação ao vivo (alvo e proteção); `undefined` sem posição.
   readonly openPosition: OpenPosition | undefined;
+  // A recomendação de cada equipe ◆ na vela decidida (camada "Equipes ◆" ligada); ausente, o balão não a menciona.
+  readonly teamNotes?: ReadonlyMap<number, readonly string[]> | undefined;
 };
 
 const OUTCOME_WORD: Readonly<Record<ChartDecision['outcome'], string>> = {
@@ -111,6 +113,14 @@ function decisionNote(params: TooltipParams): string | undefined {
   return `A estratégia, na vela de 15 min decidida, ${word} (placar ${formatThreshold(found.score)}).`;
 }
 
+function teamNotes(params: TooltipParams): readonly string[] {
+  const { teamNotes: notes, candle, mapping } = params;
+  if (notes === undefined) return [];
+  const decidedOpen =
+    mapping === undefined ? candle.openTime : decidedOpenAt(candle.openTime, mapping);
+  return notes.get(decidedOpen) ?? [];
+}
+
 function percentOf(rate: string | undefined): string {
   const scaled = rate === undefined ? undefined : parseScaled(rate);
   return scaled === undefined ? '' : ` · ${formatSignedPercentDown(scaled)}`;
@@ -163,6 +173,7 @@ export function buildTooltipModel(params: TooltipParams): TooltipModel {
     scoreRuleNote(params.layers, candle.openTime),
     decisionNote(params),
     ...tradeNotes(params),
+    ...teamNotes(params),
     params.bracketText,
   ];
   const phrase = TIMEFRAME_PHRASE[timeframe] ?? timeframe;

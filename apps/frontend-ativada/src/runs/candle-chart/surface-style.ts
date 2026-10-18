@@ -145,11 +145,13 @@ export function buildLevelColors(theme: SurfaceTheme): {
   readonly target: string;
   readonly stop: string;
   readonly text: string;
+  readonly model: string;
 } {
   return {
     target: withAlpha(theme.up, LEVEL_ALPHA),
     stop: withAlpha(theme.down, LEVEL_ALPHA),
     text: theme.text,
+    model: theme.model ?? theme.line,
   };
 }
 

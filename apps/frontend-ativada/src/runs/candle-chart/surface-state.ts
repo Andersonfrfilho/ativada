@@ -8,6 +8,7 @@ import type {
   SurfacePriceLevel,
   SurfaceProjection,
   SurfaceScoreBar,
+  SurfaceTeamPlaque,
   SurfaceThreshold,
   SurfaceTheme,
   SurfaceTime,
@@ -28,6 +29,7 @@ export type SurfaceState = {
   thresholds: readonly SurfaceThreshold[];
   markers: readonly SurfaceMarker[];
   waited: readonly SurfaceTime[];
+  teamPlaques: readonly SurfaceTeamPlaque[];
   levels: readonly SurfaceLevelBox[];
   priceLevels: readonly SurfacePriceLevel[];
   zones: readonly SurfaceZone[];
@@ -49,6 +51,7 @@ export function createSurfaceState(): SurfaceState {
     thresholds: [],
     markers: [],
     waited: [],
+    teamPlaques: [],
     levels: [],
     priceLevels: [],
     zones: [],

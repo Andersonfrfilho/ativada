@@ -83,6 +83,16 @@ export function buildSeriesSetters(ctx: Context): SeriesSetters {
   };
 }
 
+// As plaquinhas das equipes ◆ dividem a lista de marcadores da biblioteca com as compras, as vendas e o "esperou".
+export function buildTeamSetters(ctx: Context): Pick<ChartSurface, 'setTeamPlaques'> {
+  return {
+    setTeamPlaques: (plaques): void => {
+      ctx.state.teamPlaques = plaques;
+      paint(ctx, renderMarkers);
+    },
+  };
+}
+
 export function buildOverlaySetters(ctx: Context): OverlaySetters {
   const { state } = ctx;
   return {

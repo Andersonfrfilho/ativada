@@ -12,6 +12,7 @@ export const SURFACE_THEME_TOKENS = {
   coneUp: '--cone-up',
   coneDown: '--cone-down',
   coneNeutral: '--cone-neutral',
+  model: '--model',
 } as const satisfies Record<keyof SurfaceTheme, string>;
 
 export type ColorResolver = (token: string) => string;
@@ -27,6 +28,7 @@ export function buildSurfaceTheme(resolve: ColorResolver): SurfaceTheme {
     coneUp: resolve(SURFACE_THEME_TOKENS.coneUp),
     coneDown: resolve(SURFACE_THEME_TOKENS.coneDown),
     coneNeutral: resolve(SURFACE_THEME_TOKENS.coneNeutral),
+    model: resolve(SURFACE_THEME_TOKENS.model),
   };
 }
 

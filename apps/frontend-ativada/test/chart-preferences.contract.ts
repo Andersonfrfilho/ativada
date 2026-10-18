@@ -41,10 +41,12 @@ describe('chart preferences', () => {
         stopTarget: false,
         levels: true,
         waited: false,
+        teams: false,
       },
       isTooltipOn: true,
     });
     expect(DEFAULT_CHART_PREFERENCES.layers.stopTarget).toBe(false);
+    expect(DEFAULT_CHART_PREFERENCES.layers.teams).toBe(false);
   });
 
   test('what was saved is what comes back', () => {
@@ -78,6 +80,7 @@ describe('chart preferences', () => {
         stopTarget: true,
         levels: true,
         waited: false,
+        teams: false,
       },
       isTooltipOn: true,
     });

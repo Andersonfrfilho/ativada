@@ -13,7 +13,9 @@ import type { PageRange } from './candle-paging.js';
 import { computeLayersWindow } from './layer-series.js';
 import type { ProjectionCurrent, Projections } from './projections.validation.js';
 import type { StrategyLayers } from './strategy-layers.validation.js';
+import type { TeamLayer } from './team-layer.js';
 import { useSettledValue } from './useSettledValue.hook.js';
+import { useTeamLayer } from './useTeamLayer.hook.js';
 import type { CandleSource } from './useCandleSource.hook.js';
 
 export type ChartLayersInput = {
@@ -36,6 +38,8 @@ export type ChartLayerData = {
   readonly projections: Projections | undefined;
   readonly isProjectionError: boolean;
   readonly trades: readonly Trade[];
+  // Plaquinhas, faixas e notas das equipes ◆; só com a camada ligada, ao vivo e na vela da estratégia.
+  readonly team: TeamLayer | undefined;
 };
 
 const SETTLE_MILLISECONDS = 150;
@@ -69,6 +73,24 @@ function useLayersWindow(
   });
 }
 
+function useTeamLayerData(
+  input: ChartLayersInput,
+  isStrategyTimeframe: boolean,
+): TeamLayer | undefined {
+  const { runId, chart, view, source } = input;
+  const lastOpen = source.history.candles.at(-1)?.openTime;
+  return useTeamLayer({
+    runId,
+    isEnabled:
+      isStrategyTimeframe &&
+      view.isLive &&
+      source.preferences.preferences.layers[CHART_LAYER.TEAMS],
+    mapping: source.displayMapping,
+    runMilliseconds: timeframeMilliseconds(chart.timeframe) ?? 0,
+    chartEnd: lastOpen === undefined ? undefined : lastOpen + source.durationMilliseconds,
+  });
+}
+
 // O que as camadas pedem, cada uma na sua consulta: linhas e placar (`strategy-layers`), a tendência (`projections`, só na
 // simulação ao vivo e se a camada estiver ligada) e as operações com stop e alvo (a mesma lista da tabela, sem pedido novo).
 // Nunca juntar tudo num `Promise.all`: a falha de uma camada não pode derrubar as velas (code-standart §15).
@@ -89,6 +111,7 @@ export function useChartLayers(input: ChartLayersInput): ChartLayerData {
   // A consulta é a mesma do cartão de histórico (backtest também a pede): sem a camada ligada, o cache não vira previsão.
   const forecast = isForecastEnabled ? projections.data : undefined;
   const rows = useTradeRows(runId, view.queryRange);
+  const team = useTeamLayerData(input, isStrategyTimeframe);
   const layers = useExpandedLayers(
     window === undefined ? undefined : layersQuery.data,
     displayMapping,
@@ -101,5 +124,6 @@ export function useChartLayers(input: ChartLayersInput): ChartLayerData {
     projections: forecast,
     isProjectionError: isForecastEnabled && projections.isError,
     trades: rows.items,
+    team,
   };
 }

@@ -13,6 +13,7 @@ const DEFAULT_LAYERS = {
   stopTarget: false,
   levels: true,
   waited: false,
+  teams: false,
 } as const;
 
 const layersSchema = z
@@ -23,6 +24,7 @@ const layersSchema = z
     stopTarget: z.boolean().catch(DEFAULT_LAYERS.stopTarget),
     levels: z.boolean().catch(DEFAULT_LAYERS.levels),
     waited: z.boolean().catch(DEFAULT_LAYERS.waited),
+    teams: z.boolean().catch(DEFAULT_LAYERS.teams),
   })
   .catch(DEFAULT_LAYERS);
 

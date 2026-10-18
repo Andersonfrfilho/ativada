@@ -2,6 +2,7 @@
 import { stamp, type Context, type Render } from './lightweight-context.js';
 import type { ISeriesApi, SeriesPartialOptionsMap } from './lightweight-surface.js';
 import { pricePriceFormat, SCORE_PRICE_FORMAT } from './surface-format.js';
+import { buildAllMarkerSpecs } from './team-plaque-style.js';
 import {
   buildCandleColors,
   buildConeEdges,
@@ -10,7 +11,6 @@ import {
   buildZoneColors,
   buildLevelLineColors,
   buildMarkColors,
-  buildMarkerSpecs,
   buildScoreData,
   buildThresholdLines,
   buildVolumeData,
@@ -128,7 +128,9 @@ export const renderVolume: Render = (ctx, theme) =>
   ctx.volume.setData(stamp(buildVolumeData(ctx.state.volume, theme)));
 
 export const renderMarkers: Render = (ctx, theme) => {
-  ctx.markers.setMarkers(stamp(buildMarkerSpecs(ctx.state.markers, ctx.state.waited, theme)));
+  const { markers, waited, teamPlaques } = ctx.state;
+  const layers = { markers, waited, plaques: teamPlaques };
+  ctx.markers.setMarkers(stamp(buildAllMarkerSpecs(layers, theme)));
   ctx.marks.update(ctx.state.markers, buildMarkColors(theme));
 };
 

@@ -3,7 +3,7 @@ import { useEffect, useEffectEvent } from 'react';
 
 import type { TradeChart } from '../trade-chart.validation.js';
 import { CHART_LAYER, type ChartLayer } from './candle-chart.constant.js';
-import type { ChartSurface } from './chart-surface.types.js';
+import type { ChartSurface, SurfaceLevelBox, SurfaceTeamPlaque } from './chart-surface.types.js';
 import type { DisplayMapping } from './display-mapping.js';
 import { toLevelBoxes, toWaitedTimes } from './layer-series.js';
 import { toSurfaceProjection } from './projection-cone.js';
@@ -42,11 +42,27 @@ export function useLayerSurface(surface: ChartSurface | undefined, input: LayerS
   useEffect(() => {
     surface?.setWaited(isWaitedOn ? toWaitedTimes(decisions, displayMapping) : []);
   }, [surface, decisions, isWaitedOn, displayMapping]);
+  const isTeamsOn = isOn(CHART_LAYER.TEAMS) && data.isStrategyTimeframe;
+  const teamBoxes = isTeamsOn ? (data.team?.boxes ?? NO_BOXES) : NO_BOXES;
   const pushLevels = useEffectEvent((): void => {
-    surface?.setLevels(isLevelsOn ? toLevelBoxes(trades) : []);
+    surface?.setLevels([...(isLevelsOn ? toLevelBoxes(trades) : []), ...teamBoxes]);
   });
   const tradesSignature = trades.map((trade) => `${trade.engineKey}:${trade.status}`).join(',');
+  const teamSignature = teamBoxes.map((box) => `${box.key}:${box.exitTime}`).join(',');
   useEffect(() => {
     pushLevels();
-  }, [surface, isLevelsOn, tradesSignature]);
+  }, [surface, isLevelsOn, tradesSignature, teamSignature]);
+  useTeamPlaques(surface, isTeamsOn ? data.team?.plaques : undefined);
+}
+
+const NO_BOXES: readonly SurfaceLevelBox[] = [];
+
+// As plaquinhas das equipes ◆: camada desligada ou sem dados entrega lista vazia e a superfície apaga o que desenhou.
+function useTeamPlaques(
+  surface: ChartSurface | undefined,
+  plaques: readonly SurfaceTeamPlaque[] | undefined,
+): void {
+  useEffect(() => {
+    surface?.setTeamPlaques(plaques ?? []);
+  }, [surface, plaques]);
 }

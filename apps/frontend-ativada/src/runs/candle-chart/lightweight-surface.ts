@@ -15,7 +15,7 @@ import {
 
 import type { ChartSurface } from './chart-surface.types.js';
 import { toTime, type Context } from './lightweight-context.js';
-import { buildOverlaySetters, buildSeriesSetters } from './lightweight-data.js';
+import { buildOverlaySetters, buildSeriesSetters, buildTeamSetters } from './lightweight-data.js';
 import { buildAnchors } from './lightweight-anchor.js';
 import { buildEvents, buildView } from './lightweight-view.js';
 import { ZoneBandsPrimitive } from './zone-bands-primitive.js';
@@ -126,6 +126,7 @@ export function createLightweightSurface(container: HTMLElement): ChartSurface {
   return {
     ...buildSeriesSetters(ctx),
     ...buildOverlaySetters(ctx),
+    ...buildTeamSetters(ctx),
     ...buildEvents(ctx),
     ...buildView(ctx),
     ...buildAnchors(ctx),

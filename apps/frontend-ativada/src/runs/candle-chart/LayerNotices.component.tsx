@@ -7,6 +7,7 @@ import { CHART_LAYER, type ChartLayer } from './candle-chart.constant.js';
 import styles from './CandleChart.module.css';
 import { describeScorePanel } from './layer-series.js';
 import { LEVELS_NOTICE } from './strategy-levels.js';
+import { TEAM_LAYER_NOTICE } from './team-layer.js';
 import { GLOSSARY_TERM } from '../../glossary/glossary.constant.js';
 import { Term } from '../../glossary/Term.component.js';
 import { ZONES_LEAD, type StrategyZones } from './strategy-zones.js';
@@ -79,6 +80,9 @@ export function LayerNotices(props: LayerNoticesProps): ReactElement {
       {hasLevels ? <p className={controls.muted}>{LEVELS_NOTICE}</p> : null}
       {isLive && isOn(CHART_LAYER.LEVELS) ? <ZonesNotice zones={zones} /> : null}
       {isWaitedWithoutData(props) ? <p className={controls.muted}>{ZOOM_FOR_DECISIONS}</p> : null}
+      {isLive && isOn(CHART_LAYER.TEAMS) && data.isStrategyTimeframe ? (
+        <p className={controls.muted}>{TEAM_LAYER_NOTICE}</p>
+      ) : null}
       {isLive && isOn(CHART_LAYER.FORECAST) && data.projection !== undefined ? (
         <p className={controls.muted}>
           {props.displayMapping === undefined ? FORECAST_NARROW : FORECAST_DISPLAY}
