@@ -105,3 +105,29 @@ O analista usa `postureLabel`, `message`, `reasonMessage`, `lockMessages`; o aud
 `bun run typecheck` + `bun run lint` + `bun run format:check` + testes (`make check`, o script `test` do painel com os
 arquivos novos na lista explícita) + commit isolado + evidência em `evidence.md`. Rodar no Linux/WSL (espelho em disco
 Linux; spec 003 plan D6). Nenhuma dependência nova.
+
+
+## Fase 2: escritório vivo — plano (2026-10-18)
+
+Pasta nova `apps/frontend-ativada/src/runs/team-room/motion/` (compartilhada) mais arquivos em `balcony/` e `office/`.
+
+| Peça | Arquivo | O quê |
+|---|---|---|
+| Ritmo | `motion/motion-rhythm.ts` | `RHYTHM.lively` (ocioso 2–9 s, reunião 20 s, turno 3,2 s) e `RHYTHM.calm` (×2) |
+| Semente | `motion/seeded-random.ts` | Gerador determinístico (mulberry32) |
+| Relógio da cena | `motion/cue-runner.ts` | Executa uma lista de pistas com UM temporizador pendente; temporizador injetável (relógio falso) |
+| Contexto do relógio | `motion/MotionClock.context.tsx` | Padrão real; o teste injeta o falso |
+| Movimento reduzido | `motion/useReducedMotion.hook.ts` | `matchMedia` com assinatura |
+| Calmo | `motion/calm-store.ts` + `useCalm.hook.ts` + `CalmButton.component.tsx` | Preferência em `localStorage` (try/catch), compartilhada entre varanda e escritório |
+| Varanda | `balcony/balcony-script.ts`, `useBalconyScene.hook.ts` | Pistas puras (quem fala, gesto) e o hook; atributos `data-speaking`/`data-gesture` |
+| Planta | `office/office-grid.ts` | Grade 14 × 10, mesas, assentos, pontos (mesa da Alice, quadro) |
+| Rotas | `office/office-route.ts` | BFS na grade, sem células de mesa |
+| Roteiro | `office/office-script.ts` | Viagens (ocioso/reunião) como dado puro, com semente |
+| Cena | `office/useOfficeWalk.hook.ts` | Uma pista por passo; posição por classes `x-N`/`y-N` |
+| Cenário | `office/IsoOffice*.component.tsx`, `IsoOffice.module.css` | Piso, paredes, janela, quadro, relógio, plantas, mesas, telas |
+
+Fluxo: `useReducedMotion` + animação ligada + aba visível → `isMoving`. Sem `isMoving` nada agenda e nada leva atributo de movimento.
+
+### Modelo por task
+
+E0 documentos → haiku; E1 varanda → sonnet; E2 aba Escritório → sonnet; E3 Calmo e movimento reduzido → haiku; F revisão → sonnet.

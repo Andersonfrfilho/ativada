@@ -215,3 +215,52 @@ sala agora.", "Tentar de novo", a legenda da RF13 e "não vota".
 da 007 D3; com D3-B a rota recalcula e a sala funciona igual) e as rotas `GET /v1/runs/:runId/analyst` e
 `/analyst/decisions` (T3.1), o Zod e o glossário do painel (T3.2) e o `AnalystCard` (T3.3). Esta spec **não cria
 migration, não muda o motor nem o `run-recording`, não adiciona dependência**.
+
+
+## Fase 2: escritório vivo (2026-10-18)
+
+> Pedido: "eles não andam, não tem escritório, não tem mesas nem computadores". Preview aprovado:
+> `docs/preview/escritorio-vivo/` (a especificação visual). Decisões aprovadas pelo usuário em 2026-10-18 ("tudo como
+> sugerido"). Vale tudo o que a §4 já exige (honestidade, estado = ícone + palavra + cor, nada de lookahead, sem promessa).
+
+### Decisões
+
+| # | Decisão | Valor |
+|---|---|---|
+| V1 | Estilo | **Plano** na faixa/varanda acima do gráfico; **isométrico** só no cenário da aba cheia "Escritório" |
+| V2 | Primeira versão | Varanda animada (andar de lado, mãos, papéis, balões em turnos) + Escritório com cenário fixo (janela da cidade, quadro de cotações, relógio, plantas, mesas com computadores cujas telas mostram gráficos) e agentes andando |
+| V3 | Segunda fase (NÃO nesta) | Lousa com níveis (entrada/alvo/proteção) e plaquinha de % líquido; o código deixa só o ponto de extensão `OFFICE_SPOT.BOARD_EXTENSION` |
+| V4 | Balões | **Um fala por vez**; o estado fica fixo no crachá (ícone + palavra + cor), nunca só no balão |
+| V5 | Ritmo | Ocioso a cada 2–9 s, reunião ~20 s; botão **Calmo** (ritmo ×2, preferência em `localStorage`, com `try/catch`); `prefers-reduced-motion` = só poses fixas, sem andar nem piscar |
+| V6 | Quem aparece | Os 6 agentes de regra (Tiago-Tendência, Renata-Reversão, Vitor-Volume, Sofia-Sentimento, Alice-Analista de Risco, Otávio-Auditor) com nome e cargo SEMPRE visíveis, em ao vivo, backtest e walk-forward; equipes de modelo só as LIGADAS (ligada com problema aparece com o estado em palavra) |
+| V7 | Backtest e walk-forward | Os agentes não opinam sobre o passado além do que já é gravado (comportamento do `HistoricalTeam` intacto); o movimento é só de cena |
+
+### Requisitos
+
+- **ER-V1 Varanda animada.** Movimento lateral leve, mãos digitando/apontando, papéis e balões em turnos (um por vez, ordem
+  embaralhada com semente). Só `transform` e `opacity`.
+- **ER-V2 Cenário fixo isométrico.** Piso, paredes, janela com a cidade, quadro de cotações, relógio (o do `OfficeModel`),
+  plantas e mesas com computador; cada tela tem um gráfico próprio por agente. Decorativo (`aria-hidden`); a lista de crachás
+  abaixo carrega o detalhe (alvo de 44 px).
+- **ER-V3 Agentes andam.** Por corredores, nunca por cima de mesa, até a mesa da Alice, ao quadro de cotações e de volta ao
+  assento. Reunião (~20 s) na vela nova: a equipe vai à mesa da Alice e volta.
+- **ER-V4 Calmo e movimento reduzido.** O botão "Calmo" dobra os intervalos; com `prefers-reduced-motion: reduce` (ou a
+  animação desligada) não há relógio de cena, nem classe de movimento: só poses fixas.
+- **ER-V5 375 px.** O cenário reduz (unidades de contêiner); a lista de crachás abaixo carrega o detalhe.
+
+### Contratos (provados antes do código)
+
+1. Nomes e cargos dos 6 agentes visíveis; só equipes ligadas aparecem.
+2. Balões: no máximo um em `data-speaking`, com relógio falso; o texto de todos continua no DOM.
+3. "Calmo" muda o ritmo (intervalos ×2) e a preferência é lembrada.
+4. `prefers-reduced-motion`: nenhum atributo/classe de movimento e nenhum temporizador de cena.
+5. Roteiro de movimento (dado puro): nenhuma célula de mesa na rota, volta ao assento, determinístico com a mesma semente.
+
+### Riscos de desempenho
+
+| Risco | Mitigação |
+|---|---|
+| Muitos temporizadores | **Um relógio por cena** (um único temporizador pendente por vez, `cue-runner`); nenhum timer por agente |
+| Reflow | Animação só com `transform`/`opacity`; posição por classes/variáveis CSS (sem `style=`) |
+| Aba escondida ou fora da tela | Pausa por `visibilitychange` e `IntersectionObserver` (o mesmo observador do escritório) |
+| Cenário pesado no celular | Sem SVG filtrado; HTML + CSS; escala por `cqw`; vista frontal antiga continua como alternativa |

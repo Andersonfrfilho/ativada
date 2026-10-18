@@ -84,3 +84,19 @@ PROIBIDO: git push, git reset, git commit --amend, git stash, mexer nos containe
 UI: verifique por texto (read_page, get_page_text); screenshot só na T3.2.
 Ao terminar ou parar, feche o modo (/oh-my-claudecode:cancel).
 ```
+
+
+## Fase 2 — Escritório vivo (2026-10-18)
+
+> 🤖 Modelo por task: E0 `haiku` · E1 `sonnet` · E2 `sonnet` · E3 `haiku` · F `sonnet`. Gates no Linux a cada task: `typecheck`,
+> `eslint`, `prettier --check`, `panel-test`. Commit isolado por task. Teste novo entra na lista explícita do `package.json`.
+
+| Task | O quê | Aceite |
+|---|---|---|
+| E0 | Esta seção (spec, plan, tasks) | Decisões V1–V7 registradas |
+| E1 | Varanda animada: relógio de cena único, pistas puras, balões em turnos, mãos, papéis, estado no crachá | Contratos: nomes visíveis, só ligadas, um balão por vez (relógio falso) |
+| E2 | Aba Escritório isométrica: grade, rotas, roteiro puro, cenário, mesas, telas, agentes que andam | Contratos: sem sobreposição de mesa, volta ao assento, determinístico com semente |
+| E3 | Botão Calmo e `prefers-reduced-motion` | Calmo muda o ritmo e é lembrado; movimento reduzido sem classes de movimento |
+| F | Revisão: contratos, 375 px, claro/escuro, contraste, alvos 44 px, glossário, `CLAUDE.md`, `evidence.md` | Evidência registrada |
+
+Fora desta fase: lousa com níveis e plaquinha de % líquido (segunda fase; só o ponto de extensão).
