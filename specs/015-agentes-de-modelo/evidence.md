@@ -442,3 +442,31 @@ Nenhuma captura de tela (a captura final por tema é da T6.3, que não foi pedid
 - Lista de "recentes" da barra de troca de execuções ainda nomeia a execução de equipe pelo id da versão fixa (o título do botão já mostra a equipe).
 - T6.1 (E2E `make panel-e2e` com servidor de controle), T6.2 (teste real com chaves, manual com o usuário), T6.3 (revisão de design 375/1280 px nos dois temas e a captura final) e T6.4 (`CLAUDE.md`) ficam abertas.
 - A API não expõe a coluna `requested_by` do pedido avulso (pendência (3) da T3.4, inalterada).
+
+
+### Fase 6 parcial — CLAUDE.md, revisão de código, `requested_by` e revisão de design (2026-10-17)
+
+**T6.4.** `CLAUDE.md` ganhou um parágrafo no Estado e 8 bullets (equipes, pacote `model-agents`, worker/despachante, `team_run`/`team-step`/`model-team-1`, rotas, migrations 0027/0028, privacidade/custo/tetos, tela) mais o bullet "o projeto vive SÓ no Linux".
+
+**Revisão de código** (`code-reviewer`, opus, só leitura, 314 arquivos de `3c7b3c5^..HEAD` e auditoria §15). Sem achado crítico ou alto. Corrigidos (média):
+
+- `report-scheduler.ts`: `Promise.all` por par derrubava o ciclo; agora `Promise.allSettled` (o primeiro erro sobe depois de todos) e o ciclo em `create-model-teams-wiring.ts` captura a falha do enfileirador (log só do nome do erro, `ENQUEUE_FAILED`) e SEMPRE roda `dispatcher.tick()`. Teste novo no `model-team-dispatcher.contract.test.ts`.
+- `reason-hygiene.ts`: caracteres invisíveis (zero-width, hífen suave, controles bidi, categoria `Cf`) e formas de compatibilidade (largura cheia) escondiam a palavra proibida; agora `normalize('NFKC')` + remoção de `\p{Cf}` antes da busca. Teste novo em `model-agents-hygiene.contract.test.ts`.
+
+Limpo (verificado pelo revisor): `allSettled` por linha no despachante; logs só com `errorName`; chave só no cabeçalho; 500 genérico; `OwnerScope` em toda leitura de dado de usuário (duelo, sala, comparação, `team_run_inputs`, interruptor, cota); sem `dangerouslySetInnerHTML`/`innerHTML`/`href` vindo do modelo; dinheiro em `EngineDecimal`/`numeric`/BigInt; SQL parametrizado.
+
+**Achados NÃO corrigidos (média/baixa), para decisão:**
+
+1. (média) `analyst_decisions` é lida sem `OwnerScope` em `team-report.repository.ts` (`readPublicReadings`, junta `runs` de qualquer usuário). Só vale se as `readings` dependerem apenas de dado de mercado (premissa do ADR A3); falta um contrato que prove isso, ou calcular as leituras a partir de `candles`.
+2. (média) Pedido avulso lido por id sem dono (`onDemandSection`): ver a proposta `requested_by` abaixo.
+3. (baixa) Motivo oculto: a tela esconde os TRÊS papéis quando a flag única `reason_hidden` está ligada (`TeamSheetRoles.component.tsx`); o texto já vem higienizado por papel, a tela poderia mostrá-lo.
+4. (baixa) Higiene não filtra URL, markdown nem frases de injeção (sem XSS: o React escapa; só chamariz).
+5. (baixa) `model-team-environment.ts`: `daily > monthly` compara com `Number` (só validação do env); trocar por `EngineDecimal`.
+6. (baixa) O custo de API do ranking/sala é a soma da INSTALAÇÃO por equipe, não do usuário; rotular como tal ou não expor.
+7. (baixa) `claimOnDemand` e `enqueueOnDemandReport` em transações separadas: falha do insert consome a cota do dia.
+8. (baixa) Sem N+1 real: `createRun` em laço no duelo (≤ 4, intencional), 1 a 2 consultas por vela no replay do `team-step`, 3 leituras independentes do `report-input.ts` poderiam ir em `Promise.all` (latência).
+9. (baixa) `run-model-teams-comparison.use-case.ts` detecta analista por substring de JSON; `provider-http.ts` lê o corpo todo antes do teto; conferir que `httpUrlSchema` recusa `http://` fora de teste.
+
+**Proposta `requested_by` (NÃO aplicada; sem migration).** Fatos: o id do pedido avulso é UUIDv7 (74 bits aleatórios), a linha é dado público de mercado (sem saldo, posição ou chave) e a leitura exige antes uma execução do próprio usuário no mesmo par. O risco prático é baixo. Opção A (recomendada para quando houver tempo): `ALTER TABLE model_team_reports ADD COLUMN requested_by uuid NULL REFERENCES users(id) ON DELETE SET NULL` (aditiva, rollback = `DROP COLUMN`), gravada só quando `kind = 'on_demand'`, e `onDemandSection` passa a exigir `requested_by = scope.userId`; a migration traz o custo de LGPD (a coluna vira dado pessoal: exportar, anular na exclusão da conta, hoje `model_team_reports` é `UNOWNED_PUBLIC_TABLES`) e de teste (mutante de dono novo). Opção B: não adicionar e manter o id não adivinhável como a garantia, ajustando o comentário do esquema (`run-model-teams.schema.ts:36`) para dizer isso. Recomendação: B agora, A se o produto passar a mostrar opiniões avulsas a mais de um dono ou se a auditoria exigir. Decisão do usuário.
+
+**T6.3 parcial.** `contrast`, `touch-targets` e `design-review` verdes (180 testes). Três alvos de toque dos componentes novos estavam fora do contrato e entraram (`TeamComparison .summary`, `Duel .link`, `Duel .pick`; todos com 44 px). A varredura por DOM a 375 px (`getBoundingClientRect`) e o tema escuro NÃO foram feitas: o painel (http://127.0.0.1:56100) abre em `/login` ("Entrar com Keycloak", acesso por convite) e a I.A. não digita senha. **Pendente para o usuário:** logado, a 375 e 1280 px nos dois temas, abrir `/conta#equipes`, a sala da simulação (ficha da equipe, "Equipes × regras", camada ◆) e `/duelo/:duelId` e conferir que nenhum alvo interativo mede menos de 44 px e que nada transborda na horizontal; capturas finais (uma por tema) ficam para a T6.3 completa.

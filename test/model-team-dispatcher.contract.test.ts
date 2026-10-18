@@ -373,6 +373,28 @@ describe('enfileirador', () => {
     });
   });
 
+  test('um par que falha não impede os outros de enfileirar; o erro sobe depois', async () => {
+    const enqueued: string[] = [];
+    const enqueuer = createReportEnqueuer({
+      exchange: 'binance',
+      symbols: ['BADUSDT', 'LINKUSDT'],
+      runtimes: [],
+      cadenceMinutes: 60,
+      candles: { findLatestOpenTime: () => Promise.resolve(CANDLE_TIME) },
+      reports: {
+        enqueueTeamReports: (request) => {
+          if (request.symbol === 'BADUSDT') return Promise.reject(new Error('falhou'));
+          enqueued.push(request.symbol);
+          return Promise.resolve(1);
+        },
+      },
+      now: () => NOW,
+    });
+    const outcome = await enqueuer.enqueueLatest().catch((error: unknown) => error);
+    expect(outcome).toStrictEqual(new Error('falhou'));
+    expect(enqueued).toStrictEqual(['LINKUSDT']);
+  });
+
   test('par sem vela gravada ou com vela velha não enfileira nada', async () => {
     expect(await build({ candleTime: undefined, now: NOW }).run()).toBe(0);
     const stale = build({ candleTime: CANDLE_TIME, now: NOW + 3 * CANDLE_MILLISECONDS });

@@ -45,8 +45,16 @@ export function createReportEnqueuer(dependencies: ReportEnqueuerDependencies): 
   }
   return {
     enqueueLatest: async (): Promise<number> => {
-      const counts = await Promise.all(dependencies.symbols.map(enqueueSymbol));
-      return counts.reduce((total, count) => total + count, 0);
+      // `allSettled`: o par que falha não impede os outros de enfileirar; o primeiro erro sobe DEPOIS de todos terminarem.
+      const results = await Promise.allSettled(dependencies.symbols.map(enqueueSymbol));
+      let total = 0;
+      let firstFailure: { readonly reason: unknown } | undefined;
+      for (const result of results) {
+        if (result.status === 'fulfilled') total += result.value;
+        else firstFailure ??= { reason: result.reason };
+      }
+      if (firstFailure !== undefined) throw firstFailure.reason;
+      return total;
     },
   };
 }

@@ -42,6 +42,11 @@ function cutToLimit(text: string): string {
   return isSplitPair ? cut.slice(0, -1) : cut;
 }
 
+// Zero-width, hífen suave e controles de direção (categoria Cf) não mudam o que se lê, mas escondiam a palavra proibida.
+function removeInvisible(text: string): string {
+  return text.normalize('NFKC').replace(/\p{Cf}/gu, '');
+}
+
 function hasForbiddenWord(text: string): boolean {
   const lowerText = text.toLowerCase();
   return FORBIDDEN_REASON_WORDS.some((word) => lowerText.includes(word));
@@ -49,7 +54,7 @@ function hasForbiddenWord(text: string): boolean {
 
 // A busca roda no texto limpo INTEIRO, antes do corte: cortar não esconde uma palavra proibida.
 export function sanitizeReason(rawReason: string): SanitizedReason {
-  const cleaned = stripControls(rawReason);
+  const cleaned = stripControls(removeInvisible(rawReason));
   if (cleaned === '' || hasForbiddenWord(cleaned)) {
     return { reason: HIDDEN_REASON_PHRASE, reasonHidden: true };
   }

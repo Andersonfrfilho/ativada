@@ -6,7 +6,7 @@ import {
   type DatabaseHandle,
   type JsonContainer,
 } from '@ativada/database';
-import { MILLISECONDS_PER_SECOND } from '@ativada/environment';
+import { MILLISECONDS_PER_SECOND, readErrorName } from '@ativada/environment';
 import type { BudgetLimits } from '@ativada/model-agents';
 
 import type { Environment } from '../environment.js';
@@ -14,6 +14,7 @@ import type { WorkerLogger } from '../logging/worker-logger.js';
 import { createLoopOutageGuard } from '../outage/loop-outage-guard.js';
 import { buildTeamRuntimes, type TeamRuntime } from './build-team-runtimes.js';
 import { createModelTeamLoop, type ModelTeamLoop } from './model-team-loop.js';
+import { MODEL_TEAM_LOG } from './model-teams.constant.js';
 import { buildProviderStatus } from './provider-status.js';
 import { createReportDispatcher, type ReportDispatcher } from './report-dispatcher.js';
 import { createReportEnqueuer, type ReportEnqueuer } from './report-scheduler.js';
@@ -90,6 +91,20 @@ function createEnqueuer(
   });
 }
 
+// Falha ao enfileirar não impede despachar o que já está pendente (RNF01); só o nome do erro vai ao log.
+async function runCycle(parts: {
+  readonly enqueuer: ReportEnqueuer;
+  readonly dispatcher: ReportDispatcher;
+  readonly logger: WorkerLogger;
+}): Promise<void> {
+  try {
+    await parts.enqueuer.enqueueLatest();
+  } catch (error: unknown) {
+    parts.logger.error(MODEL_TEAM_LOG.ENQUEUE_FAILED, { errorName: readErrorName(error) });
+  }
+  await parts.dispatcher.tick();
+}
+
 // MODO SOMBRA: as equipes só recomendam e gravam o relatório; nenhuma execução depende delas e nenhuma ordem sai.
 export function createModelTeamsWiring(params: CreateModelTeamsWiringParams): ModelTeamsWiring {
   const { environment, database, logger } = params;
@@ -113,10 +128,7 @@ export function createModelTeamsWiring(params: CreateModelTeamsWiringParams): Mo
   });
   const enqueuer = createEnqueuer({ ...params, now, runtimes });
   const loop = createModelTeamLoop({
-    cycle: async (): Promise<void> => {
-      await enqueuer.enqueueLatest();
-      await dispatcher.tick();
-    },
+    cycle: () => runCycle({ enqueuer, dispatcher, logger }),
     logger,
     pollMilliseconds: environment.MODEL_TEAM_POLL_SECONDS * MILLISECONDS_PER_SECOND,
     outage: createLoopOutageGuard({ database, logger }),

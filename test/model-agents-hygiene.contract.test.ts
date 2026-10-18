@@ -39,6 +39,13 @@ describe('higiene do motivo (RF08)', () => {
     expect(api.sanitizeReason('Tenho Certeza')).toStrictEqual(HIDDEN);
   });
 
+  test('caracteres invisíveis e de direção não escondem a palavra proibida', () => {
+    expect(api.sanitizeReason('o preço é gar​antido')).toStrictEqual(HIDDEN);
+    expect(api.sanitizeReason('com­pre agora')).toStrictEqual(HIDDEN);
+    expect(api.sanitizeReason('‮compre')).toStrictEqual(HIDDEN);
+    expect(api.sanitizeReason('ｃｏｍｐｒｅ')).toStrictEqual(HIDDEN);
+  });
+
   test('quebras de linha viram espaço e controles somem', () => {
     const raw = 'linha um\nlinha\tdois\r\nlinha\u0000 três\u007f fim x';
     expect(api.sanitizeReason(raw)).toStrictEqual({
