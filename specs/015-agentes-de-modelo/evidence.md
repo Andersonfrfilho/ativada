@@ -320,3 +320,20 @@ chaves reais, rede a provedor real, `git push`, aplicar a migration no banco de 
 - **Pendências.** (1) Aplicar a `0028` no banco de dev (o usuário). (2) `make lgpd-test` (precisa de Docker/Keycloak): a `0028` só adiciona coluna em `strategies`, que já está no registro de exportação/exclusão.
   (3) `opinionIds` do estado são ids aleatórios (uuidv7) devolvidos no `202`; a linha avulsa não guarda o dono, então quem soubesse o id de outro usuário leria aquela recomendação (dado público de mercado, sem
   posição nem saldo). Se quiser fechar isso, é uma coluna `requested_by` aditiva. (4) `make live-mutants`/`queue-mutants` não foram reexecutados (não tocam o passo ao vivo nesta task).
+
+## Fase 5 — Painel das equipes de modelo (2026-10-17)
+
+Autorização (usuário): tela das equipes. Não autorizados e não usados: chaves reais, rede a provedor real, `git push`, mudança de API, banco ou motor. Gates no Linux
+(`~/personal/ativada`): `typecheck`, `lint`, `format:check`, `panel-test`. Verificação da UI por texto (`read_page`/`get_page_text`); uma captura só no fim.
+
+### T5.1 — Contratos do painel e consultas (Zod espelhando as rotas)
+
+- `apps/frontend-ativada/src/runs/model-teams/`: `model-teams.constant.ts` (catálogo fechado espelhado), `model-teams.validation.ts` (`GET /v1/me/model-teams`, `GET /v1/runs/:id/model-teams`
+  e `/comparison`, `202` do pedido avulso), `model-teams.query.ts` (`useRunModelTeamsQuery` com a chave `['runs', runId, 'model-teams', <pedidos>]` e polling de 2 s SÓ com um relatório
+  `pending` à vista; `409`/`404` viram "ausente", sem erro; `useMyModelTeamsQuery`, `useSetModelTeamMutation`, `useRequestOpinionMutation` que passa a acompanhar o `opinionId`).
+  `src/runs/duel/duel.validation.ts` (`POST /v1/model-duels`, `GET /v1/model-duels/:id`; as curvas têm o mesmo tamanho de `candleTimes`).
+- Dinheiro e preços do relatório ficam em texto decimal (`decimalText`); o contrato `model-teams-queries.contract.tsx` varre os arquivos das pastas `model-teams` e `duel` atrás de `Number(`,
+  `parseFloat` e `toFixed`.
+- Teste: `test/model-teams-queries.contract.tsx` (5), com `test/support/model-teams-fixtures.ts` (rotas falsas das equipes) na lista explícita do `package.json` do painel.
+- Pendências de dado da API (nada mudado aqui): (1) a API não devolve o **id do modelo** (só `modelFamily`, "Gemini Pro" etc.) nem o **teto de custo** do dia/mês: a ficha mostra a família do modelo e o
+  custo de hoje e do mês, sem a barra "contra o teto". Se quiser os dois na tela, é campo aditivo em `GET /v1/runs/:id/model-teams` (`modelId`, `budget { dailyUsd, monthlyUsd }`).
