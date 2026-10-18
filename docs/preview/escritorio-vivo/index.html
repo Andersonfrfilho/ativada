@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Escritório vivo · AtivAdA (preview)</title>
+<meta name="description" content="Preview do escritório vivo da equipe de investimentos: agentes que andam, mesas com computadores, quadro de cotações, lousa e equipes de modelo. Simulação com dinheiro fictício.">
+<link rel="stylesheet" href="css/office.css">
+</head>
+<body>
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <h1>Escritório vivo <small>preview</small></h1>
+      <p class="disc">Simulação com dinheiro fictício · tendência, não promessa</p>
+    </div>
+    <div class="ctl" role="group" aria-label="Controles do preview">
+      <fieldset>
+        <legend>Situação da simulação</legend>
+        <div class="pills">
+          <label class="st-pill tone-wait"><input type="radio" name="estado" value="wait" checked><span><i data-ic="pause"></i>Esperar</span></label>
+          <label class="st-pill tone-buy"><input type="radio" name="estado" value="buy"><span><i data-ic="up"></i>Compra recomendada</span></label>
+          <label class="st-pill tone-sell"><input type="radio" name="estado" value="sell"><span><i data-ic="down"></i>Venda recomendada</span></label>
+          <label class="st-pill tone-warn"><input type="radio" name="estado" value="protect"><span><i data-ic="shield"></i>Proteção ativada</span></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Equipes de modelo ◆</legend>
+        <div class="selwrap">
+          <label class="sel" for="sel-nina">◆ Nina (Gemini)
+            <select id="sel-nina"><option value="off">Desligada</option><option value="on">Ligada</option><option value="nokey">Ligada, sem chave</option></select></label>
+          <label class="sel" for="sel-lucas">◆ Lucas (Claude)
+            <select id="sel-lucas"><option value="off">Desligada</option><option value="on">Ligada</option><option value="nokey">Ligada, sem chave</option></select></label>
+          <label class="sel" for="sel-olivia">◆ Olívia (GPT)
+            <select id="sel-olivia"><option value="off">Desligada</option><option value="on">Ligada</option><option value="nokey">Ligada, sem chave</option></select></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Exibição</legend>
+        <div class="pills">
+          <button type="button" class="btn" id="btnMotion" aria-pressed="false"><span id="motionTxt">Movimento ligado</span></button>
+          <button type="button" class="btn" id="btnTheme"><span id="themeTxt">Tema: automático</span></button>
+          <button type="button" class="btn" id="btnLayout" aria-pressed="false"><span id="layoutTxt">Disposição: lado a lado</span></button>
+        </div>
+      </fieldset>
+    </div>
+  </div>
+</header>
+
+<main id="conteudo" class="wrap">
+  <section class="statusbar" aria-label="Situação atual da simulação">
+    <span id="stChip" class="chip big tone-wait"></span>
+    <span id="stPlaque"></span>
+    <span id="stMeet"></span>
+    <span class="chip tone-warn" id="modelWarn" hidden><i data-ic="warn"></i><span>Equipe ligada sem chave: aparece com aviso e não opina</span></span>
+  </section>
+
+  <div class="grid" id="grid">
+    <!-- (6a) versão compacta: faixa acima do gráfico -->
+    <section class="frame" id="framePanel" aria-labelledby="h-panel">
+      <div class="frame-h">
+        <h2 id="h-panel">Painel · aba Gráfico <small>varanda compacta acima do gráfico</small></h2>
+        <span class="mut" style="font-size:12px">Altura do bloco: <b id="hMeasure">…</b> <span id="hLeft"></span></span>
+      </div>
+      <div class="mock-tabs" aria-hidden="true"><span class="on">Gráfico</span><span>Escritório</span><span>Placar</span><span>Ordens</span></div>
+      <div class="pad">
+        <div class="balcony" id="balRoot" role="group" aria-label="Varanda da equipe: faixa compacta com os agentes, nomes, estado e balões de opinião"></div>
+      </div>
+      <div class="chartbox">
+        <div class="chart-h"><span><b>PEPE/USDT</b> · velas de 5 min · simulação</span><span class="mut">entrada = 100 (referência)</span></div>
+        <svg id="chartSvg" viewBox="0 0 480 182" role="img" aria-label="Gráfico de velas simulado de PEPE/USDT com marcador da situação da equipe e linhas de entrada, alvo e proteção quando há sinal."></svg>
+      </div>
+      <p class="foot">Simulação com dinheiro fictício. Valores de exemplo, sem promessa de lucro.</p>
+    </section>
+
+    <!-- (6b) versão cheia: aba Escritório -->
+    <section class="frame" aria-labelledby="h-office">
+      <div class="frame-h">
+        <h2 id="h-office">Aba Escritório <small>versão cheia, vista isométrica leve</small></h2>
+        <span class="mut" style="font-size:12px">Toque em um personagem para ver a ficha</span>
+      </div>
+      <div class="sceneWrap" id="officeRoot">
+        <svg class="scene" role="img" aria-label="Escritório vivo" aria-describedby="srText" data-state="wait"><title>Escritório de investimentos</title></svg>
+        <div class="ov"><svg class="leaders" aria-hidden="true"></svg></div>
+      </div>
+      <p class="foot">Simulação com dinheiro fictício · tendência, não promessa. Valores de exemplo.</p>
+    </section>
+  </div>
+
+  <div class="below">
+    <section class="card" aria-labelledby="h-leg">
+      <h2 id="h-leg">Quem está fazendo o quê</h2>
+      <ul id="legend"></ul>
+      <div id="ficha" aria-live="polite"></div>
+    </section>
+    <div style="display:grid;gap:16px">
+      <section class="card sr-card" aria-labelledby="h-sr">
+        <h2 id="h-sr">Descrição para leitor de tela</h2>
+        <div id="srText"></div>
+      </section>
+      <section class="card notes" aria-labelledby="h-nt">
+        <h2 id="h-nt">O que este preview mostra</h2>
+        <ul>
+          <li>Ritmo de movimento: ciclos curtos e variados; quem anda, quando e por quê.</li>
+          <li>Estado sempre com ícone + palavra + cor; alvos de toque de 44 px; claro, escuro e 375 px.</li>
+          <li>Só as equipes de modelo ligadas aparecem; ligada sem chave aparece com aviso.</li>
+          <li>Com movimento reduzido: nada anda, só poses fixas; a reunião aparece de uma vez.</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+  <p class="footer">Preview estático (HTML, CSS e JS puros). Não usa a API, o banco nem o motor. Nada aqui é recomendação de investimento.</p>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/figure.js"></script>
+<script src="js/office.js"></script>
+<script src="js/balcony.js"></script>
+<script src="js/chart.js"></script>
+<script>document.querySelectorAll('[data-ic]').forEach(function (e) { e.outerHTML = '<span class="ico">' + AV.icon(e.getAttribute('data-ic'), 16) + '</span>'; });</script>
+<script src="js/main.js"></script>
+</body>
+</html>
