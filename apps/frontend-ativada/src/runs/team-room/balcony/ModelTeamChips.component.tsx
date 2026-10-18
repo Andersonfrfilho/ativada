@@ -3,6 +3,7 @@ import { useId, type ReactElement } from 'react';
 
 import { Icon } from '../../../layout/Icon.component.js';
 import { ModelTeamSheet } from '../../model-teams/ModelTeamSheet.component.js';
+import { OnDemandButton } from '../../model-teams/OnDemandButton.component.js';
 import {
   useModelTeamsView,
   type ModelTeamsView,
@@ -61,7 +62,9 @@ function ModelChip({
         >
           <ChipFace card={card} />
         </button>
-        <ModelTeamSheet card={card} run={view.run} id={sheetId} isOpen={sheet.isOpen} />
+        <ModelTeamSheet card={card} run={view.run} id={sheetId} isOpen={sheet.isOpen}>
+          <OnDemandButton card={card} view={view} />
+        </ModelTeamSheet>
       </div>
     </li>
   );
@@ -98,7 +101,9 @@ function ModelsSummary({ view }: { readonly view: ModelTeamsView }): ReactElemen
             id={`${sheetId}-${card.key}`}
             isOpen
             isInline
-          />
+          >
+            <OnDemandButton card={card} view={view} />
+          </ModelTeamSheet>
         ))}
       </div>
     </div>

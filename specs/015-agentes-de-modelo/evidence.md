@@ -361,3 +361,14 @@ Autorização (usuário): tela das equipes. Não autorizados e não usados: chav
 - Termos com tooltip (glossário): Equipe de modelo, Papel, Acertos de lado, Intervalo de confiança, Custo estimado, Em observação.
 - Testes: `test/model-teams-room.contract.tsx` (9: estados em palavra, provedor, ficha completa, motivo ocultado, execução ao vivo ausente, selo, custo, placar, falhas); `team-balcony`/`office-stage` atualizados
   (sem "em breve"); `touch-targets` ganhou `.modelButton`, o link da ficha e o interruptor da Conta. `bun run --cwd apps/frontend-ativada test`: 1.515 passam, 0 falham (127 arquivos).
+
+### T5.4 — "Pedir opinião agora" e o cartão "Equipes × regras"
+
+- `model-teams/OnDemandButton.component.tsx` dentro da ficha de cada equipe (varanda, lista de crachás do escritório e a ficha do celular): `POST /v1/runs/:id/model-teams/:teamKey/opinions` → `202 { opinionId }`; o id passa a ir em
+  `?opinionIds=` e o polling de 2 s liga SÓ enquanto há relatório `pending` (RF20). Desabilitado, o botão traz a frase do motivo (`aria-describedby`): equipe desligada, provedor indisponível (a palavra do estado:
+  "sem chave configurada", "parada pelo teto de custo"...), simulação sem analista (`GET /analyst` → `ANALYST_NOT_ENABLED`) ou parada, ou "Aguardando a resposta da equipe…". Erros do servidor viram frase (429 limite, 409 por código).
+  O resultado vem marcado "pedido avulso · não entra no placar" (Term "Pedido avulso"), nunca no placar e nunca comanda ordem.
+- `model-teams/TeamComparison.component.tsx` ("Equipes × regras", `<details>` recolhido; só consulta aberto; `LiveChartArea` o põe depois da sala): uma linha por vela fechada, os 4 especialistas de regra (● a favor/contra/neutro/não
+  vota), as 3 equipes (◆ comprar/vender/esperar/sem leitura/pensando), ✓ acertou / ✗ errou em palavra para leitor de tela, "↗ subiu / ↘ desceu / = igual / ainda aberta" e a frase fixa "Comparação de acerto do lado da próxima vela; não
+  mede lucro e não é recomendação." Paginação por cursor ("Ver velas anteriores"); sem analista as regras dizem "sem analista".
+- Testes: `test/model-teams-ondemand.contract.tsx` (6: pede e acompanha até decidir, três motivos de botão desabilitado, 429, tabela com ✓/✗ e "ainda aberta", regras nulas).

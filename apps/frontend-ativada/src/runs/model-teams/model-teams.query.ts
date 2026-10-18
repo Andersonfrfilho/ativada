@@ -1,8 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
+  type InfiniteData,
+  type UseInfiniteQueryResult,
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
@@ -12,6 +15,7 @@ import { HTTP_METHOD, HTTP_STATUS } from '@ativada/environment';
 import { API_PATH } from '../../app/app.constant.js';
 import { useApiClient, useAppConfig } from '../../app/useAppContext.hook.js';
 import { ApiError } from '../../http/api.error.js';
+import type { Page } from '../../http/api-client.js';
 import { RUN_POLL_MILLISECONDS } from '../run.constant.js';
 import { RUN_QUERY_ROOT } from '../runs.query.js';
 import {
@@ -21,10 +25,12 @@ import {
   type ModelTeamKey,
 } from './model-teams.constant.js';
 import {
+  comparisonItemSchema,
   myModelTeamsSchema,
   opinionRequestedSchema,
   runModelTeamsSchema,
   teamViewSchema,
+  type ComparisonItem,
   type MyModelTeams,
   type RunModelTeams,
   type TeamView,
@@ -82,6 +88,31 @@ export function useRunModelTeamsQuery(
     },
     // Enquanto há relatório `pending` à vista consulta a cada 2 s, sem stream novo (RF20).
     refetchInterval: (query) => (hasPendingReport(query.state.data) ? runPollMilliseconds : false),
+  });
+}
+
+export const COMPARISON_PAGE_SIZE = 24;
+const FIRST_PAGE: string | null = null;
+
+// "Equipes × regras": 24 velas por página, da mais nova, por cursor; só consulta com o cartão aberto.
+export function useComparisonQuery(
+  runId: string,
+  isEnabled: boolean,
+): UseInfiniteQueryResult<InfiniteData<Page<ComparisonItem>, string | null>> {
+  const client = useApiClient();
+  return useInfiniteQuery({
+    queryKey: [RUN_QUERY_ROOT, runId, MODEL_TEAMS_QUERY_ROOT, 'comparison'],
+    enabled: isEnabled,
+    initialPageParam: FIRST_PAGE,
+    queryFn: ({ pageParam }) => {
+      const query = new URLSearchParams({ limit: String(COMPARISON_PAGE_SIZE) });
+      if (pageParam !== null) query.set('cursor', pageParam);
+      return client.requestPage({
+        path: `${API_PATH.RUNS}/${runId}/model-teams/comparison?${query.toString()}`,
+        schema: comparisonItemSchema,
+      });
+    },
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
   });
 }
 
