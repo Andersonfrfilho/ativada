@@ -25,6 +25,12 @@ export const OFFICE_TERM = {
   MODEL_AGENT: 'modelAgent',
   IN_OBSERVATION: 'inObservation',
   WEIGHT: 'weight',
+  MODEL_TEAM: 'modelTeam',
+  TEAM_ROLE: 'teamRole',
+  DUEL: 'duel',
+  ESTIMATED_COST: 'estimatedCost',
+  COST_CEILING: 'costCeiling',
+  ON_DEMAND: 'onDemand',
 } as const;
 
 export type OfficeTerm = (typeof OFFICE_TERM)[keyof typeof OFFICE_TERM];
@@ -112,10 +118,42 @@ export const OFFICE_ENTRIES: Readonly<Record<OfficeTerm, GlossaryEntry>> = {
   [OFFICE_TERM.IN_OBSERVATION]: {
     label: 'Em observação',
     phrase: 'Menos de 30 previsões contadas: ainda não dá para medir o acerto, então não vota.',
-    example: 'Exemplo: Nina, Lucas e Clara: faltam 30.',
+    example: 'Exemplo: Nina: 12 contadas, faltam 18.',
   },
   [OFFICE_TERM.WEIGHT]: {
     label: 'Peso',
     phrase: 'Quanto o voto conta para a Alice. Quem não provou valor tem peso 0.',
+  },
+  [OFFICE_TERM.MODEL_TEAM]: {
+    label: 'Equipe de modelo',
+    phrase:
+      'Um modelo de linguagem com três papéis (tendência, risco e gestor) que indica compra, venda ou espera. Pode errar.',
+    example: 'Exemplo: ◆ Nina (Gemini) indica comprar.',
+  },
+  [OFFICE_TERM.TEAM_ROLE]: {
+    label: 'Papel',
+    phrase:
+      'Cada equipe tem três papéis: o analista de tendência, o analista de risco e o gestor, que dá a indicação.',
+  },
+  [OFFICE_TERM.DUEL]: {
+    label: 'Duelo',
+    phrase:
+      'Equipes e regras operam o mesmo par, na mesma vela e com o mesmo saldo fictício, para comparar.',
+  },
+  [OFFICE_TERM.ESTIMATED_COST]: {
+    label: 'Custo estimado',
+    phrase:
+      'O gasto da chamada ao modelo, pelos tokens e pelo preço configurado. A fatura do provedor é a palavra final.',
+    example: 'Exemplo: US$ 0,0109 por opinião.',
+  },
+  [OFFICE_TERM.COST_CEILING]: {
+    label: 'Teto de custo',
+    phrase:
+      'O limite de gasto com modelos por dia e por mês; ao chegar nele, as equipes param até o período virar.',
+  },
+  [OFFICE_TERM.ON_DEMAND]: {
+    label: 'Pedido avulso',
+    phrase:
+      'Uma opinião pedida na hora, só para testar. Não entra no placar de acertos e nunca comanda ordem.',
   },
 };

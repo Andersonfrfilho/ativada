@@ -337,3 +337,13 @@ Autorização (usuário): tela das equipes. Não autorizados e não usados: chav
 - Teste: `test/model-teams-queries.contract.tsx` (5), com `test/support/model-teams-fixtures.ts` (rotas falsas das equipes) na lista explícita do `package.json` do painel.
 - Pendências de dado da API (nada mudado aqui): (1) a API não devolve o **id do modelo** (só `modelFamily`, "Gemini Pro" etc.) nem o **teto de custo** do dia/mês: a ficha mostra a família do modelo e o
   custo de hoje e do mês, sem a barra "contra o teto". Se quiser os dois na tela, é campo aditivo em `GET /v1/runs/:id/model-teams` (`modelId`, `budget { dailyUsd, monthlyUsd }`).
+
+### T5.6 — Preferências: interruptor por equipe (feita logo depois da T5.1 para o usuário poder ligar as equipes)
+
+- `src/account/model-teams/ModelTeamsCard.component.tsx` na página Conta (âncora `#equipes`): uma linha por equipe (Nina, Lucas, Olívia) com `role="switch"` DESLIGADO por padrão (vem de `GET /v1/me/model-teams`),
+  a palavra "Ligada/Desligada", a família do modelo e a nuvem, o estado do provedor em ícone + palavra ("sem chave configurada", "parada pelo teto de custo", "provedor fora (tentando de novo às HH:MM)"...) e a
+  frase de custo ("gasta API na sua instalação"). Marca por equipe sem depender de cor: borda tracejada, pontilhada ou dupla + a inicial/nome.
+- `src/runs/model-teams/team-badge.ts`: o selo (ícone + palavra + tom) puro, usado também pela varanda e pela ficha.
+- Glossário (RF23): `Equipe de modelo`, `Papel`, `Duelo`, `Custo estimado`, `Teto de custo`, `Pedido avulso` (uma frase de até 120 caracteres; o teste do glossário confere); o exemplo de "Em observação" deixou de citar a Clara.
+- Teste: `test/model-teams-preferences.contract.tsx` (3: desligadas por padrão, estado em palavra, PATCH `{enabled}`, foco, nenhuma palavra proibida); `account.contract.tsx` ganhou a rota falsa de `GET /v1/me/model-teams`.
+  O teste de tema do `account.contract` só passa depois do `theme-store.contract` (dependência de ordem que já existia; o `package.json` os lista nessa ordem).

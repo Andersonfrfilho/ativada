@@ -57,6 +57,12 @@ describe('glossary', () => {
         'Agente de modelo',
         'Em observação',
         'Peso',
+        'Equipe de modelo',
+        'Papel',
+        'Duelo',
+        'Custo estimado',
+        'Teto de custo',
+        'Pedido avulso',
       ].sort(),
     );
   });
