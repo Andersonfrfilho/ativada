@@ -6,9 +6,11 @@ import { Term } from '../../../glossary/Term.component.js';
 import { Icon } from '../../../layout/Icon.component.js';
 import { StatusChip } from '../../live-tracking/StatusChip.component.js';
 import type { SeatState } from '../team-room-sequence.js';
-import { TeamFigure } from '../TeamFigure.component.js';
+import type { Gesture } from '../motion/gesture.js';
+import { TeamFigure, type TeamFigureProps } from '../TeamFigure.component.js';
 import type { BalconyAgent } from './balcony-agents.js';
 import { BALCONY_TEXT, type BalconySlot } from './balcony.constant.js';
+import { useSlotMotion } from './balcony-scene.context.js';
 import styles from './Balcony.module.css';
 import { useLeaderFocus } from './leader-focus.context.js';
 import { useBadgeSheet } from './useBadgeSheet.hook.js';
@@ -130,6 +132,14 @@ function Badge({ agent, onActivate, onLeave, renderSheet }: BadgeProps): ReactEl
   );
 }
 
+function figureOf(
+  agent: BalconyAgent,
+  state: SeatState,
+  gesture: Gesture | undefined,
+): TeamFigureProps {
+  return { role: agent.figureRole, tone: agent.tone, state, isRinging: false, gesture };
+}
+
 // Um agente em pé na varanda: o bonequinho olhando o gráfico, o crachá no parapeito e o balão curto.
 export function BalconyAgentSlot({
   agent,
@@ -145,6 +155,7 @@ export function BalconyAgentSlot({
     const bubble = slotRef.current?.lastElementChild;
     if (bubble instanceof HTMLElement) leader?.setFocus({ slot, element: bubble });
   }
+  const motion = useSlotMotion(agent.slot);
   return (
     <li
       ref={slotRef}
@@ -153,9 +164,11 @@ export function BalconyAgentSlot({
       data-state={state}
       data-active={isActive}
       data-kind={agent.kind}
+      data-speaking={motion.isTurns ? motion.isSpeaking : undefined}
+      data-gesture={motion.gesture}
     >
       <div className={styles.figure}>
-        <TeamFigure role={agent.figureRole} tone={agent.tone} state={state} isRinging={false} />
+        <TeamFigure {...figureOf(agent, state, motion.gesture)} />
       </div>
       <Badge
         agent={agent}

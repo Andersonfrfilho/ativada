@@ -794,3 +794,47 @@
 :global([data-viewport='short']) .leader[data-forming-band] {
   display: block;
 }
+
+/* Escritório vivo: balões em turnos (um fala por vez) e o andar de lado. Só com a cena se mexendo (`data-turns`), de 700 px para
+   cima; no celular vale o balão ativo por toque. Só `transform`/`translate` e `opacity`. */
+@media (min-width: 700px) {
+  .balcony[data-turns='on'] .slot[data-speaking='false'] .bubble {
+    opacity: 0;
+  }
+
+  .balcony[data-turns='on'] .slot[data-speaking='false']:hover .bubble,
+  .balcony[data-turns='on'] .slot[data-speaking='false']:focus-within .bubble {
+    opacity: 1;
+  }
+}
+
+@keyframes sway {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  25% {
+    translate: 6px 0;
+  }
+  75% {
+    translate: -6px 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .balcony[data-turns='on'] .slot .bubble {
+    transition: opacity var(--motion-medium) var(--ease-out);
+  }
+
+  .slot[data-gesture='sway'] .figure {
+    animation: sway calc(var(--motion-walk) * 2) ease-in-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .balcony[data-turns='on'] .slot .bubble,
+  .slot[data-gesture='sway'] .figure {
+    animation: none;
+    transition: none;
+  }
+}

@@ -141,6 +141,7 @@ function LoadedBalcony(props: LoadedProps): ReactElement {
           auditor={model.auditor}
           horizon={horizonOf(model, props.status, timeZone)}
           step={step}
+          isAnimationOn={props.isAnimationOn !== false}
         />
       )}
       <p className={styles.visuallyHidden} role="status" aria-live="polite">

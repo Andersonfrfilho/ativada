@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import type { Gesture } from './motion/gesture.js';
 import styles from './TeamFigure.module.css';
 import type { SeatState } from './team-room-sequence.js';
 import type { SeatTone } from './team-room.types.js';
@@ -33,10 +34,15 @@ function Legs(): ReactElement {
 function Torso(): ReactElement {
   return (
     <>
-      <rect className={styles.sleeve} x="18" y="48" width="9" height="22" rx="4" />
-      <rect className={styles.sleeve} x="53" y="48" width="9" height="22" rx="4" />
-      <circle className={styles.skin} cx="22.5" cy="71" r="4" />
-      <circle className={styles.skin} cx="57.5" cy="71" r="4" />
+      <g className={styles.armLeft}>
+        <rect className={styles.sleeve} x="18" y="48" width="9" height="22" rx="4" />
+        <circle className={styles.skin} cx="22.5" cy="71" r="4" />
+      </g>
+      <g className={styles.armRight}>
+        <rect className={styles.sleeve} x="53" y="48" width="9" height="22" rx="4" />
+        <circle className={styles.skin} cx="57.5" cy="71" r="4" />
+        <rect className={styles.paper} x="55" y="60" width="14" height="17" rx="1.5" />
+      </g>
       <rect className={styles.shirt} x="26" y="45" width="28" height="31" rx="7" />
       <rect className={styles.skin} x="36" y="39" width="8" height="8" />
     </>
@@ -97,12 +103,22 @@ export type TeamFigureProps = {
   readonly tone: SeatTone;
   readonly state: SeatState;
   readonly isRinging: boolean;
+  // O gesto de mãos da cena viva; sem ele (movimento parado ou reduzido) o bonequinho fica na pose fixa.
+  readonly gesture?: Gesture | undefined;
 };
 
-function classNameOf({ role, tone, state, isRinging }: TeamFigureProps): string {
+const GESTURE_CLASS: Readonly<Record<Gesture, string | undefined>> = {
+  type: styles.gestureType,
+  paper: styles.gesturePaper,
+  point: styles.gesturePoint,
+  sway: undefined,
+};
+
+function classNameOf({ role, tone, state, isRinging, gesture }: TeamFigureProps): string {
   return [
     styles.figure,
     ROLE_CLASS[role],
+    gesture === undefined ? undefined : GESTURE_CLASS[gesture],
     tone === 'quiet' ? styles.quiet : undefined,
     tone === 'voter' ? styles.lit : undefined,
     state === 'thinking' ? styles.thinking : undefined,

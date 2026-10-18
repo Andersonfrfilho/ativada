@@ -168,3 +168,71 @@
   --skin: var(--skin-4);
   --hair: var(--hair-5);
 }
+
+/* Mãos e papéis (escritório vivo): os braços giram no ombro; o papel só aparece no gesto de levar papéis. Só `transform` e `opacity`. */
+.armLeft,
+.armRight {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+}
+
+.paper {
+  fill: var(--surface);
+  stroke: var(--ink-3);
+  stroke-width: 1;
+  opacity: 0;
+}
+
+@keyframes tap-left {
+  from {
+    transform: rotate(7deg);
+  }
+  to {
+    transform: rotate(-4deg);
+  }
+}
+
+@keyframes tap-right {
+  from {
+    transform: rotate(-4deg);
+  }
+  to {
+    transform: rotate(7deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .gestureType .armLeft {
+    animation: tap-left var(--motion-fast) ease-in-out infinite alternate;
+  }
+
+  .gestureType .armRight {
+    animation: tap-right var(--motion-fast) ease-in-out infinite alternate;
+  }
+
+  .gesturePoint .armRight {
+    transform: rotate(-58deg);
+    transition: transform var(--motion-medium) var(--ease-out);
+  }
+
+  .gesturePaper .armRight {
+    transform: rotate(-28deg);
+    transition: transform var(--motion-medium) var(--ease-out);
+  }
+
+  .gesturePaper .paper {
+    opacity: 1;
+    transition: opacity var(--motion-fast) var(--ease-out);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gestureType .armLeft,
+  .gestureType .armRight,
+  .gesturePoint .armRight,
+  .gesturePaper .armRight,
+  .gesturePaper .paper {
+    animation: none;
+    transition: none;
+  }
+}
