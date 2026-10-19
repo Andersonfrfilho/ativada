@@ -384,6 +384,7 @@ describe('backtest detail', () => {
     ];
     const { fake } = renderApp({ path: '/backtests/run-1', isAuthenticated: true, routes });
     fireEvent.click(await screen.findByRole('button', { name: 'Cancelar execução' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirmar: cancelar execução' }));
     await waitFor(() => expect(fake.callsTo('POST', '/v1/runs/run-1/stop')).toHaveLength(1));
   });
 

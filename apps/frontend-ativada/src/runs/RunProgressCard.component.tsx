@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 
 import { Card } from '../layout/Card.component.js';
 import { Icon } from '../layout/Icon.component.js';
@@ -11,6 +11,73 @@ import { useStopRunMutation } from './runs.query.js';
 import type { RunDetail } from './run.validation.js';
 
 export type RunProgressCardProps = { readonly run: RunDetail };
+
+type StopControlProps = {
+  readonly label: string;
+  readonly isPending: boolean;
+  readonly onStop: () => void;
+};
+
+type ConfirmStopProps = {
+  readonly label: string;
+  readonly isPending: boolean;
+  readonly onStop: () => void;
+  readonly onBack: () => void;
+};
+
+function ConfirmStop({ label, isPending, onStop, onBack }: ConfirmStopProps): ReactElement {
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    confirmRef.current?.focus();
+  }, []);
+  return (
+    <div
+      className={styles.row}
+      role="group"
+      aria-label="Confirmar o cancelamento"
+      onKeyDown={(event) => event.key === 'Escape' && onBack()}
+    >
+      <button
+        ref={confirmRef}
+        type="button"
+        className={`${controls.button} ${controls.danger}`}
+        disabled={isPending}
+        onClick={onStop}
+      >
+        {`Confirmar: ${label.toLowerCase()}`}
+      </button>
+      <button type="button" className={controls.button} onClick={onBack}>
+        Voltar
+      </button>
+    </div>
+  );
+}
+
+// O primeiro clique arma, o segundo cancela; "Voltar" ou Esc desarmam e o foco vai para a confirmação.
+function StopControl({ label, isPending, onStop }: StopControlProps): ReactElement {
+  const [isConfirming, setIsConfirming] = useState(false);
+  if (isConfirming) {
+    return (
+      <ConfirmStop
+        label={label}
+        isPending={isPending}
+        onStop={onStop}
+        onBack={() => setIsConfirming(false)}
+      />
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={`${controls.button} ${controls.danger}`}
+      disabled={isPending}
+      onClick={() => setIsConfirming(true)}
+    >
+      <Icon name="stop" size={14} />
+      {label}
+    </button>
+  );
+}
 
 // Simulação ao vivo não termina sozinha: sem barra de andamento, o cartão fica no fim da tela e explica o que o cancelar faz.
 export function RunProgressCard({ run }: RunProgressCardProps): ReactElement {
@@ -40,15 +107,11 @@ export function RunProgressCard({ run }: RunProgressCardProps): ReactElement {
         />
       )}
       <div className={styles.row}>
-        <button
-          type="button"
-          className={`${controls.button} ${controls.danger}`}
-          disabled={stop.isPending}
-          onClick={() => stop.mutate()}
-        >
-          <Icon name="stop" size={14} />
-          {isLive ? 'Cancelar simulação' : 'Cancelar execução'}
-        </button>
+        <StopControl
+          label={isLive ? 'Cancelar simulação' : 'Cancelar execução'}
+          isPending={stop.isPending}
+          onStop={() => stop.mutate()}
+        />
       </div>
     </Card>
   );
