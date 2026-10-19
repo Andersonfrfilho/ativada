@@ -484,3 +484,13 @@ cenário isométrico (janela, quadro de cotações, relógio, plantas), mesas co
 - Ajustes desta retomada: `walkCues` recebe objeto (limite de 3 parâmetros); testes do palco frontal antigo gravam `officeView: 'front'`
   (o padrão agora é o isométrico); erro de tipo e expectativas do `iso-office` corrigidos.
 - Gates: `bun run typecheck` verde, `bun run lint` verde, `bun run format:check` verde, `bun run --cwd apps/frontend-ativada test` 1.602 passam, 0 falham.
+
+## Fase 2, E3: botão Calmo e movimento reduzido (2026-10-19)
+
+- Botão "Calmo" em `TeamRoomControls` (`aria-pressed`, `useCalm`): a escolha fica em `localStorage` (`ativada.team-room.calm`), com leitura e escrita
+  dentro de `try/catch` (armazenamento bloqueado = ritmo normal, sem lançar), e vale para a varanda e o escritório. O ritmo calmo já dobrava
+  intervalos e alongava passos (`motion-rhythm.ts`, contratos `balcony-motion` e `iso-office`).
+- `prefers-reduced-motion` (`useReducedMotion`): sem atributos de movimento, sem classes de passo e nada agendado, provado em `iso-office`,
+  `balcony-motion` e `office-scenes`.
+- Contrato novo `calm-button.contract.tsx` (liga/desliga, lembrado, armazenamento bloqueado), na lista explícita do `test`.
+- Gates: typecheck, lint e format:check verdes; `bun run --cwd apps/frontend-ativada test` 1.605 passam, 0 falham.

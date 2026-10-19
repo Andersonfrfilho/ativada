@@ -2,6 +2,8 @@
 import type { ReactElement } from 'react';
 
 import { Icon } from '../../layout/Icon.component.js';
+import { useCalm } from './motion/useCalm.hook.js';
+import { OFFICE_TEXT } from './office/office.constant.js';
 import styles from './TeamRoomCard.module.css';
 import { TEAM_LAYOUT, type TeamLayout, type TeamRoomPreference } from './team-room-preference.js';
 import { TEAM_ROOM_TEXT } from './team-room.constant.js';
@@ -63,6 +65,22 @@ function PauseButton({
   );
 }
 
+// O ritmo calmo (passos mais lentos e pausas mais longas), lembrado neste navegador e igual na varanda e no escritório.
+function CalmButton(): ReactElement {
+  const { isCalm, setCalm } = useCalm();
+  return (
+    <button
+      type="button"
+      className={styles.tool}
+      aria-pressed={isCalm}
+      title={OFFICE_TEXT.CALM_NOTE}
+      onClick={() => setCalm(!isCalm)}
+    >
+      {OFFICE_TEXT.CALM}
+    </button>
+  );
+}
+
 // Repetir a animação, ligar e desligar a animação e recolher a sala: preferências de tela, lembradas neste navegador.
 export function TeamRoomControls(props: TeamRoomControlsProps): ReactElement {
   const { preference, onChange, onReplay } = props;
@@ -79,6 +97,7 @@ export function TeamRoomControls(props: TeamRoomControlsProps): ReactElement {
         {TEAM_ROOM_TEXT.REPLAY}
       </button>
       <PauseButton {...props} />
+      <CalmButton />
       <button
         type="button"
         className={styles.tool}
