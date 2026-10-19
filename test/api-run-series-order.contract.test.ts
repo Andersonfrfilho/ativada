@@ -17,7 +17,7 @@ const RUNS = '/v1/runs';
 const FIRST = Date.UTC(2025, 0, 1);
 const ROWS = 7;
 const ORDERABLE = ['equity', 'signals'] as const;
-const ASCENDING_ONLY = ['trades', 'orders', 'fills', 'windows'] as const;
+const ASCENDING_ONLY = ['orders', 'fills', 'windows'] as const;
 
 let harness: RunsHarness;
 let runId: string;

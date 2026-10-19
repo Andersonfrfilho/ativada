@@ -466,14 +466,20 @@ export function createInMemoryRuns(
   const listPositions: InMemoryRuns['results']['listPositions'] = (scope, runId, params) => {
     listCalls.positions.push(params.limit);
     if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
-    const rows = storeOf(runId).positions.filter((row) => matchesPositionFilter(row, params));
+    const filtered = storeOf(runId).positions.filter((row) => matchesPositionFilter(row, params));
+    const isDescending = params.order === 'desc';
+    const rows = isDescending ? [...filtered].reverse() : filtered;
     return Promise.resolve(
       pageOf(
         rows,
         params,
         (row, cursor: PositionCursor) =>
-          row.openedCandleTime > cursor.openedCandleTime ||
-          (row.openedCandleTime === cursor.openedCandleTime && row.engineKey > cursor.engineKey),
+          isDescending
+            ? row.openedCandleTime < cursor.openedCandleTime ||
+              (row.openedCandleTime === cursor.openedCandleTime && row.engineKey < cursor.engineKey)
+            : row.openedCandleTime > cursor.openedCandleTime ||
+              (row.openedCandleTime === cursor.openedCandleTime &&
+                row.engineKey > cursor.engineKey),
         (row) => ({ openedCandleTime: row.openedCandleTime, engineKey: row.engineKey }),
       ),
     );

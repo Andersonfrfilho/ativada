@@ -111,6 +111,7 @@ export type TradesFilters = {
   readonly from?: number;
   readonly to?: number;
   readonly status?: 'open' | 'closed';
+  readonly order?: 'asc' | 'desc';
 };
 
 function tradesFilterParams(filters: TradesFilters): Record<string, string> {
@@ -118,6 +119,7 @@ function tradesFilterParams(filters: TradesFilters): Record<string, string> {
     ...(filters.from === undefined ? {} : { from: String(filters.from) }),
     ...(filters.to === undefined ? {} : { to: String(filters.to) }),
     ...(filters.status === undefined ? {} : { status: filters.status }),
+    ...(filters.order === undefined ? {} : { order: filters.order }),
   };
 }
 
@@ -127,7 +129,15 @@ export function useTradesQuery(
 ): UseInfiniteQueryResult<InfiniteData<Page<Trade>, string | null>> {
   const client = useApiClient();
   return useInfiniteQuery({
-    queryKey: [RUN_QUERY_ROOT, runId, 'trades', filters.from, filters.to, filters.status],
+    queryKey: [
+      RUN_QUERY_ROOT,
+      runId,
+      'trades',
+      filters.from,
+      filters.to,
+      filters.status,
+      filters.order,
+    ],
     initialPageParam: FIRST_PAGE,
     // A tabela segue a faixa do gráfico: a lista anterior fica na tela enquanto a nova faixa carrega.
     placeholderData: keepPreviousData,

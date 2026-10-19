@@ -40,7 +40,7 @@ const TRADE_SCHEMA = z.strictObject({
 
 export const RUN_TRADES_DOCUMENTATION: RouteDocumentation = {
   summary:
-    'Operações (posições abertas e fechadas), em ordem de abertura. `from`/`to` (ms UTC, `[from, to)`) trazem as que ' +
+    'Operações (posições abertas e fechadas), em ordem de abertura (`order=desc` começa pela mais recente). `from`/`to` (ms UTC, `[from, to)`) trazem as que ' +
     'compraram ou venderam na faixa; `status=open|closed` separa abertas de fechadas. Valor pago = notional da compra ' +
     'arredondado para cima + taxa; recebido = notional da venda arredondado para baixo - taxa; `netProfitRate` = ' +
     'resultado / pago, arredondado para baixo a 8 casas.',

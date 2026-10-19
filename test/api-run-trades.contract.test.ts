@@ -417,3 +417,35 @@ describe('validação e acesso', () => {
     expect(query?.safeParse({ status: 'x' }).success).toBe(false);
   });
 });
+
+describe('GET /v1/runs/:id/trades?order=desc', () => {
+  test('a primeira operação fechada já é a mais recente', async () => {
+    expect(keysOf(await trades('?status=closed&order=desc&limit=1'))).toStrictEqual(['c']);
+  });
+
+  test('percorre as fechadas do fim para o começo, sem repetir nem pular', async () => {
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    do {
+      const query: string = `?status=closed&order=desc&limit=1${
+        cursor === null ? '' : `&cursor=${encodeURIComponent(cursor)}`
+      }`;
+      const page = await trades(query);
+      seen.push(...keysOf(page));
+      cursor = page.pagination.nextCursor;
+    } while (cursor !== null);
+    expect(seen).toStrictEqual(['c', 'b', 'a']);
+  });
+
+  test('sem order, ou com order=asc, a ordem continua a de abertura', async () => {
+    expect(keysOf(await trades('?status=closed'))).toStrictEqual(['a', 'b', 'c']);
+    expect(keysOf(await trades('?status=closed&order=asc'))).toStrictEqual(['a', 'b', 'c']);
+  });
+
+  test('valor de order desconhecido é 400', async () => {
+    const { status } = await readJson(
+      await harness.call({ subject: SUBJECT_A, path: `${RUNS}/${runId}/trades?order=sideways` }),
+    );
+    expect(status).toBe(400);
+  });
+});

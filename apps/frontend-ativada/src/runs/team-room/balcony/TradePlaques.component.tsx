@@ -40,7 +40,8 @@ export function TradePlaques({ runId }: { readonly runId: string }): ReactElemen
   const timeZone = useUserTimeZone();
   const run = useRunDetailQuery(runId).data;
   const open = useTradesQuery(runId, { status: 'open' }).data?.pages[0]?.items[0];
-  const closed = useTradesQuery(runId, { status: 'closed' }).data?.pages[0]?.items[0];
+  const closed = useTradesQuery(runId, { status: 'closed', order: 'desc' }).data?.pages[0]
+    ?.items[0];
   const shown = useShownPrice(run?.symbol ?? '');
   if (run === undefined) return null;
   const plaques = buildPlaques({

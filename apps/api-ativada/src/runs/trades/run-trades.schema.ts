@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { RESULT_ORDER } from '@ativada/database';
 import { z } from '@ativada/environment';
 
 import { PAGE_QUERY_SHAPE } from '../../shared/pagination/page-query.schema.js';
@@ -11,5 +12,6 @@ export const tradesQuerySchema = z
     ...PAGE_QUERY_SHAPE,
     ...RANGE_QUERY_SHAPE,
     status: z.enum(TRADE_STATUS_FILTER).optional(),
+    order: z.enum(RESULT_ORDER).optional(),
   })
   .superRefine(requireRangeOrder);

@@ -1,25 +1,30 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { and, asc, eq, gt, gte, lt, or, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, lt, or, type SQL } from 'drizzle-orm';
 
 import { ownerCondition } from '../ownership/owner-scope.js';
 import { positions } from '../schema/positions.schema.js';
 import { clampLimit, toPage, type ListRequest } from './run-result-list.js';
 import { toPositionInput } from './run-result-record.mapper.js';
-import type {
-  ListPositionsParams,
-  PositionCursor,
-  PositionInput,
-  ResultPage,
-  TimeRange,
+import {
+  RESULT_ORDER,
+  type ListPositionsParams,
+  type PositionCursor,
+  type PositionInput,
+  type ResultPage,
+  type TimeRange,
 } from './run-result.types.js';
 
-function afterPosition(after: PositionCursor | undefined): SQL | undefined {
+// Decrescente: o cursor é a última posição entregue e a próxima página é a anterior a ela.
+function afterPosition(params: ListPositionsParams): SQL | undefined {
+  const { after } = params;
   if (after === undefined) return undefined;
+  const isDescending = params.order === RESULT_ORDER.DESCENDING;
+  const compare = isDescending ? lt : gt;
   return or(
-    gt(positions.openedCandleTime, after.openedCandleTime),
+    compare(positions.openedCandleTime, after.openedCandleTime),
     and(
       eq(positions.openedCandleTime, after.openedCandleTime),
-      gt(positions.engineKey, after.engineKey),
+      compare(positions.engineKey, after.engineKey),
     ),
   );
 }
@@ -34,6 +39,11 @@ function positionRangeCondition(range: TimeRange | undefined): SQL | undefined {
   return or(isInside(positions.openedCandleTime), isInside(positions.closedCandleTime));
 }
 
+function positionOrder(params: ListPositionsParams): SQL[] {
+  const direction = params.order === RESULT_ORDER.DESCENDING ? desc : asc;
+  return [direction(positions.openedCandleTime), direction(positions.engineKey)];
+}
+
 export async function listPositions(
   request: Omit<ListRequest<PositionCursor>, 'params'> & { readonly params: ListPositionsParams },
 ): Promise<ResultPage<PositionInput, PositionCursor>> {
@@ -46,12 +56,12 @@ export async function listPositions(
       and(
         ownerCondition(scope, positions.userId),
         eq(positions.runId, runId),
-        afterPosition(params.after),
+        afterPosition(params),
         positionRangeCondition(params.range),
         params.status === undefined ? undefined : eq(positions.status, params.status),
       ),
     )
-    .orderBy(asc(positions.openedCandleTime), asc(positions.engineKey))
+    .orderBy(...positionOrder(params))
     .limit(limit + 1);
   const cursorOf = (row: (typeof rows)[number]): PositionCursor => ({
     openedCandleTime: row.openedCandleTime,

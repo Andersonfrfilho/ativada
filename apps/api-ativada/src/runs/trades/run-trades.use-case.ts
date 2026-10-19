@@ -5,6 +5,7 @@ import type {
   PositionCursor,
   PositionInput,
   PositionStatus,
+  ResultOrder,
   RunResultRepository,
   TimeRange,
 } from '@ativada/database';
@@ -23,6 +24,7 @@ export type RunTradesDependencies = {
 export type TradesPageInput = PageInput<PositionCursor> & {
   readonly range?: TimeRange | undefined;
   readonly status?: PositionStatus | undefined;
+  readonly order?: ResultOrder;
 };
 
 // Os campos antigos continuam como estavam; os novos só acrescentam (spec 005, D1).

@@ -28,6 +28,7 @@ function readTradesInput(request: Request): TradesPageInput {
       ? { from: query.from ?? OPEN_ENDED_START, to: query.to ?? OPEN_ENDED_END }
       : undefined,
     status: query.status,
+    ...(query.order === undefined ? {} : { order: query.order }),
   };
 }
 
