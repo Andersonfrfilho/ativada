@@ -1,8 +1,5 @@
 /* A varanda: a equipe em pé acima do gráfico, olhando o pregão; a lousa ao lado. Posições por seletor de assento, sem estilo inline. */
 .frame {
-  position: sticky;
-  top: 40px;
-  z-index: 15;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -403,12 +400,8 @@
   }
 }
 
-/* Celular: a varanda vira barra fixa no topo do gráfico, um balão por vez, e a lousa sobe do rodapé como folha. */
+/* Celular: um balão por vez e a lousa em folha recolhível dentro do fluxo (nunca fixa sobre o rodapé). */
 @media (max-width: 699px) {
-  .frame {
-    top: 60px;
-  }
-
   .moment,
   .fixedLine {
     display: none;
@@ -469,11 +462,6 @@
   }
 
   .board {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 25;
     border-width: 2px 0 0;
     border-radius: 12px 12px 0 0;
   }
