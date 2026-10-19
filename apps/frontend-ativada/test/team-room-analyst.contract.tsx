@@ -57,7 +57,10 @@ function openWith(
   probe: ReactElement,
 ): ReturnType<typeof renderApp> {
   // O escritório abre recolhido por padrão; estes testes olham o palco aberto.
-  localStorage.setItem(TEAM_ROOM_STORAGE_KEY, JSON.stringify({ isCollapsed: false }));
+  localStorage.setItem(
+    TEAM_ROOM_STORAGE_KEY,
+    JSON.stringify({ isCollapsed: false, officeView: 'front' }),
+  );
   return renderApp({
     path: '/',
     isAuthenticated: true,

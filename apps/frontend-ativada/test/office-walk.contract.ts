@@ -160,7 +160,8 @@ describe('roteiro de movimento (dado puro)', () => {
     for (const cue of cycle.cues) {
       for (const move of moves([cue.payload])) {
         if (meetingCells.has(keyOf(move.cell))) reached.add(move.slot);
-        if (move.slot === 'alice') expect(move.cell).toEqual(deskSpecOf('alice')?.seat);
+        if (move.slot === 'alice')
+          expect(keyOf(move.cell)).toBe(keyOf(OFFICE_DESKS[4]?.seat ?? { x: -1, y: -1 }));
       }
     }
     expect([...reached].sort()).toEqual(['otavio', 'renata', 'sofia', 'tiago', 'vitor']);

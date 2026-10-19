@@ -52,7 +52,10 @@ function open(
 ): RenderedApp {
   // O escritório abre recolhido por padrão ("Ver o escritório"); estes testes olham o palco aberto.
   if (localStorage.getItem(TEAM_ROOM_STORAGE_KEY) === null) {
-    localStorage.setItem(TEAM_ROOM_STORAGE_KEY, JSON.stringify({ isCollapsed: false }));
+    localStorage.setItem(
+      TEAM_ROOM_STORAGE_KEY,
+      JSON.stringify({ isCollapsed: false, officeView: 'front' }),
+    );
   }
   return renderApp({
     path: '/',
@@ -216,7 +219,7 @@ describe('sala da equipe: movimento só na vela nova', () => {
   test('with the animation turned off the new candle goes straight to the final state', async () => {
     localStorage.setItem(
       TEAM_ROOM_STORAGE_KEY,
-      JSON.stringify({ isAnimationOn: false, isCollapsed: false }),
+      JSON.stringify({ isAnimationOn: false, isCollapsed: false, officeView: 'front' }),
     );
     const harness = createRoomHarness();
     const app = open(harness);

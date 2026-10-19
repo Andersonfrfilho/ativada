@@ -47,7 +47,10 @@ function Room(): ReactElement {
 }
 
 function openOffice(harness: LiveHarness): RenderedApp {
-  localStorage.setItem(TEAM_ROOM_STORAGE_KEY, JSON.stringify({ isCollapsed: false }));
+  localStorage.setItem(
+    TEAM_ROOM_STORAGE_KEY,
+    JSON.stringify({ isCollapsed: false, officeView: 'front' }),
+  );
   return renderApp({
     path: '/',
     isAuthenticated: true,

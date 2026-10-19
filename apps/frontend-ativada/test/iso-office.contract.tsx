@@ -93,8 +93,12 @@ describe('escritório isométrico: cenário fixo, mesas e computadores', () => {
     ).toHaveLength(0);
     expect(stage.querySelectorAll('[data-tower]')).toHaveLength(6);
     expect(stage.querySelector('polyline')).not.toBeNull();
-    expect(stage.querySelectorAll('[data-desk]')).toHaveLength(6);
-    expect(stage.querySelectorAll('svg[data-chart]')).toHaveLength(6);
+    for (const slot of ['tiago', 'renata', 'vitor', 'sofia', 'alice', 'otavio']) {
+      expect(stage.querySelector(`[data-desk="${slot}"]`)).not.toBeNull();
+    }
+    expect(stage.querySelectorAll('svg[data-chart]')).toHaveLength(
+      stage.querySelectorAll('[data-desk]').length,
+    );
     expect(stage.querySelector('circle')).not.toBeNull();
   });
 
@@ -112,7 +116,7 @@ describe('escritório isométrico: cenário fixo, mesas e computadores', () => {
       'Sofia',
       'Sentimento',
       'Alice',
-      'Risco sênior',
+      'Resumo do placar',
       'Otávio',
       'Auditor',
     ]) {

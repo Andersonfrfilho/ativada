@@ -39,13 +39,18 @@ function seatOf(slot: BalconySlot): Cell | undefined {
 }
 
 // Os passos de um caminho: uma casa por `step`, a pessoa em marcha; no fim, a pose de quem chegou.
-function walkCues(
-  slot: BalconySlot,
-  path: readonly Cell[],
-  at: number,
-  rhythm: Rhythm,
-  arrival: Pose,
-): { readonly cues: readonly OfficeCue[]; readonly endsAt: number } {
+type WalkParams = {
+  readonly slot: BalconySlot;
+  readonly path: readonly Cell[];
+  readonly at: number;
+  readonly rhythm: Rhythm;
+  readonly arrival: Pose;
+};
+
+function walkCues({ slot, path, at, rhythm, arrival }: WalkParams): {
+  readonly cues: readonly OfficeCue[];
+  readonly endsAt: number;
+} {
   const step = rhythm.stepMilliseconds;
   const moves = path.map((cell, index) => ({
     at: at + index * step,
@@ -76,8 +81,14 @@ function tripCues(trip: Trip, at: number, rhythm: Rhythm): { cues: OfficeCue[]; 
   if (there === undefined || back === undefined || there.length === 0) {
     return { cues: [], endsAt: at };
   }
-  const go = walkCues(trip.slot, there, at, rhythm, trip.pose);
-  const home = walkCues(trip.slot, back, go.endsAt + trip.dwell, rhythm, 'sit');
+  const go = walkCues({ slot: trip.slot, path: there, at, rhythm, arrival: trip.pose });
+  const home = walkCues({
+    slot: trip.slot,
+    path: back,
+    at: go.endsAt + trip.dwell,
+    rhythm,
+    arrival: 'sit',
+  });
   return { cues: [...go.cues, ...home.cues], endsAt: home.endsAt };
 }
 

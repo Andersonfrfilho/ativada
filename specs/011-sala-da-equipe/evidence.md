@@ -472,3 +472,15 @@ Verificado sem achado: limpeza de timers, observers e `scene-runner` (pausa/reto
 
 Pendente (baixa): `FormingBand.component.tsx` e `LeaderOverlay.component.tsx` refazem os listeners e medem de novo a cada render do pai
 (`props` é objeto novo a cada movimento da cruz); depender dos campos primitivos ou ler `props` por ref e evitar `setState` quando a caixa não muda.
+
+## Fase 2, E2: aba Escritório isométrica (2026-10-19)
+
+Retomada no Linux a partir do WIP salvo (d232ab9). Grade 14 × 10, rotas por busca em largura, roteiro puro com semente (`office-script.ts`),
+cenário isométrico (janela, quadro de cotações, relógio, plantas), mesas com tela, agentes que andam e escolha Andando/Frontal lembrada.
+
+- Contratos `office-walk.contract.ts` (mesas sem sobreposição, rotas fora dos móveis, volta ao assento, no máximo um fora do lugar, mesma semente = mesmo roteiro)
+  e `iso-office.contract.tsx` (cenário decorativo, só equipes ligadas com mesa, ninguém sobre móvel, assentos ao fim, movimento reduzido sem
+  agendar nada, escolha do cenário lembrada, CSS só com `transform` e ritmo espelhado), ambos na lista explícita do script `test`.
+- Ajustes desta retomada: `walkCues` recebe objeto (limite de 3 parâmetros); testes do palco frontal antigo gravam `officeView: 'front'`
+  (o padrão agora é o isométrico); erro de tipo e expectativas do `iso-office` corrigidos.
+- Gates: `bun run typecheck` verde, `bun run lint` verde, `bun run format:check` verde, `bun run --cwd apps/frontend-ativada test` 1.602 passam, 0 falham.
