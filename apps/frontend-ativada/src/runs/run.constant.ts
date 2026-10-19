@@ -20,6 +20,8 @@ export type RunStatus = (typeof RUN_STATUS)[keyof typeof RUN_STATUS];
 export const TIMEFRAMES = ['15m', '1h', '4h', '1d'] as const;
 
 export const RUN_POLL_MILLISECONDS = 2_000;
+// Simulação ao vivo rodando: o WebSocket invalida o detalhe, então a consulta periódica é só rede de segurança.
+export const LIVE_RUN_POLL_MILLISECONDS = 60_000;
 export const LIST_PAGE_SIZE = 20;
 export const CURVE_MAX_POINTS = 240;
 

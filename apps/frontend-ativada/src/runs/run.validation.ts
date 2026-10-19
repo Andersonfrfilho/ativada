@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@ativada/environment';
 
-import { RUN_STATUS } from './run.constant.js';
+import { LIVE_RUN_POLL_MILLISECONDS, RUN_KIND, RUN_STATUS } from './run.constant.js';
 import { decimalText } from '../http/decimal.validation.js';
 import { signalSourceSchema } from './model-teams/model-teams.validation.js';
 
@@ -140,4 +140,14 @@ export function parseOverfitting(value: unknown): Overfitting | undefined {
 
 export function isActiveRun(run: Pick<Run, 'status'>): boolean {
   return run.status === RUN_STATUS.QUEUED || run.status === RUN_STATUS.RUNNING;
+}
+
+// Backtest e simulação na fila acompanham de perto; a simulação ao vivo rodando espera o aviso do WebSocket.
+export function detailPollInterval(
+  run: Pick<Run, 'status' | 'kind'>,
+  activeMilliseconds: number,
+): number | false {
+  if (!isActiveRun(run)) return false;
+  const isLiveRunning = run.kind === RUN_KIND.LIVE_PAPER && run.status === RUN_STATUS.RUNNING;
+  return isLiveRunning ? LIVE_RUN_POLL_MILLISECONDS : activeMilliseconds;
 }

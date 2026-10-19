@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 
 import { deriveLiveRunState, type LiveRunStatusInput } from '../src/runs/live-run-status.js';
 import { dataResponse, pageResponse, type FakeRoute } from './support/fake-fetch.js';
@@ -277,7 +277,7 @@ describe('on the overview balance card', () => {
 
   test('stalled: a banner with shape and words, and it goes away when the field goes away', async () => {
     let stalledSince: number | undefined = Date.parse('2026-10-13T16:15:00.000Z');
-    renderApp({
+    const app = renderApp({
       path: '/',
       isAuthenticated: true,
       routes: overviewRoutes(() => (stalledSince === undefined ? {} : { stalledSince })),
@@ -287,6 +287,10 @@ describe('on the overview balance card', () => {
     expect(banner.textContent).toContain('Parada.');
     expect(banner.textContent).toContain('⚠');
     stalledSince = undefined;
+    // A simulação rodando não é consultada a cada 2 s: o aviso do WebSocket refaz o detalhe.
+    act(() =>
+      app.stream.emit({ type: 'event', runId: 'run-live', kind: 'fill', eventId: 'e1', at: 1 }),
+    );
     // Booleano: um `toBeNull` falho serializa o elemento do DOM e leva segundos por tentativa.
     await waitFor(() => expect(screen.queryByText(STALLED) === null).toBe(true));
     expect(screen.getByText(/Aguardando a primeira vela/)).toBeDefined();

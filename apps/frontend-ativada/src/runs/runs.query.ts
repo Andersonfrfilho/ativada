@@ -24,6 +24,7 @@ import {
   type RunKind,
 } from './run.constant.js';
 import {
+  detailPollInterval,
   isActiveRun,
   runDetailSchema,
   runSchema,
@@ -60,7 +61,9 @@ export function useRunDetailQuery(runId: string): UseQueryResult<RunDetail> {
     queryKey: [RUN_QUERY_ROOT, runId, 'detail'],
     queryFn: () => client.request({ path: `${API_PATH.RUNS}/${runId}`, schema: runDetailSchema }),
     refetchInterval: (query) =>
-      query.state.data !== undefined && isActiveRun(query.state.data) ? runPollMilliseconds : false,
+      query.state.data === undefined
+        ? false
+        : detailPollInterval(query.state.data, runPollMilliseconds),
   });
 }
 
