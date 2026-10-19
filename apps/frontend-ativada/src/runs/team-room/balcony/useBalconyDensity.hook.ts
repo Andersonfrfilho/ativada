@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 
 import {
+  applyExpansion,
   DENSITY,
   DENSITY_STORAGE_KEY,
   readChoice,
@@ -35,12 +36,10 @@ export function useBalconyDensity(): BalconyDensity {
     globalThis.addEventListener('resize', update);
     return (): void => globalThis.removeEventListener('resize', update);
   }, []);
-  const resolved = resolveDensity(choice, height);
-  const density = resolved === DENSITY.COLLAPSED && isExpanded ? DENSITY.COMPACT : resolved;
+  const density = applyExpansion(resolveDensity(choice, height), choice, isExpanded);
   function toggle(): void {
     const next = density === DENSITY.COMFORTABLE ? DENSITY.COMPACT : DENSITY.COMFORTABLE;
     setChoice(next);
-    setIsExpanded(false);
     try {
       storage()?.setItem(DENSITY_STORAGE_KEY, next);
     } catch {

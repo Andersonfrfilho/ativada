@@ -19,6 +19,16 @@ export function resolveDensity(choice: DensityChoice, viewportHeight: number): D
   return viewportHeight >= COMFORTABLE_MIN_HEIGHT ? DENSITY.COMFORTABLE : DENSITY.COMPACT;
 }
 
+// "Expandir" numa janela baixa tira a varanda do recolhido e fica expandido: a escolha da pessoa vale, senão compacto.
+export function applyExpansion(
+  resolved: Density,
+  choice: DensityChoice,
+  isExpanded: boolean,
+): Density {
+  if (resolved !== DENSITY.COLLAPSED || !isExpanded) return resolved;
+  return choice === 'auto' ? DENSITY.COMPACT : choice;
+}
+
 export function readChoice(storage: Pick<Storage, 'getItem'> | undefined): DensityChoice {
   try {
     const value = storage?.getItem(DENSITY_STORAGE_KEY);

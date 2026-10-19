@@ -3,12 +3,16 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, test } from 'bun:test';
 
+import { act, renderHook } from '@testing-library/react';
+
 import {
+  applyExpansion,
   DENSITY,
   DENSITY_STORAGE_KEY,
   readChoice,
   resolveDensity,
 } from '../src/runs/team-room/balcony/balcony-density.js';
+import { useBalconyDensity } from '../src/runs/team-room/balcony/useBalconyDensity.hook.js';
 
 function css(path: string): string {
   return readFileSync(new URL(path, import.meta.url), 'utf8');
@@ -49,5 +53,30 @@ describe('densidade da varanda por medida da janela', () => {
     const chart = css('../src/runs/candle-chart/CandleChart.module.css');
     expect(chart).toContain('clamp(320px, calc(100dvh - 440px), 640px)');
     expect(chart).toContain('clamp(320px, calc(100dvh - 415px), 640px)');
+  });
+});
+
+describe('"Expandir" numa janela baixa realmente expande', () => {
+  test('a collapsed window that was expanded stays expanded (compact by default, else the choice)', () => {
+    const collapsed = resolveDensity('auto', 600);
+    expect(collapsed).toBe(DENSITY.COLLAPSED);
+    expect(applyExpansion(collapsed, 'auto', true)).toBe(DENSITY.COMPACT);
+    expect(applyExpansion(collapsed, DENSITY.COMFORTABLE, true)).toBe(DENSITY.COMFORTABLE);
+    expect(applyExpansion(collapsed, 'auto', false)).toBe(DENSITY.COLLAPSED);
+    expect(applyExpansion(DENSITY.COMFORTABLE, 'auto', true)).toBe(DENSITY.COMFORTABLE);
+  });
+
+  test('in a 600 px window: Expandir opens, then switching the density never collapses it again', () => {
+    globalThis.innerHeight = 600;
+    localStorage.clear();
+    const hook = renderHook(() => useBalconyDensity());
+    expect(hook.result.current.density).toBe(DENSITY.COLLAPSED);
+    act(() => hook.result.current.expand());
+    expect(hook.result.current.density).toBe(DENSITY.COMPACT);
+    act(() => hook.result.current.toggle());
+    expect(hook.result.current.density).toBe(DENSITY.COMFORTABLE);
+    act(() => hook.result.current.toggle());
+    expect(hook.result.current.density).toBe(DENSITY.COMPACT);
+    localStorage.clear();
   });
 });
