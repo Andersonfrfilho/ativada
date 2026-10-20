@@ -38,7 +38,12 @@ function LivePaperBody({ run }: { readonly run: RunDetail }): ReactElement {
   const hasChart = run.status === RUN_STATUS.RUNNING || run.status === RUN_STATUS.CANCELLED;
   return (
     <>
-      <LiveChartArea runId={run.id} hasChart={hasChart}>
+      <LiveChartArea
+        runId={run.id}
+        symbol={run.symbol}
+        timeframe={run.timeframe}
+        hasChart={hasChart}
+      >
         <LiveSectionIndex run={run} />
         <RunHeader run={run} />
         {run.status === RUN_STATUS.CANCELLED ? (

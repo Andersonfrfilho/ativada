@@ -20,7 +20,7 @@ import { createFakeSurfaceFactory, type FakeChartSurface } from './support/fake-
 
 function SurfaceOwner(): ReactElement {
   const { containerRef, surface, hasFailed } = useChartSurface();
-  useSurfaceTheme(surface);
+  useSurfaceTheme(surface, containerRef);
   return (
     <div>
       <div ref={containerRef} data-testid="canvas" />
@@ -55,6 +55,8 @@ const LIGHT_TOKENS: Readonly<Record<string, string>> = {
   '--cone-down': 'rgb(200, 90, 95)',
   '--cone-neutral': 'rgb(120, 130, 150)',
   '--model': 'rgb(138, 62, 168)',
+  '--chart-ma20': 'rgb(240, 180, 41)',
+  '--chart-ma50': 'rgb(157, 140, 255)',
 };
 
 function applyTokens(tokens: Readonly<Record<string, string>>): void {
@@ -143,7 +145,18 @@ describe('useSurfaceTheme: cores dos tokens', () => {
       coneDown: 'rgb(200, 90, 95)',
       coneNeutral: 'rgb(120, 130, 150)',
       model: 'rgb(138, 62, 168)',
+      average20: 'rgb(240, 180, 41)',
+      average50: 'rgb(157, 140, 255)',
     });
+  });
+
+  test('reads the tokens on the chart container, so a dark terminal frame wins over the page theme', async () => {
+    const created = renderWithFakeSurfaces();
+    await waitFor(() => expect(created[0]?.callsOf('setTheme').length).toBe(1));
+    screen.getByTestId('canvas').style.setProperty('--surface', 'rgb(13, 18, 32)');
+    act(() => setTheme(THEME.DARK));
+    await waitFor(() => expect(created[0]?.callsOf('setTheme').length).toBe(2));
+    expect(lastTheme(created[0])).toMatchObject({ background: 'rgb(13, 18, 32)' });
   });
 
   test('switching the theme applies the new colors to the same surface', async () => {

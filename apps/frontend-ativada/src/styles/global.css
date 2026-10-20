@@ -97,6 +97,16 @@
   --screen-bad: #ff7d83;
   --light: color-mix(in srgb, var(--accent) 30%, var(--surface));
   --light-strip: color-mix(in srgb, var(--accent) 55%, var(--surface));
+  --terminal-line: #262f4b;
+  --terminal-accent: #8ea3ff;
+  --terminal-accent-soft: #1e2954;
+  --terminal-warn: #f2c26b;
+  --terminal-warn-soft: #33270f;
+  --terminal-buy-soft: #0e2d23;
+  --terminal-sell-soft: #3a191e;
+  --terminal-model: #d59af0;
+  --chart-ma20: #f0b429;
+  --chart-ma50: #9d8cff;
   color-scheme: light;
 }
 

@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type {
+  SurfaceAverage,
   SurfaceCandle,
   SurfaceFormingSlot,
   SurfaceLevelBox,
@@ -25,6 +26,7 @@ export type SurfaceState = {
   indexByTime: ReadonlyMap<number, number>;
   volume: readonly SurfaceVolumeBar[];
   lines: readonly SurfaceLine[];
+  averages: readonly SurfaceAverage[];
   scoreBars: readonly SurfaceScoreBar[];
   thresholds: readonly SurfaceThreshold[];
   markers: readonly SurfaceMarker[];
@@ -47,6 +49,7 @@ export function createSurfaceState(): SurfaceState {
     indexByTime: new Map(),
     volume: [],
     lines: [],
+    averages: [],
     scoreBars: [],
     thresholds: [],
     markers: [],

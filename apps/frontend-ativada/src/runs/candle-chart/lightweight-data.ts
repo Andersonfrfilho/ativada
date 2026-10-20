@@ -8,6 +8,7 @@ import {
   renderZones,
   renderPriceLevels,
   renderLines,
+  renderAverages,
   renderLive,
   renderMarkers,
   renderProjection,
@@ -19,7 +20,7 @@ import type { ChartOptions, DeepPartial } from './lightweight-surface.js';
 
 type SeriesSetters = Pick<
   ChartSurface,
-  'setCandles' | 'setVolume' | 'setLines' | 'setScore' | 'setMarkers'
+  'setCandles' | 'setVolume' | 'setLines' | 'setAverages' | 'setScore' | 'setMarkers'
 >;
 
 type OverlaySetters = Pick<
@@ -59,7 +60,7 @@ export function buildSeriesSetters(ctx: Context): SeriesSetters {
       if (precision !== state.pricePrecision) {
         state.pricePrecision = precision;
         applyPricePrecision(ctx);
-        paint(ctx, renderLines, renderProjection);
+        paint(ctx, renderLines, renderAverages, renderProjection);
       }
       paint(ctx, renderLive);
     },
@@ -70,6 +71,10 @@ export function buildSeriesSetters(ctx: Context): SeriesSetters {
     setLines: (lines): void => {
       state.lines = lines;
       paint(ctx, renderLines);
+    },
+    setAverages: (averages): void => {
+      state.averages = averages;
+      paint(ctx, renderAverages);
     },
     setScore: (bars, thresholds): void => {
       state.scoreBars = bars;

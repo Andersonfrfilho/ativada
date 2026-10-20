@@ -501,3 +501,15 @@ cenário isométrico (janela, quadro de cotações, relógio, plantas), mesas co
 
 Seções "Fase 3 — Sala de operações" em `spec.md` (decisões S-D1–S-D8, requisitos SR1–SR7, contratos), `plan.md` (peças e modelo por
 task) e `tasks.md` (S0–S6). Base dos gates antes da fase: `bun run --cwd apps/frontend-ativada test` 1.651 passam, 0 falham.
+
+### S1 — telão-terminal (2026-10-20)
+
+- `TerminalScreen` (`src/runs/trading-room/`): moldura escura nos dois temas (os tokens da página são redefinidos dentro dela com os
+  `--screen*`/`--terminal-*` de `global.css`), cabeçalho com par, vela, preço (`useShownPrice`), legenda MA20/MA50 e `PriceVariation`,
+  que saiu do cartão "Acompanhamento" (aparece uma vez só).
+- Porta `ChartSurface` ganhou `setAverages` (camada própria no adaptador, cores `--chart-ma20`/`--chart-ma50`); `moving-average.ts` calcula
+  as médias dos números de desenho; `useAverageLines` só empurra dentro do `TerminalChartProvider`.
+- `useSurfaceTheme` lê os tokens no contêiner do gráfico (com o valor da página como reserva), então o canvas segue a moldura.
+- Contratos: `trading-room-terminal.contract.tsx` (média à mão, médias só no terminal, variações uma vez no telão), contraste dos pares do
+  terminal em `contrast.contract.ts`, tema lido no contêiner em `chart-surface-lifecycle.contract.tsx`.
+- Gates: typecheck, lint e format:check verdes; `bun run --cwd apps/frontend-ativada test` 1.668 passam, 0 falham.

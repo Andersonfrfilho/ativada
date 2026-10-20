@@ -7,7 +7,6 @@ import type { RunDetail } from '../run.validation.js';
 import controls from '../../styles/Controls.module.css';
 import { DecisionsTable } from './DecisionsTable.component.js';
 import { LiveGoalBlock } from './LiveGoalBlock.component.js';
-import { PriceVariation } from '../../live/PriceVariation.component.js';
 import { LivePulseLine } from './LivePulseLine.component.js';
 import { LiveSummaryStrip } from './LiveSummaryStrip.component.js';
 import { LiveSectionPlaceholder } from './LiveSectionPlaceholder.component.js';
@@ -43,7 +42,6 @@ export function LiveSummarySection({ run }: LiveTrackingSectionProps): ReactElem
     <>
       {status.isError ? <StaleDataNotice updatedAt={status.dataUpdatedAt} /> : null}
       <LivePulseLine runId={run.id} symbol={run.symbol} />
-      <PriceVariation symbol={run.symbol} />
       <LiveSummaryStrip status={status.data} />
     </>
   );

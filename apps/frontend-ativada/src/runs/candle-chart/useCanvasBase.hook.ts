@@ -10,6 +10,7 @@ import type { TradeSelection } from '../useTradeSelection.hook.js';
 import { CHART_LAYER } from './candle-chart.constant.js';
 import type { ChartSurface } from './chart-surface.types.js';
 import type { CandleSource } from './useCandleSource.hook.js';
+import { useAverageLines } from './useAverageLines.hook.js';
 import { useChartSurface } from './useChartSurface.hook.js';
 import { useSurfaceData } from './useSurfaceData.hook.js';
 import { useSurfaceTheme } from './useSurfaceTheme.hook.js';
@@ -37,7 +38,8 @@ export function useCanvasBase(input: CanvasBaseInput): CanvasBase {
   const timeZone = useUserTimeZone();
   const { containerRef, surface, hasFailed } = useChartSurface();
   const trades = useTradeRows(runId, view.queryRange).items;
-  useSurfaceTheme(surface);
+  useSurfaceTheme(surface, containerRef);
+  useAverageLines(surface, source.history.candles);
   useSurfaceData(surface, {
     candles: source.history.candles,
     markers: chart.markers,

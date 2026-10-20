@@ -18,6 +18,7 @@ import type { SurfaceState } from './surface-state.js';
 // os valores da biblioteca por `kit` e os tipos reexportados dele, então a troca da biblioteca continua num lugar só.
 export type Layers = {
   lines: ISeriesApi<'Line'>[];
+  averages: ISeriesApi<'Line'>[];
   cone: ISeriesApi<'Line'>[];
   score: ISeriesApi<'Histogram'> | undefined;
   scoreLevels: IPriceLine[];

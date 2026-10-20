@@ -65,6 +65,20 @@ export const renderLines: Render = (ctx, theme) => {
   });
 };
 
+// MA20 e MA50 do telão: linha cheia fina na cor do token de cada uma (sem token, a cor da linha).
+export const renderAverages: Render = (ctx, theme) => {
+  removeAll(ctx, ctx.layers.averages);
+  ctx.layers.averages = ctx.state.averages.map((average) => {
+    const color = (average.period === 20 ? theme.average20 : theme.average50) ?? theme.line;
+    const series = ctx.chart.addSeries(
+      ctx.kit.LineSeries,
+      lineOptions(ctx, { color, isDashed: false, width: 1 }),
+    );
+    series.setData(stamp(average.points));
+    return series;
+  });
+};
+
 function dropScore(ctx: Context): void {
   try {
     if (ctx.layers.score !== undefined) ctx.chart.removeSeries(ctx.layers.score);
@@ -161,6 +175,7 @@ export const RENDER_ALL: readonly Render[] = [
   renderCandleColors,
   renderVolume,
   renderLines,
+  renderAverages,
   renderScore,
   renderMarkers,
   renderProjection,

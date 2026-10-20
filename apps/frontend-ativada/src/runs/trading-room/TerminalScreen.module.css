@@ -1,0 +1,106 @@
+/* Copyright (c) 2026 Ada Technology. All rights reserved. */
+/* O telão-terminal (spec 011, Fase 3): moldura escura nos DOIS temas. Os tokens da página são redefinidos aqui dentro,
+   então o cartão do gráfico, os chips e o próprio canvas (o tema é lido no contêiner) ficam escuros sem tocar no gráfico. */
+.terminal {
+  --bg: var(--screen);
+  --surface: var(--screen);
+  --surface-2: var(--bezel);
+  --line: var(--terminal-line);
+  --ink: var(--screen-ink);
+  --ink-2: var(--screen-ink-2);
+  --ink-3: var(--screen-ink-2);
+  --accent: var(--terminal-accent);
+  --accent-soft: var(--terminal-accent-soft);
+  --on-accent: var(--screen);
+  --buy: var(--screen-good);
+  --buy-soft: var(--terminal-buy-soft);
+  --sell: var(--screen-bad);
+  --sell-soft: var(--terminal-sell-soft);
+  --warn: var(--terminal-warn);
+  --warn-soft: var(--terminal-warn-soft);
+  --model: var(--terminal-model);
+  --chart-grid: color-mix(in srgb, var(--ink-3) 30%, var(--surface));
+  --cone-up: color-mix(in srgb, var(--buy) 85%, var(--surface));
+  --cone-down: color-mix(in srgb, var(--sell) 85%, var(--surface));
+  --cone-neutral: color-mix(in srgb, var(--bench) 85%, var(--surface));
+  --model-soft: color-mix(in srgb, var(--model) 12%, var(--surface));
+  color-scheme: dark;
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--bezel);
+  color: var(--ink);
+  box-shadow: 0 0 0 3px var(--screen);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  font: 500 var(--text-xs) / 1.4 var(--font-data);
+  color: var(--ink-2);
+}
+
+.symbol {
+  margin: 0;
+  font: 700 var(--text-md) / 1.2 var(--font-body);
+  color: var(--ink);
+}
+
+.timeframe {
+  padding: 1px var(--space-2);
+  border-radius: 4px;
+  background: var(--screen);
+  color: var(--ink);
+}
+
+.price {
+  font: 700 var(--text-md) / 1.2 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.averages {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.swatch20,
+.swatch50 {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  margin-left: var(--space-1);
+}
+
+.swatch20 {
+  background: var(--chart-ma20);
+}
+
+.swatch50 {
+  background: var(--chart-ma50);
+}
+
+.variations {
+  margin-left: auto;
+}
+
+.foot {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+}
+
+@media (max-width: 759px) {
+  .terminal {
+    padding: var(--space-2);
+  }
+
+  .variations {
+    margin-left: 0;
+  }
+}

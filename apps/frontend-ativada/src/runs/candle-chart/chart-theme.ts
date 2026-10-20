@@ -13,6 +13,8 @@ export const SURFACE_THEME_TOKENS = {
   coneDown: '--cone-down',
   coneNeutral: '--cone-neutral',
   model: '--model',
+  average20: '--chart-ma20',
+  average50: '--chart-ma50',
 } as const satisfies Record<keyof SurfaceTheme, string>;
 
 export type ColorResolver = (token: string) => string;
@@ -29,6 +31,8 @@ export function buildSurfaceTheme(resolve: ColorResolver): SurfaceTheme {
     coneDown: resolve(SURFACE_THEME_TOKENS.coneDown),
     coneNeutral: resolve(SURFACE_THEME_TOKENS.coneNeutral),
     model: resolve(SURFACE_THEME_TOKENS.model),
+    average20: resolve(SURFACE_THEME_TOKENS.average20),
+    average50: resolve(SURFACE_THEME_TOKENS.average50),
   };
 }
 

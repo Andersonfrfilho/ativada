@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { TeamComparison } from '../model-teams/TeamComparison.component.js';
 import { ProjectionCards } from '../projection-cards/ProjectionCards.component.js';
 import { TradeChartCard } from '../TradeChartCard.component.js';
+import { TerminalScreen } from '../trading-room/TerminalScreen.component.js';
 import { renderCompactTeam } from './RunTeamAside.component.js';
 import { TradePlaques } from './balcony/TradePlaques.component.js';
 import { TeamAsideProvider } from './TeamAside.context.js';
@@ -13,6 +14,8 @@ import { useTeamRoomPreference } from './useTeamRoomPreference.hook.js';
 
 export type LiveChartAreaProps = {
   readonly runId: string;
+  readonly symbol: string;
+  readonly timeframe: string;
   // Sem gráfico (simulação concluída) a sala aparece sozinha.
   readonly hasChart: boolean;
   // O que vem entre o gráfico e a sala grande: as decisões e o acompanhamento detalhado.
@@ -21,11 +24,19 @@ export type LiveChartAreaProps = {
 
 // A alternância "Gráfico + equipe" (o gráfico no alto, a equipe compacta colada nele, a sala grande por último) e
 // "Sala com o gráfico" (o gráfico vira o monitor da sala): o mesmo gráfico, as mesmas frases do servidor.
-export function LiveChartArea({ runId, hasChart, children }: LiveChartAreaProps): ReactElement {
+export function LiveChartArea({
+  runId,
+  symbol,
+  timeframe,
+  hasChart,
+  children,
+}: LiveChartAreaProps): ReactElement {
   const { preference, update } = useTeamRoomPreference();
   const isRoomLayout = preference.layout === TEAM_LAYOUT.ROOM_WITH_CHART;
   const chart = hasChart ? (
-    <TradeChartCard runId={runId} hasSummary={false} hasProjections={false} />
+    <TerminalScreen symbol={symbol} timeframe={timeframe}>
+      <TradeChartCard runId={runId} hasSummary={false} hasProjections={false} />
+    </TerminalScreen>
   ) : undefined;
   const aside = isRoomLayout ? undefined : renderCompactTeam(runId, preference);
   const room = (

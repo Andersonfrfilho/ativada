@@ -35,6 +35,12 @@ export type SurfaceLine = {
   readonly points: readonly { readonly time: SurfaceTime; readonly value: number }[];
 };
 
+// Médias móveis do telão (MA20 e MA50): só desenho, calculadas dos números de desenho das velas.
+export type SurfaceAverage = {
+  readonly period: 20 | 50;
+  readonly points: readonly { readonly time: SurfaceTime; readonly value: number }[];
+};
+
 export type SurfaceScoreBar = {
   readonly time: SurfaceTime;
   readonly value: number;
@@ -128,6 +134,9 @@ export type SurfaceTheme = {
   readonly coneNeutral: string;
   // A cor dos ◆ (token `--model`); ausente, vale a cor da linha.
   readonly model?: string | undefined;
+  // As médias do telão (tokens `--chart-ma20` e `--chart-ma50`); ausentes, vale a cor da linha.
+  readonly average20?: string | undefined;
+  readonly average50?: string | undefined;
 };
 
 // O ponto do gráfico que um agente comenta, em pixels do contêiner do gráfico (só desenho).
@@ -155,6 +164,7 @@ export type ChartSurface = {
   readonly setCandles: (candles: readonly SurfaceCandle[]) => void;
   readonly setVolume: (bars: readonly SurfaceVolumeBar[]) => void;
   readonly setLines: (lines: readonly SurfaceLine[]) => void;
+  readonly setAverages: (averages: readonly SurfaceAverage[]) => void;
   readonly setScore: (
     bars: readonly SurfaceScoreBar[],
     thresholds: readonly SurfaceThreshold[],

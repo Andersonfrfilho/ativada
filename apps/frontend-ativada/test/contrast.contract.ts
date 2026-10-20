@@ -252,3 +252,35 @@ describe('office screens stay legible (always dark)', () => {
     });
   }
 });
+
+// O telão da sala de operações (spec 011, Fase 3) é um terminal escuro nos dois temas: os pares dele vêm do bloco claro,
+// que é o único onde os tokens `--terminal-*` e `--chart-ma*` existem.
+describe('trading-room terminal stays legible (always dark)', () => {
+  const tokens = lightTokens();
+  const TEXT_PAIRS: readonly (readonly [string, string])[] = [
+    ['screen-ink', 'bezel'],
+    ['screen-ink-2', 'bezel'],
+    ['terminal-accent', 'screen'],
+    ['terminal-warn', 'terminal-warn-soft'],
+    ['screen-ink', 'terminal-buy-soft'],
+    ['screen-ink', 'terminal-sell-soft'],
+    ['screen-ink', 'terminal-accent-soft'],
+    ['terminal-model', 'screen'],
+    ['screen-good', 'screen'],
+    ['screen-bad', 'screen'],
+  ];
+  for (const [text, fill] of TEXT_PAIRS) {
+    test(`${text} on ${fill} is at least ${MINIMUM_RATIO}:1`, () => {
+      expect(tokens.get(fill), fill).toBeDefined();
+      const ratioValue = ratio(tokens.get(text) ?? '#000000', tokens.get(fill) ?? '#000000');
+      expect(ratioValue).toBeGreaterThanOrEqual(MINIMUM_RATIO);
+    });
+  }
+  for (const mark of ['chart-ma20', 'chart-ma50', 'terminal-line'] as const) {
+    test(`graphic ${mark} on screen is at least ${GRAPHIC_MINIMUM_RATIO}:1 (line) or visible`, () => {
+      const minimum = mark === 'terminal-line' ? 1.2 : GRAPHIC_MINIMUM_RATIO;
+      const ratioValue = ratio(tokens.get(mark) ?? '#0d1220', tokens.get('screen') ?? '#0d1220');
+      expect(ratioValue).toBeGreaterThanOrEqual(minimum);
+    });
+  }
+});

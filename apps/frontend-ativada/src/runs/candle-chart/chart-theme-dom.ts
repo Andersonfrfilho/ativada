@@ -12,16 +12,22 @@ function toRgbText(data: Uint8ClampedArray): string {
 }
 
 // A biblioteca não lê `color-mix()` nem `var()`: o token é resolvido pelo navegador e convertido em `rgb()` por um pixel
-// de canvas. Sem canvas (testes) devolve o valor computado do token como está.
+// de canvas. Sem canvas (testes) devolve o valor computado do token como está. O token vale no elemento pedido (uma moldura
+// pode redefini-lo); sem valor ali (ambiente que não herda propriedade personalizada), vale o da página.
 export function createCssColorResolver(root: HTMLElement): ColorResolver {
   const document = root.ownerDocument;
-  const computed = document.defaultView?.getComputedStyle(root);
+  const own = document.defaultView?.getComputedStyle(root);
+  const page = document.defaultView?.getComputedStyle(document.documentElement);
+  const read = (token: string): string => {
+    const value = own?.getPropertyValue(token).trim() ?? '';
+    return value === '' ? (page?.getPropertyValue(token).trim() ?? '') : value;
+  };
   const canvas = document.createElement('canvas');
   canvas.width = 1;
   canvas.height = 1;
   const context = canvas.getContext('2d', { willReadFrequently: true });
   return (token) => {
-    const value = computed?.getPropertyValue(token).trim() ?? '';
+    const value = read(token);
     if (context === null) return value;
     context.clearRect(0, 0, 1, 1);
     context.fillStyle = TRANSPARENT;

@@ -79,6 +79,10 @@ function attachPrimitives(
   return { boxes, marks, zones };
 }
 
+function createLayers(): Context['layers'] {
+  return { lines: [], averages: [], cone: [], score: undefined, scoreLevels: [], levelLines: [] };
+}
+
 function createContext(chart: IChartApi): Context {
   const priceFormat = pricePriceFormat(DEFAULT_PRECISION);
   const candles = chart.addSeries(CandlestickSeries, { priceFormat }, PANE.PRICE);
@@ -109,7 +113,7 @@ function createContext(chart: IChartApi): Context {
     zones,
     markers: createSeriesMarkers(candles, []),
     state: createSurfaceState(),
-    layers: { lines: [], cone: [], score: undefined, scoreLevels: [], levelLines: [] },
+    layers: createLayers(),
     crosshairListeners: new Set(),
   };
 }
