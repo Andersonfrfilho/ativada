@@ -3,13 +3,27 @@ import { afterEach, describe, expect, test } from 'bun:test';
 
 import { cleanup, render, screen, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
+import { createMemoryRouter } from 'react-router';
+import { RouterProvider } from 'react-router/dom';
 
+import { createAppRoutes } from '../src/app/createAppRoutes.js';
+import { ChartSurfaceLoaderContext } from '../src/runs/candle-chart/chart-surface-loader.js';
+
+import { CHART_PREFERENCES_STORAGE_KEY } from '../src/runs/candle-chart/candle-chart.constant.js';
 import type { MarketCandle } from '../src/runs/candle-chart/market-candles.validation.js';
 import { computeMovingAverage } from '../src/runs/candle-chart/moving-average.js';
 import { TerminalChartProvider } from '../src/runs/candle-chart/terminal-chart.context.js';
 import { useAverageLines } from '../src/runs/candle-chart/useAverageLines.hook.js';
-import { createFakeChartSurface } from './support/fake-chart-surface.js';
-import { createLiveHarness, openLiveDetail } from './support/live-tracking-harness.js';
+import { buildCandlesBetween, CANDLES_PATH, timeframeStep } from './support/candle-card-harness.js';
+import { createFakeChartSurface, createFakeSurfaceFactory } from './support/fake-chart-surface.js';
+import { dataResponse, type FakeRoute } from './support/fake-fetch.js';
+import {
+  createLiveHarness,
+  LIVE_RUN_ID,
+  liveRoutes,
+  openLiveDetail,
+} from './support/live-tracking-harness.js';
+import { renderApp } from './support/render-app.js';
 
 // Spec 011, Fase 3, S1: o telão-terminal (médias de desenho, cabeçalho com as variações uma vez só).
 
@@ -97,4 +111,45 @@ describe('the live detail page', () => {
     const room = screen.getByRole('region', { name: 'Sala de operações' });
     expect(room.textContent).toContain('Simulação com dinheiro fictício · Tendência, não promessa');
   });
+
+  test('keeps the next-candle prediction beside the chart even with the forecast layer off', async () => {
+    localStorage.setItem(
+      CHART_PREFERENCES_STORAGE_KEY,
+      JSON.stringify({ layers: { forecast: false }, isTooltipOn: true }),
+    );
+    const { factory } = createFakeSurfaceFactory();
+    const router = createMemoryRouter(createAppRoutes(), {
+      initialEntries: [`/backtests/${LIVE_RUN_ID}`],
+    });
+    renderApp({
+      path: '/',
+      isAuthenticated: true,
+      routes: [...liveRoutes(createLiveHarness()), candlesRoute()],
+      probe: (
+        <ChartSurfaceLoaderContext value={() => Promise.resolve(factory)}>
+          <RouterProvider router={router} />
+        </ChartSurfaceLoaderContext>
+      ),
+    });
+    const terminal = await screen.findByRole('region', { name: 'Telão: gráfico da simulação' });
+    expect(
+      await within(terminal).findByRole('heading', { name: 'Próxima vela de perto' }),
+    ).toBeTruthy();
+    localStorage.removeItem(CHART_PREFERENCES_STORAGE_KEY);
+  });
 });
+
+function candlesRoute(): FakeRoute {
+  return {
+    method: 'GET',
+    path: CANDLES_PATH,
+    respond: (call): Response =>
+      dataResponse(
+        buildCandlesBetween(
+          Number(call.query.get('from')),
+          Number(call.query.get('to')),
+          timeframeStep(call.query.get('timeframe')),
+        ),
+      ),
+  };
+}

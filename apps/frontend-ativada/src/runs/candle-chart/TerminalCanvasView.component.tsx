@@ -3,7 +3,6 @@ import { useId, useRef, type ReactElement } from 'react';
 
 import { LeaderFocusProvider } from '../team-room/balcony/leader-focus.context.js';
 import styles from './CandleChart.module.css';
-import { CHART_LAYER } from './candle-chart.constant.js';
 import { CanvasControls, CanvasNotices } from './CanvasControls.component.js';
 import { CanvasOverlays } from './CanvasOverlays.component.js';
 import {
@@ -17,8 +16,9 @@ import {
 // O gráfico no telão da sala: uma faixa fina (vela, zoom em ícones, balão de valores e o menu "Camadas"), o canvas com o
 // volume e, se couber, a "Próxima vela de perto". Resumo, período, tabela e crédito ficam na seção "Operações".
 export function TerminalCanvasView(props: CanvasViewProps): ReactElement {
-  const { view, model } = props;
-  const hasSide = view.isLive && model.isLayerOn(CHART_LAYER.FORECAST);
+  const { view } = props;
+  // No telão a previsão fica sempre ao lado do gráfico; a camada "Previsão" só liga o cone sobre as velas.
+  const hasSide = view.isLive;
   const ids: DescriptionIds = { help: useId(), caption: useId() };
   const figureRef = useRef<HTMLElement>(null);
   return (
