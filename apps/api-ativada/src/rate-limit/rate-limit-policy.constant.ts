@@ -124,6 +124,14 @@ export const RATE_LIMIT_POLICY = {
     keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
     maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
+  // "Pergunte à equipe" na sala ao vivo: cada pergunta lê até 500 velas e, sem cache, refaz as leituras do placar na thread.
+  RUN_QUESTION: {
+    name: 'run-question',
+    limit: 20,
+    windowMilliseconds: ONE_MINUTE_MILLISECONDS,
+    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
+  },
   // Cada pedido avulso custa uma chamada ao provedor: 5 por 10 minutos, além do teto diário por usuário.
   MODEL_OPINION_REQUEST: {
     name: 'model-opinion-request',

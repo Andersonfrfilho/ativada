@@ -138,6 +138,7 @@ export function buildApiRouteDependencies(
       tradeSummary: notUsed,
       liveStatus: notUsed,
       tradePlan: notUsed,
+      questions: notUsed,
       liveSummary: notUsed,
       decisions: notUsed,
       strategyLayers: notUsed,

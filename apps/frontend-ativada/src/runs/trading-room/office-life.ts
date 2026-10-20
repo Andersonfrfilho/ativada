@@ -3,6 +3,7 @@ import type { BalconySlot } from '../team-room/balcony/balcony.constant.js';
 import { createRandom } from '../team-room/motion/seeded-random.js';
 import { chatContextOf } from './office-chat.js';
 import { planActivity, REST_FACING, restPose } from './office-activities.js';
+import { scheduleAnswer, settleAnswer } from './office-answer.js';
 import { advanceAgent, SPEECH_STEPS, type StepEffects } from './office-agent-step.js';
 import { gatherSpot, seatOf, type Point } from './office-geometry.js';
 import type { AgentLife, LifeLine, LifeState } from './office-life.types.js';
@@ -40,6 +41,7 @@ export function createLife(params: {
     puddle: undefined,
     meeting: undefined,
     lines: params.lines,
+    answer: undefined,
   };
 }
 
@@ -69,6 +71,8 @@ export function startMeeting(state: LifeState): LifeState {
     screenHolder: undefined,
     machineHolder: undefined,
     meeting: { phase: 'gathering', bannerSteps: 0 },
+    // A reunião passa na frente; a resposta volta a ser agendada quando ela acabar.
+    answer: state.answer === undefined ? undefined : { ...state.answer, isScheduled: false },
   };
 }
 
@@ -142,11 +146,12 @@ function applyEffects(state: LifeState, effects: StepEffects): LifeState {
     screenHolder: isReleased ? undefined : state.screenHolder,
     machineHolder: effects.traffic.machineHolder,
     puddle: puddleAfter(state.puddle, effects.spills[0]),
+    answer: settleAnswer(state, effects.released),
   };
 }
 
 export function stepLife(state: LifeState): LifeState {
-  const planned = planIdle(advanceMeeting(state));
+  const planned = planIdle(scheduleAnswer(advanceMeeting(state)));
   const traffic = createTraffic({
     mask: floorMaskOf(planned.agents.map((agent) => agent.who)),
     machineHolder: planned.machineHolder,

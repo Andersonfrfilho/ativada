@@ -42,6 +42,9 @@ import type * as ProjectionsRouteModule from '../../../apps/api-ativada/src/runs
 import type * as ProjectionsUseCaseModule from '../../../apps/api-ativada/src/runs/projections/projections.use-case.js';
 import type * as TradePlanRouteModule from '../../../apps/api-ativada/src/runs/trade-plan/trade-plan.route.js';
 import type * as TradePlanUseCaseModule from '../../../apps/api-ativada/src/runs/trade-plan/trade-plan.use-case.js';
+import type * as QuestionsRouteModule from '../../../apps/api-ativada/src/runs/questions/questions.route.js';
+import type * as QuestionsUseCaseModule from '../../../apps/api-ativada/src/runs/questions/questions.use-case.js';
+import type * as QuestionReadingsModule from '../../../apps/api-ativada/src/runs/questions/question-readings.js';
 import type * as ProjectionRuleModule from '../../../apps/api-ativada/src/runs/projections/projection-rule.js';
 import type * as ProjectionMessagesModule from '../../../apps/api-ativada/src/runs/projections/projection-messages.js';
 import type * as LiveBalanceModule from '../../../apps/api-ativada/src/runs/live-status/live-balance.js';
@@ -167,6 +170,9 @@ export type ApiApp = {
   readonly projectionsUseCase: typeof ProjectionsUseCaseModule;
   readonly tradePlanRoute: typeof TradePlanRouteModule;
   readonly tradePlanUseCase: typeof TradePlanUseCaseModule;
+  readonly questionsRoute: typeof QuestionsRouteModule;
+  readonly questionsUseCase: typeof QuestionsUseCaseModule;
+  readonly questionReadings: typeof QuestionReadingsModule;
   readonly projectionRule: typeof ProjectionRuleModule;
   readonly projectionMessages: typeof ProjectionMessagesModule;
   readonly liveBalance: typeof LiveBalanceModule;
@@ -297,6 +303,9 @@ export async function loadApiApp(): Promise<ApiApp> {
     projectionsUseCase: await load('runs/projections/projections.use-case'),
     tradePlanRoute: await load('runs/trade-plan/trade-plan.route'),
     tradePlanUseCase: await load('runs/trade-plan/trade-plan.use-case'),
+    questionsRoute: await load('runs/questions/questions.route'),
+    questionsUseCase: await load('runs/questions/questions.use-case'),
+    questionReadings: await load('runs/questions/question-readings'),
     projectionRule: await load('runs/projections/projection-rule'),
     projectionMessages: await load('runs/projections/projection-messages'),
     liveBalance: await load('runs/live-status/live-balance'),

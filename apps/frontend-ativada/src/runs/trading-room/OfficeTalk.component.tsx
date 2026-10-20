@@ -1,10 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { useRef, type ReactElement } from 'react';
+import { useRef, type ReactElement, type ReactNode } from 'react';
 
 import { FIGURE, type Point } from './office-geometry.js';
-import type { RoomOpinion } from './room-opinions.js';
 import { ROOM_VIEW } from './room-art.js';
-import { OpinionCard } from './OpinionCard.component.js';
 import { usePlacement } from './usePlacement.hook.js';
 import styles from './Office.module.css';
 
@@ -21,12 +19,12 @@ function bubblePoint(spot: Point): Point & { readonly side: 'left' | 'right' } {
     : { x: spot.x - BUBBLE_GAP, y, side: 'right' };
 }
 
-// O balão de quem foi ao telão: a ficha inteira do que ele acha. Fica no piso, nunca sobre o gráfico.
+// O balão de quem foi ao telão: a ficha do que ele acha, ou a resposta à pergunta. Fica no piso, nunca sobre o gráfico.
 export function OfficeBubble({
-  opinion,
+  children,
   spot,
 }: {
-  readonly opinion: RoomOpinion;
+  readonly children: ReactNode;
   readonly spot: Point;
 }): ReactElement {
   const ref = useRef<HTMLDivElement>(null);
@@ -34,7 +32,7 @@ export function OfficeBubble({
   usePlacement(ref, point);
   return (
     <div ref={ref} className={styles.bubble} data-side={point.side} aria-hidden="true">
-      <OpinionCard opinion={opinion} />
+      {children}
     </div>
   );
 }

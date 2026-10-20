@@ -6,7 +6,10 @@ import { DecisionContent } from './DecisionContent.component.js';
 import { OfficeAgent } from './OfficeAgent.component.js';
 import { Lectern, OfficeDesk } from './OfficeDesk.component.js';
 import { OfficeBubble, OfficeLaser } from './OfficeTalk.component.js';
+import { AnswerCard } from './AnswerCard.component.js';
+import { answerOf } from './office-answer.js';
 import { speakerOf } from './office-life.js';
+import { OpinionCard } from './OpinionCard.component.js';
 import type { LifeState } from './office-life.types.js';
 import type { RoomOpinion } from './room-opinions.js';
 import { RoomArt } from './RoomArt.component.js';
@@ -24,10 +27,17 @@ function Talk({ opinions, life }: Omit<OfficeFloorProps, 'isMoving'>): ReactElem
   const opinion = opinions.find((item) => item.slot === speaker);
   const agent = life.agents.find((item) => item.who === speaker);
   if (opinion === undefined || agent === undefined) return null;
+  const answer = answerOf(life, speaker);
   return (
     <>
       <OfficeLaser spot={agent.at} />
-      <OfficeBubble opinion={opinion} spot={agent.at} />
+      <OfficeBubble spot={agent.at}>
+        {answer === undefined ? (
+          <OpinionCard opinion={opinion} />
+        ) : (
+          <AnswerCard name={opinion.name} question={answer.question} text={answer.text} />
+        )}
+      </OfficeBubble>
     </>
   );
 }

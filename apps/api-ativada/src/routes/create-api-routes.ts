@@ -36,6 +36,8 @@ import { createProjectionsRoute } from '../runs/projections/projections.route.js
 import type { ProjectionsUseCase } from '../runs/projections/projections.use-case.js';
 import { createStrategyLayersRoute } from '../runs/projections/strategy-layers.route.js';
 import type { StrategyLayersUseCase } from '../runs/projections/strategy-layers.use-case.js';
+import { createQuestionsRoute } from '../runs/questions/questions.route.js';
+import type { QuestionsUseCase } from '../runs/questions/questions.use-case.js';
 import { createTradePlanRoute } from '../runs/trade-plan/trade-plan.route.js';
 import type { TradePlanUseCase } from '../runs/trade-plan/trade-plan.use-case.js';
 import type { RunDecisionsUseCase } from '../runs/live-status/run-decisions.use-case.js';
@@ -71,6 +73,7 @@ export type RunRoutesBundle = {
   readonly strategyLayers: StrategyLayersUseCase;
   readonly projections: ProjectionsUseCase;
   readonly tradePlan: TradePlanUseCase;
+  readonly questions: QuestionsUseCase;
   readonly analyst: AnalystUseCase;
   readonly analystDecisions: AnalystDecisionsUseCase;
 };
@@ -85,6 +88,7 @@ export type LiveAwareUseCases = Pick<
   | 'strategyLayers'
   | 'projections'
   | 'tradePlan'
+  | 'questions'
 >;
 
 export type ApiRouteDependencies = HealthRouteDependencies & {
@@ -108,6 +112,29 @@ export type ApiRouteDependencies = HealthRouteDependencies & {
   readonly isDocumentationEnabled: boolean;
 };
 
+// As rotas de uma execução: ciclo de vida, séries, acompanhamento ao vivo, analista e exportação.
+function createRunRouteTable(runs: RunRoutesBundle): readonly Route[] {
+  return [
+    ...createRunRoutes(runs.routes),
+    ...createRunSeriesRoutes(runs.series),
+    createRunChartRoute(runs.chart),
+    createTradeSummaryRoute(runs.tradeSummary),
+    createLiveStatusRoute(runs.liveStatus),
+    createLiveSummaryRoute(runs.liveSummary),
+    createRunDecisionsRoute(runs.decisions),
+    createStrategyLayersRoute(runs.strategyLayers),
+    createProjectionsRoute(runs.projections),
+    createTradePlanRoute(runs.tradePlan),
+    createQuestionsRoute({
+      questions: runs.questions,
+      enabled: runs.routes.enabled,
+    }),
+    createAnalystRoute(runs.analyst),
+    createAnalystDecisionsRoute(runs.analystDecisions),
+    ...createRunExportRoutes(runs.exportRunCsv),
+  ];
+}
+
 export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Route[] {
   const routes: Route[] = [
     ...createHealthRoutes(dependencies),
@@ -128,19 +155,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     ...createMyModelTeamsRoutes(dependencies.modelTeams.me),
     ...createRunModelTeamsRoutes(dependencies.modelTeams.runs),
     ...createModelDuelRoutes(dependencies.modelTeams.duels),
-    ...createRunRoutes(dependencies.runs.routes),
-    ...createRunSeriesRoutes(dependencies.runs.series),
-    createRunChartRoute(dependencies.runs.chart),
-    createTradeSummaryRoute(dependencies.runs.tradeSummary),
-    createLiveStatusRoute(dependencies.runs.liveStatus),
-    createLiveSummaryRoute(dependencies.runs.liveSummary),
-    createRunDecisionsRoute(dependencies.runs.decisions),
-    createStrategyLayersRoute(dependencies.runs.strategyLayers),
-    createProjectionsRoute(dependencies.runs.projections),
-    createTradePlanRoute(dependencies.runs.tradePlan),
-    createAnalystRoute(dependencies.runs.analyst),
-    createAnalystDecisionsRoute(dependencies.runs.analystDecisions),
-    ...createRunExportRoutes(dependencies.runs.exportRunCsv),
+    ...createRunRouteTable(dependencies.runs),
   ];
   // A tabela final inclui as próprias rotas de documentação: o documento é gerado depois, dela inteira.
   if (dependencies.isDocumentationEnabled) routes.push(...createDocsRoutes(() => routes));

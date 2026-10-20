@@ -136,6 +136,7 @@ describe('OpenAPI gerado da tabela de rotas', () => {
       '/v1/runs/{runId}/strategy-layers',
       '/v1/runs/{runId}/projections',
       '/v1/runs/{runId}/trade-plan',
+      '/v1/runs/{runId}/questions',
     ]) {
       const operation = asRecord(asRecord(paths[path])['get']);
       expect(Object.keys(asRecord(operation['responses']))).toContain('429');
@@ -267,6 +268,7 @@ describe('OpenAPI gerado da tabela de rotas', () => {
       'get /v1/runs/{runId}/live-status',
       'get /v1/runs/{runId}/decisions',
       'get /v1/runs/{runId}/trade-plan',
+      'get /v1/runs/{runId}/questions',
     ]) {
       expect(byOperation.get(operation)?.get('404')).toStrictEqual(['RUN_NOT_FOUND']);
       expect(byOperation.get(operation)?.get('409')).toStrictEqual(['RUN_NOT_LIVE']);

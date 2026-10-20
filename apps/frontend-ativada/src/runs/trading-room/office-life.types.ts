@@ -62,6 +62,16 @@ export type AgentLife = {
 
 export type LifeLine = { readonly name: string; readonly line: string };
 
+// A pergunta da caixa "Pergunte à equipe": `key` muda a cada resposta nova; agendada = quem responde já tem a fila dela.
+export type LifeAnswer = {
+  readonly key: number;
+  readonly who: BalconySlot;
+  // A pergunta como o botão a mostra e a resposta do servidor, já em texto.
+  readonly question: string;
+  readonly text: string;
+  readonly isScheduled: boolean;
+};
+
 export type MeetingPhase = 'gathering' | 'banner' | 'returning';
 
 export type LifeState = {
@@ -77,4 +87,5 @@ export type LifeState = {
   readonly meeting: { readonly phase: MeetingPhase; readonly bannerSteps: number } | undefined;
   // A fala curta de cada um quando um colega vem perguntar (texto do servidor, já resumido).
   readonly lines: Readonly<Partial<Record<BalconySlot, LifeLine>>>;
+  readonly answer: LifeAnswer | undefined;
 };

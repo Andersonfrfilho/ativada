@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { BalconySlot } from '../team-room/balcony/balcony.constant.js';
 import { useMotionTimer } from '../team-room/motion/MotionClock.context.js';
+import { startAnswer, type AnswerRequest } from './office-answer.js';
 import { createLife, startMeeting, STEP_MILLISECONDS, stepLife, withLines } from './office-life.js';
 import type { LifeState } from './office-life.types.js';
 
@@ -15,6 +16,8 @@ export type OfficeLifeInput = {
   readonly decisionKey: number | undefined;
   // Calmo, movimento reduzido ou aba escondida = falso: nada é agendado e a cena fica onde está.
   readonly isMoving: boolean;
+  // A resposta mais nova da caixa "Pergunte à equipe": com movimento, quem responde vai ao telão.
+  readonly answer?: AnswerRequest | undefined;
 };
 
 function useLifeState(
@@ -37,9 +40,29 @@ function useLifeState(
 }
 
 // Um temporizador por cena (o relógio de movimento, falso nos testes): cada passo agenda o próximo. Sem movimento, nada.
-export function useOfficeLife({ crew, lines, decisionKey, isMoving }: OfficeLifeInput): LifeState {
+function useAnswerCue(
+  answer: AnswerRequest | undefined,
+  params: { isMoving: boolean; update: (change: (state: LifeState) => LifeState) => void },
+): void {
+  const { isMoving, update } = params;
+  const lastKey = useRef(answer?.key);
+  useEffect(() => {
+    if (answer === undefined || lastKey.current === answer.key) return;
+    lastKey.current = answer.key;
+    if (isMoving) update((state) => startAnswer(state, answer));
+  }, [answer, isMoving, update]);
+}
+
+export function useOfficeLife({
+  crew,
+  lines,
+  decisionKey,
+  isMoving,
+  answer,
+}: OfficeLifeInput): LifeState {
   const timer = useMotionTimer();
   const [state, update] = useLifeState(crew, lines);
+  useAnswerCue(answer, { isMoving, update });
   const lastDecision = useRef(decisionKey);
   useEffect(() => {
     const before = lastDecision.current;

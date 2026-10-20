@@ -2537,3 +2537,35 @@ ganho por perda perto do zero: os números da sala saem prontos do servidor. O m
   PEPE com tick 0,00000001 e passo 1, e paridade com `simulatedFillModel`: a ordem que o motor guardaria preenche na abertura estimada e o `net_profit`
   no alvo, no stop e na venda a mercado é o do plano) e 7 mutantes em `test/api-run-live-status-mutants.contract.test.ts`.
 - **Fica para depois:** preço ao vivo do ticker como `currentPrice`; a escala do analista no dimensionamento previsto.
+
+## Perguntas à equipe (`questions-1`, sala de operações)
+
+**Contexto.** O dono quer perguntar aos agentes da sala sobre moedas específicas e ver a resposta no balão. Modo 1, sem modelo de linguagem e sem custo:
+perguntas rápidas de catálogo fechado, respondidas pelo servidor com as leituras que já existem. O motor, `packages/run-recording` e `ENGINE_VERSION` não mudam.
+
+- **Rota sob a execução, não `/v1/market-questions`.** `GET /v1/runs/:runId/questions?symbol=&question=` (`access: USER`, `documentation`, política
+  própria `RUN_QUESTION`, 20/min por usuário). Os agentes de regra SÃO as regras da estratégia da execução (Tiago lê a regra de tendência dela, Renata a de
+  reversão…): sem a execução não há períodos de EMA, limiares de RSI nem pesos para ler, e uma rota de mercado teria de escolher uma estratégia por conta
+  própria. Sob a execução, o dono vem do token, alheia/inexistente/id malformado é o mesmo 404, outro tipo que não `live_paper` é 409 `RUN_NOT_LIVE` (a
+  sala só existe ali) e o timeframe é o da execução. Balde próprio porque, ao errar o cache, a pergunta lê até 500 velas e refaz as leituras na thread.
+- **Perguntas:** `trend` (Tiago: a regra da família tendência, EMA de preferência), `stretch` (Renata: reversão, RSI de preferência), `volume` (Vitor: OBV),
+  `sentiment` (Sofia: Fear & Greed), `entry_gap` (Alice: o placar e o que falta para comprar), `plan` (Alice: o plano de operação) e `track_record` (Otávio:
+  o acerto da previsão contra a moeda ao ar). `symbol` é qualquer par habilitado; fora disso, pergunta fora do catálogo, campo faltando ou a mais é 400 sem eco.
+- **Nenhuma conta nova.** As leituras saem de `computeLatestTriggers` (estado aguardando entrada) sobre as últimas 500 velas FECHADAS e contíguas do par
+  pedido, com a versão da estratégia da execução e `setupFor(par, timeframe)` — o mesmo caminho dos ativos e das metas. As frases reaproveitam o
+  catálogo do próximo gatilho (`buildTriggerRuleMessage`, `buildTriggersMessage`). `plan` é a `plan.message` da rota irmã `trade-plan` e `track_record` é o
+  `summary` da rota irmã `projections` (mensagem + veredito de Wilson), chamadas como casos de uso. As duas só existem para o par da execução: outro par recebe a
+  frase do catálogo que diz isso (o plano e as previsões são da simulação, não do par).
+- **Cache** em memória da instância por (versão da estratégia, par, timeframe, última vela), 256 entradas, a mais velha sai primeiro: a mesma pergunta na
+  mesma vela não refaz a série nem relê o sentimento. A leitura das velas é uma consulta por pedido (é ela que diz qual é a última vela).
+- **Resposta:** `{ version, runId, symbol, question, agent, answer, basis, asOf, notice }`. `answer` vem do catálogo fechado `question-messages.ts` (pt-BR,
+  números pelo `live-number-format`, sem data nem hora, nada manda comprar ou vender); `basis` é `indicative` quando o indicador se move com a próxima vela ou
+  o número é estimativa (plano), `exact` nos demais; `asOf` é a vela lida (`candleTime` e `closedAt` = abertura + duração), nula quando o par não tem vela —
+  aí a resposta é "Sem dados de <par> ainda." Aquecimento incompleto tem frase própria. O Fear & Greed vale para o mercado inteiro e a resposta diz isso, e
+  diz quando a estratégia não o usa no placar.
+- **Painel:** a caixa "Pergunte à equipe" na sala (moeda + botões); quem responde vai à frente do telão pela atividade `answer` de `office-life` (pura, com o
+  trânsito e o caminho de sempre; o dono do telão cede a vez) e o balão grande mostra a resposta; o histórico "Perguntas" guarda as 5 últimas em texto, e a
+  resposta nova é anunciada pela MESMA região `aria-live` da sala (a da decisão), que agora diz o que mudou por último.
+- **Prova:** `test/api-run-questions.contract.test.ts` (cada pergunta com votos esperados de uma série que só sobe, plano e acertos iguais às rotas irmãs,
+  par sem velas, aquecimento, 404/401/400/409, o balde de 20 por minuto) e o `api-openapi` (429, 404 e 409 documentados).
+- **Fica para depois:** modo 2 (pergunta livre a uma equipe de modelo, com custo) e o acerto da previsão de outro par.

@@ -19,16 +19,25 @@ export type GoalSeriesReader = {
 
 // O trecho contíguo MAIS RECENTE da série: o motor recusa lacuna, e uma lacuna antiga não pode esconder o histórico
 // novo. Candle fora de ordem ou repetido também quebra o trecho.
-export function latestContiguousRun(candles: readonly EngineCandle[]): EngineCandle[] {
+export function latestContiguousSpan(params: {
+  readonly candles: readonly EngineCandle[];
+  readonly durationMilliseconds: number;
+}): EngineCandle[] {
+  const { candles } = params;
   let start = candles.length;
   for (let index = candles.length - 1; index >= 0; index -= 1) {
     const candle = candles[index];
     const next = candles[index + 1];
     if (candle === undefined) break;
-    if (next !== undefined && next.openTime - candle.openTime !== DURATION) break;
+    if (next !== undefined && next.openTime - candle.openTime !== params.durationMilliseconds)
+      break;
     start = index;
   }
   return candles.slice(start);
+}
+
+export function latestContiguousRun(candles: readonly EngineCandle[]): EngineCandle[] {
+  return latestContiguousSpan({ candles, durationMilliseconds: DURATION });
 }
 
 // Candle é dado público de mercado (sem dono). Os dois últimos anos de janelas mais o aquecimento do indicador mais
