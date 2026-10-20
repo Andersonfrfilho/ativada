@@ -7,6 +7,7 @@ import { Icon, type IconName } from '../../layout/Icon.component.js';
 import { MEDAL_WORD, TONE_WORD, type RankingEntry } from './live-ranking.js';
 import styles from './LiveRanking.module.css';
 import { useLiveRanking } from './useLiveRanking.hook.js';
+import { useWheelScroll } from './useWheelScroll.hook.js';
 
 const TONE_ICON: Readonly<Record<RankingEntry['tone'], IconName>> = {
   up: 'arrowUp',
@@ -45,6 +46,7 @@ function RankingChip({ entry }: { readonly entry: RankingEntry }): ReactElement 
 // O ranking das simulações ao vivo rodando: melhor resultado primeiro, a execução aberta marcada; o link troca de execução.
 export function LiveRanking({ currentId }: { readonly currentId: string }): ReactElement | null {
   const ranking = useLiveRanking(currentId);
+  const rowRef = useWheelScroll<HTMLOListElement>(ranking.length > 0);
   if (ranking.length === 0) return null;
   return (
     <section className={styles.ranking} aria-labelledby="live-ranking-title">
@@ -54,7 +56,7 @@ export function LiveRanking({ currentId }: { readonly currentId: string }): Reac
         </h2>
         <span className={styles.note}>resultado desde o início, dinheiro fictício</span>
       </div>
-      <ol className={styles.row} aria-label="Ranking ao vivo">
+      <ol ref={rowRef} className={styles.row} aria-label="Ranking ao vivo">
         {ranking.map((entry) => (
           <RankingChip key={entry.runId} entry={entry} />
         ))}

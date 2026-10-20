@@ -26,13 +26,23 @@
   display: flex;
   gap: 8px;
   margin: 0;
-  padding: 0 0 4px;
+  padding: 2px 32px 2px 2px;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 2px 32px;
+  scrollbar-width: none;
+  mask-image: linear-gradient(to right, var(--ink) calc(100% - 32px), transparent);
   list-style: none;
+}
+
+.row::-webkit-scrollbar {
+  display: none;
 }
 
 .item {
   flex: 0 0 auto;
+  scroll-snap-align: start;
 }
 
 .chip {
