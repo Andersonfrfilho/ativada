@@ -131,3 +131,27 @@ Fluxo: `useReducedMotion` + animação ligada + aba visível → `isMoving`. Sem
 ### Modelo por task
 
 E0 documentos → haiku; E1 varanda → sonnet; E2 aba Escritório → sonnet; E3 Calmo e movimento reduzido → haiku; F revisão → sonnet.
+
+## Fase 3 — Sala de operações — plano (2026-10-20)
+
+Pasta nova `apps/frontend-ativada/src/runs/trading-room/`. O gráfico continua em `src/runs/candle-chart/` (porta `ChartSurface`).
+
+| Peça | Arquivo | O quê |
+|---|---|---|
+| Plano do servidor | `trading-room/trade-plan.validation.ts`, `trade-plan.query.ts` | Espelho Zod de `GET /v1/runs/:runId/trade-plan`, sob a raiz `runs` (o aviso do stream refaz) |
+| Opiniões | `trading-room/room-opinions.ts` | Agentes da equipe (`buildBalconyAgents`, `buildModelAgent`) + plano → linhas prontas (puro) |
+| Pixel art | `trading-room/pixel-avatar.ts`, `room-art.ts`, `desk-art.ts` | Grades 18×29 com contorno, mobília e monitores como listas de retângulos (puro); componentes só desenham |
+| Rotas | `trading-room/office-route.ts` | Assentos, frente do telão, reunião, visitas e o caminho pelos corredores (unidades 1600×900 do preview) |
+| Roteiro | `trading-room/office-life*.ts` | Estado puro + `stepLife` (um ladrilho por passo, semente `createRandom`) |
+| Cena | `trading-room/useOfficeLife.hook.ts` | UM temporizador (`useMotionTimer`) só com movimento; reunião na troca da decisão |
+| Telão | `trading-room/TerminalScreen.component.tsx`, `candle-chart/terminal-chart.context.tsx` | Moldura escura e cabeçalho; o contexto liga as médias e os níveis do plano |
+| Médias | `candle-chart/moving-average.ts` + `setAverages` na porta | MA20 e MA50 como linhas de desenho |
+| Parede | `trading-room/Wall*.component.tsx` | Letreiro, relógios, Fear & Greed, mapa de calor, próxima vela e quadro de preços |
+
+Posição dos bonecos por variáveis CSS (`--x`, `--y`) escritas por `ref` (como o balão do gráfico), nunca `style=`. Fluxo: Calmo,
+movimento reduzido ou aba escondida → nada agendado e nenhum atributo de movimento.
+
+### Modelo por task
+
+S0 documentos → haiku; S1 telão → sonnet; S2 plano e opiniões → sonnet; S3 cena e parede → sonnet; S4 vida no escritório →
+sonnet; S5 página, 375 px e código morto → sonnet; S6 `CLAUDE.md` e evidência → haiku.

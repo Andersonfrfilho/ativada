@@ -100,3 +100,19 @@ Ao terminar ou parar, feche o modo (/oh-my-claudecode:cancel).
 | F | Revisão: contratos, 375 px, claro/escuro, contraste, alvos 44 px, glossário, `CLAUDE.md`, `evidence.md` | Evidência registrada |
 
 Fora desta fase: lousa com níveis e plaquinha de % líquido (segunda fase; só o ponto de extensão).
+
+## Fase 3 — Sala de operações (aprovada 2026-10-20)
+
+> 🤖 Modelo por task: S0 `haiku` · S1 `sonnet` · S2 `sonnet` · S3 `sonnet` · S4 `sonnet` · S5 `sonnet` · S6 `haiku`. Gates no Linux a cada
+> task: `bun run typecheck`, `bun run lint`, `bun run format:check`, `bun run --cwd apps/frontend-ativada test`. Commit isolado por task.
+> Teste novo entra no FIM da lista explícita do `package.json` do painel.
+
+| Task | O quê | Aceite |
+|---|---|---|
+| S0 | Esta seção (spec, plan, tasks) | Decisões S-D1–S-D8 registradas |
+| S1 | Telão-terminal: tokens `--terminal-*`, contexto do terminal, MA20/MA50 (`setAverages`), cabeçalho com par/vela/preço e `PriceVariation` (sai do "Acompanhamento"), níveis do `trade-plan` | Contratos: médias exatas à mão, superfície falsa recebe as médias só no terminal, níveis do plano, variações uma vez só; contraste dos pares do terminal |
+| S2 | `trade-plan` no painel (Zod + consulta) e `room-opinions.ts` | Contratos: as três formas do servidor, campo estranho recusado, linhas de cada agente com o texto formatado, equipe desligada fora |
+| S3 | Pixel art (avatares, mobília, mesas com monitores) e a parede de telas | Contratos: desenho determinístico, contorno, cena `aria-hidden`, Fear & Greed com crédito, mapa de calor dos pares habilitados |
+| S4 | Vida no escritório: roteiro com semente, reunião na troca da decisão, Calmo e movimento reduzido | Contratos (relógio falso): determinístico, passo ≤ 1 ladrilho, fora da área do telão, reunião e volta ao assento, nada agendado com Calmo/movimento reduzido |
+| S5 | Página: a sala troca varanda, plaquinhas e seção da sala em `LiveChartArea`; 375 px; lista "O que cada um acha"; `aria-live` único; código morto apagado | Contratos de página; `design-review`, `contrast`, `touch-targets` verdes |
+| S6 | `CLAUDE.md` (painel) e `evidence.md` | Diff revisado |

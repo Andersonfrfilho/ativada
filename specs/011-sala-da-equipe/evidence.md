@@ -494,3 +494,10 @@ cenário isométrico (janela, quadro de cotações, relógio, plantas), mesas co
   `balcony-motion` e `office-scenes`.
 - Contrato novo `calm-button.contract.tsx` (liga/desliga, lembrado, armazenamento bloqueado), na lista explícita do `test`.
 - Gates: typecheck, lint e format:check verdes; `bun run --cwd apps/frontend-ativada test` 1.605 passam, 0 falham.
+
+## Fase 3 — Sala de operações (aprovada 2026-10-20)
+
+### S0 — documentos (2026-10-20)
+
+Seções "Fase 3 — Sala de operações" em `spec.md` (decisões S-D1–S-D8, requisitos SR1–SR7, contratos), `plan.md` (peças e modelo por
+task) e `tasks.md` (S0–S6). Base dos gates antes da fase: `bun run --cwd apps/frontend-ativada test` 1.651 passam, 0 falham.

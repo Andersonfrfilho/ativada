@@ -264,3 +264,51 @@ migration, não muda o motor nem o `run-recording`, não adiciona dependência**
 | Reflow | Animação só com `transform`/`opacity`; posição por classes/variáveis CSS (sem `style=`) |
 | Aba escondida ou fora da tela | Pausa por `visibilitychange` e `IntersectionObserver` (o mesmo observador do escritório) |
 | Cenário pesado no celular | Sem SVG filtrado; HTML + CSS; escala por `cqw`; vista frontal antiga continua como alternativa |
+
+## Fase 3 — Sala de operações (aprovada 2026-10-20)
+
+> O dono aprovou a **direção E** do preview `docs/preview/equipe-ao-vivo/escritorio.html` (rodada 3; análise em
+> `docs/preview/equipe-ao-vivo/analise.md`): o gráfico de produção é o telão de um escritório de operações em pixel art
+> original, com a equipe trabalhando em volta dele. Vale tudo o que a §4 já exige (honestidade, estado = ícone + palavra +
+> cor, nada de lookahead, sem promessa, "Simulação com dinheiro fictício · Tendência, não promessa").
+
+### Decisões
+
+| # | Decisão | Valor |
+|---|---|---|
+| S-D1 | Onde | Só no detalhe da `live_paper` (`BacktestDetailPage` → `LivePaperBody`). Backtest e walk-forward seguem com a coluna histórica (`HistoricalTeam`) |
+| S-D2 | O que sai | A varanda (`TeamBalcony`), as plaquinhas da operação e a seção da sala (frontal e isométrica) **desta página**; código sem outro uso é apagado com os testes dele |
+| S-D3 | O telão | É o gráfico de produção (`lightweight-charts` pela porta `ChartSurface`), em moldura de terminal escura nos dois temas, com MA20/MA50, volume e as linhas de nível com etiqueta no eixo. Nada da equipe (boneco, balão, laser) entra sobre o canvas |
+| S-D4 | Cabeçalho do telão | Par, vela, preço ao vivo e as variações 1m–24h (`PriceVariation`), que saem do cartão "Acompanhamento" (sem duplicar) |
+| S-D5 | Números | Só do servidor: `live-status` (placar, decisões e votos), `trade-plan` (compra, alvo, proteção, resultado previsto no alvo e na proteção, comprado, níveis por equipe ◆, motivo tipado quando não há números), opiniões das equipes e previsões. O painel só formata texto decimal |
+| S-D6 | Movimento | Roteiro puro com semente (passo de ladrilho de 32, café, telão, visita, alongar) e a **reunião** na troca da decisão (todos vão à frente do telão, a faixa "A equipe decidiu" aparece e cada um volta). "Calmo" (mesma preferência da Fase 2) e `prefers-reduced-motion` congelam a cena onde está; com movimento reduzido nenhuma classe/atributo de movimento é desenhado |
+| S-D7 | Quem aparece | Os seis agentes de regra e só as equipes ◆ LIGADAS; a carteira da equipe aparece na mesa dela quando a execução é dela |
+| S-D8 | 375 px | Telão em cima, quadros (preços, próxima vela, mapa de calor), a faixa compacta das mesas e a lista de opiniões; o piso com os bonecos não aparece; sem rolagem horizontal |
+
+### Requisitos
+
+- **SR1 Telão-terminal.** Moldura escura (tokens `--terminal-*`, iguais nos dois temas), cabeçalho com par, vela, preço e
+  variações, legenda MA20/MA50; as médias são desenho (calculadas dos números de desenho das velas), nunca dinheiro.
+- **SR2 Níveis.** Com o `trade-plan` em `awaiting_entry`, as linhas de compra simulada, alvo e proteção com o preço na etiqueta do
+  eixo; comprado, entrada, alvo e proteção; sem plano, o gatilho da regra de preço (comportamento anterior).
+- **SR3 Parede de telas.** Letreiro dos pares habilitados (preço e variação de 24 h dos dados de preço existentes), relógios
+  (Nova York, Londres, Tóquio, São Paulo), Fear & Greed (consulta de sentimento existente, com o crédito), mapa de calor dos
+  pares habilitados, quadro "Próxima vela" (hora no fuso do usuário, placar e limiares do `live-status`) e quadro de preços
+  (do `trade-plan`).
+- **SR4 Mesas e opiniões.** Mesa com monitores por agente; plaquinha com nome, intenção (ícone + palavra + cor) e o resumo; o balão
+  de quem vai ao telão mostra compra, alvo, lucro previsto (já sem custo) e proteção quando o servidor os dá; equipe ◆ com a
+  confiança; quem está fora do placar fica esmaecido com "fora do placar".
+- **SR5 Decisão.** Barra fixa com a decisão da Alice (números do `trade-plan`) e a faixa na reunião; UM `aria-live` anuncia só a
+  troca da decisão.
+- **SR6 Texto.** Lista "O que cada um acha" com o mesmo conteúdo dos balões (alternativa para leitor de tela e celular).
+- **SR7 Acessibilidade.** Cena decorativa `aria-hidden`; ordem de foco: Calmo → telão → lista; alvos de 44 px; contraste dos pares
+  novos testado nos dois temas.
+
+### Contratos (provados antes do código)
+
+1. O Zod do `trade-plan` aceita as três formas do servidor e recusa campo fora do contrato.
+2. Opiniões: números só do `trade-plan`/`live-status` (texto do servidor formatado); equipe desligada não aparece.
+3. Avatares e mobília: pixel art determinística (mesma entrada = mesmo desenho), contorno automático.
+4. Roteiro: mesma semente = mesma sequência; passo de no máximo um ladrilho; ninguém entra na área do telão; a reunião junta todos
+   e devolve cada um ao assento; Calmo e movimento reduzido = nenhum temporizador.
+5. Página: sem varanda nem aba isométrica; variações só no telão; `aria-live` único; 375 px sem piso.
