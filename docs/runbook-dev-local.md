@@ -144,12 +144,15 @@ Pares novos precisam de candles: o `backfill-candles` do cron (`CRON_TASKS=backf
 - As velas que o gráfico oferece vêm de `MARKET_TIMEFRAMES` (o `dev-up` repassa como `VITE_MARKET_TIMEFRAMES`). A vela
   escolhida na tela não é lembrada entre execuções: cada execução abre na própria vela.
 
-## 8. Velas de exibição de 3 min (spec 017)
+## 8. Velas de exibição de 1 e 3 min (spec 017)
 
-- `MARKET_DISPLAY_TIMEFRAMES=3m` (o `env.dev` já liga; padrão VAZIO = nenhuma) e `CANDLE_DISPLAY_RETENTION_DAYS=90` (7 a 365).
-  A vela de 3 min é SÓ de exibição: nunca vira vela de execução (`POST /v1/runs` com `3m` é `400`) e o motor nunca a lê.
-- O worker assina `kline_3m` e grava só as velas fechadas; a API assina a mesma no ticker (com `TICKER_KLINE_ENABLED`).
+- `MARKET_DISPLAY_TIMEFRAMES=1m,3m` (o `env.dev` já liga; padrão VAZIO = nenhuma), `CANDLE_DISPLAY_RETENTION_DAYS=90` (7 a 365, vale
+  para 3m) e `CANDLE_DISPLAY_1M_RETENTION_DAYS=30` (1 a 90, vale para 1m). As velas de 1 e 3 min são SÓ de exibição: nunca viram
+  vela de execução (`POST /v1/runs` com `1m` ou `3m` é `400`) e o motor nunca as lê.
+- O worker assina `kline_1m` e `kline_3m` e grava só as velas fechadas; a API assina a mesma no ticker (com `TICKER_KLINE_ENABLED`).
   O `dev-up` repassa `MARKET_DISPLAY_TIMEFRAMES` como `VITE_MARKET_DISPLAY_TIMEFRAMES`.
-- Recarga dos últimos 90 dias: `CRON_TASKS=backfill-display-candles` (cron real; o 418 da Binance aborta). Limpeza diária das
-  velas de exibição vencidas: `CRON_TASKS=purge-display-candles` (só 3m; 15m, 1h, 4h e 1d nunca são apagadas).
-- Migration `0026` aceita `3m` no `CHECK` de `candles`; o rollback ABORTA enquanto houver linha 3m (rode a limpeza antes).
+- Recarga da retenção de cada vela (90 dias de 3m, 30 de 1m): `CRON_TASKS=backfill-display-candles` (cron real; o 418 da Binance
+  aborta). Limpeza diária das velas de exibição vencidas: `CRON_TASKS=purge-display-candles` (cada vela pela sua retenção; 15m,
+  1h, 4h e 1d nunca são apagadas).
+- Migration `0026` aceita `3m` no `CHECK` de `candles` e a `0029` aceita `1m`; cada rollback ABORTA enquanto houver linha do seu
+  timeframe (rode a limpeza antes).

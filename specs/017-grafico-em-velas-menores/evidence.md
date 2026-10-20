@@ -13,7 +13,7 @@ AUTORIZADOS, e só eles:
 Decisões A em tudo: velas de 3 min guardadas só 90 dias; só 3 min de exibição; abre em 3 min nas simulações de 15 min; saída
 por alvo/proteção com marca no início da vela de 15 min e colchete sobre as 5 de 3 min.
 
-**NÃO autorizado:** `1m`/`5m` (por isso o `CHECK` aceita só `3m`), chamada externa sob demanda (opção B), mudar o motor.
+**NÃO autorizado (até 2026-10-20, ver adendo no fim):** `1m`/`5m` (por isso o `CHECK` aceita só `3m`), chamada externa sob demanda (opção B), mudar o motor.
 A Fase 3 (painel) fica para depois: outro agente edita o painel agora.
 
 ## T0.1 — contrato (docs/adr/0002, "Gráfico em velas menores (spec 017)")
@@ -179,3 +179,19 @@ em `useSeriesLoader`, limpeza de listeners e timers, dinheiro em `bigint`, sem l
 Pendente (baixa):
 - `tooltip-model.ts` (`decisionNote`) diz "na vela de 15 min decidida" também numa execução de 1 h vista em 1 h; usar a vela da execução ou só falar de 15 min com `mapping`.
 - `useTooltipHotkey.hook.ts`: a tecla `V` é global (alterna todos os gráficos montados) e não confere `event.repeat`.
+
+## Adendo 2026-10-20 — vela de 1 min autorizada
+
+O dono autorizou `1m` como segunda vela SÓ de exibição (5 min segue fora). Espelha o 3 min:
+
+- Migration `0029_candles_display_timeframe_1m` (CHECK com `1m`, NOT VALID + VALIDATE) e `.rollback.sql` que ABORTA enquanto existir linha 1m;
+  `make migration-test` confere o CHECK e as duas guardas (0026 com 3m, 0029 com 1m).
+- Retenção própria: env `CANDLE_DISPLAY_1M_RETENTION_DAYS` (1 a 90, padrão 30; 1 min tem 3x as linhas por dia do 3 min).
+  `purgeDisplayCandles` aceita `timeframes`; a tarefa de expurgo e o backfill do cron rodam vela por vela com a retenção de cada uma
+  (`buildDisplayRetentionDays`); a API devolve o `retentionStart` da vela pedida (`DisplayRetention.days` por vela).
+- Fronteira mantida: `POST /v1/runs` com `1m` é 400 (contrato parametrizado em `display-timeframe-boundary`), `MARKET_TIMEFRAMES` recusa `1m`.
+- Painel: seletor com 1m (abre em 3m na simulação ao vivo de 15 min), degraus de 15 (execução de 15 min) e 60 (1 h) velas sem
+  lookahead (`display-mapping.contract.ts`, oráculo de composição de 15 velas de 1 min em `compose-candles.contract.ts`), textos de
+  legenda, retenção, vagas e previsão geram a vela mostrada (`describeDisplayLegend`, `describeRetention`, `DisplaySlotsList`),
+  corte de retenção lembrado por vela. Variação de 1, 5 e 15 min: ticks primeiro, velas de 1 min gravadas como reserva
+  (`price-variation.contract.ts`, `price-variation-minute.contract.tsx`).
