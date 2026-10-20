@@ -581,3 +581,7 @@ task) e `tasks.md` (S0–S6). Base dos gates antes da fase: `bun run --cwd apps/
 - Pendências vistas: a 1440 × 900 o canvas começa em y ≈ 875 (o cabeçalho do cartão "Preço e operações" com a barra de velas e camadas ocupa
   ~400 px); o cabeçalho do aplicativo (fora desta tela) passa da largura a 1440 px (`AppShell`, não mexido aqui).
 - Gates verdes; painel 1.590 passam, 0 falham.
+
+### S6 — CLAUDE.md (2026-10-20)
+
+Seção do painel ganhou "Sala de operações (spec 011 Fase 3)" e a nota da spec 015 aponta a ficha para o cartão da equipe na sala. format:check verde.
