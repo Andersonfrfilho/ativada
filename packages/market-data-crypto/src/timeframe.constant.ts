@@ -20,6 +20,7 @@ export const TIMEFRAME_DURATION_MILLISECONDS: Readonly<Record<Timeframe, number>
 
 // Velas só de exibição (spec 017): gravadas com retenção curta e NUNCA timeframe de execução; fora de `TIMEFRAME` de propósito.
 export const DISPLAY_TIMEFRAME = {
+  ONE_MINUTE: '1m',
   THREE_MINUTES: '3m',
 } as const;
 
@@ -33,6 +34,7 @@ export type MarketCandleTimeframe =
 export const MARKET_CANDLE_DURATION_MILLISECONDS: Readonly<Record<MarketCandleTimeframe, number>> =
   {
     ...TIMEFRAME_DURATION_MILLISECONDS,
+    [DISPLAY_TIMEFRAME.ONE_MINUTE]: MILLISECONDS_PER_MINUTE,
     [DISPLAY_TIMEFRAME.THREE_MINUTES]: 3 * MILLISECONDS_PER_MINUTE,
   };
 

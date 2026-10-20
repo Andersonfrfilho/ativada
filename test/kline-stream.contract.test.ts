@@ -157,7 +157,7 @@ describe('kline stream: close and settings', () => {
     ['a lowercase symbol', { symbols: ['btcusdt'] }],
     ['no symbol', { symbols: [] }],
     ['no timeframe', { timeframes: [] }],
-    ['an unsupported timeframe', { timeframes: ['1m' as never] }],
+    ['an unsupported timeframe', { timeframes: ['5m' as never] }],
     ['a non websocket base URL', { baseUrl: 'https://data-stream.binance.vision' }],
     ['a zero stale limit', { staleAfterMilliseconds: 0 }],
   ])('rejects %s at creation', (_name, overrides) => {

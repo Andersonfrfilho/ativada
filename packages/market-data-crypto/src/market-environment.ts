@@ -3,10 +3,13 @@ import { commaSeparatedTextSchema, z } from '@ativada/environment';
 
 import {
   CONFIGURED_SYMBOL_PATTERN,
+  DEFAULT_CANDLE_DISPLAY_1M_RETENTION_DAYS,
   DEFAULT_CANDLE_DISPLAY_RETENTION_DAYS,
   DEFAULT_MARKET_DISPLAY_TIMEFRAMES,
   DEFAULT_MARKET_EXCHANGE,
+  MAXIMUM_CANDLE_DISPLAY_1M_RETENTION_DAYS,
   MAXIMUM_CANDLE_DISPLAY_RETENTION_DAYS,
+  MINIMUM_CANDLE_DISPLAY_1M_RETENTION_DAYS,
   MINIMUM_CANDLE_DISPLAY_RETENTION_DAYS,
   DEFAULT_MARKET_SYMBOLS,
   DEFAULT_MARKET_TIMEFRAMES,
@@ -18,8 +21,10 @@ import { DISPLAY_TIMEFRAME, TIMEFRAME } from './timeframe.constant.js';
 const EXCHANGE_EXPECTATION = `uma das corretoras suportadas: ${SUPPORTED_MARKET_EXCHANGES.join(', ')}`;
 const SYMBOL_EXPECTATION = 'símbolos em maiúsculas separados por vírgula (ex.: BTCUSDT,ETHUSDT)';
 const TIMEFRAME_EXPECTATION = 'timeframes separados por vírgula dentre 15m, 1h, 4h e 1d';
-const DISPLAY_TIMEFRAME_EXPECTATION = 'timeframes de exibição separados por vírgula (3m) ou vazio';
+const DISPLAY_TIMEFRAME_EXPECTATION =
+  'timeframes de exibição separados por vírgula (1m, 3m) ou vazio';
 const RETENTION_EXPECTATION = `inteiro de ${MINIMUM_CANDLE_DISPLAY_RETENTION_DAYS} a ${MAXIMUM_CANDLE_DISPLAY_RETENTION_DAYS}`;
+const RETENTION_1M_EXPECTATION = `inteiro de ${MINIMUM_CANDLE_DISPLAY_1M_RETENTION_DAYS} a ${MAXIMUM_CANDLE_DISPLAY_1M_RETENTION_DAYS}`;
 
 // Vazio é válido (nenhuma vela de exibição); o resto precisa ser timeframe de exibição conhecido.
 const displayTimeframesSchema = commaSeparatedTextSchema.transform((entries) =>
@@ -67,4 +72,10 @@ export const marketEnvironmentShape = {
     .min(MINIMUM_CANDLE_DISPLAY_RETENTION_DAYS, { error: RETENTION_EXPECTATION })
     .max(MAXIMUM_CANDLE_DISPLAY_RETENTION_DAYS, { error: RETENTION_EXPECTATION })
     .default(DEFAULT_CANDLE_DISPLAY_RETENTION_DAYS),
+  CANDLE_DISPLAY_1M_RETENTION_DAYS: z.coerce
+    .number({ error: RETENTION_1M_EXPECTATION })
+    .int({ error: RETENTION_1M_EXPECTATION })
+    .min(MINIMUM_CANDLE_DISPLAY_1M_RETENTION_DAYS, { error: RETENTION_1M_EXPECTATION })
+    .max(MAXIMUM_CANDLE_DISPLAY_1M_RETENTION_DAYS, { error: RETENTION_1M_EXPECTATION })
+    .default(DEFAULT_CANDLE_DISPLAY_1M_RETENTION_DAYS),
 };

@@ -5,6 +5,7 @@ import { readPostgresErrorCode } from '../src/postgres-error-code.js';
 import type { CandleCheckContext } from './candle-checks.js';
 
 const NOW_MILLISECONDS = 1_800_000_000_000;
+const ONE_MINUTE = 60_000;
 const THREE_MINUTES = 180_000;
 const FIFTEEN_MINUTES = 900_000;
 const ONE_DAY = 86_400_000;
@@ -17,8 +18,13 @@ const KEY = { exchange: 'binance', symbol: SYMBOL } as const;
 
 type Row = CandleRecord<StoredCandleTimeframe>;
 
+const DURATION_BY_TIMEFRAME: Readonly<Partial<Record<StoredCandleTimeframe, number>>> = {
+  '1m': ONE_MINUTE,
+  '3m': THREE_MINUTES,
+};
+
 function candle(timeframe: StoredCandleTimeframe, openTime: number, tradeCount = 1): Row {
-  const duration = timeframe === '3m' ? THREE_MINUTES : FIFTEEN_MINUTES;
+  const duration = DURATION_BY_TIMEFRAME[timeframe] ?? FIFTEEN_MINUTES;
   return {
     ...KEY,
     timeframe,
@@ -71,6 +77,27 @@ async function checkPurgeOnlyDisplayCandles(context: CandleCheckContext): Promis
   const second = await repository.purgeDisplayCandles({ openedBefore: CUTOFF });
   assertCondition(second === 0, 'o segundo expurgo apagou algo');
   reportCheck('expurgo: só 3m anterior ao corte (exclusivo), em lotes; 15m, 1h, 4h e 1d intactos');
+}
+
+async function checkPurgeOneTimeframe(context: CandleCheckContext): Promise<void> {
+  const { handle, client, assertCondition, reportCheck } = context;
+  const repository = createCandleRepository(handle, { now: () => NOW_MILLISECONDS });
+  const before = await countRows(client, '3m');
+  await repository.upsertCandles([
+    candle('1m', CUTOFF - ONE_MINUTE),
+    candle('1m', CUTOFF - 2 * ONE_MINUTE),
+    candle('1m', CUTOFF),
+    candle('3m', CUTOFF - THREE_MINUTES),
+  ]);
+  const deleted = await repository.purgeDisplayCandles({
+    openedBefore: CUTOFF,
+    timeframes: ['1m'],
+  });
+  assertCondition(deleted === 2, `o expurgo só de 1m apagou ${deleted} (esperado 2)`);
+  assertCondition((await countRows(client, '1m')) === 1, 'sobrou outra vela 1m além da do corte');
+  assertCondition((await countRows(client, '3m')) === before + 1, 'o expurgo só de 1m tocou em 3m');
+  await repository.purgeDisplayCandles({ openedBefore: CUTOFF + ONE_MINUTE, timeframes: ['1m'] });
+  reportCheck('expurgo por timeframe: 1m com o próprio corte, 3m intacto');
 }
 
 async function checkSeriesStayApart(context: CandleCheckContext): Promise<void> {
@@ -240,6 +267,7 @@ async function checkEmptyFirstSubCandle(context: CandleCheckContext): Promise<vo
 
 export async function checkDisplayCandles(context: CandleCheckContext): Promise<void> {
   await checkPurgeOnlyDisplayCandles(context);
+  await checkPurgeOneTimeframe(context);
   await checkSeriesStayApart(context);
   await checkCheckConstraint(context);
   await checkFiveThreeMinuteCandlesMakeTheFifteen(context);

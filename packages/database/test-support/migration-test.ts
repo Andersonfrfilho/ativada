@@ -30,35 +30,51 @@ async function readReasonCheck(databaseUrl: string): Promise<ConstraintRow | und
   }
 }
 
-// A 0026 (spec 017) aceita 3m no CHECK de candles; o rollback dela ABORTA enquanto existir linha 3m.
+// A 0026 (spec 017) aceita 3m no CHECK de candles e a 0029 aceita 1m.
 const TIMEFRAME_CHECK = 'candles_timeframe_check';
-const DISPLAY_TIMEFRAME_LITERAL = "'3m'";
-const ROLLBACK_0026_GUARD_MESSAGE = 'não apaga velas de exibição';
+const DISPLAY_TIMEFRAME_LITERALS = ["'1m'", "'3m'"];
+const ROLLBACK_GUARD_MESSAGE = 'não apaga velas de exibição';
 const ROLLBACK_0026 = '0026_candles_display_timeframes.rollback.sql';
-const DISPLAY_CANDLE_INSERT = `INSERT INTO candles (exchange, symbol, timeframe, open_time, close_time, open, high, low, close, volume, trade_count)
-  VALUES ('binance', 'BTCUSDT', '3m', 0, 179999, 1, 2, 1, 2, 1, 1)`;
+const ROLLBACK_0029 = '0029_candles_display_timeframe_1m.rollback.sql';
+const displayCandleInsert = (timeframe: string, closeTime: number): string =>
+  `INSERT INTO candles (exchange, symbol, timeframe, open_time, close_time, open, high, low, close, volume, trade_count)
+  VALUES ('binance', 'BTCUSDT', '${timeframe}', 0, ${closeTime}, 1, 2, 1, 2, 1, 1)`;
 
+async function expectRollbackGuard(
+  client: Bun.SQL,
+  params: { readonly file: string; readonly label: string },
+): Promise<void> {
+  const script = await Bun.file(join(MIGRATIONS_FOLDER, params.file)).text();
+  const failure = await client
+    .begin((transaction) => transaction.unsafe(script))
+    .then(
+      () => undefined,
+      (error: unknown) => (error instanceof Error ? error.message : String(error)),
+    );
+  if (!failure?.includes(ROLLBACK_GUARD_MESSAGE)) {
+    throw new Error(`o rollback ${params.label} não abortou pela guarda com linha de exibição`);
+  }
+}
+
+// A 0026 (3m) e a 0029 (1m): cada rollback ABORTA enquanto existir linha do seu timeframe.
 async function checkDisplayTimeframeMigration(databaseUrl: string): Promise<void> {
   const client = new Bun.SQL(databaseUrl);
   try {
     const rows: unknown =
       await client`SELECT pg_get_constraintdef(oid) AS definition, convalidated FROM pg_constraint WHERE conname = ${TIMEFRAME_CHECK}`;
     const check = (rows as readonly ConstraintRow[])[0];
-    if (check?.convalidated !== true || !check.definition.includes(DISPLAY_TIMEFRAME_LITERAL)) {
-      throw new Error(`${TIMEFRAME_CHECK} sem 3m validado`);
+    const hasLiterals = DISPLAY_TIMEFRAME_LITERALS.every((literal) =>
+      check?.definition.includes(literal),
+    );
+    if (check?.convalidated !== true || !hasLiterals) {
+      throw new Error(`${TIMEFRAME_CHECK} sem 1m e 3m validados`);
     }
-    await client.unsafe(DISPLAY_CANDLE_INSERT);
-    const script = await Bun.file(join(MIGRATIONS_FOLDER, ROLLBACK_0026)).text();
-    const failure = await client
-      .begin((transaction) => transaction.unsafe(script))
-      .then(
-        () => undefined,
-        (error: unknown) => (error instanceof Error ? error.message : String(error)),
-      );
-    if (!failure?.includes(ROLLBACK_0026_GUARD_MESSAGE)) {
-      throw new Error('o rollback da 0026 não abortou pela guarda com linha 3m');
-    }
+    await client.unsafe(displayCandleInsert('3m', 179_999));
+    await expectRollbackGuard(client, { file: ROLLBACK_0026, label: '0026' });
     await client.unsafe("DELETE FROM candles WHERE timeframe = '3m'");
+    await client.unsafe(displayCandleInsert('1m', 59_999));
+    await expectRollbackGuard(client, { file: ROLLBACK_0029, label: '0029' });
+    await client.unsafe("DELETE FROM candles WHERE timeframe = '1m'");
   } finally {
     await client.close();
   }

@@ -47,4 +47,8 @@ export const DEFAULT_MARKET_DISPLAY_TIMEFRAMES = '';
 export const DEFAULT_CANDLE_DISPLAY_RETENTION_DAYS = 90;
 export const MINIMUM_CANDLE_DISPLAY_RETENTION_DAYS = 7;
 export const MAXIMUM_CANDLE_DISPLAY_RETENTION_DAYS = 365;
+// A vela de 1 min tem 3x mais linhas por dia que a de 3 min: retenção própria, mais curta.
+export const DEFAULT_CANDLE_DISPLAY_1M_RETENTION_DAYS = 30;
+export const MINIMUM_CANDLE_DISPLAY_1M_RETENTION_DAYS = 1;
+export const MAXIMUM_CANDLE_DISPLAY_1M_RETENTION_DAYS = 90;
 export const CONFIGURED_SYMBOL_PATTERN = /^[A-Z0-9]{5,20}$/;

@@ -36,8 +36,11 @@ export {
   MAX_KLINES_PER_REQUEST,
   MAXIMUM_RETRY_AFTER_SECONDS,
   SUPPORTED_MARKET_EXCHANGES,
+  DEFAULT_CANDLE_DISPLAY_1M_RETENTION_DAYS,
   DEFAULT_CANDLE_DISPLAY_RETENTION_DAYS,
+  MAXIMUM_CANDLE_DISPLAY_1M_RETENTION_DAYS,
   MAXIMUM_CANDLE_DISPLAY_RETENTION_DAYS,
+  MINIMUM_CANDLE_DISPLAY_1M_RETENTION_DAYS,
   MINIMUM_CANDLE_DISPLAY_RETENTION_DAYS,
 } from './market-data.constant.js';
 export {
@@ -60,6 +63,11 @@ export type {
   MarketDataClient,
   MarketDataClientSettings,
 } from './market-data.types.js';
+export {
+  buildDisplayRetentionDays,
+  type DisplayRetentionDays,
+  type DisplayRetentionSettings,
+} from './display-retention-days.js';
 export {
   DISPLAY_TIMEFRAME,
   isDisplayTimeframe,

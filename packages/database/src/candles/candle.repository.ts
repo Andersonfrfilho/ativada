@@ -141,12 +141,13 @@ async function purgeDisplayCandles(
   params: PurgeDisplayCandlesParams,
 ): Promise<number> {
   const batchSize = params.batchSize ?? DISPLAY_CANDLE_PURGE_BATCH_SIZE;
+  const timeframes = params.timeframes ?? DISPLAY_CANDLE_TIMEFRAMES;
   let total = 0;
   for (;;) {
     const deleted = await database.execute(sql`
       DELETE FROM candles WHERE ctid IN (
         SELECT ctid FROM candles
-        WHERE ${inArray(candles.timeframe, [...DISPLAY_CANDLE_TIMEFRAMES])}
+        WHERE ${inArray(candles.timeframe, [...timeframes])}
           AND ${candles.openTime} < ${params.openedBefore}
         LIMIT ${batchSize})
       RETURNING 1`);

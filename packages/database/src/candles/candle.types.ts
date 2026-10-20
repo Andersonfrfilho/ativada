@@ -50,6 +50,8 @@ export type PurgeDisplayCandlesParams = {
   // Abertura estritamente anterior a este instante é apagada.
   readonly openedBefore: number;
   readonly batchSize?: number | undefined;
+  // Padrão: todas as velas de exibição; cada uma tem a sua retenção.
+  readonly timeframes?: readonly DisplayCandleTimeframe[] | undefined;
 };
 
 export type CandleRepository = {

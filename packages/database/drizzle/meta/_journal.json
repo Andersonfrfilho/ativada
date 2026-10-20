@@ -204,6 +204,13 @@
       "when": 1792276012617,
       "tag": "0028_strategies_system_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792500294642,
+      "tag": "0029_candles_display_timeframe_1m",
+      "breakpoints": true
     }
   ]
 }
