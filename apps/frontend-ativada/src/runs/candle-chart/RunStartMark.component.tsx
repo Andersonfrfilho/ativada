@@ -51,12 +51,12 @@ function useMark(props: RunStartMarkProps): Mark | undefined {
   return mark;
 }
 
-// A linha vertical "a simulação começa aqui, às HH:MM": o que vem antes é só contexto, sem decisão da estratégia.
+// A linha vertical "início · HH:MM" (a simulação começa aqui; mais baixa que "opiniões valem até" para não colidir): o que vem antes é só contexto, sem decisão da estratégia.
 export function RunStartMark(props: RunStartMarkProps): ReactElement | null {
   const timeZone = useUserTimeZone();
   const mark = useMark(props);
   if (mark === undefined || props.startedAt === undefined) return null;
-  const label = `a simulação começa aqui, às ${formatTimeInZone(props.startedAt, timeZone)}`;
+  const label = `início · ${formatTimeInZone(props.startedAt, timeZone)}`;
   return (
     <svg className={styles.runStart} aria-hidden="true" focusable="false" data-run-start="">
       <line
@@ -66,7 +66,7 @@ export function RunStartMark(props: RunStartMarkProps): ReactElement | null {
         y1={mark.top}
         y2={mark.top + mark.height}
       />
-      <text className={styles.runStartLabel} x={mark.x + 6} y={mark.top + 14}>
+      <text className={styles.runStartLabel} x={mark.x + 6} y={mark.top + 32}>
         {label}
       </text>
     </svg>

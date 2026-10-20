@@ -263,6 +263,10 @@ describe('trading-room terminal stays legible (always dark)', () => {
   const TEXT_PAIRS: readonly (readonly [string, string])[] = [
     ['screen-ink', 'bezel'],
     ['screen-ink-2', 'bezel'],
+    ['screen-ink-2', 'screen'],
+    ['screen-good', 'terminal-buy-soft'],
+    ['screen-bad', 'terminal-sell-soft'],
+    ['terminal-accent', 'terminal-accent-soft'],
     ['terminal-accent', 'screen'],
     ['terminal-warn', 'terminal-warn-soft'],
     ['screen-ink', 'terminal-buy-soft'],

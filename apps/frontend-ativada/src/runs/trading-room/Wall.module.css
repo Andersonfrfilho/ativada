@@ -188,101 +188,106 @@
 }
 
 .board {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
   min-width: 0;
   padding: var(--space-2) var(--space-3);
-  background: var(--room-bubble);
-  color: var(--room-bubble-ink);
-  box-shadow:
-    0 0 0 3px var(--room-plate-line),
-    4px 4px 0 3px color-mix(in srgb, var(--room-bubble-line) 18%, transparent);
+  border-radius: 6px;
+  background: var(--screen);
+  color: var(--screen-ink);
+  box-shadow: 0 0 0 3px var(--bezel);
 }
 
 .boardTitle {
-  margin: 0 0 var(--space-1);
-  font-size: var(--text-xs);
-  color: var(--room-bubble-ink-2);
+  margin: 0;
+  font: 700 11px / 1.3 var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--screen-ink-2);
 }
 
 .status {
   display: inline-flex;
   align-items: center;
+  justify-self: start;
   gap: 4px;
-  padding: 1px 8px 1px 6px;
+  padding: 0 6px;
   border-radius: var(--radius-pill);
-  font: 700 var(--text-xs) / 1.4 var(--font-body);
-  background: var(--room-bubble-soft);
-  color: var(--room-bubble-ink-2);
+  font: 700 12px / 1.5 var(--font-data);
+  background: var(--bezel);
+  color: var(--screen-ink);
 }
 
 .status[data-tone='buy'] {
-  background: var(--room-bubble-buy-soft);
-  color: var(--room-bubble-buy);
+  background: var(--terminal-buy-soft);
+  color: var(--screen-good);
 }
 
 .status[data-tone='sell'] {
-  background: var(--room-bubble-sell-soft);
-  color: var(--room-bubble-sell);
+  background: var(--terminal-sell-soft);
+  color: var(--screen-bad);
 }
 
 .status[data-tone='warn'] {
-  background: var(--room-bubble-warn-soft);
-  color: var(--room-bubble-warn);
+  background: var(--terminal-warn-soft);
+  color: var(--terminal-warn);
 }
 
 .status[data-tone='info'] {
-  background: var(--room-bubble-accent-soft);
-  color: var(--room-bubble-accent);
+  background: var(--terminal-accent-soft);
+  color: var(--terminal-accent);
 }
 
 .clock small {
-  font: 600 var(--text-xs) / 1.3 var(--font-body);
-  color: var(--room-bubble-ink-2);
+  font: 500 var(--text-xs) / 1.3 var(--font-body);
+  color: var(--screen-ink-2);
 }
 
 .clock {
   margin: 0;
-  font: 800 var(--text-xl) / 1.1 var(--font-data);
+  font: 700 var(--text-md) / 1.2 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--terminal-accent);
 }
 
 .score {
-  margin: var(--space-1) 0 0;
-  font-size: var(--text-sm);
+  margin: 0;
+  font: 500 var(--text-xs) / 1.4 var(--font-data);
 }
 
 .boardNote {
-  margin: var(--space-1) 0 0;
+  margin: 0;
   font-size: var(--text-xs);
-  color: var(--room-bubble-ink-2);
+  color: var(--screen-ink-2);
 }
 
 .pips {
   display: grid;
   grid-template-columns: repeat(9, minmax(0, 1fr));
   gap: 3px;
-  margin-top: var(--space-1);
 }
 
 .pip {
-  position: relative;
-  height: 10px;
-  background: var(--room-bubble-soft);
-  box-shadow: inset 0 0 0 1px var(--room-plate-line);
+  height: 8px;
+  border-radius: 2px;
+  background: var(--bezel);
 }
 
 .pip[data-side='zero'] {
-  background: var(--room-bubble-ink-2);
+  background: var(--screen-ink-2);
 }
 
 .pip[data-side='buy'][data-on='true'] {
-  background: var(--room-bubble-buy);
+  background: var(--screen-good);
 }
 
 .pip[data-side='sell'][data-on='true'] {
-  background: var(--room-bubble-sell);
+  background: var(--screen-bad);
 }
 
 .pip[data-gate='true'] {
-  outline: 2px solid var(--room-bubble-ink);
+  outline: 1px solid var(--screen-ink);
 }
 
 .priceRows {
@@ -298,31 +303,34 @@
   grid-template-columns: 1fr auto;
   gap: 0 var(--space-2);
   padding-left: var(--space-2);
-  box-shadow: inset 3px 0 0 var(--room-bubble-ink-2);
-  font-size: var(--text-xs);
+  box-shadow: inset 2px 0 0 var(--terminal-line);
+  font: 500 var(--text-xs) / 1.4 var(--font-body);
+  color: var(--screen-ink-2);
 }
 
 .priceRow strong {
   font: 700 var(--text-sm) / 1.3 var(--font-data);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  color: var(--screen-ink);
 }
 
 .priceRow em {
   grid-column: 1 / -1;
   justify-self: end;
-  font: 600 11px / 1.3 var(--font-data);
+  font: 500 11px / 1.3 var(--font-data);
   font-style: normal;
-  color: var(--room-bubble-ink-2);
+  color: var(--screen-ink-2);
 }
 
 .priceRow[data-tone='buy'],
 .priceRow[data-tone='up'] {
-  box-shadow: inset 3px 0 0 var(--room-bubble-buy);
+  box-shadow: inset 2px 0 0 var(--screen-good);
 }
 
 .priceRow[data-tone='sell'],
 .priceRow[data-tone='down'] {
-  box-shadow: inset 3px 0 0 var(--room-bubble-sell);
+  box-shadow: inset 2px 0 0 var(--screen-bad);
 }
 
 @media (prefers-reduced-motion: no-preference) {
