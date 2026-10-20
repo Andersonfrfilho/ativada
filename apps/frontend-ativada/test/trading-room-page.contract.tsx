@@ -1,13 +1,20 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 
 import { dataResponse } from './support/fake-fetch.js';
 import { LIVE_BASE, LIVE_RUN_ID, liveRoutes } from './support/live-tracking-harness.js';
+import {
+  buildRunModelTeams,
+  buildTeamState,
+  buildTeamView,
+  createModelTeamsHarness,
+  modelTeamsRoutes,
+} from './support/model-teams-fixtures.js';
 import { renderApp } from './support/render-app.js';
 import { createRoomHarness } from './support/team-room-fixtures.js';
-import { buildTradePlan } from './support/trade-plan-fixtures.js';
+import { buildAvailableTeam, buildTradePlan } from './support/trade-plan-fixtures.js';
 
 // Spec 011, Fase 3, S5: a página da simulação ao vivo abre na sala de operações.
 
@@ -102,5 +109,45 @@ describe('a sala de operações na simulação ao vivo', () => {
     expect(screen.getByRole('button', { name: 'Calmo' }).getAttribute('aria-pressed')).toBe(
       'false',
     );
+  });
+});
+
+describe('as equipes ◆ na sala aparecem uma vez em texto', () => {
+  test('Olívia has one card in the list, with her plan and the sheet with "Pedir opinião agora"', async () => {
+    const harness = createRoomHarness();
+    const teams = createModelTeamsHarness(
+      buildRunModelTeams({
+        teams: [
+          buildTeamState('nina', { team: buildTeamView('nina', { isEnabled: false }), recent: [] }),
+          buildTeamState('lucas', {
+            team: buildTeamView('lucas', { isEnabled: false }),
+            recent: [],
+          }),
+          buildTeamState('olivia'),
+        ],
+      }),
+    );
+    renderApp({
+      path: `/backtests/${LIVE_RUN_ID}`,
+      isAuthenticated: true,
+      routes: [
+        ...modelTeamsRoutes(teams, LIVE_RUN_ID),
+        ...liveRoutes(harness),
+        {
+          method: 'GET',
+          path: `${LIVE_BASE}/trade-plan`,
+          respond: (): Response => dataResponse(buildTradePlan(undefined, [buildAvailableTeam()])),
+        },
+      ],
+    });
+    const list = await screen.findByRole('region', { name: 'O que cada um acha' });
+    const ficha = await within(list).findByRole('button', { name: 'Ver a ficha de Olívia' });
+    expect(within(list).getAllByRole('button', { name: /ficha de/ })).toHaveLength(1);
+    await waitFor(() => expect(list.textContent).toContain('99.900,00'));
+    expect(list.textContent).toContain('Carteira dela: +5,00%');
+    fireEvent.click(ficha);
+    expect(ficha.getAttribute('aria-expanded')).toBe('true');
+    expect(within(list).getByRole('group', { name: 'Ficha de Olívia' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Equipes de modelo na sala' })).toBeNull();
   });
 });

@@ -201,10 +201,26 @@
 }
 
 @media (min-width: 1024px) {
-  .wall {
-    grid-template-columns: minmax(14rem, 17rem) minmax(0, 1fr) minmax(14rem, 17rem);
-    grid-template-areas:
-      'ticker ticker ticker'
-      'left screen right';
+  .left,
+  .right {
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   }
+}
+
+.ficha {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.fichaButton {
+  justify-self: start;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--accent);
+  font: 600 var(--text-sm) / 1.2 var(--font-body);
+  cursor: pointer;
 }

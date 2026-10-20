@@ -10,7 +10,6 @@ import { RunHeader } from '../src/runs/RunHeader.component.js';
 import { runDetailSchema, runSchema } from '../src/runs/run.validation.js';
 import { LiveMarketProvider } from '../src/live/LiveMarketProvider.component.js';
 import { TradingRoom } from '../src/runs/trading-room/TradingRoom.component.js';
-import { findRoomModelTeams } from './support/loaded-team.js';
 import { buildProjectionsResponse } from './support/candle-chart-fixtures.js';
 import { createLiveHarness, LIVE_RUN_ID } from './support/live-tracking-harness.js';
 import {
@@ -99,12 +98,8 @@ describe('execução de equipe: telas', () => {
     });
     const room = await screen.findByRole('region', { name: 'Sala de operações' });
     await waitFor(() => expect(room.textContent).toContain('não há placar nem gatilhos de regra'));
-    const teamSection = await findRoomModelTeams();
-    expect(
-      await within(teamSection).findByRole('button', { name: /^Nina, equipe de modelo/ }),
-    ).toBeDefined();
-    expect(
-      within(room).getByRole('region', { name: 'O que cada um acha' }).textContent,
-    ).not.toContain('Tiago');
+    const list = within(room).getByRole('region', { name: 'O que cada um acha' });
+    expect(await within(list).findByRole('button', { name: 'Ver a ficha de Nina' })).toBeDefined();
+    expect(list.textContent).not.toContain('Tiago');
   });
 });

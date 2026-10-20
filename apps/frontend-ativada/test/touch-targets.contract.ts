@@ -37,6 +37,7 @@ const TARGETS: readonly (readonly [string, string])[] = [
   ['runs/live-tracking/Decisions.module.css', '.more'],
   ['runs/live-tracking/LiveTracking.module.css', '.link'],
   ['runs/trading-room/TradingRoom.module.css', '.calm'],
+  ['runs/trading-room/TradingRoom.module.css', '.fichaButton'],
   ['runs/team-room/office/Office.module.css', '.badgeButton'],
   ['runs/analyst/Analyst.module.css', '.more'],
   ['backtests/run-switch/RunSwitcher.module.css', '.trigger'],

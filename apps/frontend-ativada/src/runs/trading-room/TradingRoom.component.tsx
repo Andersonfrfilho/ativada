@@ -16,7 +16,7 @@ import { TRADING_ROOM_TEXT } from './trading-room.constant.js';
 import { useOfficeLife } from './useOfficeLife.hook.js';
 import { useRoomMotion } from './useRoomMotion.hook.js';
 import { useTradingRoomModel } from './useTradingRoomModel.hook.js';
-import { RoomModelTeams } from './RoomModelTeams.component.js';
+import { ModelTeamsFoot } from './ModelTeamsFoot.component.js';
 import { RoomWall } from './RoomWall.component.js';
 import styles from './TradingRoom.module.css';
 
@@ -86,7 +86,7 @@ function RoomLife({ runId, status, isWide, isMoving }: RoomLifeProps): ReactElem
       <DecisionBar leader={leader} status={status} />
       <OpinionList opinions={model.opinions} />
       {model.isTeamRun ? <p className={styles.teamRunNote}>{TEAM_RUN_NOTE}</p> : null}
-      <RoomModelTeams runId={runId} />
+      <ModelTeamsFoot />
       <p className={styles.visuallyHidden} role="status" aria-live="polite">
         {useDecisionAnnouncement(model.decisionKey, leader)}
       </p>

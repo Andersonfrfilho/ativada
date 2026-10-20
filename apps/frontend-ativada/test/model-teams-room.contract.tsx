@@ -4,7 +4,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 
 import { LiveMarketProvider } from '../src/live/LiveMarketProvider.component.js';
-import { RoomModelTeams } from '../src/runs/trading-room/RoomModelTeams.component.js';
+import { RoomModelTeams } from './support/model-teams-probe.js';
 import { describeTeamBadge } from '../src/runs/model-teams/team-badge.js';
 import {
   describeFailures,

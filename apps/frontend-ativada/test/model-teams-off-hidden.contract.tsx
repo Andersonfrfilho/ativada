@@ -5,7 +5,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 
 import { LayerBar } from '../src/runs/candle-chart/LayerBar.component.js';
 import { LiveMarketProvider } from '../src/live/LiveMarketProvider.component.js';
-import { RoomModelTeams } from '../src/runs/trading-room/RoomModelTeams.component.js';
+import { RoomModelTeams } from './support/model-teams-probe.js';
 import { LIVE_RUN_ID } from './support/live-tracking-harness.js';
 import {
   buildNoKeyTeam,

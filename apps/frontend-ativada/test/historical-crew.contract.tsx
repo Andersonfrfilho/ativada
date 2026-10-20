@@ -22,7 +22,7 @@ import {
 } from './support/model-teams-fixtures.js';
 import type { TeamView } from '../src/runs/model-teams/model-teams.validation.js';
 import { LiveMarketProvider } from '../src/live/LiveMarketProvider.component.js';
-import { RoomModelTeams } from '../src/runs/trading-room/RoomModelTeams.component.js';
+import { RoomModelTeams } from './support/model-teams-probe.js';
 import { findRoomModelTeams } from './support/loaded-team.js';
 import { renderApp } from './support/render-app.js';
 import { buildRoomDecision, createRoomHarness, roomRoutes } from './support/team-room-fixtures.js';

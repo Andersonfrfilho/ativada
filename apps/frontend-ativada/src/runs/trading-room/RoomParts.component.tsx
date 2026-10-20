@@ -3,6 +3,7 @@ import { useId, type ReactElement } from 'react';
 
 import { useCalm } from '../team-room/motion/useCalm.hook.js';
 import { IntentChip } from './IntentChip.component.js';
+import { ModelTeamFicha } from './ModelTeamFicha.component.js';
 import { OpinionCard } from './OpinionCard.component.js';
 import { OUT_OF_SCORE, type RoomOpinion } from './room-opinions.js';
 import { TRADING_ROOM_TEXT } from './trading-room.constant.js';
@@ -50,7 +51,7 @@ export function DeskStrip({
   );
 }
 
-// A alternativa em texto da cena: o que cada um acha, com os mesmos números dos balões.
+// A alternativa em texto da cena: o que cada um acha, com os mesmos números dos balões; a equipe ◆ traz a ficha junto.
 export function OpinionList({
   opinions,
 }: {
@@ -66,6 +67,7 @@ export function OpinionList({
         {opinions.map((opinion) => (
           <li key={opinion.slot} className={styles.cardItem} data-tone={opinion.intent.tone}>
             <OpinionCard opinion={opinion} />
+            {opinion.kind === 'model' ? <ModelTeamFicha teamKey={opinion.slot} /> : null}
           </li>
         ))}
       </ul>

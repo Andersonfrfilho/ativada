@@ -564,3 +564,20 @@ task) e `tasks.md` (S0–S6). Base dos gates antes da fase: `bun run --cwd apps/
   `team-beside-chart`, `team-always-beside-chart`, `team-room-model` e `calm-button` atualizados.
 - Contrato `trading-room-page.contract.tsx` (4: plano do servidor na barra e na lista, piso decorativo sem focável e um só `aria-live`, movimento
   reduzido sem `data-motion`, 375 px com a faixa). Gates verdes; painel 1.588 passam, 0 falham (menos testes porque os da varanda saíram).
+
+### S5b — uma Olívia só e o telão largo (2026-10-20, retorno do dono)
+
+- Pedido: "tem duas Olívias aparecendo, uma na sala e outra fora, e cadê o telão?". O estado intermediário (commit 27b2411) ainda tinha a
+  varanda e a sala antiga; o commit de0aef7 tirou as duas, mas a sala ainda listava as equipes ◆ duas vezes (cartão e personagem com ficha).
+  Agora cada equipe ◆ aparece UMA vez em texto, no cartão da lista "O que cada um acha", com "Ver a ficha de …" (`ModelTeamFicha`: a mesma
+  `ModelTeamSheet` com "Pedir opinião agora"); `ModelTeamsFoot` diz que elas indicam e não votam (ou dá só o link para Conta).
+- O telão ocupa a largura toda da parede em qualquer tela (os quadros e telas vão para uma fileira embaixo): com as colunas laterais o cartão do
+  gráfico ficava com ~580 px e a barra de ferramentas quebrava em muitas linhas.
+- Verificação no navegador real (Chromium headless do cache do Playwright 1.58, painel dev em 127.0.0.1:56100, TODA a API `/v1` respondida por
+  fixtures dentro do navegador: nenhuma conta criada, nenhum dado real lido). Medido no DOM: 1 avatar e 1 cartão da Olívia, 0 personagem extra,
+  telão começando em y = 348 (1440 × 900), canvas com 460 px de altura, nenhum boneco sobre o canvas, variações só no cabeçalho do telão (1 lista),
+  375 px sem rolagem horizontal. Capturas: `sala-1440.png`, `sala-1440-completa.png`, `sala-375.png`, `sala-375-completa.png` (pasta de
+  rascunho da sessão).
+- Pendências vistas: a 1440 × 900 o canvas começa em y ≈ 875 (o cabeçalho do cartão "Preço e operações" com a barra de velas e camadas ocupa
+  ~400 px); o cabeçalho do aplicativo (fora desta tela) passa da largura a 1440 px (`AppShell`, não mexido aqui).
+- Gates verdes; painel 1.590 passam, 0 falham.
