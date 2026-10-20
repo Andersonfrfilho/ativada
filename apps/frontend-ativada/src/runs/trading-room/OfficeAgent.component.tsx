@@ -21,6 +21,7 @@ export function OfficeAgent({
   usePlacement(ref, agent.at);
   return (
     <div ref={ref} className={styles.agent} data-pose={agent.pose} data-face={agent.face}>
+      <span className={styles.shadow} data-shadow />
       <PixelAvatar who={agent.who} />
       <span className={styles.agentName}>{name}</span>
       {agent.speech === undefined || agent.speech === '' ? null : (

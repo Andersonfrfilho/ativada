@@ -4,6 +4,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { cleanup, render, screen, within } from '@testing-library/react';
 
 import { LiveMarketProvider } from '../src/live/LiveMarketProvider.component.js';
+import { OfficeAgent } from '../src/runs/trading-room/OfficeAgent.component.js';
 import { avatarPoses } from '../src/runs/trading-room/avatar-poses.js';
 import { buildDeskArt } from '../src/runs/trading-room/desk-art.js';
 import { FearGreedScreen } from '../src/runs/trading-room/FearGreedScreen.component.js';
@@ -51,6 +52,44 @@ describe('pixel avatars', () => {
       JSON.stringify(avatarPoses(who === 'tiago' ? 'tiago' : (who as 'renata')).idle),
     );
     expect(new Set(drawings).size).toBe(drawings.length);
+  });
+});
+
+describe('model teams are people, and everyone has a shadow', () => {
+  const ROBOT_PARTS = ['visor', 'visor-eye', 'glow', 'head', 'head-d'];
+
+  test('Nina, Lucas and Olívia are drawn as distinct humans with the purple badge and no robot parts', () => {
+    const drawings = ['nina', 'lucas', 'olivia'] as const;
+    for (const who of drawings) {
+      const colors = new Set(avatarPoses(who).idle.map((run) => run.color));
+      expect(ROBOT_PARTS.some((part) => colors.has(part))).toBe(false);
+      expect(colors.has('halo')).toBe(true);
+      expect(colors.has('skin')).toBe(true);
+      expect(colors.has('hair')).toBe(true);
+    }
+    const unique = new Set(drawings.map((who) => JSON.stringify(avatarPoses(who).idle)));
+    expect(unique.size).toBe(drawings.length);
+  });
+
+  test('every agent renders a shadow element under the avatar', () => {
+    for (const who of CREW) {
+      const { container, unmount } = render(
+        <OfficeAgent
+          agent={{
+            who,
+            at: { x: 100, y: 400 },
+            pose: 'standing',
+            face: 'right',
+            queue: [],
+            speech: undefined,
+            speechSteps: 0,
+          }}
+          name={who}
+        />,
+      );
+      expect(container.querySelectorAll('[data-shadow]').length).toBe(1);
+      unmount();
+    }
   });
 });
 

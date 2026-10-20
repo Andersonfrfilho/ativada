@@ -3,7 +3,7 @@ import type { BalconySlot } from '../team-room/balcony/balcony.constant.js';
 
 // Avatares em pixel art ORIGINAIS (grade 18 × 29, contorno automático), portados do preview aprovado da direção E. Cada um
 // tem o adereço que faz a silhueta: topete em seta, coque, fone largo, cabelo longo, rabo de cavalo com headset, lupa e o
-// halo das equipes ◆. Dois quadros de perna para andar e um braço erguido para apontar. A cor é um nome (`--px-<nome>`).
+// losango roxo das equipes ◆ (pessoas de blazer). Dois quadros de perna para andar e um braço erguido para apontar. A cor é um nome (`--px-<nome>`).
 export const AVATAR_WIDTH = 18;
 export const AVATAR_HEIGHT = 29;
 
@@ -43,10 +43,10 @@ const NEIGHBOURS: readonly (readonly [number, number])[] = [
 
 function isFilled(grid: Grid, x: number, y: number): boolean {
   const color = grid[y]?.[x];
-  return color !== undefined && color !== '' && color !== 'glow';
+  return color !== undefined && color !== '';
 }
 
-// Contorno de um pixel em volta de tudo o que foi pintado (menos o brilho do pé das equipes ◆).
+// Contorno de um pixel em volta de tudo o que foi pintado.
 export function outline(grid: Grid): Grid {
   return grid.map((line, y) =>
     line.map((color, x) => {

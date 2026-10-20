@@ -183,6 +183,24 @@
   --px-cloth: var(--model);
 }
 
+.avatar[data-who='nina'] {
+  --px-hair: var(--hair-3);
+  --px-skin: var(--skin-2);
+  --px-skin-d: var(--skin-4);
+}
+
+.avatar[data-who='lucas'] {
+  --px-hair: var(--hair-5);
+  --px-skin: var(--skin-4);
+  --px-skin-d: var(--skin-2);
+}
+
+.avatar[data-who='olivia'] {
+  --px-hair: var(--hair-4);
+  --px-skin: var(--skin-1);
+  --px-skin-d: var(--skin-3);
+}
+
 .avatar {
   --px-cloth-d: color-mix(in srgb, var(--px-cloth) 70%, var(--px-line));
 }
@@ -219,6 +237,18 @@
   width: calc(72 / 1600 * 100%);
   z-index: var(--z, 40);
   transform: translate(calc(var(--x) / 72 * 100%), calc((var(--y) - 340) / 116 * 100%));
+}
+
+/* A sombra fica atrás do boneco e acima do piso; anda junto com ele. */
+.shadow {
+  position: absolute;
+  z-index: -1;
+  left: 12%;
+  bottom: -2%;
+  width: 76%;
+  height: 6%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--px-line) 38%, transparent);
 }
 
 .agent[data-face='left'] .avatar {

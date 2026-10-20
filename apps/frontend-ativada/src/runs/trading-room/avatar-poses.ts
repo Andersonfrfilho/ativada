@@ -23,10 +23,10 @@ function drawLayer(who: AvatarWho, variant: Variant): readonly PixelRun[] {
   const grid = emptyGrid();
   const paint = createPainter(grid);
   paintBackHair(paint, who);
-  paintLegs(paint, who, variant.isStep);
-  paintBody(paint, who);
-  paintArm(paint, who, variant.isUp);
-  paintHead(paint, who);
+  paintLegs(paint, variant.isStep);
+  paintBody(paint);
+  paintArm(paint, variant.isUp);
+  paintHead(paint);
   paintStyle(paint, who);
   return toRuns(outline(grid));
 }

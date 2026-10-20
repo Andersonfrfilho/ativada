@@ -5,7 +5,15 @@ type Stroke = readonly [box: Box, color: string];
 
 const dot = (x: number, y: number, color: string): Stroke => [[x, y, 1, 1], color];
 
-// O adereço de cada um (o que faz a silhueta). As equipes ◆ dividem o mesmo halo e visor.
+// O losango roxo no peito do blazer: o que marca a equipe de modelo ◆.
+const BADGE: readonly Stroke[] = [
+  dot(11, 15, 'halo'),
+  dot(10, 16, 'halo'),
+  dot(12, 16, 'halo'),
+  dot(11, 17, 'halo'),
+];
+
+// O adereço de cada um (o que faz a silhueta); as equipes ◆ são pessoas de blazer roxo com o losango no peito.
 const STYLE: Readonly<Record<AvatarWho, readonly Stroke[]>> = {
   tiago: [
     [[4, 3, 10, 3], 'hair'],
@@ -65,29 +73,45 @@ const STYLE: Readonly<Record<AvatarWho, readonly Stroke[]>> = {
     [[17, 10, 1, 4], 'gold'],
     [[15, 11, 2, 2], 'glass'],
   ],
-  nina: [],
-  lucas: [],
-  olivia: [],
+  nina: [
+    [[4, 3, 10, 3], 'hair'],
+    [[4, 6, 1, 5], 'hair'],
+    [[13, 6, 1, 5], 'hair'],
+    [[5, 6, 3, 1], 'hair'],
+    [[5, 7, 3, 1], 'frame'],
+    [[10, 7, 3, 1], 'frame'],
+    [[8, 8, 2, 1], 'frame'],
+    ...BADGE,
+  ],
+  lucas: [
+    [[4, 3, 10, 2], 'hair'],
+    [[9, 2, 5, 1], 'hair'],
+    [[4, 5, 1, 2], 'hair'],
+    [[6, 12, 6, 1], 'hair'],
+    [[4, 10, 1, 2], 'hair'],
+    [[13, 10, 1, 2], 'hair'],
+    dot(8, 14, 'pin'),
+    dot(9, 14, 'pin'),
+    ...BADGE,
+  ],
+  olivia: [
+    [[4, 3, 10, 3], 'hair'],
+    [[7, 0, 4, 3], 'hair'],
+    [[4, 6, 1, 2], 'hair'],
+    [[14, 4, 2, 9], 'hair'],
+    [[15, 13, 1, 3], 'hair'],
+    [[5, 7, 3, 2], 'frame'],
+    [[10, 7, 3, 2], 'frame'],
+    dot(8, 8, 'frame'),
+    dot(9, 8, 'frame'),
+    dot(8, 14, 'pin'),
+    dot(9, 14, 'pin'),
+    ...BADGE,
+  ],
 };
 
-const MODEL_STYLE: readonly Stroke[] = [
-  [[5, 0, 8, 1], 'halo'],
-  dot(4, 1, 'halo'),
-  dot(13, 1, 'halo'),
-  [[5, 7, 8, 3], 'visor'],
-  [[6, 8, 2, 1], 'visor-eye'],
-  [[10, 8, 2, 1], 'visor-eye'],
-  dot(8, 17, 'halo'),
-  dot(9, 17, 'halo'),
-];
-
-export function isModel(who: AvatarWho): boolean {
-  return who === 'nina' || who === 'lucas' || who === 'olivia';
-}
-
 export function paintStyle(paint: Painter, who: AvatarWho): void {
-  const strokes = isModel(who) ? MODEL_STYLE : STYLE[who];
-  strokes.forEach(([box, color]) => paint(box, color));
+  STYLE[who].forEach(([box, color]) => paint(box, color));
 }
 
 // O cabelo longo da Sofia fica ATRÁS do corpo: é pintado antes de tudo.
@@ -97,20 +121,17 @@ export function paintBackHair(paint: Painter, who: AvatarWho): void {
   paint([14, 4, 2, 13], 'hair');
 }
 
-export function paintBody(paint: Painter, who: AvatarWho): void {
-  const model = isModel(who);
+export function paintBody(paint: Painter): void {
   paint([5, 14, 8, 8], 'cloth');
   paint([12, 14, 1, 8], 'cloth-d');
   paint([3, 15, 2, 6], 'cloth-d');
-  paint([3, 21, 2, 1], model ? 'head' : 'skin');
-  paint([8, 13, 2, 1], model ? 'head-d' : 'skin-d');
+  paint([3, 21, 2, 1], 'skin');
+  paint([8, 13, 2, 1], 'skin-d');
 }
 
-export function paintHead(paint: Painter, who: AvatarWho): void {
-  const model = isModel(who);
-  paint([4, 4, 10, 9], model ? 'head' : 'skin');
-  paint([4, 12, 10, 1], model ? 'head-d' : 'skin-d');
-  if (model) return;
+export function paintHead(paint: Painter): void {
+  paint([4, 4, 10, 9], 'skin');
+  paint([4, 12, 10, 1], 'skin-d');
   [dot(6, 8, 'eye'), dot(6, 9, 'eye'), dot(11, 8, 'eye'), dot(11, 9, 'eye')].forEach(([b, c]) =>
     paint(b, c),
   );
@@ -119,25 +140,19 @@ export function paintHead(paint: Painter, who: AvatarWho): void {
   paint([12, 10, 1, 1], 'blush');
 }
 
-export function paintLegs(paint: Painter, who: AvatarWho, isStep: boolean): void {
-  if (isModel(who)) {
-    paint([6, 22, 6, 3], 'cloth-d');
-    paint([4, 27, 10, 1], 'glow');
-    return;
-  }
+export function paintLegs(paint: Painter, isStep: boolean): void {
   paint([6, 22, 2, isStep ? 3 : 4], 'pants');
   paint([5, isStep ? 25 : 26, 3, 1], 'shoe');
   paint([10, 22, 2, 4], 'pants');
   paint([10, 26, 3, 1], 'shoe');
 }
 
-export function paintArm(paint: Painter, who: AvatarWho, isUp: boolean): void {
-  const hand = isModel(who) ? 'head' : 'skin';
+export function paintArm(paint: Painter, isUp: boolean): void {
   if (isUp) {
     paint([13, 7, 2, 8], 'cloth-d');
-    paint([13, 6, 2, 1], hand);
+    paint([13, 6, 2, 1], 'skin');
     return;
   }
   paint([13, 15, 2, 6], 'cloth-d');
-  paint([13, 21, 2, 1], hand);
+  paint([13, 21, 2, 1], 'skin');
 }
