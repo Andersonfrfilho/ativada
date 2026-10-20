@@ -102,6 +102,18 @@ describe('public ticker pipeline against a fake Binance', () => {
     });
   });
 
+  test('the USDT to BRL rate is followed besides the market pairs and reaches a subscriber', async () => {
+    const { received, subscriber } = startPipeline();
+    await waitConnected();
+    expect(server.requestedStreams()).toStrictEqual([
+      'btcusdt@miniTicker/ethusdt@miniTicker/usdtbrl@miniTicker',
+    ]);
+    market?.publisher.subscriptions.subscribe(subscriber, ['USDTBRL']);
+    server.sendTicker({ symbol: 'USDTBRL', price: '5.4321', openPrice: '5.40', eventTime: 2_000 });
+    await waitFor(() => ticksOf(received, 'USDTBRL').length >= 1, 'cotação', 4_000);
+    expect(ticksOf(received, 'USDTBRL')[0]?.message).toMatchObject({ price: '5.4321' });
+  });
+
   test('p95 from tick to subscriber stays under 2 s while ticks keep coming (about 6 s, two pairs)', async () => {
     const { received } = startPipeline();
     await waitConnected();

@@ -8,6 +8,7 @@ import { RouterProvider } from 'react-router/dom';
 import { AppProviders } from './app/AppProviders.component.js';
 import { createAppRoutes } from './app/createAppRoutes.js';
 import { isProductionBuild, loadEnvironment, readMarketSymbols } from './environment.js';
+import { USDT_BRL_PAIR } from './exchange/exchange.constant.js';
 import { createApiClient } from './http/api-client.js';
 import { createStreamConnector } from './live/stream-connector.js';
 import { createSessionService } from './session/session-service.js';
@@ -46,7 +47,11 @@ function start(): void {
         session={session}
         apiClient={apiClient}
         queryClient={queryClient}
-        connectStream={createStreamConnector({ apiClient, session, pairs: config.marketSymbols })}
+        connectStream={createStreamConnector({
+          apiClient,
+          session,
+          pairs: [...config.marketSymbols, USDT_BRL_PAIR],
+        })}
       >
         <RouterProvider router={createBrowserRouter(createAppRoutes())} />
       </AppProviders>
