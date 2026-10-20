@@ -18,15 +18,18 @@ export type CandleToolbarProps = {
 // fica longe da ponta.
 export function CandleToolbar({ chart, source, model }: CandleToolbarProps): ReactElement {
   const { surface } = model;
-  const retentionStart = useRememberedRetention(source.retentionStart);
-  const isDisplayUnavailable = retentionStart !== undefined && chart.runRange.to < retentionStart;
+  const retention = useRememberedRetention(source.retentionStart, source.timeframe);
+  const unavailableOptions = source.timeframeOptions.filter((option) => {
+    const start = retention[option];
+    return start !== undefined && chart.runRange.to < start;
+  });
   return (
     <ChartToolbar
       timeframe={source.timeframe}
       options={source.timeframeOptions}
       runTimeframe={chart.timeframe}
       surface={surface}
-      isDisplayUnavailable={isDisplayUnavailable}
+      unavailableOptions={unavailableOptions}
       isTooltipOn={source.preferences.preferences.isTooltipOn}
       onToggleTooltip={source.preferences.toggleTooltip}
       onTimeframeChange={model.handleTimeframeChange}

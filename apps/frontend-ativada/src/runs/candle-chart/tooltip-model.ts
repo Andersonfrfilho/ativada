@@ -2,6 +2,7 @@
 import { formatDecimalText, formatSignedPercentDown, parseScaled } from '../../format/decimal.js';
 import { formatPrice } from '../../format/format.js';
 import { formatInZone, formatTimeInZone } from '../../format/zoned-time.js';
+import { timeframeOfMilliseconds } from '../live-chart.js';
 import type { ChartDecision, ChartMarker } from '../trade-chart.validation.js';
 import { MARKER_LABEL, TIMEFRAME_PHRASE } from './candle-chart.constant.js';
 import { decidedOpenAt, opinionWindowAt, type DisplayMapping } from './display-mapping.js';
@@ -102,6 +103,11 @@ function layerRows(layers: StrategyLayers | undefined, time: number): TooltipRow
   return [...lineRows(layers, index), ...(score === undefined ? [] : [score])];
 }
 
+function runPhrase(mapping: DisplayMapping): string {
+  const run = timeframeOfMilliseconds(mapping.runMilliseconds);
+  return TIMEFRAME_PHRASE[run ?? ''] ?? 'execução';
+}
+
 function decisionNote(params: TooltipParams): string | undefined {
   const { decisions, candle, mapping } = params;
   if (decisions === null) return undefined;
@@ -110,7 +116,8 @@ function decisionNote(params: TooltipParams): string | undefined {
   const found = decisions.find((decision) => decision.candleTime === decidedOpen);
   if (found === undefined) return undefined;
   const word = OUTCOME_WORD[found.outcome];
-  return `A estratégia, na vela de 15 min decidida, ${word} (placar ${formatThreshold(found.score)}).`;
+  const run = mapping === undefined ? '15 min' : runPhrase(mapping);
+  return `A estratégia, na vela de ${run} decidida, ${word} (placar ${formatThreshold(found.score)}).`;
 }
 
 function teamNotes(params: TooltipParams): readonly string[] {
@@ -155,7 +162,7 @@ function contextOf(params: TooltipParams): string | undefined {
   if (mapping === undefined) return undefined;
   const window = opinionWindowAt(candle.openTime, mapping);
   const clock = (milliseconds: number): string => formatTimeInZone(milliseconds, timeZone);
-  return `Dentro da vela de 15 min das ${clock(window.issuedAt)} (opinião vale até ${clock(window.validUntil)})`;
+  return `Dentro da vela de ${runPhrase(mapping)} das ${clock(window.issuedAt)} (opinião vale até ${clock(window.validUntil)})`;
 }
 
 // O que o balão mostra para a vela apontada: o mesmo texto decimal do servidor, sem conversão para número.

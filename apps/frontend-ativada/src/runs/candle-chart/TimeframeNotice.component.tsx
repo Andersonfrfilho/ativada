@@ -2,7 +2,12 @@
 import type { ReactElement } from 'react';
 
 import controls from '../../styles/Controls.module.css';
-import { DISPLAY_TEXT, TIMEFRAME_PHRASE } from './candle-chart.constant.js';
+import {
+  DISPLAY_TEXT,
+  describeDisplayLegend,
+  describeRetention,
+  TIMEFRAME_PHRASE,
+} from './candle-chart.constant.js';
 import type { DisplayMapping } from './display-mapping.js';
 
 export type TimeframeNoticeProps = {
@@ -14,25 +19,38 @@ export type TimeframeNoticeProps = {
   readonly hasRetentionCut: boolean;
 };
 
-function DisplayNotice({ hasRetentionCut }: { readonly hasRetentionCut: boolean }): ReactElement {
+function DisplayNotice(props: {
+  readonly timeframe: string;
+  readonly runTimeframe: string;
+  readonly hasRetentionCut: boolean;
+}): ReactElement {
+  const { timeframe, runTimeframe, hasRetentionCut } = props;
   return (
     <div role="status">
       <p className={controls.muted}>
-        <strong>{DISPLAY_TEXT.LEGEND}</strong>
+        <strong>{describeDisplayLegend(timeframe, runTimeframe)}</strong>
       </p>
       <p className={controls.muted}>{DISPLAY_TEXT.NO_ADVANTAGE}</p>
-      {hasRetentionCut ? <p className={controls.muted}>{DISPLAY_TEXT.RETENTION}</p> : null}
+      {hasRetentionCut ? <p className={controls.muted}>{describeRetention(timeframe)}</p> : null}
     </div>
   );
 }
 
 // A estratégia só decide na vela da execução: nas velas maiores, previsão, placar, canal e "esperou" não existem (RF05 da 009);
-// nas menores que a dividem (3 min), tudo aparece onde valeu e a frase diz que ver mais velas não é vantagem (RF10 da 017).
+// nas menores que a dividem (1 e 3 min), tudo aparece onde valeu e a frase diz que ver mais velas não é vantagem (RF10 da 017).
 // Compras e vendas aparecem em qualquer vela.
 export function TimeframeNotice(props: TimeframeNoticeProps): ReactElement | null {
   const { timeframe, runTimeframe, displayMapping, hasRetentionCut } = props;
   if (timeframe === runTimeframe) return null;
-  if (displayMapping !== undefined) return <DisplayNotice hasRetentionCut={hasRetentionCut} />;
+  if (displayMapping !== undefined) {
+    return (
+      <DisplayNotice
+        timeframe={timeframe}
+        runTimeframe={runTimeframe}
+        hasRetentionCut={hasRetentionCut}
+      />
+    );
+  }
   return (
     <p className={controls.muted} role="status">
       Previsão, placar, canal e &quot;esperou&quot; só aparecem na vela de{' '}

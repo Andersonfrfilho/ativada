@@ -29,16 +29,17 @@ function seeded(seed: number): () => number {
 
 function candleFromTrades(
   trades: readonly Trade[],
-  openTime: number,
+  slot: { readonly openTime: number; readonly minutes: number },
   carried: bigint,
 ): MarketCandle {
+  const { openTime } = slot;
   const prices = trades.map((trade) => trade.price);
   const first = trades[0]?.price ?? carried;
   const last = trades.at(-1)?.price ?? carried;
   const volume = trades.reduce((sum, trade) => sum + trade.quantity, 0n);
   return {
     openTime,
-    closeTime: openTime + SLOT - 1,
+    closeTime: openTime + slot.minutes * MINUTE - 1,
     open: text(first),
     high: text(prices.length === 0 ? carried : prices.reduce((a, b) => (b > a ? b : a))),
     low: text(prices.length === 0 ? carried : prices.reduce((a, b) => (b < a ? b : a))),
@@ -58,20 +59,32 @@ function drawTrades(next: () => number): Trade[] {
   return trades.sort((left, right) => left.minute - right.minute);
 }
 
-function build(seed: number): { small: MarketCandle[]; big: MarketCandle } {
+function build(seed: number, slotMinutes = 3): { small: MarketCandle[]; big: MarketCandle } {
   const next = seeded(seed);
   const trades = drawTrades(next);
   const carried = BigInt(Math.floor(next() * 1_000_000)) + 1n;
   let previous = carried;
-  const small = Array.from({ length: 5 }, (_unused, slot) => {
-    const inSlot = trades.filter((trade) => Math.floor(trade.minute / 3) === slot);
-    const candle = candleFromTrades(inSlot, WINDOW_OPEN + slot * SLOT, previous);
+  const small = Array.from({ length: 15 / slotMinutes }, (_unused, slot) => {
+    const inSlot = trades.filter((trade) => Math.floor(trade.minute / slotMinutes) === slot);
+    const openTime = WINDOW_OPEN + slot * slotMinutes * MINUTE;
+    const candle = candleFromTrades(inSlot, { openTime, minutes: slotMinutes }, previous);
     previous = inSlot.at(-1)?.price ?? previous;
     return candle;
   });
-  const big = candleFromTrades(trades, WINDOW_OPEN, carried);
+  const big = candleFromTrades(trades, { openTime: WINDOW_OPEN, minutes: 15 }, carried);
   return { small, big: { ...big, closeTime: WINDOW_OPEN + 15 * MINUTE - 1 } };
 }
+
+describe('composição de 15 velas de 1 min em uma de 15 min', () => {
+  test('2.000 sorteios: a soma é igual à vela de 15 min feita direto dos negócios', () => {
+    for (let seed = 1; seed <= 2_000; seed += 1) {
+      const { small, big } = build(seed, 1);
+      expect(small).toHaveLength(15);
+      const composed = composeCandles(small, { openTime: big.openTime, closeTime: big.closeTime });
+      expect(composed).toEqual(big);
+    }
+  });
+});
 
 describe('composição de 5 velas de 3 min em uma de 15 min', () => {
   test('2.000 sorteios: a soma é igual à vela de 15 min feita direto dos negócios', () => {

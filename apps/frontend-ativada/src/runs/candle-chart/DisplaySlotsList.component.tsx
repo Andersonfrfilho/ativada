@@ -5,11 +5,14 @@ import { formatPrice } from '../../format/format.js';
 import { formatTimeInZone } from '../../format/zoned-time.js';
 import { Icon, type IconName } from '../../layout/Icon.component.js';
 import type { DisplaySlot, SlotDirection } from './display-slots.js';
+import { TIMEFRAME_PHRASE } from './candle-chart.constant.js';
 import styles from './NextCandlePanel.module.css';
 
-export type ThreeMinuteSlotsProps = {
+export type DisplaySlotsListProps = {
   readonly slots: readonly DisplaySlot[];
   readonly timeZone: string;
+  readonly shown: string;
+  readonly run: string;
 };
 
 const DIRECTION_ICON: Readonly<Record<SlotDirection, IconName>> = {
@@ -55,11 +58,13 @@ function Slot({
   );
 }
 
-// As 5 velas de 3 min que compõem a vela de 15 min em formação: estado em ícone + palavra, nunca só cor.
-export function ThreeMinuteSlots({ slots, timeZone }: ThreeMinuteSlotsProps): ReactElement {
+// As velas de exibição que compõem a vela da execução em formação: estado em ícone + palavra, nunca só cor.
+export function DisplaySlotsList(props: DisplaySlotsListProps): ReactElement {
+  const { slots, timeZone, shown, run } = props;
+  const title = `As velas de ${TIMEFRAME_PHRASE[shown] ?? shown} desta vela de ${TIMEFRAME_PHRASE[run] ?? run}`;
   return (
-    <section className={styles.slots} aria-label="As velas de 3 min desta vela de 15 min">
-      <h4 className={styles.slotsTitle}>As velas de 3 min desta vela de 15 min</h4>
+    <section className={styles.slots} aria-label={title}>
+      <h4 className={styles.slotsTitle}>{title}</h4>
       <ol className={styles.slotList}>
         {slots.map((slot) => (
           <Slot key={slot.openTime} slot={slot} timeZone={timeZone} />

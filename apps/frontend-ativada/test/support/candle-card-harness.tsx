@@ -52,6 +52,7 @@ export type CandleCardOptions = {
   readonly marketDisplayTimeframes?: readonly string[];
   // O corte da retenção das velas de exibição que a rota devolve em `meta` (ms); sem ele, a resposta é a antiga.
   readonly retentionStart?: number;
+  readonly oneMinuteRetentionStart?: number;
   // A equipe que a simulação ao vivo cola no gráfico (recebe a vela apontada).
   readonly aside?: TeamAsideRenderer;
 };
@@ -97,7 +98,14 @@ export function timeframeStep(timeframe: string | null): number {
   if (timeframe === '1d') return 24 * FIXTURE_HOUR;
   if (timeframe === '15m') return FIXTURE_HOUR / 4;
   if (timeframe === '3m') return FIXTURE_HOUR / 20;
+  if (timeframe === '1m') return FIXTURE_HOUR / 60;
   return FIXTURE_HOUR;
+}
+
+// O corte da retenção de cada vela de exibição (a de 1 min tem o seu).
+function retentionCutOf(timeframe: string | null, options: CandleCardOptions): number | undefined {
+  if (timeframe === '3m') return options.retentionStart;
+  return timeframe === '1m' ? options.oneMinuteRetentionStart : undefined;
 }
 
 function candlesRoute(options: CandleCardOptions): FakeRoute {
@@ -109,7 +117,7 @@ function candlesRoute(options: CandleCardOptions): FakeRoute {
       const step = timeframeStep(call.query.get('timeframe'));
       const from = Number(call.query.get('from'));
       const to = Number(call.query.get('to'));
-      const cut = call.query.get('timeframe') === '3m' ? options.retentionStart : undefined;
+      const cut = retentionCutOf(call.query.get('timeframe'), options);
       const candles = buildCandlesBetween(Math.max(from, cut ?? from), to, step);
       if (cut === undefined) return dataResponse(candles);
       return jsonResponse({ data: candles, meta: { retentionStart: cut } });

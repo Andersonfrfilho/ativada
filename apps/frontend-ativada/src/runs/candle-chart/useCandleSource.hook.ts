@@ -71,6 +71,9 @@ function offeredTimeframes(params: OfferParams): readonly TimeframeChoice[] {
   return [...displayed, ...executed];
 }
 
+// A simulação ao vivo de 15 min abre em 3 min; 1 min é só para quem quer mais detalhe.
+const PREFERRED_LIVE_DISPLAY = '3m';
+
 // A vela mostrada e as oferecidas: as do ambiente, e sempre a da própria execução. A simulação ao vivo de 15 min abre em 3 min.
 function useRunTimeframe(
   chart: TradeChart,
@@ -85,7 +88,10 @@ function useRunTimeframe(
     enabled: marketTimeframes,
     enabledDisplay: marketDisplayTimeframes,
   });
-  const preferred = isLive && chart.timeframe === '15m' ? timeframeOptions[0] : undefined;
+  const preferred =
+    isLive && chart.timeframe === '15m'
+      ? timeframeOptions.find((option) => option === PREFERRED_LIVE_DISPLAY)
+      : undefined;
   const isDisplayFirst = DISPLAY_TIMEFRAMES.some((option) => option === preferred);
   const choice = useTimeframeChoice({
     owner: `${chart.symbol}|${chart.timeframe}`,

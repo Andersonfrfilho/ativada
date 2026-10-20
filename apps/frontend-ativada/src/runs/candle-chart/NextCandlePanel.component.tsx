@@ -5,12 +5,13 @@ import { formatPrice, formatPriceEdge } from '../../format/format.js';
 import { Icon, type IconName } from '../../layout/Icon.component.js';
 import controls from '../../styles/Controls.module.css';
 import type { TradeChart } from '../trade-chart.validation.js';
+import { timeframeOfMilliseconds } from '../live-chart.js';
 import { useLiveCandle } from '../../live/useLiveCandle.hook.js';
 import type { DisplayMapping } from './display-mapping.js';
 import { buildSlots } from './display-slots.js';
 import type { MarketCandle } from './market-candles.validation.js';
 import { OpenPositionLine } from './OpenPositionLine.component.js';
-import { ThreeMinuteSlots } from './ThreeMinuteSlots.component.js';
+import { DisplaySlotsList } from './DisplaySlotsList.component.js';
 import { NextCandleChart } from './NextCandleChart.component.js';
 import styles from './NextCandlePanel.module.css';
 import { describeHorizon, NEXT_CANDLE_TEXT } from './next-candle-state.js';
@@ -111,8 +112,9 @@ function DisplaySlots(props: {
   readonly display: PanelDisplay;
 }): ReactElement | null {
   const { chart, view, display } = props;
-  const live = useLiveCandle(chart.symbol, '3m');
-  if (view.window === undefined) return null;
+  const shown = timeframeOfMilliseconds(display.mapping.displayMilliseconds);
+  const live = useLiveCandle(chart.symbol, shown ?? '');
+  if (view.window === undefined || shown === undefined) return null;
   const slots = buildSlots({
     start: view.window.start,
     mapping: display.mapping,
@@ -120,7 +122,9 @@ function DisplaySlots(props: {
     forming: live?.status === 'forming' ? live.candle : undefined,
     now: view.now,
   });
-  return <ThreeMinuteSlots slots={slots} timeZone={view.timeZone} />;
+  return (
+    <DisplaySlotsList slots={slots} timeZone={view.timeZone} shown={shown} run={chart.timeframe} />
+  );
 }
 
 // "Próxima vela de perto" (D13): o desenho pequeno da vela que se forma, a tendência do placar com a faixa, o resultado da

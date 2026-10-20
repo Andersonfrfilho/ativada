@@ -32,6 +32,7 @@ export const CHART_PREFERENCES_STORAGE_KEY = 'ativada.chart-preferences';
 
 // Como a vela aparece em frase ("na vela de 1 h").
 export const TIMEFRAME_PHRASE: Readonly<Record<string, string>> = {
+  '1m': '1 min',
   '3m': '3 min',
   '15m': '15 min',
   '1h': '1 h',
@@ -40,14 +41,23 @@ export const TIMEFRAME_PHRASE: Readonly<Record<string, string>> = {
 };
 
 // Velas só de exibição (spec 017): nunca são a vela de uma execução; o motor decide sempre na vela da execução.
-export const DISPLAY_TIMEFRAMES = ['3m'] as const;
+export const DISPLAY_TIMEFRAMES = ['1m', '3m'] as const;
 export type DisplayTimeframe = (typeof DISPLAY_TIMEFRAMES)[number];
 
+// A retenção padrão de cada vela de exibição no ambiente (CANDLE_DISPLAY_1M_RETENTION_DAYS e CANDLE_DISPLAY_RETENTION_DAYS).
+const RETENTION_DAYS: Readonly<Record<string, number>> = { '1m': 30, '3m': 90 };
+
 export const DISPLAY_TEXT = {
-  LEGEND: 'Gráfico em 3 min · opiniões a cada 15 min',
   NO_ADVANTAGE: 'Mais velas dão mais detalhe visual; não melhoram a previsão nem criam vantagem.',
-  RETENTION: 'Velas de 3 min existem só dos últimos 90 dias.',
 } as const;
+
+export function describeDisplayLegend(shown: string, run: string): string {
+  return `Gráfico em ${TIMEFRAME_PHRASE[shown] ?? shown} · opiniões a cada ${TIMEFRAME_PHRASE[run] ?? run}`;
+}
+
+export function describeRetention(timeframe: string): string {
+  return `Velas de ${TIMEFRAME_PHRASE[timeframe] ?? timeframe} existem só dos últimos ${RETENTION_DAYS[timeframe] ?? 90} dias.`;
+}
 
 // Saídas que o motor decide dentro de uma vela da execução, sem saber o minuto (ADR 0002, V8).
 export const BRACKET_EXIT_REASONS: readonly string[] = ['target', 'stop', 'gap'];

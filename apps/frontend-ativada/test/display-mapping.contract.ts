@@ -56,6 +56,45 @@ function layersFor(times: readonly number[]): StrategyLayers {
   };
 }
 
+describe('mapeamento da vela de 1 min (spec 017)', () => {
+  const ONE = MINUTE;
+  const HOUR = 60 * MINUTE;
+  const MAPPING_ONE = { runMilliseconds: RUN, displayMilliseconds: ONE };
+
+  test('divide as execuções de 15 min e de 1 h, e só as menores', () => {
+    expect(createDisplayMapping(RUN, ONE)).toEqual(MAPPING_ONE);
+    expect(createDisplayMapping(HOUR, ONE)).toEqual({
+      runMilliseconds: HOUR,
+      displayMilliseconds: ONE,
+    });
+    expect(createDisplayMapping(ONE, ONE)).toBeUndefined();
+    expect(createDisplayMapping(RUN, 4 * MINUTE)).toBeUndefined();
+  });
+
+  test('2.000 sorteios: a opinião nunca começa antes do fechamento e ocupa 15 velas de 1 min', () => {
+    const next = seeded(31);
+    for (let draw = 0; draw < 2_000; draw += 1) {
+      const decided = bucketOf(Math.floor(next() * 1_900_000_000_000), RUN);
+      const opens = slotOpens(decided, MAPPING_ONE);
+      expect(opens).toHaveLength(15);
+      expect(opens[0]).toBe(decided + RUN);
+      expect(opens.every((open) => open >= decided + RUN && open < decided + 2 * RUN)).toBe(true);
+      const shown = opens[draw % 15] ?? 0;
+      expect(slotOpens(decidedOpenAt(shown, MAPPING_ONE), MAPPING_ONE)).toContain(shown);
+    }
+  });
+
+  test('o placar vira degraus de 15 velas deslocados para quando valeram, sem olhar para a frente', () => {
+    const times = [0, RUN];
+    const expanded = expandLayers(layersFor(times), MAPPING_ONE);
+    expect(expanded.candleTimes).toHaveLength(30);
+    expect(expanded.candleTimes[0]).toBe(RUN);
+    expect(expanded.score.slice(0, 15)).toEqual(Array.from({ length: 15 }, () => '0.00000000'));
+    expect(expanded.score.slice(15, 30)).toEqual(Array.from({ length: 15 }, () => '1.00000000'));
+    expect(waitedOpens([0], MAPPING_ONE)).toEqual([RUN]);
+  });
+});
+
 describe('mapeamento da vela de 15 min para a de 3 min', () => {
   test('só existe quando a vela mostrada é menor e divide a da execução', () => {
     expect(createDisplayMapping(RUN, SHOWN)).toEqual(MAPPING);

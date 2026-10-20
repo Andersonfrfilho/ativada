@@ -542,6 +542,42 @@ describe('balão de valores opcional', () => {
   });
 });
 
+describe('velas de 1 min ao lado das de 3 min (spec 017)', () => {
+  const LEGEND_ONE = 'Gráfico em 1 min · opiniões a cada 15 min';
+
+  test('a simulação ao vivo continua abrindo em 3 min e o 1m é oferecido; escolhido, a legenda e os pedidos são de 1 min', async () => {
+    const harness = show({ marketDisplayTimeframes: ['1m', '3m'] });
+    await ready(harness);
+    expect(pressed(/^3m/)).toBe('true');
+    expect(callsOfTimeframe(harness, '1m')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: /^1m/ }));
+    expect(await screen.findByText(LEGEND_ONE)).toBeDefined();
+    await waitFor(() => expect(callsOfTimeframe(harness, '1m').length).toBeGreaterThan(0));
+    expect(screen.getByText(PHRASE)).toBeDefined();
+  });
+
+  test('sem 1m no ambiente o botão não existe', async () => {
+    const harness = show({ marketDisplayTimeframes: ['3m'] });
+    await ready(harness);
+    expect(screen.queryByRole('button', { name: /^1m/ })).toBeNull();
+  });
+
+  test('cada vela de exibição tem o seu corte: sem 1 min na execução, o 3m segue disponível', async () => {
+    const harness = show({
+      kind: 'backtest',
+      marketDisplayTimeframes: ['1m', '3m'],
+      oneMinuteRetentionStart: FIXTURE_FROM + 41 * 24 * FIXTURE_HOUR,
+    });
+    await ready(harness);
+    fireEvent.click(screen.getByRole('button', { name: /^1m/ }));
+    await screen.findByText('Velas de 1 min existem só dos últimos 30 dias.');
+    fireEvent.click(screen.getByRole('button', { name: /^15m/ }));
+    await waitFor(() => expect(pressed(/^15m/)).toBe('true'));
+    expect(screen.getByRole('button', { name: /^1m/ }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('button', { name: /^3m/ }).hasAttribute('disabled')).toBe(false);
+  });
+});
+
 describe('botão 3m quando a execução inteira é anterior à retenção', () => {
   const RETENTION_TEXT = 'Velas de 3 min existem só dos últimos 90 dias.';
 

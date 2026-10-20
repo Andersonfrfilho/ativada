@@ -5,7 +5,7 @@ import { Icon } from '../../layout/Icon.component.js';
 import controls from '../../styles/Controls.module.css';
 import type { ChartSurface } from './chart-surface.types.js';
 import styles from './CandleChart.module.css';
-import { DISPLAY_TEXT, DISPLAY_TIMEFRAMES } from './candle-chart.constant.js';
+import { DISPLAY_TIMEFRAMES, describeRetention } from './candle-chart.constant.js';
 import type { TimeframeChoice } from './useCandleSource.hook.js';
 
 export type ChartToolbarProps = {
@@ -16,7 +16,8 @@ export type ChartToolbarProps = {
   readonly runTimeframe: string;
   readonly onTimeframeChange: (timeframe: TimeframeChoice) => void;
   // A execução inteira é anterior ao corte da retenção: as velas de exibição não existem para ela.
-  readonly isDisplayUnavailable?: boolean | undefined;
+  // Velas de exibição cuja retenção já não cobre a execução inteira.
+  readonly unavailableOptions?: readonly string[] | undefined;
   // Leva o gráfico ao começo da simulação (só com vela de exibição, onde o começo fica longe da ponta).
   readonly onGoToStart?: (() => void) | undefined;
   // O balão de valores é opcional: ligado, segue o mouse; desligado, só abre ao clicar ou tocar numa vela.
@@ -80,13 +81,13 @@ function isDisplayOption(option: string): boolean {
 }
 
 function TimeframeGroup(props: ChartToolbarProps): ReactElement {
-  const { timeframe, options, runTimeframe, onTimeframeChange, isDisplayUnavailable } = props;
-  const isCut = isDisplayUnavailable === true;
+  const { timeframe, options, runTimeframe, onTimeframeChange } = props;
+  const unavailable = props.unavailableOptions ?? [];
   return (
     <>
       <div className={styles.row} role="group" aria-label="Vela do gráfico">
         {options.map((option) => {
-          const isBlocked = isCut && isDisplayOption(option) && option !== timeframe;
+          const isBlocked = unavailable.includes(option) && option !== timeframe;
           return (
             <button
               key={option}
@@ -95,7 +96,7 @@ function TimeframeGroup(props: ChartToolbarProps): ReactElement {
               aria-pressed={option === timeframe}
               disabled={isBlocked}
               aria-describedby={isBlocked ? RETENTION_HINT_ID : undefined}
-              title={isBlocked ? DISPLAY_TEXT.RETENTION : undefined}
+              title={isBlocked ? describeRetention(option) : undefined}
               onClick={() => onTimeframeChange(option)}
             >
               {option}
@@ -105,9 +106,9 @@ function TimeframeGroup(props: ChartToolbarProps): ReactElement {
           );
         })}
       </div>
-      {isCut && !isDisplayOption(timeframe) ? (
+      {unavailable.length > 0 && !isDisplayOption(timeframe) ? (
         <p id={RETENTION_HINT_ID} className={controls.muted}>
-          <Icon name="info" size={14} /> {DISPLAY_TEXT.RETENTION}
+          <Icon name="info" size={14} /> {unavailable.map(describeRetention).join(' ')}
         </p>
       ) : null}
     </>

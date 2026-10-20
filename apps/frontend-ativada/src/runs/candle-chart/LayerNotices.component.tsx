@@ -3,8 +3,10 @@ import type { ReactElement } from 'react';
 
 import controls from '../../styles/Controls.module.css';
 import type { TradeChart } from '../trade-chart.validation.js';
-import { CHART_LAYER, type ChartLayer } from './candle-chart.constant.js';
+import { timeframeOfMilliseconds } from '../live-chart.js';
+import { CHART_LAYER, TIMEFRAME_PHRASE, type ChartLayer } from './candle-chart.constant.js';
 import styles from './CandleChart.module.css';
+import { slotCount } from './display-mapping.js';
 import { describeScorePanel } from './layer-series.js';
 import { LEVELS_NOTICE } from './strategy-levels.js';
 import { TEAM_LAYER_NOTICE } from './team-layer.js';
@@ -33,8 +35,13 @@ const ZOOM_FOR_DECISIONS = 'Aproxime o gráfico para ver cada decisão';
 const FORECAST_NARROW =
   'A previsão vale para uma vela só, por isso o cone é estreito aqui; a leitura clara está em "Próxima vela de perto".';
 
-const FORECAST_DISPLAY =
-  'A previsão vale para a vela de 15 min inteira (as 5 velas de 3 min do cone); a leitura clara está em "Próxima vela de perto".';
+function describeForecastDisplay(mapping: DisplayMapping): string {
+  const run = timeframeOfMilliseconds(mapping.runMilliseconds);
+  const shown = timeframeOfMilliseconds(mapping.displayMilliseconds);
+  const runPhrase = TIMEFRAME_PHRASE[run ?? ''] ?? 'execução';
+  const shownPhrase = TIMEFRAME_PHRASE[shown ?? ''] ?? 'exibição';
+  return `A previsão vale para a vela de ${runPhrase} inteira (as ${slotCount(mapping)} velas de ${shownPhrase} do cone); a leitura clara está em "Próxima vela de perto".`;
+}
 
 // O texto das camadas: cada linha da estratégia pelo nome, o que o painel do placar mostra e o motivo de uma camada
 // estar vazia ou ter falhado. A falha das camadas NUNCA tira as velas da tela.
@@ -85,7 +92,9 @@ export function LayerNotices(props: LayerNoticesProps): ReactElement {
       ) : null}
       {isLive && isOn(CHART_LAYER.FORECAST) && data.projection !== undefined ? (
         <p className={controls.muted}>
-          {props.displayMapping === undefined ? FORECAST_NARROW : FORECAST_DISPLAY}
+          {props.displayMapping === undefined
+            ? FORECAST_NARROW
+            : describeForecastDisplay(props.displayMapping)}
         </p>
       ) : null}
     </div>

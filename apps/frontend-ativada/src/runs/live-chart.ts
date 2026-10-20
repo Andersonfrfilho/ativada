@@ -5,6 +5,7 @@ const MINUTE_MILLISECONDS = 60_000;
 const HOUR_MILLISECONDS = 60 * MINUTE_MILLISECONDS;
 
 const TIMEFRAME_MILLISECONDS: Readonly<Record<string, number>> = {
+  '1m': MINUTE_MILLISECONDS,
   '3m': 3 * MINUTE_MILLISECONDS,
   '15m': 15 * MINUTE_MILLISECONDS,
   '1h': HOUR_MILLISECONDS,
@@ -15,6 +16,11 @@ const TIMEFRAME_MILLISECONDS: Readonly<Record<string, number>> = {
 // A duração de uma vela em milissegundos; vela que o painel não conhece não tem duração (nada é inventado).
 export function timeframeMilliseconds(timeframe: string): number | undefined {
   return TIMEFRAME_MILLISECONDS[timeframe];
+}
+
+// A vela de uma duração em milissegundos (a chave do mapa acima); `undefined` se o painel não a conhece.
+export function timeframeOfMilliseconds(milliseconds: number): string | undefined {
+  return Object.entries(TIMEFRAME_MILLISECONDS).find(([, value]) => value === milliseconds)?.[0];
 }
 
 export type LastClosedParams = {
