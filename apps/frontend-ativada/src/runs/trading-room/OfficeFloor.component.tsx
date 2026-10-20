@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import { CoffeeMachineFx } from './CoffeeMachineFx.component.js';
 import { DecisionContent } from './DecisionContent.component.js';
 import { OfficeAgent } from './OfficeAgent.component.js';
 import { Lectern, OfficeDesk } from './OfficeDesk.component.js';
@@ -38,6 +39,7 @@ export function OfficeFloor({ opinions, life, isMoving }: OfficeFloorProps): Rea
   return (
     <div className={styles.floor} data-motion={isMoving ? 'on' : undefined} aria-hidden="true">
       <RoomArt crew={life.agents.map((agent) => agent.who)} />
+      <CoffeeMachineFx agents={life.agents} puddle={life.puddle} />
       {opinions.map((opinion) => (
         <OfficeDesk key={opinion.slot} opinion={opinion} />
       ))}

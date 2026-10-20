@@ -1,9 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { BalconySlot } from '../team-room/balcony/balcony.constant.js';
 import { createRandom } from '../team-room/motion/seeded-random.js';
+import { chatContextOf } from './office-chat.js';
 import { planActivity, restPose } from './office-activities.js';
 import { advanceAgent, SPEECH_STEPS, type StepEffects } from './office-agent-step.js';
-import { gatherSpot, seatOf } from './office-geometry.js';
+import { gatherSpot, seatOf, type Point } from './office-geometry.js';
 import type { AgentLife, LifeLine, LifeState } from './office-life.types.js';
 import { routeSteps } from './office-route.js';
 
@@ -23,6 +24,7 @@ export function createLife(params: {
     at: seatOf(who),
     pose: restPose(who),
     face: 'right',
+    hasCup: false,
     queue: [],
     speech: undefined,
     speechSteps: 0,
@@ -32,6 +34,8 @@ export function createLife(params: {
     seed: params.seed,
     agents,
     screenHolder: undefined,
+    machineHolder: undefined,
+    puddle: undefined,
     meeting: undefined,
     lines: params.lines,
   };
@@ -51,6 +55,7 @@ export function startMeeting(state: LifeState): LifeState {
     ...agent,
     speech: undefined,
     speechSteps: 0,
+    hasCup: false,
     queue: [
       { kind: 'walk' as const, steps: routeSteps(agent.at, gatherSpot(index, total)) },
       { kind: 'wait' as const, steps: 1, pose: 'standing' as const },
@@ -60,6 +65,7 @@ export function startMeeting(state: LifeState): LifeState {
     ...state,
     agents,
     screenHolder: undefined,
+    machineHolder: undefined,
     meeting: { phase: 'gathering', bannerSteps: 0 },
   };
 }
@@ -110,6 +116,14 @@ function planIdle(state: LifeState): LifeState {
   return { ...state, agents, screenHolder: holder };
 }
 
+export const PUDDLE_STEPS = 12;
+
+function puddleAfter(puddle: LifeState['puddle'], spill: Point | undefined): LifeState['puddle'] {
+  if (spill !== undefined) return { at: spill, steps: PUDDLE_STEPS };
+  if (puddle === undefined || puddle.steps <= 1) return undefined;
+  return { at: puddle.at, steps: puddle.steps - 1 };
+}
+
 function applyEffects(state: LifeState, effects: StepEffects): LifeState {
   const agents = state.agents.map((agent) => {
     const reply = effects.replies.find((item) => item.host === agent.who);
@@ -119,12 +133,27 @@ function applyEffects(state: LifeState, effects: StepEffects): LifeState {
   });
   const isReleased =
     state.screenHolder !== undefined && effects.released.includes(state.screenHolder);
-  return { ...state, agents, screenHolder: isReleased ? undefined : state.screenHolder };
+  const isFreed = state.machineHolder !== undefined && effects.freed.includes(state.machineHolder);
+  return {
+    ...state,
+    agents,
+    screenHolder: isReleased ? undefined : state.screenHolder,
+    machineHolder: effects.claimed[0] ?? (isFreed ? undefined : state.machineHolder),
+    puddle: puddleAfter(state.puddle, effects.spills[0]),
+  };
 }
 
 export function stepLife(state: LifeState): LifeState {
   const planned = planIdle(advanceMeeting(state));
-  const effects: StepEffects = { replies: [], released: [] };
+  const effects: StepEffects = {
+    replies: [],
+    released: [],
+    claimed: [],
+    freed: [],
+    spills: [],
+    isMachineBusy: planned.machineHolder !== undefined,
+    chat: chatContextOf(planned),
+  };
   const agents = planned.agents.map((agent) => advanceAgent(agent, effects));
   return applyEffects({ ...planned, tick: planned.tick + 1, agents }, effects);
 }

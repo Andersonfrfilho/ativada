@@ -43,6 +43,12 @@ export function PixelAvatar({ who }: { readonly who: AvatarWho }): ReactElement 
       <Layer runs={poses.idle} className={styles.poseIdle} />
       <Layer runs={poses.step} className={styles.poseStep} />
       <Layer runs={poses.point} className={styles.posePoint} />
+      <Layer runs={poses.hold} className={styles.poseHold} />
+      <Layer runs={poses.holdStep} className={styles.poseHoldStep} />
+      <Layer runs={poses.sip} className={styles.poseSip} />
+      <Layer runs={poses.burn} className={styles.poseBurn} />
+      <Layer runs={poses.blow} className={styles.poseBlow} />
+      <Layer runs={poses.tilt} className={styles.poseTilt} />
     </svg>
   );
 }

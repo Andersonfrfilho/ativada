@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { useRef, type ReactElement } from 'react';
 
+import { avatarLookOf } from './avatar-poses.js';
 import type { AgentLife } from './office-life.types.js';
 import { PixelAvatar } from './PixelAvatar.component.js';
 import { usePlacement } from './usePlacement.hook.js';
@@ -20,7 +21,13 @@ export function OfficeAgent({
   const ref = useRef<HTMLDivElement>(null);
   usePlacement(ref, agent.at);
   return (
-    <div ref={ref} className={styles.agent} data-pose={agent.pose} data-face={agent.face}>
+    <div
+      ref={ref}
+      className={styles.agent}
+      data-pose={agent.pose}
+      data-face={agent.face}
+      data-look={avatarLookOf(agent.pose, agent.hasCup)}
+    >
       <span className={styles.shadow} data-shadow />
       <PixelAvatar who={agent.who} />
       <span className={styles.agentName}>{name}</span>

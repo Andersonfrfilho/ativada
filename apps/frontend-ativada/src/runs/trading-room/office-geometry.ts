@@ -17,6 +17,12 @@ export const AISLE_RIGHT = 1208;
 export const DESK_WIDTH = 288;
 export const LECTERN: Point = { x: 744, y: 712 };
 export const COFFEE: Point = { x: 296, y: FLOOR_TOP };
+// Quem espera a máquina fica no ladrilho de baixo; quem bebe fica de pé nestes pontos (o primeiro a chegar usa o mais longe).
+export const COFFEE_QUEUE: Point = { x: 296, y: FLOOR_TOP + 32 };
+export const COFFEE_SPOTS: readonly Point[] = [
+  { x: 464, y: FLOOR_TOP },
+  { x: 392, y: FLOOR_TOP },
+];
 const GATHER_STEP = 104;
 const SCREEN_CENTER = 800;
 

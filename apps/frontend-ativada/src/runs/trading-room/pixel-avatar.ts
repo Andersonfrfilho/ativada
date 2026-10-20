@@ -17,6 +17,12 @@ export type AvatarPoses = {
   readonly idle: readonly PixelRun[];
   readonly step: readonly PixelRun[];
   readonly point: readonly PixelRun[];
+  readonly hold: readonly PixelRun[];
+  readonly holdStep: readonly PixelRun[];
+  readonly sip: readonly PixelRun[];
+  readonly burn: readonly PixelRun[];
+  readonly blow: readonly PixelRun[];
+  readonly tilt: readonly PixelRun[];
 };
 
 type Grid = string[][];

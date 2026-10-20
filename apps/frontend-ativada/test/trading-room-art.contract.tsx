@@ -82,6 +82,7 @@ describe('model teams are people, and everyone has a shadow', () => {
             face: 'right',
             queue: [],
             speech: undefined,
+            hasCup: false,
             speechSteps: 0,
           }}
           name={who}

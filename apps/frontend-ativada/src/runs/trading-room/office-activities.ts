@@ -1,11 +1,12 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { Random } from '../team-room/motion/seeded-random.js';
 import type { BalconySlot } from '../team-room/balcony/balcony.constant.js';
-import { COFFEE, screenSpotOf, seatOf, visitSpotOf, type Point } from './office-geometry.js';
+import { screenSpotOf, seatOf, visitSpotOf, type Point } from './office-geometry.js';
+import { coffeeVariantOf, planCoffee } from './office-coffee.js';
 import type { AgentLife, LifeAction, LifeState, Pose } from './office-life.types.js';
 import { routeSteps } from './office-route.js';
 
-export const LIFE_TEXT = { COFFEE: 'Pausa para o café.', ASK: 'O que você acha,' } as const;
+export const LIFE_TEXT = { ASK: 'O que você acha,' } as const;
 
 type Activity = 'work' | 'coffee' | 'screen' | 'visit' | 'stretch';
 const WEIGHTS: Readonly<Record<string, Readonly<Partial<Record<Activity, number>>>>> = {
@@ -15,7 +16,6 @@ const WEIGHTS: Readonly<Record<string, Readonly<Partial<Record<Activity, number>
 };
 const SPEECH_STEPS = 8;
 const SCREEN_STEPS = 16;
-const COFFEE_STEPS = 9;
 
 export function restPose(who: BalconySlot): Pose {
   return who === 'alice' ? 'standing' : 'seated';
@@ -85,9 +85,8 @@ export function planActivity(
     { kind: 'wait', steps: random.between(14, 28), pose: restPose(agent.who) },
   ];
   if (activity === 'coffee') {
-    return goAndBack(agent, COFFEE, [
-      { kind: 'wait', steps: COFFEE_STEPS, pose: 'standing', say: LIFE_TEXT.COFFEE },
-    ]);
+    const home = restPose(agent.who);
+    return planCoffee(agent, state, { home, variant: coffeeVariantOf(random) }) ?? work;
   }
   if (activity === 'screen' && state.screenHolder === undefined) {
     return goAndBack(agent, screenSpotOf(agent.who), [

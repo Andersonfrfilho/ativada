@@ -76,7 +76,7 @@ const coffee: Part = (x, y) =>
     r([12, 0, 44, 40], '--room-machine'),
     r([18, 6, 32, 10], '--screen'),
     r([28, 22, 12, 6], '--room-metal'),
-    r([28, 30, 12, 10], '--room-mug'),
+    r([44, 22, 6, 6], '--room-metal'),
     r([62, 28, 10, 12], '--room-mug'),
   ]);
 
@@ -121,6 +121,25 @@ const lamp: Part = (x, y) =>
     r([26, 24, 4, 64], '--room-metal'),
     r([14, 88, 28, 6], '--room-metal'),
   ]);
+
+// O que muda na máquina de café: o botão aceso (pisca enquanto alguém aperta) e a caneca embaixo do bico enquanto o café sai.
+export function buildCoffeeFx(look: 'idle' | 'pressing' | 'brewing'): readonly ArtRect[] {
+  if (look === 'idle') return [];
+  const button: ArtRect =
+    look === 'pressing'
+      ? { ...r([44, 22, 6, 6], '--screen-good'), blink: 2 }
+      : r([44, 22, 6, 6], '--screen-good');
+  const cup = [r([28, 30, 12, 10], '--room-mug'), r([30, 31, 8, 3], '--room-machine')];
+  return at(224, 344, look === 'brewing' ? [button, ...cup] : [button]);
+}
+
+// A poça de café no chão, na altura dos pés de quem derrubou.
+export function buildPuddle(spot: { readonly x: number; readonly y: number }): readonly ArtRect[] {
+  return [
+    r([spot.x + 20, spot.y + 104, 28, 5], '--room-cabinet'),
+    r([spot.x + 26, spot.y + 109, 16, 3], '--room-cabinet'),
+  ];
+}
 
 // O piso inteiro menos os ladrilhos (o padrão xadrez é um `<pattern>` no componente) e as cadeiras (dependem da equipe).
 export function buildRoomArt(): readonly ArtRect[] {

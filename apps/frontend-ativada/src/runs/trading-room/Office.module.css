@@ -202,11 +202,21 @@
 }
 
 .avatar {
+  --px-cup: var(--room-mug);
+  --px-coffee: var(--px-line);
+  --px-steam: var(--room-mug);
+  --px-tongue: var(--screen-bad);
   --px-cloth-d: color-mix(in srgb, var(--px-cloth) 70%, var(--px-line));
 }
 
 .poseStep,
-.posePoint {
+.posePoint,
+.poseHold,
+.poseHoldStep,
+.poseSip,
+.poseBurn,
+.poseBlow,
+.poseTilt {
   display: none;
 }
 
@@ -255,14 +265,24 @@
   transform: scaleX(-1);
 }
 
-.agent[data-pose='walking'] .poseIdle,
-.agent[data-pose='pointing'] .poseIdle {
+.agent:not([data-look='idle']) .poseIdle {
   display: none;
 }
 
-.agent[data-pose='walking'] .poseStep,
-.agent[data-pose='pointing'] .posePoint {
+.agent[data-look='walk'] .poseStep,
+.agent[data-look='point'] .posePoint,
+.agent[data-look='hold'] .poseHold,
+.agent[data-look='walk-hold'] .poseHoldStep,
+.agent[data-look='sip'] .poseSip,
+.agent[data-look='burn'] .poseBurn,
+.agent[data-look='blow'] .poseBlow,
+.agent[data-look='tilt'] .poseTilt {
   display: inline;
+}
+
+.agent[data-pose='embarrassed'] .avatar {
+  transform-origin: bottom;
+  scale: 1 0.94;
 }
 
 .agentName {
@@ -279,8 +299,7 @@
   white-space: nowrap;
 }
 
-.agent[data-pose='seated'] .agentName,
-.agent[data-pose='standing'] .agentName {
+.agent:not([data-pose='walking'], [data-pose='pointing']) .agentName {
   visibility: hidden;
 }
 
@@ -357,12 +376,18 @@
     transition: transform 300ms linear;
   }
 
-  .floor[data-motion='on'] .agent[data-pose='walking'] .poseIdle {
+  .floor[data-motion='on'] .agent[data-look='walk'] .poseIdle,
+  .floor[data-motion='on'] .agent[data-look='walk-hold'] .poseHold {
     display: inline;
     animation: frame-a 620ms steps(1) infinite;
   }
 
-  .floor[data-motion='on'] .agent[data-pose='walking'] .poseStep {
+  .floor[data-motion='on'] .agent[data-pose='burning'] .avatar {
+    animation: hop 360ms steps(2) infinite;
+  }
+
+  .floor[data-motion='on'] .agent[data-look='walk'] .poseStep,
+  .floor[data-motion='on'] .agent[data-look='walk-hold'] .poseHoldStep {
     animation: frame-b 620ms steps(1) infinite;
   }
 
@@ -388,6 +413,12 @@
   .agent * {
     transition: none;
     animation: none;
+  }
+}
+
+@keyframes hop {
+  50% {
+    translate: 0 -6%;
   }
 }
 
@@ -418,4 +449,8 @@
     opacity: 0;
     transform: scale(0.96);
   }
+}
+
+.puddle[data-fading='true'] {
+  opacity: 0.5;
 }

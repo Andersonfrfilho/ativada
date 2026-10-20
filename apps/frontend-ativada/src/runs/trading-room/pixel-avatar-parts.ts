@@ -147,12 +147,49 @@ export function paintLegs(paint: Painter, isStep: boolean): void {
   paint([10, 26, 3, 1], 'shoe');
 }
 
-export function paintArm(paint: Painter, isUp: boolean): void {
-  if (isUp) {
+export type ArmMode = 'down' | 'up' | 'hold' | 'sip' | 'burn' | 'blow' | 'tilt';
+
+// A caneca: três por três com o café por cima e a alça do lado de fora.
+function paintMug(paint: Painter, x: number, y: number): void {
+  paint([x, y, 3, 3], 'cup');
+  paint([x, y, 3, 1], 'coffee');
+  paint([x + 3, y + 1, 1, 1], 'cup');
+}
+
+// Os fiapos de vapor sobre a caneca; ao queimar a língua saem mais.
+function paintSteam(paint: Painter, isHot: boolean): void {
+  paint([15, 6, 1, 1], 'steam');
+  paint([16, 5, 1, 1], 'steam');
+  if (isHot) paint([14, 5, 1, 1], 'steam');
+}
+
+// A língua vermelha de quem queimou, embaixo da boca (pintada depois da cabeça).
+export function paintTongue(paint: Painter): void {
+  paint([8, 12, 2, 1], 'tongue');
+}
+
+export function paintArm(paint: Painter, mode: ArmMode): void {
+  if (mode === 'up') {
     paint([13, 7, 2, 8], 'cloth-d');
     paint([13, 6, 2, 1], 'skin');
     return;
   }
-  paint([13, 15, 2, 6], 'cloth-d');
-  paint([13, 21, 2, 1], 'skin');
+  if (mode === 'sip' || mode === 'burn' || mode === 'blow') {
+    paint([13, 12, 2, 5], 'cloth-d');
+    paint([13, 11, 2, 1], 'skin');
+    paintMug(paint, 14, 8);
+    if (mode !== 'sip') paintSteam(paint, mode === 'burn');
+    return;
+  }
+  if (mode === 'tilt') {
+    paint([13, 15, 2, 4], 'cloth-d');
+    paint([13, 19, 2, 1], 'skin');
+    paint([15, 18, 3, 2], 'cup');
+    paint([17, 20, 1, 2], 'coffee');
+    paint([16, 23, 1, 1], 'coffee');
+    return;
+  }
+  paint([13, 15, 2, mode === 'hold' ? 4 : 6], 'cloth-d');
+  paint([13, mode === 'hold' ? 19 : 21, 2, 1], 'skin');
+  if (mode === 'hold') paintMug(paint, 14, 17);
 }
