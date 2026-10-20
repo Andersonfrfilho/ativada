@@ -314,6 +314,13 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     app.projectionsRoute.createProjectionsRoute(
       app.projectionsUseCase.createProjectionsUseCase(projectionDeps),
     ),
+    app.tradePlanRoute.createTradePlanRoute(
+      app.tradePlanUseCase.createTradePlanUseCase({
+        ...liveStatusDeps,
+        teams: modelTeams.teams,
+        reports: modelTeams.reads,
+      }),
+    ),
     ...app.runExportRoutes.createRunExportRoutes(
       app.exportCsv.createExportRunCsvUseCase({
         results: runs.results,

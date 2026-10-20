@@ -65,6 +65,7 @@ export const RUN_LIVE_SUMMARY_PATH = '/v1/runs/live-summary';
 export const RUN_DECISIONS_PATH = '/v1/runs/:runId/decisions';
 export const RUN_STRATEGY_LAYERS_PATH = '/v1/runs/:runId/strategy-layers';
 export const RUN_PROJECTIONS_PATH = '/v1/runs/:runId/projections';
+export const RUN_TRADE_PLAN_PATH = '/v1/runs/:runId/trade-plan';
 export const RUN_ANALYST_PATH = '/v1/runs/:runId/analyst';
 export const RUN_ANALYST_DECISIONS_PATH = '/v1/runs/:runId/analyst/decisions';
 

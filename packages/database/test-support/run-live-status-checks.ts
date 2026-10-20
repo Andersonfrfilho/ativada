@@ -128,9 +128,10 @@ export async function checkLiveStatusReads(context: LifecycleCheckContext): Prom
       (item) =>
         item.close ===
           closeAt((item.candleTime - candleTimeAt(0)) / SYNTHETIC_CANDLE_MILLISECONDS) &&
-        item.closeTime === item.candleTime + SYNTHETIC_CANDLE_MILLISECONDS - 1,
+        item.closeTime === item.candleTime + SYNTHETIC_CANDLE_MILLISECONDS - 1 &&
+        item.volume === '1.00000000',
     ),
-    'ao vivo: o fechamento ou o close_time da vela de cada decisão não bate com a junção pela PK de candles',
+    'ao vivo: o fechamento, o volume ou o close_time da vela de cada decisão não bate com a junção pela PK de candles',
   );
   const second = await reads.listDecisionRows(owner.scope, run.id, {
     market: MARKET,

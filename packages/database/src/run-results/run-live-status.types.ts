@@ -14,8 +14,13 @@ export type DecisionMarket = {
   readonly timeframe: string;
 };
 
-// Uma linha de `signals` com o fechamento (`candles.close`, 8 casas e zeros à direita) e o `close_time` da vela que ela decidiu.
-export type DecisionRow = SignalInput & { readonly close: string; readonly closeTime: number };
+// Uma linha de `signals` com o fechamento (`candles.close`, 8 casas e zeros à direita), o volume e o `close_time` da vela que ela
+// decidiu (o volume é o da vela de decisão, que o dimensionamento da entrada usa).
+export type DecisionRow = SignalInput & {
+  readonly close: string;
+  readonly volume: string;
+  readonly closeTime: number;
+};
 
 // Decrescente por `candle_time`: `before` é o último instante já entregue (exclusivo); `limit` de 1 a 100.
 export type ListDecisionRowsParams = {

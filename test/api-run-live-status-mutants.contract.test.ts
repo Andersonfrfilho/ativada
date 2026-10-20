@@ -45,6 +45,62 @@ function edit(file: string, find: string, replace: string): SourceEdit[] {
   return [{ file, find, replace, occurrences: 1 }];
 }
 
+const TRADE_PLAN_DIRECTORY = 'runs/trade-plan';
+const TRADE_PLAN_ROUTE = `${TRADE_PLAN_DIRECTORY}/trade-plan.route.ts`;
+const TRADE_PLAN_USE_CASE = `${TRADE_PLAN_DIRECTORY}/trade-plan.use-case.ts`;
+const TRADE_PLAN_LEVELS = `${TRADE_PLAN_DIRECTORY}/trade-plan-levels.ts`;
+const TRADE_PLAN_MATH = `${TRADE_PLAN_DIRECTORY}/trade-plan-math.ts`;
+const TRADE_PLAN_TEAMS = `${TRADE_PLAN_DIRECTORY}/trade-plan-teams.ts`;
+
+// O plano de operação ao vivo (`/trade-plan`): dono, direção dos arredondamentos e as contas do preenchimento.
+const TRADE_PLAN: readonly SourceMutant[] = [
+  { name: 'TRADE_PLAN_ROUTE_IS_PUBLIC', edits: edit(TRADE_PLAN_ROUTE, USER_ACCESS, PUBLIC_ACCESS) },
+  {
+    name: 'TRADE_PLAN_TARGET_RATE_ROUNDS_DOWN',
+    edits: edit(
+      TRADE_PLAN_LEVELS,
+      'exitPrice: target }, UP);',
+      'exitPrice: target }, ROUNDING_DIRECTION.DOWN);',
+    ),
+  },
+  {
+    name: 'TRADE_PLAN_RESULT_RATE_ROUNDS_UP',
+    edits: edit(
+      TRADE_PLAN_MATH,
+      'params.entryCost), ROUNDING_DIRECTION.DOWN)',
+      'params.entryCost), ROUNDING_DIRECTION.UP)',
+    ),
+  },
+  {
+    name: 'TRADE_PLAN_STOP_EXITS_WITHOUT_SLIPPAGE',
+    edits: edit(
+      TRADE_PLAN_LEVELS,
+      'const exitPrice = marketSellFill(stop, params.basis.parameters);',
+      'const exitPrice = stop;',
+    ),
+  },
+  {
+    name: 'TRADE_PLAN_FEE_ROUNDS_DOWN',
+    edits: edit(
+      TRADE_PLAN_MATH,
+      'return roundMoneyUp(notional.times(pricing.feeRate));',
+      'return roundMoneyDown(notional.times(pricing.feeRate));',
+    ),
+  },
+  {
+    name: 'TRADE_PLAN_TEAM_READS_ON_DEMAND_REPORTS',
+    edits: edit(TRADE_PLAN_TEAMS, 'row.kind === MODEL_TEAM_REPORT_KIND.SCHEDULED &&', ''),
+  },
+  {
+    name: 'TRADE_PLAN_IGNORES_A_STALLED_RUN',
+    edits: edit(
+      TRADE_PLAN_USE_CASE,
+      'if (run.stalledSince !== undefined) return TRADE_PLAN_UNAVAILABLE_REASON.STALLED;',
+      '',
+    ),
+  },
+];
+
 const OWNER_ACCESS_AND_KIND: readonly SourceMutant[] = [
   {
     name: 'LIVE_STATUS_OF_FOREIGN_RUN_ANSWERS_DIFFERENTLY',
@@ -369,8 +425,8 @@ const PHRASES_AND_STATES: readonly SourceMutant[] = [
     name: 'TRIGGERS_IGNORE_THE_RUN_STATUS',
     edits: edit(
       TRIGGERS,
-      'if (context.run.status !== RUN_STATUS.RUNNING) {\n    return unavailable(context, TRIGGER_UNAVAILABLE_REASON.NOT_RUNNING);\n  }\n',
-      '',
+      'return context.run.status === RUN_STATUS.RUNNING\n    ? undefined\n    : TRIGGER_UNAVAILABLE_REASON.NOT_RUNNING;',
+      'return undefined;',
     ),
   },
   {
@@ -472,6 +528,7 @@ const MUTANTS: readonly SourceMutant[] = [
   ...VALIDATION_AND_LIMITS,
   ...ROUNDING_AND_ARITHMETIC,
   ...PHRASES_AND_STATES,
+  ...TRADE_PLAN,
 ];
 
 describe('acompanhamento ao vivo: o contrato reprova cada mutante do código de produção', () => {

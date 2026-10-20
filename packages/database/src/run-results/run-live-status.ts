@@ -66,12 +66,18 @@ export async function readLatestEquityPoint(
 function toDecisionRow(row: {
   readonly signal: typeof signals.$inferSelect;
   readonly close: string | null;
+  readonly volume: string | null;
   readonly closeTime: number | null;
 }): DecisionRow {
-  if (row.close === null || row.closeTime === null) {
+  if (row.close === null || row.volume === null || row.closeTime === null) {
     throw new Error('Decisão gravada sem a vela correspondente.');
   }
-  return { ...toSignalInput(row.signal), close: row.close, closeTime: row.closeTime };
+  return {
+    ...toSignalInput(row.signal),
+    close: row.close,
+    volume: row.volume,
+    closeTime: row.closeTime,
+  };
 }
 
 // As decisões da execução, da mais recente para a mais antiga, com o fechamento da vela de cada uma numa junção pela PK de
@@ -83,7 +89,12 @@ export async function listDecisionRows(
   const { market } = params;
   const limit = clamp(params.limit, DECISION_ROWS_MAXIMUM);
   const rows = await executor
-    .select({ signal: signals, close: candles.close, closeTime: candles.closeTime })
+    .select({
+      signal: signals,
+      close: candles.close,
+      volume: candles.volume,
+      closeTime: candles.closeTime,
+    })
     .from(signals)
     .leftJoin(
       candles,

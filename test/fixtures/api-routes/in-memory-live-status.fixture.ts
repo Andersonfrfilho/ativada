@@ -73,7 +73,7 @@ export function createInMemoryLiveStatus(
           candidate.openTime === signal.candleTime,
       );
       if (candle === undefined) throw new Error('Decisão gravada sem a vela correspondente.');
-      return { ...signal, close: candle.close, closeTime: candle.closeTime };
+      return { ...signal, close: candle.close, volume: candle.volume, closeTime: candle.closeTime };
     });
     return Promise.resolve({
       items,

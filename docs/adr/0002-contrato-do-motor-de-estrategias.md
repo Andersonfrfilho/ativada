@@ -2502,3 +2502,38 @@ Autorizados em 2026-10-17 (migration, API e worker); o motor e `ENGINE_VERSION` 
   `runs.request.duel.groupId`; equipe desligada ou falta de vaga para TODAS é 409 e nada é criado; se uma criação falhar mesmo assim, as já criadas são canceladas.
 - **Execução de equipe nas leituras de regra**: `live-status` (`triggers.reason = team_run`), `projections` (`current.reason = team_run`, sem consulta
   de previsões) e `strategy-layers` (`unavailable = team_run`, listas vazias) não inventam régua de placar.
+
+## Plano de operação ao vivo (`trade-plan-1`, sala da equipe)
+
+Decidido em 2026-10-20 para a "sala da equipe" da simulação ao vivo (prévia `docs/preview/equipe-ao-vivo/escritorio.html`). A auditoria da tela ao vivo
+(`docs/preview/tela-ao-vivo/auditoria.md` #3) mostrou que o painel recalculando o líquido com 8 casas erra até ~0,1% por perna na PEPE e pode trocar
+ganho por perda perto do zero: os números da sala saem prontos do servidor. O motor, `packages/run-recording` e `ENGINE_VERSION` não mudam.
+
+- **Rota irmã, não campo novo do `live-status`.** `GET /v1/runs/:runId/trade-plan` (`access: USER`, `documentation`, política `RUN_LIVE_STATUS`: agora
+  são cinco rotas no MESMO balde de 60/min). O `live-status` tem contrato fechado de no máximo 5 consultas por pedido (spec 008, L19) e o plano precisa de
+  mais duas (o interruptor e as recomendações das equipes); a rota à parte mantém o contrato e o teto do `live-status` intactos e o aviso do stream refaz as
+  duas pela mesma raiz `runs`. Só `live_paper` (outro tipo 409 `RUN_NOT_LIVE`); alheia, inexistente ou id malformado é o mesmo 404; consulta com parâmetro é 400.
+- **Consultas:** no máximo 7, todas por chave e com LIMIT (execução, versão, a última decisão com a vela — `DecisionRow` ganhou o `volume` da vela, aditivo —,
+  a posição aberta, o último ponto de patrimônio, o interruptor das equipes e `readOverview` das recomendações do par só se alguma equipe está ligada).
+  Execução fora de `running` responde com UMA consulta.
+- **`plan`** é `awaiting_entry`, `holding` ou `unavailable` (`not_running`, `stalled`, `waiting_for_data`, `no_candle`, `no_atr`, `invalid_stop`, nessa
+  ordem, sem número nenhum). Aguardando: a abertura estimada é o último fechamento gravado no tick (para cima); a compra simulada é a do motor
+  (`abertura × (1 + slippage)` no tick para cima; ordem limitada = o preço limite inteiro, o pior caso); stop e alvo saem de `computeProtectivePrices` com o
+  ATR GRAVADO da vela decidida (pela mesma porta `decimalFromIndicator`), a quantidade de `computePositionSize` com o valor em risco que a ordem guardaria
+  (`caixa × riskPerTrade`, para baixo; o caixa é o patrimônio do último ponto) e o volume da vela de decisão. **Não** usa `computePlanLevels`/`computeHoldingLevels`:
+  essas partem da meta (taxa de alvo e perda máxima) e dariam números diferentes do preenchimento real; o plano precisa bater com o `net_profit` que o motor
+  gravaria. A escala do analista (`entryRiskScale`) não entra: é a entrada cheia. Comprada: a posição gravada, "vender agora" a mercado sobre o último fechamento
+  (`fechamento × (1 − slippage)`, tick para baixo) e o líquido no alvo (sai AO PREÇO do alvo) e no stop sem gap (`stop × (1 − slippage)`, tick para baixo).
+- **Arredondamento contra o usuário:** débito e taxa para cima, crédito para baixo (as contas de `money.ts`, replicadas em `trade-plan-math.ts` como a API
+  já fazia em `money-rounding.ts`); o líquido (`net`) é exato nessa grade e a taxa sobre o débito sai para BAIXO a 12 casas; a taxa até o que se quer
+  alcançar (entrada, alvo) sobe e até o que se pode perder (stop, venda agora) desce. Preço e distância em valor são exatos (dois preços no tick).
+  `currentPrice` é o último fechamento gravado (sem o ticker ao vivo: a rota não depende do stream).
+- **Equipes:** uma linha por equipe LIGADA pelo dono (desligada não aparece). A recomendação é a AGENDADA decidida mais nova do par (avulsa não entra);
+  `buy` com os três preços vira as mesmas contas (entrada sugerida no tick para cima como abertura, alvo para cima, proteção para baixo); `hold`/`sell` é
+  `no_entry`, nenhuma é `no_report`, preços que não cabem (alvo ≤ compra, proteção acima da venda possível) é `invalid_levels`. Na execução da própria
+  equipe (`signalSource`), `wallet` traz o saldo, o resultado e a taxa dela (`computeLiveBalance`).
+- **Frases** de catálogo fechado (`trade-plan-messages.ts`), pt-BR, sem data nem hora; o aviso fixo "não é recomendação" vai em `notice`.
+- **Prova:** `test/api-run-trade-plan.contract.test.ts` (cada estado, 404/409/400, direção dos arredondamentos, oráculo `bigint` independente,
+  PEPE com tick 0,00000001 e passo 1, e paridade com `simulatedFillModel`: a ordem que o motor guardaria preenche na abertura estimada e o `net_profit`
+  no alvo, no stop e na venda a mercado é o do plano) e 7 mutantes em `test/api-run-live-status-mutants.contract.test.ts`.
+- **Fica para depois:** preço ao vivo do ticker como `currentPrice`; a escala do analista no dimensionamento previsto.

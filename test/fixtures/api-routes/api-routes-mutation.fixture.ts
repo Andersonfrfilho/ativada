@@ -179,6 +179,7 @@ export const LIVE_STATUS_MUTANT_TARGET: MutantTarget = {
   directoryPrefix: 'live-status-',
   judgeTestFiles: [
     'test/api-run-live-status.contract.test.ts',
+    'test/api-run-trade-plan.contract.test.ts',
     'test/api-run-decisions-history.contract.test.ts',
     'test/api-run-chart-decisions.contract.test.ts',
     'test/live-balance.contract.test.ts',

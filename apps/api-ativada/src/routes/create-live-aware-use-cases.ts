@@ -1,8 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
+  createModelTeamReadRepository,
   createRunLiveStatusRepository,
   createRunProjectionRepository,
   createStrategyRepository,
+  createUserModelTeamRepository,
   type RunRepository,
   type RunResultRepository,
 } from '@ativada/database';
@@ -13,6 +15,7 @@ import { createLiveSummaryUseCase } from '../runs/live-summary/live-summary.use-
 import { createRunDecisionsUseCase } from '../runs/live-status/run-decisions.use-case.js';
 import { createProjectionsUseCase } from '../runs/projections/projections.use-case.js';
 import { createStrategyLayersUseCase } from '../runs/projections/strategy-layers.use-case.js';
+import { createTradePlanUseCase } from '../runs/trade-plan/trade-plan.use-case.js';
 import type { LiveAwareUseCases } from './create-api-routes.js';
 import type { DomainRouteParams } from './create-domain-route-dependencies.js';
 
@@ -45,6 +48,11 @@ export function createLiveAwareUseCases(
       ...dependencies,
       results: shared.results,
       projections: createRunProjectionRepository(params.database),
+    }),
+    tradePlan: createTradePlanUseCase({
+      ...dependencies,
+      teams: createUserModelTeamRepository(params.database),
+      reports: createModelTeamReadRepository(params.database),
     }),
   };
 }

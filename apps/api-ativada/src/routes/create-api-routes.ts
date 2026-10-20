@@ -36,6 +36,8 @@ import { createProjectionsRoute } from '../runs/projections/projections.route.js
 import type { ProjectionsUseCase } from '../runs/projections/projections.use-case.js';
 import { createStrategyLayersRoute } from '../runs/projections/strategy-layers.route.js';
 import type { StrategyLayersUseCase } from '../runs/projections/strategy-layers.use-case.js';
+import { createTradePlanRoute } from '../runs/trade-plan/trade-plan.route.js';
+import type { TradePlanUseCase } from '../runs/trade-plan/trade-plan.use-case.js';
 import type { RunDecisionsUseCase } from '../runs/live-status/run-decisions.use-case.js';
 import { createTradeSummaryRoute } from '../runs/trade-summary/trade-summary.route.js';
 import type { TradeSummaryUseCase } from '../runs/trade-summary/trade-summary.use-case.js';
@@ -68,6 +70,7 @@ export type RunRoutesBundle = {
   readonly decisions: RunDecisionsUseCase;
   readonly strategyLayers: StrategyLayersUseCase;
   readonly projections: ProjectionsUseCase;
+  readonly tradePlan: TradePlanUseCase;
   readonly analyst: AnalystUseCase;
   readonly analystDecisions: AnalystDecisionsUseCase;
 };
@@ -75,7 +78,13 @@ export type RunRoutesBundle = {
 // O que as leituras do acompanhamento ao vivo entregam ao pacote de rotas de execuções.
 export type LiveAwareUseCases = Pick<
   RunRoutesBundle,
-  'chart' | 'liveStatus' | 'liveSummary' | 'decisions' | 'strategyLayers' | 'projections'
+  | 'chart'
+  | 'liveStatus'
+  | 'liveSummary'
+  | 'decisions'
+  | 'strategyLayers'
+  | 'projections'
+  | 'tradePlan'
 >;
 
 export type ApiRouteDependencies = HealthRouteDependencies & {
@@ -128,6 +137,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     createRunDecisionsRoute(dependencies.runs.decisions),
     createStrategyLayersRoute(dependencies.runs.strategyLayers),
     createProjectionsRoute(dependencies.runs.projections),
+    createTradePlanRoute(dependencies.runs.tradePlan),
     createAnalystRoute(dependencies.runs.analyst),
     createAnalystDecisionsRoute(dependencies.runs.analystDecisions),
     ...createRunExportRoutes(dependencies.runs.exportRunCsv),
