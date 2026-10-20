@@ -306,7 +306,7 @@ migration, não muda o motor nem o `run-recording`, não adiciona dependência**
 
 ### Contratos (provados antes do código)
 
-1. O Zod do `trade-plan` aceita as três formas do servidor e recusa campo fora do contrato.
+1. O Zod do `trade-plan` aceita as três formas do servidor e recusa valor fora do contrato (motivo, decimal, estado).
 2. Opiniões: números só do `trade-plan`/`live-status` (texto do servidor formatado); equipe desligada não aparece.
 3. Avatares e mobília: pixel art determinística (mesma entrada = mesmo desenho), contorno automático.
 4. Roteiro: mesma semente = mesma sequência; passo de no máximo um ladrilho; ninguém entra na área do telão; a reunião junta todos

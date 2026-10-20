@@ -2,9 +2,12 @@
 import { useEffect, useMemo } from 'react';
 
 import { useLiveStatusQuery } from '../live-tracking/live-status.query.js';
+import { useTradePlanQuery } from '../trading-room/trade-plan.query.js';
 import type { ChartSurface, SurfacePriceLevel } from './chart-surface.types.js';
+import { buildPlanLevels } from './plan-levels.js';
 import { buildStrategyLevels } from './strategy-levels.js';
 import { buildStrategyZones, type StrategyZones } from './strategy-zones.js';
+import { useIsTerminalChart } from './terminal-chart.context.js';
 
 export type LevelLines = {
   readonly levels: readonly SurfacePriceLevel[];
@@ -17,16 +20,19 @@ export type LevelLinesInput = {
   readonly isOn: boolean;
 };
 
-// Os níveis da estratégia como linhas horizontais rotuladas, da mesma consulta do acompanhamento (nenhuma consulta nova).
+// Os níveis da estratégia como linhas horizontais rotuladas, da mesma consulta do acompanhamento; no telão, do plano do
+// servidor (compra simulada, alvo e proteção), com o nível antigo como reserva quando não há plano.
 export function useLevelLines(
   surface: ChartSurface | undefined,
   { runId, isOn }: LevelLinesInput,
 ): LevelLines {
   const status = useLiveStatusQuery(runId, isOn).data;
-  const levels = useMemo(
-    () => (isOn && status !== undefined ? buildStrategyLevels(status) : []),
-    [isOn, status],
-  );
+  const isTerminal = useIsTerminalChart();
+  const plan = useTradePlanQuery(runId, isOn && isTerminal).data?.plan;
+  const levels = useMemo(() => {
+    if (!isOn || status === undefined) return [];
+    return buildPlanLevels(isTerminal ? plan : undefined) ?? buildStrategyLevels(status);
+  }, [isOn, status, plan, isTerminal]);
   const zones = useMemo(
     () =>
       isOn && status !== undefined ? buildStrategyZones(status) : { zones: [], reason: undefined },

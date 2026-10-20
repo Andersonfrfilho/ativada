@@ -513,3 +513,14 @@ task) e `tasks.md` (S0–S6). Base dos gates antes da fase: `bun run --cwd apps/
 - Contratos: `trading-room-terminal.contract.tsx` (média à mão, médias só no terminal, variações uma vez no telão), contraste dos pares do
   terminal em `contrast.contract.ts`, tema lido no contêiner em `chart-surface-lifecycle.contract.tsx`.
 - Gates: typecheck, lint e format:check verdes; `bun run --cwd apps/frontend-ativada test` 1.668 passam, 0 falham.
+
+### S2 — plano do servidor, níveis e opiniões (2026-10-20)
+
+- `trade-plan.validation.ts` espelha `TRADE_PLAN_SCHEMA` da API (commit 80559a5; motivos e decimais fechados) e `useTradePlanQuery` usa a chave
+  `['runs', runId, 'trade-plan']` (o aviso do stream refaz).
+- No telão, `useLevelLines` desenha as linhas do plano (`plan-levels.ts`): compra simulada (ou entrada), alvo e proteção com o preço na etiqueta
+  do eixo; sem plano, o nível antigo.
+- `room-plan-rows.ts` e `room-opinions.ts` (puros): a Alice leva o plano (comprar, alvo, lucro previsto já sem custo em % e USDT fict., proteção;
+  comprado, o resultado agora); os agentes de regra não têm alvo próprio e repetem "Plano da equipe: …"; equipe ◆ com níveis, confiança e
+  carteira. Taxas em % arredondadas para baixo (`formatSignedPercentDown`), só formatação do texto do servidor.
+- Contrato `trading-room-plan.contract.ts` (8 testes). Gates: typecheck, lint, format:check verdes; painel 1.676 passam, 0 falham.
