@@ -8,8 +8,9 @@ const HUNDREDTHS_PER_UNIT = 10_000n;
 const HUNDREDTHS_TO_SCALED_PERCENT = 1_000_000n;
 const ZERO = 0n;
 const TICK_TOLERANCE_MILLISECONDS = 15_000;
-// A vela de referência pode estar até meia vela (7,5 min) longe do instante pedido.
-const CANDLE_TOLERANCE_MILLISECONDS = 450_000;
+// A vela de referência pode estar até meia vela (7,5 min) longe do instante pedido; a de 1 min, até uma vela.
+const QUARTER_HOUR_TOLERANCE_MILLISECONDS = 450_000;
+const MINUTE_TOLERANCE_MILLISECONDS = 60_000;
 
 export const VARIATION_WINDOWS = [
   { key: '1m', label: '1 min', words: '1 minuto', minutes: 1, canUseCandles: false },
@@ -38,7 +39,10 @@ export type ComputeVariationsParams = {
   // O preço ao vivo em dia deste par, ou `undefined` quando o tick está mudo/fora.
   readonly livePrice: string | undefined;
   readonly tickAtOrBefore: (limit: number) => HistoricTick | undefined;
+  // Velas de 15 min (1 h, 4 h e 24 h).
   readonly candles: readonly VariationCandle[];
+  // Velas de 1 min gravadas: reserva de 1, 5 e 15 min quando o painel ainda não tem tick de antes.
+  readonly minuteCandles?: readonly VariationCandle[] | undefined;
 };
 
 export const VARIATION_REASON = {
@@ -97,6 +101,7 @@ function fromTicks(params: ComputeVariationsParams, window: VariationWindow): bi
 function nearestCandle(
   candles: readonly VariationCandle[],
   target: number,
+  tolerance: number,
 ): VariationCandle | undefined {
   let best: VariationCandle | undefined;
   for (const candle of candles) {
@@ -104,23 +109,36 @@ function nearestCandle(
       best === undefined || Math.abs(candle.closeTime - target) < Math.abs(best.closeTime - target);
     if (isCloser) best = candle;
   }
-  const isNear =
-    best !== undefined && Math.abs(best.closeTime - target) <= CANDLE_TOLERANCE_MILLISECONDS;
+  const isNear = best !== undefined && Math.abs(best.closeTime - target) <= tolerance;
   return isNear ? best : undefined;
 }
 
+type CandleSource = { readonly candles: readonly VariationCandle[]; readonly tolerance: number };
+
 // Sem preço ao vivo a janela parte do fechamento da última vela, não do relógio.
-function fromCandles(params: ComputeVariationsParams, window: VariationWindow): bigint | undefined {
-  const last = params.candles.at(-1);
+function fromCandles(
+  params: ComputeVariationsParams,
+  window: VariationWindow,
+  source: CandleSource,
+): bigint | undefined {
+  const last = source.candles.at(-1);
   if (last === undefined) return undefined;
-  const anchor = params.livePrice === undefined ? last.closeTime : params.now;
+  const hasLivePrice = params.livePrice !== undefined;
+  const anchor = hasLivePrice ? params.now : last.closeTime;
   const current = params.livePrice ?? last.close;
   const reference = nearestCandle(
-    params.candles,
+    source.candles,
     anchor - window.minutes * MILLISECONDS_PER_MINUTE,
+    source.tolerance,
   );
-  if (reference === undefined || reference === last) return undefined;
+  if (reference === undefined || (!hasLivePrice && reference === last)) return undefined;
   return computeVariationHundredths(current, reference.close);
+}
+
+function sourceOf(params: ComputeVariationsParams, window: VariationWindow): CandleSource {
+  return window.canUseCandles
+    ? { candles: params.candles, tolerance: QUARTER_HOUR_TOLERANCE_MILLISECONDS }
+    : { candles: params.minuteCandles ?? [], tolerance: MINUTE_TOLERANCE_MILLISECONDS };
 }
 
 function missingReason(params: ComputeVariationsParams, window: VariationWindow): string {
@@ -133,7 +151,7 @@ function missingReason(params: ComputeVariationsParams, window: VariationWindow)
 export function computeVariations(params: ComputeVariationsParams): readonly WindowVariation[] {
   return VARIATION_WINDOWS.map((window) => {
     const hundredths =
-      fromTicks(params, window) ?? (window.canUseCandles ? fromCandles(params, window) : undefined);
+      fromTicks(params, window) ?? fromCandles(params, window, sourceOf(params, window));
     const reason = hundredths === undefined ? missingReason(params, window) : undefined;
     return { window, hundredths, reason };
   });

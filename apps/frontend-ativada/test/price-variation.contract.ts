@@ -112,3 +112,48 @@ describe('computeVariations', () => {
     expect(byKey(variations, '1m').reason).toBe(VARIATION_REASON.NO_LIVE_PRICE);
   });
 });
+
+// Velas de 1 min: a última fechou há `agoMinutes`; as outras, de 1 em 1 min para trás.
+function minuteCandles(
+  count: number,
+  closeOf: (index: number) => string,
+  agoMinutes = 0.5,
+): VariationCandle[] {
+  return Array.from({ length: count }, (_, index) => ({
+    closeTime: NOW - agoMinutes * MINUTE - (count - 1 - index) * MINUTE,
+    close: closeOf(index),
+  }));
+}
+
+describe('computeVariations with stored 1 min candles', () => {
+  test('fills 1, 5 and 15 min when there is no tick history yet', () => {
+    const variations = computeVariations(params({ minuteCandles: minuteCandles(25, () => '100') }));
+    expect(byKey(variations, '1m').hundredths).toBe(500n);
+    expect(byKey(variations, '5m').hundredths).toBe(500n);
+    expect(byKey(variations, '15m').hundredths).toBe(500n);
+  });
+
+  test('a tick still wins over the candle for the same window', () => {
+    const variations = computeVariations(
+      params({
+        tickAtOrBefore: (limit) => ({ time: limit - 1_000, price: '102.5' }),
+        minuteCandles: minuteCandles(25, () => '100'),
+      }),
+    );
+    expect(byKey(variations, '5m').hundredths).toBe(243n);
+  });
+
+  test('without a live price it anchors on the last 1 min close, never on a zero-length window', () => {
+    const candles = minuteCandles(25, (index) => String(100 + index));
+    const variations = computeVariations(params({ livePrice: undefined, minuteCandles: candles }));
+    // última 124, cinco velas antes 119: +4,20%
+    expect(byKey(variations, '5m').hundredths).toBe(420n);
+    expect(byKey(variations, '1m').hundredths).toBe(81n);
+  });
+
+  test('a window longer than the stored 1 min candles stays empty with its reason', () => {
+    const variations = computeVariations(params({ minuteCandles: minuteCandles(3, () => '100') }));
+    expect(byKey(variations, '15m').hundredths).toBeUndefined();
+    expect(byKey(variations, '15m').reason).toBe(VARIATION_REASON.SHORT_HISTORY);
+  });
+});
