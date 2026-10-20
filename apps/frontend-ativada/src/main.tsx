@@ -6,6 +6,7 @@ import { createBrowserRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 
 import { AppProviders } from './app/AppProviders.component.js';
+import type { AppConfig } from './app/app-context.js';
 import { createAppRoutes } from './app/createAppRoutes.js';
 import {
   isProductionBuild,
@@ -14,6 +15,7 @@ import {
   readMarketSymbols,
   readMarketTimeframes,
 } from './environment.js';
+import { USDT_BRL_PAIR } from './exchange/exchange.constant.js';
 import { createApiClient } from './http/api-client.js';
 import { queryRetryDelay, shouldRetryQuery } from './http/rate-limit.js';
 import { createStreamConnector } from './live/stream-connector.js';
@@ -29,6 +31,16 @@ const SERVICE_WORKER_PATH = '/sw.js';
 function registerServiceWorker(): void {
   if (!isProductionBuild() || !('serviceWorker' in navigator)) return;
   void navigator.serviceWorker.register(SERVICE_WORKER_PATH);
+}
+
+function buildAppConfig(environment: ReturnType<typeof loadEnvironment>): AppConfig {
+  return {
+    authorizeUrl: environment.VITE_KEYCLOAK_AUTHORIZE_URL,
+    clientId: environment.VITE_KEYCLOAK_CLIENT_ID,
+    marketSymbols: readMarketSymbols(environment),
+    marketTimeframes: readMarketTimeframes(environment),
+    marketDisplayTimeframes: readMarketDisplayTimeframes(environment),
+  };
 }
 
 function start(): void {
@@ -48,13 +60,7 @@ function start(): void {
       },
     },
   });
-  const config = {
-    authorizeUrl: environment.VITE_KEYCLOAK_AUTHORIZE_URL,
-    clientId: environment.VITE_KEYCLOAK_CLIENT_ID,
-    marketSymbols: readMarketSymbols(environment),
-    marketTimeframes: readMarketTimeframes(environment),
-    marketDisplayTimeframes: readMarketDisplayTimeframes(environment),
-  };
+  const config = buildAppConfig(environment);
   createRoot(container).render(
     <StrictMode>
       <AppProviders
@@ -62,7 +68,11 @@ function start(): void {
         session={session}
         apiClient={apiClient}
         queryClient={queryClient}
-        connectStream={createStreamConnector({ apiClient, session, pairs: config.marketSymbols })}
+        connectStream={createStreamConnector({
+          apiClient,
+          session,
+          pairs: [...config.marketSymbols, USDT_BRL_PAIR],
+        })}
       >
         <RouterProvider router={createBrowserRouter(createAppRoutes())} />
       </AppProviders>

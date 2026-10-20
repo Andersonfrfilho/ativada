@@ -15,6 +15,7 @@ import type { TickerStreamSettings } from './ticker.types.js';
 export type ResolvedTickerSettings = {
   readonly url: string;
   readonly symbols: ReadonlySet<string>;
+  readonly klineSymbols: ReadonlySet<string>;
   readonly timeframes: ReadonlySet<string>;
   readonly staleAfterMilliseconds: number;
   readonly reconnectBaseMilliseconds: number;
@@ -29,10 +30,14 @@ export function resolveTickerSettings(settings: TickerStreamSettings): ResolvedT
       'symbols deve ter símbolos em letras maiúsculas e dígitos.',
     );
   }
+  const klineSymbols = new Set(settings.klineSymbols ?? symbols);
+  if (![...klineSymbols].every((symbol) => symbols.has(symbol))) {
+    throw new MarketDataInvalidRequestError('klineSymbols deve estar contido em symbols.');
+  }
   const timeframes = new Set(settings.timeframes ?? []);
   const names = [
     ...[...symbols].map((symbol) => `${symbol.toLowerCase()}${MINI_TICKER_STREAM_SUFFIX}`),
-    ...[...symbols].flatMap((symbol) =>
+    ...[...klineSymbols].flatMap((symbol) =>
       [...timeframes].map(
         (timeframe) => `${symbol.toLowerCase()}${KLINE_STREAM_SUFFIX}${timeframe}`,
       ),
@@ -55,5 +60,5 @@ export function resolveTickerSettings(settings: TickerStreamSettings): ResolvedT
   for (const [name, value] of Object.entries(numbers)) assertPositive(name, value);
   const baseUrl = assertBaseUrl(settings.baseUrl ?? BINANCE_STREAM_BASE_URL);
   const url = `${baseUrl}${STREAM_PATH}${STREAMS_QUERY_PREFIX}${names.join(STREAM_NAME_SEPARATOR)}`;
-  return { url, symbols, timeframes, ...numbers };
+  return { url, symbols, klineSymbols, timeframes, ...numbers };
 }

@@ -11,7 +11,10 @@ import type { Environment } from '../environment.js';
 import type { Logger } from '../logging/logger.js';
 import { createMarketPublisher } from './create-market-publisher.js';
 import type { MarketPublisher } from './market-context.js';
-import { STALE_SWEEP_INTERVAL_MILLISECONDS } from './market-stream.constant.js';
+import {
+  EXCHANGE_RATE_PAIRS,
+  STALE_SWEEP_INTERVAL_MILLISECONDS,
+} from './market-stream.constant.js';
 
 export type MarketEnvironment = Pick<
   Environment,
@@ -39,13 +42,17 @@ export type ApplicationMarketStreamParams = {
 
 const LOG_MESSAGE = 'market stream';
 
+function tickerPairs(environment: MarketEnvironment): string[] {
+  return [...new Set([...environment.MARKET_SYMBOLS, ...EXCHANGE_RATE_PAIRS])];
+}
+
 function createPublisher(
   params: ApplicationMarketStreamParams,
   serverClock: ServerClock,
 ): MarketPublisher {
   const { environment } = params;
   return createMarketPublisher<ReturnType<typeof setTimeout>>({
-    pairs: environment.MARKET_SYMBOLS,
+    pairs: tickerPairs(environment),
     maxPairsPerSocket: environment.STREAM_MAX_PAIRS_PER_SOCKET,
     staleAfterMilliseconds: environment.TICKER_STALE_SECONDS * MILLISECONDS_PER_SECOND,
     now: () => Date.now(),
@@ -62,7 +69,8 @@ function openTicker(
   publisher: MarketPublisher,
 ): TickerStream {
   return createTickerStream({
-    symbols: params.environment.MARKET_SYMBOLS,
+    symbols: tickerPairs(params.environment),
+    klineSymbols: params.environment.MARKET_SYMBOLS,
     timeframes: params.environment.TICKER_KLINE_ENABLED
       ? [...params.environment.MARKET_TIMEFRAMES, ...params.environment.MARKET_DISPLAY_TIMEFRAMES]
       : [],

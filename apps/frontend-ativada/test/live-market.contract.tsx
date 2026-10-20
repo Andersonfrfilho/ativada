@@ -217,6 +217,21 @@ describe('live prices on the overview', () => {
     expect(bitcoinCandleCalls(fake)).toBe(requests);
   });
 
+  test('with a live USDT/BRL rate the price shows its value in reais in a tooltip', async () => {
+    const { stream } = await openOverview();
+    const bitcoin = screen.getByRole('article', { name: 'BTC/USDT' });
+    act(() => stream.setStatus('live'));
+    act(() => stream.tick(tick('BTCUSDT', '62000.50')));
+    await waitFor(() => expect(bitcoin.textContent).toContain('62.000,50'));
+    expect(within(bitcoin).queryByRole('tooltip')).toBeNull();
+    act(() => stream.tick(tick('USDTBRL', '5.5')));
+    const tooltip = await within(bitcoin).findByRole('tooltip');
+    expect(tooltip.textContent).toBe('≈ R$ 341.002,75');
+    expect(within(bitcoin).getByText('62.000,50').getAttribute('aria-describedby')).toBe(
+      tooltip.id,
+    );
+  });
+
   test('says "ao vivo" while ticks arrive, and "sem dados há N s" when the server seals them as stale', async () => {
     const { stream } = await openOverview();
     act(() => stream.setStatus('live'));

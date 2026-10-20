@@ -274,8 +274,10 @@ mão e não cacheia `/v1`). Detalhe e decisões em `specs/001-simulador-e-sinais
   Porcentagem do formulário vira fração movendo a vírgula no TEXTO (`percentToFraction`): nunca `Number` em valor que vai à
   API. O ranking é HISTÓRICO e a tela diz isso; o veredito aparece como Favorável / Neutro / Desfavorável "no histórico", com seta (o valor da API segue COMPRAR/SEGURAR/EVITAR, só o rótulo mudou em `VERDICT_LABEL`), e não é recomendação. "Simular esta meta" só existe para o
   par da meta (a API recusa outro). Campo que o motor devolve nulo (taxas de janela vazia, leitura de sentimento) tem texto
-  próprio. O gráfico do plano é SVG à mão (`plan-chart.ts` é a escala pura). **Sem fonte de câmbio:** a cotação USDT→R$ é
-  digitada pelo usuário e guardada só no `localStorage`. A regra do dia dos ativos exige `strategyId` na consulta (a API não
+  próprio. O gráfico do plano é SVG à mão (`plan-chart.ts` é a escala pura). **Câmbio só para exibição:** o ticker da API acompanha
+  `USDTBRL` além de `MARKET_SYMBOLS` (`EXCHANGE_RATE_PAIRS`; não vira par operável) e o painel assina esse par. `InReais` mostra o
+  "≈ R$" de um preço em USDT num tooltip; `useUsdtBrlRate` usa o tick em dia e, sem ele, a cotação digitada na tela de ativos
+  (guardada só no `localStorage`). A regra do dia dos ativos exige `strategyId` na consulta (a API não
   adivinha a estratégia); o painel manda a primeira da lista até o usuário escolher.
 - **Preços ao vivo (`src/live/`).** `MarketStore` + `useSyncExternalStore`: o tick por par re-renderiza só quem lê o preço.
   `computeMarketState` (`live`/`waiting`/`stale`/`offline`) alimenta o selo e o REST de reserva (15 s) dos cartões de moeda e do

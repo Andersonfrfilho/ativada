@@ -32,6 +32,8 @@ export type TickerStreamSettings = {
   readonly symbols: readonly string[];
   // Velas cujo `kline` também se assina (na mesma conexão); ausente ou vazio = só o miniTicker.
   readonly timeframes?: readonly MarketCandleTimeframe[] | undefined;
+  // Pares cujo `kline` se assina; ausente = todos os `symbols` (o par só de cotação fica só no miniTicker).
+  readonly klineSymbols?: readonly string[] | undefined;
   readonly baseUrl?: string | undefined;
   readonly staleAfterMilliseconds?: number | undefined;
   readonly reconnectBaseMilliseconds?: number | undefined;

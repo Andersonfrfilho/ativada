@@ -2,6 +2,7 @@
 import { useState, type ReactElement } from 'react';
 
 import { formatScaled, formatSignedScaled, formatSignedScaledPercent } from '../format/decimal.js';
+import { InReais } from '../exchange/InReais.component.js';
 import { formatPrice, formatQuantity, formatSymbol } from '../format/format.js';
 import { useLivePrice } from '../live/useShownPrice.hook.js';
 import controls from '../styles/Controls.module.css';
@@ -49,7 +50,8 @@ function RuleLines({
         </p>
       )}
       <p>
-        Alvo {formatPrice(item.targetPrice)} · Stop {formatPrice(item.stopPrice)}
+        Alvo <InReais usdt={item.targetPrice}>{formatPrice(item.targetPrice)}</InReais> · Stop{' '}
+        <InReais usdt={item.stopPrice}>{formatPrice(item.stopPrice)}</InReais>
       </p>
       {numbers.isTargetReached === true ? <span className={styles.flag}>Alvo atingido</span> : null}
       {numbers.isStopReached === true ? <span className={styles.flag}>Stop atingido</span> : null}
@@ -75,7 +77,8 @@ export function AssetCard({ item, rate }: AssetCardProps): ReactElement {
     <article className={styles.asset} aria-label={name}>
       <h3 className={styles.symbol}>{name}</h3>
       <p className={controls.muted}>
-        Quantidade {formatQuantity(item.quantity)} · Preço médio {formatPrice(item.averagePrice)}
+        Quantidade {formatQuantity(item.quantity)} · Preço médio{' '}
+        <InReais usdt={item.averagePrice}>{formatPrice(item.averagePrice)}</InReais>
       </p>
       <ValueLines numbers={numbers} rate={rate} />
       <RuleLines item={item} numbers={numbers} />

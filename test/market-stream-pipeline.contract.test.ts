@@ -95,7 +95,7 @@ describe('forming candle through the same pipeline', () => {
     const { received } = startPipeline(true);
     await waitConnected();
     expect(server.requestedStreams()).toStrictEqual([
-      'btcusdt@miniTicker/ethusdt@miniTicker/btcusdt@kline_1h/ethusdt@kline_1h',
+      'btcusdt@miniTicker/ethusdt@miniTicker/usdtbrl@miniTicker/btcusdt@kline_1h/ethusdt@kline_1h',
     ]);
     for (let index = 0; index < 30; index += 1) {
       server.sendEvent({
@@ -124,14 +124,16 @@ describe('forming candle through the same pipeline', () => {
   test('with the flag off the kline streams are not even subscribed', async () => {
     startPipeline(false);
     await waitConnected();
-    expect(server.requestedStreams()).toStrictEqual(['btcusdt@miniTicker/ethusdt@miniTicker']);
+    expect(server.requestedStreams()).toStrictEqual([
+      'btcusdt@miniTicker/ethusdt@miniTicker/usdtbrl@miniTicker',
+    ]);
   });
 
   test('a display timeframe is subscribed next to the execution ones, one message per pair and candle', async () => {
     const { received } = startPipeline(true, ['3m']);
     await waitConnected();
     expect(server.requestedStreams()).toStrictEqual([
-      'btcusdt@miniTicker/ethusdt@miniTicker/btcusdt@kline_1h/btcusdt@kline_3m/ethusdt@kline_1h/ethusdt@kline_3m',
+      'btcusdt@miniTicker/ethusdt@miniTicker/usdtbrl@miniTicker/btcusdt@kline_1h/btcusdt@kline_3m/ethusdt@kline_1h/ethusdt@kline_3m',
     ]);
     for (let index = 0; index < 30; index += 1) {
       for (const timeframe of ['1h', '3m'] as const) {
@@ -152,7 +154,7 @@ describe('forming candle through the same pipeline', () => {
     const { received } = startPipeline(true, ['1m']);
     await waitConnected();
     expect(server.requestedStreams()).toStrictEqual([
-      'btcusdt@miniTicker/ethusdt@miniTicker/btcusdt@kline_1h/btcusdt@kline_1m/ethusdt@kline_1h/ethusdt@kline_1m',
+      'btcusdt@miniTicker/ethusdt@miniTicker/usdtbrl@miniTicker/btcusdt@kline_1h/btcusdt@kline_1m/ethusdt@kline_1h/ethusdt@kline_1m',
     ]);
     server.sendEvent({ symbol: 'BTCUSDT', timeframe: '1m', openTime: OPEN_TIME, isClosed: false });
     await waitFor(
@@ -165,7 +167,9 @@ describe('forming candle through the same pipeline', () => {
   test('a display timeframe alone never turns the kline subscription on', async () => {
     startPipeline(false, ['3m']);
     await waitConnected();
-    expect(server.requestedStreams()).toStrictEqual(['btcusdt@miniTicker/ethusdt@miniTicker']);
+    expect(server.requestedStreams()).toStrictEqual([
+      'btcusdt@miniTicker/ethusdt@miniTicker/usdtbrl@miniTicker',
+    ]);
   });
 });
 
@@ -190,6 +194,18 @@ describe('public ticker pipeline against a fake Binance', () => {
       at: 1_000_100,
       change24h: '0.3333',
     });
+  });
+
+  test('the USDT to BRL rate is followed besides the market pairs and reaches a subscriber', async () => {
+    const { received, subscriber } = startPipeline();
+    await waitConnected();
+    expect(server.requestedStreams()).toStrictEqual([
+      'btcusdt@miniTicker/ethusdt@miniTicker/usdtbrl@miniTicker',
+    ]);
+    market?.publisher.subscriptions.subscribe(subscriber, ['USDTBRL']);
+    server.sendTicker({ symbol: 'USDTBRL', price: '5.4321', openPrice: '5.40', eventTime: 2_000 });
+    await waitFor(() => ticksOf(received, 'USDTBRL').length >= 1, 'cotação', 4_000);
+    expect(ticksOf(received, 'USDTBRL')[0]?.message).toMatchObject({ price: '5.4321' });
   });
 
   test('p95 from tick to subscriber stays under 2 s while ticks keep coming (about 6 s, two pairs)', async () => {

@@ -46,7 +46,8 @@ function reportMalformed(params: DispatcherParams, reason: MalformedReason): voi
 // A vela só vale para o par e a vela assinados; sem `onCandle` ela é lida e descartada.
 function dispatchCandle(params: DispatcherParams, candle: RawCandle): void {
   const { counters, settings, config } = params;
-  const isSubscribed = config.symbols.has(candle.symbol) && config.timeframes.has(candle.timeframe);
+  const isSubscribed =
+    config.klineSymbols.has(candle.symbol) && config.timeframes.has(candle.timeframe);
   if (!isSubscribed) return reportMalformed(params, MALFORMED_REASON.UNSUBSCRIBED);
   const { onCandle } = settings;
   if (onCandle === undefined) return;

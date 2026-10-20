@@ -3,6 +3,10 @@ export const MARKET_TOPIC_PREFIX = 'market:';
 export const PAIR_PATTERN = /^[A-Z0-9]{2,20}$/;
 export const MAX_PAIRS_PER_MESSAGE = 50;
 
+// Câmbio só para exibição (o painel mostra o "≈ R$" dos preços em USDT): o ticker o acompanha além de `MARKET_SYMBOLS`,
+// mas ele NÃO vira par operável (sem candles, metas, backtest nem alerta de preço).
+export const EXCHANGE_RATE_PAIRS: readonly string[] = ['USDTBRL'];
+
 export const MARKET_SERVER_MESSAGE_TYPE = {
   TICK: 'tick',
   CANDLE: 'candle',
