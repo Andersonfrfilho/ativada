@@ -77,6 +77,9 @@ const PAIRS: readonly (readonly [string, string])[] = [
   ['on-sell', 'sell'],
   ['model', 'surface'],
   ['postit-ink', 'postit'],
+  ['on-medal', 'medal-gold'],
+  ['on-medal', 'medal-silver'],
+  ['on-medal', 'medal-bronze'],
 ];
 
 // Setas, linha, halo e contorno do gráfico são elementos gráficos (WCAG 1.4.11): 3:1.
