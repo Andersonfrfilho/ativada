@@ -15,7 +15,6 @@ import {
   stepLife,
 } from '../src/runs/trading-room/office-life.js';
 import type { LifeState } from '../src/runs/trading-room/office-life.types.js';
-import { routeSteps } from '../src/runs/trading-room/office-route.js';
 import { useOfficeLife } from '../src/runs/trading-room/useOfficeLife.hook.js';
 import { createFakeMotionTimer } from './support/fake-motion-timer.js';
 
@@ -58,8 +57,10 @@ describe('office life script', () => {
     states.reduce((before, after) => {
       after.agents.forEach((agent, index) => {
         const prior = before.agents[index];
-        const distance =
-          Math.abs(agent.at.x - (prior?.at.x ?? 0)) + Math.abs(agent.at.y - (prior?.at.y ?? 0));
+        const distance = Math.max(
+          Math.abs(agent.at.x - (prior?.at.x ?? 0)),
+          Math.abs(agent.at.y - (prior?.at.y ?? 0)),
+        );
         expect(distance).toBeLessThanOrEqual(32);
         expect(agent.at.y).toBeGreaterThanOrEqual(FLOOR_TOP);
       });
@@ -71,12 +72,6 @@ describe('office life script', () => {
     expect(states.some((state) => state.agents.some((agent) => agent.pose === 'walking'))).toBe(
       true,
     );
-  });
-
-  test('routes are tile steps and never go above the screen front', () => {
-    const steps = routeSteps(seatOf('tiago'), seatOf('vitor'));
-    expect(steps.at(-1)).toEqual(seatOf('vitor'));
-    expect(steps.every((point) => point.y >= FLOOR_TOP)).toBe(true);
   });
 
   test('the meeting gathers everyone in front of the screen, shows the banner and sends each one back to the seat', () => {

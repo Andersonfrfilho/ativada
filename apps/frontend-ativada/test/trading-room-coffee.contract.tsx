@@ -5,7 +5,8 @@ import { cleanup, render } from '@testing-library/react';
 
 import type { BalconySlot } from '../src/runs/team-room/balcony/balcony.constant.js';
 import { CHAT_LINES, CHAT_TURN_STEPS } from '../src/runs/trading-room/office-chat.js';
-import { avatarLookOf, avatarPoses } from '../src/runs/trading-room/avatar-poses.js';
+import { avatarLookOf } from '../src/runs/trading-room/avatar-look.js';
+import { IDLE_FRONT, spriteOf } from '../src/runs/trading-room/avatar-poses.js';
 import {
   BURN_LINES,
   coffeeVariantOf,
@@ -146,7 +147,7 @@ describe('the coffee break script', () => {
     let state = createLife({ crew: ['renata', 'tiago'], seed: 1, lines: {} });
     const queued = withQueue(state, 'tiago', [
       { kind: 'await_machine' },
-      { kind: 'walk', steps: [COFFEE] },
+      { kind: 'walk', to: COFFEE },
     ]);
     state = {
       ...queued,
@@ -158,8 +159,9 @@ describe('the coffee break script', () => {
     for (let index = 0; index < 4; index += 1) state = stepLife(state);
     expect(agentOf(state, 'tiago').at).toEqual(COFFEE_QUEUE);
     expect(agentOf(state, 'tiago').pose).toBe('standing');
-    state = stepLife({ ...state, machineHolder: undefined });
+    state = stepLife(stepLife({ ...state, machineHolder: undefined }));
     expect(agentOf(state, 'tiago').at).toEqual(COFFEE);
+    expect(agentOf(state, 'tiago').face).toBe('w');
     expect(state.machineHolder).toBe('tiago');
   });
 
@@ -183,8 +185,8 @@ describe('the coffee break script', () => {
       agentOf(facing as LifeState, 'tiago'),
       agentOf(facing as LifeState, 'renata'),
     ].sort((a, b) => a.at.x - b.at.x);
-    expect(left?.face).toBe('right');
-    expect(right?.face).toBe('left');
+    expect(left?.face).toBe('e');
+    expect(right?.face).toBe('w');
   });
 
   test('alone at the coffee area nobody chats, and the same seed repeats the same script', () => {
@@ -270,10 +272,14 @@ describe('coffee mishaps', () => {
     expect(inOrder(phases, ['drinking', 'burning', 'blowing', 'drinking', 'walking'])).toBe(true);
     expect(states.some((s) => agentOf(s, 'tiago').speech === line)).toBe(true);
     expect(states.every((s) => s.puddle === undefined)).toBe(true);
-    expect(avatarLookOf('burning', true)).toBe('burn');
-    expect(avatarPoses('tiago').burn.some((run) => run.color === 'tongue')).toBe(true);
-    expect(avatarPoses('tiago').blow.some((run) => run.color === 'tongue')).toBe(false);
-    expect(avatarPoses('tiago').blow.some((run) => run.color === 'steam')).toBe(true);
+    const burning = states.map((s) => agentOf(s, 'tiago')).find((a) => a.pose === 'burning');
+    expect(burning === undefined ? '' : avatarLookOf(burning, true).name).toBe('burn');
+    const burn = spriteOf('tiago', { ...IDLE_FRONT, arm: 'burn', face: 'squeeze' });
+    const blow = spriteOf('tiago', { ...IDLE_FRONT, view: 'e', arm: 'blow', face: 'puff' });
+    expect(burn.some((run) => run.color === 'tongue')).toBe(true);
+    expect(burn.filter((run) => run.color === 'steam').length).toBeGreaterThanOrEqual(4);
+    expect(blow.some((run) => run.color === 'tongue')).toBe(false);
+    expect(blow.some((run) => run.color === 'steam')).toBe(true);
   });
 
   test('spilling: fumble, puddle, embarrassed, back to the machine for a new cup, puddle fades', () => {

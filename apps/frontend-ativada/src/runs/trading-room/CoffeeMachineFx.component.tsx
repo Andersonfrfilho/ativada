@@ -4,7 +4,8 @@ import type { ReactElement } from 'react';
 import { ArtRects } from './ArtRects.component.js';
 import { machineLookOf } from './office-coffee.js';
 import type { AgentLife, LifeState } from './office-life.types.js';
-import { buildCoffeeFx, buildPuddle, ROOM_VIEW } from './room-art.js';
+import { buildCoffeeFx, buildPuddle } from './coffee-corner-art.js';
+import { ROOM_VIEW } from './room-art.js';
 import styles from './Office.module.css';
 
 const VIEW_BOX = `${ROOM_VIEW.x} ${ROOM_VIEW.y} ${ROOM_VIEW.width} ${ROOM_VIEW.height}`;

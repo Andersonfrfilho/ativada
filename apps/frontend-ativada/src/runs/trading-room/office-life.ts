@@ -2,11 +2,12 @@
 import type { BalconySlot } from '../team-room/balcony/balcony.constant.js';
 import { createRandom } from '../team-room/motion/seeded-random.js';
 import { chatContextOf } from './office-chat.js';
-import { planActivity, restPose } from './office-activities.js';
+import { planActivity, REST_FACING, restPose } from './office-activities.js';
 import { advanceAgent, SPEECH_STEPS, type StepEffects } from './office-agent-step.js';
 import { gatherSpot, seatOf, type Point } from './office-geometry.js';
 import type { AgentLife, LifeLine, LifeState } from './office-life.types.js';
-import { routeSteps } from './office-route.js';
+import { floorMaskOf } from './office-mask.js';
+import { createTraffic, priorityOrder } from './office-traffic.js';
 
 // A vida no escritório como dado puro: `stepLife` avança UM passo de todos (um ladrilho ou uma pausa), sorteando a próxima
 // atividade com a semente do passo. A mesma semente dá sempre a mesma sequência; nenhum relógio aqui.
@@ -23,8 +24,9 @@ export function createLife(params: {
     who,
     at: seatOf(who),
     pose: restPose(who),
-    face: 'right',
+    face: REST_FACING,
     hasCup: false,
+    stride: 0,
     queue: [],
     speech: undefined,
     speechSteps: 0,
@@ -57,8 +59,8 @@ export function startMeeting(state: LifeState): LifeState {
     speechSteps: 0,
     hasCup: false,
     queue: [
-      { kind: 'walk' as const, steps: routeSteps(agent.at, gatherSpot(index, total)) },
-      { kind: 'wait' as const, steps: 1, pose: 'standing' as const },
+      { kind: 'walk' as const, to: gatherSpot(index, total) },
+      { kind: 'wait' as const, steps: 1, pose: 'standing' as const, face: 'n' as const },
     ],
   }));
   return {
@@ -74,8 +76,8 @@ function sendHome(agents: readonly AgentLife[]): readonly AgentLife[] {
   return agents.map((agent) => ({
     ...agent,
     queue: [
-      { kind: 'walk' as const, steps: routeSteps(agent.at, seatOf(agent.who)) },
-      { kind: 'wait' as const, steps: 1, pose: restPose(agent.who) },
+      { kind: 'walk' as const, to: seatOf(agent.who) },
+      { kind: 'wait' as const, steps: 1, pose: restPose(agent.who), face: REST_FACING },
     ],
   }));
 }
@@ -88,6 +90,7 @@ function advanceMeeting(state: LifeState): LifeState {
     const agents = state.agents.map((agent) => ({
       ...agent,
       pose: agent.who === 'alice' ? ('pointing' as const) : ('standing' as const),
+      face: 'n' as const,
     }));
     return { ...state, agents, meeting: { phase: 'banner', bannerSteps: BANNER_STEPS } };
   }
@@ -133,18 +136,22 @@ function applyEffects(state: LifeState, effects: StepEffects): LifeState {
   });
   const isReleased =
     state.screenHolder !== undefined && effects.released.includes(state.screenHolder);
-  const isFreed = state.machineHolder !== undefined && effects.freed.includes(state.machineHolder);
   return {
     ...state,
     agents,
     screenHolder: isReleased ? undefined : state.screenHolder,
-    machineHolder: effects.claimed[0] ?? (isFreed ? undefined : state.machineHolder),
+    machineHolder: effects.traffic.machineHolder,
     puddle: puddleAfter(state.puddle, effects.spills[0]),
   };
 }
 
 export function stepLife(state: LifeState): LifeState {
   const planned = planIdle(advanceMeeting(state));
+  const traffic = createTraffic({
+    mask: floorMaskOf(planned.agents.map((agent) => agent.who)),
+    machineHolder: planned.machineHolder,
+    agents: planned.agents,
+  });
   const effects: StepEffects = {
     replies: [],
     released: [],
@@ -153,8 +160,13 @@ export function stepLife(state: LifeState): LifeState {
     spills: [],
     isMachineBusy: planned.machineHolder !== undefined,
     chat: chatContextOf(planned),
+    traffic,
   };
-  const agents = planned.agents.map((agent) => advanceAgent(agent, effects));
+  const agents = [...planned.agents];
+  for (const index of priorityOrder(planned.agents, planned.seed)) {
+    const agent = agents[index];
+    if (agent !== undefined) agents[index] = advanceAgent(agent, effects);
+  }
   return applyEffects({ ...planned, tick: planned.tick + 1, agents }, effects);
 }
 

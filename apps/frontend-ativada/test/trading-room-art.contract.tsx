@@ -5,7 +5,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 
 import { LiveMarketProvider } from '../src/live/LiveMarketProvider.component.js';
 import { OfficeAgent } from '../src/runs/trading-room/OfficeAgent.component.js';
-import { avatarPoses } from '../src/runs/trading-room/avatar-poses.js';
+import { IDLE_FRONT, spriteOf } from '../src/runs/trading-room/avatar-poses.js';
 import { buildDeskArt } from '../src/runs/trading-room/desk-art.js';
 import { FearGreedScreen } from '../src/runs/trading-room/FearGreedScreen.component.js';
 import { DESKS, seatOf, FLOOR_TOP } from '../src/runs/trading-room/office-geometry.js';
@@ -34,22 +34,24 @@ const CREW = [
 ] as const;
 
 describe('pixel avatars', () => {
-  test('every agent is drawn the same way every time, inside the 18 × 29 grid, with an outline', () => {
+  test('every agent is drawn the same way every time, inside the 20 × 29 grid, with an outline', () => {
     for (const who of CREW) {
-      const poses = avatarPoses(who);
-      expect(avatarPoses(who)).toBe(poses);
-      for (const runs of [poses.idle, poses.step, poses.point]) {
+      const idle = spriteOf(who, IDLE_FRONT);
+      expect(spriteOf(who, IDLE_FRONT)).toBe(idle);
+      const step = spriteOf(who, { ...IDLE_FRONT, view: 'e', legs: 0, arm: 'swing' });
+      const point = spriteOf(who, { ...IDLE_FRONT, view: 'n', arm: 'point' });
+      for (const runs of [idle, step, point]) {
         expect(runs.some((run) => run.color === 'line')).toBe(true);
         expect(runs.every((run) => run.x >= 0 && run.x + run.w <= AVATAR_WIDTH)).toBe(true);
         expect(runs.every((run) => run.y >= 0 && run.y < AVATAR_HEIGHT)).toBe(true);
       }
-      expect(poses.point).not.toEqual(poses.idle);
+      expect(point).not.toEqual(idle);
     }
   });
 
   test('silhouettes differ: no two rule agents share the same idle drawing', () => {
     const drawings = ['tiago', 'renata', 'alice', 'vitor', 'sofia', 'otavio'].map((who) =>
-      JSON.stringify(avatarPoses(who === 'tiago' ? 'tiago' : (who as 'renata')).idle),
+      JSON.stringify(spriteOf(who === 'tiago' ? 'tiago' : (who as 'renata'), IDLE_FRONT)),
     );
     expect(new Set(drawings).size).toBe(drawings.length);
   });
@@ -61,13 +63,13 @@ describe('model teams are people, and everyone has a shadow', () => {
   test('Nina, Lucas and Olívia are drawn as distinct humans with the purple badge and no robot parts', () => {
     const drawings = ['nina', 'lucas', 'olivia'] as const;
     for (const who of drawings) {
-      const colors = new Set(avatarPoses(who).idle.map((run) => run.color));
+      const colors = new Set(spriteOf(who, IDLE_FRONT).map((run) => run.color));
       expect(ROBOT_PARTS.some((part) => colors.has(part))).toBe(false);
       expect(colors.has('halo')).toBe(true);
       expect(colors.has('skin')).toBe(true);
       expect(colors.has('hair')).toBe(true);
     }
-    const unique = new Set(drawings.map((who) => JSON.stringify(avatarPoses(who).idle)));
+    const unique = new Set(drawings.map((who) => JSON.stringify(spriteOf(who, IDLE_FRONT))));
     expect(unique.size).toBe(drawings.length);
   });
 
@@ -79,13 +81,15 @@ describe('model teams are people, and everyone has a shadow', () => {
             who,
             at: { x: 100, y: 400 },
             pose: 'standing',
-            face: 'right',
+            face: 's',
+            stride: 0,
             queue: [],
             speech: undefined,
             hasCup: false,
             speechSteps: 0,
           }}
           name={who}
+          isMoving={false}
         />,
       );
       expect(container.querySelectorAll('[data-shadow]').length).toBe(1);

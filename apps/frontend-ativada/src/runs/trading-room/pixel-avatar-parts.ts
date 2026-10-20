@@ -1,9 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { AvatarWho, Box, Painter } from './pixel-avatar.js';
-
-type Stroke = readonly [box: Box, color: string];
-
-const dot = (x: number, y: number, color: string): Stroke => [[x, y, 1, 1], color];
+import { dot, shiftPainter, type AvatarWho, type Painter, type Stroke } from './pixel-avatar.js';
+import type { SpriteView } from './sprite-types.js';
 
 // O losango roxo no peito do blazer: o que marca a equipe de modelo ◆.
 const BADGE: readonly Stroke[] = [
@@ -13,7 +10,8 @@ const BADGE: readonly Stroke[] = [
   dot(11, 17, 'halo'),
 ];
 
-// O adereço de cada um (o que faz a silhueta); as equipes ◆ são pessoas de blazer roxo com o losango no peito.
+// O adereço de cada um na vista de frente (o desenho aprovado, numa grade de 18 que entra na de 20 com um pixel de margem);
+// as equipes ◆ são pessoas de blazer roxo com o losango no peito.
 const STYLE: Readonly<Record<AvatarWho, readonly Stroke[]>> = {
   tiago: [
     [[4, 3, 10, 3], 'hair'],
@@ -110,86 +108,19 @@ const STYLE: Readonly<Record<AvatarWho, readonly Stroke[]>> = {
   ],
 };
 
-export function paintStyle(paint: Painter, who: AvatarWho): void {
-  STYLE[who].forEach(([box, color]) => paint(box, color));
+// De frente na diagonal o rosto vira um pixel para a direita: óculos e losango acompanham os olhos.
+export function paintFrontStyle(paint: Painter, who: AvatarWho, view: SpriteView): void {
+  const framed = shiftPainter(paint, 1, 0);
+  const turned = shiftPainter(paint, 2, 0);
+  STYLE[who].forEach(([box, color]) => {
+    const isTurning = view === 'se' && (color === 'frame' || color === 'halo' || color === 'pin');
+    (isTurning ? turned : framed)(box, color);
+  });
 }
 
-// O cabelo longo da Sofia fica ATRÁS do corpo: é pintado antes de tudo.
-export function paintBackHair(paint: Painter, who: AvatarWho): void {
+// O cabelo longo da Sofia fica ATRÁS do corpo nas vistas de frente: é pintado antes de tudo.
+export function paintFrontBackHair(paint: Painter, who: AvatarWho): void {
   if (who !== 'sofia') return;
-  paint([2, 4, 2, 13], 'hair');
-  paint([14, 4, 2, 13], 'hair');
-}
-
-export function paintBody(paint: Painter): void {
-  paint([5, 14, 8, 8], 'cloth');
-  paint([12, 14, 1, 8], 'cloth-d');
-  paint([3, 15, 2, 6], 'cloth-d');
-  paint([3, 21, 2, 1], 'skin');
-  paint([8, 13, 2, 1], 'skin-d');
-}
-
-export function paintHead(paint: Painter): void {
-  paint([4, 4, 10, 9], 'skin');
-  paint([4, 12, 10, 1], 'skin-d');
-  [dot(6, 8, 'eye'), dot(6, 9, 'eye'), dot(11, 8, 'eye'), dot(11, 9, 'eye')].forEach(([b, c]) =>
-    paint(b, c),
-  );
-  paint([8, 11, 2, 1], 'mouth');
-  paint([5, 10, 1, 1], 'blush');
-  paint([12, 10, 1, 1], 'blush');
-}
-
-export function paintLegs(paint: Painter, isStep: boolean): void {
-  paint([6, 22, 2, isStep ? 3 : 4], 'pants');
-  paint([5, isStep ? 25 : 26, 3, 1], 'shoe');
-  paint([10, 22, 2, 4], 'pants');
-  paint([10, 26, 3, 1], 'shoe');
-}
-
-export type ArmMode = 'down' | 'up' | 'hold' | 'sip' | 'burn' | 'blow' | 'tilt';
-
-// A caneca: três por três com o café por cima e a alça do lado de fora.
-function paintMug(paint: Painter, x: number, y: number): void {
-  paint([x, y, 3, 3], 'cup');
-  paint([x, y, 3, 1], 'coffee');
-  paint([x + 3, y + 1, 1, 1], 'cup');
-}
-
-// Os fiapos de vapor sobre a caneca; ao queimar a língua saem mais.
-function paintSteam(paint: Painter, isHot: boolean): void {
-  paint([15, 6, 1, 1], 'steam');
-  paint([16, 5, 1, 1], 'steam');
-  if (isHot) paint([14, 5, 1, 1], 'steam');
-}
-
-// A língua vermelha de quem queimou, embaixo da boca (pintada depois da cabeça).
-export function paintTongue(paint: Painter): void {
-  paint([8, 12, 2, 1], 'tongue');
-}
-
-export function paintArm(paint: Painter, mode: ArmMode): void {
-  if (mode === 'up') {
-    paint([13, 7, 2, 8], 'cloth-d');
-    paint([13, 6, 2, 1], 'skin');
-    return;
-  }
-  if (mode === 'sip' || mode === 'burn' || mode === 'blow') {
-    paint([13, 12, 2, 5], 'cloth-d');
-    paint([13, 11, 2, 1], 'skin');
-    paintMug(paint, 14, 8);
-    if (mode !== 'sip') paintSteam(paint, mode === 'burn');
-    return;
-  }
-  if (mode === 'tilt') {
-    paint([13, 15, 2, 4], 'cloth-d');
-    paint([13, 19, 2, 1], 'skin');
-    paint([15, 18, 3, 2], 'cup');
-    paint([17, 20, 1, 2], 'coffee');
-    paint([16, 23, 1, 1], 'coffee');
-    return;
-  }
-  paint([13, 15, 2, mode === 'hold' ? 4 : 6], 'cloth-d');
-  paint([13, mode === 'hold' ? 19 : 21, 2, 1], 'skin');
-  if (mode === 'hold') paintMug(paint, 14, 17);
+  paint([3, 4, 2, 13], 'hair');
+  paint([15, 4, 2, 13], 'hair');
 }

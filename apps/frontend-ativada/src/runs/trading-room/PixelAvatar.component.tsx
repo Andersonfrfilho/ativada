@@ -1,7 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
-import { avatarPoses } from './avatar-poses.js';
+import type { AvatarLook } from './avatar-look.js';
+import { spriteKeyOf, spriteOf } from './avatar-poses.js';
 import { AVATAR_HEIGHT, AVATAR_WIDTH, type AvatarWho, type PixelRun } from './pixel-avatar.js';
 import styles from './Office.module.css';
 
@@ -22,17 +23,25 @@ function Layer({
           width={run.w}
           height={1}
           fill={`var(--px-${run.color})`}
+          className={run.color === 'steam' ? styles.steamPixel : undefined}
         />
       ))}
     </g>
   );
 }
 
-// O avatar em pixel art: as três poses no mesmo desenho; o CSS mostra a da hora pelo `data-pose` do agente.
-export function PixelAvatar({ who }: { readonly who: AvatarWho }): ReactElement {
-  const poses = avatarPoses(who);
+// O avatar em pixel art: o quadro da hora e, com movimento, o quadro seguinte que o CSS alterna (passo, respiração,
+// digitação). A chave muda a cada quadro novo para a alternância recomeçar junto com o passo.
+export function PixelAvatar({
+  who,
+  look,
+}: {
+  readonly who: AvatarWho;
+  readonly look: AvatarLook;
+}): ReactElement {
   return (
     <svg
+      key={`${spriteKeyOf(look.main)}|${look.alt === undefined ? '' : spriteKeyOf(look.alt)}`}
       className={styles.avatar}
       data-who={who}
       viewBox={`0 0 ${AVATAR_WIDTH} ${AVATAR_HEIGHT}`}
@@ -40,15 +49,10 @@ export function PixelAvatar({ who }: { readonly who: AvatarWho }): ReactElement 
       aria-hidden="true"
       focusable="false"
     >
-      <Layer runs={poses.idle} className={styles.poseIdle} />
-      <Layer runs={poses.step} className={styles.poseStep} />
-      <Layer runs={poses.point} className={styles.posePoint} />
-      <Layer runs={poses.hold} className={styles.poseHold} />
-      <Layer runs={poses.holdStep} className={styles.poseHoldStep} />
-      <Layer runs={poses.sip} className={styles.poseSip} />
-      <Layer runs={poses.burn} className={styles.poseBurn} />
-      <Layer runs={poses.blow} className={styles.poseBlow} />
-      <Layer runs={poses.tilt} className={styles.poseTilt} />
+      <Layer runs={spriteOf(who, look.main)} className={styles.frameA} />
+      {look.alt === undefined ? null : (
+        <Layer runs={spriteOf(who, look.alt)} className={styles.frameB} />
+      )}
     </svg>
   );
 }

@@ -1,9 +1,9 @@
 /* Copyright (c) 2026 Ada Technology. All rights reserved. */
-/* O piso da sala (direção E): unidades de desenho do preview (largura 1600; o piso vai de y 340 a 900) viram % da cena;
+/* O piso da sala (direção E): unidades de desenho do preview (largura 1600; o piso vai de y 340 a 1028) viram % da cena;
    o texto usa `cqw`. Os bonecos andam por `transform` (nada de `left`/`top` animado). */
 .floor {
   position: relative;
-  aspect-ratio: 1600 / 560;
+  aspect-ratio: 1600 / 688;
   container-type: inline-size;
   overflow: hidden;
   border-radius: 0 0 var(--radius-control) var(--radius-control);
@@ -22,7 +22,7 @@
 .bubble {
   position: absolute;
   left: calc(var(--x) / 1600 * 100%);
-  top: calc((var(--y) - 340) / 560 * 100%);
+  top: calc((var(--y) - 340) / 688 * 100%);
 }
 
 .desk {
@@ -202,21 +202,17 @@
 }
 
 .avatar {
-  --px-cup: var(--room-mug);
-  --px-coffee: var(--px-line);
-  --px-steam: var(--room-mug);
+  --px-cup: var(--room-cup);
+  --px-coffee: var(--room-coffee);
+  --px-steam: var(--room-steam);
+  --px-sweat: var(--room-water);
   --px-tongue: var(--screen-bad);
   --px-cloth-d: color-mix(in srgb, var(--px-cloth) 70%, var(--px-line));
+  --px-pants-d: color-mix(in srgb, var(--px-pants) 72%, var(--px-line));
 }
 
-.poseStep,
-.posePoint,
-.poseHold,
-.poseHoldStep,
-.poseSip,
-.poseBurn,
-.poseBlow,
-.poseTilt {
+/* O segundo quadro (passo seguinte, respiração, digitação) só aparece com movimento. */
+.frameB {
   display: none;
 }
 
@@ -239,14 +235,15 @@
   --model: var(--room-bubble-model);
 }
 
-/* Agentes: andam por `transform` (a porcentagem é do próprio boneco: 72 × 116 unidades). */
+/* Agentes: andam por `transform` (a porcentagem é do próprio boneco: 80 × 116 unidades, com um pixel de margem de cada
+   lado para o espelho das direções oeste ficar no mesmo lugar). */
 .agent {
   position: absolute;
   left: 0;
   top: 0;
-  width: calc(72 / 1600 * 100%);
+  width: calc(80 / 1600 * 100%);
   z-index: var(--z, 40);
-  transform: translate(calc(var(--x) / 72 * 100%), calc((var(--y) - 340) / 116 * 100%));
+  transform: translate(calc((var(--x) - 4) / 80 * 100%), calc((var(--y) - 340) / 116 * 100%));
 }
 
 /* A sombra fica atrás do boneco e acima do piso; anda junto com ele. */
@@ -261,23 +258,8 @@
   background: color-mix(in srgb, var(--px-line) 38%, transparent);
 }
 
-.agent[data-face='left'] .avatar {
+.agent[data-mirror='true'] .avatar {
   transform: scaleX(-1);
-}
-
-.agent:not([data-look='idle']) .poseIdle {
-  display: none;
-}
-
-.agent[data-look='walk'] .poseStep,
-.agent[data-look='point'] .posePoint,
-.agent[data-look='hold'] .poseHold,
-.agent[data-look='walk-hold'] .poseHoldStep,
-.agent[data-look='sip'] .poseSip,
-.agent[data-look='burn'] .poseBurn,
-.agent[data-look='blow'] .poseBlow,
-.agent[data-look='tilt'] .poseTilt {
-  display: inline;
 }
 
 .agent[data-pose='embarrassed'] .avatar {
@@ -324,6 +306,14 @@
   right: 88%;
 }
 
+/* No canto do café o balão é pequeno e fica na parede acima do canto (nunca sobre o resto da sala). */
+.say[data-side='corner'] {
+  top: calc((354 - var(--y)) / 116 * 100%);
+  left: 4%;
+  max-width: 10cqw;
+  font-size: 0.72cqw;
+}
+
 .bubble {
   width: calc(430 / 1600 * 100%);
   z-index: 160;
@@ -361,7 +351,7 @@
 .banner {
   position: absolute;
   left: calc(256 / 1600 * 100%);
-  top: calc(248 / 560 * 100%);
+  top: calc(300 / 688 * 100%);
   width: calc(1088 / 1600 * 100%);
   z-index: 200;
   padding: 1cqw 1.4cqw;
@@ -376,19 +366,29 @@
     transition: transform 300ms linear;
   }
 
-  .floor[data-motion='on'] .agent[data-look='walk'] .poseIdle,
-  .floor[data-motion='on'] .agent[data-look='walk-hold'] .poseHold {
+  .floor[data-motion='on'] .agent[data-anim] .frameA {
+    animation: frame-a var(--frame-period) steps(1) infinite;
+  }
+
+  .floor[data-motion='on'] .agent[data-anim] .frameB {
     display: inline;
-    animation: frame-a 620ms steps(1) infinite;
+    animation: frame-b var(--frame-period) steps(1) infinite;
+  }
+
+  .floor[data-motion='on'] .steamPixel {
+    animation: rise 900ms steps(3) infinite;
+  }
+
+  .floor[data-motion='on'] .steamPuff {
+    animation: rise-puff 1.2s steps(4) infinite;
+  }
+
+  .floor[data-motion='on'] .drip {
+    animation: led 0.5s steps(1) infinite;
   }
 
   .floor[data-motion='on'] .agent[data-pose='burning'] .avatar {
     animation: hop 360ms steps(2) infinite;
-  }
-
-  .floor[data-motion='on'] .agent[data-look='walk'] .poseStep,
-  .floor[data-motion='on'] .agent[data-look='walk-hold'] .poseHoldStep {
-    animation: frame-b 620ms steps(1) infinite;
   }
 
   .floor[data-motion='on'] .blink0 {
@@ -410,9 +410,38 @@
 
 @media (prefers-reduced-motion: reduce) {
   .agent,
-  .agent * {
+  .agent *,
+  .drip,
+  .steamPuff {
     transition: none;
     animation: none;
+  }
+}
+
+/* Quanto dura cada par de quadros: dois quadros por passo na caminhada, respiração lenta, digitação rápida. */
+.agent[data-anim='walk'] {
+  --frame-period: 320ms;
+}
+
+.agent[data-anim='breath'] {
+  --frame-period: 1.8s;
+}
+
+.agent[data-anim='type'] {
+  --frame-period: 480ms;
+}
+
+@keyframes rise {
+  to {
+    opacity: 0.25;
+    translate: 0 -2px;
+  }
+}
+
+@keyframes rise-puff {
+  to {
+    opacity: 0.15;
+    translate: 0 -12px;
   }
 }
 

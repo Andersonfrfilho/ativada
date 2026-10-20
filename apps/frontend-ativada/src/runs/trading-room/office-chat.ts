@@ -1,5 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { BalconySlot } from '../team-room/balcony/balcony.constant.js';
+import { COFFEE_SPOTS } from './office-geometry.js';
+import { isSamePoint, sideFacing } from './office-grid.js';
 import type { AgentLife, LifeAction, LifeState } from './office-life.types.js';
 
 // Conversa de café: frases curtas e casuais, sem nada que pareça conselho de investimento.
@@ -12,6 +14,7 @@ export const CHAT_LINES = [
   'Vale um segundo café.',
 ] as const;
 export const CHAT_TURN_STEPS = 4;
+const CHAT_PATIENCE_STEPS = 60;
 
 export type ChatContext = {
   readonly tick: number;
@@ -32,7 +35,11 @@ export function fadeSpeech(agent: AgentLife): Pick<AgentLife, 'speech' | 'speech
 export function chatContextOf(state: LifeState): ChatContext {
   const isComing = (agent: AgentLife): boolean =>
     agent.queue.some((action) => action.kind === 'await_machine' || action.kind === 'chat');
-  const talkers = state.agents.filter((agent) => agent.queue[0]?.kind === 'chat');
+  const isAtSpot = (agent: AgentLife): boolean =>
+    COFFEE_SPOTS.some((spot) => isSamePoint(spot, agent.at));
+  const talkers = state.agents.filter(
+    (agent) => agent.queue[0]?.kind === 'chat' && isAtSpot(agent),
+  );
   const arriving = state.agents.filter(isComing).map((agent) => agent.who);
   if (state.machineHolder !== undefined) arriving.push(state.machineHolder);
   return { tick: state.tick, seed: state.seed, talkers, arriving };
@@ -59,11 +66,14 @@ export function chatStep(params: {
   const { agent, action, rest, context } = params;
   const left = action.steps - 1;
   const queue = left > 0 ? [{ ...action, steps: left }, ...rest] : rest;
-  const partner = context.talkers.find((other) => other.who !== agent.who);
+  const isTalking = context.talkers.some((other) => other.who === agent.who);
+  const partner = isTalking ? context.talkers.find((other) => other.who !== agent.who) : undefined;
   if (partner === undefined) {
-    const isWaiting = context.arriving.some((who) => who !== agent.who);
-    return { ...agent, ...fadeSpeech(agent), pose: 'holding', queue: isWaiting ? queue : rest };
+    const patience = (action.patience ?? CHAT_PATIENCE_STEPS) - 1;
+    const isWaiting = patience > 0 && context.arriving.some((who) => who !== agent.who);
+    const waiting = [{ ...action, patience }, ...rest];
+    return { ...agent, ...fadeSpeech(agent), pose: 'holding', queue: isWaiting ? waiting : rest };
   }
-  const face = partner.at.x < agent.at.x ? 'left' : 'right';
+  const face = sideFacing(agent.at, partner.at, agent.face);
   return { ...agent, ...speakIn(agent, partner, context), pose: 'holding', face, queue };
 }

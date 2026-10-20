@@ -1,8 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { buildCoffeeCorner } from './coffee-corner-art.js';
+import { PLANTS } from './office-geometry.js';
 
 // Cenário em pixel art ORIGINAL do piso da sala (direção E), em unidades de desenho do preview (1600 de largura; o piso
-// vai de y 340 a 900): lambri com rodapé, tapete, café, bebedouro, arquivo, rack de servidores com luzes, plantas e
-// luminária. Cada retângulo é desenhado aqui; a cor é um token `--room-*` (ou `--px-*`).
+// vai de y 340 a 1028): lambri com rodapé, tapete, o canto do café, bebedouro, arquivo, rack de servidores com luzes,
+// plantas e luminária. Cada retângulo é desenhado aqui; a cor é um token `--room-*` (ou `--px-*`).
 export type ArtRect = {
   readonly x: number;
   readonly y: number;
@@ -11,9 +13,11 @@ export type ArtRect = {
   readonly fill: string;
   // As luzes do rack piscam (só com movimento): três ritmos.
   readonly blink?: 0 | 1 | 2;
+  // O café que pinga e o vapor que sobe da máquina (só com movimento).
+  readonly motion?: 'drip' | 'steam' | undefined;
 };
 
-export const ROOM_VIEW = { x: 0, y: 340, width: 1600, height: 560 } as const;
+export const ROOM_VIEW = { x: 0, y: 340, width: 1600, height: 688 } as const;
 export const WALL_BOTTOM = 448;
 export const TILE = 32;
 
@@ -41,11 +45,11 @@ function wall(): readonly ArtRect[] {
 
 function rug(): readonly ArtRect[] {
   return [
-    r([416, 476, 768, 192], '--room-rug'),
-    r([432, 492, 736, 8], '--room-rug-light'),
-    r([432, 644, 736, 8], '--room-rug-light'),
-    r([432, 492, 8, 160], '--room-rug-light'),
-    r([1160, 492, 8, 160], '--room-rug-light'),
+    r([416, 604, 768, 192], '--room-rug'),
+    r([432, 620, 736, 8], '--room-rug-light'),
+    r([432, 772, 736, 8], '--room-rug-light'),
+    r([432, 620, 8, 160], '--room-rug-light'),
+    r([1160, 620, 8, 160], '--room-rug-light'),
   ];
 }
 
@@ -67,17 +71,6 @@ const plant: Part = (x, y) =>
     r([56, 24, 16, 16], '--room-leaf-dark'),
     r([28, 8, 8, 8], '--room-leaf-light'),
     r([44, 32, 8, 8], '--room-leaf-light'),
-  ]);
-
-const coffee: Part = (x, y) =>
-  at(x, y, [
-    r([0, 40, 88, 56], '--room-cabinet'),
-    r([0, 40, 88, 6], '--room-cabinet-light'),
-    r([12, 0, 44, 40], '--room-machine'),
-    r([18, 6, 32, 10], '--screen'),
-    r([28, 22, 12, 6], '--room-metal'),
-    r([44, 22, 6, 6], '--room-metal'),
-    r([62, 28, 10, 12], '--room-mug'),
   ]);
 
 const cooler: Part = (x, y) =>
@@ -122,38 +115,17 @@ const lamp: Part = (x, y) =>
     r([14, 88, 28, 6], '--room-metal'),
   ]);
 
-// O que muda na máquina de café: o botão aceso (pisca enquanto alguém aperta) e a caneca embaixo do bico enquanto o café sai.
-export function buildCoffeeFx(look: 'idle' | 'pressing' | 'brewing'): readonly ArtRect[] {
-  if (look === 'idle') return [];
-  const button: ArtRect =
-    look === 'pressing'
-      ? { ...r([44, 22, 6, 6], '--screen-good'), blink: 2 }
-      : r([44, 22, 6, 6], '--screen-good');
-  const cup = [r([28, 30, 12, 10], '--room-mug'), r([30, 31, 8, 3], '--room-machine')];
-  return at(224, 344, look === 'brewing' ? [button, ...cup] : [button]);
-}
-
-// A poça de café no chão, na altura dos pés de quem derrubou.
-export function buildPuddle(spot: { readonly x: number; readonly y: number }): readonly ArtRect[] {
-  return [
-    r([spot.x + 20, spot.y + 104, 28, 5], '--room-cabinet'),
-    r([spot.x + 26, spot.y + 109, 16, 3], '--room-cabinet'),
-  ];
-}
-
 // O piso inteiro menos os ladrilhos (o padrão xadrez é um `<pattern>` no componente) e as cadeiras (dependem da equipe).
 export function buildRoomArt(): readonly ArtRect[] {
   return [
     ...wall(),
     ...rug(),
-    ...coffee(224, 344),
-    ...cooler(160, 352),
-    ...plant(18, 352),
+    ...buildCoffeeCorner(),
+    ...cooler(1224, 352),
     ...cabinet(1296, 352),
     ...rack(1368, 352),
     ...plant(1456, 352),
     ...lamp(1530, 352),
-    ...plant(330, 808),
-    ...plant(1212, 808),
+    ...PLANTS.flatMap((spot) => plant(spot.x, spot.y)),
   ];
 }

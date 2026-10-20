@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { BalconySlot } from '../team-room/balcony/balcony.constant.js';
 
-// Avatares em pixel art ORIGINAIS (grade 18 × 29, contorno automático), portados do preview aprovado da direção E. Cada um
-// tem o adereço que faz a silhueta: topete em seta, coque, fone largo, cabelo longo, rabo de cavalo com headset, lupa e o
-// losango roxo das equipes ◆ (pessoas de blazer). Dois quadros de perna para andar e um braço erguido para apontar. A cor é um nome (`--px-<nome>`).
-export const AVATAR_WIDTH = 18;
+// Avatares em pixel art ORIGINAIS (grade 20 × 29, contorno automático), desenhados em cinco vistas (de frente, de frente
+// na diagonal, de lado, de costas na diagonal e de costas); as outras três são o espelho. Cada um tem o adereço que faz a
+// silhueta. A cor é um nome (`--px-<nome>`).
+export const AVATAR_WIDTH = 20;
 export const AVATAR_HEIGHT = 29;
 
 export type PixelRun = {
@@ -13,21 +13,11 @@ export type PixelRun = {
   readonly w: number;
   readonly color: string;
 };
-export type AvatarPoses = {
-  readonly idle: readonly PixelRun[];
-  readonly step: readonly PixelRun[];
-  readonly point: readonly PixelRun[];
-  readonly hold: readonly PixelRun[];
-  readonly holdStep: readonly PixelRun[];
-  readonly sip: readonly PixelRun[];
-  readonly burn: readonly PixelRun[];
-  readonly blow: readonly PixelRun[];
-  readonly tilt: readonly PixelRun[];
-};
 
 type Grid = string[][];
 type Box = readonly [x: number, y: number, w: number, h: number];
 type Painter = (box: Box, color: string) => void;
+type Stroke = readonly [box: Box, color: string];
 
 function createPainter(grid: Grid): Painter {
   return ([x, y, w, h], color) => {
@@ -39,6 +29,17 @@ function createPainter(grid: Grid): Painter {
     }
   };
 }
+
+// Um pintor deslocado: o tronco desce um pixel no quadro "abaixado" da caminhada e na respiração.
+function shiftPainter(paint: Painter, dx: number, dy: number): Painter {
+  return ([x, y, w, h], color) => paint([x + dx, y + dy, w, h], color);
+}
+
+export function paintStrokes(paint: Painter, strokes: readonly Stroke[]): void {
+  strokes.forEach(([box, color]) => paint(box, color));
+}
+
+export const dot = (x: number, y: number, color: string): Stroke => [[x, y, 1, 1], color];
 
 const NEIGHBOURS: readonly (readonly [number, number])[] = [
   [1, 0],
@@ -84,4 +85,4 @@ export function emptyGrid(): Grid {
 }
 
 export type AvatarWho = BalconySlot;
-export { createPainter, type Box, type Grid, type Painter };
+export { createPainter, shiftPainter, type Box, type Grid, type Painter, type Stroke };

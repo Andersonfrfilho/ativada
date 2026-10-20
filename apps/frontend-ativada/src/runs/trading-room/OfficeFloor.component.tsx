@@ -49,6 +49,7 @@ export function OfficeFloor({ opinions, life, isMoving }: OfficeFloorProps): Rea
           key={agent.who}
           agent={agent}
           name={opinions.find((item) => item.slot === agent.who)?.name ?? agent.who}
+          isMoving={isMoving}
         />
       ))}
       <Talk opinions={opinions} life={life} />
