@@ -212,3 +212,182 @@
   --accent-soft: var(--room-bubble-accent-soft);
   --model: var(--room-bubble-model);
 }
+
+/* Agentes: andam por `transform` (a porcentagem é do próprio boneco: 72 × 116 unidades). */
+.agent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(72 / 1600 * 100%);
+  z-index: var(--z, 40);
+  transform: translate(calc(var(--x) / 72 * 100%), calc((var(--y) - 340) / 116 * 100%));
+}
+
+.agent[data-face='left'] .avatar {
+  transform: scaleX(-1);
+}
+
+.agent[data-pose='walking'] .poseIdle,
+.agent[data-pose='pointing'] .poseIdle {
+  display: none;
+}
+
+.agent[data-pose='walking'] .poseStep,
+.agent[data-pose='pointing'] .posePoint {
+  display: inline;
+}
+
+.agentName {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  padding: 0.05cqw 0.5cqw;
+  border-radius: var(--radius-pill);
+  background: var(--room-pill);
+  color: var(--room-pill-ink);
+  font-size: 0.75cqw;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.agent[data-pose='seated'] .agentName,
+.agent[data-pose='standing'] .agentName {
+  visibility: hidden;
+}
+
+.say {
+  position: absolute;
+  left: 88%;
+  top: 2%;
+  z-index: 5;
+  width: max-content;
+  max-width: 16cqw;
+  padding: 0.25cqw 0.5cqw;
+  border-radius: 0.5cqw;
+  background: var(--room-bubble);
+  color: var(--room-bubble-ink);
+  box-shadow: 0 0 0 0.15cqw var(--room-bubble-line);
+  font-size: 0.8cqw;
+  line-height: 1.25;
+}
+
+.say[data-side='left'] {
+  left: auto;
+  right: 88%;
+}
+
+.bubble {
+  width: calc(430 / 1600 * 100%);
+  z-index: 160;
+  padding: 0.7cqw 0.8cqw;
+  border-radius: 0.9cqw;
+  background: var(--room-bubble);
+  color: var(--room-bubble-ink);
+  box-shadow:
+    0 0 0 0.2cqw var(--room-bubble-line),
+    0 0.45cqw 0 0.2cqw color-mix(in srgb, var(--room-bubble-line) 20%, transparent);
+  font-size: 1cqw;
+}
+
+.bubble[data-side='right'] {
+  transform: translateX(-100%);
+}
+
+.lasers {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 150;
+  pointer-events: none;
+}
+
+.laser {
+  fill: none;
+  stroke: var(--terminal-accent);
+  stroke-width: 3;
+  stroke-dasharray: 6 5;
+  vector-effect: non-scaling-stroke;
+}
+
+.banner {
+  position: absolute;
+  left: calc(256 / 1600 * 100%);
+  top: calc(248 / 560 * 100%);
+  width: calc(1088 / 1600 * 100%);
+  z-index: 200;
+  padding: 1cqw 1.4cqw;
+  border-radius: 0.6cqw;
+  background: var(--room-bubble);
+  color: var(--room-bubble-ink);
+  box-shadow: 0 0 0 0.3cqw var(--room-bubble-line);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .floor[data-motion='on'] .agent {
+    transition: transform 300ms linear;
+  }
+
+  .floor[data-motion='on'] .agent[data-pose='walking'] .poseIdle {
+    display: inline;
+    animation: frame-a 620ms steps(1) infinite;
+  }
+
+  .floor[data-motion='on'] .agent[data-pose='walking'] .poseStep {
+    animation: frame-b 620ms steps(1) infinite;
+  }
+
+  .floor[data-motion='on'] .blink0 {
+    animation: led 1.4s steps(1) infinite;
+  }
+
+  .floor[data-motion='on'] .blink1 {
+    animation: led 2.1s steps(1) infinite;
+  }
+
+  .floor[data-motion='on'] .blink2 {
+    animation: led 0.9s steps(1) infinite;
+  }
+
+  .floor[data-motion='on'] .banner {
+    animation: stamp var(--motion-medium) var(--ease-out) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent,
+  .agent * {
+    transition: none;
+    animation: none;
+  }
+}
+
+@keyframes frame-a {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes frame-b {
+  0% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes led {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes stamp {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}

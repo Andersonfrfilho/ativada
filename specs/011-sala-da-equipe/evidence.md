@@ -536,3 +536,15 @@ task) e `tasks.md` (S0–S6). Base dos gates antes da fase: `bun run --cwd apps/
   e `PriceBoard` (linhas do plano do servidor). Plaquinha, balão e faixa usam a paleta clara nos dois temas.
 - Contrato `trading-room-art.contract.tsx` (8) e 19 pares novos em `contrast.contract.ts`. Gates: typecheck, lint, format:check verdes;
   painel 1.701 passam, 0 falham.
+
+### S4 — vida no escritório (2026-10-20)
+
+- `office-route.ts` (corredores, passos de no máximo um ladrilho, nunca acima da frente do telão), `office-activities.ts` (trabalhar, café,
+  telão um por vez, visita com a fala do anfitrião vinda do servidor, alongar), `office-agent-step.ts` e `office-life.ts` (`stepLife` puro com
+  `createRandom(semente + passo)`, reunião: juntar na frente do telão, faixa por 16 passos, volta ao assento).
+- `useOfficeLife`: UM temporizador do relógio de movimento por vez; sem movimento (Calmo, `prefers-reduced-motion`, aba escondida) nada é
+  agendado e a cena fica onde está; decisão nova com movimento = reunião.
+- Desenho: `OfficeAgent` (posição por `--x/--y/--z` escritos por ref; anda por `transform`), `OfficeBubble` e `OfficeLaser` (o laser termina na
+  borda da moldura), `DecisionContent` (faixa e barra), `OpinionCard` (confiança em `<meter>` com o número), `OfficeFloor` (`aria-hidden`,
+  `data-motion` só com movimento; CSS com bloco de movimento reduzido).
+- Contrato `trading-room-life.contract.tsx` (6). Gates verdes; painel 1.707 passam, 0 falham.
