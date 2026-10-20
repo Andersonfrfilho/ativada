@@ -4,8 +4,8 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { cleanup, render, screen, within } from '@testing-library/react';
 
 import { LayerBar } from '../src/runs/candle-chart/LayerBar.component.js';
-import { ModelTeamsRunProvider } from '../src/runs/model-teams/ModelTeamsRun.context.js';
-import { OfficeCorners } from '../src/runs/team-room/office/OfficeCorners.component.js';
+import { LiveMarketProvider } from '../src/live/LiveMarketProvider.component.js';
+import { RoomModelTeams } from '../src/runs/trading-room/RoomModelTeams.component.js';
 import { LIVE_RUN_ID } from './support/live-tracking-harness.js';
 import {
   buildNoKeyTeam,
@@ -39,9 +39,9 @@ function openOffice(state: ReturnType<typeof buildRunModelTeams>): void {
     isAuthenticated: true,
     routes: modelTeamsRoutes(createModelTeamsHarness(state), LIVE_RUN_ID),
     probe: (
-      <ModelTeamsRunProvider runId={LIVE_RUN_ID}>
-        <OfficeCorners />
-      </ModelTeamsRunProvider>
+      <LiveMarketProvider>
+        <RoomModelTeams runId={LIVE_RUN_ID} />
+      </LiveMarketProvider>
     ),
   });
 }
@@ -49,8 +49,8 @@ function openOffice(state: ReturnType<typeof buildRunModelTeams>): void {
 const OFF = (key: 'nina' | 'lucas' | 'olivia'): ReturnType<typeof buildTeamState> =>
   buildTeamState(key, { team: buildTeamView(key, { isEnabled: false }), recent: [] });
 
-describe('equipes desligadas no escritório', () => {
-  test('a sala de vidro lista só as ligadas, com a palavra do estado', async () => {
+describe('equipes desligadas na sala de operações', () => {
+  test('a sala lista só as ligadas, com a palavra do estado', async () => {
     openOffice(
       buildRunModelTeams({
         teams: [
@@ -62,18 +62,20 @@ describe('equipes desligadas no escritório', () => {
         ],
       }),
     );
-    const olivia = await screen.findByText(/Olívia/);
-    expect(olivia.closest('li')?.textContent).toContain('esperar');
-    expect(screen.getByText(/Lucas/).closest('li')?.textContent).toContain('sem chave configurada');
-    expect(screen.queryByText(/Nina/)).toBeNull();
+    const [olivia] = await screen.findAllByText(/Olívia/);
+    expect(olivia?.closest('li')?.textContent).toContain('esperar');
+    expect(screen.getAllByText(/Lucas/)[0]?.closest('li')?.textContent).toContain(
+      'sem chave configurada',
+    );
+    expect(screen.queryByRole('button', { name: /^Nina, / })).toBeNull();
     expect(document.body.textContent).not.toContain('desligada');
   });
 
-  test('nenhuma ligada: a sala de vidro some por completo (o café fica)', async () => {
+  test('nenhuma ligada: só o link discreto para Conta, nenhum personagem', async () => {
     openOffice(buildRunModelTeams({ teams: [OFF('nina'), OFF('lucas'), OFF('olivia')] }));
-    await screen.findByText('Café');
+    await screen.findByText('Equipes de modelo (desligadas) · ligar em Conta');
     expect(document.querySelector('li[data-team]')).toBeNull();
-    expect(document.body.textContent).not.toContain('MODELO');
+    expect(document.body.textContent).not.toContain('EQUIPES DE MODELO');
   });
 });
 

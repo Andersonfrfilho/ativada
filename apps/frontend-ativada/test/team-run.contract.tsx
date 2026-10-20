@@ -9,8 +9,8 @@ import { teamRunLabel } from '../src/runs/model-teams/run-source-label.js';
 import { RunHeader } from '../src/runs/RunHeader.component.js';
 import { runDetailSchema, runSchema } from '../src/runs/run.validation.js';
 import { LiveMarketProvider } from '../src/live/LiveMarketProvider.component.js';
-import { TeamBalcony } from '../src/runs/team-room/balcony/TeamBalcony.component.js';
-import { TEAM_ROOM_TEXT } from '../src/runs/team-room/team-room.constant.js';
+import { TradingRoom } from '../src/runs/trading-room/TradingRoom.component.js';
+import { findRoomModelTeams } from './support/loaded-team.js';
 import { buildProjectionsResponse } from './support/candle-chart-fixtures.js';
 import { createLiveHarness, LIVE_RUN_ID } from './support/live-tracking-harness.js';
 import {
@@ -93,13 +93,18 @@ describe('execução de equipe: telas', () => {
       routes: [...modelTeamsRoutes(teams, LIVE_RUN_ID), ...roomRoutes(live)],
       probe: (
         <LiveMarketProvider>
-          <TeamBalcony runId={LIVE_RUN_ID} />
+          <TradingRoom runId={LIVE_RUN_ID} screen={undefined} />
         </LiveMarketProvider>
       ),
     });
-    const team = await screen.findByRole('complementary', { name: TEAM_ROOM_TEXT.COMPACT_TITLE });
-    await waitFor(() => expect(team.textContent).toContain('não há placar nem gatilhos de regra'));
-    expect(within(team).getByRole('button', { name: /^Nina, equipe de modelo/ })).toBeDefined();
-    expect(team.textContent).not.toContain('Tiago');
+    const room = await screen.findByRole('region', { name: 'Sala de operações' });
+    await waitFor(() => expect(room.textContent).toContain('não há placar nem gatilhos de regra'));
+    const teamSection = await findRoomModelTeams();
+    expect(
+      await within(teamSection).findByRole('button', { name: /^Nina, equipe de modelo/ }),
+    ).toBeDefined();
+    expect(
+      within(room).getByRole('region', { name: 'O que cada um acha' }).textContent,
+    ).not.toContain('Tiago');
   });
 });

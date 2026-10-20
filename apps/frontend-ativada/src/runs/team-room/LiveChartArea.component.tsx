@@ -5,25 +5,20 @@ import { TeamComparison } from '../model-teams/TeamComparison.component.js';
 import { ProjectionCards } from '../projection-cards/ProjectionCards.component.js';
 import { TradeChartCard } from '../TradeChartCard.component.js';
 import { TerminalScreen } from '../trading-room/TerminalScreen.component.js';
-import { renderCompactTeam } from './RunTeamAside.component.js';
-import { TradePlaques } from './balcony/TradePlaques.component.js';
-import { TeamAsideProvider } from './TeamAside.context.js';
-import { TeamRoomSection } from './TeamRoomSection.component.js';
-import { TEAM_LAYOUT } from './team-room-preference.js';
-import { useTeamRoomPreference } from './useTeamRoomPreference.hook.js';
+import { TradingRoom } from '../trading-room/TradingRoom.component.js';
 
 export type LiveChartAreaProps = {
   readonly runId: string;
   readonly symbol: string;
   readonly timeframe: string;
-  // Sem gráfico (simulação concluída) a sala aparece sozinha.
+  // Sem gráfico (simulação concluída) a sala aparece sem o telão.
   readonly hasChart: boolean;
-  // O que vem entre o gráfico e a sala grande: as decisões e o acompanhamento detalhado.
+  // O que vem depois da sala: as decisões e o acompanhamento detalhado.
   readonly children?: ReactNode;
 };
 
-// A alternância "Gráfico + equipe" (o gráfico no alto, a equipe compacta colada nele, a sala grande por último) e
-// "Sala com o gráfico" (o gráfico vira o monitor da sala): o mesmo gráfico, as mesmas frases do servidor.
+// A simulação ao vivo abre na sala de operações (spec 011, Fase 3): o gráfico de produção é o telão da parede e a equipe
+// trabalha no piso, abaixo dele; nada da equipe fica sobre as velas.
 export function LiveChartArea({
   runId,
   symbol,
@@ -31,30 +26,17 @@ export function LiveChartArea({
   hasChart,
   children,
 }: LiveChartAreaProps): ReactElement {
-  const { preference, update } = useTeamRoomPreference();
-  const isRoomLayout = preference.layout === TEAM_LAYOUT.ROOM_WITH_CHART;
-  const chart = hasChart ? (
+  const screen = hasChart ? (
     <TerminalScreen symbol={symbol} timeframe={timeframe}>
       <TradeChartCard runId={runId} hasSummary={false} hasProjections={false} />
     </TerminalScreen>
   ) : undefined;
-  const aside = isRoomLayout ? undefined : renderCompactTeam(runId, preference);
-  const room = (
-    <TeamRoomSection
-      runId={runId}
-      preference={preference}
-      onPreferenceChange={update}
-      monitor={isRoomLayout ? chart : undefined}
-    />
-  );
   return (
-    <TeamAsideProvider aside={aside}>
-      {isRoomLayout ? room : chart}
-      {hasChart ? <TradePlaques runId={runId} /> : null}
+    <>
+      <TradingRoom runId={runId} screen={screen} />
       {children}
       {hasChart ? <ProjectionCards runId={runId} isLive /> : null}
-      {isRoomLayout ? null : room}
       <TeamComparison runId={runId} />
-    </TeamAsideProvider>
+    </>
   );
 }

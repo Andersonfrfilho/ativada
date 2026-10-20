@@ -548,3 +548,19 @@ task) e `tasks.md` (S0–S6). Base dos gates antes da fase: `bun run --cwd apps/
   borda da moldura), `DecisionContent` (faixa e barra), `OpinionCard` (confiança em `<meter>` com o número), `OfficeFloor` (`aria-hidden`,
   `data-motion` só com movimento; CSS com bloco de movimento reduzido).
 - Contrato `trading-room-life.contract.tsx` (6). Gates verdes; painel 1.707 passam, 0 falham.
+
+### S5 — página, 375 px e código morto (2026-10-20)
+
+- `LiveChartArea` agora monta só a `TradingRoom` (com o telão-terminal dentro), depois as decisões e o acompanhamento, os cartões de acertos e
+  "Equipes × regras". Saíram desta página a varanda (`TeamBalcony`, a coluna "Equipe agora" ao lado do gráfico), as plaquinhas da operação e a
+  seção da sala frontal/isométrica; a execução ao vivo concluída também não ganha mais a coluna ao lado do gráfico (`RunTeamAside`).
+- `TradingRoom`: parede (`RoomWall`: telão primeiro no DOM, letreiro, quadro de preços, mapa de calor, próxima vela, relógios, Fear & Greed), piso
+  (≥ 760 px) ou faixa compacta das mesas (celular), barra da decisão, lista "O que cada um acha", equipes ◆ com a ficha e "Pedir opinião agora"
+  (`RoomModelTeams`, mesma `ModelTeamChips` da spec 015), frase da execução de equipe, UM `aria-live` (só a troca da decisão), botão "Calmo" de
+  44 px (`touch-targets`). O índice da página leva "Sala de operações" à âncora da sala.
+- Código morto apagado (sem nenhum uso a partir de `main.tsx`, conferido por varredura do grafo de importações): 65 arquivos de `team-room/`
+  (varanda, lousa, plaquinhas, sala frontal e isométrica, preferências de layout) e 12 testes só deles; testes que usavam a varanda para provar
+  as equipes ◆ (`model-teams-room`, `model-teams-ondemand`, `historical-crew`, `team-run`, `model-teams-off-hidden`) passaram para a sala;
+  `team-beside-chart`, `team-always-beside-chart`, `team-room-model` e `calm-button` atualizados.
+- Contrato `trading-room-page.contract.tsx` (4: plano do servidor na barra e na lista, piso decorativo sem focável e um só `aria-live`, movimento
+  reduzido sem `data-motion`, 375 px com a faixa). Gates verdes; painel 1.588 passam, 0 falham (menos testes porque os da varanda saíram).

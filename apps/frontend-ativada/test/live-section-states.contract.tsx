@@ -36,7 +36,13 @@ describe('seções do acompanhamento ao vivo sem o live-status', () => {
     const labels = within(index)
       .getAllByRole('button')
       .map((button) => button.textContent);
-    expect(labels).toEqual(['Acompanhamento', 'Decisões', 'O que falta', 'Acertos', 'Escritório']);
+    expect(labels).toEqual([
+      'Acompanhamento',
+      'Decisões',
+      'O que falta',
+      'Acertos',
+      'Sala de operações',
+    ]);
     expect(within(index).getByText(/A simulação começa em/)).toBeDefined();
   });
 });

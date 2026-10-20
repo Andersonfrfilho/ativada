@@ -3,24 +3,17 @@ import type { ReactElement } from 'react';
 
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, screen, waitFor } from '@testing-library/react';
 
 import { renderHistoricalTeam } from '../src/runs/team-room/HistoricalTeam.component.js';
-import { CompactTeam } from '../src/runs/team-room/CompactTeam.component.js';
 import { RunTeamAside } from '../src/runs/team-room/RunTeamAside.component.js';
 import { TeamAside } from '../src/runs/team-room/TeamAside.context.js';
-import { TEAM_ROOM_STORAGE_KEY } from '../src/runs/team-room/team-room.constant.js';
 import { buildFixtureChart } from './fixtures/trade-chart.fixture.js';
 import { showCandleCard } from './support/candle-card-harness.js';
 import { errorResponse } from './support/fake-fetch.js';
-import { LIVE_RUN_ID, openLiveDetail, type LiveHarness } from './support/live-tracking-harness.js';
+import { LIVE_RUN_ID, openLiveDetail } from './support/live-tracking-harness.js';
 import { renderApp } from './support/render-app.js';
-import {
-  buildRoomLiveStatus,
-  createRoomHarness,
-  DEFAULT_VOTES,
-  roomRoutes,
-} from './support/team-room-fixtures.js';
+import { createRoomHarness, roomRoutes } from './support/team-room-fixtures.js';
 
 afterEach(() => {
   cleanup();
@@ -28,56 +21,6 @@ afterEach(() => {
 });
 
 const TEAM_NAME = { name: 'Equipe agora' } as const;
-
-function openCompactTeam(harness: LiveHarness): void {
-  renderApp({
-    path: '/',
-    isAuthenticated: true,
-    routes: roomRoutes(harness),
-    probe: <CompactTeam runId={LIVE_RUN_ID} />,
-  });
-}
-
-// A coluna troca de moldura quando a resposta chega: cada espera relê o elemento.
-async function teamText(expected: string): Promise<string> {
-  await waitFor(() => expect(teamNow()).toContain(expected));
-  return teamNow();
-}
-
-function teamNow(): string {
-  return screen.getByRole('complementary', TEAM_NAME).textContent ?? '';
-}
-
-describe('a equipe junto do gráfico nunca some', () => {
-  test('a run with no decision yet says the team is watching and when the first opinion arrives', async () => {
-    openCompactTeam(createRoomHarness([]));
-    const text = await teamText('A equipe ainda está olhando o mercado.');
-    expect(text).toMatch(
-      /A primeira opinião chega quando a vela de 1 hora fechar às [0-9]{2}:[0-9]{2}./,
-    );
-  });
-
-  test('a stopped run with no decision says it is not running instead of promising an opinion', async () => {
-    const harness = createRoomHarness([]);
-    harness.liveStatus = buildRoomLiveStatus([], DEFAULT_VOTES, { status: 'cancelled' });
-    openCompactTeam(harness);
-    expect(await teamText('não está rodando')).not.toContain('A primeira opinião chega');
-  });
-
-  test('while loading it holds its place, and when the server refuses it offers to try again', async () => {
-    const harness = createRoomHarness();
-    harness.isLiveStatusFailing = true;
-    openCompactTeam(harness);
-    await teamText('Não deu para carregar a equipe agora.');
-    harness.isLiveStatusFailing = false;
-    fireEvent.click(
-      within(screen.getByRole('complementary', TEAM_NAME)).getByRole('button', {
-        name: 'Tentar de novo',
-      }),
-    );
-    await teamText('Vela que fechou');
-  });
-});
 
 describe('o gráfico reserva a coluna da equipe em todo estado', () => {
   const aside = (): ReactElement => <p data-testid="team">equipe</p>;
@@ -143,34 +86,22 @@ describe('RunTeamAside: a execução terminada', () => {
     },
   );
 
-  test('a finished live run keeps the recorded opinion of the team', async () => {
+  test('a finished live run has no column beside the chart: the team is in the trading room', async () => {
     renderWithKind('live_paper');
-    const team = await screen.findByRole('complementary', TEAM_NAME);
-    await waitFor(() => expect(team.textContent).toContain('Vela que fechou'));
+    await waitFor(() => expect(screen.queryByRole('complementary', TEAM_NAME)).toBeNull());
   });
 });
 
-describe('a preferência "Sala com o gráfico" não esconde nada', () => {
-  function chooseRoomLayout(): void {
-    localStorage.setItem(TEAM_ROOM_STORAGE_KEY, JSON.stringify({ layout: 'room_with_chart' }));
-  }
-
+describe('a sala de operações não esconde o gráfico', () => {
   test.each([
     ['without decisions', false],
     ['with the server refusing live-status', true],
-  ])(
-    '%s the chart is still on the page and the way back is one click away',
-    async (_name, isFailing) => {
-      chooseRoomLayout();
-      const harness = createRoomHarness([]);
-      harness.isLiveStatusFailing = isFailing;
-      openLiveDetail(harness);
-      expect(await screen.findByRole('region', { name: 'Preço e operações' })).toBeDefined();
-      const back = await screen.findByRole('button', { name: 'Gráfico + equipe' });
-      expect(back.getAttribute('aria-pressed')).toBe('false');
-      fireEvent.click(back);
-      expect(await screen.findByRole('complementary', TEAM_NAME)).toBeDefined();
-      expect(localStorage.getItem(TEAM_ROOM_STORAGE_KEY)).toContain('chart_and_team');
-    },
-  );
+  ])('%s the chart is still on the screen of the room', async (_name, isFailing) => {
+    const harness = createRoomHarness([]);
+    harness.isLiveStatusFailing = isFailing;
+    openLiveDetail(harness);
+    const room = await screen.findByRole('region', { name: 'Sala de operações' });
+    const chart = await screen.findByRole('region', { name: 'Preço e operações' });
+    expect(room.contains(chart)).toBe(true);
+  });
 });

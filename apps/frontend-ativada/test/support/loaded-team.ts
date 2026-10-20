@@ -10,3 +10,10 @@ export async function findLoadedTeam(): Promise<HTMLElement> {
   await waitFor(() => expect(aside.textContent).toContain(TEAM_ROOM_TEXT.DISCLAIMER));
   return aside;
 }
+
+// As equipes ◆ na sala de operações (spec 011, Fase 3): a seção existe e as fichas chegam.
+export async function findRoomModelTeams(): Promise<HTMLElement> {
+  const section = await screen.findByRole('region', { name: 'Equipes de modelo na sala' });
+  await waitFor(() => expect(section.textContent).not.toBe(''));
+  return section;
+}

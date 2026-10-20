@@ -22,8 +22,8 @@ import {
 } from './support/model-teams-fixtures.js';
 import type { TeamView } from '../src/runs/model-teams/model-teams.validation.js';
 import { LiveMarketProvider } from '../src/live/LiveMarketProvider.component.js';
-import { TeamBalcony } from '../src/runs/team-room/balcony/TeamBalcony.component.js';
-import { findLoadedTeam } from './support/loaded-team.js';
+import { RoomModelTeams } from '../src/runs/trading-room/RoomModelTeams.component.js';
+import { findRoomModelTeams } from './support/loaded-team.js';
 import { renderApp } from './support/render-app.js';
 import { buildRoomDecision, createRoomHarness, roomRoutes } from './support/team-room-fixtures.js';
 
@@ -142,11 +142,11 @@ describe('as equipes ◆ ao vivo como personagens', () => {
       routes: [...modelTeamsRoutes(harness, LIVE_RUN_ID), ...roomRoutes(createRoomHarness())],
       probe: (
         <LiveMarketProvider>
-          <TeamBalcony runId={LIVE_RUN_ID} />
+          <RoomModelTeams runId={LIVE_RUN_ID} />
         </LiveMarketProvider>
       ),
     });
-    const crew = await findLoadedTeam();
+    const crew = await findRoomModelTeams();
     const olivia = await within(crew).findByRole('button', { name: /^Olívia, .*esperar/ });
     const slot = olivia.closest('li');
     expect(slot?.getAttribute('data-kind')).toBe('model');

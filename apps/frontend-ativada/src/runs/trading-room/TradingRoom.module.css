@@ -1,0 +1,210 @@
+/* Copyright (c) 2026 Ada Technology. All rights reserved. */
+/* A sala de operações: a parede (letreiro, telão e quadros) em cima, o piso com a equipe embaixo, depois a decisão e a
+   lista em texto. Celular primeiro: uma coluna; a partir de 760 px o piso aparece e, de 1024 px, os quadros cercam o telão. */
+.room {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  margin-bottom: var(--space-4);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.title {
+  margin: 0;
+  font: 700 var(--text-xl) / 1.2 var(--font-display);
+}
+
+.hint {
+  flex-basis: 100%;
+  order: 3;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.calm {
+  min-height: 44px;
+  margin-left: auto;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: 600 var(--text-sm) / 1.2 var(--font-body);
+  cursor: pointer;
+}
+
+.calm[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.wall {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'ticker'
+    'screen'
+    'right'
+    'left';
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-control) var(--radius-control) 0 0;
+  background: var(--room-wall);
+}
+
+.screen {
+  grid-area: screen;
+  min-width: 0;
+}
+
+.ticker {
+  grid-area: ticker;
+  min-width: 0;
+}
+
+.left,
+.right {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.left {
+  grid-area: left;
+}
+
+.right {
+  grid-area: right;
+}
+
+.strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  list-style: none;
+  border-radius: 0 0 var(--radius-control) var(--radius-control);
+  background: var(--room-tile-b);
+  color: var(--ink);
+}
+
+.token {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+}
+
+.token[data-out='true'] {
+  opacity: 0.75;
+}
+
+.tokenName {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.tokenOut {
+  font-size: var(--text-xs);
+  color: var(--warn);
+}
+
+.decisionBar {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+}
+
+.opinions {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.opinionsTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cardItem {
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    inset 4px 0 0 var(--line);
+}
+
+.cardItem[data-tone='buy'] {
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    inset 4px 0 0 var(--buy);
+}
+
+.cardItem[data-tone='sell'] {
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    inset 4px 0 0 var(--sell);
+}
+
+.teamRunNote {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.models {
+  min-width: 0;
+}
+
+.foot {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (min-width: 760px) {
+  .wall {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'ticker ticker'
+      'screen screen'
+      'left right';
+  }
+}
+
+@media (min-width: 1024px) {
+  .wall {
+    grid-template-columns: minmax(14rem, 17rem) minmax(0, 1fr) minmax(14rem, 17rem);
+    grid-template-areas:
+      'ticker ticker ticker'
+      'left screen right';
+  }
+}

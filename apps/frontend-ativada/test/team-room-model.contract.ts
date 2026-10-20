@@ -7,7 +7,6 @@ import { describe, expect, test } from 'bun:test';
 
 import { decisionSchema } from '../src/runs/live-tracking/live-status.validation.js';
 import { projectionsSchema } from '../src/runs/candle-chart/projections.validation.js';
-import { describeAnnouncement } from '../src/runs/team-room/team-room-lines.js';
 import {
   analystStateOf,
   planSequence,
@@ -154,13 +153,6 @@ describe('sala da equipe: a sequência da vela nova', () => {
 });
 
 describe('sala da equipe: honestidade e código', () => {
-  test('the screen reader announcement is one sentence per candle and names who voted', () => {
-    const view = viewOf([RSI_AGAINST]);
-    expect(describeAnnouncement(view, '10:00 de hoje')).toBe(
-      'Vela que fechou 10:00 de hoje. Reversão: RSI contra. Resumo do placar: Esperou. As falas estão na lista de texto.',
-    );
-  });
-
   test('no new text promises, recommends or sounds sure', () => {
     const root = fileURLToPath(new URL('../src/runs/team-room', import.meta.url));
     const forbidden = /vai subir|vai cair|garantid|recomendamos|compre\b|confiante|lucro certo/i;

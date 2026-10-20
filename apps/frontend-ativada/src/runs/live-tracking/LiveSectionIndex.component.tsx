@@ -14,7 +14,7 @@ const SECTION_LINKS = [
   { id: DECISIONS_ANCHOR, label: 'Decisões' },
   { id: TRIGGERS_ANCHOR, label: 'O que falta' },
   { id: HITS_ANCHOR, label: 'Acertos' },
-  { id: OFFICE_ANCHOR, label: 'Escritório' },
+  { id: OFFICE_ANCHOR, label: 'Sala de operações' },
 ] as const;
 
 function scrollToSection(id: string): void {

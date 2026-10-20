@@ -4,14 +4,14 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 
 import { LiveMarketProvider } from '../src/live/LiveMarketProvider.component.js';
-import { TeamBalcony } from '../src/runs/team-room/balcony/TeamBalcony.component.js';
+import { RoomModelTeams } from '../src/runs/trading-room/RoomModelTeams.component.js';
 import { describeTeamBadge } from '../src/runs/model-teams/team-badge.js';
 import {
   describeFailures,
   describeScoreboard,
   formatUsd,
 } from '../src/runs/model-teams/team-sheet-text.js';
-import { findLoadedTeam } from './support/loaded-team.js';
+import { findRoomModelTeams } from './support/loaded-team.js';
 import { LIVE_RUN_ID } from './support/live-tracking-harness.js';
 import {
   buildNoKeyTeam,
@@ -65,11 +65,11 @@ async function openBalcony(
     routes: [...modelTeamsRoutes(harness, LIVE_RUN_ID), ...roomRoutes(createRoomHarness())],
     probe: (
       <LiveMarketProvider>
-        <TeamBalcony runId={LIVE_RUN_ID} />
+        <RoomModelTeams runId={LIVE_RUN_ID} />
       </LiveMarketProvider>
     ),
   });
-  return findLoadedTeam();
+  return findRoomModelTeams();
 }
 
 describe('as equipes ◆ na varanda (RF19)', () => {

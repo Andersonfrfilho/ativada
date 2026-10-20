@@ -3,22 +3,15 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { CALM_STORAGE_KEY, readCalm } from '../src/runs/team-room/motion/calm-store.js';
-import { DEFAULT_TEAM_ROOM_PREFERENCE } from '../src/runs/team-room/team-room-preference.js';
-import { TeamRoomControls } from '../src/runs/team-room/TeamRoomControls.component.js';
+import { CalmToggle } from '../src/runs/trading-room/RoomParts.component.js';
 
 afterEach(() => {
   cleanup();
   localStorage.clear();
 });
 
-function noop(): void {
-  return;
-}
-
 function renderControls(): void {
-  render(
-    <TeamRoomControls preference={DEFAULT_TEAM_ROOM_PREFERENCE} onChange={noop} onReplay={noop} />,
-  );
+  render(<CalmToggle />);
 }
 
 describe('botão Calmo', () => {
