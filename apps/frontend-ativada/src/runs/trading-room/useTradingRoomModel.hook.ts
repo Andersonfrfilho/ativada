@@ -6,6 +6,7 @@ import { buildModelAgent } from '../team-room/balcony/model-agents.js';
 import { useCompactTeamModel } from '../team-room/useCompactTeamModel.hook.js';
 import type { LifeLine } from './office-life.types.js';
 import { buildRoomOpinions, type RoomOpinion } from './room-opinions.js';
+import { describeScore } from './room-score.js';
 import { useTradePlanQuery } from './trade-plan.query.js';
 import type { TradePlan } from './trade-plan.validation.js';
 
@@ -43,7 +44,12 @@ export function useTradingRoomModel(runId: string, status: LiveStatus): TradingR
       ? []
       : buildBalconyAgents({ view, auditor: team?.auditor, horizon: undefined });
   const modelAgents = models.teams.map((card) => buildModelAgent(card, models.status));
-  const opinions = buildRoomOpinions({ agents, models: modelAgents, tradePlan });
+  const scoreLine = describeScore(triggers);
+  const opinions = buildRoomOpinions({ agents, models: modelAgents, tradePlan }).map((opinion) =>
+    opinion.kind === 'leader' && scoreLine !== undefined
+      ? { ...opinion, line: scoreLine }
+      : opinion,
+  );
   return {
     tradePlan,
     opinions,

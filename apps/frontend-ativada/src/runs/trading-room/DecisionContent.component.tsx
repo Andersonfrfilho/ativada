@@ -9,18 +9,12 @@ import styles from './Opinion.module.css';
 export type DecisionContentProps = {
   readonly leader: RoomOpinion;
   readonly label: string;
-  // A frase fixa de simulação; a barra embaixo do telão já a tem no pé da sala.
-  readonly hasFoot?: boolean;
 };
 
-// A decisão da equipe (a ficha da Alice) em números grandes: a barra fixa embaixo da cena e a faixa da reunião.
-export function DecisionContent({
-  leader,
-  label,
-  hasFoot = true,
-}: DecisionContentProps): ReactElement {
+// A decisão da equipe (a ficha da Alice) em números grandes: a faixa da reunião.
+export function DecisionContent({ leader, label }: DecisionContentProps): ReactElement {
   return (
-    <div className={hasFoot ? styles.decision : `${styles.decision} ${styles.compact}`}>
+    <div className={styles.decision}>
       <div className={styles.decisionHead}>
         <span className={styles.decisionLabel}>{label}</span>
         <IntentChip look={leader.intent} />
@@ -36,7 +30,7 @@ export function DecisionContent({
         ))}
       </ul>
       {leader.note === undefined ? null : <p className={styles.note}>{leader.note}</p>}
-      {hasFoot ? <p className={styles.decisionFoot}>{TRADING_ROOM_TEXT.DECISION_FOOT}</p> : null}
+      <p className={styles.decisionFoot}>{TRADING_ROOM_TEXT.DECISION_FOOT}</p>
     </div>
   );
 }

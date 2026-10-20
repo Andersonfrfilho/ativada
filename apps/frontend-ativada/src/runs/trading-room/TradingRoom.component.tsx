@@ -5,7 +5,6 @@ import { PointedLevelProvider } from '../candle-chart/pointed-level.context.js';
 import { OFFICE_ANCHOR } from '../live-tracking/live-anchors.js';
 import { useLiveStatusQuery } from '../live-tracking/live-status.query.js';
 import { ModelTeamsRunProvider } from '../model-teams/ModelTeamsRun.context.js';
-import { RoomDecision } from './RoomDecision.component.js';
 import { RoomLife } from './RoomLife.component.js';
 import { RoomWall } from './RoomWall.component.js';
 import { TRADING_ROOM_TEXT } from './trading-room.constant.js';
@@ -18,13 +17,12 @@ export type TradingRoomProps = {
   readonly screen: ReactNode;
 };
 
-// A sala de operações (spec 011, Fase 3, direção E), numa cena só: a parede com o telão no meio, os quadros dos lados e a
-// decisão da equipe colada embaixo do telão; o piso com as mesas logo abaixo; depois o que cada um acha em texto.
+// A sala de operações (spec 011, Fase 3, direção E), numa cena só: a parede com o telão no meio, a decisão da equipe e os quadros
+// ao lado; o piso com as mesas logo abaixo do telão; depois o que cada um acha em texto.
 export function TradingRoom({ runId, screen }: TradingRoomProps): ReactElement {
   const titleId = useId();
   const status = useLiveStatusQuery(runId, true).data;
   const { isWide, isMoving } = useRoomMotion();
-  const decision = status === undefined ? null : <RoomDecision runId={runId} status={status} />;
   return (
     <section
       id={OFFICE_ANCHOR}
@@ -37,13 +35,7 @@ export function TradingRoom({ runId, screen }: TradingRoomProps): ReactElement {
       </h2>
       <ModelTeamsRunProvider runId={runId}>
         <PointedLevelProvider>
-          <RoomWall
-            runId={runId}
-            screen={screen}
-            status={status}
-            isMoving={isMoving}
-            decision={decision}
-          />
+          <RoomWall runId={runId} screen={screen} status={status} isMoving={isMoving} />
           {status === undefined ? (
             <p role="status">{TRADING_ROOM_TEXT.LOADING}</p>
           ) : (

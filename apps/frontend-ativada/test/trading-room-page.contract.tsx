@@ -75,8 +75,30 @@ describe('a sala de operações na simulação ao vivo', () => {
     expect(list.textContent).toContain('+7,65 USDT fict.');
     expect(list.textContent).toContain('Plano da equipe: comprar a 100.010,00');
     expect(room.textContent).toContain('Simulação com dinheiro fictício · Tendência, não promessa');
-    const board = within(room).getByRole('region', { name: 'Quadro de preços' });
+    const board = within(room).getByRole('region', { name: 'Decisão da equipe' });
     expect(board.textContent).toContain('Proteção');
+  });
+
+  test('one decision card in the side column; no price board, no strip under the terminal, floor follows the terminal', async () => {
+    fakeMedia((query) => query.includes('min-width'));
+    openRoom();
+    const room = await screen.findByRole('region', { name: 'Sala de operações' });
+    await within(room).findByRole('region', { name: 'O que cada um acha' });
+    expect(within(room).getAllByRole('region', { name: 'Decisão da equipe' })).toHaveLength(1);
+    expect(within(room).queryByRole('region', { name: 'Quadro de preços' })).toBeNull();
+    expect(within(room).queryByRole('region', { name: 'Próxima vela' })).toBeNull();
+    const card = within(room).getByRole('region', { name: 'Decisão da equipe' });
+    expect(card.textContent).toContain('próxima vela');
+    expect(card.textContent).toContain('placar +1 · compra a partir de +2');
+    expect(card.textContent).toContain('Último fechamento');
+    const terminal = within(room).getByRole('region', { name: 'Telão: gráfico da simulação' });
+    expect(terminal.contains(card)).toBe(false);
+    const floor = room.querySelector('[aria-hidden="true"][data-motion]');
+    const order = terminal.compareDocumentPosition(floor ?? terminal);
+    expect(order & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      card.compareDocumentPosition(floor ?? card) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   test('the floor is decorative: aria-hidden, nothing focusable, and only one live region for the decision', async () => {

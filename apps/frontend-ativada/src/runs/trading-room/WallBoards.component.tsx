@@ -5,7 +5,11 @@ import { useUserTimeZone } from '../../account/useUserTimeZone.hook.js';
 import { formatTimeInZone } from '../../format/zoned-time.js';
 import { formatPrice } from '../../format/format.js';
 import type { LiveStatus } from '../live-tracking/live-status.validation.js';
+import { Icon } from '../../layout/Icon.component.js';
+import type { SeatLook } from '../team-room/team-room.types.js';
 import { strategyPlanRows } from './room-plan-rows.js';
+import { describeScore } from './room-score.js';
+import { TRADING_ROOM_TEXT } from './trading-room.constant.js';
 import type { TradePlan } from './trade-plan.validation.js';
 import { scorePips } from './wall-model.js';
 import styles from './Wall.module.css';
@@ -32,42 +36,42 @@ function ScorePips({
   );
 }
 
-// O quadro "Próxima vela": quando a equipe decide de novo (no fuso do usuário) e o placar de agora com o limiar.
-export function NextCandleBoard({ status }: { readonly status: LiveStatus }): ReactElement {
+export type DecisionBoardProps = {
+  readonly status: LiveStatus;
+  readonly tradePlan: TradePlan | undefined;
+  readonly intent: SeatLook | undefined;
+};
+
+function StatusBadge({ look }: { readonly look: SeatLook }): ReactElement {
+  return (
+    <span className={styles.status} data-tone={look.tone}>
+      <Icon name={look.icon} size={14} />
+      <span>{look.word}</span>
+    </span>
+  );
+}
+
+// O quadro único "Decisão da equipe": estado, próxima vela, placar contra o limiar e o plano do servidor em linhas
+// (compra, alvo, lucro previsto, proteção, resultado agora) com o último fechamento. Nenhum número aparece em outro lugar da parede.
+export function DecisionBoard({ status, tradePlan, intent }: DecisionBoardProps): ReactElement {
   const timeZone = useUserTimeZone();
   const { nextDecisionAt } = status.run;
   const { triggers } = status;
+  const plan = tradePlan?.plan;
   return (
-    <section className={styles.board} aria-label="Próxima vela">
-      <h4 className={styles.boardTitle}>Próxima vela</h4>
+    <section className={styles.board} aria-label={TRADING_ROOM_TEXT.DECISION_NOW}>
+      <h4 className={styles.boardTitle}>{TRADING_ROOM_TEXT.DECISION_NOW}</h4>
+      {intent === undefined ? null : <StatusBadge look={intent} />}
       <p className={styles.clock}>
+        <small>próxima vela</small>{' '}
         {nextDecisionAt === null ? '--:--' : formatTimeInZone(nextDecisionAt, timeZone)}
       </p>
       {triggers.status === 'available' ? (
         <>
-          <p className={styles.score}>
-            Placar <strong>{triggers.score}</strong> · compra a partir de {triggers.scoreThreshold}
-          </p>
+          <p className={styles.score}>{describeScore(triggers)}</p>
           <ScorePips score={triggers.score} threshold={triggers.scoreThreshold} />
-          <p className={styles.boardNote}>{triggers.message}</p>
         </>
-      ) : (
-        <p className={styles.boardNote}>{triggers.message}</p>
-      )}
-    </section>
-  );
-}
-
-// O quadro de preços: o plano do servidor em linhas (compra, alvo, lucro previsto, proteção) e o último fechamento.
-export function PriceBoard({
-  tradePlan,
-}: {
-  readonly tradePlan: TradePlan | undefined;
-}): ReactElement {
-  const plan = tradePlan?.plan;
-  return (
-    <section className={styles.board} aria-label="Quadro de preços">
-      <h4 className={styles.boardTitle}>Quadro de preços</h4>
+      ) : null}
       <ul className={styles.priceRows}>
         {strategyPlanRows(plan).map((row) => (
           <li key={row.label} className={styles.priceRow} data-tone={row.tone}>
@@ -83,7 +87,7 @@ export function PriceBoard({
           </li>
         )}
       </ul>
-      {plan === undefined ? null : <p className={styles.boardNote}>{plan.message}</p>}
+      <p className={styles.boardNote}>{plan === undefined ? triggers.message : plan.message}</p>
     </section>
   );
 }
