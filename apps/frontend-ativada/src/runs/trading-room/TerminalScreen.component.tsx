@@ -25,7 +25,7 @@ function TerminalHead({ symbol, timeframe }: Omit<TerminalScreenProps, 'children
   return (
     <div className={styles.head}>
       <h3 className={styles.symbol}>{formatSymbol(symbol)}</h3>
-      <span className={styles.timeframe}>vela de {timeframeLabel(timeframe)}</span>
+      <span className={styles.visuallyHidden}>vela de {timeframeLabel(timeframe)}</span>
       <span className={styles.price} aria-label={TRADING_ROOM_TEXT.PRICE_NOW}>
         {shown === undefined ? '—' : formatPrice(shown.price)}
       </span>
@@ -49,7 +49,6 @@ export function TerminalScreen({ symbol, timeframe, children }: TerminalScreenPr
     <section className={styles.terminal} aria-label={TRADING_ROOM_TEXT.SCREEN_LABEL}>
       <TerminalHead symbol={symbol} timeframe={timeframe} />
       <TerminalChartProvider>{children}</TerminalChartProvider>
-      <p className={styles.foot}>{TRADING_ROOM_TEXT.DISCLAIMER}</p>
     </section>
   );
 }

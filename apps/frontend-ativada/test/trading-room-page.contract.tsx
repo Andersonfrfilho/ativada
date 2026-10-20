@@ -112,6 +112,20 @@ describe('a sala de operações na simulação ao vivo', () => {
   });
 });
 
+describe('o telão só tem o gráfico', () => {
+  test('period buttons, date fields and the trades table live in the Operações tab, not on the screen', async () => {
+    openRoom();
+    const screenRegion = await screen.findByRole('region', { name: 'Telão: gráfico da simulação' });
+    expect(within(screenRegion).queryByRole('region', { name: 'Preço e operações' })).toBeNull();
+    expect(within(screenRegion).queryByLabelText(/De \(data em UTC\)/)).toBeNull();
+    const operations = await screen.findByRole('region', { name: 'Operações' });
+    expect(screenRegion.contains(operations)).toBe(false);
+    expect(
+      within(operations).getByRole('link', { name: /TradingView Lightweight Charts/ }),
+    ).toBeTruthy();
+  });
+});
+
 describe('as equipes ◆ na sala aparecem uma vez em texto', () => {
   test('Olívia has one card in the list, with her plan and the sheet with "Pedir opinião agora"', async () => {
     const harness = createRoomHarness();

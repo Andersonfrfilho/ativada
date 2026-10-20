@@ -19,24 +19,21 @@ function isBefore(first: HTMLElement, second: HTMLElement): boolean {
 }
 
 describe('detalhe da simulação ao vivo: a sala de operações no alto', () => {
-  test('the page opens on the trading room with the chart on its screen, then the short summary, decisions and detail; no balcony and no old room', async () => {
+  test('a compact line, then the trading room with the chart on its screen, then the tabs; no balcony and no old room', async () => {
     openLiveDetail(createRoomHarness());
     const tradingRoom = await screen.findByRole('region', { name: 'Sala de operações' });
-    const summary = await screen.findByRole('region', { name: 'Sua simulação ao vivo' });
-    const chart = await screen.findByRole('region', { name: 'Preço e operações' });
-    const decisions = await screen.findByRole('region', { name: /^O que a estratégia decidiu/ });
-    const tracking = await screen.findByRole('region', { name: 'Acompanhamento' });
+    const chart = await screen.findByRole('region', { name: 'Telão: gráfico da simulação' });
+    const tabs = await screen.findByRole('tablist', { name: 'Detalhes da simulação' });
     expect(tradingRoom.contains(chart)).toBe(true);
+    expect(isBefore(tradingRoom, tabs)).toBe(true);
+    const chips = screen.getAllByText('Ao vivo');
+    expect(isBefore(chips.at(-1) ?? tradingRoom, tradingRoom)).toBe(true);
     expect(screen.queryByRole('region', { name: 'Sala da equipe' })).toBeNull();
     expect(screen.queryByRole('complementary', { name: 'Equipe agora' })).toBeNull();
-    const order = [tradingRoom, summary, decisions, tracking];
-    order.slice(1).forEach((section, index) => {
-      expect(isBefore(order[index] ?? section, section)).toBe(true);
-    });
   });
 
-  test('the short summary shows balance, result and buy and hold in words, with the server numbers', async () => {
-    openLiveDetail(createRoomHarness());
+  test('the short summary (Acompanhamento tab) shows balance, result and buy and hold in words, with the server numbers', async () => {
+    openLiveDetail(createRoomHarness(), '#acompanhamento');
     const summary = await screen.findByRole('region', { name: 'Sua simulação ao vivo' });
     expect(summary.textContent).toContain('Saldo');
     expect(summary.textContent).toContain('Resultado');

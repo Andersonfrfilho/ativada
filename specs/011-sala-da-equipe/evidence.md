@@ -585,3 +585,24 @@ task) e `tasks.md` (S0–S6). Base dos gates antes da fase: `bun run --cwd apps/
 ### S6 — CLAUDE.md (2026-10-20)
 
 Seção do painel ganhou "Sala de operações (spec 011 Fase 3)" e a nota da spec 015 aponta a ficha para o cartão da equipe na sala. format:check verde.
+
+### S7 — uma cena só, telão limpo e abas (2026-10-20, segundo retorno do dono)
+
+- Pedido: "você separou; precisamos deixar os gráficos e outras informações importantes perto das opiniões, bem como as previsões". Nova
+  composição, como o preview `capturas/e-v3-*`: uma linha de estado acima ("Ao vivo" · pulso · saldo e resultado), depois a parede com o telão no
+  meio (só a faixa fina e o canvas com volume, e a "Próxima vela de perto" presa à direita dentro da moldura), a decisão da equipe colada embaixo
+  do telão, quadros nos lados ("Próxima vela", Fear & Greed, relógios; quadro de preços, letreiro, mapa de calor) e o piso logo abaixo, sem bloco
+  no meio. Depois "O que cada um acha" e as abas Operações, Decisões, O que falta, Acertos e Acompanhamento (uma por vez; `#acompanhamento`,
+  `#decisoes`, `#falta` e `#acertos` abrem a aba certa; setas, Home e End; o cancelar segue em "Andamento", na aba Acompanhamento).
+- Telão: `TerminalCanvasView` (vela, zoom em ícones com nome acessível, balão de valores e o menu "Camadas do gráfico" flutuante); resumo,
+  aviso histórico, período, datas, tabela e crédito do gráfico foram para `TradeOperations` (aba Operações). A página ao vivo fica mais larga
+  (`--page-width` 1480 px enquanto a sala está na tela) para o gráfico e a previsão caberem lado a lado.
+- Leituras de indicador para gente (`reading-text.ts`: "-961.233.115,7845" vira "−961,2 mi"); plaquinhas do piso quebram linha em vez de cortar.
+- Quem aponta no telão engrossa a linha do nível dele no canvas (`PointedLevelProvider` → `SurfacePriceLevel.isPointed`, linha cheia de 4 px);
+  o laser termina na moldura.
+- Cabeçalho do aplicativo: a navegação quebra linha a partir de 1100 px e os itens ficam compactos até 1499 px (antes passava de 1440).
+- Medido no Chromium headless com a API simulada no navegador (nenhuma conta, nenhum dado real), 1440 × 900: canvas começa em y = 378 e tem
+  420 px; decisão da equipe em y = 867–979; piso em y = 1003–1496; nenhum preço cortado; uma Olívia (1 boneco, 1 cartão); nada além da largura
+  (scrollWidth 1440). 375 × 812: sem rolagem horizontal (375), canvas de 360 px. Capturas `sala5-1440*.png` e `sala5-375*.png` na pasta de
+  rascunho da sessão.
+- Gates verdes; painel 1.593 passam, 0 falham. Testes da página ao vivo abrem a aba pelo endereço (`openLiveDetail(harness, '#decisoes')`).

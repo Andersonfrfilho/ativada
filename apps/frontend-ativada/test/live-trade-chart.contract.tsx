@@ -142,7 +142,7 @@ const FIXED_SEARCH = `?de=${new Date(FIXTURE_FROM).toISOString()}&ate=${new Date
 describe('cartão "Preço e operações" na simulação ao vivo', () => {
   test('follows the end: a stream notice brings the new arrow and moves the label', async () => {
     const { app, server } = open();
-    await screen.findByRole('region', CARD);
+    await screen.findByRole('region', { name: 'Operações' });
     await waitFor(() => expect(chartItems()).toHaveLength(6));
     expect(screen.getByText(/Acompanhando o fim da simulação/)).toBeDefined();
     expect(screen.getByText(/última vela fechada às 21:00/)).toBeDefined();
@@ -192,9 +192,12 @@ describe('cartão "Preço e operações" na simulação ao vivo', () => {
   });
 
   test('is on the running live run only: a queued one keeps the progress alone', async () => {
-    const { app } = open('', liveRun({ status: 'queued', queuePosition: { own: 1, overall: 1 } }));
+    const { app } = open(
+      '#acompanhamento',
+      liveRun({ status: 'queued', queuePosition: { own: 1, overall: 1 } }),
+    );
     expect(await screen.findByText(/Posição na fila: 1/)).toBeDefined();
-    expect(screen.queryByRole('region', CARD)).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Telão: gráfico da simulação' })).toBeNull();
     expect(app.fake.callsTo('GET', `${BASE}/chart`)).toHaveLength(0);
   });
 

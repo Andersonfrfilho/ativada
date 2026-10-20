@@ -1,61 +1,36 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { useId, useRef, type ReactElement } from 'react';
 
-import { formatSymbol } from '../../format/format.js';
-import { describeChart } from '../chart-description.js';
 import styles from './CandleChart.module.css';
 import { CHART_LAYER } from './candle-chart.constant.js';
-import { CHART_KEYBOARD_HELP } from './chart-key-plan.js';
-import { ChartCredit } from './ChartCredit.component.js';
-import { ChartTooltip } from './ChartTooltip.component.js';
-import { useChartTooltip } from './useChartTooltip.hook.js';
-import { useTooltipHotkey } from './useTooltipHotkey.hook.js';
-import { ClusterButtons } from './ClusterButtons.component.js';
-import { useEnabledTeamKeys } from '../model-teams/useEnabledTeamKeys.hook.js';
-import { LayerBar } from './LayerBar.component.js';
 import { BesideTeam } from '../team-room/BesideTeam.component.js';
 import { LeaderFocusProvider } from '../team-room/balcony/leader-focus.context.js';
-import { CandleToolbar } from './CandleToolbar.component.js';
+import { CanvasControls, CanvasNotices } from './CanvasControls.component.js';
 import { CanvasOverlays } from './CanvasOverlays.component.js';
+import {
+  CanvasFooter,
+  ChartSide,
+  SurfaceBox,
+  type CanvasViewProps,
+  type DescriptionIds,
+} from './CanvasParts.component.js';
 import { TeamAside } from '../team-room/TeamAside.context.js';
 import { LayerNotices } from './LayerNotices.component.js';
-import { LiveCandleNotice } from './LiveCandleNotice.component.js';
-import { NextCandlePanel } from './NextCandlePanel.component.js';
 import { OhlcLegend } from './OhlcLegend.component.js';
 import { SimpleChartFallback } from './SimpleChartFallback.component.js';
-import { TimeframeNotice } from './TimeframeNotice.component.js';
-import {
-  useCandleCanvasModel,
-  type CandleCanvasInput,
-  type CandleCanvasModel,
-} from './useCandleCanvasModel.hook.js';
+import { TerminalCanvasView } from './TerminalCanvasView.component.js';
+import { useIsTerminalChart } from './terminal-chart.context.js';
+import { useCandleCanvasModel, type CandleCanvasInput } from './useCandleCanvasModel.hook.js';
 
 const SURFACE_FAILED_REASON =
   'Não foi possível carregar o desenho do gráfico; mostrando o gráfico simples.';
 
-type CanvasViewProps = CandleCanvasInput & { readonly model: CandleCanvasModel };
-
-function CanvasHeader({ runId, chart, view, source, model }: CanvasViewProps): ReactElement {
-  const teamKeys = useEnabledTeamKeys(runId, view.isLive);
+function CanvasHeader(props: CanvasViewProps): ReactElement {
+  const { model } = props;
   return (
     <>
-      <CandleToolbar {...{ chart, source, model }} />
-      <LayerBar
-        layers={source.preferences.preferences.layers}
-        isLive={view.isLive}
-        isStrategyTimeframe={model.layerData.isStrategyTimeframe}
-        hasTeams={teamKeys !== undefined && teamKeys.length > 0}
-        onToggle={source.preferences.toggleLayer}
-      />
-      <TimeframeNotice
-        timeframe={source.timeframe}
-        runTimeframe={chart.timeframe}
-        displayMapping={source.displayMapping}
-        hasRetentionCut={
-          source.retentionStart !== undefined && chart.runRange.from < source.retentionStart
-        }
-      />
-      <LiveCandleNotice live={model.live} />
+      <CanvasControls {...props} />
+      <CanvasNotices {...props} />
       {model.legend === undefined ? null : (
         <OhlcLegend
           text={model.legend}
@@ -64,87 +39,6 @@ function CanvasHeader({ runId, chart, view, source, model }: CanvasViewProps): R
         />
       )}
       {model.fifteenLegend === undefined ? null : <OhlcLegend text={model.fifteenLegend} />}
-    </>
-  );
-}
-
-type DescriptionIds = { readonly help: string; readonly caption: string };
-
-// O gráfico é UMA parada de Tab (RF20): setas, Shift+seta, mais e menos, Home, End, Esc e Enter agem na cruz; a ajuda de
-// teclado e a descrição textual são lidas pelo leitor de tela ao chegar nele.
-function SurfaceBox({
-  runId,
-  view,
-  chart,
-  source,
-  model,
-  ids,
-}: CanvasViewProps & { readonly ids: DescriptionIds }): ReactElement {
-  const isOn = source.preferences.preferences.isTooltipOn;
-  const tooltip = useChartTooltip({ runId, isLive: view.isLive, chart, source, model, isOn });
-  useTooltipHotkey(source.preferences.toggleTooltip);
-  return (
-    <div className={styles.canvasFrame}>
-      <div
-        ref={model.containerRef}
-        className={styles.canvas}
-        role="img"
-        aria-roledescription="gráfico de velas"
-        aria-label={`Gráfico de velas de ${formatSymbol(chart.symbol)}`}
-        aria-describedby={`${ids.help} ${ids.caption}`}
-        tabIndex={0}
-        onKeyDown={model.keyboard.onKeyDown}
-        {...tooltip.handlers}
-      />
-      <ChartTooltip id={tooltip.id} model={tooltip.model} tipRef={tooltip.tipRef} />
-    </div>
-  );
-}
-
-function ChartCaption(props: CanvasViewProps & { readonly id: string }): ReactElement {
-  const { chart, view, model, id } = props;
-  const forecast =
-    view.isLive && model.isLayerOn(CHART_LAYER.FORECAST) ? model.forecastText : undefined;
-  return (
-    <figcaption id={id} className={styles.caption}>
-      {describeChart({ chart, timeZone: model.timeZone, forecast })}
-    </figcaption>
-  );
-}
-
-// A coluna ao lado do gráfico: com a camada "Previsão", a próxima vela de perto (a equipe fica na varanda, acima do gráfico).
-function ChartSide({ runId, chart, model, source }: CanvasViewProps): ReactElement {
-  const { displayMapping, history } = source;
-  const display =
-    displayMapping === undefined
-      ? undefined
-      : { mapping: displayMapping, candles: history.candles };
-  return (
-    <div className={styles.side}>
-      <NextCandlePanel runId={runId} chart={chart} layerData={model.layerData} display={display} />
-    </div>
-  );
-}
-
-function CanvasFooter(props: CanvasViewProps & { readonly ids: DescriptionIds }): ReactElement {
-  const { chart, selection, model, ids } = props;
-  return (
-    <>
-      {chart.clusters === null ? null : (
-        <ClusterButtons
-          clusters={chart.clusters}
-          timeZone={model.timeZone}
-          onZoom={selection.setRange}
-        />
-      )}
-      <ChartCaption {...props} id={ids.caption} />
-      <p id={ids.help} className={styles.visuallyHidden}>
-        {CHART_KEYBOARD_HELP}
-      </p>
-      <p role="status" aria-live="polite" className={styles.visuallyHidden}>
-        {model.keyboard.announcement}
-      </p>
-      <ChartCredit />
     </>
   );
 }
@@ -183,6 +77,7 @@ function CanvasView(props: CanvasViewProps): ReactElement {
 // texto para leitor de tela ficam em HTML por cima e por baixo do canvas.
 export function CandleCanvas(props: CandleCanvasInput): ReactElement {
   const model = useCandleCanvasModel(props);
+  const isTerminal = useIsTerminalChart();
   if (model.hasFailed) {
     const { chart, selection } = props;
     return (
@@ -198,5 +93,6 @@ export function CandleCanvas(props: CandleCanvasInput): ReactElement {
       </BesideTeam>
     );
   }
+  if (isTerminal) return <TerminalCanvasView {...props} model={model} />;
   return <CanvasView {...props} model={model} />;
 }

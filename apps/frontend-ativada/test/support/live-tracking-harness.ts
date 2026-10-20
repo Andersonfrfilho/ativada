@@ -134,9 +134,10 @@ export function liveRoutes(harness: LiveHarness): readonly FakeRoute[] {
   ];
 }
 
-export function openLiveDetail(harness: LiveHarness): RenderedApp {
+// `hash` abre uma aba da simulação ao vivo (`#acompanhamento`, `#decisoes`, `#falta`, `#acertos`); sem ela, "Operações".
+export function openLiveDetail(harness: LiveHarness, hash = ''): RenderedApp {
   return renderApp({
-    path: `/backtests/${LIVE_RUN_ID}`,
+    path: `/backtests/${LIVE_RUN_ID}${hash}`,
     isAuthenticated: true,
     routes: liveRoutes(harness),
   });

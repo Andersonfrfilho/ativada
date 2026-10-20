@@ -7,6 +7,7 @@ import type { ChartSurface, SurfacePriceLevel } from './chart-surface.types.js';
 import { buildPlanLevels } from './plan-levels.js';
 import { buildStrategyLevels } from './strategy-levels.js';
 import { buildStrategyZones, type StrategyZones } from './strategy-zones.js';
+import { usePointedLevel } from './pointed-level.context.js';
 import { useIsTerminalChart } from './terminal-chart.context.js';
 
 export type LevelLines = {
@@ -29,10 +30,12 @@ export function useLevelLines(
   const status = useLiveStatusQuery(runId, isOn).data;
   const isTerminal = useIsTerminalChart();
   const plan = useTradePlanQuery(runId, isOn && isTerminal).data?.plan;
+  const pointed = usePointedLevel().role;
   const levels = useMemo(() => {
     if (!isOn || status === undefined) return [];
-    return buildPlanLevels(isTerminal ? plan : undefined) ?? buildStrategyLevels(status);
-  }, [isOn, status, plan, isTerminal]);
+    const built = buildPlanLevels(isTerminal ? plan : undefined) ?? buildStrategyLevels(status);
+    return built.map((level) => ({ ...level, isPointed: level.role === pointed }));
+  }, [isOn, status, plan, isTerminal, pointed]);
   const zones = useMemo(
     () =>
       isOn && status !== undefined ? buildStrategyZones(status) : { zones: [], reason: undefined },

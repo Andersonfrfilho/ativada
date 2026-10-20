@@ -358,7 +358,7 @@ function detailRoutes(run: () => Record<string, unknown>): readonly FakeRoute[] 
 describe('on the live simulation detail', () => {
   test('queued or running, it shows the state under "Andamento"', async () => {
     renderApp({
-      path: '/backtests/run-live',
+      path: '/backtests/run-live#acompanhamento',
       isAuthenticated: true,
       routes: detailRoutes(() => detail({ status: 'queued' })),
     });
@@ -369,7 +369,7 @@ describe('on the live simulation detail', () => {
   test('stalled shows the banner', async () => {
     const stalledSince = Date.parse('2026-10-13T16:15:00.000Z');
     renderApp({
-      path: '/backtests/run-live',
+      path: '/backtests/run-live#acompanhamento',
       isAuthenticated: true,
       routes: detailRoutes(() => detail({ stalledSince })),
     });

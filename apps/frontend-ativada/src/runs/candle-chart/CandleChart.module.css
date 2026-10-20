@@ -409,3 +409,107 @@
   stroke-width: 3px;
   fill: var(--ink);
 }
+
+/* O gráfico no telão da sala (spec 011, Fase 3): uma faixa fina acima do canvas — vela, zoom em ícones, balão de valores e o
+   menu "Camadas" (lista flutuante). Os rótulos dos ícones seguem para o leitor de tela. */
+.toolLabel {
+  display: inline;
+}
+
+.terminalFigure {
+  gap: 6px;
+}
+
+.terminalBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  min-width: 0;
+}
+
+.terminalBar .toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.terminalBar .row {
+  gap: 4px;
+}
+
+.terminalBar .row button,
+.terminalBar .toolbar > button,
+.terminalBar .layersToggle {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.terminalBar .hint,
+.terminalBar .toolLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.terminalBar .layerBar {
+  position: relative;
+}
+
+.terminalBar .layerBar .layersToggle {
+  display: inline-flex;
+}
+
+.terminalBar .layersClosed {
+  display: none;
+}
+
+.terminalBar .layersOpen {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  right: 0;
+  width: max-content;
+  max-width: min(90vw, 28rem);
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg) 60%, transparent);
+}
+
+.terminalNotices {
+  font-size: 12px;
+}
+
+.terminalNotices:empty {
+  display: none;
+}
+
+@media (max-width: 759px) {
+  .terminalBar .row button,
+  .terminalBar .toolbar > button,
+  .terminalBar .layersToggle {
+    min-height: 44px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .terminalFigure .canvas {
+    height: clamp(320px, calc(100dvh - 480px), 520px);
+  }
+}
+
+/* No telão a descrição textual do gráfico segue só para o leitor de tela. */
+.terminalFigure .caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

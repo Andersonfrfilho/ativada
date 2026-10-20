@@ -71,7 +71,7 @@ function flatBalance(): Record<string, unknown> {
 describe('cartão "Acompanhamento" (T3.1)', () => {
   test('shows balance, result, buy and hold and the verdict with the fixture numbers', async () => {
     const harness = createLiveHarness({ tradeSummary: buildSummaryResponse() });
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#acompanhamento');
     const card = await findLoadedCard();
     expect(await within(card).findByText('1.030,50')).toBeDefined();
     expect(within(card).getByText('começou com 1.000,00')).toBeDefined();
@@ -91,7 +91,7 @@ describe('cartão "Acompanhamento" (T3.1)', () => {
     const harness = createLiveHarness({
       liveStatus: buildLiveStatusResponse({ balance: flatBalance() }),
     });
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#acompanhamento');
     const card = await findLoadedCard();
     expect(await within(card).findByText('= 0,00')).toBeDefined();
     expect(within(card).getByText('igual ao início')).toBeDefined();
@@ -121,7 +121,7 @@ describe('cartão "Acompanhamento" (T3.1)', () => {
         },
       }),
     });
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#acompanhamento');
     const card = await findLoadedCard();
     expect(
       await within(card).findByRole('heading', {
@@ -133,7 +133,7 @@ describe('cartão "Acompanhamento" (T3.1)', () => {
 
   test('a failed refresh keeps the card on screen and only warns how old the data is', async () => {
     const harness = createLiveHarness();
-    const app = openLiveDetail(harness);
+    const app = openLiveDetail(harness, '#acompanhamento');
     const card = await findLoadedCard();
     expect(await within(card).findByText('1.030,50')).toBeDefined();
     harness.isLiveStatusFailing = true;
@@ -159,14 +159,14 @@ describe('cartão "Acompanhamento" (T3.1)', () => {
         }),
       }),
     });
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#acompanhamento');
     const card = await findLoadedCard();
     expect(await within(card).findByText(/Aguardando a primeira vela, que /)).toBeDefined();
     expect(within(card).getByText('Ainda sem vela fechada.')).toBeDefined();
   });
 
   test('the card keeps the notices in a single short note: candle, every hour and play money', async () => {
-    openLiveDetail(createLiveHarness());
+    openLiveDetail(createLiveHarness(), '#acompanhamento');
     const card = await findLoadedCard();
     const notices = await within(card).findByRole('note', { name: 'Avisos sobre a simulação' });
     expect(within(notices).getByText(/o resumo do preço em 1 hora/)).toBeDefined();
@@ -183,7 +183,7 @@ describe('bloco da meta (T3.1)', () => {
     const harness = createLiveHarness({
       liveStatus: buildLiveStatusResponse({ balance: flatBalance(), goal: goalOf() }),
     });
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#falta');
     const region = await screen.findByRole('region', { name: 'Meta: +3% em 7 dias' });
     expect(within(region).getByText('30,00 USDT')).toBeDefined();
     expect(within(region).getByText('(3,00%)')).toBeDefined();
@@ -205,7 +205,7 @@ describe('bloco da meta (T3.1)', () => {
         goal: goalOf({ remainingAmount: '0', remainingRate: '0' }),
       }),
     });
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#falta');
     const region = await screen.findByRole('region', { name: 'Meta: +3% em 7 dias' });
     expect(within(region).getAllByText('No caminho').length).toBeGreaterThan(0);
     expect(within(region).queryByText('Abaixo do ritmo')).toBeNull();
@@ -216,6 +216,7 @@ describe('bloco da meta (T3.1)', () => {
     const balance = { ...flatBalance(), current: '1002.7', result: '2.7', resultRate: '0.0027' };
     openLiveDetail(
       createLiveHarness({ liveStatus: buildLiveStatusResponse({ balance, goal: goalOf() }) }),
+      '#falta',
     );
     const region = await screen.findByRole('region', { name: 'Meta: +3% em 7 dias' });
     expect(within(region).getAllByText('No caminho').length).toBeGreaterThan(0);
@@ -226,6 +227,7 @@ describe('bloco da meta (T3.1)', () => {
     const balance = { ...flatBalance(), observedAt: null };
     openLiveDetail(
       createLiveHarness({ liveStatus: buildLiveStatusResponse({ balance, goal: goalOf() }) }),
+      '#falta',
     );
     const region = await screen.findByRole('region', { name: 'Meta: +3% em 7 dias' });
     expect(within(region).queryByText('Abaixo do ritmo')).toBeNull();
@@ -237,15 +239,15 @@ describe('bloco da meta (T3.1)', () => {
         goal: goalOf({ outcome: 'goal_reached', outcomeAt: LIVE_PERIOD_START + 10 * HOUR }),
       }),
     });
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#falta');
     const region = await screen.findByRole('region', { name: 'Meta: +3% em 7 dias' });
     expect(within(region).getByRole('status').textContent).toBe('Meta alcançada em 01/01 às 06:00');
     expect(within(region).queryByText('Ganho até agora')).toBeNull();
   });
 
   test('without a goal the block is gone', async () => {
-    openLiveDetail(createLiveHarness());
-    await screen.findByRole('region', TRACKING);
+    openLiveDetail(createLiveHarness(), '#falta');
+    await screen.findByRole('region', { name: 'O que falta para comprar agora' });
     expect(screen.queryByRole('region', { name: /^Meta:/ })).toBeNull();
   });
 });
@@ -257,9 +259,11 @@ describe('estados da simulação', () => {
     harness.liveStatus = buildLiveStatusResponse({
       run: buildRunSection({ status: 'cancelled', nextDecisionAt: null }),
     });
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#acompanhamento');
     expect(await screen.findByRole('region', TRACKING)).toBeDefined();
-    expect(await screen.findByRole('region', { name: 'Preço e operações' })).toBeDefined();
+    expect(
+      await screen.findByRole('region', { name: 'Telão: gráfico da simulação' }),
+    ).toBeDefined();
     expect(screen.getByText('Execução cancelada.').getAttribute('role')).toBe('status');
     expect(screen.queryByRole('alert')).toBeNull();
   });

@@ -112,7 +112,7 @@ describe('"O que falta para comprar agora" (T3.3)', () => {
     const harness = createLiveHarness({
       liveStatus: buildLiveStatusResponse({ triggers: triggersOf() }),
     });
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#falta');
     const card = await screen.findByRole('region', { name: 'O que falta para comprar agora' });
     expect(
       within(card).getByRole('img', { name: /Pontuação −2,5; compra a partir de \+2/ }),
@@ -140,7 +140,7 @@ describe('"O que falta para comprar agora" (T3.3)', () => {
         }),
       }),
     });
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#falta');
     const card = await screen.findByRole('region', { name: 'O que falta para vender agora' });
     expect(within(card).getByRole('img', { name: /vende a partir de −2/ })).toBeDefined();
   });
@@ -153,7 +153,7 @@ describe('"O que falta para comprar agora" (T3.3)', () => {
     const harness = createLiveHarness({
       liveStatus: buildLiveStatusResponse({ triggers: { status: 'unavailable', reason, message } }),
     });
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#falta');
     const card = await screen.findByRole('region', { name: 'O que falta para comprar agora' });
     expect(within(card).getByText(message)).toBeDefined();
     expect(within(card).queryByRole('table')).toBeNull();
@@ -168,7 +168,7 @@ describe('linha de pulso', () => {
   test('says running, the last decision and the countdown to the next one', async () => {
     setSystemTime(new Date(FIXTURE_CANDLE_TIME + 1.5 * HOUR));
     const harness = createLiveHarness();
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#falta');
     const pulse = await screen.findByRole('region', { name: 'Simulação rodando agora' });
     expect(within(pulse).getByText('Rodando')).toBeDefined();
     expect(within(pulse).getByText(/Última decisão/)).toBeDefined();
@@ -181,7 +181,7 @@ describe('linha de pulso', () => {
 
   test('past the expected close it says the candle is being processed, not a 00:00 countdown', async () => {
     setSystemTime(new Date(FIXTURE_CANDLE_TIME + 2 * HOUR + 60_000));
-    openLiveDetail(createLiveHarness());
+    openLiveDetail(createLiveHarness(), '#falta');
     const pulse = await screen.findByRole('region', { name: 'Simulação rodando agora' });
     expect(within(pulse).getByText('Processando a vela…')).toBeDefined();
     expect(within(pulse).queryByText(/Próxima às/)).toBeNull();
@@ -209,7 +209,7 @@ describe('linha de pulso', () => {
         run: buildRunSection({ stalledSince: LIVE_PERIOD_START + HOUR }),
       }),
     });
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#falta');
     const pulse = await screen.findByRole('region', { name: 'Simulação parada' });
     expect(within(pulse).getByText('Parada')).toBeDefined();
     expect(within(pulse).queryByText(/Próxima às/)).toBeNull();

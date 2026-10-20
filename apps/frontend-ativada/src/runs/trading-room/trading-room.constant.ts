@@ -13,7 +13,6 @@ export const TRADING_ROOM_TEXT = {
   OPINIONS_TITLE: 'O que cada um acha',
   CALM: 'Calmo',
   CALM_NOTE: 'Congela a cena onde está; a escolha fica lembrada neste navegador.',
-  HINT: 'O gráfico está no telão. A equipe trabalha, toma café, vai ao telão apontar e se reúne quando decide; ninguém fica na frente das velas.',
   LOADING: 'Carregando a sala…',
   MODELS_LABEL: 'Equipes de modelo na sala',
 } as const;

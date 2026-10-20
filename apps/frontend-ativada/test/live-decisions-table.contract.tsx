@@ -85,7 +85,7 @@ describe('tabela "O que a estratégia decidiu" (T3.2)', () => {
       ],
       null,
     );
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#decisoes');
     const card = await screen.findByRole('region', TABLE_CARD);
     const rows = within(card).getAllByRole('row').slice(1);
     expect(rows).toHaveLength(2);
@@ -104,7 +104,7 @@ describe('tabela "O que a estratégia decidiu" (T3.2)', () => {
       [buildDecisionAt(0, { outcome: 'buy_pending', action: 'BUY', message: 'Pediu compra.' })],
       null,
     );
-    openLiveDetail(harness);
+    openLiveDetail(harness, '#decisoes');
     const card = await screen.findByRole('region', TABLE_CARD);
     expect(within(card).getByText('Pediu compra')).toBeDefined();
     expect(within(card).getByText(/^1 decisão mostrada/)).toBeDefined();
@@ -117,6 +117,7 @@ describe('tabela "O que a estratégia decidiu" (T3.2)', () => {
         [buildDecisionAt(0, { outcome: 'exited', message: 'Vendeu no stop (95,50).' })],
         null,
       ),
+      '#decisoes',
     );
     const card = await screen.findByRole('region', TABLE_CARD);
     expect(within(card).getByText('Saiu')).toBeDefined();
@@ -135,7 +136,7 @@ describe('tabela "O que a estratégia decidiu" (T3.2)', () => {
         reading: null,
       },
     ];
-    openLiveDetail(liveWith([buildDecisionAt(0, { votes })], null));
+    openLiveDetail(liveWith([buildDecisionAt(0, { votes })], null), '#decisoes');
     const card = await screen.findByRole('region', TABLE_CARD);
     fireEvent.click(within(card).getByRole('button', { name: 'ver votos' }));
     expect(within(card).getByText('fora (filtro de tendência)')).toBeDefined();
@@ -143,7 +144,7 @@ describe('tabela "O que a estratégia decidiu" (T3.2)', () => {
   });
 
   test('"ver votos" opens the rules by button with aria-expanded and shows the technical detail folded', async () => {
-    openLiveDetail(liveWith([buildDecisionAt(0)], null));
+    openLiveDetail(liveWith([buildDecisionAt(0)], null), '#decisoes');
     const card = await screen.findByRole('region', TABLE_CARD);
     const toggle = within(card).getByRole('button', { name: 'ver votos' });
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
@@ -180,7 +181,7 @@ describe('tabela "O que a estratégia decidiu" (T3.2)', () => {
         reading: null,
       },
     ];
-    openLiveDetail(liveWith([buildDecisionAt(0, { votes })], null));
+    openLiveDetail(liveWith([buildDecisionAt(0, { votes })], null), '#decisoes');
     const card = await screen.findByRole('region', TABLE_CARD);
     fireEvent.click(within(card).getByRole('button', { name: 'ver votos' }));
     expect(within(card).getByText('−1,5 contra')).toBeDefined();
@@ -189,7 +190,7 @@ describe('tabela "O que a estratégia decidiu" (T3.2)', () => {
 
   test('equal hours fold into one line that opens by button', async () => {
     const items = [0, 1, 2, 3, 4].map((hours) => weak(hours));
-    openLiveDetail(liveWith(items, null));
+    openLiveDetail(liveWith(items, null), '#decisoes');
     const card = await screen.findByRole('region', TABLE_CARD);
     expect(within(card).getAllByRole('row')).toHaveLength(3);
     const toggle = within(card).getByRole('button', { name: 'Mostrar 4 horas iguais' });
@@ -216,7 +217,7 @@ describe('tabela "O que a estratégia decidiu" (T3.2)', () => {
     const items = Array.from({ length: 12 }, (_, hours) =>
       buildDecisionAt(hours, { score: String(hours), message: `Motivo ${hours}` }),
     );
-    openLiveDetail(liveWith(items, null));
+    openLiveDetail(liveWith(items, null), '#decisoes');
     const card = await screen.findByRole('region', TABLE_CARD);
     expect(within(card).getAllByRole('row')).toHaveLength(9);
     fireEvent.click(within(card).getByRole('button', { name: 'Ver mais 4 decisões' }));
@@ -231,7 +232,7 @@ describe('tabela "O que a estratégia decidiu" (T3.2)', () => {
       { items: [...newest, buildDecisionAt(2, { score: '3' })], nextCursor: 'page-1' },
       { items: [buildDecisionAt(3, { score: '4' })], nextCursor: null },
     ];
-    const app = openLiveDetail(harness);
+    const app = openLiveDetail(harness, '#decisoes');
     const card = await screen.findByRole('region', TABLE_CARD);
     expect(within(card).getAllByRole('row')).toHaveLength(3);
     fireEvent.click(within(card).getByRole('button', { name: 'Ver decisões anteriores' }));
@@ -247,7 +248,7 @@ describe('tabela "O que a estratégia decidiu" (T3.2)', () => {
 
   test('a stream notice adds the new line on top without reloading the page', async () => {
     const harness = liveWith([buildDecisionAt(1, { score: '1' })], null);
-    const app = openLiveDetail(harness);
+    const app = openLiveDetail(harness, '#decisoes');
     const card = await screen.findByRole('region', TABLE_CARD);
     expect(within(card).getAllByRole('row')).toHaveLength(2);
     harness.liveStatus = buildLiveStatusResponse({

@@ -216,7 +216,7 @@ describe('overview page', () => {
     expect(link.getAttribute('href')).toBe('/backtests/run-1');
     fireEvent.click(link);
     await waitFor(() => expect(app.router.state.location.pathname).toBe('/backtests/run-1'));
-    expect(await screen.findByRole('heading', { name: /Simulação ao vivo/ })).toBeDefined();
+    expect(await screen.findByRole('region', { name: 'Sala de operações' })).toBeDefined();
   });
 
   test('shows the balance, the comparison with buy and hold, and the running state', async () => {

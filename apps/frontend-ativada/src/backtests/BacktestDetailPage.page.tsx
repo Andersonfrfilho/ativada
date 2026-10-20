@@ -7,16 +7,9 @@ import { ApiError } from '../http/api.error.js';
 import { HTTP_STATUS } from '@ativada/environment';
 import controls from '../styles/Controls.module.css';
 import { RunHeader } from '../runs/RunHeader.component.js';
-import {
-  LiveDecisionsSection,
-  LiveSummarySection,
-  LiveTrackingSection,
-} from '../runs/live-tracking/LiveTrackingSection.component.js';
-import { LiveSectionIndex } from '../runs/live-tracking/LiveSectionIndex.component.js';
 import { CarriedTimeframeProvider } from '../runs/candle-chart/CarriedTimeframe.context.js';
-import { AnalystSection } from '../runs/analyst/AnalystSection.component.js';
 import { RunProgressCard } from '../runs/RunProgressCard.component.js';
-import { LiveChartArea } from '../runs/team-room/LiveChartArea.component.js';
+import { LivePaperBody } from '../runs/live-page/LivePaperBody.component.js';
 import { FAILURE_TEXT, RUN_KIND, RUN_STATUS } from '../runs/run.constant.js';
 import runStyles from '../runs/Runs.module.css';
 import { isActiveRun, type RunDetail } from '../runs/run.validation.js';
@@ -32,34 +25,15 @@ function failureMessage(run: RunDetail): string {
   return FAILURE_TEXT[code] ?? `A execução falhou (${code || 'sem código'}).`;
 }
 
-// A simulação ao vivo (qualquer estado, menos falha) abre pela equipe na varanda e pelo gráfico, sempre em tela sem rolar; o
-// cabeçalho, o pulso e o resumo curto vêm logo depois do primeiro quadro e o detalhe fica por último.
-function LivePaperBody({ run }: { readonly run: RunDetail }): ReactElement {
-  const hasChart = run.status === RUN_STATUS.RUNNING || run.status === RUN_STATUS.CANCELLED;
-  return (
-    <>
-      <LiveChartArea
-        runId={run.id}
-        symbol={run.symbol}
-        timeframe={run.timeframe}
-        hasChart={hasChart}
-      >
-        <LiveSectionIndex run={run} />
-        <RunHeader run={run} />
-        {run.status === RUN_STATUS.CANCELLED ? (
-          <p role="status" className={controls.muted}>
-            {failureMessage(run)}
-          </p>
-        ) : null}
-        <LiveSummarySection run={run} />
-        {run.status === RUN_STATUS.COMPLETED ? <CompletedBacktest run={run} /> : null}
-        <AnalystSection runId={run.id} />
-        <LiveDecisionsSection run={run} />
-        <LiveTrackingSection run={run} />
-      </LiveChartArea>
-      {isActiveRun(run) ? <RunProgressCard run={run} /> : null}
-    </>
-  );
+function LiveRunBody({ run }: { readonly run: RunDetail }): ReactElement {
+  const cancelled =
+    run.status === RUN_STATUS.CANCELLED ? (
+      <p role="status" className={controls.muted}>
+        {failureMessage(run)}
+      </p>
+    ) : null;
+  const completed = run.status === RUN_STATUS.COMPLETED ? <CompletedBacktest run={run} /> : null;
+  return <LivePaperBody run={run} completed={completed} cancelled={cancelled} />;
 }
 
 function isLivePaperRun(run: RunDetail): boolean {
@@ -68,7 +42,7 @@ function isLivePaperRun(run: RunDetail): boolean {
 
 function RunBody({ run }: { readonly run: RunDetail }): ReactElement {
   if (isLivePaperRun(run)) {
-    return <LivePaperBody run={run} />;
+    return <LiveRunBody run={run} />;
   }
   // Backtest e walk-forward só mostram operações depois de concluídos.
   if (isActiveRun(run)) return <RunProgressCard run={run} />;

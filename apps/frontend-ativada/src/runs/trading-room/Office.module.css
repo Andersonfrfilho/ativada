@@ -102,9 +102,7 @@
 .plateLine,
 .plateSub,
 .plateWallet {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
   font-family: var(--font-data);
 }
 

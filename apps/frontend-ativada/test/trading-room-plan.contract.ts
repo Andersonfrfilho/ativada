@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { buildPlanLevels } from '../src/runs/candle-chart/plan-levels.js';
 import type { BalconyAgent } from '../src/runs/team-room/balcony/balcony-agents.js';
+import { humanizeReading } from '../src/runs/trading-room/reading-text.js';
 import { buildRoomOpinions, summarize } from '../src/runs/trading-room/room-opinions.js';
 import { tradePlanSchema, type TradePlan } from '../src/runs/trading-room/trade-plan.validation.js';
 import {
@@ -156,5 +157,15 @@ describe('room opinions', () => {
     expect(model?.rows[0]).toEqual({ label: 'Comprar a', value: '99.900,00', tone: 'buy' });
     expect(model?.confidence).toBe(72);
     expect(model?.wallet).toBe('Carteira dela: +5,00%');
+  });
+});
+
+describe('readings for people', () => {
+  test('huge indicator numbers become mi/bi with the typographic minus; small ones keep 2 places', () => {
+    expect(humanizeReading('OBV×EMA 20 ema -961.233.115,7845')).toBe(
+      'OBV×EMA 20 ema −961,2\u00a0mi',
+    );
+    expect(humanizeReading('RSI 54,3456')).toBe('RSI 54,35');
+    expect(humanizeReading('EMA rápida 101.000')).toBe('EMA rápida 101.000');
   });
 });

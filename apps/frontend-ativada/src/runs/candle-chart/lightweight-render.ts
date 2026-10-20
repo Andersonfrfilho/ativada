@@ -164,8 +164,8 @@ export const renderPriceLevels: Render = (ctx, theme) => {
       price: level.price,
       title: level.title,
       color: buildLevelLineColors(theme)[level.role],
-      lineWidth: 2,
-      lineStyle: ctx.kit.LineStyle.Dashed,
+      lineWidth: level.isPointed === true ? 4 : 2,
+      lineStyle: level.isPointed === true ? ctx.kit.LineStyle.Solid : ctx.kit.LineStyle.Dashed,
       axisLabelVisible: true,
     }),
   );

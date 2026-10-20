@@ -11,7 +11,7 @@ import { LivePulseLine } from './LivePulseLine.component.js';
 import { LiveSummaryStrip } from './LiveSummaryStrip.component.js';
 import { LiveSectionPlaceholder } from './LiveSectionPlaceholder.component.js';
 import { LiveTrackingCard, TRACKING_ANCHOR } from './LiveTrackingCard.component.js';
-import { DECISIONS_ANCHOR } from './LiveTradesState.component.js';
+import { DECISIONS_ANCHOR, TRIGGERS_ANCHOR } from './LiveTradesState.component.js';
 import styles from './LiveTracking.module.css';
 import { useLiveStatusQuery } from './live-status.query.js';
 import { NextTriggersBlock } from './NextTriggersBlock.component.js';
@@ -47,7 +47,7 @@ export function LiveSummarySection({ run }: LiveTrackingSectionProps): ReactElem
   );
 }
 
-// Cartão "Acompanhamento", o que falta para comprar e a meta: o detalhe, depois do gráfico e das decisões.
+// Cartão "Acompanhamento" (a aba de mesmo nome).
 export function LiveTrackingSection({ run }: LiveTrackingSectionProps): ReactElement {
   const query = useLiveStatusQuery(run.id, true);
   const status = query.data;
@@ -61,14 +61,23 @@ export function LiveTrackingSection({ run }: LiveTrackingSectionProps): ReactEle
       />
     );
   }
+  return <LiveTrackingCard run={run} status={status} />;
+}
+
+// "O que falta para comprar agora" e a meta: uma aba própria na simulação ao vivo.
+export function LiveTriggersSection({ run }: LiveTrackingSectionProps): ReactElement {
+  const query = useLiveStatusQuery(run.id, true);
+  const status = query.data;
+  if (status === undefined) {
+    return (
+      <LiveSectionPlaceholder id={TRIGGERS_ANCHOR} title="O que falta" icon="flag" query={query} />
+    );
+  }
   return (
-    <>
-      <LiveTrackingCard run={run} status={status} />
-      <div className={status.goal === null ? styles.stack : styles.grid}>
-        <NextTriggersBlock status={status} />
-        <LiveGoalBlock status={status} goalId={run.goalId} />
-      </div>
-    </>
+    <div className={status.goal === null ? styles.stack : styles.grid}>
+      <NextTriggersBlock status={status} />
+      <LiveGoalBlock status={status} goalId={run.goalId} />
+    </div>
   );
 }
 

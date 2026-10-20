@@ -94,8 +94,7 @@ describe('the live detail page', () => {
       within(terminal).getByRole('list', { name: 'Variação do preço por período' }),
     ).toBeTruthy();
     expect(screen.getAllByRole('list', { name: 'Variação do preço por período' })).toHaveLength(1);
-    expect(
-      within(terminal).getByText('Simulação com dinheiro fictício · Tendência, não promessa'),
-    ).toBeTruthy();
+    const room = screen.getByRole('region', { name: 'Sala de operações' });
+    expect(room.textContent).toContain('Simulação com dinheiro fictício · Tendência, não promessa');
   });
 });

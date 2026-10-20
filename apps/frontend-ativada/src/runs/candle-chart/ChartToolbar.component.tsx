@@ -55,7 +55,7 @@ function ZoomGroup({ surface, onGoToStart }: ZoomGroupProps): ReactElement {
           onClick={onGoToStart}
         >
           <span aria-hidden="true">⇤</span>
-          Início
+          <span className={styles.toolLabel}>Início</span>
         </button>
       )}
       {ZOOM_BUTTONS.map((button) => (
@@ -64,10 +64,11 @@ function ZoomGroup({ surface, onGoToStart }: ZoomGroupProps): ReactElement {
           type="button"
           className={controls.button}
           disabled={surface === undefined}
+          title={button.label}
           onClick={() => surface !== undefined && button.act(surface)}
         >
           <span aria-hidden="true">{button.symbol}</span>
-          {button.label}
+          <span className={styles.toolLabel}>{button.label}</span>
         </button>
       ))}
     </div>
@@ -128,10 +129,13 @@ export function ChartToolbar(props: ChartToolbarProps): ReactElement {
           type="button"
           className={`${controls.button} ${isTooltipOn === true ? styles.pressed : ''}`}
           aria-pressed={isTooltipOn === true}
+          title="Balão de valores"
           onClick={onToggleTooltip}
         >
           <Icon name="info" size={16} />
-          Balão de valores: {isTooltipOn === true ? 'ligado' : 'desligado'}
+          <span className={styles.toolLabel}>
+            Balão de valores: {isTooltipOn === true ? 'ligado' : 'desligado'}
+          </span>
         </button>
       )}
     </div>

@@ -13,6 +13,7 @@ import { TradeNotice } from './TradeNotice.component.js';
 import { TradeSummary } from './TradeSummary.component.js';
 import { TradesTable } from './TradesTable.component.js';
 import type { Trade } from './run.validation.js';
+import { useIsTerminalChart } from './candle-chart/terminal-chart.context.js';
 import { useChartView, type ChartView } from './useChartView.hook.js';
 import { useTradeSelection, type TradeSelection } from './useTradeSelection.hook.js';
 
@@ -24,14 +25,19 @@ export type TradeChartCardProps = {
   readonly hasProjections?: boolean;
 };
 
-type ChartDetailsProps = {
+export type ChartDetailsProps = {
   readonly runId: string;
   readonly hasSummary: boolean;
   readonly view: ChartView;
   readonly selection: TradeSelection;
 };
 
-function ChartDetails({ runId, hasSummary, view, selection }: ChartDetailsProps): ReactElement {
+export function ChartDetails({
+  runId,
+  hasSummary,
+  view,
+  selection,
+}: ChartDetailsProps): ReactElement {
   return (
     <>
       <TradeNotice isLive={view.isLive} />
@@ -57,9 +63,12 @@ export function TradeChartCard({
   const timeZone = useUserTimeZone();
   const selection = useTradeSelection();
   const view = useChartView(runId, selection.range);
+  const isTerminal = useIsTerminalChart();
   function handleSelectTrade(trade: Trade): void {
     selection.select(planTradeSelection({ trade, range: view.range, extent: view.extent }));
   }
+  // No telão da sala só o gráfico: o resto vive na aba "Operações" (`TradeOperations`).
+  if (isTerminal) return <TradeChartBody runId={runId} view={view} selection={selection} />;
   const details = (
     <ChartDetails runId={runId} hasSummary={hasSummary} view={view} selection={selection} />
   );

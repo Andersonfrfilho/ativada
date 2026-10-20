@@ -74,6 +74,8 @@ export type SurfacePriceLevel = {
   readonly role: 'entry' | 'target' | 'stop' | 'trigger';
   readonly price: number;
   readonly title: string;
+  // O agente da sala aponta este nível agora: linha cheia e mais grossa.
+  readonly isPointed?: boolean | undefined;
 };
 
 // Faixa de preço sombreada (compra, venda ou proteção): da mínima à máxima, na largura do gráfico, com o texto pronto.

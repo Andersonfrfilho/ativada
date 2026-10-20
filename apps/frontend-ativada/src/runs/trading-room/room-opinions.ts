@@ -10,6 +10,7 @@ import {
   teamPlanRows,
   type OpinionRow,
 } from './room-plan-rows.js';
+import { humanizeReading } from './reading-text.js';
 import type { TeamPlan, TradePlan } from './trade-plan.validation.js';
 
 export type OpinionKind = 'rule' | 'leader' | 'auditor' | 'model';
@@ -54,7 +55,7 @@ function baseOf(agent: BalconyAgent): Omit<RoomOpinion, 'rows' | 'note'> {
     kind: kindOf(agent),
     intent: agent.vote ?? NO_READING,
     isOut: agent.kind === 'rule' && agent.tone === 'quiet',
-    line: agent.line,
+    line: agent.line === undefined ? undefined : humanizeReading(agent.line),
     confidence: null,
     wallet: undefined,
   };
@@ -111,5 +112,6 @@ export function summarize(opinion: RoomOpinion): readonly [string, string] {
     return [`${first.value} → ${second.value}`, stop === undefined ? '' : `prot. ${stop.value}`];
   }
   const head = opinion.line ?? opinion.note ?? '';
-  return [head, opinion.isOut ? OUT_OF_SCORE : (opinion.note ?? '')];
+  const sub = opinion.kind === 'rule' ? '' : (opinion.note ?? '');
+  return [head, opinion.isOut ? OUT_OF_SCORE : sub];
 }

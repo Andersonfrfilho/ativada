@@ -80,7 +80,7 @@
 
 .rows {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
   gap: 4px var(--space-3);
   margin: 0;
   padding: 0;
@@ -146,7 +146,7 @@
 
 .bigNumbers {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(9.5rem, 100%), 1fr));
   gap: var(--space-2);
   margin: 0;
   padding: 0;
@@ -193,4 +193,35 @@
   margin: 0;
   font-size: var(--text-xs);
   color: var(--ink-2);
+}
+
+/* Embaixo do telão a decisão fica numa faixa (a partir de 760 px): rótulo e selo à esquerda, os números ao lado. */
+@media (min-width: 760px) {
+  .compact {
+    grid-template-columns: minmax(11rem, auto) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .compact .decisionHead {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .compact .bigNumbers {
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  }
+
+  .compact .bigNumber {
+    padding: 4px 10px;
+  }
+
+  .compact .bigNumber strong {
+    font-size: var(--text-md);
+  }
+
+  .compact .note {
+    grid-column: 1 / -1;
+  }
 }

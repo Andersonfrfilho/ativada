@@ -101,7 +101,7 @@ describe('a sala de operações não esconde o gráfico', () => {
     harness.isLiveStatusFailing = isFailing;
     openLiveDetail(harness);
     const room = await screen.findByRole('region', { name: 'Sala de operações' });
-    const chart = await screen.findByRole('region', { name: 'Preço e operações' });
+    const chart = await screen.findByRole('region', { name: 'Telão: gráfico da simulação' });
     expect(room.contains(chart)).toBe(true);
   });
 });

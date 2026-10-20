@@ -17,20 +17,18 @@
 
 .title {
   margin: 0;
-  font: 700 var(--text-xl) / 1.2 var(--font-display);
+  font: 700 var(--text-lg) / 1.2 var(--font-display);
 }
 
 .hint {
-  flex-basis: 100%;
-  order: 3;
+  flex: 1 1 20rem;
   margin: 0;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   color: var(--ink-2);
 }
 
 .calm {
   min-height: 44px;
-  margin-left: auto;
   padding: 6px 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
@@ -50,7 +48,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    'ticker'
+    'head'
     'screen'
     'right'
     'left';
@@ -63,11 +61,8 @@
 
 .screen {
   grid-area: screen;
-  min-width: 0;
-}
-
-.ticker {
-  grid-area: ticker;
+  display: grid;
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -75,7 +70,7 @@
 .right {
   display: grid;
   align-content: start;
-  gap: var(--space-3);
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -85,6 +80,12 @@
 
 .right {
   grid-area: right;
+}
+
+/* A página da simulação ao vivo fica mais larga (a cena do preview tem 1440 px): o telão precisa de espaço para o gráfico
+   e a previsão lado a lado. */
+:global(:root:has([data-wide-page='true'])) {
+  --page-width: 1480px;
 }
 
 .strip {
@@ -120,9 +121,10 @@
 }
 
 .decisionBar {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-control);
-  background: var(--surface-2);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--room-plate-line);
 }
 
 .opinions {
@@ -194,16 +196,19 @@
   .wall {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
-      'ticker ticker'
+      'head head'
       'screen screen'
       'left right';
   }
 }
 
-@media (min-width: 1024px) {
-  .left,
-  .right {
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+@media (min-width: 1100px) {
+  .wall {
+    grid-template-columns: minmax(12.5rem, 15rem) minmax(0, 1fr) minmax(12.5rem, 15rem);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'head screen right'
+      'left screen right';
   }
 }
 
@@ -223,4 +228,18 @@
   color: var(--accent);
   font: 600 var(--text-sm) / 1.2 var(--font-body);
   cursor: pointer;
+}
+
+.roomHead {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.roomTitle {
+  margin: 0;
+  font: 700 var(--text-md) / 1.2 var(--font-display);
+  color: var(--ink);
 }

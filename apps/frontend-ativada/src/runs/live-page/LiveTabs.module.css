@@ -1,0 +1,64 @@
+/* Copyright (c) 2026 Ada Technology. All rights reserved. */
+.tabs {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--line);
+}
+
+.tab {
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--ink-2);
+  font: 600 var(--text-md) / 1.2 var(--font-body);
+  cursor: pointer;
+}
+
+.tab[aria-selected='true'] {
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+}
+
+.panel {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.topLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.topLine > * {
+  margin: 0;
+}
+
+.balance {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.balance strong {
+  color: var(--ink);
+}
+
+.liveChip {
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--buy-soft);
+  color: var(--buy);
+  font-weight: 700;
+}
