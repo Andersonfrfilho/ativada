@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
+  type DisplayRetentionDays,
   isDisplayTimeframe,
   MARKET_CANDLE_DURATION_MILLISECONDS,
   type MarketCandleTimeframe,
@@ -8,7 +9,7 @@ import {
 const MILLISECONDS_PER_DAY = 86_400_000;
 
 export type DisplayRetention = {
-  readonly days: number;
+  readonly days: DisplayRetentionDays;
   readonly now: () => number;
 };
 
@@ -21,6 +22,6 @@ export function readRetentionMeta(
 ): CandleResponseMeta | undefined {
   if (retention === undefined || !isDisplayTimeframe(timeframe)) return undefined;
   const duration = MARKET_CANDLE_DURATION_MILLISECONDS[timeframe];
-  const start = retention.now() - retention.days * MILLISECONDS_PER_DAY;
+  const start = retention.now() - retention.days[timeframe] * MILLISECONDS_PER_DAY;
   return { retentionStart: Math.ceil(start / duration) * duration };
 }

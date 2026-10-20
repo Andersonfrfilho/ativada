@@ -261,7 +261,10 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
       displayRetention:
         options.displayRetentionDays === undefined
           ? undefined
-          : { days: options.displayRetentionDays, now: () => clock.now },
+          : {
+              days: { '1m': options.displayRetentionDays, '3m': options.displayRetentionDays },
+              now: () => clock.now,
+            },
       listCandles: app.candlesUseCase.createListCandlesUseCase({
         candles: candles.repository,
         exchange: EXCHANGE,

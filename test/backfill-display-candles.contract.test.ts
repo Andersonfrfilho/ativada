@@ -14,6 +14,8 @@ import { readEnvironmentFile } from './fixtures/environment-file.fixture.js';
 const THREE_MINUTES = 180_000;
 const DAY = 86_400_000;
 const RETENTION_DAYS = 90;
+const ONE_MINUTE = 60_000;
+const ONE_MINUTE_RETENTION_DAYS = 30;
 const MAX_KLINES_PER_REQUEST = 1_000;
 
 function expectedCandleCount(): number {
@@ -38,6 +40,18 @@ describe('backfill window in days (display candles)', () => {
     expect(window.from - (BACKFILL_NOW - RETENTION_DAYS * DAY)).toBeLessThan(THREE_MINUTES);
     expect(window.to).toBeLessThanOrEqual(BACKFILL_NOW);
     expect(window.to + THREE_MINUTES - 1).toBeGreaterThanOrEqual(BACKFILL_NOW);
+  });
+
+  test('30 days back on the 1m grid, to the last closed candle', () => {
+    const window = computeBackfillWindow({
+      now: BACKFILL_NOW,
+      days: ONE_MINUTE_RETENTION_DAYS,
+      timeframe: '1m',
+    });
+    expect(window.from % ONE_MINUTE).toBe(0);
+    expect(window.to % ONE_MINUTE).toBe(0);
+    expect(window.from - (BACKFILL_NOW - ONE_MINUTE_RETENTION_DAYS * DAY)).toBeLessThan(ONE_MINUTE);
+    expect(window.to + ONE_MINUTE - 1).toBeGreaterThanOrEqual(BACKFILL_NOW);
   });
 
   test('days win over years when both are given', () => {
@@ -65,6 +79,27 @@ describe('backfill-display-candles', () => {
     expect(harness.grid.calls).toHaveLength(callsAfterFirst);
   });
 
+  test('stores 30 days of 1m candles in pages of 1.000 and a second run asks for nothing', async () => {
+    const harness = createBackfillHarness({
+      timeframes: ['1m'],
+      days: ONE_MINUTE_RETENTION_DAYS,
+      symbols: ['BTCUSDT'],
+    });
+    const first = await harness.run();
+    const window = computeBackfillWindow({
+      now: BACKFILL_NOW,
+      days: ONE_MINUTE_RETENTION_DAYS,
+      timeframe: '1m',
+    });
+    const total = (window.to - window.from) / ONE_MINUTE;
+    expect(first.inserted).toBe(total);
+    expect(harness.repository.stored().every((candle) => candle.timeframe === '1m')).toBe(true);
+    expect(harness.grid.calls).toHaveLength(Math.ceil(total / MAX_KLINES_PER_REQUEST));
+    const callsAfterFirst = harness.grid.calls.length;
+    expect((await harness.run()).inserted).toBe(0);
+    expect(harness.grid.calls).toHaveLength(callsAfterFirst);
+  });
+
   test('a 418 stops the run at once, before any further pair', async () => {
     const harness = createBackfillHarness({
       timeframes: ['3m'],
@@ -84,19 +119,22 @@ describe('backfill-display-candles', () => {
 
 describe('purge-display-candles', () => {
   test('asks the repository for the cutoff of the retention, exclusive, and reports the count', async () => {
-    const received: number[] = [];
+    const received: { openedBefore: number; timeframes: unknown }[] = [];
     const task = createPurgeDisplayCandlesTask({
       repository: {
-        purgeDisplayCandles: ({ openedBefore }) => {
-          received.push(openedBefore);
-          return Promise.resolve(42);
+        purgeDisplayCandles: ({ openedBefore, timeframes }) => {
+          received.push({ openedBefore, timeframes });
+          return Promise.resolve(21);
         },
       },
-      retentionDays: RETENTION_DAYS,
+      retentionDays: { '1m': ONE_MINUTE_RETENTION_DAYS, '3m': RETENTION_DAYS },
       now: () => BACKFILL_NOW,
     });
     const summary = await task();
-    expect(received).toStrictEqual([BACKFILL_NOW - RETENTION_DAYS * DAY]);
+    expect(received).toStrictEqual([
+      { openedBefore: BACKFILL_NOW - ONE_MINUTE_RETENTION_DAYS * DAY, timeframes: ['1m'] },
+      { openedBefore: BACKFILL_NOW - RETENTION_DAYS * DAY, timeframes: ['3m'] },
+    ]);
     expect(summary).toStrictEqual({ deleted: 42, failures: 0 });
   });
 });
@@ -109,6 +147,7 @@ describe('cron environment for display candles', () => {
     for (const name of [
       'MARKET_DISPLAY_TIMEFRAMES',
       'CANDLE_DISPLAY_RETENTION_DAYS',
+      'CANDLE_DISPLAY_1M_RETENTION_DAYS',
       'CRON_TASKS',
     ]) {
       delete base[name];
@@ -119,6 +158,20 @@ describe('cron environment for display candles', () => {
   test('nothing is stored by default and the retention is 90 days', async () => {
     const environment = parseEnvironment(environmentSchema, await buildSource());
     expect(environment.MARKET_DISPLAY_TIMEFRAMES).toStrictEqual([]);
+    expect(environment.CANDLE_DISPLAY_RETENTION_DAYS).toBe(90);
+    expect(environment.CANDLE_DISPLAY_1M_RETENTION_DAYS).toBe(30);
+  });
+
+  test('reads 1m with its own retention, apart from the 3m one', async () => {
+    const environment = parseEnvironment(
+      environmentSchema,
+      await buildSource({
+        MARKET_DISPLAY_TIMEFRAMES: '1m,3m',
+        CANDLE_DISPLAY_1M_RETENTION_DAYS: '14',
+      }),
+    );
+    expect(environment.MARKET_DISPLAY_TIMEFRAMES).toStrictEqual(['1m', '3m']);
+    expect(environment.CANDLE_DISPLAY_1M_RETENTION_DAYS).toBe(14);
     expect(environment.CANDLE_DISPLAY_RETENTION_DAYS).toBe(90);
   });
 
@@ -140,11 +193,13 @@ describe('cron environment for display candles', () => {
   });
 
   test.each([
-    ['MARKET_DISPLAY_TIMEFRAMES', '1m'],
+    ['MARKET_DISPLAY_TIMEFRAMES', '5m'],
     ['MARKET_DISPLAY_TIMEFRAMES', '15m'],
     ['CANDLE_DISPLAY_RETENTION_DAYS', '6'],
     ['CANDLE_DISPLAY_RETENTION_DAYS', '366'],
     ['CANDLE_DISPLAY_RETENTION_DAYS', 'muito'],
+    ['CANDLE_DISPLAY_1M_RETENTION_DAYS', '0'],
+    ['CANDLE_DISPLAY_1M_RETENTION_DAYS', '91'],
   ])('refuses %s=%s', async (name, value) => {
     const source = await buildSource({ [name]: value });
     expect(() => parseEnvironment(environmentSchema, source)).toThrow(name);

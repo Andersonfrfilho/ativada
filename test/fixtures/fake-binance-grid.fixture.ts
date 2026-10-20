@@ -3,6 +3,7 @@ import type { FetchImplementation } from '../../packages/market-data-crypto/src/
 import { buildRawKline } from './fake-binance.fixture.js';
 
 const DURATION_BY_INTERVAL: Readonly<Record<string, number>> = {
+  '1m': 60_000,
   '3m': 180_000,
   '15m': 900_000,
   '1h': 3_600_000,

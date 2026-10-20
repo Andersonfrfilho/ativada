@@ -131,3 +131,30 @@ describe('worker: display candles (3m) from the stream', () => {
     expect(pipeline.server.restRequests.some((request) => request.interval === '3m')).toBe(true);
   });
 });
+
+const ONE_MINUTE = 60_000;
+
+describe('worker: display candles (1m) from the stream', () => {
+  test('subscribes to kline_1m and stores a closed 1m candle, never waking the simulation', async () => {
+    let wakeUps = 0;
+    pipeline = startPipeline({
+      displayTimeframes: ['1m'],
+      onCandleStored: () => void (wakeUps += 1),
+    });
+    await waitFor(() => pipeline.finishedRecoveries() === 1, 'first recovery finished');
+    expect(pipeline.server.requestedStreams().join(',')).toContain('btcusdt@kline_1m');
+    pipeline.server.sendEvent({
+      symbol: SYMBOL,
+      timeframe: '1m',
+      openTime: PIPELINE_BASE,
+      isClosed: true,
+    });
+    await waitFor(
+      () => pipeline.repository.stored().some((candle) => candle.timeframe === '1m'),
+      '1m candle stored',
+    );
+    const stored = pipeline.repository.stored().find((candle) => candle.timeframe === '1m');
+    expect(stored?.closeTime).toBe(PIPELINE_BASE + ONE_MINUTE - 1);
+    expect(wakeUps).toBe(0);
+  });
+});

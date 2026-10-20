@@ -8,6 +8,7 @@ import {
   MODEL_TEAM_RETENTION_DAYS,
 } from '@ativada/database';
 import {
+  buildDisplayRetentionDays,
   createFearGreedClient,
   createMarketDataClient,
   createServerClock,
@@ -21,7 +22,11 @@ import {
 import { createReconcileBlockedAccountsTask } from './accounts/reconcile-blocked-accounts.task.js';
 import { createExpireAuditEventsTask } from './audit/expire-audit-events.task.js';
 import { TASK_NAME } from './cron.constant.js';
-import { createBackfillCandlesTask } from './market/backfill-candles.task.js';
+import {
+  createBackfillCandlesTask,
+  type BackfillCandlesSummary,
+  type BackfillCandlesTask,
+} from './market/backfill-candles.task.js';
 import { BACKFILL_LOG } from './market/market.constant.js';
 import { createPurgeDisplayCandlesTask } from './market/purge-display-candles.task.js';
 import { createExpireModelTeamReportsTask } from './model-teams/expire-model-team-reports.task.js';
@@ -57,23 +62,40 @@ function createBackfillDisplayTask(
   serverClock: ServerClock,
 ): CronTask {
   const { environment, database, logger } = params;
-  return {
-    name: TASK_NAME.BACKFILL_DISPLAY_CANDLES,
-    run: createBackfillCandlesTask({
+  const retentionDays = buildDisplayRetentionDays(environment);
+  const client = createMarketDataClient({
+    baseUrl: environment.BINANCE_BASE_URL,
+    clock: serverClock,
+  });
+  // Uma tarefa por vela de exibição: cada uma tem a sua janela de retenção.
+  const tasks = environment.MARKET_DISPLAY_TIMEFRAMES.map((timeframe) =>
+    createBackfillCandlesTask({
       repository: createCandleRepository(database),
-      client: createMarketDataClient({
-        baseUrl: environment.BINANCE_BASE_URL,
-        clock: serverClock,
-      }),
+      client,
       logger,
       now: serverClock.now,
       refreshClock: serverClock.refresh,
       exchange: environment.MARKET_EXCHANGE,
       symbols: environment.MARKET_SYMBOLS,
-      timeframes: environment.MARKET_DISPLAY_TIMEFRAMES,
-      days: environment.CANDLE_DISPLAY_RETENTION_DAYS,
+      timeframes: [timeframe],
+      days: retentionDays[timeframe],
     }),
-  };
+  );
+  return { name: TASK_NAME.BACKFILL_DISPLAY_CANDLES, run: () => runInSequence(tasks) };
+}
+
+async function runInSequence(
+  tasks: readonly BackfillCandlesTask[],
+): Promise<BackfillCandlesSummary> {
+  const total = { pairs: 0, inserted: 0, unfillable: 0, failures: 0 };
+  for (const task of tasks) {
+    const summary = await task();
+    total.pairs += summary.pairs;
+    total.inserted += summary.inserted;
+    total.unfillable += summary.unfillable;
+    total.failures += summary.failures;
+  }
+  return total;
 }
 
 function createPurgeDisplayTask(params: CreatePurgeTaskParams): CronTask {
@@ -82,7 +104,7 @@ function createPurgeDisplayTask(params: CreatePurgeTaskParams): CronTask {
     name: TASK_NAME.PURGE_DISPLAY_CANDLES,
     run: createPurgeDisplayCandlesTask({
       repository: createCandleRepository(database),
-      retentionDays: environment.CANDLE_DISPLAY_RETENTION_DAYS,
+      retentionDays: buildDisplayRetentionDays(environment),
       now: () => Date.now(),
     }),
   };

@@ -98,6 +98,10 @@ describe('display timeframes never become run timeframes', () => {
     expect(marketEnvironmentShape.MARKET_DISPLAY_TIMEFRAMES.parse(undefined)).toStrictEqual([]);
     expect(marketEnvironmentShape.MARKET_DISPLAY_TIMEFRAMES.parse('')).toStrictEqual([]);
     expect(marketEnvironmentShape.MARKET_DISPLAY_TIMEFRAMES.parse('3m')).toStrictEqual(['3m']);
+    expect(marketEnvironmentShape.MARKET_DISPLAY_TIMEFRAMES.parse('1m,3m')).toStrictEqual([
+      '1m',
+      '3m',
+    ]);
   });
 });
 
@@ -134,9 +138,13 @@ describe('the run request schema', () => {
   };
 
   test('refuses a display timeframe even when someone enabled it by mistake', () => {
-    const schema = createRunRequestSchema({ symbols: ['BTCUSDT'], timeframes: ['15m', '3m'] });
+    const schema = createRunRequestSchema({
+      symbols: ['BTCUSDT'],
+      timeframes: ['15m', '1m', '3m'],
+    });
     expect(schema.safeParse({ ...body, timeframe: '15m' }).success).toBe(true);
     expect(schema.safeParse({ ...body, timeframe: '3m' }).success).toBe(false);
+    expect(schema.safeParse({ ...body, timeframe: '1m' }).success).toBe(false);
   });
 });
 
@@ -160,12 +168,16 @@ describe('POST /v1/runs refuses display timeframes', () => {
     await harness.stop();
   });
 
-  test.each(['backtest', 'live_paper'])('%s with 3m is a 400 on timeframe', async (kind) => {
+  test.each(
+    ['backtest', 'live_paper'].flatMap((kind) =>
+      ['1m', '3m'].map((frame) => [kind, frame] as const),
+    ),
+  )('%s with %s is a 400 on timeframe', async (kind, frame) => {
     const body = {
       strategyVersionId: seeded.versionId,
       kind,
       symbol: 'BTCUSDT',
-      timeframe: '3m',
+      timeframe: frame,
       ...(kind === 'backtest'
         ? { periodStart: Date.UTC(2026, 0, 1), periodEnd: Date.UTC(2026, 0, 2) }
         : {}),

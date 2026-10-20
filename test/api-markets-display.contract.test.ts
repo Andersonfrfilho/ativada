@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { readRetentionMeta } from '../apps/api-ativada/src/markets/display-retention.js';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
 import type { CandleRecord } from '../packages/database/src/index.js';
@@ -127,5 +128,26 @@ describe('a deployment without display timeframes', () => {
     } finally {
       await plain.stop();
     }
+  });
+});
+
+describe('retention start per display timeframe', () => {
+  const RETENTION_NOW = Date.UTC(2026, 5, 1, 12, 0, 30);
+  const DAY_MILLISECONDS = 86_400_000;
+  const retention = { days: { '1m': 30, '3m': 90 }, now: (): number => RETENTION_NOW };
+
+  test('1m uses its own 30 days on the 1 min grid, 3m keeps its 90', (): void => {
+    const oneMinute = readRetentionMeta('1m', retention);
+    const threeMinutes = readRetentionMeta('3m', retention);
+    expect(oneMinute?.retentionStart).toBe(
+      Math.ceil((RETENTION_NOW - 30 * DAY_MILLISECONDS) / 60_000) * 60_000,
+    );
+    expect(threeMinutes?.retentionStart).toBe(
+      Math.ceil((RETENTION_NOW - 90 * DAY_MILLISECONDS) / 180_000) * 180_000,
+    );
+  });
+
+  test('execution candles have no retention start', () => {
+    expect(readRetentionMeta('15m', retention)).toBeUndefined();
   });
 });

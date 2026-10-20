@@ -40,7 +40,7 @@ function silentLogger(): Logger {
 // O pipeline de produção inteiro: ticker real -> agregação -> publicação -> assinante, contra uma Binance falsa.
 function startPipeline(
   isKlineEnabled = false,
-  displayTimeframes: readonly '3m'[] = [],
+  displayTimeframes: readonly ('1m' | '3m')[] = [],
 ): {
   readonly received: Received[];
   readonly subscriber: FakeStreamSocket;
@@ -146,6 +146,20 @@ describe('forming candle through the same pipeline', () => {
     await Bun.sleep(1_300);
     const candles = received.filter((item) => item.message['type'] === 'candle');
     expect(candles.map((item) => item.message['timeframe']).sort()).toStrictEqual(['1h', '3m']);
+  });
+
+  test('1m is subscribed as kline_1m next to the execution ones and published as a candle', async () => {
+    const { received } = startPipeline(true, ['1m']);
+    await waitConnected();
+    expect(server.requestedStreams()).toStrictEqual([
+      'btcusdt@miniTicker/ethusdt@miniTicker/btcusdt@kline_1h/btcusdt@kline_1m/ethusdt@kline_1h/ethusdt@kline_1m',
+    ]);
+    server.sendEvent({ symbol: 'BTCUSDT', timeframe: '1m', openTime: OPEN_TIME, isClosed: false });
+    await waitFor(
+      () => received.some((item) => item.message['timeframe'] === '1m'),
+      'vela de 1 min publicada',
+      4_000,
+    );
   });
 
   test('a display timeframe alone never turns the kline subscription on', async () => {
