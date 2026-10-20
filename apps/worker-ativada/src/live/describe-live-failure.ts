@@ -1,5 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { isForeignKeyViolation, readPostgresErrorCode } from '@ativada/database';
+import {
+  isDatabaseConnectionFailure,
+  isForeignKeyViolation,
+  readPostgresErrorCode,
+} from '@ativada/database';
 import { PositionUntrackedError } from '@ativada/run-recording';
 import {
   EngineInputError,
@@ -26,10 +30,31 @@ const TRANSIENT_ERROR_CODES: readonly string[] = [
 ];
 const TRANSIENT_ERROR_PREFIXES: readonly string[] = ['ERR_POSTGRES', 'ERR_SQL'];
 
+const MAX_CAUSE_DEPTH = 4;
+
 function readErrorCode(error: unknown): string | undefined {
   if (typeof error !== 'object' || error === null) return undefined;
   const code: unknown = Object.getOwnPropertyDescriptor(error, 'code')?.value;
   return typeof code === 'string' ? code : undefined;
+}
+
+function isTransientCode(code: string): boolean {
+  return (
+    TRANSIENT_ERROR_CODES.includes(code) ||
+    TRANSIENT_ERROR_PREFIXES.some((prefix) => code.startsWith(prefix))
+  );
+}
+
+// O Drizzle embrulha o erro do driver (e o do porteiro) em `cause`: o código pode estar em qualquer nível da cadeia.
+function hasTransientCodeInChain(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth += 1) {
+    const code = readErrorCode(current);
+    if (code !== undefined && isTransientCode(code)) return true;
+    if (typeof current !== 'object' || current === null) return false;
+    current = Object.getOwnPropertyDescriptor(current, 'cause')?.value;
+  }
+  return false;
 }
 
 // A execução não falha por causa do banco ou da rede: o checkpoint garante que a próxima ronda retoma de onde parou.
@@ -38,12 +63,7 @@ export function isTransientFailure(error: unknown): boolean {
   if (sqlState !== undefined) {
     return !DETERMINISTIC_SQLSTATE_CLASSES.includes(sqlState.slice(0, SQLSTATE_CLASS_LENGTH));
   }
-  const code = readErrorCode(error);
-  if (code === undefined) return false;
-  return (
-    TRANSIENT_ERROR_CODES.includes(code) ||
-    TRANSIENT_ERROR_PREFIXES.some((prefix) => code.startsWith(prefix))
-  );
+  return isDatabaseConnectionFailure(error) || hasTransientCodeInChain(error);
 }
 
 // A exclusão da conta apagou a execução (ou o dono) no meio do passo: a execução acabou, o que não é erro (ADR 0001 §k).

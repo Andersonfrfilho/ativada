@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { describe, expect, test } from 'bun:test';
 
+import { DatabaseUnavailableError } from '../packages/database/src/connection/connection-error.js';
+
 import {
   buildLive,
   classicSetup,
@@ -197,6 +199,69 @@ describe('avaliador ao vivo: falhas tipadas', () => {
     isDown = false;
     await tickUntilIdle(evaluator);
     expect(live.state.commits).toBe(TOTAL_CANDLES);
+  });
+});
+
+// O Drizzle embrulha o erro do driver (ou o do porteiro) num `DrizzleQueryError` de nome "Error", sem `code`.
+function wrappedByDrizzle(cause: Error): Error {
+  return Object.assign(new Error('Failed query: select 1'), { cause });
+}
+
+function driverError(code: string, field: 'code' | 'errno' = 'errno'): Error {
+  return Object.assign(new Error('erro do driver'), { name: 'PostgresError', [field]: code });
+}
+
+describe('avaliador ao vivo: falha passageira do banco embrulhada pelo Drizzle', () => {
+  test.each([
+    ['teto da consulta do porteiro', new DatabaseUnavailableError('DATABASE_QUERY_TIMEOUT')],
+    ['porteiro sem banco', new DatabaseUnavailableError('DATABASE_UNAVAILABLE')],
+    ['conexão fechada', driverError('ERR_POSTGRES_CONNECTION_CLOSED', 'code')],
+    ['rede do driver', driverError('ECONNRESET', 'code')],
+    ['tempo ocioso do driver', driverError('ERR_POSTGRES_IDLE_TIMEOUT', 'code')],
+    ['statement_timeout 57014', driverError('57014')],
+    ['serialização 40001', driverError('40001')],
+    ['deadlock 40P01', driverError('40P01')],
+    ['lock_timeout 55P03', driverError('55P03')],
+    ['parada do operador 57P01', driverError('57P01')],
+    ['conexões demais 53300', driverError('53300')],
+  ] as const)('%s: a execução segue running e retoma na ronda seguinte', async (_label, cause) => {
+    let isDown = true;
+    const live = buildLive({
+      dataset: BTC_HOURLY,
+      overrides: {
+        hooks: { findCandlesError: () => (isDown ? wrappedByDrizzle(cause) : undefined) },
+      },
+    });
+    const { evaluator, logger } = await createTestEvaluator(live);
+    const first = await evaluator.tick();
+    expect(first.failed).toBe(0);
+    expect(live.state.status).toBe('running');
+    expect(live.state.errorCode).toBeUndefined();
+    expect(messages(logger.entries)).toContain('live run will be retried');
+    isDown = false;
+    await tickUntilIdle(evaluator);
+    expect(live.state.commits).toBe(TOTAL_CANDLES);
+  });
+
+  test('erro de lógica sem código continua falhando a execução com LIVE_UNEXPECTED', async () => {
+    const live = buildLive({
+      dataset: BTC_HOURLY,
+      overrides: { hooks: { findCandlesError: () => wrappedByDrizzle(new TypeError('defeito')) } },
+    });
+    const { evaluator } = await createTestEvaluator(live);
+    await tickUntilIdle(evaluator);
+    expect(live.state.status).toBe('failed');
+    expect(live.state.errorCode).toBe('LIVE_UNEXPECTED');
+  });
+
+  test('dado inválido embrulhado (22P02) continua falhando, sem repetir para sempre', async () => {
+    const live = buildLive({
+      dataset: BTC_HOURLY,
+      overrides: { hooks: { findCandlesError: () => wrappedByDrizzle(driverError('22P02')) } },
+    });
+    const { evaluator } = await createTestEvaluator(live);
+    await tickUntilIdle(evaluator);
+    expect(live.state.status).toBe('failed');
   });
 });
 
