@@ -1,0 +1,214 @@
+/* Copyright (c) 2026 Ada Technology. All rights reserved. */
+/* O piso da sala (direção E): unidades de desenho do preview (largura 1600; o piso vai de y 340 a 900) viram % da cena;
+   o texto usa `cqw`. Os bonecos andam por `transform` (nada de `left`/`top` animado). */
+.floor {
+  position: relative;
+  aspect-ratio: 1600 / 560;
+  container-type: inline-size;
+  overflow: hidden;
+  border-radius: 0 0 var(--radius-control) var(--radius-control);
+  box-shadow: inset 0 0 0 3px var(--room-bubble-line);
+  background: var(--room-tile-a);
+}
+
+.roomArt {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.desk,
+.bubble {
+  position: absolute;
+  left: calc(var(--x) / 1600 * 100%);
+  top: calc((var(--y) - 340) / 560 * 100%);
+}
+
+.desk {
+  width: calc(288 / 1600 * 100%);
+  z-index: calc(var(--z, 50) + 1);
+  --desk-tone: var(--screen-ink-2);
+}
+
+.desk[data-tone='buy'] {
+  --desk-tone: var(--screen-good);
+}
+
+.desk[data-tone='sell'] {
+  --desk-tone: var(--screen-bad);
+}
+
+.desk[data-tone='warn'] {
+  --desk-tone: var(--terminal-warn);
+}
+
+.desk[data-tone='info'] {
+  --desk-tone: var(--terminal-accent);
+}
+
+.desk > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.lectern {
+  width: calc(128 / 1600 * 100%);
+}
+
+.lecternTag {
+  position: absolute;
+  left: 50%;
+  bottom: 8%;
+  transform: translateX(-50%);
+  padding: 0.1cqw 0.5cqw;
+  border-radius: var(--radius-pill);
+  background: var(--room-pill);
+  color: var(--room-pill-ink);
+  font-size: 0.75cqw;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.nameplate {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  top: 54%;
+  display: grid;
+  gap: 0.1cqw;
+  padding: 0.3cqw 0.5cqw;
+  background: var(--room-plate);
+  color: var(--room-plate-ink);
+  box-shadow: 0 0 0 0.15cqw var(--room-plate-line);
+  font-size: 0.78cqw;
+  line-height: 1.25;
+}
+
+.nameplate[data-out='true'] {
+  opacity: 0.7;
+  outline: 0.12cqw dashed var(--room-plate-line);
+}
+
+.plateHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4cqw;
+  font-size: 0.9cqw;
+}
+
+.plateLine,
+.plateSub,
+.plateWallet {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--font-data);
+}
+
+.plateLine {
+  font-weight: 600;
+}
+
+.plateSub {
+  color: var(--room-plate-ink-2);
+}
+
+.plateWallet {
+  font-weight: 700;
+  color: var(--room-bubble-model);
+}
+
+.blink0,
+.blink1,
+.blink2 {
+  opacity: 1;
+}
+
+/* Avatares: cada um com a roupa, a pele e o cabelo dos tokens. */
+.avatar {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  --px-pants: var(--pants);
+  --px-shoe: var(--shoe);
+}
+
+.avatar[data-who='tiago'] {
+  --px-cloth: var(--shirt-trend);
+  --px-hair: var(--hair-2);
+  --px-skin: var(--skin-1);
+  --px-skin-d: var(--skin-4);
+}
+
+.avatar[data-who='renata'] {
+  --px-cloth: var(--shirt-reversion);
+  --px-hair: var(--hair-3);
+  --px-skin: var(--skin-3);
+  --px-skin-d: var(--skin-1);
+}
+
+.avatar[data-who='vitor'] {
+  --px-cloth: var(--shirt-volume);
+  --px-hair: var(--hair-2);
+  --px-skin: var(--skin-2);
+  --px-skin-d: var(--hair-4);
+}
+
+.avatar[data-who='sofia'] {
+  --px-cloth: var(--shirt-sentiment);
+  --px-hair: var(--hair-4);
+  --px-skin: var(--skin-3);
+  --px-skin-d: var(--skin-1);
+}
+
+.avatar[data-who='alice'] {
+  --px-cloth: var(--shirt-analyst);
+  --px-hair: var(--hair-1);
+  --px-skin: var(--skin-4);
+  --px-skin-d: var(--skin-2);
+}
+
+.avatar[data-who='otavio'] {
+  --px-cloth: var(--shirt-auditor);
+  --px-hair: var(--hair-5);
+  --px-skin: var(--skin-1);
+  --px-skin-d: var(--skin-4);
+}
+
+.avatar[data-who='nina'],
+.avatar[data-who='lucas'],
+.avatar[data-who='olivia'] {
+  --px-cloth: var(--model);
+}
+
+.avatar {
+  --px-cloth-d: color-mix(in srgb, var(--px-cloth) 70%, var(--px-line));
+}
+
+.poseStep,
+.posePoint {
+  display: none;
+}
+
+/* Superfícies brancas da sala (plaquinha, balão, faixa): paleta clara nos dois temas, contraste garantido. */
+.nameplate,
+.bubble,
+.banner {
+  --ink: var(--room-bubble-ink);
+  --ink-2: var(--room-bubble-ink-2);
+  --surface: var(--room-bubble);
+  --surface-2: var(--room-bubble-soft);
+  --buy: var(--room-bubble-buy);
+  --buy-soft: var(--room-bubble-buy-soft);
+  --sell: var(--room-bubble-sell);
+  --sell-soft: var(--room-bubble-sell-soft);
+  --warn: var(--room-bubble-warn);
+  --warn-soft: var(--room-bubble-warn-soft);
+  --accent: var(--room-bubble-accent);
+  --accent-soft: var(--room-bubble-accent-soft);
+  --model: var(--room-bubble-model);
+}

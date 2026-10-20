@@ -13,7 +13,7 @@ import {
 } from './overview.constant.js';
 import { useSentimentQuery } from './sentiment.query.js';
 
-const CLASSIFICATION_TEXT: Readonly<Record<string, string>> = {
+export const CLASSIFICATION_TEXT: Readonly<Record<string, string>> = {
   'Extreme Fear': 'Medo extremo',
   Fear: 'Medo',
   Neutral: 'Neutro',

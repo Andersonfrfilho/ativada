@@ -1,0 +1,33 @@
+/* Copyright (c) 2026 Ada Technology. All rights reserved. */
+/* Chip de intenção e o cartão de opinião (balão, faixa e lista em texto). */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px 1px 6px;
+  border-radius: var(--radius-pill);
+  font: 700 var(--text-xs) / 1.4 var(--font-body);
+  white-space: nowrap;
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+
+.chip[data-tone='buy'] {
+  background: var(--buy-soft);
+  color: var(--buy);
+}
+
+.chip[data-tone='sell'] {
+  background: var(--sell-soft);
+  color: var(--sell);
+}
+
+.chip[data-tone='warn'] {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.chip[data-tone='info'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}

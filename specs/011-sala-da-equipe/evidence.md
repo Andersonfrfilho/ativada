@@ -524,3 +524,15 @@ task) e `tasks.md` (S0–S6). Base dos gates antes da fase: `bun run --cwd apps/
   comprado, o resultado agora); os agentes de regra não têm alvo próprio e repetem "Plano da equipe: …"; equipe ◆ com níveis, confiança e
   carteira. Taxas em % arredondadas para baixo (`formatSignedPercentDown`), só formatação do texto do servidor.
 - Contrato `trading-room-plan.contract.ts` (8 testes). Gates: typecheck, lint, format:check verdes; painel 1.676 passam, 0 falham.
+
+### S3 — pixel art e parede de telas (2026-10-20)
+
+- Avatares em pixel art portados do preview (`pixel-avatar.ts`, `pixel-avatar-parts.ts`, `avatar-poses.ts`: grade 18 × 29, contorno
+  automático, poses parado/passo/apontando, equipes ◆ com halo e visor), piso (`room-art.ts`: lambri, tapete, café, bebedouro, arquivo,
+  rack com luzes, plantas, luminária, cadeiras; ladrilhos por `<pattern>`), mesas com dois monitores e notebook (`desk-art.ts`) e a planta
+  (`office-geometry.ts`). Cores só por tokens novos `--room-*` e `--px-*` em `global.css` (piso, lambri, tapete e mesa com variante escura).
+- Parede: `WallTicker` (letreiro decorativo dos pares habilitados), `WallClocks`, `FearGreedScreen` (consulta de sentimento existente, com o
+  crédito), `WallHeatmap` (variação de 24 h dos dados de preço), `NextCandleBoard` (hora no fuso, placar e limiar com casas exatas em BigInt)
+  e `PriceBoard` (linhas do plano do servidor). Plaquinha, balão e faixa usam a paleta clara nos dois temas.
+- Contrato `trading-room-art.contract.tsx` (8) e 19 pares novos em `contrast.contract.ts`. Gates: typecheck, lint, format:check verdes;
+  painel 1.701 passam, 0 falham.

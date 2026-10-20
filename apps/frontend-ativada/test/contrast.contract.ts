@@ -268,6 +268,23 @@ describe('trading-room terminal stays legible (always dark)', () => {
     ['terminal-model', 'screen'],
     ['screen-good', 'screen'],
     ['screen-bad', 'screen'],
+    ['terminal-accent', 'bezel'],
+    ['terminal-warn', 'screen'],
+    ['room-bubble-ink', 'room-bubble'],
+    ['room-bubble-ink-2', 'room-bubble'],
+    ['room-bubble-ink-2', 'room-bubble-soft'],
+    ['room-bubble-buy', 'room-bubble'],
+    ['room-bubble-sell', 'room-bubble'],
+    ['room-bubble-warn', 'room-bubble'],
+    ['room-bubble-model', 'room-bubble'],
+    ['room-bubble-buy', 'room-bubble-buy-soft'],
+    ['room-bubble-sell', 'room-bubble-sell-soft'],
+    ['room-bubble-warn', 'room-bubble-warn-soft'],
+    ['room-bubble-accent', 'room-bubble-accent-soft'],
+    ['room-plate-ink', 'room-plate'],
+    ['room-plate-ink-2', 'room-plate'],
+    ['room-bubble-model', 'room-plate'],
+    ['room-pill-ink', 'room-pill'],
   ];
   for (const [text, fill] of TEXT_PAIRS) {
     test(`${text} on ${fill} is at least ${MINIMUM_RATIO}:1`, () => {
