@@ -10,7 +10,8 @@ import type { ToastEntry } from './notice-center.types.js';
 import { NoticeBadge } from './NoticeBadge.component.js';
 import { FIXED_LINE, NoticeBody } from './NoticeBody.component.js';
 import { buildNoticeRuler, SignalCard } from './SignalCard.component.js';
-import { buildChartLink, describeTone } from './notice-tone.js';
+import { isBodyClick, isPlainClick } from './notice-click.js';
+import { buildChartLink, buildNoticeTarget, describeTone } from './notice-tone.js';
 import { describeWhen } from './notice-text.js';
 import { withMutedRun } from './notice-preferences.js';
 import { useNoticeCenter } from './useNoticeCenter.hook.js';
@@ -55,21 +56,26 @@ function ToastActions(props: {
   readonly onDone: () => void;
 }): ReactElement {
   const link = buildChartLink(props.notice);
+  const target = buildNoticeTarget(props.notice);
   const { runId } = props.notice;
-  const { openDrawer } = useNoticeCenter();
+  const { openDrawer, openNotice } = useNoticeCenter();
   function handleManual(): void {
     props.onDone();
     openDrawer();
   }
   return (
     <div className={styles['actions']}>
-      {link === undefined ? null : (
+      {target === undefined ? null : (
         <Link
           className={`${styles['action']} ${styles['actionMain']}`}
-          to={link}
-          onClick={props.onDone}
+          to={target}
+          onClick={(event) => {
+            if (!isPlainClick(event)) return;
+            event.preventDefault();
+            openNotice(props.notice);
+          }}
         >
-          Ver no gráfico
+          {link === undefined ? 'Ver alertas' : 'Ver no gráfico'}
         </Link>
       )}
       {props.notice.manual === null ? null : (
@@ -102,6 +108,7 @@ export function NoticeToast({ entry, isCompact }: ToastProps): ReactElement {
   return (
     <li
       className={`${styles['toast']} ${styles[tone.tone]} ${isCompact ? styles['compact'] : ''}`}
+      onClick={(event) => (isBodyClick(event) ? center.openNotice(notice) : undefined)}
       {...hold}
     >
       <div className={styles['head']}>

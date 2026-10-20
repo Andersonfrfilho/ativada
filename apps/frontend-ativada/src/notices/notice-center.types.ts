@@ -35,6 +35,8 @@ export type NoticeCenter = {
   readonly openDrawer: () => void;
   readonly closeDrawer: () => void;
   readonly markAllRead: () => void;
+  // Abre o aviso: vai à simulação (ou à tela do alerta), fecha gaveta e toast e marca como lido.
+  readonly openNotice: (notice: Notice) => void;
   readonly dismissToast: (noticeId: string) => void;
   readonly dismissSummary: () => void;
   // Fala um texto curto no ÚNICO aria-live (p.ex. "Copiado").

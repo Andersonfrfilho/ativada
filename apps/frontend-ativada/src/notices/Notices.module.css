@@ -156,6 +156,9 @@
 .toast {
   position: relative;
   display: grid;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  cursor: pointer;
   gap: var(--space-3);
   overflow: hidden;
   padding: var(--space-3) var(--space-4) var(--space-4) calc(var(--space-4) + 6px);
@@ -349,6 +352,9 @@
   inset: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  max-width: 100vw;
+  overscroll-behavior: contain;
   background: var(--surface);
   animation: drawer-in var(--motion-medium) var(--ease-out);
 }
@@ -375,6 +381,7 @@
 }
 
 .drawerHead {
+  flex-shrink: 0;
   display: grid;
   gap: var(--space-2);
   padding: var(--space-4) var(--space-5) var(--space-3);
@@ -450,6 +457,7 @@
 }
 
 .strip {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -463,6 +471,8 @@
 
 .body {
   flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   padding-bottom: var(--space-6);
 }
@@ -484,7 +494,10 @@
 
 .item {
   display: grid;
-  grid-template-columns: 36px 1fr;
+  grid-template-columns: 36px minmax(0, 1fr);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  cursor: pointer;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--line);

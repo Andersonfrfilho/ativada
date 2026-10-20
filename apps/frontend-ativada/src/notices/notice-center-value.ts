@@ -13,6 +13,7 @@ export type CenterParts = {
     'toasts' | 'summary' | 'announcement' | 'dismissToast' | 'dismissSummary' | 'speak'
   >;
   readonly drawer: DrawerState;
+  readonly openNotice: NoticeCenter['openNotice'];
   readonly preferences: PreferencesState;
   readonly unreadCount: number;
   readonly connection: NoticeCenter['connection'];
@@ -32,6 +33,7 @@ export function buildNoticeCenter(parts: CenterParts): NoticeCenter {
     ...parts.feed,
     ...parts.view,
     ...parts.drawer,
+    openNotice: parts.openNotice,
     unreadCount: parts.unreadCount,
     connection: parts.connection,
     preferences: parts.preferences.preferences,

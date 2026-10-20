@@ -9,6 +9,7 @@ import { useCenterParts } from './useCenterParts.hook.js';
 export function NoticeCenterProvider({ children }: { readonly children: ReactNode }): ReactElement {
   const parts = useCenterParts();
   const { feed, view, drawer, preferences, unreadCount, connection, timeZone, now } = parts;
+  const { openNotice } = parts;
   const { toastMilliseconds, runOptions, near } = parts;
   const value = useMemo(
     () =>
@@ -16,6 +17,7 @@ export function NoticeCenterProvider({ children }: { readonly children: ReactNod
         feed,
         view,
         drawer,
+        openNotice,
         preferences,
         unreadCount,
         connection,
@@ -29,6 +31,7 @@ export function NoticeCenterProvider({ children }: { readonly children: ReactNod
       feed,
       view,
       drawer,
+      openNotice,
       preferences,
       unreadCount,
       connection,

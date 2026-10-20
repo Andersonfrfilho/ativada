@@ -10,6 +10,7 @@ import { playNoticeSound } from './notice-sound.js';
 import type { Notice } from './notice.validation.js';
 import type { NoticePreferences } from './notice-preferences.js';
 import type { NoticeFeed } from './useNoticeFeed.hook.js';
+import type { OpenNotice } from './useOpenNotice.hook.js';
 
 const SUMMARY_DELAY_MILLISECONDS = 400;
 const AWAY_WINDOW_MILLISECONDS = 10_000;
@@ -21,6 +22,7 @@ type RoutingParams = {
   readonly openRunId: string | undefined;
   readonly isHidden: boolean;
   readonly timeZone: string;
+  readonly openBridge: RefObject<OpenNotice>;
 };
 
 type LiveContext = { readonly context: EventContext; readonly timeZone: string };
@@ -53,7 +55,11 @@ type Setters = {
   readonly setAnnouncement: (change: (current: Announcement) => Announcement) => void;
 };
 
-function createRouter(live: RefObject<LiveContext>, setters: Setters): NoticeEventRouter {
+function createRouter(
+  live: RefObject<LiveContext>,
+  setters: Setters,
+  openBridge: RefObject<OpenNotice>,
+): NoticeEventRouter {
   return new NoticeEventRouter({
     now: (): number => Date.now(),
     getContext: (): EventContext => live.current.context,
@@ -62,7 +68,12 @@ function createRouter(live: RefObject<LiveContext>, setters: Setters): NoticeEve
     sink: {
       toast: (notice): void => setters.setToasts((current) => upsertToast(current, notice)),
       sound: playNoticeSound,
-      notify: (notice): void => showBrowserNotification(notice, live.current.timeZone),
+      notify: (notice): void =>
+        showBrowserNotification({
+          notice,
+          timeZone: live.current.timeZone,
+          onOpen: (opened): void => openBridge.current(opened),
+        }),
       announce: (notice): void =>
         setters.setAnnouncement((current) => speak(notice, live.current.timeZone, current.id + 1)),
       summary: setters.setSummary,
@@ -86,7 +97,7 @@ export function useNoticeRouting(params: RoutingParams): {
   readonly view: RoutingView;
   readonly beginAway: () => void;
 } {
-  const { feed, preferences, openRunId, isHidden, timeZone } = params;
+  const { feed, preferences, openRunId, isHidden, timeZone, openBridge } = params;
   const [toasts, setToasts] = useState<readonly ToastEntry[]>([]);
   const [summary, setSummary] = useState<string | undefined>(undefined);
   const [announcement, setAnnouncement] = useState<Announcement>({ text: '', id: 0 });
@@ -98,7 +109,10 @@ export function useNoticeRouting(params: RoutingParams): {
     live.current = { context: { preferences, openRunId, isTabHidden: isHidden }, timeZone };
   }, [preferences, openRunId, isHidden, timeZone]);
 
-  const router = useMemo(() => createRouter(live, { setToasts, setSummary, setAnnouncement }), []);
+  const router = useMemo(
+    () => createRouter(live, { setToasts, setSummary, setAnnouncement }, openBridge),
+    [openBridge],
+  );
   useRouterFeed(router, feed, isHidden);
 
   const dismissToast = useCallback(

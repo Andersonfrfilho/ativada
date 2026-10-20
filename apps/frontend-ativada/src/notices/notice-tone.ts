@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { ROUTE_PATH } from '../app/app.constant.js';
 import type { IconName } from '../layout/Icon.component.js';
 import { NOTICE_KIND, NOTICE_STATE } from './notice.constant.js';
 import type { Notice } from './notice.validation.js';
@@ -58,4 +59,11 @@ export function buildChartLink(notice: Notice): string | undefined {
   const operation =
     notice.operationKey === null ? '' : `?operacao=${encodeURIComponent(notice.operationKey)}`;
   return `/backtests/${notice.runId}${operation}#grafico`;
+}
+
+// Para onde o clique no aviso leva: a simulação (com a operação) ou, no alerta de preço, a página de alertas.
+export function buildNoticeTarget(notice: Notice): string | undefined {
+  const chart = buildChartLink(notice);
+  if (chart !== undefined) return chart;
+  return notice.kind === NOTICE_KIND.PRICE_ALERT ? ROUTE_PATH.ALERTS : undefined;
 }

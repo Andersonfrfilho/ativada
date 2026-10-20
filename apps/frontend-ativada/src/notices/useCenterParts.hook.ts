@@ -12,7 +12,7 @@ import { useConnectionNotice } from './useConnectionNotice.hook.js';
 import { useDrawerState } from './useDrawerState.hook.js';
 import { useNoticeFeed } from './useNoticeFeed.hook.js';
 import { useNoticePreferences } from './useNoticePreferences.hook.js';
-import { useNoticeRouting } from './useNoticeRouting.hook.js';
+import { useRoutingWithOpen } from './useRoutingWithOpen.hook.js';
 import { useRunOptionsAndNear } from './useRunOptionsAndNear.hook.js';
 import { useTabHidden } from './useTabHidden.hook.js';
 import { useTabTitle } from './useTabTitle.hook.js';
@@ -28,7 +28,7 @@ export function useCenterParts(): CenterParts {
   const openRunId = useMatch(ROUTE_PATH.BACKTEST)?.params['runId'];
   const drawer = useDrawerState({ items: feed.items, update: prefs.update });
   const { preferences } = prefs;
-  const routing = useNoticeRouting({ feed, preferences, openRunId, isHidden, timeZone });
+  const routing = useRoutingWithOpen({ feed, openRunId, isHidden, timeZone, drawer, prefs });
   const connection = useConnectionNotice({
     status: streamStatus,
     onReturn: routing.beginAway,
@@ -42,6 +42,7 @@ export function useCenterParts(): CenterParts {
     feed,
     view: routing.view,
     drawer,
+    openNotice: routing.openNotice,
     preferences: prefs,
     unreadCount,
     connection,

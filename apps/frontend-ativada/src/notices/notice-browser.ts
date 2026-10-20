@@ -65,12 +65,22 @@ export function describeNotification(
 }
 
 // `tag` = `noticeId`, então duas abas abertas não duplicam a notificação.
-export function showBrowserNotification(notice: Notice, timeZone: string): void {
+export function showBrowserNotification(params: {
+  readonly notice: Notice;
+  readonly timeZone: string;
+  readonly onOpen: (notice: Notice) => void;
+}): void {
+  const { notice, timeZone, onOpen } = params;
   const constructor = readNotification();
   if (constructor === undefined || constructor.permission !== PERMISSION.GRANTED) return;
   const { title, body } = describeNotification(notice, timeZone);
   try {
-    new constructor(title, { body, tag: notice.noticeId });
+    const shown = new constructor(title, { body, tag: notice.noticeId });
+    shown.onclick = (): void => {
+      window.focus();
+      shown.close();
+      onOpen(notice);
+    };
   } catch {
     return;
   }
