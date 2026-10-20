@@ -10,7 +10,7 @@ export type UsdtRate = {
   readonly setText: (text: string) => void;
 };
 
-function readStored(): string {
+export function readStoredUsdtRate(): string {
   try {
     return window.localStorage.getItem(USDT_RATE_STORAGE_KEY) ?? '';
   } catch {
@@ -28,7 +28,7 @@ function writeStored(text: string): void {
 
 // O produto não tem fonte de câmbio: a cotação USDT→R$ é a que o usuário digita, guardada só neste navegador.
 export function useUsdtRate(): UsdtRate {
-  const [text, setTextState] = useState(readStored);
+  const [text, setTextState] = useState(readStoredUsdtRate);
   return {
     text,
     rate: parseRate(text),

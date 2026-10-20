@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import { InReais } from '../exchange/InReais.component.js';
 import { formatDate, formatPrice } from '../format/format.js';
 import { useShownPrice } from '../live/useShownPrice.hook.js';
 import { Card } from '../layout/Card.component.js';
@@ -31,7 +32,9 @@ function Level({ title, kind, price, detail, view, current }: LevelProps): React
   return (
     <div className={styles.level}>
       <h3>{title}</h3>
-      <p className={styles.levelValue}>{price === null ? '—' : formatPrice(price)}</p>
+      <p className={styles.levelValue}>
+        {price === null ? '—' : <InReais usdt={price}>{formatPrice(price)}</InReais>}
+      </p>
       <p className={controls.muted}>{detail}</p>
       {price === null ? null : (
         <>
@@ -97,9 +100,8 @@ export function PlanCard({ view }: PlanCardProps): ReactElement {
         ({plan.horizonDays} dias)
       </p>
       <p>
-        {shown === undefined
-          ? `Último fechamento ${formatPrice(plan.lastClose)}`
-          : `Preço agora ${formatPrice(current)}`}
+        {shown === undefined ? 'Último fechamento ' : 'Preço agora '}
+        <InReais usdt={current}>{formatPrice(current)}</InReais>
       </p>
       <PlanLevels view={view} current={current} />
       <p className={controls.muted}>{BASIS_TEXT[plan.basis]}</p>

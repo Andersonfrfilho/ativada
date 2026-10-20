@@ -16,6 +16,7 @@ import { computeAssetNumbers, sumAssetNumbers, toReais } from './asset-math.js';
 import { useAssetSummaryQuery } from './asset.query.js';
 import type { AssetSummary } from './asset.validation.js';
 import { useUsdtRate, type UsdtRate } from './useUsdtRate.hook.js';
+import { useUsdtBrlRate } from '../exchange/useUsdtBrlRate.hook.js';
 
 type TotalsProps = { readonly summary: AssetSummary; readonly rate: bigint | undefined };
 
@@ -84,8 +85,8 @@ function AssetControls({
         />
       </div>
       <p className={controls.muted}>
-        O painel não busca cotação do dólar: informe a sua para ver os valores em R$. Ela fica
-        guardada só neste navegador.
+        Os valores em R$ usam a cotação ao vivo do USDT/BRL da Binance. Se ela faltar, vale a que
+        você informar aqui, guardada só neste navegador.
       </p>
     </Card>
   );
@@ -94,6 +95,7 @@ function AssetControls({
 export function AssetsPage(): ReactElement {
   const [picked, setPicked] = useState('');
   const usdt = useUsdtRate();
+  const { rate } = useUsdtBrlRate(usdt.rate);
   const strategiesQuery = useStrategiesQuery();
   const strategies = strategiesQuery.data ?? [];
   // A regra do dia precisa de uma estratégia: sem escolha vale a primeira da lista.
@@ -114,13 +116,13 @@ export function AssetsPage(): ReactElement {
           Não foi possível carregar seus ativos. Tente novamente em instantes.
         </p>
       ) : null}
-      {summary.data === undefined ? null : <Totals summary={summary.data} rate={usdt.rate} />}
+      {summary.data === undefined ? null : <Totals summary={summary.data} rate={rate} />}
       {summary.isSuccess && items.length === 0 ? (
         <p className={controls.muted}>Nenhum ativo registrado. Registre uma compra abaixo.</p>
       ) : null}
       <div className={styles.list}>
         {items.map((item) => (
-          <AssetCard key={item.symbol} item={item} rate={usdt.rate} />
+          <AssetCard key={item.symbol} item={item} rate={rate} />
         ))}
       </div>
       <OperationCard />

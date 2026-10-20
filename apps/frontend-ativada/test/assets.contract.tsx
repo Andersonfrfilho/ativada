@@ -114,14 +114,27 @@ describe('assets board', () => {
     expect(await screen.findByText(/Nenhum ativo registrado/)).toBeDefined();
   });
 
-  test('converts to reais with the rate the user typed, because the product has no exchange-rate source', async () => {
+  test('without a live USDT/BRL rate, converts to reais with the rate the user typed', async () => {
     await openAssets({ summary: buildSummary([buildAssetItem()]) });
     const card = await screen.findByRole('article', { name: 'BTC/USDT' });
     expect(card.textContent).not.toContain('R$');
-    expect(screen.getByText(/não busca cotação/)).toBeDefined();
+    expect(screen.getByText(/cotação ao vivo do USDT\/BRL/)).toBeDefined();
     fireEvent.change(screen.getByLabelText('Cotação do USDT em R$'), { target: { value: '5,5' } });
     await waitFor(() => expect(card.textContent).toContain('R$ 170.500,00'));
     expect(screen.getByText(/Total em R\$: R\$ 170\.500,00/)).toBeDefined();
+  });
+
+  test('the live USDT/BRL rate wins over the typed one, and the typed one is back when it goes quiet', async () => {
+    const { stream } = await openAssets({ summary: buildSummary([buildAssetItem()]) });
+    const card = await screen.findByRole('article', { name: 'BTC/USDT' });
+    fireEvent.change(screen.getByLabelText('Cotação do USDT em R$'), { target: { value: '5,5' } });
+    await waitFor(() => expect(card.textContent).toContain('R$ 170.500,00'));
+    act(() => stream.setStatus('live'));
+    act(() => stream.tick({ ...tick('6'), symbol: 'USDTBRL' }));
+    await waitFor(() => expect(card.textContent).toContain('R$ 186.000,00'));
+    expect(screen.getByText(/Total em R\$: R\$ 186\.000,00/)).toBeDefined();
+    act(() => stream.tick({ ...tick('6'), symbol: 'USDTBRL', isStale: true }));
+    await waitFor(() => expect(card.textContent).toContain('R$ 170.500,00'));
   });
 
   test('remembers the typed rate in this browser', async () => {

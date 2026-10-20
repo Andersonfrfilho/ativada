@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { ReactElement } from 'react';
 
+import { InReais } from '../exchange/InReais.component.js';
 import { formatChangePercent, formatPrice, formatSymbol } from '../format/format.js';
 import { useShownPrice, type ShownPrice } from '../live/useShownPrice.hook.js';
 import controls from '../styles/Controls.module.css';
@@ -24,7 +25,9 @@ export function CoinCard({ symbol }: CoinCardProps): ReactElement {
         <p className={controls.muted}>Sem preço ainda</p>
       ) : (
         <>
-          <p className={styles.coinPrice}>{formatPrice(shown.price)}</p>
+          <p className={styles.coinPrice}>
+            <InReais usdt={shown.price}>{formatPrice(shown.price)}</InReais>
+          </p>
           <p
             className={
               shown.change === undefined || shown.change >= 0 ? styles.positive : styles.negative
