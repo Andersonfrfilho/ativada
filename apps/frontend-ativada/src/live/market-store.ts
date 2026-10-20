@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { CandleStore } from './candle-store.js';
+import { TickHistory } from './tick-history.js';
 import { STREAM_STATUS, type StreamStatus } from './stream.constant.js';
 import type { MarketTick } from './stream-client.js';
 
@@ -35,6 +36,7 @@ export class MarketStore {
   private readonly listeners = new Set<() => void>();
   // A vela em formação mora ao lado do preço, com assinatura própria (spec 009, D9).
   readonly candles: CandleStore;
+  readonly history = new TickHistory();
 
   constructor(private readonly now: () => number) {
     this.candles = new CandleStore(now);
@@ -51,11 +53,13 @@ export class MarketStore {
   };
 
   readonly applyTick = (tick: MarketTick): void => {
+    const receivedAt = this.now();
+    if (!tick.isStale) this.history.record(tick.symbol, { time: receivedAt, price: tick.price });
     const next = new Map(this.prices);
     next.set(tick.symbol, {
       price: tick.price,
       change24h: toRatio(tick.change24h),
-      receivedAt: this.now(),
+      receivedAt,
       isStale: tick.isStale,
     });
     this.publish(next);
@@ -64,6 +68,7 @@ export class MarketStore {
   readonly clear = (): void => {
     this.publish(new Map());
     this.candles.clear();
+    this.history.clear();
   };
 
   private publish(next: ReadonlyMap<string, LivePrice>): void {
