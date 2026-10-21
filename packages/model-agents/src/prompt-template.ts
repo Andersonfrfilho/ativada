@@ -19,7 +19,7 @@ export const PROMPT_INSTRUCTION = [
 ].join('\n');
 
 // Bloco de dados em ordem fixa de chaves: a mesma entrada dá sempre o mesmo texto e o mesmo hash.
-function buildDataBlock(input: TeamPromptInput): string {
+export function buildPromptDataBlock(input: TeamPromptInput): string {
   const { readings } = input;
   return JSON.stringify({
     symbol: input.symbol,
@@ -41,7 +41,7 @@ function buildDataBlock(input: TeamPromptInput): string {
 // Lança com entrada de chave de fora: o prompt só nasce de dado público de mercado (RF09).
 export function renderPrompt(input: TeamPromptInput): string {
   const validInput = teamPromptInputSchema.parse(input);
-  return `${PROMPT_INSTRUCTION}\n\nDADOS:\n${buildDataBlock(validInput)}`;
+  return `${PROMPT_INSTRUCTION}\n\nDADOS:\n${buildPromptDataBlock(validInput)}`;
 }
 
 export function hashPrompt(prompt: string): string {

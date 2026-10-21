@@ -54,3 +54,13 @@ export type RequestTeamReportParams = {
   readonly limits: ModelCallLimits;
   readonly signal: AbortSignal;
 };
+
+// A pergunta livre (adendo da spec 015): o mesmo provedor responde em TEXTO, não no formato do relatório. Só código no erro.
+export type FreeTextCallResult =
+  | {
+      readonly status: typeof MODEL_CALL_STATUS.OK;
+      readonly text: string;
+      readonly usage: ModelTokenUsage;
+      readonly latencyMilliseconds: number;
+    }
+  | Exclude<ModelCallResult, { readonly status: typeof MODEL_CALL_STATUS.OK }>;

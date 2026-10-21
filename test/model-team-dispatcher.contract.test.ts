@@ -12,6 +12,7 @@ import { createTeamCircuits } from '../apps/worker-ativada/src/model-teams/team-
 import type { WorkerLogger } from '../apps/worker-ativada/src/logging/worker-logger.js';
 import {
   MODEL_CALL_STATUS,
+  type FreeTextCallResult,
   type ModelCallResult,
   type RequestTeamReportParams,
 } from '../packages/model-agents/src/index.js';
@@ -80,6 +81,7 @@ function createHarness(
         calls.push(params);
         return Promise.resolve(state.result);
       },
+      requestFreeText: () => Promise.resolve({ status: MODEL_CALL_STATUS.TIMEOUT }),
     },
   };
   const dependencies: ReportProcessorDependencies = {
@@ -346,6 +348,8 @@ describe('enfileirador', () => {
           port: {
             requestTeamReport: (): Promise<ModelCallResult> =>
               Promise.resolve({ status: MODEL_CALL_STATUS.TIMEOUT }),
+            requestFreeText: (): Promise<FreeTextCallResult> =>
+              Promise.resolve({ status: MODEL_CALL_STATUS.TIMEOUT }),
           },
         },
       ],
@@ -412,7 +416,10 @@ describe('estado do provedor no batimento', () => {
       modelId: 'fake-model-1',
       price: { inputUsdPerMegaToken: '2', outputUsdPerMegaToken: '12' },
       maxThinkingTokens: 0,
-      port: { requestTeamReport: () => Promise.resolve({ status: MODEL_CALL_STATUS.TIMEOUT }) },
+      port: {
+        requestTeamReport: () => Promise.resolve({ status: MODEL_CALL_STATUS.TIMEOUT }),
+        requestFreeText: () => Promise.resolve({ status: MODEL_CALL_STATUS.TIMEOUT }),
+      },
     };
     circuits.record('nina', { status: MODEL_CALL_STATUS.KEY_REJECTED }, NOW);
     const status = buildProviderStatus({ runtimes: [runtime], circuits, now: () => NOW + 1 });

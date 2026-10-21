@@ -35,8 +35,9 @@ function stripControls(text: string): string {
   return cleaned.replace(/ {2,}/g, ' ').trim();
 }
 
-function cutToLimit(text: string): string {
-  const cut = text.slice(0, REPORT_TEXT_MAX_LENGTH);
+// Corta no limite sem partir um par substituto (emoji, por exemplo) ao meio.
+export function cutText(text: string, maximum: number): string {
+  const cut = text.slice(0, maximum);
   const lastCode = cut.charCodeAt(cut.length - 1);
   const isSplitPair = lastCode >= HIGH_SURROGATE_START && lastCode <= HIGH_SURROGATE_END;
   return isSplitPair ? cut.slice(0, -1) : cut;
@@ -47,6 +48,11 @@ function removeInvisible(text: string): string {
   return text.normalize('NFKC').replace(/\p{Cf}/gu, '');
 }
 
+// O texto do modelo como se lê: sem invisíveis nem controles, quebras de linha viram espaço.
+export function cleanModelText(text: string): string {
+  return stripControls(removeInvisible(text));
+}
+
 function hasForbiddenWord(text: string): boolean {
   const lowerText = text.toLowerCase();
   return FORBIDDEN_REASON_WORDS.some((word) => lowerText.includes(word));
@@ -54,11 +60,11 @@ function hasForbiddenWord(text: string): boolean {
 
 // A busca roda no texto limpo INTEIRO, antes do corte: cortar não esconde uma palavra proibida.
 export function sanitizeReason(rawReason: string): SanitizedReason {
-  const cleaned = stripControls(removeInvisible(rawReason));
+  const cleaned = cleanModelText(rawReason);
   if (cleaned === '' || hasForbiddenWord(cleaned)) {
     return { reason: HIDDEN_REASON_PHRASE, reasonHidden: true };
   }
-  return { reason: cutToLimit(cleaned), reasonHidden: false };
+  return { reason: cutText(cleaned, REPORT_TEXT_MAX_LENGTH), reasonHidden: false };
 }
 
 export type SanitizedReport = {
