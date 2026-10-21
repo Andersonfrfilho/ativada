@@ -1,5 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { AggregatedTick, PriceTickListener, RawTick } from '@ativada/market-data-crypto';
+import type {
+  AggregatedTick,
+  PriceTickListener,
+  RawCandle,
+  RawTick,
+} from '@ativada/market-data-crypto';
 
 import type { StreamSocket } from '../stream/stream-socket.types.js';
 import type { MarketPubSub } from './market-pubsub.js';
@@ -27,6 +32,8 @@ export type MarketSubscriptions = {
 export type MarketPublisher = {
   readonly subscriptions: MarketSubscriptions;
   readonly handleRawTick: (tick: RawTick) => void;
+  // A vela em formação (spec 009): no máximo 1 por segundo por (par, vela), só a quem assinou o par.
+  readonly handleRawCandle: (candle: RawCandle) => void;
   // Ponto de extensão da Fase 4b: recebe CADA tick agregado uma vez; devolve a função que o remove.
   readonly addListener: (listener: PriceTickListener) => () => void;
   readonly sweepStale: () => void;

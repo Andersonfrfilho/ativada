@@ -8,6 +8,7 @@ export type ProfileView = {
   readonly timezone: string;
   readonly alertTelegramEnabled: boolean;
   readonly telegramLinked: boolean;
+  readonly limits: { readonly maxActiveLivePaperRuns: number };
   readonly createdAt: string;
 };
 
@@ -19,6 +20,7 @@ export function toProfileView(record: ProfileRecord): ProfileView {
     timezone: record.timezone,
     alertTelegramEnabled: record.alertTelegramEnabled,
     telegramLinked: record.isTelegramLinked,
+    limits: { maxActiveLivePaperRuns: record.maxActiveLivePaperRuns },
     createdAt: record.createdAt.toISOString(),
   };
 }

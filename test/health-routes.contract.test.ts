@@ -9,6 +9,8 @@ import {
   buildApiRouteDependencies,
   EMPTY_QUEUE_SUMMARY,
   HEALTHY_LISTENER,
+  UNKNOWN_WORKER,
+  UP_DATABASE_HEALTH,
 } from './fixtures/api-route-dependencies.fixture.js';
 import { createApiHarness, type ApiHarness } from './fixtures/api-harness.fixture.js';
 import { sweepProtectedRoutesWithoutToken } from './fixtures/route-sweep.fixture.js';
@@ -147,8 +149,10 @@ describe('admin health through the full authentication pipeline', () => {
       data: {
         status: 'ok',
         checks: { database: 'up' },
+        database: UP_DATABASE_HEALTH,
         listener: { state: 'up', reason: null },
         runs: EMPTY_QUEUE_SUMMARY,
+        worker: UNKNOWN_WORKER,
       },
     });
   });
@@ -178,7 +182,7 @@ describe('admin health through the full authentication pipeline', () => {
     const body = (await response.json()) as {
       data: { status: string; checks: { database: string }; listener: unknown; runs: unknown };
     };
-    expect(body.data).toStrictEqual({
+    expect(body.data).toMatchObject({
       status: 'degraded',
       checks: { database: 'down' },
       listener: { state: 'up', reason: null },

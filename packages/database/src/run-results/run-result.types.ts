@@ -1,6 +1,16 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { JsonContainer } from '../json-value.types.js';
 import type { OwnerScope } from '../ownership/owner-scope.js';
+import type {
+  FillClusterBucket,
+  FillClustersParams,
+  FillCounts,
+  FillMarkerInput,
+  FillMarkersParams,
+  PriceColumn,
+  PriceColumnsParams,
+  TradeTotals,
+} from './run-chart.types.js';
 import type { RunLogCursor, RunLogEntry } from './run-log.types.js';
 import type {
   CommandKind,
@@ -130,6 +140,15 @@ export type ListResultsParams<TCursor> = {
   readonly order?: ResultOrder;
 };
 
+// Faixa semiaberta `[from, to)` em milissegundos UTC.
+export type TimeRange = { readonly from: number; readonly to: number };
+
+// Posições: com `range`, só as que têm compra OU venda dentro da faixa; `status` separa abertas de fechadas.
+export type ListPositionsParams = ListResultsParams<PositionCursor> & {
+  readonly range?: TimeRange | undefined;
+  readonly status?: PositionStatus | undefined;
+};
+
 export type ResultPage<TItem, TCursor> = {
   readonly items: readonly TItem[];
   readonly nextCursor: TCursor | undefined;
@@ -145,10 +164,14 @@ type AppendOf<TInput> = (
   rows: readonly TInput[],
 ) => Promise<AppendResult | undefined>;
 
-type ListOf<TItem, TCursor> = (
+type ListOf<
+  TItem,
+  TCursor,
+  TParams extends ListResultsParams<TCursor> = ListResultsParams<TCursor>,
+> = (
   scope: OwnerScope,
   runId: string,
-  params: ListResultsParams<TCursor>,
+  params: TParams,
 ) => Promise<ResultPage<TItem, TCursor> | undefined>;
 
 // `undefined` quer dizer "execução não encontrada para este dono", igual a uma execução inexistente.
@@ -163,7 +186,13 @@ export type RunResultRepository = {
   readonly listSignals: ListOf<SignalInput, number>;
   readonly listOrders: ListOf<OrderInput, OrderCursor>;
   readonly listFills: ListOf<FillInput, FillCursor>;
-  readonly listPositions: ListOf<PositionInput, PositionCursor>;
+  readonly listPositions: ListOf<PositionInput, PositionCursor, ListPositionsParams>;
+  // Os preenchimentos das posições dadas, numa única consulta (compra e venda de cada uma).
+  readonly listFillsOfPositions: (
+    scope: OwnerScope,
+    runId: string,
+    positionKeys: readonly string[],
+  ) => Promise<readonly FillInput[] | undefined>;
   readonly listEquityPoints: ListOf<EquityPointInput, number>;
   readonly listWindows: ListOf<WalkForwardWindowInput, number>;
   // No máximo cinco pontos da curva de patrimônio (os que decidem piso, dobro, vale, pico e último), nunca a série inteira.
@@ -172,6 +201,28 @@ export type RunResultRepository = {
     runId: string,
     params: SurvivalPointsParams,
   ) => Promise<readonly SurvivalPointInput[] | undefined>;
+  // A leitura do gráfico de preço e operações (spec 005): sempre dentro do escopo do dono, `undefined` é execução alheia.
+  readonly listPriceColumns: (
+    scope: OwnerScope,
+    runId: string,
+    params: PriceColumnsParams,
+  ) => Promise<readonly PriceColumn[] | undefined>;
+  readonly listFillMarkers: (
+    scope: OwnerScope,
+    runId: string,
+    params: FillMarkersParams,
+  ) => Promise<readonly FillMarkerInput[] | undefined>;
+  readonly countFillsInRange: (
+    scope: OwnerScope,
+    runId: string,
+    range: TimeRange,
+  ) => Promise<FillCounts | undefined>;
+  readonly listFillClusters: (
+    scope: OwnerScope,
+    runId: string,
+    params: FillClustersParams,
+  ) => Promise<readonly FillClusterBucket[] | undefined>;
+  readonly readTradeTotals: (scope: OwnerScope, runId: string) => Promise<TradeTotals | undefined>;
   // O registro cronológico (sinais, ordens e preenchimentos) por cursor, para o CSV do registro (RF12).
   readonly listLog: ListOf<RunLogEntry, RunLogCursor>;
 };

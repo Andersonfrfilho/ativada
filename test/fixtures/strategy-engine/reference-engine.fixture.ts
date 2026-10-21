@@ -69,6 +69,7 @@ function runReferenceStep(
       signal: walletSignal(signal.signal, input, defect),
       commands: input.commands,
       executionReports: input.executionReports,
+      entryRiskScale: input.entryRiskScale,
     },
     defect,
   );

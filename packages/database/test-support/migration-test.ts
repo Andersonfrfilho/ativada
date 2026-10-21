@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { join } from 'node:path';
+
 import { MIGRATIONS_FOLDER, ROLLBACK_SUFFIX } from '../src/database.constant.js';
 import { applyMigrations } from '../src/migrate.js';
 import { applyRollbacks } from './rollback.js';
@@ -6,9 +8,77 @@ import { readDatabaseUrl } from '../src/read-database-url.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
 
 const TEMPORARY_DATABASE_PREFIX = 'ativada_migration_';
+// Tabela mais nova criada por migration (0027): existe depois de aplicar e some depois do rollback (o teste de tabelas sobrando cobre a volta).
+const LATEST_MIGRATION_TABLE = 'model_team_reports';
 
 type CountRow = { readonly total: number };
 type TableNameRow = { readonly table_name: string };
+type ConstraintRow = { readonly definition: string; readonly convalidated: boolean };
+
+// A 0025 (spec 007) acrescenta analyst_timeout ao CHECK de run_commands.reason, validado (NOT VALID + VALIDATE).
+const REASON_CHECK = 'run_commands_reason_check';
+const LATEST_REASON = 'analyst_timeout';
+
+async function readReasonCheck(databaseUrl: string): Promise<ConstraintRow | undefined> {
+  const client = new Bun.SQL(databaseUrl);
+  try {
+    const rows: unknown =
+      await client`SELECT pg_get_constraintdef(oid) AS definition, convalidated FROM pg_constraint WHERE conname = ${REASON_CHECK}`;
+    return (rows as readonly ConstraintRow[])[0];
+  } finally {
+    await client.close();
+  }
+}
+
+// A 0026 (spec 017) aceita 3m no CHECK de candles e a 0029 aceita 1m.
+const TIMEFRAME_CHECK = 'candles_timeframe_check';
+const DISPLAY_TIMEFRAME_LITERALS = ["'1m'", "'3m'"];
+const ROLLBACK_GUARD_MESSAGE = 'não apaga velas de exibição';
+const ROLLBACK_0026 = '0026_candles_display_timeframes.rollback.sql';
+const ROLLBACK_0029 = '0029_candles_display_timeframe_1m.rollback.sql';
+const displayCandleInsert = (timeframe: string, closeTime: number): string =>
+  `INSERT INTO candles (exchange, symbol, timeframe, open_time, close_time, open, high, low, close, volume, trade_count)
+  VALUES ('binance', 'BTCUSDT', '${timeframe}', 0, ${closeTime}, 1, 2, 1, 2, 1, 1)`;
+
+async function expectRollbackGuard(
+  client: Bun.SQL,
+  params: { readonly file: string; readonly label: string },
+): Promise<void> {
+  const script = await Bun.file(join(MIGRATIONS_FOLDER, params.file)).text();
+  const failure = await client
+    .begin((transaction) => transaction.unsafe(script))
+    .then(
+      () => undefined,
+      (error: unknown) => (error instanceof Error ? error.message : String(error)),
+    );
+  if (!failure?.includes(ROLLBACK_GUARD_MESSAGE)) {
+    throw new Error(`o rollback ${params.label} não abortou pela guarda com linha de exibição`);
+  }
+}
+
+// A 0026 (3m) e a 0029 (1m): cada rollback ABORTA enquanto existir linha do seu timeframe.
+async function checkDisplayTimeframeMigration(databaseUrl: string): Promise<void> {
+  const client = new Bun.SQL(databaseUrl);
+  try {
+    const rows: unknown =
+      await client`SELECT pg_get_constraintdef(oid) AS definition, convalidated FROM pg_constraint WHERE conname = ${TIMEFRAME_CHECK}`;
+    const check = (rows as readonly ConstraintRow[])[0];
+    const hasLiterals = DISPLAY_TIMEFRAME_LITERALS.every((literal) =>
+      check?.definition.includes(literal),
+    );
+    if (check?.convalidated !== true || !hasLiterals) {
+      throw new Error(`${TIMEFRAME_CHECK} sem 1m e 3m validados`);
+    }
+    await client.unsafe(displayCandleInsert('3m', 179_999));
+    await expectRollbackGuard(client, { file: ROLLBACK_0026, label: '0026' });
+    await client.unsafe("DELETE FROM candles WHERE timeframe = '3m'");
+    await client.unsafe(displayCandleInsert('1m', 59_999));
+    await expectRollbackGuard(client, { file: ROLLBACK_0029, label: '0029' });
+    await client.unsafe("DELETE FROM candles WHERE timeframe = '1m'");
+  } finally {
+    await client.close();
+  }
+}
 
 async function listMigrationFileNames(migrationsFolder: string): Promise<string[]> {
   const glob = new Bun.Glob('*.sql');
@@ -55,6 +125,17 @@ async function runMigrationTest(adminUrl: string): Promise<number> {
       );
     }
 
+    const appliedTables = await listPublicTables(temporary.url);
+    if (!appliedTables.includes(LATEST_MIGRATION_TABLE)) {
+      throw new Error(`a migration mais nova não criou ${LATEST_MIGRATION_TABLE}`);
+    }
+
+    const reasonCheck = await readReasonCheck(temporary.url);
+    if (reasonCheck?.convalidated !== true || !reasonCheck.definition.includes(LATEST_REASON)) {
+      throw new Error(`${REASON_CHECK} sem ${LATEST_REASON} validado`);
+    }
+
+    await checkDisplayTimeframeMigration(temporary.url);
     await applyRollbacks({ databaseUrl: temporary.url, migrationsFolder: MIGRATIONS_FOLDER });
     const leftoverTables = await listPublicTables(temporary.url);
     if (leftoverTables.length > 0) {

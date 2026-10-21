@@ -2,6 +2,7 @@
 import { readErrorName } from '@ativada/environment';
 
 import type { WorkerLogger } from '../logging/worker-logger.js';
+import type { LoopOutageGuard } from '../outage/loop-outage-guard.js';
 import { ALERT_LOG } from './alerts.constant.js';
 import type { AlertDispatcher } from './alert-dispatcher.js';
 
@@ -17,6 +18,8 @@ export type AlertSchedulerDependencies = {
   readonly dispatcher: Pick<AlertDispatcher, 'tick'>;
   readonly logger: WorkerLogger;
   readonly pollMilliseconds: number;
+  // Banco fora: o ciclo espera o backoff do porteiro e a queda sai resumida (uma linha por minuto), sem erro cru.
+  readonly outage?: LoopOutageGuard | undefined;
 };
 
 type SchedulerState = {
@@ -28,9 +31,13 @@ type SchedulerState = {
 };
 
 async function runTick(dependencies: AlertSchedulerDependencies): Promise<void> {
+  const { outage } = dependencies;
+  if (outage?.isWaiting() === true) return;
   try {
     await dependencies.dispatcher.tick();
+    outage?.handleSuccess();
   } catch (error: unknown) {
+    if (outage?.handleFailure(error) === true) return;
     // Só o nome: a mensagem do erro pode carregar a URL da Bot API, que leva o token.
     dependencies.logger.error(ALERT_LOG.DISPATCH_FAILED, { errorName: readErrorName(error) });
   }

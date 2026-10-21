@@ -9,6 +9,7 @@ export const EXCHANGE_RATE_PAIRS: readonly string[] = ['USDTBRL'];
 
 export const MARKET_SERVER_MESSAGE_TYPE = {
   TICK: 'tick',
+  CANDLE: 'candle',
   SUBSCRIBED: 'subscribed',
 } as const;
 

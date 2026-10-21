@@ -4,10 +4,10 @@ import {
   downloadCandleInterval,
   formatPairLabel,
   groupConsecutiveOpenTimes,
-  TIMEFRAME_DURATION_MILLISECONDS,
+  MARKET_CANDLE_DURATION_MILLISECONDS,
+  type MarketCandleTimeframe,
   type MarketDataClient,
   type OpenTimeInterval,
-  type Timeframe,
 } from '@ativada/market-data-crypto';
 
 import type { CronLogger } from '../logging/cron-logger.js';
@@ -21,12 +21,13 @@ export type BackfillPairDependencies = {
   readonly now: () => number;
   readonly refreshClock: () => Promise<void>;
   readonly exchange: string;
-  readonly years: number;
+  readonly years?: number | undefined;
+  readonly days?: number | undefined;
 };
 
 export type BackfillPair = {
   readonly symbol: string;
-  readonly timeframe: Timeframe;
+  readonly timeframe: MarketCandleTimeframe;
 };
 
 export type BackfillPairResult = {
@@ -41,6 +42,7 @@ async function findGaps(
   const window = computeBackfillWindow({
     now: dependencies.now(),
     years: dependencies.years,
+    days: dependencies.days,
     timeframe: pair.timeframe,
   });
   const openTimes = await dependencies.repository.findMissingOpenTimes({
@@ -52,7 +54,7 @@ async function findGaps(
   });
   return groupConsecutiveOpenTimes({
     openTimes,
-    durationMilliseconds: TIMEFRAME_DURATION_MILLISECONDS[pair.timeframe],
+    durationMilliseconds: MARKET_CANDLE_DURATION_MILLISECONDS[pair.timeframe],
   });
 }
 

@@ -159,6 +159,8 @@ function createWriter(
   const { memory } = context;
   return {
     publishStepEvents: (): Promise<number> => Promise.resolve(0),
+    appendAnalystDecision: () => Promise.resolve(false),
+    appendTeamRunInput: () => Promise.resolve(false),
     appendAlerts: (): Promise<AppendResult> => Promise.resolve({ written: 0 }),
     recordGoalOutcome: (): Promise<boolean> => Promise.resolve(false),
     recordDataWait: (): Promise<undefined> => Promise.resolve(undefined),

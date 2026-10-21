@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { CandleRecord } from '../../../packages/database/src/index.js';
+import type { CandleRecord, StoredCandleTimeframe } from '../../../packages/database/src/index.js';
 import {
   createOwnerScope,
   type OwnerScope,
@@ -27,6 +27,11 @@ import {
 } from './in-memory-runs.fixture.js';
 import { createInMemoryRunQueue, type InMemoryRunQueue } from './in-memory-run-queue.fixture.js';
 import { createInMemoryGoals, type InMemoryGoals } from './in-memory-goals.fixture.js';
+import type { CreateRunUseCase } from '../../../apps/api-ativada/src/runs/create-run.use-case.js';
+import {
+  createInMemoryModelTeams,
+  type InMemoryModelTeams,
+} from './in-memory-model-teams.fixture.js';
 import {
   createInMemoryStrategies,
   type InMemoryStrategies,
@@ -63,6 +68,10 @@ export type HarnessParts = {
   readonly strategies: InMemoryStrategies;
   readonly goals: InMemoryGoals;
   readonly candles: InMemoryCandles;
+  readonly runs: InMemoryRuns;
+  readonly modelTeams: InMemoryModelTeams;
+  readonly createRun: CreateRunUseCase;
+  readonly runQueue: InMemoryRunQueue;
   readonly clock: { now: number };
 };
 
@@ -72,6 +81,10 @@ export type RunsHarnessOptions = {
   readonly csvLimits?: { maxRows?: number; maxDurationMilliseconds?: number };
   readonly extraRoutes?: (app: ApiApp, parts: HarnessParts) => readonly Route[];
   readonly symbols?: readonly string[];
+  // Velas de exibição (spec 017) habilitadas só na consulta de velas; criar execução continua só com as do motor.
+  readonly displayTimeframes?: readonly string[];
+  readonly displayCandles?: readonly CandleRecord<StoredCandleTimeframe>[];
+  readonly displayRetentionDays?: number;
   // Teto de execuções guardadas por usuário (padrão alto: só os testes da cota o baixam).
   readonly runStorageLimit?: number;
   readonly strategyLimits?: {
@@ -85,8 +98,11 @@ export type RunsHarness = {
   readonly strategies: InMemoryStrategies;
   readonly goals: InMemoryGoals;
   readonly runs: InMemoryRuns;
+  readonly modelTeams: InMemoryModelTeams;
   readonly candles: InMemoryCandles;
   readonly dispatched: RunDispatchRequest[];
+  // As consultas do acompanhamento ao vivo, na ordem em que foram feitas (esvazie antes do pedido que se quer contar).
+  readonly queries: string[];
   readonly limits: InMemoryRunQueue['limits'];
   readonly dispatch: { shouldFail: boolean };
   readonly failures: { candles: boolean; queuePosition: boolean };
@@ -135,12 +151,20 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
   const jwks: JwksTestServer = startJwksTestServer([key]);
   const strategies = createInMemoryStrategies();
   const goals = createInMemoryGoals();
-  const runs = createInMemoryRuns(strategies.repository, (goalId) => goals.referenced.add(goalId));
-  const candles = createInMemoryCandleSeries(options.candles ?? []);
+  const candles = createInMemoryCandleSeries([
+    ...(options.candles ?? []),
+    ...(options.displayCandles ?? []),
+  ]);
+  const runs = createInMemoryRuns(
+    strategies.repository,
+    (goalId) => goals.referenced.add(goalId),
+    options.candles ?? [],
+  );
+  const clock = { now: NOW };
+  const modelTeams = createInMemoryModelTeams(runs, () => clock.now);
   const dispatched: RunDispatchRequest[] = [];
   const dispatch = { shouldFail: false };
   const failures = { candles: false, queuePosition: false };
-  const clock = { now: NOW };
   const reportedErrors: unknown[] = [];
   const enabled = {
     symbols: [...(options.symbols ?? ENABLED_SYMBOLS)],
@@ -167,10 +191,80 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     queue: queue.port,
     results: runs.results,
   };
+  // Cada consulta do acompanhamento anota o nome em `queries`: o contrato conta quantas um pedido faz.
+  const liveStatusDeps = {
+    runs: {
+      findRun: (
+        ...args: Parameters<typeof runs.repository.findRun>
+      ): ReturnType<typeof runs.repository.findRun> => {
+        runs.liveCalls.push('findRun');
+        return runs.repository.findRun(...args);
+      },
+    },
+    strategies: {
+      findVersion: (
+        ...args: Parameters<typeof strategies.repository.findVersion>
+      ): ReturnType<typeof strategies.repository.findVersion> => {
+        runs.liveCalls.push('findVersion');
+        return strategies.repository.findVersion(...args);
+      },
+    },
+    live: runs.liveStatus,
+    exchange: EXCHANGE,
+  };
+  // As camadas e as previsões (spec 009): as mesmas consultas anotadas em `queries`, mais as das janelas.
+  const projectionDeps = {
+    ...liveStatusDeps,
+    results: {
+      listWindows: (
+        ...args: Parameters<typeof runs.results.listWindows>
+      ): ReturnType<typeof runs.results.listWindows> => {
+        runs.liveCalls.push('listWindows');
+        return runs.results.listWindows(...args);
+      },
+    },
+    projections: runs.projections,
+  };
+  // O analista de risco (spec 007): as mesmas consultas anotadas em `queries`.
+  const analystDeps = { ...liveStatusDeps, analyst: runs.analyst.repository };
   const series = app.runSeriesUseCases.createRunSeriesUseCases({ results: runs.results });
+  const createRun = app.createRun.createCreateRunUseCase({
+    ...runDeps,
+    candles: {
+      findCandles: (params) =>
+        failures.candles
+          ? Promise.reject(new Error(UNAVAILABLE_DATABASE))
+          : candles.repository.findCandles(params),
+    },
+    queue: {
+      ...queue.port,
+      findQueuePosition: (scope, runId) =>
+        failures.queuePosition
+          ? Promise.reject(new Error(UNAVAILABLE_DATABASE))
+          : queue.port.findQueuePosition(scope, runId),
+    },
+    reportUnexpectedError: (error) => reportedErrors.push(error),
+    strategies: strategies.repository,
+    teams: modelTeams.teams,
+    goals: goals.repository,
+    dispatcher,
+    queuePerUserLimit: options.queuePerUserLimit ?? DEFAULT_QUEUE_PER_USER_LIMIT,
+    runStorageLimit: options.runStorageLimit ?? DEFAULT_RUN_STORAGE_LIMIT,
+    now: () => clock.now,
+  });
   const routes: readonly Route[] = [
     ...app.marketRoutes.createMarketRoutes({
-      enabled,
+      enabled: {
+        ...enabled,
+        timeframes: [...enabled.timeframes, ...(options.displayTimeframes ?? [])],
+      },
+      displayRetention:
+        options.displayRetentionDays === undefined
+          ? undefined
+          : {
+              days: { '1m': options.displayRetentionDays, '3m': options.displayRetentionDays },
+              now: () => clock.now,
+            },
       listCandles: app.candlesUseCase.createListCandlesUseCase({
         candles: candles.repository,
         exchange: EXCHANGE,
@@ -186,35 +280,47 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     }),
     ...app.runRoutes.createRunRoutes({
       enabled,
-      createRun: app.createRun.createCreateRunUseCase({
-        ...runDeps,
-        candles: {
-          findCandles: (params) =>
-            failures.candles
-              ? Promise.reject(new Error(UNAVAILABLE_DATABASE))
-              : candles.repository.findCandles(params),
-        },
-        queue: {
-          ...queue.port,
-          findQueuePosition: (scope, runId) =>
-            failures.queuePosition
-              ? Promise.reject(new Error(UNAVAILABLE_DATABASE))
-              : queue.port.findQueuePosition(scope, runId),
-        },
-        reportUnexpectedError: (error) => reportedErrors.push(error),
-        strategies: strategies.repository,
-        goals: goals.repository,
-        dispatcher,
-        queuePerUserLimit: options.queuePerUserLimit ?? DEFAULT_QUEUE_PER_USER_LIMIT,
-        runStorageLimit: options.runStorageLimit ?? DEFAULT_RUN_STORAGE_LIMIT,
-        now: () => clock.now,
-      }),
+      createRun,
       listRuns: app.runUseCases.createListRunsUseCase(runDeps),
       getRun: app.runUseCases.createGetRunUseCase(runDeps),
       stopRun: app.runUseCases.createStopRunUseCase(runDeps),
       deleteRun: app.runUseCases.createDeleteRunUseCase(runDeps),
     }),
     ...app.runSeriesRoutes.createRunSeriesRoutes(series),
+    app.runChartRoute.createRunChartRoute(
+      app.runChartUseCase.createRunChartUseCase({
+        runs: runs.repository,
+        results: runs.results,
+        exchange: EXCHANGE,
+        strategies: strategies.repository,
+        live: runs.liveStatus,
+      }),
+    ),
+    app.tradeSummaryRoute.createTradeSummaryRoute(
+      app.tradeSummaryUseCase.createTradeSummaryUseCase({ results: runs.results }),
+    ),
+    app.liveStatusRoute.createLiveStatusRoute(
+      app.liveStatusUseCase.createLiveStatusUseCase({ ...liveStatusDeps, now: () => clock.now }),
+    ),
+    app.liveSummaryRoute.createLiveSummaryRoute(
+      app.liveSummaryUseCase.createLiveSummaryUseCase({ live: runs.liveStatus }),
+    ),
+    app.runDecisionsRoute.createRunDecisionsRoute(
+      app.runDecisionsUseCase.createRunDecisionsUseCase(liveStatusDeps),
+    ),
+    app.strategyLayersRoute.createStrategyLayersRoute(
+      app.strategyLayersUseCase.createStrategyLayersUseCase(projectionDeps),
+    ),
+    app.projectionsRoute.createProjectionsRoute(
+      app.projectionsUseCase.createProjectionsUseCase(projectionDeps),
+    ),
+    app.tradePlanRoute.createTradePlanRoute(
+      app.tradePlanUseCase.createTradePlanUseCase({
+        ...liveStatusDeps,
+        teams: modelTeams.teams,
+        reports: modelTeams.reads,
+      }),
+    ),
     ...app.runExportRoutes.createRunExportRoutes(
       app.exportCsv.createExportRunCsvUseCase({
         results: runs.results,
@@ -222,7 +328,22 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
         ...(options.csvLimits === undefined ? {} : { limits: options.csvLimits }),
       }),
     ),
-    ...(options.extraRoutes?.(app, { strategies, goals, candles, clock }) ?? []),
+    app.analystRoute.createAnalystRoute(
+      app.analystUseCase.createAnalystUseCase({ ...analystDeps, now: () => clock.now }),
+    ),
+    app.analystRoute.createAnalystDecisionsRoute(
+      app.analystDecisionsUseCase.createAnalystDecisionsUseCase(analystDeps),
+    ),
+    ...(options.extraRoutes?.(app, {
+      strategies,
+      goals,
+      candles,
+      runs,
+      modelTeams,
+      createRun,
+      runQueue: queue,
+      clock,
+    }) ?? []),
   ];
   const verifyAccessToken = app.tokenVerifier.createAccessTokenVerifier({
     settings: {
@@ -261,8 +382,10 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     strategies,
     goals,
     runs,
+    modelTeams,
     candles,
     dispatched,
+    queries: runs.liveCalls,
     limits: queue.limits,
     dispatch,
     failures,

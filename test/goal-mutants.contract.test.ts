@@ -16,6 +16,7 @@ const LEVELS = 'goal/goal-levels.ts';
 const OUTCOME = 'goal/goal-window-outcome.ts';
 const PROGRESS = 'goal/goal-progress.ts';
 const WINDOWS = 'goal/goal-windows.ts';
+const WINDOW_PATH = 'goal/goal-window-path.ts';
 const SUMMARY = 'goal/goal-summary.ts';
 const VERDICT = 'goal/goal-verdict.ts';
 const CONSTANT = 'goal/goal.constant.ts';
@@ -275,7 +276,7 @@ const MUTANTS: readonly GoalSourceMutant[] = [
   {
     name: 'NEXT_BUY_LOOKS_AT_SELLS',
     edits: edit(
-      WINDOWS,
+      WINDOW_PATH,
       'signals[index]?.action === SIGNAL_ACTION.BUY',
       'signals[index]?.action === SIGNAL_ACTION.SELL',
     ),
@@ -283,7 +284,7 @@ const MUTANTS: readonly GoalSourceMutant[] = [
   {
     name: 'NEXT_BUY_SKIPS_THE_CURRENT_CANDLE',
     edits: edit(
-      WINDOWS,
+      WINDOW_PATH,
       'isBuy ? index : (next[index + 1] ?? signals.length)',
       'next[index + 1] ?? signals.length',
     ),
@@ -291,7 +292,7 @@ const MUTANTS: readonly GoalSourceMutant[] = [
   {
     name: 'TRAJECTORY_SHIFTED_BY_ONE',
     edits: edit(
-      WINDOWS,
+      WINDOW_PATH,
       'trajectory[start + offset - buy]',
       'trajectory[start + offset - buy + 1]',
     ),
@@ -299,7 +300,7 @@ const MUTANTS: readonly GoalSourceMutant[] = [
   {
     name: 'TRAJECTORY_ONLY_WHEN_THE_BUY_IS_AFTER_THE_START',
     edits: edit(
-      WINDOWS,
+      WINDOW_PATH,
       'buy < start + horizonCandles ? readTrajectory(buy) : []',
       'buy < start + horizonCandles - 2 ? readTrajectory(buy) : []',
     ),

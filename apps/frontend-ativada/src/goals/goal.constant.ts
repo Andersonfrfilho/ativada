@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import { LIVE_RUN_LIMIT_REACHED_TEXT } from './simulation-timeframe.constant.js';
+
 export const GOAL_QUERY_ROOT = 'goals';
 export const GOAL_TIMEFRAME = '1d';
 export const GOAL_PAGE_SIZE = 100;
@@ -33,14 +35,13 @@ export const GOAL_ERROR_TEXT: Readonly<Record<string, string>> = {
   GOAL_IN_USE: 'Há simulações ligadas a esta meta: pare-as antes de apagá-la.',
   GOAL_INACTIVE: 'A meta está desligada: ligue-a para iniciar uma simulação.',
   GOAL_NOT_FOUND: 'Meta não encontrada.',
-  LIVE_RUN_LIMIT_REACHED:
-    'Você já está no máximo de simulações ao vivo. Pare uma para iniciar outra.',
+  LIVE_RUN_LIMIT_REACHED: LIVE_RUN_LIMIT_REACHED_TEXT,
   GOAL_PLAN_UNAVAILABLE:
-    'Ainda não há candles suficientes para montar o plano desta estratégia neste par.',
+    'Ainda não há velas suficientes para montar o plano desta estratégia neste par.',
 };
 
 export const UNAVAILABLE_REASON_TEXT: Readonly<Record<string, string>> = {
-  INVALID_CANDLES: 'série de candles inválida',
+  INVALID_CANDLES: 'série de velas inválida',
   CANDLES_NOT_CONTIGUOUS: 'histórico com lacunas',
   INVALID_SENTIMENTS: 'sem dados de sentimento',
   INVALID_STRATEGY_CONFIG: 'configuração da estratégia inválida',
@@ -50,6 +51,26 @@ export const GOAL_OUTCOME_TEXT: Readonly<Record<string, string>> = {
   goal_reached: 'Meta atingida',
   goal_stopped: 'Parou na perda máxima',
   goal_expired: 'Prazo encerrado sem atingir a meta',
+};
+
+// O valor da API segue COMPRAR/SEGURAR/EVITAR; na tela o veredito é do histórico, nunca uma ordem (redesenho aprovado).
+export const VERDICT_LABEL: Readonly<Record<string, string>> = {
+  COMPRAR: 'Favorável no histórico',
+  SEGURAR: 'Neutro no histórico',
+  EVITAR: 'Desfavorável no histórico',
+};
+
+export const VERDICT_ICON = {
+  COMPRAR: 'arrowUp',
+  SEGURAR: 'equal',
+  EVITAR: 'arrowDown',
+} as const;
+
+export const VERDICT_PLAIN: Readonly<Record<string, string>> = {
+  COMPRAR: 'Boa opção no passado: chegou ao alvo na maior parte das tentativas.',
+  SEGURAR: 'Resultado no meio do caminho: não dá para dizer que foi bom nem ruim.',
+  EVITAR:
+    'Opção fraca no passado: quase nunca chegou ao alvo ou bateu a perda máxima com frequência.',
 };
 
 export const VERDICT_HINT: Readonly<Record<string, string>> = {

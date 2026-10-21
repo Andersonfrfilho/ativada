@@ -308,7 +308,8 @@ describe('live connection', () => {
     await screen.findByRole('list', { name: 'Histórico de sinais' });
     expect(stream.connections()).toBe(1);
     act(() => stream.setStatus('live'));
-    expect(screen.getByText('Ao vivo')).toBeDefined();
+    // "Ao vivo" também é o item do menu: o selo da conexão é o que tem papel de status.
+    expect(screen.getByText('Ao vivo', { selector: '[role="status"]' })).toBeDefined();
     act(() => stream.setStatus('reconnecting'));
     expect(screen.getByText('Reconectando…')).toBeDefined();
     act(() => stream.setStatus('blocked'));

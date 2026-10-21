@@ -13,6 +13,8 @@ export type DocumentedSuccess = {
   readonly description: string;
   readonly schema?: z.ZodType;
   readonly isList?: boolean;
+  // Esquema do `meta` opcional do envelope (campo aditivo).
+  readonly meta?: z.ZodType;
   readonly contentType?: string;
 };
 

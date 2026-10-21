@@ -26,6 +26,19 @@ export const LIVE_JUDGE_TEST_FILES: readonly string[] = [
   'test/live-goal-evaluator.contract.test.ts',
 ];
 
+// Os testes que reprovam o mutante do analista de risco em sombra e governando: a série do par e o passo com a decisão na transação.
+export const LIVE_ANALYST_JUDGE_TEST_FILES: readonly string[] = [
+  'test/live-analyst-series.contract.test.ts',
+  'test/live-analyst-shadow.contract.test.ts',
+  'test/live-analyst-govern.contract.test.ts',
+];
+
+// Os testes que reprovam o mutante do passo da execução de equipe (spec 015): o passo, a espera, o replay e a retomada.
+export const LIVE_TEAM_JUDGE_TEST_FILES: readonly string[] = [
+  'test/live-team-step.contract.test.ts',
+  'test/live-team-determinism.contract.test.ts',
+];
+
 export type LiveSourceEdit = {
   readonly file: string;
   readonly find: string;
@@ -73,7 +86,10 @@ async function pointImportsAtRecordingCopy(directory: string): Promise<void> {
 }
 
 // Cópia do módulo com as edições; os testes da simulação ao vivo rodam contra ela num processo à parte.
-export async function runLiveMutant(mutant: LiveSourceMutant): Promise<LiveMutantVerdict> {
+export async function runLiveMutant(
+  mutant: LiveSourceMutant,
+  judgeFiles: readonly string[] = LIVE_JUDGE_TEST_FILES,
+): Promise<LiveMutantVerdict> {
   const directory = `${LIVE_MUTANT_ROOT}/${mutant.name.toLowerCase()}`;
   await cp(SOURCE_DIRECTORY, directory, { recursive: true });
   await cp(RECORDING_DIRECTORY, `${directory}/${LIVE_RECORDING_COPY}`, { recursive: true });
@@ -84,7 +100,7 @@ export async function runLiveMutant(mutant: LiveSourceMutant): Promise<LiveMutan
     const problem = error instanceof Error ? error.message : 'edição inválida';
     return { exitCode: -1, failedTests: 0, hasLoadError: false, problem };
   }
-  const child = Bun.spawn([process.execPath, 'test', ...LIVE_JUDGE_TEST_FILES], {
+  const child = Bun.spawn([process.execPath, 'test', ...judgeFiles], {
     cwd: REPOSITORY_ROOT,
     env: {
       PATH: Bun.env.PATH ?? '',

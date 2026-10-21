@@ -10,20 +10,20 @@ import {
   writeSignals,
   writeWindows,
 } from './run-result-append.js';
-import {
-  listEquityPoints,
-  listFills,
-  listOrders,
-  listPositions,
-  listSignals,
-} from './run-result-list.js';
+import { listEquityPoints, listFills, listOrders, listSignals } from './run-result-list.js';
 import { listRunLog } from './run-log-list.js';
+import { listFillsOfPositions } from './run-fill-list.js';
+import { countFillsInRange, listFillClusters, listFillMarkers } from './run-fill-markers.js';
+import { listPriceColumns } from './run-price-columns.js';
+import { readTradeTotals } from './run-trade-totals.js';
+import { listPositions } from './run-position-list.js';
 import { listSurvivalPoints } from './run-survival-points.js';
 import { listWindows } from './run-window-list.js';
 import { writeOrders, writePositions } from './run-result-upsert.js';
 import type { WriteRequest } from './run-result-write.types.js';
 import type {
   AppendResult,
+  FillInput,
   ListResultsParams,
   ResultPage,
   RunResultRepository,
@@ -61,17 +61,54 @@ type ListRequest<TCursor> = {
   readonly params: ListResultsParams<TCursor>;
 };
 
-function lister<TItem, TCursor>(
+function lister<TItem, TCursor, TParams extends ListResultsParams<TCursor>>(
   database: Database,
-  list: (request: ListRequest<TCursor>) => Promise<ResultPage<TItem, TCursor>>,
+  list: (
+    request: Omit<ListRequest<TCursor>, 'params'> & { readonly params: TParams },
+  ) => Promise<ResultPage<TItem, TCursor>>,
 ): (
   scope: OwnerScope,
   runId: string,
-  params: ListResultsParams<TCursor>,
+  params: TParams,
 ) => Promise<ResultPage<TItem, TCursor> | undefined> {
   return async (scope, runId, params) => {
     if (!(await isOwnedRun(database, scope, runId))) return undefined;
     return list({ executor: database, scope, runId, params });
+  };
+}
+
+type ChartReaders = Pick<
+  RunResultRepository,
+  | 'listPriceColumns'
+  | 'listFillMarkers'
+  | 'countFillsInRange'
+  | 'listFillClusters'
+  | 'readTradeTotals'
+>;
+
+// As leituras do gráfico: cada uma confere o dono da execução antes de ler.
+function createChartReaders(database: Database): ChartReaders {
+  return {
+    listPriceColumns: async (scope, runId, params) =>
+      (await isOwnedRun(database, scope, runId))
+        ? listPriceColumns({ executor: database, params })
+        : undefined,
+    listFillMarkers: async (scope, runId, params) =>
+      (await isOwnedRun(database, scope, runId))
+        ? listFillMarkers({ executor: database, scope, runId, params })
+        : undefined,
+    countFillsInRange: async (scope, runId, range) =>
+      (await isOwnedRun(database, scope, runId))
+        ? countFillsInRange({ executor: database, scope, runId, params: range })
+        : undefined,
+    listFillClusters: async (scope, runId, params) =>
+      (await isOwnedRun(database, scope, runId))
+        ? listFillClusters({ executor: database, scope, runId, params })
+        : undefined,
+    readTradeTotals: async (scope, runId) =>
+      (await isOwnedRun(database, scope, runId))
+        ? readTradeTotals({ executor: database, scope, runId })
+        : undefined,
   };
 }
 
@@ -92,6 +129,15 @@ export function createRunResultRepository(handle: DatabaseHandle): RunResultRepo
     listEquityPoints: lister(database, listEquityPoints),
     listWindows: lister(database, listWindows),
     listLog: lister(database, listRunLog),
+    listFillsOfPositions: async (
+      scope,
+      runId,
+      positionKeys,
+    ): Promise<readonly FillInput[] | undefined> => {
+      if (!(await isOwnedRun(database, scope, runId))) return undefined;
+      return listFillsOfPositions({ executor: database, scope, runId, positionKeys });
+    },
+    ...createChartReaders(database),
     listSurvivalPoints: async (
       scope,
       runId,

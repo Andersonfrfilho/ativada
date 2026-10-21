@@ -6,7 +6,10 @@ import type {
   CreateRunParams,
   EquityPointInput,
   FillCursor,
+  FindCandlesParams,
   FillInput,
+  FillMarkerInput,
+  ListPositionsParams,
   ListResultsParams,
   OrderCursor,
   OrderInput,
@@ -16,14 +19,28 @@ import type {
   RunLogCursor,
   RunLogEntry,
   RunRecord,
+  RunLiveStatusRepository,
+  RunProjectionRepository,
   RunRepository,
   RunResultRepository,
   RunStatus,
   SignalInput,
+  StoredCandleTimeframe,
   StrategyRepository,
   WalkForwardWindowInput,
 } from '../../../packages/database/src/index.js';
 import type { OwnerScope } from '../../../packages/database/src/ownership/owner-scope.js';
+import {
+  createInMemoryAnalystDecisions,
+  type InMemoryAnalystDecisions,
+} from './in-memory-analyst-decisions.fixture.js';
+import { createInMemoryLiveStatus, type LiveRunHead } from './in-memory-live-status.fixture.js';
+import { createInMemoryProjections } from './in-memory-projections.fixture.js';
+import {
+  referenceFillClusters,
+  referencePriceColumns,
+  referenceTradeTotals,
+} from '../run-chart/chart-oracle.fixture.js';
 import type { UserId } from '../../../packages/database/src/ownership/user-id.js';
 import {
   RUN_STATUS,
@@ -62,13 +79,30 @@ export type InMemoryRuns = {
     | 'listOrders'
     | 'listFills'
     | 'listPositions'
+    | 'listFillsOfPositions'
+    | 'listPriceColumns'
+    | 'listFillMarkers'
+    | 'countFillsInRange'
+    | 'listFillClusters'
+    | 'readTradeTotals'
     | 'listEquityPoints'
     | 'listWindows'
     | 'listLog'
     | 'listSurvivalPoints'
   >;
+  // As leituras do acompanhamento ao vivo e o nome de cada consulta feita (a harness acrescenta as do pedido).
+  readonly liveStatus: RunLiveStatusRepository;
+  // As leituras da previsão e das camadas (spec 009): anotam o nome em `liveCalls` como as do acompanhamento.
+  readonly projections: RunProjectionRepository;
+  // As leituras do analista de risco (spec 007): anotam o nome em `liveCalls` e guardam as decisões semeadas.
+  readonly analyst: InMemoryAnalystDecisions;
+  readonly liveCalls: string[];
   // Cada leitura de resultado anota o `limit` pedido: provam que a rota lê por página, nunca a série inteira.
   readonly listCalls: Record<ResultKind | 'log', number[]>;
+  // As chaves de posição de cada leitura de preenchimentos: prova que a página inteira vai numa consulta só.
+  readonly fillLookups: (readonly string[])[];
+  // Quantas vezes cada leitura do gráfico rodou: prova que os marcadores só são lidos até o limite.
+  readonly chartCalls: { columns: number; markers: number; counts: number; clusters: number };
   // Quantas linhas cada leitura da sobrevivência devolveu: o custo não pode crescer com a série.
   readonly survivalRowsRead: number[];
   readonly seed: <TKind extends ResultKind>(
@@ -104,10 +138,27 @@ function pageOf<TRow, TCursor>(
   };
 }
 
+function readField(value: RunRecord['request'], key: string): RunRecord['request'] {
+  if (typeof value !== 'object' || value === null) return undefined;
+  return Object.entries(value).find(([name]) => name === key)?.[1];
+}
+
+function readAnalystMode(request: RunRecord['request']): string | undefined {
+  const mode = readField(readField(request, 'analyst'), 'mode');
+  return typeof mode === 'string' ? mode : undefined;
+}
+
+function readInitialBalance(parameters: RunRecord['runParameters']): string {
+  const balance = readField(parameters, 'initialBalance');
+  return typeof balance === 'string' ? balance : '10000';
+}
+
 export function createInMemoryRuns(
-  strategies: Pick<StrategyRepository, 'findVersion'>,
+  strategies: Pick<StrategyRepository, 'findVersion' | 'findStrategy'>,
   // Chamado quando uma execução fica atrelada a uma meta: a FK RESTRICT do banco, que impede apagar a meta.
   onGoalLinked: (goalId: string) => void = () => undefined,
+  // As velas que o preço do gráfico lê (a mesma semente do repositório de velas do harness).
+  candleSeed: readonly CandleRecord[] = [],
 ): InMemoryRuns {
   const runs: StoredRun[] = [];
   const stores = new Map<string, ResultStore>();
@@ -121,6 +172,8 @@ export function createInMemoryRuns(
     windows: [],
   };
   const survivalRowsRead: number[] = [];
+  const fillLookups: (readonly string[])[] = [];
+  const chartCalls = { columns: 0, markers: 0, counts: 0, clusters: 0 };
   let sequence = 0;
 
   const ownedRun = (scope: OwnerScope, runId: string): StoredRun | undefined =>
@@ -194,6 +247,12 @@ export function createInMemoryRuns(
       const owned = runs
         .filter((stored) => stored.userId === scope.ownerUserId && stored.deletedAt === undefined)
         .filter((stored) => params.kind === undefined || stored.record.kind === params.kind)
+        .filter((stored) => params.symbol === undefined || stored.record.symbol === params.symbol)
+        .filter(
+          (stored) =>
+            params.strategyVersionId === undefined ||
+            stored.record.strategyVersionId === params.strategyVersionId,
+        )
         .sort((first, second) => second.sequence - first.sequence);
       const start =
         params.after === undefined
@@ -394,7 +453,176 @@ export function createInMemoryRuns(
     );
   };
 
+  const isInRange = (time: number | undefined, range: { from: number; to: number }): boolean =>
+    time !== undefined && time >= range.from && time < range.to;
+
+  // Compra OU venda dentro de [from, to): a posição que atravessa a faixa sem preenchimento nela fica fora.
+  const matchesPositionFilter = (row: PositionInput, params: ListPositionsParams): boolean =>
+    (params.status === undefined || row.status === params.status) &&
+    (params.range === undefined ||
+      isInRange(row.openedCandleTime, params.range) ||
+      isInRange(row.closedCandleTime, params.range));
+
+  const listPositions: InMemoryRuns['results']['listPositions'] = (scope, runId, params) => {
+    listCalls.positions.push(params.limit);
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    const filtered = storeOf(runId).positions.filter((row) => matchesPositionFilter(row, params));
+    const isDescending = params.order === 'desc';
+    const rows = isDescending ? [...filtered].reverse() : filtered;
+    return Promise.resolve(
+      pageOf(
+        rows,
+        params,
+        (row, cursor: PositionCursor) =>
+          isDescending
+            ? row.openedCandleTime < cursor.openedCandleTime ||
+              (row.openedCandleTime === cursor.openedCandleTime && row.engineKey < cursor.engineKey)
+            : row.openedCandleTime > cursor.openedCandleTime ||
+              (row.openedCandleTime === cursor.openedCandleTime &&
+                row.engineKey > cursor.engineKey),
+        (row) => ({ openedCandleTime: row.openedCandleTime, engineKey: row.engineKey }),
+      ),
+    );
+  };
+
+  const listFillsOfPositions: InMemoryRuns['results']['listFillsOfPositions'] = (
+    scope,
+    runId,
+    positionKeys,
+  ) => {
+    fillLookups.push(positionKeys);
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    return Promise.resolve(
+      storeOf(runId).fills.filter((fill) => positionKeys.includes(fill.positionKey)),
+    );
+  };
+
+  const isFillInRange = (fill: FillInput, range: { from: number; to: number }): boolean =>
+    fill.candleTime >= range.from && fill.candleTime < range.to;
+
+  const listPriceColumns: InMemoryRuns['results']['listPriceColumns'] = (scope, runId, params) => {
+    chartCalls.columns += 1;
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    const candles = candleSeed.filter(
+      (candle) =>
+        candle.exchange === params.exchange &&
+        candle.symbol === params.symbol &&
+        candle.timeframe === params.timeframe,
+    );
+    return Promise.resolve(
+      referencePriceColumns({ candles, range: params.range, columns: params.columns }),
+    );
+  };
+
+  const listFillMarkers: InMemoryRuns['results']['listFillMarkers'] = (scope, runId, params) => {
+    chartCalls.markers += 1;
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    const store = storeOf(runId);
+    const markers: FillMarkerInput[] = store.fills
+      .filter((fill) => isFillInRange(fill, params.range))
+      .sort(
+        (left, right) =>
+          left.candleTime - right.candleTime || (left.orderKey < right.orderKey ? -1 : 1),
+      )
+      .slice(0, params.limit)
+      .map((fill) => ({
+        ...fill,
+        netProfit:
+          fill.side === 'sell'
+            ? store.positions.find((position) => position.engineKey === fill.positionKey)?.netProfit
+            : undefined,
+      }));
+    return Promise.resolve(markers);
+  };
+
+  const countFillsInRange: InMemoryRuns['results']['countFillsInRange'] = (scope, runId, range) => {
+    chartCalls.counts += 1;
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    const inRange = storeOf(runId).fills.filter((fill) => isFillInRange(fill, range));
+    return Promise.resolve({
+      buys: inRange.filter((fill) => fill.side === 'buy').length,
+      sells: inRange.filter((fill) => fill.side === 'sell').length,
+    });
+  };
+
+  const listFillClusters: InMemoryRuns['results']['listFillClusters'] = (scope, runId, params) => {
+    chartCalls.clusters += 1;
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    return Promise.resolve(
+      referenceFillClusters({
+        fills: storeOf(runId).fills,
+        range: params.range,
+        columns: params.columns,
+      }),
+    );
+  };
+
+  const readTradeTotals: InMemoryRuns['results']['readTradeTotals'] = (scope, runId) => {
+    if (ownedRun(scope, runId) === undefined) return Promise.resolve(undefined);
+    const store = storeOf(runId);
+    return Promise.resolve(
+      referenceTradeTotals({ positions: store.positions, fills: store.fills }),
+    );
+  };
+
+  const liveCalls: string[] = [];
+  const liveHeadsOf = async (scope: OwnerScope): Promise<readonly LiveRunHead[]> => {
+    const active = runs
+      .filter(
+        (stored) =>
+          stored.userId === scope.ownerUserId &&
+          stored.deletedAt === undefined &&
+          stored.record.kind === 'live_paper' &&
+          (stored.record.status === RUN_STATUS.QUEUED ||
+            stored.record.status === RUN_STATUS.RUNNING),
+      )
+      .sort((left, right) => right.sequence - left.sequence);
+    return Promise.all(
+      active.map(async (stored): Promise<LiveRunHead> => {
+        const { record } = stored;
+        const version = await strategies.findVersion(scope, record.strategyVersionId);
+        const strategy =
+          version === undefined
+            ? undefined
+            : await strategies.findStrategy(scope, version.strategyId);
+        return {
+          runId: record.id,
+          strategyName: strategy?.name ?? '',
+          timeframe: record.timeframe,
+          analystMode: readAnalystMode(record.request),
+          initialBalance: readInitialBalance(record.runParameters),
+          isWaitingForData: record.waitingSince !== undefined,
+        };
+      }),
+    );
+  };
+  const liveStatus = createInMemoryLiveStatus({
+    isOwned: (scope, runId) => ownedRun(scope, runId) !== undefined,
+    storeOf,
+    candleSeed,
+    calls: liveCalls,
+    liveRunsOf: (scope) => liveHeadsOf(scope),
+  });
+
+  const projections = createInMemoryProjections({
+    isOwned: (scope, runId) => ownedRun(scope, runId) !== undefined,
+    storeOf,
+    candleSeed,
+    calls: liveCalls,
+  });
+
+  const analyst = createInMemoryAnalystDecisions({
+    isOwned: (scope, runId) => ownedRun(scope, runId) !== undefined,
+    resultsOf: storeOf,
+    calls: liveCalls,
+  });
+
   const results: InMemoryRuns['results'] = {
+    readTradeTotals,
+    listPriceColumns,
+    listFillMarkers,
+    countFillsInRange,
+    listFillClusters,
     listLog,
     listSurvivalPoints,
     listSignals: lister<SignalInput, number>('signals', (store) => store.signals, {
@@ -423,18 +651,20 @@ export function createInMemoryRuns(
         (row.candleTime === cursor.candleTime && row.orderKey > cursor.orderKey),
       of: (row) => ({ candleTime: row.candleTime, orderKey: row.orderKey }),
     }),
-    listPositions: lister<PositionInput, PositionCursor>('positions', (store) => store.positions, {
-      isAfter: (row, cursor) =>
-        row.openedCandleTime > cursor.openedCandleTime ||
-        (row.openedCandleTime === cursor.openedCandleTime && row.engineKey > cursor.engineKey),
-      of: (row) => ({ openedCandleTime: row.openedCandleTime, engineKey: row.engineKey }),
-    }),
+    listPositions,
+    listFillsOfPositions,
   };
 
   return {
     repository,
     results,
+    liveStatus,
+    projections,
+    analyst,
+    liveCalls,
     listCalls,
+    fillLookups,
+    chartCalls,
     survivalRowsRead,
     seed: (runId, kind, rows): void => {
       const store = storeOf(runId);
@@ -458,16 +688,20 @@ export type InMemoryCandles = {
   readonly queries: { from: number; to: number; limit: number | undefined }[];
 };
 
-export function createInMemoryCandleSeries(seed: readonly CandleRecord[]): InMemoryCandles {
+export function createInMemoryCandleSeries(
+  seed: readonly CandleRecord<StoredCandleTimeframe>[],
+): InMemoryCandles {
   const queries: InMemoryCandles['queries'] = [];
   return {
     queries,
     repository: {
-      findCandles: (params): Promise<readonly CandleRecord[]> => {
+      findCandles: <TTimeframe extends StoredCandleTimeframe>(
+        params: FindCandlesParams<TTimeframe>,
+      ): Promise<readonly CandleRecord<TTimeframe>[]> => {
         queries.push({ from: params.from, to: params.to, limit: params.limit });
         const matching = seed
           .filter(
-            (candle) =>
+            (candle): candle is CandleRecord<TTimeframe> =>
               candle.exchange === params.exchange &&
               candle.symbol === params.symbol &&
               candle.timeframe === params.timeframe &&

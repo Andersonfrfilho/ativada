@@ -33,6 +33,11 @@ import { startFakeBinanceStreamServer } from '../packages/market-data-crypto/tes
 import { startApi } from './session-test/start-api.js';
 
 const HOLD_POLL_MILLISECONDS = 1000;
+const STALL_SWEEP_DISABLED_SECONDS = 3600;
+// A API trata 30 s de silêncio do ticker como conexão morta e reconecta com espera crescente (até 60 s). A Binance de verdade nunca
+// fica muda; a falsa só fala quando um teste manda, então um quadro sem dado de mercado a cada 10 s mantém a conexão de pé.
+const KEEP_ALIVE_MILLISECONDS = 10_000;
+const KEEP_ALIVE_FRAME = JSON.stringify({ keepAlive: true });
 
 const EXPECTED_DISPLAY = {
   equity: '10.420,00',
@@ -88,7 +93,17 @@ async function main(): Promise<void> {
     identity.cleanup.register('parar o Telegram falso', () => telegram.stop());
     const binance = startFakeBinanceStreamServer();
     identity.cleanup.register('parar a Binance falsa', () => binance.stop());
+    const keepAlive = setInterval(
+      () => binance.sendText(KEEP_ALIVE_FRAME),
+      KEEP_ALIVE_MILLISECONDS,
+    );
+    identity.cleanup.register('parar o sinal de vida da Binance falsa', () =>
+      Promise.resolve(clearInterval(keepAlive)),
+    );
     Bun.env['TICKER_STREAM_ENABLED'] = 'true';
+    Bun.env['TICKER_KLINE_ENABLED'] = 'true';
+    // A varredura de parada da API marcaria a simulação do seed (vela de ontem) por conta própria: o servidor de controle faz esse papel no teste.
+    Bun.env['LIVE_STALL_SWEEP_SECONDS'] = String(STALL_SWEEP_DISABLED_SECONDS);
     Bun.env['BINANCE_BASE_URL'] = binance.restUrl;
     Bun.env['BINANCE_STREAM_URL'] = binance.streamUrl;
     const api = startApi();

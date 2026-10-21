@@ -9,6 +9,8 @@ export type ProfileRecord = {
   readonly timezone: string;
   readonly alertTelegramEnabled: boolean;
   readonly isTelegramLinked: boolean;
+  // Teto do usuário de simulações ao vivo na fila ou rodando (`users.limits`, com o padrão quando inválido).
+  readonly maxActiveLivePaperRuns: number;
   readonly createdAt: Date;
 };
 

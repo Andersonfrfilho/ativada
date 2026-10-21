@@ -18,3 +18,8 @@ export { alerts } from './alerts.schema.js';
 export { goals } from './goals.schema.js';
 export { priceAlerts } from './price-alerts.schema.js';
 export { userAssets } from './user-assets.schema.js';
+export { workerHeartbeats } from './worker-heartbeats.schema.js';
+export { analystDecisions } from './analyst-decisions.schema.js';
+export { modelTeamReports } from './model-team-reports.schema.js';
+export { userModelTeams } from './user-model-teams.schema.js';
+export { teamRunInputs } from './team-run-inputs.schema.js';

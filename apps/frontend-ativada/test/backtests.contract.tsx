@@ -12,6 +12,7 @@ import {
   type FakeRoute,
 } from './support/fake-fetch.js';
 import { renderApp } from './support/render-app.js';
+import { buildChartResponse, buildSummaryResponse } from './support/trade-chart-fixtures.js';
 import {
   buildEquityCsv,
   buildMetrics,
@@ -62,6 +63,16 @@ function runRoutes(runs: Record<string, unknown>[]): readonly FakeRoute[] {
         method: 'GET',
         path: `/v1/runs/${String(run['id'])}/trades`,
         respond: (): Response => pageResponse([]),
+      },
+      {
+        method: 'GET',
+        path: `/v1/runs/${String(run['id'])}/chart`,
+        respond: (): Response => dataResponse(buildChartResponse()),
+      },
+      {
+        method: 'GET',
+        path: `/v1/runs/${String(run['id'])}/trade-summary`,
+        respond: (): Response => dataResponse(buildSummaryResponse()),
       },
     ]),
   ];
@@ -143,7 +154,7 @@ describe('backtest list', () => {
     ];
     renderApp({ path: '/backtests', isAuthenticated: true, routes });
     expect(await screen.findByText('Rodando')).toBeDefined();
-    expect(await screen.findByText('Concluída')).toBeDefined();
+    expect(await screen.findByText('+4,20%')).toBeDefined();
     expect(await screen.findByRole('checkbox', { name: /Comparar/ })).toBeDefined();
   });
 
@@ -373,6 +384,7 @@ describe('backtest detail', () => {
     ];
     const { fake } = renderApp({ path: '/backtests/run-1', isAuthenticated: true, routes });
     fireEvent.click(await screen.findByRole('button', { name: 'Cancelar execução' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirmar: cancelar execução' }));
     await waitFor(() => expect(fake.callsTo('POST', '/v1/runs/run-1/stop')).toHaveLength(1));
   });
 
@@ -409,9 +421,19 @@ describe('backtest detail', () => {
     expect(metrics.textContent).toContain('5,20%');
     expect(metrics.textContent).toContain('85,30');
     expect(await screen.findByRole('img', { name: /Retorno acumulado/ })).toBeDefined();
-    const trades = await screen.findByRole('region', { name: 'Operações' });
-    expect(trades.textContent).toContain('Alvo');
-    expect(trades.textContent).toContain('94,20');
+    // A tabela antiga (abertura, preços de entrada e saída, resultado e motivo) agora é a do cartão "Preço e operações".
+    const trades = await screen.findByRole('region', { name: 'Tabela de operações' });
+    await waitFor(() => expect(trades.textContent).toContain('31/12/2025 21:00'));
+    for (const field of [
+      '31/12/2025 22:00',
+      '60.000,00',
+      '61.000,00',
+      '+94,20',
+      'atingiu o alvo de lucro',
+    ]) {
+      expect(trades.textContent).toContain(field);
+    }
+    expect(screen.getByRole('region', { name: 'Preço e operações' })).toBeDefined();
     expect(screen.getByRole('region', { name: 'Custos incluídos' }).textContent).toContain('0,10%');
   });
 
@@ -432,7 +454,8 @@ describe('backtest detail', () => {
       isAuthenticated: true,
       routes: [...STRATEGY_ROUTES, ...runRoutes([buildRun({ strategyVersionId: 'version-2' })])],
     });
-    expect(await screen.findByText(/Placar clássico · versão 2/)).toBeDefined();
+    // O nome da estratégia aparece no cabeçalho e no botão de troca rápida; o hash curto só no cabeçalho.
+    expect((await screen.findAllByText(/Placar clássico · versão 2/)).length).toBeGreaterThan(0);
     expect(screen.getByText(/bbbbbbbb/)).toBeDefined();
   });
 
@@ -461,7 +484,7 @@ describe('backtest detail', () => {
       isAuthenticated: true,
       routes: [...STRATEGY_ROUTES, ...runRoutes([run])],
     });
-    expect((await screen.findByRole('alert')).textContent).toContain('Não há candles');
+    expect((await screen.findByRole('alert')).textContent).toContain('Não há velas');
   });
 
   test('a run of someone else (404) says so without a stack trace', async () => {

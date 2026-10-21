@@ -1,5 +1,9 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { CandleRecord, CandleRepository } from '../../packages/database/src/index.js';
+import type {
+  CandleRecord,
+  CandleRepository,
+  StoredCandleTimeframe,
+} from '../../packages/database/src/index.js';
 import { assertCondition } from '../identity-test/identity-test.error.js';
 import {
   DURATION_MILLISECONDS,
@@ -43,7 +47,7 @@ export async function seedGrid(
   },
 ): Promise<number> {
   const duration = DURATION_MILLISECONDS[params.timeframe];
-  const records: CandleRecord[] = [];
+  const records: CandleRecord<StoredCandleTimeframe>[] = [];
   for (let openTime = params.from; openTime < params.to; openTime += duration) {
     if (params.skippedOpenTimes.has(openTime)) continue;
     records.push({

@@ -1,0 +1,238 @@
+/* Bonequinho da sala (spec 011): cores só por tokens; as roupas são decoração e nunca carregam significado. */
+.figure {
+  display: block;
+  width: 64px;
+  height: 88px;
+  overflow: visible;
+  --shirt: var(--shirt-other);
+  --skin: var(--skin-1);
+  --hair: var(--hair-1);
+}
+
+.roleTrend {
+  --shirt: var(--shirt-trend);
+}
+
+.roleReversion {
+  --shirt: var(--shirt-reversion);
+  --skin: var(--skin-2);
+  --hair: var(--hair-2);
+}
+
+.roleVolume {
+  --shirt: var(--shirt-volume);
+  --skin: var(--skin-3);
+  --hair: var(--hair-3);
+}
+
+.roleSentiment {
+  --shirt: var(--shirt-sentiment);
+  --skin: var(--skin-4);
+  --hair: var(--hair-4);
+}
+
+.roleOther {
+  --shirt: var(--shirt-other);
+}
+
+.roleAnalyst {
+  --shirt: var(--shirt-analyst);
+  --skin: var(--skin-2);
+  --hair: var(--hair-2);
+}
+
+.roleAuditor {
+  --shirt: var(--shirt-auditor);
+  --skin: var(--skin-3);
+  --hair: var(--hair-5);
+}
+
+.shirt,
+.cap {
+  fill: var(--shirt);
+}
+
+.sleeve {
+  fill: color-mix(in srgb, var(--shirt) 80%, black);
+}
+
+.skin {
+  fill: var(--skin);
+}
+
+.hair {
+  fill: var(--hair);
+}
+
+.pants {
+  fill: var(--pants);
+}
+
+.shoe {
+  fill: var(--shoe);
+}
+
+.eye {
+  fill: var(--shoe);
+}
+
+.mouth,
+.mark,
+.phones,
+.tie,
+.lens {
+  fill: none;
+  stroke: var(--shoe);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mark {
+  stroke: var(--surface);
+  stroke-width: 2.4;
+}
+
+.heart {
+  fill: var(--surface);
+}
+
+.tile {
+  fill: color-mix(in srgb, var(--surface) 70%, transparent);
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+
+.shadow {
+  fill: color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.halo {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  opacity: 0;
+}
+
+.quiet {
+  filter: saturate(0.55);
+}
+
+.lit .tile {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+@keyframes think-bob {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes halo-once {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.7);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .thinking .body {
+    animation: think-bob var(--motion-medium) ease-in-out infinite alternate;
+  }
+
+  .ringing .halo {
+    animation: halo-once calc(var(--motion-medium) * 2) var(--ease-out) both;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinking .body,
+  .ringing .halo {
+    animation: none;
+  }
+}
+
+.roleModel {
+  --shirt: var(--model);
+  --skin: var(--skin-4);
+  --hair: var(--hair-5);
+}
+
+/* Mãos e papéis (escritório vivo): os braços giram no ombro; o papel só aparece no gesto de levar papéis. Só `transform` e `opacity`. */
+.armLeft,
+.armRight {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+}
+
+.paper {
+  fill: var(--surface);
+  stroke: var(--ink-3);
+  stroke-width: 1;
+  opacity: 0;
+}
+
+@keyframes tap-left {
+  from {
+    transform: rotate(7deg);
+  }
+  to {
+    transform: rotate(-4deg);
+  }
+}
+
+@keyframes tap-right {
+  from {
+    transform: rotate(-4deg);
+  }
+  to {
+    transform: rotate(7deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .gestureType .armLeft {
+    animation: tap-left var(--motion-fast) ease-in-out infinite alternate;
+  }
+
+  .gestureType .armRight {
+    animation: tap-right var(--motion-fast) ease-in-out infinite alternate;
+  }
+
+  .gesturePoint .armRight {
+    transform: rotate(-58deg);
+    transition: transform var(--motion-medium) var(--ease-out);
+  }
+
+  .gesturePaper .armRight {
+    transform: rotate(-28deg);
+    transition: transform var(--motion-medium) var(--ease-out);
+  }
+
+  .gesturePaper .paper {
+    opacity: 1;
+    transition: opacity var(--motion-fast) var(--ease-out);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gestureType .armLeft,
+  .gestureType .armRight,
+  .gesturePoint .armRight,
+  .gesturePaper .armRight,
+  .gesturePaper .paper {
+    animation: none;
+    transition: none;
+  }
+}

@@ -32,24 +32,40 @@ export type CoinPrice = { readonly price: string; readonly changeRatio: number |
 
 const ACTIVE_STATUSES: readonly string[] = [RUN_STATUS.RUNNING, RUN_STATUS.QUEUED];
 
-export function useActiveRunQuery(): UseQueryResult<Run | null> {
+// A mesma página de simulações ao vivo serve a Visão geral, a meta ativa e a lista de metas: uma chave só, então UM pedido
+// (cada tela escolhe a sua simulação por `select`) em vez de um por consulta, o que gastava o limite de requisições.
+export const LIVE_RUNS_PAGE_KEY = ['runs', 'live-page'] as const;
+
+export function pickActiveRun(runs: readonly Run[]): Run | null {
+  return (
+    runs.find((run) => run.status === RUN_STATUS.RUNNING) ??
+    runs.find((run) => ACTIVE_STATUSES.includes(run.status)) ??
+    null
+  );
+}
+
+export function useLiveRunsPageOptions(): {
+  readonly queryKey: typeof LIVE_RUNS_PAGE_KEY;
+  readonly staleTime: number;
+  readonly queryFn: () => Promise<Run[]>;
+} {
   const client = useApiClient();
-  return useQuery({
-    queryKey: ['runs', 'active'],
+  return {
+    queryKey: LIVE_RUNS_PAGE_KEY,
     staleTime: STALE_TIME_MILLISECONDS,
-    queryFn: async () => {
+    queryFn: async (): Promise<Run[]> => {
       const query = new URLSearchParams({ kind: RUN_KIND_LIVE_PAPER, limit: String(PAGE_SIZE) });
       const page = await client.requestPage({
         path: `${API_PATH.RUNS}?${query.toString()}`,
         schema: runSchema,
       });
-      return (
-        page.items.find((run) => run.status === RUN_STATUS.RUNNING) ??
-        page.items.find((run) => ACTIVE_STATUSES.includes(run.status)) ??
-        null
-      );
+      return page.items;
     },
-  });
+  };
+}
+
+export function useActiveRunQuery(): UseQueryResult<Run | null> {
+  return useQuery({ ...useLiveRunsPageOptions(), select: pickActiveRun });
 }
 
 // As últimas velas da curva, da mais antiga para a mais nova: o último ponto é o saldo de agora.

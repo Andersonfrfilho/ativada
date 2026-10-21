@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { RUN_KIND, RUN_STATUS } from '@ativada/database';
+import { RUN_STATUS } from '@ativada/database';
 import { z } from '@ativada/environment';
 
 import type { RouteDocumentation } from '../openapi/route-documentation.types.js';
@@ -11,7 +11,6 @@ import {
   VALIDATION_ERROR_CODE,
 } from '../shared/errors/error-code.constant.js';
 import { HTTP_STATUS } from '../shared/http/http.constant.js';
-import { PAGE_QUERY_SHAPE } from '../shared/pagination/page-query.schema.js';
 import { CSV_TABLE_NAMES } from './csv-tables.constant.js';
 import { RUN_DETAIL_SCHEMA, RUN_VIEW_SCHEMA } from './run-view.schema.js';
 import { RUN_ID_PARAM } from './runs.constant.js';
@@ -30,7 +29,7 @@ const RUN_NOT_FOUND = {
 export const RUN_DOCUMENTATION = {
   create: {
     summary:
-      'Cria uma execução (backtest, walk-forward ou simulação ao vivo) e responde 202 com o id. Backtest e walk-forward entram na fila do usuário, que é limitada (429 `RUN_QUEUE_FULL`). `live_paper` não leva período (começa no candle corrente e não tem fim), fica `queued` até um worker reivindicá-la e responde 409 `LIVE_RUN_LIMIT_REACHED` acima do teto de ativas. `survival` (opcional, só no ao vivo) ajusta o piso (padrão 0,8 do saldo inicial) e a meta de dobro (padrão 2). `goalId` (opcional, só no ao vivo) atrela a simulação a uma meta ligada do usuário, do mesmo par: ela vende no alvo, encerra na perda máxima ou no prazo e grava o desfecho em `goalOutcome`.',
+      'Cria uma execução (backtest, walk-forward ou simulação ao vivo) e responde 202 com o id. Backtest e walk-forward entram na fila do usuário, que é limitada (429 `RUN_QUEUE_FULL`). `live_paper` não leva período (começa no candle corrente e não tem fim), fica `queued` até um worker reivindicá-la e responde 409 `LIVE_RUN_LIMIT_REACHED` acima do teto de ativas. `survival` (opcional, só no ao vivo) ajusta o piso (padrão 0,8 do saldo inicial) e a meta de dobro (padrão 2). `goalId` (opcional, só no ao vivo) atrela a simulação a uma meta ligada do usuário, do mesmo par: ela vende no alvo, encerra na perda máxima ou no prazo e grava o desfecho em `goalOutcome`. `analyst` (opcional, só no ao vivo e só com `timeframe` 15m) liga o analista de risco: `{ "mode": "shadow" }` calcula a postura, o ritmo e o tamanho a cada vela e só mostra, sem mexer na simulação; `{ "mode": "govern" }` deixa o analista decidir de verdade (sempre dinheiro fictício): ele pode pausar as entradas, reduzir o teto de risco da entrada (¼, ½ ou 1× do que a estratégia arriscaria) e sair por tempo; a saída por proteção nunca é bloqueada. Em outro tipo de execução ou com outra vela, o analista responde 400.',
     tag: TAG,
     successes: [
       {
@@ -55,12 +54,9 @@ export const RUN_DOCUMENTATION = {
     ],
   },
   list: {
-    summary: 'Lista as execuções do usuário, das mais novas para as mais antigas.',
+    summary:
+      'Lista as execuções do usuário, das mais novas para as mais antigas. Filtros opcionais e combináveis: `kind`, `symbol` (par habilitado) e `strategyVersionId`; valem antes da paginação por cursor.',
     tag: TAG,
-    query: z.strictObject({
-      ...PAGE_QUERY_SHAPE,
-      kind: z.enum(RUN_KIND).optional(),
-    }),
     successes: [
       {
         status: HTTP_STATUS.OK,

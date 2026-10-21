@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { CandleRecord, CandleRepository } from '@ativada/database';
+import type { CandleRecord, CandleRepository, StoredCandleTimeframe } from '@ativada/database';
 
 import type { CandlesQuery } from './candles-query.schema.js';
 
@@ -22,7 +22,7 @@ export type ListCandlesDependencies = {
   readonly exchange: string;
 };
 
-export function toCandleView(record: CandleRecord): CandleView {
+export function toCandleView(record: CandleRecord<StoredCandleTimeframe>): CandleView {
   return {
     openTime: record.openTime,
     closeTime: record.closeTime,

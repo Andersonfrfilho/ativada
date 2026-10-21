@@ -11,12 +11,15 @@ import {
 import type { KlineStreamSettings } from './kline-stream.types.js';
 import { BINANCE_STREAM_BASE_URL, SYMBOL_PATTERN } from './market-data.constant.js';
 import { MarketDataInvalidRequestError } from './market-data.error.js';
-import { TIMEFRAME_DURATION_MILLISECONDS, type Timeframe } from './timeframe.constant.js';
+import {
+  MARKET_CANDLE_DURATION_MILLISECONDS,
+  type MarketCandleTimeframe,
+} from './timeframe.constant.js';
 
 export type ResolvedStreamSettings = {
   readonly url: string;
   readonly symbols: ReadonlySet<string>;
-  readonly timeframes: ReadonlySet<Timeframe>;
+  readonly timeframes: ReadonlySet<MarketCandleTimeframe>;
   readonly staleAfterMilliseconds: number;
   readonly reconnectBaseMilliseconds: number;
   readonly reconnectMaxMilliseconds: number;
@@ -36,7 +39,10 @@ export function assertBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, '');
 }
 
-function buildStreamNames(symbols: readonly string[], timeframes: readonly Timeframe[]): string[] {
+function buildStreamNames(
+  symbols: readonly string[],
+  timeframes: readonly MarketCandleTimeframe[],
+): string[] {
   return symbols.flatMap((symbol) =>
     timeframes.map((timeframe) => `${symbol.toLowerCase()}${KLINE_STREAM_SUFFIX}${timeframe}`),
   );
@@ -54,7 +60,7 @@ function assertSubscription(settings: KlineStreamSettings): void {
   if (
     settings.timeframes.length === 0 ||
     !settings.timeframes.every((timeframe) =>
-      Object.hasOwn(TIMEFRAME_DURATION_MILLISECONDS, timeframe),
+      Object.hasOwn(MARKET_CANDLE_DURATION_MILLISECONDS, timeframe),
     )
   ) {
     throw new MarketDataInvalidRequestError('timeframes deve ter ao menos um timeframe suportado.');

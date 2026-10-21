@@ -229,7 +229,7 @@ describe('operation plan', () => {
         { method: 'GET', path: '/v1/markets/candles', respond: (): Response => dataResponse([]) },
       ],
     });
-    expect((await screen.findByRole('alert')).textContent).toContain('candles suficientes');
+    expect((await screen.findByRole('alert')).textContent).toContain('velas suficientes');
   });
 
   test('the chart keeps working with the plan levels only when there is no candle history', async () => {

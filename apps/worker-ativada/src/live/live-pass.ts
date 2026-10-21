@@ -1,23 +1,34 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { RUN_STATUS } from '@ativada/database';
 import { createPositionTracker, createSentimentPicker } from '@ativada/run-recording';
-import type { Engine, EngineCandle, EngineState } from '@ativada/strategy-engine';
+import type {
+  Engine,
+  EngineCandle,
+  EngineState,
+  StoredSentimentObservation,
+} from '@ativada/strategy-engine';
 
+import { createAnalystSeriesCache, type AnalystSeriesCache } from './analyst-series-cache.js';
 import { LIVE_COMMIT_OUTCOME, LIVE_PASS_KIND } from './live.constant.js';
 import type {
   GapConfirmation,
   LiveAlertingSettings,
+  LiveBlueprint,
   LiveCommitOutcome,
   LivePassOutcome,
   LiveRunSession,
+  TeamStepSettings,
 } from './live-run.types.js';
 import type { GapPolicy } from './gap-policy.js';
 import { isGapConfirmedByEvidence } from './gap-policy.js';
+import { createAnalystKit } from './load-analyst-context.js';
 import { loadLiveContext, type LiveContext } from './load-live-context.js';
 import { resolveLiveCursor, type LiveCursor } from './resolve-live-cursor.js';
 import { loadGoalTracking } from './goal-step.js';
 import { stepOnce, type StepRun } from './live-step.js';
 import { createHitRateReader } from './step-alerts.js';
+import { createTeamKit } from './create-team-kit.js';
+import type { TeamRunKit } from './team-decision.js';
 
 export type LivePassParams = {
   readonly session: LiveRunSession;
@@ -26,6 +37,10 @@ export type LivePassParams = {
   readonly maxSteps: number;
   readonly alerting?: LiveAlertingSettings | undefined;
   readonly gapPolicy?: GapPolicy | undefined;
+  // A série do analista dividida entre as simulações do mesmo par; ausente = cada ronda tem a sua (sem divisão).
+  readonly analystSeries?: AnalystSeriesCache | undefined;
+  // O prazo e o ritmo das equipes; ausente = o worker recusa a execução de equipe.
+  readonly teamSettings?: TeamStepSettings | undefined;
 };
 
 type PassRun = LivePassParams & StepRun;
@@ -98,6 +113,8 @@ async function findUnconfirmedGap(
 }
 
 function settle(commit: LiveCommitOutcome, steps: number): LivePassOutcome {
+  if (commit === LIVE_COMMIT_OUTCOME.AWAITING_TEAM)
+    return outcome(LIVE_PASS_KIND.AWAITING_TEAM, steps);
   if (commit === LIVE_COMMIT_OUTCOME.ALREADY_RECORDED) {
     return outcome(steps > 0 ? LIVE_PASS_KIND.ADVANCED : LIVE_PASS_KIND.IDLE, steps);
   }
@@ -135,6 +152,41 @@ function createGoalProgress(context: LiveContext): PassRun['goal'] {
   return { tracking, isOutcomeRecorded: context.run.goalOutcome !== undefined };
 }
 
+type PassLoad = {
+  readonly blueprint: LiveBlueprint;
+  readonly context: LiveContext;
+  readonly cursor: LiveCursor;
+  readonly observations: readonly StoredSentimentObservation[];
+  readonly lastCandle: EngineCandle;
+  readonly team: TeamRunKit | undefined;
+};
+
+function buildPassRun(params: LivePassParams, load: PassLoad): PassRun {
+  const { blueprint, context, cursor, observations, lastCandle } = load;
+  const source = context.setup.parameters.sentimentSource;
+  const goal = createGoalProgress(context);
+  const waiting = { isPending: blueprint.run.waitingSince !== undefined };
+  return {
+    ...params,
+    context,
+    readHitRate: createHitRateReader(params.session),
+    pickSentiment: createSentimentPicker({ observations, source }),
+    tracker: createPositionTracker(cursor.state.wallet.position),
+    goal,
+    waiting,
+    team: load.team,
+    analyst: createAnalystKit({
+      context,
+      session: params.session,
+      seriesCache: params.analystSeries ?? createAnalystSeriesCache(),
+      observations,
+      lastOpenTime: lastCandle.openTime,
+      goal: goal?.tracking.spec ?? null,
+      waiting,
+    }),
+  };
+}
+
 // Uma ronda de UMA simulação: do último candle gravado até o último candle fechado que o banco tem, um passo (uma
 // transação) por candle. Não guarda nada entre rondas: o checkpoint é a única memória, então a retomada é a regra.
 export async function runLivePass(params: LivePassParams): Promise<LivePassOutcome> {
@@ -143,6 +195,8 @@ export async function runLivePass(params: LivePassParams): Promise<LivePassOutco
     return outcome(LIVE_PASS_KIND.ENDED, 0);
   }
   const context = loadLiveContext(blueprint);
+  // Antes de ler qualquer vela: a execução de equipe sem o ambiente ou com outra estratégia é recusada em voz alta.
+  const team = createTeamKit({ context, session: params.session, settings: params.teamSettings });
   const cursor = await resolveLiveCursor({ ...params, context });
   const from =
     cursor.previousOpenTime === null
@@ -157,14 +211,13 @@ export async function runLivePass(params: LivePassParams): Promise<LivePassOutco
   if (last === undefined) return outcome(LIVE_PASS_KIND.IDLE, 0);
   const source = context.setup.parameters.sentimentSource;
   const observations = await params.session.listSentiment({ source, until: last.closeTime });
-  const run: PassRun = {
-    ...params,
+  const run = buildPassRun(params, {
+    blueprint,
     context,
-    readHitRate: createHitRateReader(params.session),
-    pickSentiment: createSentimentPicker({ observations, source }),
-    tracker: createPositionTracker(cursor.state.wallet.position),
-    goal: createGoalProgress(context),
-    waiting: { isPending: blueprint.run.waitingSince !== undefined },
-  };
+    cursor,
+    observations,
+    lastCandle: last,
+    team,
+  });
   return stepThrough(run, cursor, candles);
 }

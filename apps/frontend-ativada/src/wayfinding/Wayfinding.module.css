@@ -1,0 +1,47 @@
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--buy);
+  color: var(--on-buy);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--buy);
+  border-radius: var(--radius-pill);
+  background: var(--buy-soft);
+  color: var(--buy);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.banner {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-card);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.bannerText {
+  margin: 0;
+}
+
+.action {
+  min-height: 44px;
+  justify-self: start;
+  text-decoration: none;
+}

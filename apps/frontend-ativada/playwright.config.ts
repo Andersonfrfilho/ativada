@@ -3,6 +3,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:56103';
+const BROWSER_CHANNEL = process.env['PANEL_E2E_BROWSER_CHANNEL'];
 const TEST_TIMEOUT_MILLISECONDS = 90_000;
 const EXPECT_TIMEOUT_MILLISECONDS = 15_000;
 
@@ -21,5 +22,14 @@ export default defineConfig({
     screenshot: 'off',
     video: 'off',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // Opt-in: PANEL_E2E_BROWSER_CHANNEL=msedge usa o Edge instalado no lugar do Chromium do Playwright.
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        ...(BROWSER_CHANNEL === undefined ? {} : { channel: BROWSER_CHANNEL }),
+      },
+    },
+  ],
 });

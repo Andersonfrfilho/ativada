@@ -1,9 +1,11 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { SentimentObservationRepository } from '@ativada/database';
+import { resolveSymbolFilters } from '@ativada/market-data-crypto';
 import {
   createRunSetup,
   RUN_PARAMETERS_SCHEMA_VERSION,
   type EngineCandle,
+  type EngineTimeframe,
   type RunSetup,
   type SentimentObservation,
 } from '@ativada/strategy-engine';
@@ -28,25 +30,34 @@ export type SeriesReader = GoalSeriesReader & {
   readonly sentiments: Pick<SentimentObservationRepository, 'listAvailable'>;
 };
 
-function setupFor(symbol: string): RunSetup {
+export function setupFor(
+  symbol: string,
+  timeframe: EngineTimeframe = GOAL_EVALUATION_TIMEFRAME,
+): RunSetup {
   return createRunSetup({
     schemaVersion: RUN_PARAMETERS_SCHEMA_VERSION,
     symbol,
-    timeframe: GOAL_EVALUATION_TIMEFRAME,
+    timeframe,
     sentimentSource: DEFAULT_SENTIMENT_SOURCE,
     initialBalance: GOAL_INITIAL_BALANCE,
+    ...resolveSymbolFilters(symbol),
   });
 }
 
-export async function loadSymbolSeries(
+// Os candles já lidos de um par num timeframe, com o sentimento carregado só se alguém o pedir (e uma vez).
+export function buildSymbolSeries(
   reader: SeriesReader,
-  params: { readonly symbol: string; readonly now: number },
-): Promise<SymbolSeries> {
-  const candles = await loadGoalSeries(reader, params);
+  params: {
+    readonly symbol: string;
+    readonly run: RunSetup;
+    readonly candles: readonly EngineCandle[];
+  },
+): SymbolSeries {
+  const { candles } = params;
   let pending: Promise<readonly (SentimentObservation | undefined)[]> | undefined;
   return {
     symbol: params.symbol,
-    run: setupFor(params.symbol),
+    run: params.run,
     candles,
     loadSentiments: (): Promise<readonly (SentimentObservation | undefined)[]> => {
       pending ??= loadGoalSentiments(reader.sentiments, {
@@ -56,4 +67,16 @@ export async function loadSymbolSeries(
       return pending;
     },
   };
+}
+
+export async function loadSymbolSeries(
+  reader: SeriesReader,
+  params: { readonly symbol: string; readonly now: number },
+): Promise<SymbolSeries> {
+  const candles = await loadGoalSeries(reader, params);
+  return buildSymbolSeries(reader, {
+    symbol: params.symbol,
+    run: setupFor(params.symbol),
+    candles,
+  });
 }

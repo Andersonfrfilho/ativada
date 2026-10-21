@@ -1,0 +1,73 @@
+/* O resumo curto do topo da simulação ao vivo: uma faixa de números, sem cartão grande. */
+.strip {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.tiles {
+  display: grid;
+  gap: var(--space-2) var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  min-width: 0;
+}
+
+.tile {
+  display: grid;
+  gap: 1px;
+  align-content: start;
+  min-width: 0;
+}
+
+.label,
+.value,
+.note {
+  margin: 0;
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.value {
+  font: 600 var(--text-lg) / 1.25 var(--font-data);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.note {
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+}
+
+.up {
+  color: var(--buy);
+}
+
+.down {
+  color: var(--sell);
+}
+
+@media (min-width: 900px) {
+  .strip {
+    grid-template-columns: 9.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-4);
+  }
+}

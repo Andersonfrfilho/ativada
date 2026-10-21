@@ -2,6 +2,7 @@
 import {
   ACCOUNT_ERROR_CODE,
   AUTHENTICATION_ERROR_CODE,
+  DATABASE_ERROR_CODE,
   INTERNAL_ERROR_CODE,
   RATE_LIMIT_ERROR_CODE,
 } from '../shared/errors/error-code.constant.js';
@@ -40,5 +41,6 @@ export const ADMIN_ERRORS: readonly DocumentedError[] = [
 
 export const COMMON_ERRORS: readonly DocumentedError[] = [
   { status: HTTP_STATUS.TOO_MANY_REQUESTS, code: RATE_LIMIT_ERROR_CODE.RATE_LIMITED },
+  { status: HTTP_STATUS.SERVICE_UNAVAILABLE, code: DATABASE_ERROR_CODE.DATABASE_UNAVAILABLE },
   { status: HTTP_STATUS.INTERNAL_SERVER_ERROR, code: INTERNAL_ERROR_CODE },
 ];

@@ -60,6 +60,17 @@ export function roundScaledHalfUp(value: bigint, places: number): bigint {
   return value < ZERO ? -rounded : rounded;
 }
 
+// Arredonda para `places` casas na direção pedida (para cima: +infinito; para baixo: -infinito), na escala de 8.
+export function roundScaledDirected(
+  value: bigint,
+  places: number,
+  direction: 'up' | 'down',
+): bigint {
+  const unit = 10n ** BigInt(DECIMAL_SCALE - places);
+  const floor = floorDivide(value, unit) * unit;
+  return direction === 'down' || floor === value ? floor : floor + unit;
+}
+
 function groupThousands(whole: string): string {
   const groups: string[] = [];
   for (let end = whole.length; end > 0; end -= GROUP_SIZE) {
@@ -90,6 +101,7 @@ export function formatDecimalText(text: string, options: FormatOptions): string 
 
 const TWO_PLACES: FormatOptions = { minimumFraction: 2, maximumFraction: 2 };
 const PERCENT_FACTOR = 100n;
+const PERCENT_PLACES = 2;
 
 export function formatScaled(value: bigint, options: FormatOptions = TWO_PLACES): string {
   return formatDecimalText(toPlainText(value), options);
@@ -103,4 +115,15 @@ export function formatSignedScaled(value: bigint): string {
 // Uma fração escalada (0,0333) como porcentagem com sinal explícito: "+3,33%".
 export function formatSignedScaledPercent(rate: bigint): string {
   return `${rate > ZERO ? '+' : ''}${formatScaled(rate * PERCENT_FACTOR)}%`;
+}
+
+// A fração escalada como porcentagem de 2 casas arredondada para baixo (o ganho nunca sobra, a perda nunca encolhe).
+export function roundRateDownToPercent(rate: bigint): bigint {
+  return roundScaledDirected(rate * PERCENT_FACTOR, PERCENT_PLACES, 'down');
+}
+
+// "+3,33%" ou "−0,01%" a partir do valor JÁ arredondado para baixo; o sinal sai do que aparece, nunca da taxa bruta.
+export function formatSignedPercentDown(rate: bigint): string {
+  const percent = roundRateDownToPercent(rate);
+  return `${percent > ZERO ? '+' : ''}${formatScaled(percent)}%`;
 }

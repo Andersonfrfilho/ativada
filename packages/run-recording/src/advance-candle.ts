@@ -4,6 +4,7 @@ import type {
   EngineCandle,
   EngineCommand,
   EngineState,
+  EntryRiskScale,
   RunSetup,
   StepResult,
   StrategyVersion,
@@ -23,6 +24,8 @@ export type AdvanceCandleParams = {
   readonly pickSentiment: SentimentPicker;
   // Ordens externas ao placar (meta, usuário): agem no fechamento deste candle e executam em t+1.
   readonly commands?: readonly EngineCommand[] | undefined;
+  // Teto da entrada nova deste candle (ADR 0002 A21; o analista no governar). Ausente = o risco cheio da estratégia.
+  readonly entryRiskScale?: EntryRiskScale | undefined;
 };
 
 export type AdvancedCandle = {
@@ -57,6 +60,7 @@ export function advanceCandle(params: AdvanceCandleParams): AdvancedCandle {
     sentiment: params.pickSentiment(candle),
     commands: params.commands,
     confirmedGapCandles: gapCandles > 0 ? gapCandles : undefined,
+    entryRiskScale: params.entryRiskScale,
   });
   return { result, gapCandles };
 }

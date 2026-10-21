@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { GOAL_RUN_OUTCOME, RUN_KIND, RUN_STATUS } from '@ativada/database';
 import { z } from '@ativada/environment';
+import { MODEL_TEAM_KEYS, SIGNAL_SOURCE_KIND } from '@ativada/model-agents';
 import { ENGINE_TIMEFRAME, RUN_PARAMETERS_SCHEMA } from '@ativada/strategy-engine';
 
 import {
@@ -35,6 +36,15 @@ export const RUN_VIEW_SCHEMA = z.strictObject({
   finishedAt: isoDateTimeSchema.nullable(),
   goalId: resourceIdSchema.nullable(),
   goalOutcome: z.enum(GOAL_RUN_OUTCOME).nullable(),
+  signalSource: z
+    .strictObject({ kind: z.literal(SIGNAL_SOURCE_KIND.MODEL_TEAM), team: z.enum(MODEL_TEAM_KEYS) })
+    .nullable(),
+  duelId: resourceIdSchema.nullable(),
+  stalledSince: epochMillisecondsSchema
+    .optional()
+    .describe(
+      'Início (ms UTC) da parada da simulação ao vivo: o último passo esperado não aconteceu e a carência passou. Ausente quando ela está em dia.',
+    ),
 });
 
 export const RUN_WARNING_SCHEMA = z.strictObject({ code: z.string(), message: z.string() });

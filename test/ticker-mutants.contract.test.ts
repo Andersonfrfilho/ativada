@@ -17,6 +17,8 @@ const AGGREGATOR = 'ticker/tick-aggregator.ts';
 const PERCENT = 'ticker/percent-change.ts';
 const SCHEMA = 'ticker/ticker-stream.schema.ts';
 const STREAM = 'ticker/create-ticker-stream.ts';
+const CANDLE_AGGREGATOR = 'ticker/candle-aggregator.ts';
+const CANDLE_SCHEMA = 'ticker/ticker-candle.schema.ts';
 const SETTINGS = 'ticker/resolve-ticker-settings.ts';
 const CONSTANT = 'ticker/ticker.constant.ts';
 const ALWAYS_FALSE = 'false as boolean';
@@ -175,8 +177,77 @@ const STREAM_MUTANTS: readonly SourceMutant[] = [
   },
 ];
 
+// A vela em formação (spec 009, T1.5): agregador de 1 por segundo por (par, vela), leitura do kline e assinatura.
+const CANDLE_MUTANTS: readonly SourceMutant[] = [
+  {
+    name: 'EVERY_CANDLE_EVENT_OPENS_A_NEW_WINDOW',
+    edits: edit(
+      CANDLE_AGGREGATOR,
+      'window.timer ??= settings.setTimer(',
+      'window.timer = settings.setTimer(',
+    ),
+  },
+  {
+    name: 'FIRST_CANDLE_OF_THE_WINDOW_WINS',
+    edits: edit(CANDLE_AGGREGATOR, '      window.latest = candle;\n', ''),
+  },
+  {
+    name: 'CANDLE_KEY_IGNORES_THE_TIMEFRAME',
+    edits: edit(CANDLE_AGGREGATOR, '`${candle.symbol}:${candle.timeframe}`', 'candle.symbol'),
+  },
+  {
+    name: 'REDELIVERED_CANDLE_PUBLISHED_AGAIN',
+    edits: edit(CANDLE_AGGREGATOR, 'candle.eventTime <= lastTime', 'candle.eventTime < lastTime'),
+  },
+  {
+    name: 'CLOSED_CANDLE_AGGREGATOR_KEEPS_ACCEPTING',
+    edits: edit(CANDLE_AGGREGATOR, 'if (isClosed || (lastTime', 'if ((lastTime'),
+  },
+  {
+    name: 'CANDLE_STREAM_NAME_NOT_CROSS_CHECKED',
+    edits: edit(
+      CANDLE_SCHEMA,
+      'const isSameStream = stream === `${k.s.toLowerCase()}${KLINE_STREAM_SUFFIX}${k.i}`;',
+      'const isSameStream = true;',
+    ),
+  },
+  {
+    name: 'CANDLE_PAIR_NOT_CROSS_CHECKED',
+    edits: edit(CANDLE_SCHEMA, 'if (!isSameStream || data.s !== k.s)', 'if (!isSameStream)'),
+  },
+  {
+    name: 'CANDLE_CLOSED_FLAG_LOST',
+    edits: edit(CANDLE_SCHEMA, 'isClosed: k.x,', 'isClosed: false,'),
+  },
+  {
+    name: 'CANDLE_OF_AN_UNSUBSCRIBED_SIZE_DELIVERED',
+    edits: edit(
+      STREAM,
+      'config.symbols.has(candle.symbol) && config.timeframes.has(candle.timeframe)',
+      'config.symbols.has(candle.symbol)',
+    ),
+  },
+  {
+    name: 'CANDLE_OF_AN_UNSUBSCRIBED_PAIR_DELIVERED',
+    edits: edit(
+      STREAM,
+      'config.symbols.has(candle.symbol) && config.timeframes.has(candle.timeframe)',
+      'config.timeframes.has(candle.timeframe)',
+    ),
+  },
+  {
+    name: 'KLINE_STREAMS_ALWAYS_THE_FIRST_SIZE',
+    edits: edit(
+      SETTINGS,
+      '${KLINE_STREAM_SUFFIX}${timeframe}',
+      '${KLINE_STREAM_SUFFIX}${[...timeframes][0] ?? timeframe}',
+    ),
+  },
+];
+
 const MUTANTS: readonly SourceMutant[] = [
   ...AGGREGATOR_MUTANTS,
+  ...CANDLE_MUTANTS,
   ...PERCENT_MUTANTS,
   ...STREAM_MUTANTS,
 ];

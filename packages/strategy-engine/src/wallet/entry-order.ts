@@ -6,10 +6,12 @@ import type { SignalDecision } from '../engine-decision.types.js';
 import type { PendingOrderState } from '../engine-state.types.js';
 import {
   ENTRY_ORDER_TYPE,
+  ENTRY_RISK_SCALE,
   ORDER_EVENT_REASON,
   ORDER_PURPOSE,
   ORDER_SIDE,
   ORDER_STATUS,
+  type EntryRiskScale,
   type OrderEventReason,
 } from '../engine-vocabulary.constant.js';
 import { moneyDown } from '../money.js';
@@ -43,8 +45,17 @@ function rejectEntry(draft: WalletDraft, context: WalletContext, reason: OrderEv
   recordOrder(draft, context, { order, status: ORDER_STATUS.REJECTED, reason });
 }
 
-function riskAmountOf(draft: WalletDraft, context: WalletContext): string {
-  const budget = toEngineDecimal(draft.state.cash).times(context.config.risk.riskPerTrade);
+export type EntryRequest = {
+  readonly signal: SignalDecision;
+  // Teto da entrada deste passo (A21); ausente = '1'.
+  readonly entryRiskScale?: EntryRiskScale | undefined;
+};
+
+// Valor em risco = caixa × riskPerTrade × escala, com UM arredondamento (para baixo) no fim.
+function riskAmountOf(draft: WalletDraft, context: WalletContext, scale: EntryRiskScale): string {
+  const budget = toEngineDecimal(draft.state.cash)
+    .times(context.config.risk.riskPerTrade)
+    .times(scale);
   return formatEngineDecimal(moneyDown(budget));
 }
 
@@ -53,13 +64,13 @@ function riskAmountOf(draft: WalletDraft, context: WalletContext): string {
 function buildEntryOrder(
   draft: WalletDraft,
   context: WalletContext,
-  atr: number,
+  sizing: { readonly atr: number; readonly riskAmount: string },
 ): PendingOrderState {
   const { config, candle } = context;
-  const atrValue = decimalFromIndicator(atr);
+  const atrValue = decimalFromIndicator(sizing.atr);
   const sized = {
     ...emptyEntry(draft, context),
-    riskAmount: riskAmountOf(draft, context),
+    riskAmount: sizing.riskAmount,
     stopDistance: formatEngineDecimal(atrValue.times(config.risk.stopAtrMultiple)),
     targetDistance: formatEngineDecimal(atrValue.times(config.risk.targetAtrMultiple)),
     decisionVolume: formatEngineDecimal(toEngineDecimal(candle.volume)),
@@ -74,20 +85,24 @@ function buildEntryOrder(
   };
 }
 
-// BUY: só entra livre (sem posição, sem pendente, sem `halt`); ATR ausente ou zero e risco zero recusam.
+// BUY: só entra livre (sem posição, sem pendente, sem `halt`) e com escala acima de '0'; ATR ausente ou zero e
+// risco zero recusam. A escala '0' não coloca nada, em silêncio, como o `halt`.
 export function placeEntry(
   draft: WalletDraft,
   context: WalletContext,
-  signal: SignalDecision,
+  request: EntryRequest,
 ): void {
   const { state } = draft;
   if (state.isHalted || state.pendingOrder !== null || state.position !== null) return;
-  const atr = signal.indicators[RISK_ATR_INDICATOR_ID] ?? null;
+  const scale = request.entryRiskScale ?? ENTRY_RISK_SCALE.FULL;
+  if (scale === ENTRY_RISK_SCALE.NONE) return;
+  const atr = request.signal.indicators[RISK_ATR_INDICATOR_ID] ?? null;
   if (atr === null || atr <= 0) return rejectEntry(draft, context, ORDER_EVENT_REASON.ZERO_ATR);
-  if (toEngineDecimal(riskAmountOf(draft, context)).lte(0)) {
+  const riskAmount = riskAmountOf(draft, context, scale);
+  if (toEngineDecimal(riskAmount).lte(0)) {
     return rejectEntry(draft, context, ORDER_EVENT_REASON.BELOW_MIN_NOTIONAL);
   }
-  const order = buildEntryOrder(draft, context, atr);
+  const order = buildEntryOrder(draft, context, { atr, riskAmount });
   recordOrder(draft, context, { order, status: ORDER_STATUS.CREATED });
   draft.state = { ...draft.state, pendingOrder: order };
 }

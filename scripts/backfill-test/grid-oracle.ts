@@ -2,6 +2,7 @@
 import {
   CLOCK_SAFETY_MARGIN,
   DURATION_MILLISECONDS,
+  MILLISECONDS_PER_DAY,
   MILLISECONDS_PER_HOUR,
   type BackfillTimeframe,
 } from './backfill-test.constant.js';
@@ -22,6 +23,18 @@ export function computeGridWindow(params: {
   const start = new Date(params.now);
   start.setUTCFullYear(start.getUTCFullYear() - params.years);
   const from = Math.ceil(start.getTime() / duration) * duration;
+  const to = Math.floor(params.now / duration) * duration;
+  return { from, to, count: Math.max(0, (to - from) / duration) };
+}
+
+// Velas de exibição: a janela volta em dias corridos (a retenção), na grade do epoch.
+export function computeGridWindowInDays(params: {
+  readonly now: number;
+  readonly days: number;
+  readonly timeframe: BackfillTimeframe;
+}): GridWindow {
+  const duration = DURATION_MILLISECONDS[params.timeframe];
+  const from = Math.ceil((params.now - params.days * MILLISECONDS_PER_DAY) / duration) * duration;
   const to = Math.floor(params.now / duration) * duration;
   return { from, to, count: Math.max(0, (to - from) / duration) };
 }

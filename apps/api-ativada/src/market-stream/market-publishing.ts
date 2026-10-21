@@ -2,6 +2,7 @@
 import {
   computeChangePercent,
   type AggregatedTick,
+  type RawCandle,
   type RawTick,
 } from '@ativada/market-data-crypto';
 
@@ -23,6 +24,28 @@ export function buildTickMessage(
     serverTime: context.serverTime(),
     stale: isStale,
   };
+}
+
+// Preços e volume seguem em texto decimal como a Binance os mandou; `at` é o instante do evento.
+export function buildCandleMessage(candle: RawCandle): object {
+  return {
+    type: MARKET_SERVER_MESSAGE_TYPE.CANDLE,
+    symbol: candle.symbol,
+    timeframe: candle.timeframe,
+    openTime: candle.openTime,
+    open: candle.open,
+    high: candle.high,
+    low: candle.low,
+    close: candle.close,
+    volume: candle.volume,
+    closed: candle.isClosed,
+    at: candle.eventTime,
+  };
+}
+
+export function publishCandle(context: MarketContext, candle: RawCandle): void {
+  if (context.isClosed) return;
+  context.pubsub.publish(marketTopic(candle.symbol), buildCandleMessage(candle));
 }
 
 export function isPairStale(context: MarketContext, state: PairState): boolean {

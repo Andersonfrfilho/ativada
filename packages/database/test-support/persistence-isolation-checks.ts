@@ -17,9 +17,9 @@ import {
   listEquityPoints,
   listFills,
   listOrders,
-  listPositions,
   listSignals,
 } from '../src/run-results/run-result-list.js';
+import { listPositions } from '../src/run-results/run-position-list.js';
 import { createStrategyRepository } from '../src/strategies/strategy.repository.js';
 import type { LifecycleCheckContext } from './account-lifecycle-checks.js';
 import {

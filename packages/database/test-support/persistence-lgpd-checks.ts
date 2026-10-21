@@ -1,5 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { ALERT_CHANNEL, ALERT_SIDE } from '../src/alerts/alert.constant.js';
+import { createUserModelTeamRepository } from '../src/model-teams/user-model-team.repository.js';
+import { teamRunInputs } from '../src/schema/team-run-inputs.schema.js';
+import { createAnalystDecisionRepository } from '../src/analyst/analyst-decision.repository.js';
 import { readOpenDatabase, type DatabaseHandle } from '../src/database-handle.js';
 import { toJsonb } from '../src/jsonb.js';
 import { alerts } from '../src/schema/alerts.schema.js';
@@ -11,6 +14,7 @@ import { createGoalRepository } from '../src/goals/goal.repository.js';
 import { createUserAssetRepository } from '../src/user-assets/user-asset.repository.js';
 import { createPriceAlertRepository } from '../src/price-alerts/price-alert.repository.js';
 import { createStrategyRepository } from '../src/strategies/strategy.repository.js';
+import { buildAnalystDecisionInput } from './analyst-decision-checks.js';
 import type {
   LifecycleCheckContext,
   LifecycleOwner,
@@ -46,9 +50,12 @@ export const PERSISTENCE_TABLES = [
   'run_commands',
   'walk_forward_windows',
   'alerts',
+  'analyst_decisions',
   'goals',
   'price_alerts',
   'user_assets',
+  'user_model_teams',
+  'team_run_inputs',
 ] as const;
 const ENGINE_STATE_MARKER = 'engine-state-marker';
 const ALERT_REASON_MARKER = 'alert-reason-marker';
@@ -66,9 +73,12 @@ export const PERSISTENCE_EXPECTED_ROWS: Readonly<
   run_commands: 1,
   walk_forward_windows: 2,
   alerts: 1,
+  analyst_decisions: 2,
   goals: 2,
   price_alerts: 2,
   user_assets: 2,
+  user_model_teams: 2,
+  team_run_inputs: 2,
 };
 
 export function strategyNameOf(owner: LifecycleOwner): string {
@@ -115,9 +125,26 @@ export async function seedOwnerPersistence(
   await results.appendCommands(owner.scope, run.id, buildCommands(1));
   await results.appendWindows(owner.scope, run.id, buildWindows(2));
   await seedAlert(handle, owner, run.id);
+  await seedAnalystDecisions(handle, owner, run.id);
   await seedGoals(handle, owner);
   await seedPriceAlerts(handle, owner);
   await seedUserAssets(handle, owner);
+  await seedModelTeamRows(handle, owner, run.id);
+}
+
+// A decisão do analista revela a postura e as travas da simulação do dono: entra na exportação e some com a exclusão da conta.
+async function seedAnalystDecisions(
+  handle: DatabaseHandle,
+  owner: LifecycleOwner,
+  runId: string,
+): Promise<void> {
+  const decisions = createAnalystDecisionRepository(handle);
+  for (const candleTime of [1, 2]) {
+    await decisions.appendAnalystDecision(
+      owner.scope,
+      buildAnalystDecisionInput(runId, candleTime),
+    );
+  }
 }
 
 const USER_ASSET_SEED_LIMIT = 50;
@@ -286,6 +313,27 @@ export async function checkPersistencePurge(
     );
   }
   reportCheck(
-    'purga: as 12 tabelas de estratégia/execução/resultado/alerta/meta de A vazias, as de B intactas',
+    'purga: as 15 tabelas de estratégia/execução/resultado/alerta/meta de A vazias, as de B intactas',
+  );
+}
+
+// O interruptor das equipes e a entrada gravada da execução de equipe são do dono: entram na exportação e somem com a conta.
+async function seedModelTeamRows(
+  handle: DatabaseHandle,
+  owner: LifecycleOwner,
+  runId: string,
+): Promise<void> {
+  const teams = createUserModelTeamRepository(handle);
+  for (const teamKey of ['nina', 'lucas']) {
+    await teams.setEnabled(owner.scope, { teamKey, isEnabled: true });
+  }
+  const { database } = readOpenDatabase(handle);
+  await database.insert(teamRunInputs).values(
+    [1, 2].map((candleTime) => ({
+      runId,
+      candleTime,
+      userId: owner.userId,
+      failureCode: 'NO_REPORT',
+    })),
   );
 }

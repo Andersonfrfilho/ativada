@@ -6,15 +6,9 @@ import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
 import { equityPoints } from '../schema/equity-points.schema.js';
 import { fills } from '../schema/fills.schema.js';
 import { orders } from '../schema/orders.schema.js';
-import { positions } from '../schema/positions.schema.js';
 import { signals } from '../schema/signals.schema.js';
 import { RESULT_PAGE_MAXIMUM_SIZE } from './run-result.constant.js';
-import {
-  toFillInput,
-  toOrderInput,
-  toPositionInput,
-  toSignalInput,
-} from './run-result-record.mapper.js';
+import { toFillInput, toOrderInput, toSignalInput } from './run-result-record.mapper.js';
 import { RESULT_ORDER } from './run-result.types.js';
 import type {
   EquityPointInput,
@@ -23,8 +17,6 @@ import type {
   ListResultsParams,
   OrderCursor,
   OrderInput,
-  PositionCursor,
-  PositionInput,
   ResultPage,
   SignalInput,
 } from './run-result.types.js';
@@ -173,39 +165,4 @@ export async function listFills(
     orderKey: row.orderKey,
   });
   return toPage(rows, limit, { toItem: toFillInput, cursorOf });
-}
-
-function afterPosition(after: PositionCursor | undefined): SQL | undefined {
-  if (after === undefined) return undefined;
-  return or(
-    gt(positions.openedCandleTime, after.openedCandleTime),
-    and(
-      eq(positions.openedCandleTime, after.openedCandleTime),
-      gt(positions.engineKey, after.engineKey),
-    ),
-  );
-}
-
-export async function listPositions(
-  request: ListRequest<PositionCursor>,
-): Promise<ResultPage<PositionInput, PositionCursor>> {
-  const { executor, scope, runId, params } = request;
-  const limit = clampLimit(params.limit);
-  const rows = await executor
-    .select()
-    .from(positions)
-    .where(
-      and(
-        ownerCondition(scope, positions.userId),
-        eq(positions.runId, runId),
-        afterPosition(params.after),
-      ),
-    )
-    .orderBy(asc(positions.openedCandleTime), asc(positions.engineKey))
-    .limit(limit + 1);
-  const cursorOf = (row: (typeof rows)[number]): PositionCursor => ({
-    openedCandleTime: row.openedCandleTime,
-    engineKey: row.engineKey,
-  });
-  return toPage(rows, limit, { toItem: toPositionInput, cursorOf });
 }

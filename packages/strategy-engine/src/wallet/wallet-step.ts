@@ -30,6 +30,7 @@ export function runWalletStep(input: WalletStepInput): WalletStepResult {
     signal: input.signal,
     commands: input.commands ?? [],
     isAfterGap,
+    entryRiskScale: input.entryRiskScale,
   });
   const equityPoint = input.signal === null ? null : buildEquityPoint(draft, context);
   const { commands, orders, fills, openedPositions, closedPositions } = draft;

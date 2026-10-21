@@ -12,8 +12,31 @@
 }
 
 .bigNumber {
-  font: 500 32px/1.15 var(--font-data);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  font: 500 var(--text-3xl) / 1.1 var(--font-data);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.heroChip {
+  font-family: var(--font-body);
+  letter-spacing: 0;
+}
+
+.eyebrow {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.chartBlock {
+  display: grid;
+  gap: 8px;
 }
 
 .unit {
@@ -48,7 +71,6 @@
 
 .sparkline {
   width: 100%;
-  max-width: 480px;
   height: auto;
   display: block;
 }
@@ -56,57 +78,126 @@
 .equityLine {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 2;
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
 }
 
 .benchmarkLine {
   fill: none;
   stroke: var(--bench);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 3;
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  vector-effect: non-scaling-stroke;
 }
 
-.signals {
+.gridLine {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.chartTitle {
+  font-size: var(--text-sm);
+  font-weight: 650;
+  color: var(--ink-2);
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 8px;
+}
+
+.yAxis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: right;
+  font: 11px/1 var(--font-data);
+  color: var(--ink-3);
+}
+
+.xAxis {
+  grid-column: 2;
+  display: flex;
+  justify-content: space-between;
+  font: 11px/1.2 var(--font-data);
+  color: var(--ink-3);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legendOwn,
+.legendBench {
+  display: inline-block;
+  width: 22px;
+  border-top: 3px solid var(--accent);
+}
+
+.legendBench {
+  border-top: 2px dashed var(--bench);
+}
+
+.decisions {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 10px;
 }
 
-.signal {
+.decision {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 10px;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 4px 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.decision:last-child {
+  border-bottom: 0;
+}
+
+.decisionTime {
+  grid-row: span 2;
+}
+
+.decisionHead {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 4px 12px;
+  font-size: var(--text-sm);
 }
 
-.signalReason {
-  min-width: 0;
-}
-
-.badge {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  padding: 5px 9px;
-  border-radius: 6px;
-  text-transform: uppercase;
-}
-
-.buy {
-  background: var(--buy-soft);
-  color: var(--buy);
-}
-
-.sell {
-  background: var(--sell-soft);
-  color: var(--sell);
-}
-
-.hold {
-  background: var(--surface-2);
+.decisionPrice {
   color: var(--ink-2);
+  font-family: var(--font-data);
+}
+
+.decisionScore {
+  margin-left: auto;
+  font-family: var(--font-data);
+  color: var(--ink-2);
+}
+
+.decisionWhy {
+  grid-column: 2;
+  font-size: var(--text-md);
 }
 
 .coins {
@@ -135,9 +226,22 @@
   font-variant-numeric: tabular-nums;
 }
 
-.marketBar {
-  display: flex;
-  justify-content: flex-end;
+.columns {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+
+.column {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+@media (min-width: 960px) {
+  .columns {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  }
 }
 
 .markerBuy {
@@ -146,4 +250,49 @@
 
 .markerSell {
   fill: var(--sell);
+}
+
+.compare {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.compareRow {
+  display: grid;
+  grid-template-columns: minmax(0, 170px) 1fr;
+  gap: 12px;
+  align-items: center;
+  font-size: var(--text-sm);
+}
+
+.compareName {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.compareName small {
+  display: block;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.compareScale {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0 116px 0 182px;
+  font: 11px var(--font-data);
+  color: var(--ink-3);
+}
+
+@media (max-width: 520px) {
+  .compareRow {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .compareScale {
+    padding-left: 0;
+  }
 }

@@ -1,0 +1,356 @@
+/* Copyright (c) 2026 Ada Technology. All rights reserved. */
+/* A parede de telas em volta do telão: telas escuras (relógios, Fear & Greed, mapa de calor, letreiro) e quadros brancos
+   (próxima vela, preços). Telas e quadros têm a mesma paleta nos dois temas. */
+.screen {
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 6px;
+  background: var(--screen);
+  color: var(--screen-ink);
+  box-shadow: 0 0 0 3px var(--bezel);
+}
+
+.screenTitle {
+  margin: 0 0 var(--space-1);
+  font: 700 11px / 1.3 var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--screen-ink-2);
+}
+
+.screenMuted {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--screen-ink-2);
+}
+
+.clocks {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clocks li {
+  display: grid;
+  text-align: center;
+  padding: 2px 0;
+  border-radius: 4px;
+  background: var(--bezel);
+}
+
+.clocks span {
+  font-size: 11px;
+  color: var(--screen-ink-2);
+}
+
+.clocks b {
+  font: 700 var(--text-md) / 1.2 var(--font-data);
+  color: var(--terminal-accent);
+}
+
+.gauge {
+  display: grid;
+  grid-template-columns: minmax(0, 7rem) 1fr;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.gauge svg {
+  width: 100%;
+  height: auto;
+}
+
+.gauge path {
+  fill: none;
+  stroke-width: 10;
+}
+
+.zone0 {
+  stroke: var(--screen-bad);
+}
+
+.zone1 {
+  stroke: var(--terminal-warn);
+}
+
+.zone2 {
+  stroke: var(--chart-ma20);
+}
+
+.zone3 {
+  stroke: var(--room-leaf-light);
+}
+
+.zone4 {
+  stroke: var(--screen-good);
+}
+
+.needle {
+  stroke: var(--screen-ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.needleHub {
+  fill: var(--screen-ink);
+}
+
+.gaugeValue {
+  display: grid;
+  margin: 0;
+}
+
+.gaugeValue b {
+  font: 800 var(--text-xl) / 1 var(--font-data);
+  color: var(--terminal-warn);
+}
+
+.gaugeValue span {
+  font-size: var(--text-xs);
+}
+
+.credit {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: var(--screen-ink-2);
+}
+
+.heatGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.heat {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font: 600 11px / 1.4 var(--font-data);
+  background: var(--bezel);
+}
+
+.heat[data-direction='up'] {
+  background: color-mix(in srgb, var(--screen-good) calc(var(--heat, 1) * 12%), var(--screen));
+}
+
+.heat[data-direction='down'] {
+  background: color-mix(in srgb, var(--screen-bad) calc(var(--heat, 1) * 12%), var(--screen));
+}
+
+.heat[data-level='2'] {
+  --heat: 2;
+}
+
+.heat[data-level='3'] {
+  --heat: 3;
+}
+
+.ticker {
+  overflow: hidden;
+  padding: 4px 0;
+  border-radius: 4px;
+  background: var(--screen);
+  box-shadow: 0 0 0 2px var(--bezel);
+}
+
+.tickerRun {
+  display: inline-flex;
+  gap: var(--space-6);
+  padding-left: var(--space-3);
+  white-space: nowrap;
+  font: 600 var(--text-xs) / 1.4 var(--font-data);
+  color: var(--screen-ink);
+}
+
+.tick b {
+  color: var(--terminal-warn);
+}
+
+.tick i {
+  font-style: normal;
+  color: var(--screen-ink-2);
+}
+
+.tick[data-direction='up'] i {
+  color: var(--screen-good);
+}
+
+.tick[data-direction='down'] i {
+  color: var(--screen-bad);
+}
+
+.board {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 6px;
+  background: var(--screen);
+  color: var(--screen-ink);
+  box-shadow: 0 0 0 3px var(--bezel);
+}
+
+.boardTitle {
+  margin: 0;
+  font: 700 11px / 1.3 var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--screen-ink-2);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 4px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  font: 700 12px / 1.5 var(--font-data);
+  background: var(--bezel);
+  color: var(--screen-ink);
+}
+
+.status[data-tone='buy'] {
+  background: var(--terminal-buy-soft);
+  color: var(--screen-good);
+}
+
+.status[data-tone='sell'] {
+  background: var(--terminal-sell-soft);
+  color: var(--screen-bad);
+}
+
+.status[data-tone='warn'] {
+  background: var(--terminal-warn-soft);
+  color: var(--terminal-warn);
+}
+
+.status[data-tone='info'] {
+  background: var(--terminal-accent-soft);
+  color: var(--terminal-accent);
+}
+
+.clock small {
+  font: 500 var(--text-xs) / 1.3 var(--font-body);
+  color: var(--screen-ink-2);
+}
+
+.clock {
+  margin: 0;
+  font: 700 var(--text-md) / 1.2 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--terminal-accent);
+}
+
+.score {
+  margin: 0;
+  font: 500 var(--text-xs) / 1.4 var(--font-data);
+}
+
+.boardNote {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--screen-ink-2);
+}
+
+.pips {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.pip {
+  height: 8px;
+  border-radius: 2px;
+  background: var(--bezel);
+}
+
+.pip[data-side='zero'] {
+  background: var(--screen-ink-2);
+}
+
+.pip[data-side='buy'][data-on='true'] {
+  background: var(--screen-good);
+}
+
+.pip[data-side='sell'][data-on='true'] {
+  background: var(--screen-bad);
+}
+
+.pip[data-gate='true'] {
+  outline: 1px solid var(--screen-ink);
+}
+
+.priceRows {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.priceRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 var(--space-2);
+  padding-left: var(--space-2);
+  box-shadow: inset 2px 0 0 var(--terminal-line);
+  font: 500 var(--text-xs) / 1.4 var(--font-body);
+  color: var(--screen-ink-2);
+}
+
+.priceRow strong {
+  font: 700 var(--text-sm) / 1.3 var(--font-data);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--screen-ink);
+}
+
+.priceRow em {
+  grid-column: 1 / -1;
+  justify-self: end;
+  font: 500 11px / 1.3 var(--font-data);
+  font-style: normal;
+  color: var(--screen-ink-2);
+}
+
+.priceRow[data-tone='buy'],
+.priceRow[data-tone='up'] {
+  box-shadow: inset 2px 0 0 var(--screen-good);
+}
+
+.priceRow[data-tone='sell'],
+.priceRow[data-tone='down'] {
+  box-shadow: inset 2px 0 0 var(--screen-bad);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wall[data-motion='on'] .tickerRun {
+    animation: marquee 48s linear infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tickerRun {
+    animation: none;
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}

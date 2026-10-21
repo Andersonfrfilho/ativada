@@ -1,0 +1,15 @@
+{
+  "name": "@ativada/model-agents",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ativada/statistics": "workspace:*",
+    "@ativada/strategy-engine": "workspace:*",
+    "zod": "4.6.5"
+  }
+}

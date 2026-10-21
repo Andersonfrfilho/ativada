@@ -6,6 +6,8 @@ import { readDatabaseUrl } from '../src/read-database-url.js';
 import { checkPendingQueue, checkPurge, checkRemoveAndRetention } from './account-purge-checks.js';
 import { checkAdminRepositories } from './admin-checks.js';
 import { checkAlerts } from './alert-checks.js';
+import { checkAnalystDecisions } from './analyst-decision-checks.js';
+import { checkAnalystHistory } from './analyst-history-checks.js';
 import { checkAuditRetention, checkBlockedAccounts } from './cron-repository-checks.js';
 import {
   checkExport,
@@ -15,6 +17,7 @@ import {
 } from './account-lifecycle-checks.js';
 import { checkCandleRepository } from './candle-checks.js';
 import { checkMissingOpenTimes } from './candle-gap-checks.js';
+import { checkDisplayCandles } from './display-candle-checks.js';
 import { checkSentimentRepository } from './sentiment-checks.js';
 import { checkSentimentObservations } from './sentiment-observation-checks.js';
 import { checkPersistenceIsolation } from './persistence-isolation-checks.js';
@@ -23,8 +26,15 @@ import {
   checkPersistencePurge,
   seedPersistenceOwners,
 } from './persistence-lgpd-checks.js';
+import { checkAnalystCommandReason } from './run-command-analyst-checks.js';
 import { checkRunEvents } from './run-event-checks.js';
 import { checkRunDataWait } from './run-data-wait-checks.js';
+import { checkReconnection } from './reconnect-checks.js';
+import { checkRunStall } from './run-stall-checks.js';
+import { checkRunStallSweep } from './run-stall-sweep-checks.js';
+import { checkModelTeams, checkRollbackGuard } from './model-team-checks.js';
+import { checkModelTeamApi } from './model-team-api-checks.js';
+import { checkWorkerHeartbeats } from './worker-heartbeat-checks.js';
 import { checkRunLog } from './run-log-checks.js';
 import { checkRunDeletion } from './run-delete-checks.js';
 import { checkRunRepository } from './run-checks.js';
@@ -42,6 +52,16 @@ import {
   checkWindowBatchIsAtomic,
 } from './run-batch-checks.js';
 import { checkResultPagination } from './run-result-page-checks.js';
+import {
+  checkFillMarkers,
+  checkPriceColumns,
+  checkTradeFilters,
+  checkTradeTotals,
+} from './run-chart-checks.js';
+import { checkChartIsolation } from './run-chart-isolation-checks.js';
+import { checkLiveStatusReads } from './run-live-status-checks.js';
+import { checkLiveSummaryReads } from './run-live-summary-checks.js';
+import { checkProjectionReads } from './run-projection-checks.js';
 import { checkSurvivalPoints } from './run-survival-checks.js';
 import {
   checkCommandsAndForeignKey,
@@ -134,6 +154,14 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   const batch = await checkLargeBatch(context);
   await checkResultPagination(context, batch);
   await checkSurvivalPoints(context);
+  await checkPriceColumns(context);
+  await checkFillMarkers(context);
+  await checkTradeFilters(context);
+  await checkTradeTotals(context);
+  await checkChartIsolation(context);
+  await checkLiveStatusReads(context);
+  await checkLiveSummaryReads(context);
+  await checkProjectionReads(context);
   await checkOversizedOrderBatch(context);
   await checkBatchIsAtomic(context);
   await checkOrderMonotonicity(context);
@@ -141,6 +169,7 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkWindowNamespace(context);
   await checkWalkForwardWindowRules(context);
   await checkCommandsAndForeignKey(context);
+  await checkAnalystCommandReason(context);
   await checkPersistenceIsolation(context);
   await checkRunOwnerResolution(context);
   await checkBatchCommitAndRollback(context);
@@ -153,6 +182,8 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkRunQueueReading(context);
   await checkLiveRuns(context);
   await checkAlerts(context);
+  await checkAnalystDecisions(context);
+  await checkAnalystHistory(context);
   await checkGoals(context);
   await checkPriceAlerts(context);
   await checkStorageQuotas(context);
@@ -187,11 +218,19 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkAuditRetention(lifecycle);
     await checkCandleRepository(lifecycle);
     await checkMissingOpenTimes(lifecycle);
+    await checkDisplayCandles(lifecycle);
     await checkSentimentRepository(lifecycle);
     await checkSentimentObservations(lifecycle);
     await checkPersistence(lifecycle);
     await checkRunEvents(lifecycle, databaseUrl);
     await checkRunDataWait(lifecycle, databaseUrl);
+    await checkWorkerHeartbeats(lifecycle);
+    await checkRunStall(lifecycle);
+    await checkRunStallSweep(lifecycle, databaseUrl);
+    await checkModelTeams(lifecycle);
+    await checkModelTeamApi(lifecycle);
+    await checkReconnection(lifecycle, databaseUrl);
+    await checkRollbackGuard(lifecycle);
   } finally {
     await client.close();
     await closeDatabase(handle);

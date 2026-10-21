@@ -18,6 +18,14 @@ export function dataEnvelopeSchema<TData>(data: z.ZodType<TData>): z.ZodType<{ d
   return z.object({ data });
 }
 
+// `meta` é aditivo: respostas antigas, sem ele, continuam válidas.
+export function metaEnvelopeSchema<TData, TMeta>(
+  data: z.ZodType<TData>,
+  meta: z.ZodType<TMeta>,
+): z.ZodType<{ data: TData; meta?: TMeta | undefined }> {
+  return z.object({ data, meta: meta.optional() });
+}
+
 export function pageEnvelopeSchema<TItem>(
   item: z.ZodType<TItem>,
 ): z.ZodType<{ data: TItem[]; pagination: z.infer<typeof paginationSchema> }> {

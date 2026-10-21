@@ -1,0 +1,80 @@
+// Copyright (c) 2026 Ada Technology. All rights reserved.
+import { MODEL_TEAM_KEYS, MODEL_TEAMS, type ModelTeamKey } from './model-team-catalog.constant.js';
+import { PROVIDER_STATE, type ProviderState } from './provider-state.constant.js';
+
+// Catálogo FECHADO das frases da tela (RF19, RNF07). A única fala fora dele é o motivo do modelo (RF08).
+export const TEAM_BADGE = {
+  buy: { icon: '↗', label: 'comprar' },
+  sell: { icon: '↘', label: 'vender' },
+  hold: { icon: '—', label: 'esperar' },
+  pending: { icon: '◷', label: 'pensando' },
+  disabled: { icon: '○', label: 'desligada' },
+} as const;
+
+export const RETRY_TIME_MARK = '{hora}';
+
+export const PROVIDER_STATE_BADGE: Readonly<
+  Record<ProviderState, { readonly icon: string; readonly label: string }>
+> = {
+  [PROVIDER_STATE.READY]: { icon: '●', label: 'pronto' },
+  [PROVIDER_STATE.NO_KEY]: { icon: '⚠', label: 'sem chave configurada' },
+  [PROVIDER_STATE.BUDGET_EXHAUSTED]: { icon: '⏸', label: 'parada pelo teto de custo' },
+  [PROVIDER_STATE.CIRCUIT_OPEN]: {
+    icon: '⚡',
+    label: `provedor fora (tentando de novo às ${RETRY_TIME_MARK})`,
+  },
+  [PROVIDER_STATE.KEY_REJECTED]: { icon: '⚠', label: 'chave recusada pelo provedor' },
+  [PROVIDER_STATE.MODEL_NOT_FOUND]: {
+    icon: '⚠',
+    label: 'modelo indisponível no provedor; confira o id no env',
+  },
+};
+
+// O worker não deu notícia (parado ou nunca ligado): não se sabe o estado dos provedores.
+export const WORKER_OFFLINE_PHRASE =
+  '⚠ sem notícia do serviço das equipes; o estado volta quando ele responder';
+export const HIDDEN_REASON_PHRASE =
+  'O modelo deu um motivo fora das regras de linguagem da casa; o texto foi ocultado.';
+export const TEAM_NOTICE =
+  'Equipe de modelo: um modelo de linguagem lê os mesmos dados públicos de mercado, com três papéis, e indica compra, venda ou espera. Pode errar; o auditor mede o acerto. Não é recomendação. Tudo simulado.';
+export const COST_ESTIMATE_NOTICE =
+  'Estimativa pelos tokens e pelo preço configurado; a fatura do provedor é a palavra final.';
+export const COMPARISON_NOTICE =
+  'Comparação de acerto do lado da próxima vela; não mede lucro e não é recomendação.';
+export const DUEL_NOTICE =
+  'Mesmo par, mesma vela e mesmo saldo fictício. Período curto não prova nada.';
+export const WALLET_RESULT_NOTICE = 'resultado de uma simulação curta, não prova de nada';
+export const ON_DEMAND_MARK = 'pedido avulso · não entra no placar';
+// Motivos gravados na linha de decisão da execução da equipe (RF14).
+export const NO_READING_REASON = 'equipe sem leitura';
+export const IGNORED_ALREADY_LONG_REASON = 'ignorada: já comprada';
+export const IGNORED_NO_POSITION_REASON = 'ignorada: sem posição';
+
+export function buildGeneratedByFooter(team: ModelTeamKey): string {
+  return `gerado por modelo: ${MODEL_TEAMS[team].modelFamily} · pode errar`;
+}
+
+export function describeProviderState(state: ProviderState, retryTime: string): string {
+  const badge = PROVIDER_STATE_BADGE[state];
+  return `${badge.icon} ${badge.label.replace(RETRY_TIME_MARK, retryTime)}`;
+}
+
+// Toda frase fixa da tela, para a varredura de linguagem proibida (RNF07).
+export function listAllPhrases(): readonly string[] {
+  return [
+    ...Object.values(TEAM_BADGE).map((badge) => badge.label),
+    ...Object.values(PROVIDER_STATE_BADGE).map((badge) => badge.label),
+    ...MODEL_TEAM_KEYS.map((team) => buildGeneratedByFooter(team)),
+    HIDDEN_REASON_PHRASE,
+    WORKER_OFFLINE_PHRASE,
+    TEAM_NOTICE,
+    COST_ESTIMATE_NOTICE,
+    COMPARISON_NOTICE,
+    DUEL_NOTICE,
+    WALLET_RESULT_NOTICE,
+    ON_DEMAND_MARK,
+    NO_READING_REASON,
+    IGNORED_ALREADY_LONG_REASON,
+    IGNORED_NO_POSITION_REASON,
+  ];
+}

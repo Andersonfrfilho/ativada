@@ -14,7 +14,8 @@ type Edit = {
   readonly replace: string;
   readonly occurrences?: number;
 };
-type Mutant = { readonly name: string; readonly edit: Edit | undefined };
+// `also` é a segunda edição de um mutante que tira o filtro de dono de dois pontos do mesmo repositório.
+type Mutant = { readonly name: string; readonly edit: Edit | undefined; readonly also?: Edit };
 
 const WITHOUT = (file: string, find: string, kept: string, occurrences = 1): Edit => ({
   file,
@@ -31,8 +32,8 @@ const MUTANTS: readonly Mutant[] = [
     name: 'STRATEGY_LIST_SHOWS_EVERY_OWNER',
     edit: WITHOUT(
       'src/strategies/strategy-page.ts',
-      '        ownerCondition(scope, strategies.userId),\n        isNull(strategies.deletedAt),\n        isBeforeCursor(params.after),',
-      '        isNull(strategies.deletedAt),\n        isBeforeCursor(params.after),',
+      '        ownerCondition(scope, strategies.userId),\n        isNull(strategies.deletedAt),\n        eq(strategies.isSystem, false),\n        isBeforeCursor(params.after),',
+      '        isNull(strategies.deletedAt),\n        eq(strategies.isSystem, false),\n        isBeforeCursor(params.after),',
     ),
   },
   {
@@ -47,8 +48,8 @@ const MUTANTS: readonly Mutant[] = [
     name: 'STRATEGY_READ_OF_ANY_OWNER',
     edit: WITHOUT(
       'src/strategies/strategy.repository.ts',
-      '  return and(\n    ownerCondition(scope, strategies.userId),\n    eq(strategies.id, strategyId),',
-      '  return and(\n    eq(strategies.id, strategyId),',
+      '  return and(visibleStrategies(scope), eq(strategies.id, strategyId));',
+      '  return and(eq(strategies.id, strategyId), isNull(strategies.deletedAt));',
     ),
   },
   {
@@ -63,9 +64,13 @@ const MUTANTS: readonly Mutant[] = [
     name: 'RUN_READ_OF_ANY_OWNER',
     edit: WITHOUT(
       'src/runs/run.repository.ts',
+      '.where(and(ownerCondition(scope, runs.userId), eq(runs.id, runId), isNull(runs.deletedAt)))',
+      '.where(and(eq(runs.id, runId), isNull(runs.deletedAt)))',
+    ),
+    also: WITHOUT(
+      'src/runs/run.repository.ts',
       '.where(and(ownerCondition(scope, runs.userId), eq(runs.id, runId)))',
       '.where(eq(runs.id, runId))',
-      2,
     ),
   },
   {
@@ -108,8 +113,268 @@ const MUTANTS: readonly Mutant[] = [
     name: 'OWNED_RUN_CHECK_IGNORES_THE_OWNER',
     edit: WITHOUT(
       'src/runs/run-ownership.ts',
-      '.where(and(ownerCondition(scope, runs.userId), eq(runs.id, runId)))',
-      '.where(eq(runs.id, runId))',
+      '.where(and(ownerCondition(scope, runs.userId), eq(runs.id, runId), isNull(runs.deletedAt)))',
+      '.where(and(eq(runs.id, runId), isNull(runs.deletedAt)))',
+    ),
+  },
+  {
+    name: 'FILL_MARKERS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-fill-markers.ts',
+      '    ownerCondition(scope, fills.userId),\n    eq(fills.runId, runId),\n    gte(fills.candleTime, params.from),',
+      '    eq(fills.runId, runId),\n    gte(fills.candleTime, params.from),',
+    ),
+  },
+  {
+    name: 'FILL_CLUSTERS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-fill-markers.ts',
+      '      WHERE user_id = ${scope.ownerUserId} AND run_id = ${runId}\n',
+      '      WHERE run_id = ${runId}\n',
+    ),
+  },
+  {
+    name: 'FILLS_OF_POSITIONS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-fill-list.ts',
+      '        ownerCondition(scope, fills.userId),\n        eq(fills.runId, runId),\n        inArray',
+      '        eq(fills.runId, runId),\n        inArray',
+    ),
+  },
+  {
+    name: 'TRADE_TOTALS_SUM_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-trade-totals.ts',
+      '    WHERE p.user_id = ${scope.ownerUserId} AND p.run_id = ${runId}`',
+      '    WHERE p.run_id = ${runId}`',
+    ),
+  },
+  {
+    name: 'POSITION_RANGE_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-position-list.ts',
+      '        ownerCondition(scope, positions.userId),\n        eq(positions.runId, runId),\n        afterPosition',
+      '        eq(positions.runId, runId),\n        afterPosition',
+    ),
+  },
+  {
+    name: 'PRICE_COLUMNS_OF_FOREIGN_RUN_ARE_NOT_ABSENT',
+    edit: WITHOUT(
+      'src/run-results/run-result.repository.ts',
+      '      (await isOwnedRun(database, scope, runId))\n        ? listPriceColumns({ executor: database, params })\n        : undefined,',
+      '      listPriceColumns({ executor: database, params }),',
+    ),
+  },
+  {
+    name: 'FILL_MARKERS_OF_FOREIGN_RUN_ARE_NOT_ABSENT',
+    edit: WITHOUT(
+      'src/run-results/run-result.repository.ts',
+      '      (await isOwnedRun(database, scope, runId))\n        ? listFillMarkers({ executor: database, scope, runId, params })\n        : undefined,',
+      '      listFillMarkers({ executor: database, scope, runId, params }),',
+    ),
+  },
+  {
+    name: 'FILL_COUNT_OF_FOREIGN_RUN_IS_NOT_ABSENT',
+    edit: WITHOUT(
+      'src/run-results/run-result.repository.ts',
+      '      (await isOwnedRun(database, scope, runId))\n        ? countFillsInRange({ executor: database, scope, runId, params: range })\n        : undefined,',
+      '      countFillsInRange({ executor: database, scope, runId, params: range }),',
+    ),
+  },
+  {
+    name: 'FILL_CLUSTERS_OF_FOREIGN_RUN_ARE_NOT_ABSENT',
+    edit: WITHOUT(
+      'src/run-results/run-result.repository.ts',
+      '      (await isOwnedRun(database, scope, runId))\n        ? listFillClusters({ executor: database, scope, runId, params })\n        : undefined,',
+      '      listFillClusters({ executor: database, scope, runId, params }),',
+    ),
+  },
+  {
+    name: 'TRADE_TOTALS_OF_FOREIGN_RUN_ARE_NOT_ABSENT',
+    edit: WITHOUT(
+      'src/run-results/run-result.repository.ts',
+      '      (await isOwnedRun(database, scope, runId))\n        ? readTradeTotals({ executor: database, scope, runId })\n        : undefined,',
+      '      readTradeTotals({ executor: database, scope, runId }),',
+    ),
+  },
+  {
+    name: 'LIVE_LATEST_EQUITY_POINT_READS_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-live-status.ts',
+      '.where(and(ownerCondition(scope, equityPoints.userId), eq(equityPoints.runId, runId)))',
+      '.where(eq(equityPoints.runId, runId))',
+    ),
+  },
+  {
+    name: 'LIVE_DECISION_ROWS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-live-status.ts',
+      '        ownerCondition(scope, signals.userId),\n        eq(signals.runId, runId),\n        params.before',
+      '        eq(signals.runId, runId),\n        params.before',
+    ),
+  },
+  {
+    name: 'LIVE_POSITIONS_AROUND_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-live-status.ts',
+      '        ownerCondition(scope, positions.userId),\n        eq(positions.runId, runId),\n        or(',
+      '        eq(positions.runId, runId),\n        or(',
+    ),
+  },
+  {
+    name: 'LIVE_DECISION_MARKERS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-live-status.ts',
+      '        ownerCondition(scope, signals.userId),\n        eq(signals.runId, runId),\n        gte(',
+      '        eq(signals.runId, runId),\n        gte(',
+    ),
+  },
+  {
+    name: 'PROJECTION_LAYER_ROWS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-projections.ts',
+      '        ownerCondition(scope, signals.userId),\n        eq(signals.runId, runId),\n        gte(signals.candleTime, params.range.from),',
+      '        eq(signals.runId, runId),\n        gte(signals.candleTime, params.range.from),',
+    ),
+  },
+  {
+    name: 'PROJECTION_SUMMARY_READS_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-projection-summary.ts',
+      'JOIN signals s ON s.user_id = ${scope.ownerUserId} AND s.run_id = ${runId}',
+      'JOIN signals s ON s.run_id = ${runId}',
+    ),
+  },
+  {
+    name: 'PROJECTION_ITEMS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/run-results/run-projection-items.ts',
+      'JOIN signals s ON s.user_id = ${scope.ownerUserId} AND s.run_id = ${runId}',
+      'JOIN signals s ON s.run_id = ${runId}',
+    ),
+  },
+  {
+    name: 'ANALYST_DECISIONS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/analyst/analyst-decision.repository.ts',
+      '  return and(ownerCondition(scope, analystDecisions.userId), eq(analystDecisions.runId, runId));',
+      '  return and(eq(analystDecisions.runId, runId));',
+    ),
+  },
+  {
+    name: 'ANALYST_GOAL_SNAPSHOT_READS_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/analyst/analyst-goal-snapshot.ts',
+      'WHERE e.user_id = ${scope.ownerUserId} AND e.run_id = ${runId}',
+      'WHERE e.run_id = ${runId}',
+    ),
+    also: WITHOUT(
+      'src/analyst/analyst-goal-snapshot.ts',
+      'WHERE p.user_id = ${scope.ownerUserId} AND p.run_id = ${runId}',
+      'WHERE p.run_id = ${runId}',
+    ),
+  },
+  {
+    name: 'NOTICE_RUN_FILTER_IGNORES_THE_OWNER',
+    edit: WITHOUT('src/notices/notice-feed-sql.ts', 'r.user_id = ${owner} AND r.kind', 'r.kind'),
+  },
+  {
+    name: 'NOTICE_ORDERS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/notices/notice-feed-sql.ts',
+      'WHERE o.user_id = ${owner} AND o.side',
+      'WHERE o.side',
+    ),
+    also: WITHOUT('src/notices/notice-feed-sql.ts', 'r.user_id = ${owner} AND r.kind', 'r.kind'),
+  },
+  {
+    name: 'NOTICE_EXITS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/notices/notice-feed-sql.ts',
+      'WHERE p.user_id = ${owner} AND p.status',
+      'WHERE p.status',
+    ),
+    also: WITHOUT('src/notices/notice-feed-sql.ts', 'r.user_id = ${owner} AND r.kind', 'r.kind'),
+  },
+  {
+    name: 'NOTICE_RESUMES_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/notices/notice-feed-run-sql.ts',
+      'WHERE a.user_id = ${owner} AND a.side',
+      'WHERE a.side',
+    ),
+    also: WITHOUT('src/notices/notice-feed-sql.ts', 'r.user_id = ${owner} AND r.kind', 'r.kind'),
+  },
+  {
+    name: 'NOTICE_HISTORY_READS_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/notices/notice-history.ts',
+      'WHERE r.user_id = ${scope.ownerUserId} AND r.deleted_at IS NULL',
+      'WHERE r.deleted_at IS NULL',
+    ),
+  },
+  {
+    name: 'NOTICE_PRICE_ALERTS_READ_EVERY_OWNER',
+    edit: WITHOUT(
+      'src/notices/notice-feed-run-sql.ts',
+      'WHERE pa.user_id = ${owner} AND pa.last_fired_at',
+      'WHERE pa.last_fired_at',
+    ),
+  },
+  {
+    name: 'SYSTEM_STRATEGY_OF_ANY_OWNER',
+    edit: WITHOUT(
+      'src/strategies/system-strategy.ts',
+      '        ownerCondition(scope, strategies.userId),\n        eq(strategies.isSystem, true),',
+      '        eq(strategies.isSystem, true),',
+    ),
+  },
+  {
+    name: 'SYSTEM_STRATEGY_SHOWN_IN_THE_LIST',
+    edit: WITHOUT(
+      'src/strategies/strategy.repository.ts',
+      '    isNull(strategies.deletedAt),\n    eq(strategies.isSystem, false),\n  );',
+      '    isNull(strategies.deletedAt),\n  );',
+    ),
+  },
+  {
+    name: 'SYSTEM_STRATEGY_COUNTS_IN_THE_QUOTA',
+    edit: WITHOUT(
+      'src/strategies/strategy-quota.ts',
+      '        isNull(strategies.deletedAt),\n        eq(strategies.isSystem, false),\n',
+      '        isNull(strategies.deletedAt),\n',
+    ),
+  },
+  {
+    name: 'ON_DEMAND_CLAIM_OF_ANY_OWNER',
+    edit: WITHOUT(
+      'src/model-teams/user-model-team.repository.ts',
+      'WHERE user_id = ${scope.ownerUserId}::uuid AND team_key = ${params.teamKey}',
+      'WHERE team_key = ${params.teamKey}',
+    ),
+  },
+  {
+    name: 'DUEL_RUNS_OF_ANY_OWNER',
+    edit: WITHOUT(
+      'src/model-teams/model-duel.repository.ts',
+      '        ownerCondition(scope, runs.userId),\n        isNull(runs.deletedAt),',
+      '        isNull(runs.deletedAt),',
+    ),
+  },
+  {
+    name: 'DUEL_CURVES_OF_ANY_OWNER',
+    edit: WITHOUT(
+      'src/model-teams/model-duel.repository.ts',
+      'WHERE user_id = ${scope.ownerUserId}::uuid AND run_id IN',
+      'WHERE run_id IN',
+    ),
+  },
+  {
+    name: 'DUEL_TRADES_OF_ANY_OWNER',
+    edit: WITHOUT(
+      'src/model-teams/model-duel.repository.ts',
+      '        ownerCondition(scope, positions.userId),\n        inArray(',
+      '        inArray(',
     ),
   },
 ];
@@ -140,6 +405,7 @@ async function runMutant(mutant: Mutant): Promise<Verdict> {
   try {
     await symlink(`${SOURCE_PACKAGE}/node_modules`, `${directory}/node_modules`);
     if (mutant.edit !== undefined) await applyEdit(directory, mutant.name, mutant.edit);
+    if (mutant.also !== undefined) await applyEdit(directory, mutant.name, mutant.also);
     const child = Bun.spawn([process.execPath, 'run', `${directory}/${JUDGE}`], {
       cwd: REPOSITORY_ROOT,
       env: {

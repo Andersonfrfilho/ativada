@@ -4,8 +4,11 @@ import {
   createBlockedAccountRepository,
   createCandleRepository,
   createSentimentRepository,
+  createTeamReportRepository,
+  MODEL_TEAM_RETENTION_DAYS,
 } from '@ativada/database';
 import {
+  buildDisplayRetentionDays,
   createFearGreedClient,
   createMarketDataClient,
   createServerClock,
@@ -19,8 +22,14 @@ import {
 import { createReconcileBlockedAccountsTask } from './accounts/reconcile-blocked-accounts.task.js';
 import { createExpireAuditEventsTask } from './audit/expire-audit-events.task.js';
 import { TASK_NAME } from './cron.constant.js';
-import { createBackfillCandlesTask } from './market/backfill-candles.task.js';
+import {
+  createBackfillCandlesTask,
+  type BackfillCandlesSummary,
+  type BackfillCandlesTask,
+} from './market/backfill-candles.task.js';
 import { BACKFILL_LOG } from './market/market.constant.js';
+import { createPurgeDisplayCandlesTask } from './market/purge-display-candles.task.js';
+import { createExpireModelTeamReportsTask } from './model-teams/expire-model-team-reports.task.js';
 import { createSyncFearGreedTask } from './market/sync-fear-greed.task.js';
 import type { CronTask } from './run-cron-tasks.js';
 import { selectCronTasks } from './select-cron-tasks.js';
@@ -44,6 +53,69 @@ function createBackfillTask(params: CreatePurgeTaskParams, serverClock: ServerCl
       symbols: environment.MARKET_SYMBOLS,
       timeframes: environment.MARKET_TIMEFRAMES,
       years: environment.BACKFILL_YEARS,
+    }),
+  };
+}
+
+function createBackfillDisplayTask(
+  params: CreatePurgeTaskParams,
+  serverClock: ServerClock,
+): CronTask {
+  const { environment, database, logger } = params;
+  const retentionDays = buildDisplayRetentionDays(environment);
+  const client = createMarketDataClient({
+    baseUrl: environment.BINANCE_BASE_URL,
+    clock: serverClock,
+  });
+  // Uma tarefa por vela de exibição: cada uma tem a sua janela de retenção.
+  const tasks = environment.MARKET_DISPLAY_TIMEFRAMES.map((timeframe) =>
+    createBackfillCandlesTask({
+      repository: createCandleRepository(database),
+      client,
+      logger,
+      now: serverClock.now,
+      refreshClock: serverClock.refresh,
+      exchange: environment.MARKET_EXCHANGE,
+      symbols: environment.MARKET_SYMBOLS,
+      timeframes: [timeframe],
+      days: retentionDays[timeframe],
+    }),
+  );
+  return { name: TASK_NAME.BACKFILL_DISPLAY_CANDLES, run: () => runInSequence(tasks) };
+}
+
+async function runInSequence(
+  tasks: readonly BackfillCandlesTask[],
+): Promise<BackfillCandlesSummary> {
+  const total = { pairs: 0, inserted: 0, unfillable: 0, failures: 0 };
+  for (const task of tasks) {
+    const summary = await task();
+    total.pairs += summary.pairs;
+    total.inserted += summary.inserted;
+    total.unfillable += summary.unfillable;
+    total.failures += summary.failures;
+  }
+  return total;
+}
+
+function createPurgeDisplayTask(params: CreatePurgeTaskParams): CronTask {
+  const { environment, database } = params;
+  return {
+    name: TASK_NAME.PURGE_DISPLAY_CANDLES,
+    run: createPurgeDisplayCandlesTask({
+      repository: createCandleRepository(database),
+      retentionDays: buildDisplayRetentionDays(environment),
+      now: () => Date.now(),
+    }),
+  };
+}
+
+function createExpireModelTeamReportsCronTask(params: CreatePurgeTaskParams): CronTask {
+  return {
+    name: TASK_NAME.EXPIRE_MODEL_TEAM_REPORTS,
+    run: createExpireModelTeamReportsTask({
+      repository: createTeamReportRepository(params.database),
+      retentionDays: MODEL_TEAM_RETENTION_DAYS,
     }),
   };
 }
@@ -93,7 +165,10 @@ export function createProductionTasks(params: CreatePurgeTaskParams): readonly C
   const tasks: readonly CronTask[] = [
     ...createAccountTasks(params),
     createBackfillTask(params, serverClock),
+    createBackfillDisplayTask(params, serverClock),
+    createPurgeDisplayTask(params),
     createFearGreedTask(params),
+    createExpireModelTeamReportsCronTask(params),
   ];
   return selectCronTasks({ tasks, names: environment.CRON_TASKS });
 }

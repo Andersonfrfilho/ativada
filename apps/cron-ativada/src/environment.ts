@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
   checkProductionRules,
+  databaseLongQueryTimeoutSecondsSchema,
   environmentNameSchema,
   httpUrlSchema,
   nonEmptyTextSchema,
@@ -29,6 +30,7 @@ export const environmentSchema = z
     ENV: environmentNameSchema,
     DATABASE_URL: postgresUrlSchema,
     DATABASE_SSL_ROOT_CERT: pemCertificateSchema.optional(),
+    DATABASE_LONG_QUERY_TIMEOUT_SECONDS: databaseLongQueryTimeoutSecondsSchema,
     KEYCLOAK_TOKEN_URL: httpUrlSchema,
     KEYCLOAK_ADMIN_API_URL: httpUrlSchema,
     KEYCLOAK_SERVICE_CLIENT_ID: nonEmptyTextSchema,

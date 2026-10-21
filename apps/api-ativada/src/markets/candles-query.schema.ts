@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@ativada/environment';
 import {
-  ENGINE_TIMEFRAME,
-  ENGINE_TIMEFRAME_DURATION_MILLISECONDS,
-  type EngineTimeframe,
-} from '@ativada/strategy-engine';
+  MARKET_CANDLE_DURATION_MILLISECONDS,
+  MARKET_CANDLE_TIMEFRAME,
+  type MarketCandleTimeframe,
+} from '@ativada/market-data-crypto';
 
 import {
   CANDLE_QUERY_REASON,
@@ -19,7 +19,7 @@ export type EnabledMarkets = {
 
 export type CandlesQuery = {
   readonly symbol: string;
-  readonly timeframe: EngineTimeframe;
+  readonly timeframe: MarketCandleTimeframe;
   readonly from: number;
   readonly to: number;
 };
@@ -35,7 +35,7 @@ export function createCandlesQuerySchema(enabled: EnabledMarkets): z.ZodType<Can
         error: CANDLE_QUERY_REASON.NOT_ENABLED,
       }),
       timeframe: z
-        .enum(ENGINE_TIMEFRAME)
+        .enum(MARKET_CANDLE_TIMEFRAME)
         .refine((timeframe) => enabled.timeframes.includes(timeframe), {
           error: CANDLE_QUERY_REASON.NOT_ENABLED,
         }),
@@ -51,7 +51,7 @@ export function createCandlesQuerySchema(enabled: EnabledMarkets): z.ZodType<Can
         });
         return;
       }
-      const duration = ENGINE_TIMEFRAME_DURATION_MILLISECONDS[query.timeframe];
+      const duration = MARKET_CANDLE_DURATION_MILLISECONDS[query.timeframe];
       if (Math.ceil((query.to - query.from) / duration) > MAX_CANDLES_PER_RESPONSE) {
         context.addIssue({
           code: 'custom',

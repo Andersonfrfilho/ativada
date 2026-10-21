@@ -1,0 +1,108 @@
+{
+  "symbol": "BNBUSDT",
+  "metrics": {
+    "wins": 2,
+    "losses": 8,
+    "period": {
+      "candles": 17569,
+      "endTime": 1790811900000,
+      "startTime": 1775000700000,
+      "periodsPerYear": "35064",
+      "elapsedMilliseconds": 15811200000
+    },
+    "sharpe": {
+      "value": "-1.280504172836",
+      "reason": null
+    },
+    "trades": 10,
+    "sortino": {
+      "value": "-1.68175639431",
+      "reason": null
+    },
+    "version": "metrics-1",
+    "winRate": {
+      "value": "0.2",
+      "reason": null
+    },
+    "exposure": {
+      "value": "0.013774261483",
+      "reason": null
+    },
+    "feesPaid": "151.89196889",
+    "grossLoss": "572.44344237",
+    "netProfit": "-287.87069889",
+    "averageWin": {
+      "value": "142.28637174",
+      "reason": null
+    },
+    "expectancy": {
+      "value": "-28.787069889",
+      "reason": null
+    },
+    "averageLoss": {
+      "value": "71.55543029625",
+      "reason": null
+    },
+    "finalEquity": "9712.12930111",
+    "grossProfit": "284.57274348",
+    "payoffRatio": {
+      "value": "1.98847762009",
+      "reason": null
+    },
+    "totalReturn": {
+      "value": "-0.028787069889",
+      "reason": null
+    },
+    "averageTrade": {
+      "value": "-28.787069889",
+      "reason": null
+    },
+    "excessReturn": {
+      "value": "-0.270984424197",
+      "reason": null
+    },
+    "openPosition": null,
+    "profitFactor": {
+      "value": "0.497119405022",
+      "reason": null
+    },
+    "tradesPerYear": {
+      "value": "19.959016393443",
+      "reason": null
+    },
+    "initialBalance": "10000",
+    "benchmarkReturn": {
+      "value": "0.242197354308",
+      "reason": null
+    },
+    "annualizedReturn": {
+      "value": "-0.056632519443",
+      "reason": null
+    },
+    "exitReasonCounts": {
+      "gap": 0,
+      "stop": 8,
+      "signal": 0,
+      "target": 2,
+      "command": 0
+    },
+    "maxDrawdownAtLow": {
+      "depth": "0.057287776707",
+      "peakTime": 1779752700000,
+      "troughTime": 1789344900000,
+      "recoveryTime": null,
+      "durationCandles": 12288,
+      "durationMilliseconds": 11059200000
+    },
+    "maxDrawdownAtClose": {
+      "depth": "0.056451997095",
+      "peakTime": 1779752700000,
+      "troughTime": 1789344900000,
+      "recoveryTime": null,
+      "durationCandles": 12288,
+      "durationMilliseconds": 11059200000
+    },
+    "maxConsecutiveLosses": 7
+  },
+  "timeframe": "15m"
+}

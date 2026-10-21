@@ -3,7 +3,13 @@ import { MIGRATIONS_FOLDER } from '../src/database.constant.js';
 import { closeDatabase, openDatabase } from '../src/database-handle.js';
 import { applyMigrations } from '../src/migrate.js';
 import { readDatabaseUrl } from '../src/read-database-url.js';
+import { checkAnalystReads } from './analyst-reads-checks.js';
+import { checkModelTeamApi } from './model-team-api-checks.js';
+import { checkNoticeFeed } from './notice-feed-checks.js';
 import { checkPersistenceIsolation } from './persistence-isolation-checks.js';
+import { checkChartIsolation } from './run-chart-isolation-checks.js';
+import { checkLiveStatusReads } from './run-live-status-checks.js';
+import { checkProjectionReads } from './run-projection-checks.js';
 import { checkRunRepository } from './run-checks.js';
 import { checkStrategyPages } from './strategy-page-checks.js';
 import { createTemporaryDatabase, dropTemporaryDatabase } from './temporary-database.js';
@@ -29,6 +35,12 @@ async function runChecks(databaseUrl: string): Promise<void> {
     await checkStrategyPages(context);
     await checkRunRepository(context);
     await checkPersistenceIsolation(context);
+    await checkChartIsolation(context);
+    await checkLiveStatusReads(context);
+    await checkProjectionReads(context);
+    await checkAnalystReads(context);
+    await checkNoticeFeed(context);
+    await checkModelTeamApi(context);
   } finally {
     await client.close();
     await closeDatabase(handle);

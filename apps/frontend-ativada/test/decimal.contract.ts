@@ -4,9 +4,12 @@ import { describe, expect, test } from 'bun:test';
 import {
   divideFloor,
   formatDecimalText,
+  formatSignedPercentDown,
   multiplyDown,
   multiplyUp,
   parseScaled,
+  roundRateDownToPercent,
+  roundScaledDirected,
   roundScaledHalfUp,
   toPlainText,
 } from '../src/format/decimal.js';
@@ -53,6 +56,17 @@ describe('scaled arithmetic', () => {
     expect(divideFloor(1n, 0n)).toBeUndefined();
   });
 
+  test('rounds toward plus or minus infinity to the cents, never moving an exact value', () => {
+    const round = (text: string, direction: 'up' | 'down'): string =>
+      toPlainText(roundScaledDirected(parseScaled(text) ?? 0n, 2, direction));
+    expect(round('202.2975', 'up')).toBe('202.30000000');
+    expect(round('202.2975', 'down')).toBe('202.29000000');
+    expect(round('-8789.251', 'down')).toBe('-8789.26000000');
+    expect(round('-8789.251', 'up')).toBe('-8789.25000000');
+    expect(round('1.10', 'up')).toBe('1.10000000');
+    expect(round('1.10', 'down')).toBe('1.10000000');
+  });
+
   test('rounds half up to the cents', () => {
     expect(toPlainText(roundScaledHalfUp(parseScaled('2.005') ?? 0n, 2))).toBe('2.01000000');
     expect(toPlainText(roundScaledHalfUp(parseScaled('-2.005') ?? 0n, 2))).toBe('-2.01000000');
@@ -97,4 +111,14 @@ describe('price formatting by magnitude', () => {
       expect(formatPrice(text)).toBe(expected);
     });
   }
+});
+
+describe('the rate as a percent rounded down', () => {
+  test('a gain never rounds up and a loss never rounds toward zero', () => {
+    expect(roundRateDownToPercent(parseScaled('0.00009') ?? 0n)).toBe(0n);
+    expect(formatSignedPercentDown(parseScaled('0.00009') ?? 0n)).toBe('0,00%');
+    expect(formatSignedPercentDown(parseScaled('0.00019') ?? 0n)).toBe('+0,01%');
+    expect(formatSignedPercentDown(parseScaled('-0.000001') ?? 0n)).toBe('-0,01%');
+    expect(formatSignedPercentDown(parseScaled('0.0333') ?? 0n)).toBe('+3,33%');
+  });
 });

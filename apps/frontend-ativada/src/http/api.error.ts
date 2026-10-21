@@ -6,12 +6,15 @@ export type ApiErrorParams = {
   readonly code: string;
   readonly message: string;
   readonly details?: readonly ApiErrorDetail[];
+  // Os segundos do cabeçalho Retry-After (429), quando o servidor os informa.
+  readonly retryAfterSeconds?: number | undefined;
 };
 
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly details: readonly ApiErrorDetail[];
+  readonly retryAfterSeconds: number | undefined;
 
   constructor(params: ApiErrorParams) {
     super(params.message);
@@ -19,6 +22,7 @@ export class ApiError extends Error {
     this.status = params.status;
     this.code = params.code;
     this.details = params.details ?? [];
+    this.retryAfterSeconds = params.retryAfterSeconds;
   }
 }
 

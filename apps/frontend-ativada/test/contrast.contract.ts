@@ -55,7 +55,53 @@ const PAIRS: readonly (readonly [string, string])[] = [
   ['accent', 'surface'],
   ['on-accent', 'accent'],
   ['warn', 'warn-soft'],
+  ['ink', 'buy-soft'],
+  ['ink', 'sell-soft'],
+  ['ink', 'warn-soft'],
+  ['ink', 'surface-2'],
+  ['ink-2', 'surface-2'],
   ['bench', 'surface'],
+  ['accent', 'surface-2'],
+  ['buy', 'surface-2'],
+  ['sell', 'surface-2'],
+  ['surface', 'ink-2'],
+  ['ink', 'accent-soft'],
+  ['ink-2', 'accent-soft'],
+  ['accent', 'accent-soft'],
+  ['ink-3', 'surface-2'],
+  ['ink-2', 'warn-soft'],
+  ['accent', 'warn-soft'],
+  ['warn', 'surface'],
+  ['on-accent', 'sell'],
+  ['on-buy', 'buy'],
+  ['on-sell', 'sell'],
+  ['model', 'surface'],
+  ['postit-ink', 'postit'],
+  ['on-medal', 'medal-gold'],
+  ['on-medal', 'medal-silver'],
+  ['on-medal', 'medal-bronze'],
+];
+
+// Setas, linha, halo e contorno do gráfico são elementos gráficos (WCAG 1.4.11): 3:1.
+const GRAPHIC_MINIMUM_RATIO = 3;
+const GRAPHIC_PAIRS: readonly (readonly [string, string])[] = [
+  ['buy', 'surface'],
+  ['sell', 'surface'],
+  ['accent', 'surface'],
+  ['buy', 'accent-soft'],
+  ['sell', 'accent-soft'],
+  ['ink', 'accent-soft'],
+  ['surface', 'buy'],
+  ['surface', 'sell'],
+  ['bench', 'surface'],
+  ['warn', 'surface'],
+  ['warn', 'bg'],
+  ['bench', 'surface-2'],
+  ['warn', 'surface-2'],
+  ['accent', 'surface-2'],
+  ['accent', 'accent-soft'],
+  ['ink-3', 'surface'],
+  ['ink-3', 'surface-2'],
 ];
 
 for (const [theme, read] of [
@@ -73,5 +119,192 @@ for (const [theme, read] of [
         expect(ratio(front ?? '#000000', back ?? '#ffffff')).toBeGreaterThanOrEqual(MINIMUM_RATIO);
       });
     }
+    for (const [foreground, background] of GRAPHIC_PAIRS) {
+      test(`graphic ${foreground} on ${background} is at least ${GRAPHIC_MINIMUM_RATIO}:1`, () => {
+        const front = tokens.get(foreground) ?? '#000000';
+        const back = tokens.get(background) ?? '#ffffff';
+        expect(ratio(front, back)).toBeGreaterThanOrEqual(GRAPHIC_MINIMUM_RATIO);
+      });
+    }
   });
 }
+
+// Tokens derivados do gráfico (spec 009, T2.2): `color-mix(in srgb, var(--a) N%, var(--b))` resolvido com a paleta de cada tema.
+const MIX_DECLARATION =
+  /--([a-z0-9-]+):\s*color-mix\(in srgb,\s*var\(--([a-z0-9-]+)\)\s*(\d+)%,\s*var\(--([a-z0-9-]+)\)\)/g;
+const PERCENT_DIVISOR = 100;
+const CONE_TOKENS = ['cone-up', 'cone-down', 'cone-neutral'] as const;
+// Fundos suaves da central de avisos (spec 014): cancelada em cinza e as zonas de ganho e perda da régua.
+const NOTICE_FILL_TOKENS = ['cancel-soft', 'zone-gain', 'zone-loss'] as const;
+const BALCONY_FILL_TOKENS = [
+  'model-soft',
+  'board',
+  'office-wall',
+  'desk-edge',
+  'glass',
+  'office-floor',
+  'desk-top',
+  'desk-front',
+  'table-top',
+  'light',
+  'light-strip',
+] as const;
+// A grade só ajuda o olho: o valor está nos rótulos dos eixos (WCAG 1.4.11 não a cobra), então o piso é só "visível".
+const GRID_MINIMUM_RATIO = 1.5;
+
+function mixHex(front: string, percent: number, back: string): string {
+  const weight = percent / PERCENT_DIVISOR;
+  const channels = [1, 3, 5].map((index) => {
+    const frontChannel = Number.parseInt(front.slice(index, index + 2), 16);
+    const backChannel = Number.parseInt(back.slice(index, index + 2), 16);
+    const mixed = Math.round(frontChannel * weight + backChannel * (1 - weight));
+    return mixed.toString(16).padStart(2, '0');
+  });
+  return `#${channels.join('')}`;
+}
+
+function withDerivedTokens(base: Map<string, string>): Map<string, string> {
+  const resolved = new Map(base);
+  for (const [, name = '', front = '', percent = '0', back = ''] of CSS.matchAll(MIX_DECLARATION)) {
+    resolved.set(
+      name,
+      mixHex(base.get(front) ?? '#000000', Number(percent), base.get(back) ?? '#ffffff'),
+    );
+  }
+  return resolved;
+}
+
+describe('chart tokens declared in global.css (spec 009, RF06 e RNF06)', () => {
+  test('the grid and the three cone colors are derived with color-mix from existing tokens', () => {
+    const declared = [...CSS.matchAll(MIX_DECLARATION)].map((match) => match[1]);
+    expect(declared.sort()).toEqual(
+      ['chart-grid', ...CONE_TOKENS, ...NOTICE_FILL_TOKENS, ...BALCONY_FILL_TOKENS].sort(),
+    );
+  });
+});
+
+for (const [theme, read] of [
+  ['light', lightTokens],
+  ['dark', darkTokens],
+] as const) {
+  describe(`${theme} theme chart tokens`, () => {
+    const tokens = withDerivedTokens(read());
+    for (const cone of CONE_TOKENS) {
+      for (const surface of ['surface', 'surface-2'] as const) {
+        test(`graphic ${cone} on ${surface} is at least ${GRAPHIC_MINIMUM_RATIO}:1`, () => {
+          const front = tokens.get(cone);
+          expect(front, cone).toBeDefined();
+          expect(
+            ratio(front ?? '#000000', tokens.get(surface) ?? '#ffffff'),
+          ).toBeGreaterThanOrEqual(GRAPHIC_MINIMUM_RATIO);
+        });
+      }
+    }
+    test(`chart-grid on surface stays visible (at least ${GRID_MINIMUM_RATIO}:1)`, () => {
+      const front = tokens.get('chart-grid');
+      expect(front).toBeDefined();
+      expect(ratio(front ?? '#000000', tokens.get('surface') ?? '#ffffff')).toBeGreaterThanOrEqual(
+        GRID_MINIMUM_RATIO,
+      );
+    });
+    test('the grid is quieter than the cones, so it never competes with the data', () => {
+      const grid = ratio(tokens.get('chart-grid') ?? '#000000', tokens.get('surface') ?? '#ffffff');
+      const cone = ratio(tokens.get('cone-up') ?? '#000000', tokens.get('surface') ?? '#ffffff');
+      expect(grid).toBeLessThan(cone);
+    });
+  });
+}
+
+// O texto sobre os fundos suaves da central de avisos precisa de contraste de texto (AA) nos dois temas.
+for (const [theme, read] of [
+  ['light', lightTokens],
+  ['dark', darkTokens],
+] as const) {
+  describe(`${theme} theme notice fills`, () => {
+    const tokens = withDerivedTokens(read());
+    for (const fill of NOTICE_FILL_TOKENS) {
+      for (const text of ['ink', 'ink-2'] as const) {
+        test(`${text} on ${fill} is at least ${MINIMUM_RATIO}:1`, () => {
+          const front = tokens.get(text);
+          const back = tokens.get(fill);
+          expect(back, fill).toBeDefined();
+          expect(ratio(front ?? '#000000', back ?? '#ffffff')).toBeGreaterThanOrEqual(
+            MINIMUM_RATIO,
+          );
+        });
+      }
+    }
+  });
+}
+
+// As telas do escritório são sempre escuras, nos dois temas (spec 011, escritorio.md §11): tinta clara sobre a tela.
+describe('office screens stay legible (always dark)', () => {
+  const tokens = lightTokens();
+  for (const ink of ['screen-ink', 'screen-ink-2'] as const) {
+    test(`${ink} on screen is at least ${MINIMUM_RATIO}:1`, () => {
+      const front = tokens.get(ink) ?? '#000000';
+      expect(ratio(front, tokens.get('screen') ?? '#ffffff')).toBeGreaterThanOrEqual(MINIMUM_RATIO);
+    });
+  }
+  for (const mark of ['screen-good', 'screen-bad'] as const) {
+    test(`graphic ${mark} on screen is at least ${GRAPHIC_MINIMUM_RATIO}:1`, () => {
+      const front = tokens.get(mark) ?? '#000000';
+      expect(ratio(front, tokens.get('screen') ?? '#ffffff')).toBeGreaterThanOrEqual(
+        GRAPHIC_MINIMUM_RATIO,
+      );
+    });
+  }
+});
+
+// O telão da sala de operações (spec 011, Fase 3) é um terminal escuro nos dois temas: os pares dele vêm do bloco claro,
+// que é o único onde os tokens `--terminal-*` e `--chart-ma*` existem.
+describe('trading-room terminal stays legible (always dark)', () => {
+  const tokens = lightTokens();
+  const TEXT_PAIRS: readonly (readonly [string, string])[] = [
+    ['screen-ink', 'bezel'],
+    ['screen-ink-2', 'bezel'],
+    ['screen-ink-2', 'screen'],
+    ['screen-good', 'terminal-buy-soft'],
+    ['screen-bad', 'terminal-sell-soft'],
+    ['terminal-accent', 'terminal-accent-soft'],
+    ['terminal-accent', 'screen'],
+    ['terminal-warn', 'terminal-warn-soft'],
+    ['screen-ink', 'terminal-buy-soft'],
+    ['screen-ink', 'terminal-sell-soft'],
+    ['screen-ink', 'terminal-accent-soft'],
+    ['terminal-model', 'screen'],
+    ['screen-good', 'screen'],
+    ['screen-bad', 'screen'],
+    ['terminal-accent', 'bezel'],
+    ['terminal-warn', 'screen'],
+    ['room-bubble-ink', 'room-bubble'],
+    ['room-bubble-ink-2', 'room-bubble'],
+    ['room-bubble-ink-2', 'room-bubble-soft'],
+    ['room-bubble-buy', 'room-bubble'],
+    ['room-bubble-sell', 'room-bubble'],
+    ['room-bubble-warn', 'room-bubble'],
+    ['room-bubble-model', 'room-bubble'],
+    ['room-bubble-buy', 'room-bubble-buy-soft'],
+    ['room-bubble-sell', 'room-bubble-sell-soft'],
+    ['room-bubble-warn', 'room-bubble-warn-soft'],
+    ['room-bubble-accent', 'room-bubble-accent-soft'],
+    ['room-plate-ink', 'room-plate'],
+    ['room-plate-ink-2', 'room-plate'],
+    ['room-bubble-model', 'room-plate'],
+    ['room-pill-ink', 'room-pill'],
+  ];
+  for (const [text, fill] of TEXT_PAIRS) {
+    test(`${text} on ${fill} is at least ${MINIMUM_RATIO}:1`, () => {
+      expect(tokens.get(fill), fill).toBeDefined();
+      const ratioValue = ratio(tokens.get(text) ?? '#000000', tokens.get(fill) ?? '#000000');
+      expect(ratioValue).toBeGreaterThanOrEqual(MINIMUM_RATIO);
+    });
+  }
+  for (const mark of ['chart-ma20', 'chart-ma50', 'terminal-line'] as const) {
+    test(`graphic ${mark} on screen is at least ${GRAPHIC_MINIMUM_RATIO}:1 (line) or visible`, () => {
+      const minimum = mark === 'terminal-line' ? 1.2 : GRAPHIC_MINIMUM_RATIO;
+      const ratioValue = ratio(tokens.get(mark) ?? '#0d1220', tokens.get('screen') ?? '#0d1220');
+      expect(ratioValue).toBeGreaterThanOrEqual(minimum);
+    });
+  }
+});

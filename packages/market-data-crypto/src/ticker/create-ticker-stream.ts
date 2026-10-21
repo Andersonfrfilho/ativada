@@ -6,7 +6,12 @@ import type { MalformedReason } from '../kline-stream.types.js';
 import { createReconnectLoop } from '../kline-stream-loop.js';
 import { resolveTickerSettings, type ResolvedTickerSettings } from './resolve-ticker-settings.js';
 import { parseTickerMessage } from './ticker-stream.schema.js';
-import type { TickerStream, TickerStreamSettings, TickerStreamStats } from './ticker.types.js';
+import type {
+  RawCandle,
+  TickerStream,
+  TickerStreamSettings,
+  TickerStreamStats,
+} from './ticker.types.js';
 
 type TickerCounters = { -readonly [Key in keyof TickerStreamStats]: TickerStreamStats[Key] };
 
@@ -38,12 +43,25 @@ function reportMalformed(params: DispatcherParams, reason: MalformedReason): voi
   if (onMalformed !== undefined) runHandler(counters, () => onMalformed({ reason, count }));
 }
 
+// A vela só vale para o par e a vela assinados; sem `onCandle` ela é lida e descartada.
+function dispatchCandle(params: DispatcherParams, candle: RawCandle): void {
+  const { counters, settings, config } = params;
+  const isSubscribed =
+    config.klineSymbols.has(candle.symbol) && config.timeframes.has(candle.timeframe);
+  if (!isSubscribed) return reportMalformed(params, MALFORMED_REASON.UNSUBSCRIBED);
+  const { onCandle } = settings;
+  if (onCandle === undefined) return;
+  counters.deliveredCount += 1;
+  runHandler(counters, () => onCandle(candle));
+}
+
 function dispatchData(params: DispatcherParams, data: unknown): void {
   const { counters, settings, config, lifecycle } = params;
   if (lifecycle.isClosed) return;
   if (typeof data !== 'string') return reportMalformed(params, MALFORMED_REASON.NOT_TEXT);
   const message = parseTickerMessage(data);
   if (message.kind === 'malformed') return reportMalformed(params, message.reason);
+  if (message.kind === 'candle') return dispatchCandle(params, message.candle);
   if (!config.symbols.has(message.tick.symbol)) {
     return reportMalformed(params, MALFORMED_REASON.UNSUBSCRIBED);
   }

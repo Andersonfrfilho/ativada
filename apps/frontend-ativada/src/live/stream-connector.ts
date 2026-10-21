@@ -12,12 +12,13 @@ import {
   type StreamMessage,
   type StreamStatus,
 } from './stream-client.js';
-import { ticketResponseSchema } from './stream.validation.js';
+import { ticketResponseSchema, type StreamCandle } from './stream.validation.js';
 
 export type StreamHandlers = {
   readonly onStatus: (status: StreamStatus) => void;
   readonly onMessage: (message: StreamMessage) => void;
   readonly onTick: (tick: MarketTick) => void;
+  readonly onCandle?: (candle: StreamCandle) => void;
   readonly onResync: (reason: string) => void;
 };
 

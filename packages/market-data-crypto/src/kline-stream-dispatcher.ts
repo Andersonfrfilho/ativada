@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { Candle } from './candle.types.js';
+import type { MarketCandle } from './candle.types.js';
 import { MALFORMED_REASON } from './kline-stream.constant.js';
 import { parseKlineMessage } from './kline-stream.schema.js';
 import type {
@@ -61,7 +61,7 @@ function reportMalformed(params: DispatcherParams, reason: MalformedReason): voi
   if (onMalformed !== undefined) runHandler(counters, () => onMalformed({ reason, count }));
 }
 
-function isSubscribed(config: ResolvedStreamSettings, candle: Candle): boolean {
+function isSubscribed(config: ResolvedStreamSettings, candle: MarketCandle): boolean {
   return config.symbols.has(candle.symbol) && config.timeframes.has(candle.timeframe);
 }
 

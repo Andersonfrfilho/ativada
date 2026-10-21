@@ -10,7 +10,7 @@ import {
 } from './backfill-test-context.js';
 import { computeGridWindow, pagesFor, waitForSafeClock } from './grid-oracle.js';
 
-const SYMBOL = 'RESUMEUSDT';
+const SYMBOL = 'XRPUSDT';
 const TIMEFRAME = '1h';
 const YEARS = 1;
 const FAILING_REQUEST_NUMBER = 3;

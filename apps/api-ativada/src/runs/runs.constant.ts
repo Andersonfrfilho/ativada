@@ -27,6 +27,10 @@ export const RUN_FIELD = {
   WINDOWS: 'windows',
   PERIOD_END: 'periodEnd',
   GOAL_ID: 'goalId',
+  ANALYST: 'analyst',
+  MODE: 'mode',
+  STRATEGY_VERSION_ID: 'strategyVersionId',
+  SIGNAL_SOURCE: 'signalSource',
 } as const;
 
 export const RUN_REASON = {
@@ -38,7 +42,39 @@ export const RUN_REASON = {
   NOT_ALLOWED_FOR_KIND: 'not_allowed_for_kind',
   UNKNOWN_FIELD: 'unknown_field',
   GOAL_SYMBOL_MISMATCH: 'goal_symbol_mismatch',
+  ANALYST_REQUIRES_15M: 'analyst_requires_15m_timeframe',
+  NOT_ALLOWED_WITH_SIGNAL_SOURCE: 'not_allowed_with_signal_source',
+  SIGNAL_SOURCE_REQUIRES_15M: 'signal_source_requires_15m_timeframe',
 } as const;
 
 export const INVALID_GRID_MESSAGE =
   'A grade é inválida: confira os caminhos, o tipo dos valores e o limite de parâmetros.';
+
+// Faixa de tempo das rotas de operações e do gráfico (ADR 0002, spec 005, O2).
+export const RUN_RANGE_FIELD = { FROM: 'from', TO: 'to' } as const;
+export const RUN_RANGE_REASON = {
+  MUST_BE_AFTER_FROM: 'must_be_after_from',
+  OUTSIDE_RUN: 'outside_run',
+} as const;
+export const TRADE_STATUS_FILTER = ['open', 'closed'] as const;
+
+export const RUN_CHART_PATH = '/v1/runs/:runId/chart';
+export const RUN_TRADE_SUMMARY_PATH = '/v1/runs/:runId/trade-summary';
+export const RUN_LIVE_STATUS_PATH = '/v1/runs/:runId/live-status';
+export const RUN_LIVE_SUMMARY_PATH = '/v1/runs/live-summary';
+export const RUN_DECISIONS_PATH = '/v1/runs/:runId/decisions';
+export const RUN_STRATEGY_LAYERS_PATH = '/v1/runs/:runId/strategy-layers';
+export const RUN_PROJECTIONS_PATH = '/v1/runs/:runId/projections';
+export const RUN_TRADE_PLAN_PATH = '/v1/runs/:runId/trade-plan';
+export const RUN_QUESTIONS_PATH = '/v1/runs/:runId/questions';
+export const RUN_ANALYST_PATH = '/v1/runs/:runId/analyst';
+export const RUN_ANALYST_DECISIONS_PATH = '/v1/runs/:runId/analyst/decisions';
+
+// Acima disto, o gráfico agrupa os preenchimentos por coluna em vez de mandar cada um (ADR 0002, spec 005, O9).
+export const CHART_MARKER_LIMIT = 500;
+export const CHART_COLUMNS = { MINIMUM: 100, MAXIMUM: 2_000, DEFAULT: 800 } as const;
+// Todas as execuções de uma vez: o walk-forward tem poucas janelas.
+export const CHART_WINDOW_READ_LIMIT = 5_000;
+
+// Acompanhamento da simulação ao vivo (ADR 0002, spec 008, L13): 24 decisões por página (um dia em velas de 1 h), no máximo 100.
+export const LIVE_DECISIONS_PAGE_SIZE = { DEFAULT: 24, MAXIMUM: 100 } as const;

@@ -1,0 +1,82 @@
+.list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Cada equipe com a marca ◆ própria: cantos e traço diferentes, além da inicial no nome (nunca só cor). */
+.row {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border: 1.5px dashed var(--model);
+  border-radius: 4px 14px 4px 14px;
+  background: var(--model-soft);
+}
+
+.row[data-team='lucas'] {
+  border-style: dotted;
+  border-radius: 14px 4px 14px 4px;
+}
+
+.row[data-team='olivia'] {
+  border-style: double;
+  border-width: 3px;
+  border-radius: 14px;
+}
+
+.switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.switch input {
+  width: 24px;
+  height: 24px;
+}
+
+.switch input:focus-visible {
+  outline: 2px solid var(--model);
+  outline-offset: 2px;
+}
+
+.name {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-weight: 700;
+}
+
+.diamond {
+  color: var(--model);
+}
+
+.word {
+  font-weight: 600;
+}
+
+.detail {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+}
+
+.provider {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+@media (max-width: 480px) {
+  .row {
+    padding: var(--space-2);
+  }
+}

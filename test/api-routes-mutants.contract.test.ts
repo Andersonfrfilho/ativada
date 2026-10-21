@@ -151,8 +151,8 @@ const MUTANTS: readonly SourceMutant[] = [
     name: 'USER_ID_ACCEPTED_IN_THE_RUN_BODY',
     edits: edit(
       'runs/create-run-request.schema.ts',
-      '.strictObject({\n      strategyVersionId: resourceIdSchema,',
-      '.object({\n      strategyVersionId: resourceIdSchema,',
+      '.strictObject({\n      strategyVersionId: resourceIdSchema.optional(),',
+      '.object({\n      strategyVersionId: resourceIdSchema.optional(),',
     ),
   },
   {
@@ -548,6 +548,14 @@ const MUTANTS: readonly SourceMutant[] = [
     ),
   },
   {
+    name: 'RUN_LIST_IGNORES_THE_SYMBOL_FILTER',
+    edits: edit('runs/runs.routes.ts', '        symbol: query.symbol,\n', ''),
+  },
+  {
+    name: 'RUN_LIST_IGNORES_THE_STRATEGY_VERSION_FILTER',
+    edits: edit('runs/runs.routes.ts', '        strategyVersionId: query.strategyVersionId,\n', ''),
+  },
+  {
     name: 'OVERFITTING_ALERT_NOT_EXTRACTED',
     edits: edit(
       'runs/run-view.ts',
@@ -593,6 +601,134 @@ const MUTANTS: readonly SourceMutant[] = [
       'runs/run-export.routes.ts',
       '      path: RUN_EXPORT_PATH,\n      access: ROUTE_ACCESS.USER,\n      rateLimitPolicy: RATE_LIMIT_POLICY.RUN_EXPORT,\n',
       '      path: RUN_EXPORT_PATH,\n      access: ROUTE_ACCESS.USER,\n',
+    ),
+  },
+  {
+    name: 'SIGNAL_SOURCE_ALLOWS_A_GOAL',
+    edits: edit('runs/run-signal-source-request.ts', '    [RUN_FIELD.GOAL_ID, body.goalId],\n', ''),
+  },
+  {
+    name: 'SIGNAL_SOURCE_ALLOWS_THE_ANALYST',
+    edits: edit(
+      'runs/run-signal-source-request.ts',
+      '    [RUN_FIELD.ANALYST, body.analyst],\n',
+      '',
+    ),
+  },
+  {
+    name: 'SIGNAL_SOURCE_ALLOWS_A_STRATEGY_VERSION',
+    edits: edit(
+      'runs/run-signal-source-request.ts',
+      '    [RUN_FIELD.STRATEGY_VERSION_ID, body.strategyVersionId],\n',
+      '',
+    ),
+  },
+  {
+    name: 'SIGNAL_SOURCE_RUN_WITH_THE_TEAM_OFF',
+    edits: edit('runs/create-run-version.ts', 'throw new ModelTeamDisabledError();', 'return;'),
+  },
+  {
+    name: 'OPINION_DAILY_LIMIT_NOT_ENFORCED',
+    edits: edit(
+      'model-teams/model-opinion-request.use-case.ts',
+      'if (!isClaimed) throw new ModelOpinionLimitReachedError();',
+      '',
+    ),
+  },
+  {
+    name: 'OPINION_ON_A_STOPPED_RUN',
+    edits: edit(
+      'model-teams/model-opinion-request.use-case.ts',
+      'if (run.status !== RUN_STATUS.RUNNING) throw new RunNotRunningError();',
+      '',
+    ),
+  },
+  {
+    name: 'OPINION_RATE_LIMIT_REMOVED',
+    edits: edit(
+      'model-teams/run-model-teams.routes.ts',
+      '    rateLimitPolicy: RATE_LIMIT_POLICY.MODEL_OPINION_REQUEST,\n',
+      '',
+    ),
+  },
+  {
+    name: 'DUEL_RATE_LIMIT_REMOVED',
+    edits: edit(
+      'model-teams/model-duels.routes.ts',
+      '      rateLimitPolicy: RATE_LIMIT_POLICY.MODEL_DUEL_CREATE,\n',
+      '',
+    ),
+  },
+  {
+    name: 'MY_MODEL_TEAMS_ROUTE_WITHOUT_ACCESS',
+    edits: edit(
+      'model-teams/me-model-teams.routes.ts',
+      '      path: ME_MODEL_TEAMS_PATH,\n      access: ROUTE_ACCESS.USER,',
+      '      path: ME_MODEL_TEAMS_PATH,',
+    ),
+  },
+  {
+    name: 'COMPARISON_HIT_INVERTED',
+    edits: edit(
+      'model-teams/run-model-teams-comparison.use-case.ts',
+      'return side === next;',
+      'return side !== next;',
+    ),
+  },
+  {
+    name: 'DUEL_CHECKS_ONLY_ONE_SLOT',
+    edits: edit(
+      'model-teams/model-duel-create.use-case.ts',
+      'active + params.needed >',
+      'active + 1 >',
+    ),
+  },
+  {
+    name: 'DUEL_LEAVES_CREATED_RUNS_ON_FAILURE',
+    edits: edit(
+      'model-teams/model-duel-create.use-case.ts',
+      'runIds.map((runId) =>',
+      '[].map((runId: string) =>',
+    ),
+  },
+  {
+    name: 'DUEL_READ_OF_AN_ABSENT_DUEL_IS_EMPTY',
+    edits: edit(
+      'model-teams/model-duel-read.use-case.ts',
+      'if (first === undefined) throw new DuelNotFoundError();',
+      '',
+    ),
+  },
+  {
+    name: 'PROVIDER_STATE_OF_A_STOPPED_WORKER',
+    edits: edit(
+      'model-teams/provider-state.ts',
+      'const summary = health.state === WORKER_STATE.ALIVE ? params.heartbeat?.modelTeams : undefined;',
+      'const summary = params.heartbeat?.modelTeams;',
+    ),
+  },
+  {
+    name: 'TEAM_RUN_SHOWS_RULE_TRIGGERS',
+    edits: edit(
+      'runs/live-status/live-status-triggers.ts',
+      '  if (readSignalSource(context.run.request) !== undefined) {\n    return TRIGGER_UNAVAILABLE_REASON.TEAM_RUN;\n  }\n',
+      '',
+    ),
+  },
+  {
+    name: 'TEAM_RUN_SHOWS_RULE_PROJECTIONS',
+    edits: edit(
+      'runs/projections/projections.use-case.ts',
+      'if (readSignalSource(context.run.request) !== undefined) return teamRunView(context, input);\n',
+      '',
+    ),
+  },
+  {
+    name: 'TEAM_RUN_SHOWS_RULE_LAYERS',
+    edits: edit(
+      'runs/projections/strategy-layers.use-case.ts',
+      "if (readSignalSource(context.run.request) !== undefined) return emptyView(context, 'team_run');\n",
+      '',
     ),
   },
 ];

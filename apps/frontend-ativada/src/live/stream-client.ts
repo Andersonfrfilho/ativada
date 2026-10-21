@@ -13,7 +13,7 @@ import {
   STREAM_STATUS,
   type StreamStatus,
 } from './stream.constant.js';
-import { parseServerMessage, type ServerMessage } from './stream.validation.js';
+import { parseServerMessage, type ServerMessage, type StreamCandle } from './stream.validation.js';
 
 export type { StreamStatus } from './stream.constant.js';
 
@@ -47,6 +47,7 @@ export type StreamClientOptions = {
   readonly onStatus: (status: StreamStatus) => void;
   readonly onMessage: (message: StreamMessage) => void;
   readonly onTick: (tick: MarketTick) => void;
+  readonly onCandle?: (candle: StreamCandle) => void;
   // Pares do ticker assinados em toda abertura do socket (inclusive depois de uma reconexão).
   readonly pairs: readonly string[];
   readonly onResync: (reason: string) => void;
@@ -123,6 +124,7 @@ class ReconnectingStream implements StreamClient {
     // Só uma mensagem de verdade prova que a conexão presta: abrir e cair de novo não zera a espera.
     this.attempts = 0;
     if (message.type === 'tick') this.options.onTick(toMarketTick(message));
+    else if (message.type === 'candle') this.options.onCandle?.(message);
     else if (message.type === 'resync') this.options.onResync(message.reason);
     else if (message.type === 'renewed') this.scheduleNextRenewal(message.expiresAt);
     else this.options.onMessage(message);

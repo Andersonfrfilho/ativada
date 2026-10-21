@@ -288,6 +288,18 @@ const MUTANTS: readonly LiveSourceMutant[] = [
     ),
   },
   {
+    name: 'WRAPPED_DATABASE_OUTAGE_FAILS_THE_RUN',
+    edits: edit(FAILURE, 'return isDatabaseConnectionFailure(error) || ', 'return '),
+  },
+  {
+    name: 'WRAPPED_NETWORK_CODE_FAILS_THE_RUN',
+    edits: edit(
+      FAILURE,
+      "current = Object.getOwnPropertyDescriptor(current, 'cause')?.value;",
+      'return false;',
+    ),
+  },
+  {
     name: 'DATA_DEFECT_RETRIED_FOREVER',
     edits: edit(FAILURE, "['22', '23', '42']", '[]'),
   },

@@ -24,6 +24,11 @@ function accountRoutes(state: ProfileState): readonly FakeRoute[] {
   return [
     { method: 'GET', path: '/v1/me', respond: (): Response => dataResponse(buildProfile(state)) },
     {
+      method: 'GET',
+      path: '/v1/me/model-teams',
+      respond: (): Response => dataResponse({ notice: 'Aviso das equipes.', teams: [] }),
+    },
+    {
       method: 'PATCH',
       path: '/v1/me',
       respond: (call): Response => {

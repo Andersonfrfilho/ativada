@@ -6,6 +6,7 @@ import { ApiError, ResponseShapeError } from './api.error.js';
 import {
   dataEnvelopeSchema,
   errorEnvelopeSchema,
+  metaEnvelopeSchema,
   pageEnvelopeSchema,
 } from './envelope.validation.js';
 import {
@@ -32,12 +33,21 @@ export type EmptyRequestOptions = {
   readonly body?: unknown;
 };
 
+export type MetaRequestOptions<TData, TMeta> = RequestOptions<TData> & {
+  readonly metaSchema: z.ZodType<TMeta>;
+};
+
+export type WithMeta<TData, TMeta> = { readonly data: TData; readonly meta: TMeta | undefined };
+
 export type Page<TItem> = { readonly items: TItem[]; readonly nextCursor: string | null };
 
 export type DownloadedFile = { readonly blob: Blob; readonly fileName: string };
 
 export type ApiClient = {
   readonly request: <TData>(options: RequestOptions<TData>) => Promise<TData>;
+  readonly requestWithMeta: <TData, TMeta>(
+    options: MetaRequestOptions<TData, TMeta>,
+  ) => Promise<WithMeta<TData, TMeta>>;
   readonly requestPage: <TItem>(options: RequestOptions<TItem>) => Promise<Page<TItem>>;
   readonly requestEmpty: (options: EmptyRequestOptions) => Promise<void>;
   readonly download: (path: string) => Promise<DownloadedFile>;
@@ -65,12 +75,18 @@ function buildInit(attempt: Attempt, accessToken: string): RequestInit {
   };
 }
 
+function readRetryAfterSeconds(response: Response): number | undefined {
+  const seconds = Number(response.headers.get(HTTP_HEADER.RETRY_AFTER));
+  return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : undefined;
+}
+
 async function readApiError(response: Response): Promise<ApiError> {
   const parsed = errorEnvelopeSchema.safeParse(await response.json().catch(() => undefined));
   return new ApiError({
     status: response.status,
     code: parsed.success ? parsed.data.error.code : UNKNOWN_ERROR_CODE,
     message: parsed.success ? parsed.data.error.message : response.statusText,
+    retryAfterSeconds: readRetryAfterSeconds(response),
     ...(parsed.success && parsed.data.error.details !== undefined
       ? { details: parsed.data.error.details }
       : {}),
@@ -96,6 +112,16 @@ class AuthenticatedApiClient implements ApiClient {
     );
     if (!parsed.success) throw new ResponseShapeError(options.path);
     return parsed.data.data;
+  };
+
+  readonly requestWithMeta = async <TData, TMeta>(
+    options: MetaRequestOptions<TData, TMeta>,
+  ): Promise<WithMeta<TData, TMeta>> => {
+    const response = await this.send({ path: options.path, method: HTTP_METHOD.GET });
+    const schema = metaEnvelopeSchema(options.schema, options.metaSchema);
+    const parsed = schema.safeParse(await response.json().catch(() => undefined));
+    if (!parsed.success) throw new ResponseShapeError(options.path);
+    return { data: parsed.data.data, meta: parsed.data.meta };
   };
 
   readonly requestPage = async <TItem>(options: RequestOptions<TItem>): Promise<Page<TItem>> => {

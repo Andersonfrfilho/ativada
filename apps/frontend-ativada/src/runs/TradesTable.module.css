@@ -1,0 +1,74 @@
+/* A altura da janela e da linha é a de `virtual-rows.ts` (TABLE_VIEWPORT_HEIGHT e ROW_HEIGHT). */
+.scroller {
+  max-height: 440px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.scroller:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.head th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
+}
+
+.row {
+  height: 44px;
+  cursor: pointer;
+}
+
+.row:hover {
+  background: var(--surface-2);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.selected,
+.selected:hover {
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+/* Nunca só cor: a linha selecionada também ganha uma barra à esquerda. */
+.selected td:first-child {
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+
+.spacer td {
+  padding: 0;
+  border: 0;
+}
+
+/* Sobre o fundo de destaque verde e vermelho caem abaixo de 4,5:1; o sinal (+/-) já diz ganho ou perda. */
+.selected .positive,
+.selected .negative {
+  color: var(--ink);
+}
+
+/* Dez colunas: o texto quebra em duas linhas (cabem nos 44 px da linha), mas número e palavra nunca quebram no meio; no celular a tabela rola de lado em vez de espremer as colunas. */
+.scroller table {
+  min-width: 760px;
+}
+
+.scroller table th,
+.scroller table td {
+  white-space: normal;
+  overflow-wrap: normal;
+  padding: 4px 8px;
+  font-size: 12.5px;
+  line-height: 1.25;
+  vertical-align: middle;
+}
+
+.scroller table th {
+  vertical-align: bottom;
+}

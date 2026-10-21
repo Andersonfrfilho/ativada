@@ -34,6 +34,31 @@ function toEntry(
   };
 }
 
+export type StrategyLoad =
+  { readonly entry: StrategyEntry } | { readonly invalid: string } | undefined;
+
+// A estratégia do dono na versão mais recente; sem versão não há o que avaliar (retorna nada). Configuração que o motor não
+// aceita mais vira "inválida".
+export async function loadStrategyEntry(
+  reader: GoalStrategyReader,
+  params: { readonly scope: OwnerScope; readonly strategy: StrategyRecord },
+): Promise<StrategyLoad> {
+  const { scope, strategy } = params;
+  const versions = await reader.listVersionsPage(scope, {
+    strategyId: strategy.id,
+    limit: 1,
+    after: undefined,
+  });
+  const newest = versions?.versions[0];
+  if (newest === undefined) return undefined;
+  try {
+    return { entry: toEntry(strategy, newest, createStrategyVersion(newest.config)) };
+  } catch (error: unknown) {
+    if (!(error instanceof StrategyConfigError)) throw error;
+    return { invalid: strategy.id };
+  }
+}
+
 // As estratégias mais novas do dono, cada uma na versão mais recente. Configuração que o motor não aceita mais não derruba
 // a avaliação: vira "indisponível" nos pares.
 export async function loadGoalStrategies(
@@ -47,19 +72,10 @@ export async function loadGoalStrategies(
   const entries: StrategyEntry[] = [];
   const invalid: string[] = [];
   for (const strategy of page.strategies) {
-    const versions = await reader.listVersionsPage(scope, {
-      strategyId: strategy.id,
-      limit: 1,
-      after: undefined,
-    });
-    const newest = versions?.versions[0];
-    if (newest === undefined) continue;
-    try {
-      entries.push(toEntry(strategy, newest, createStrategyVersion(newest.config)));
-    } catch (error: unknown) {
-      if (!(error instanceof StrategyConfigError)) throw error;
-      invalid.push(strategy.id);
-    }
+    const loaded = await loadStrategyEntry(reader, { scope, strategy });
+    if (loaded === undefined) continue;
+    if ('entry' in loaded) entries.push(loaded.entry);
+    else invalid.push(loaded.invalid);
   }
   return { entries, invalid, isTruncated: page.nextCursor !== undefined };
 }

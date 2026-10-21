@@ -15,7 +15,11 @@ import {
   createGetProfileUseCase,
   createUpdateProfileUseCase,
 } from '../../apps/api-ativada/src/profile/profile.use-case.js';
-import { EMPTY_QUEUE_SUMMARY } from './api-route-dependencies.fixture.js';
+import {
+  EMPTY_QUEUE_SUMMARY,
+  UNKNOWN_WORKER,
+  UP_DATABASE_HEALTH,
+} from './api-route-dependencies.fixture.js';
 import { createHealthRoutes } from '../../apps/api-ativada/src/routes/health.routes.js';
 import { createOwnerScope } from '../../packages/database/src/ownership/owner-scope.js';
 import { userIdFromDatabase } from '../../packages/database/src/ownership/user-id.js';
@@ -160,7 +164,9 @@ export async function createAdminHarness(): Promise<AdminHarness> {
         unblockAccount: createUnblockAccountUseCase(accountState),
       }),
       ...createHealthRoutes({
-        checkDatabase: () => Promise.resolve(true),
+        probeDatabase: () => Promise.resolve(true),
+        readDatabaseHealthView: () => UP_DATABASE_HEALTH,
+        readWorkerHealth: () => Promise.resolve(UNKNOWN_WORKER),
         readRunQueueSummary: () => Promise.resolve(EMPTY_QUEUE_SUMMARY),
         readListenerHealth: () => ({ state: 'up', reason: null }),
       }),

@@ -7,8 +7,6 @@ import type {
   OrderCursor,
   OrderInput,
   OwnerScope,
-  PositionCursor,
-  PositionInput,
   ResultOrder,
   ResultPage,
   RunResultRepository,
@@ -18,12 +16,8 @@ import type {
 
 import type { PageInput, PageOutput } from '../strategies/strategy.use-cases.js';
 import { RunNotFoundError } from './run.error.js';
-import {
-  encodeFillCursor,
-  encodeOrderCursor,
-  encodePositionCursor,
-  encodeTimeCursor,
-} from './run-cursor.js';
+import { createRunTradesUseCase, type RunTradesUseCase } from './trades/run-trades.use-case.js';
+import { encodeFillCursor, encodeOrderCursor, encodeTimeCursor } from './run-cursor.js';
 
 export type RunSeriesDependencies = {
   readonly results: Pick<
@@ -32,6 +26,7 @@ export type RunSeriesDependencies = {
     | 'listOrders'
     | 'listFills'
     | 'listPositions'
+    | 'listFillsOfPositions'
     | 'listEquityPoints'
     | 'listWindows'
   >;
@@ -70,7 +65,7 @@ function createSeries<TItem, TCursor>(
 
 export type RunSeriesUseCases = {
   readonly equity: RunSeriesUseCase<EquityPointInput, number>;
-  readonly trades: RunSeriesUseCase<PositionInput, PositionCursor>;
+  readonly trades: RunTradesUseCase;
   readonly signals: RunSeriesUseCase<SignalInput, number>;
   readonly orders: RunSeriesUseCase<OrderInput, OrderCursor>;
   readonly fills: RunSeriesUseCase<FillInput, FillCursor>;
@@ -81,7 +76,7 @@ export function createRunSeriesUseCases(dependencies: RunSeriesDependencies): Ru
   const { results } = dependencies;
   return {
     equity: createSeries(results.listEquityPoints, encodeTimeCursor),
-    trades: createSeries(results.listPositions, encodePositionCursor),
+    trades: createRunTradesUseCase({ results }),
     signals: createSeries(results.listSignals, encodeTimeCursor),
     orders: createSeries(results.listOrders, encodeOrderCursor),
     fills: createSeries(results.listFills, encodeFillCursor),

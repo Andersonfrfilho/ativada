@@ -1,13 +1,13 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { MILLISECONDS_PER_SECOND, readErrorName } from '@ativada/environment';
-import { MarketDataBannedError, type Timeframe } from '@ativada/market-data-crypto';
+import { MarketDataBannedError, type MarketCandleTimeframe } from '@ativada/market-data-crypto';
 
 import { backfillPair, type BackfillPair, type BackfillPairDependencies } from './backfill-pair.js';
 import { BACKFILL_LOG } from './market.constant.js';
 
 export type BackfillCandlesDependencies = BackfillPairDependencies & {
   readonly symbols: readonly string[];
-  readonly timeframes: readonly Timeframe[];
+  readonly timeframes: readonly MarketCandleTimeframe[];
 };
 
 export type BackfillCandlesSummary = {

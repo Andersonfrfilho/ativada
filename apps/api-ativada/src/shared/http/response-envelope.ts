@@ -7,6 +7,8 @@ export type RouteResult = {
   readonly status: number;
   readonly data?: unknown;
   readonly pagination?: unknown;
+  // Informação aditiva sobre o `data` (ex.: início da retenção das velas de exibição); ausente = o corpo antigo.
+  readonly meta?: unknown;
   readonly headers?: Readonly<Record<string, string>>;
   // Corpo cru, sem envelope (CSV em fluxo, HTML da documentação). O `Cache-Control: no-store` continua.
   readonly rawBody?: string | ReadableStream<Uint8Array>;
@@ -22,8 +24,9 @@ export function buildSuccessResponse(result: RouteResult): Response {
     return new Response(result.rawBody, { status: result.status, headers });
   }
   const paginationField = result.pagination === undefined ? {} : { pagination: result.pagination };
+  const metaField = result.meta === undefined ? {} : { meta: result.meta };
   return Response.json(
-    { data: result.data, ...paginationField },
+    { data: result.data, ...paginationField, ...metaField },
     { status: result.status, headers },
   );
 }

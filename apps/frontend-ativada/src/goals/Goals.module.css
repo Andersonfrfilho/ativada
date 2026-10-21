@@ -8,7 +8,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: center;
   padding: 8px 0;
@@ -38,11 +38,87 @@
   gap: 12px;
 }
 
-.combination {
+.podiumCard,
+.rowCard {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.podiumCard {
+  align-content: start;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+}
+
+.rowCard {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.rowCard .barLegend {
+  display: none;
+}
+
+.bigRate {
+  font: 600 30px/1.1 var(--font-data);
+  letter-spacing: -0.02em;
+}
+
+.bigRate span {
+  font: 500 var(--text-md) var(--font-body);
+  color: var(--ink-2);
+}
+
+.mine {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.details summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.details {
   display: grid;
   gap: 6px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line);
+}
+
+.rankingFoot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (min-width: 900px) {
+  .ranking {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .podiumCard {
+    grid-column: span 2;
+  }
+
+  .rowCard {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 16px;
+  }
+
+  .rowCard .details {
+    grid-column: 1 / -1;
+  }
 }
 
 .combinationHead {
@@ -53,9 +129,11 @@
 }
 
 .verdict {
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.06em;
   padding: 5px 9px;
   border-radius: 6px;
 }
@@ -73,6 +151,94 @@
 .verdictHold {
   background: var(--surface-2);
   color: var(--ink-2);
+}
+
+.rank {
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.plainVerdict {
+  font-weight: 500;
+}
+
+.outcomeBar {
+  width: 100%;
+  height: 14px;
+  display: block;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.barReached {
+  fill: var(--buy);
+}
+
+.barStopped {
+  fill: var(--sell);
+}
+
+.barNeither {
+  fill: var(--bench);
+}
+
+.barLegend {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.barLegend li::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 3px;
+  background: var(--bench);
+}
+
+.barLegend .legendReached::before {
+  background: var(--buy);
+}
+
+.barLegend .legendStopped::before {
+  background: var(--sell);
+}
+
+.explainer {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+}
+
+.explainer summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.explainer ul {
+  margin: 4px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
 }
 
 .situations {
@@ -181,4 +347,150 @@
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+}
+
+.picker {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.pickerLegend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+
+.option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+}
+
+.option input[type='radio'] {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+
+.optionLabel {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.optionHint {
+  grid-column: 2;
+  margin-top: -8px;
+}
+
+.moreButton {
+  justify-self: start;
+}
+
+.notice {
+  padding: 10px 12px;
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent-soft);
+}
+
+.warning {
+  padding: 10px 12px;
+  border-left: 4px solid var(--warn);
+  border-radius: 6px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.situationHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.num {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.iconButton {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  border-color: var(--line);
+  color: var(--sell);
+}
+
+.row > :last-child {
+  grid-column: 3;
+}
+
+.iconButton {
+  position: relative;
+}
+
+/* A dica do botão só de ícone aparece no hover e no foco do teclado, com o mesmo texto do aria-label. */
+.iconButton:hover::after,
+.iconButton:focus-visible::after {
+  content: attr(data-tip);
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  padding: 4px 8px;
+  border-radius: var(--radius-control);
+  background: var(--ink);
+  color: var(--surface);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.rowRates {
+  margin-top: 4px;
+  font: var(--text-xs) var(--font-data);
+  color: var(--ink-2);
+}
+
+.analystOption {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.analystOption input[type='checkbox'] {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+
+.analystNotices {
+  display: grid;
+  gap: 8px;
+}
+
+.analystModes {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }

@@ -7,6 +7,7 @@ import type {
   LiveRunClaims,
   LiveRunDatabase,
   LiveTickSummary,
+  TeamStepSettings,
 } from '../../../apps/worker-ativada/src/live/live-run.types.js';
 import type { WorkerLogger } from '../../../apps/worker-ativada/src/logging/worker-logger.js';
 import {
@@ -22,6 +23,7 @@ import {
   createEngine,
   ENGINE_TIMEFRAME_DURATION_MILLISECONDS,
   serializeEngineState,
+  type Engine,
   type EngineCandle,
   type RunSetup,
   type StoredSentimentObservation,
@@ -91,6 +93,8 @@ export type TestEvaluatorOptions = {
   readonly logger?: TestLogger;
   readonly alerting?: LiveAlertingSettings;
   readonly gapPolicy?: GapPolicy;
+  readonly engine?: Engine;
+  readonly team?: TeamStepSettings;
 };
 
 export async function createTestEvaluator(
@@ -109,6 +113,8 @@ export async function createTestEvaluator(
     ...(options.maxStepsPerPass === undefined ? {} : { maxStepsPerPass: options.maxStepsPerPass }),
     ...(options.alerting === undefined ? {} : { alerting: options.alerting }),
     ...(options.gapPolicy === undefined ? {} : { gapPolicy: options.gapPolicy }),
+    ...(options.engine === undefined ? {} : { engine: options.engine }),
+    ...(options.team === undefined ? {} : { team: options.team }),
   });
   return { evaluator, logger };
 }

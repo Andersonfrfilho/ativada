@@ -20,6 +20,8 @@ export type RunStatus = (typeof RUN_STATUS)[keyof typeof RUN_STATUS];
 export const TIMEFRAMES = ['15m', '1h', '4h', '1d'] as const;
 
 export const RUN_POLL_MILLISECONDS = 2_000;
+// Simulação ao vivo rodando: o WebSocket invalida o detalhe, então a consulta periódica é só rede de segurança.
+export const LIVE_RUN_POLL_MILLISECONDS = 60_000;
 export const LIST_PAGE_SIZE = 20;
 export const CURVE_MAX_POINTS = 240;
 
@@ -37,7 +39,7 @@ export function statusLabel(status: string): string {
 }
 
 export const FAILURE_TEXT: Readonly<Record<string, string>> = {
-  NO_CANDLES: 'Não há candles gravados para esse par, timeframe e período.',
+  NO_CANDLES: 'Não há velas gravadas para esse par, timeframe e período.',
   INSUFFICIENT_HISTORY:
     'O período começa cedo demais: falta histórico para aquecer os indicadores.',
   BACKTEST_TIMEOUT: 'A execução demorou mais que o limite e foi encerrada.',
@@ -57,10 +59,16 @@ export const METRIC_UNAVAILABLE_TEXT: Readonly<Record<string, string>> = {
   no_wins: 'sem ganhos',
 };
 
-export const EXIT_REASON_LABEL: Readonly<Record<string, string>> = {
-  stop: 'Stop',
-  target: 'Alvo',
-  signal: 'Sinal de venda',
-  command: 'Comando',
-  gap: 'Lacuna',
+// Os cinco motivos reais do motor (ADR 0002, spec 005 O12), em português simples.
+export const EXIT_REASON_PLAIN_TEXT: Readonly<Record<string, string>> = {
+  target: 'atingiu o alvo de lucro',
+  stop: 'vendeu para limitar a perda (stop)',
+  signal: 'a estratégia mandou vender',
+  command: 'a meta chegou ao fim e a simulação vendeu',
+  gap: 'faltaram dados do mercado e a posição foi fechada',
 };
+
+// Motivo que este painel não conhece aparece como veio, nunca some.
+export function exitReasonText(code: string): string {
+  return EXIT_REASON_PLAIN_TEXT[code] ?? code;
+}

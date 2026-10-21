@@ -6,14 +6,15 @@ import {
   formatPairLabel,
   groupConsecutiveOpenTimes,
   MarketDataBannedError,
-  TIMEFRAME_DURATION_MILLISECONDS,
+  MARKET_CANDLE_DURATION_MILLISECONDS,
   type MarketDataClient,
   type OpenTimeInterval,
+  type MarketCandleTimeframe,
   type PairKey,
-  type Timeframe,
 } from '@ativada/market-data-crypto';
 
 import type { WorkerLogger } from '../logging/worker-logger.js';
+import type { LoopOutageGuard } from '../outage/loop-outage-guard.js';
 import {
   DEFAULT_BAN_SECONDS,
   MAXIMUM_BAN_SECONDS,
@@ -28,11 +29,12 @@ export type GapRecoveryDependencies = {
   >;
   readonly client: Pick<MarketDataClient, 'fetchKlinesRange'>;
   readonly logger: WorkerLogger;
+  readonly outage?: LoopOutageGuard | undefined;
   readonly now: () => number;
   readonly refreshClock: () => Promise<void>;
   readonly exchange: string;
   readonly symbols: readonly string[];
-  readonly timeframes: readonly Timeframe[];
+  readonly timeframes: readonly MarketCandleTimeframe[];
   readonly lookbackMilliseconds: number;
   // Aberturas que a Binance não tem: perguntar de novo a cada verificação só gastaria peso.
   readonly unfillable: Set<string>;
@@ -61,7 +63,7 @@ async function downloadInterval(
     exchange: dependencies.exchange,
     store: (records) => dependencies.repository.upsertCandles(records),
   });
-  const duration = TIMEFRAME_DURATION_MILLISECONDS[pair.timeframe];
+  const duration = MARKET_CANDLE_DURATION_MILLISECONDS[pair.timeframe];
   const now = dependencies.now();
   for (let openTime = interval.from; openTime <= interval.to; openTime += duration) {
     const isOldEnough = now - (openTime + duration) >= UNFILLABLE_MIN_AGE_MILLISECONDS;
@@ -76,7 +78,7 @@ async function findMissing(
   dependencies: GapRecoveryDependencies,
   pair: PairKey,
 ): Promise<readonly number[]> {
-  const duration = TIMEFRAME_DURATION_MILLISECONDS[pair.timeframe];
+  const duration = MARKET_CANDLE_DURATION_MILLISECONDS[pair.timeframe];
   const now = dependencies.now();
   const openTimes = await dependencies.repository.findMissingOpenTimes({
     exchange: dependencies.exchange,
@@ -102,7 +104,7 @@ async function recoverPair(dependencies: GapRecoveryDependencies, pair: PairKey)
   }
   const openTimes = await findMissing(dependencies, pair);
   let downloaded = 0;
-  const durationMilliseconds = TIMEFRAME_DURATION_MILLISECONDS[pair.timeframe];
+  const durationMilliseconds = MARKET_CANDLE_DURATION_MILLISECONDS[pair.timeframe];
   for (const interval of groupConsecutiveOpenTimes({ openTimes, durationMilliseconds })) {
     downloaded += await downloadInterval(dependencies, pair, interval);
   }
@@ -130,6 +132,8 @@ export async function recoverGaps(dependencies: GapRecoveryDependencies): Promis
         await recoverPair(dependencies, { symbol, timeframe });
       } catch (error: unknown) {
         if (dependencies.signal.aborted) return { failures };
+        // Banco fora vale para todos os pares: sobe para o laço, que espera o backoff e resume a queda.
+        if (dependencies.outage?.isOutage(error) === true) throw error;
         failures += 1;
         dependencies.logger.error(WORKER_LOG.GAP_RECOVERY_FAILED, {
           pairId: formatPairLabel({ symbol, timeframe }),

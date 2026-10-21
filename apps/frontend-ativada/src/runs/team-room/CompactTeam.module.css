@@ -1,0 +1,85 @@
+/* A equipe colada no gráfico: o palco da sala em versão estreita, com bonequinhos menores. */
+.compact {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.moment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.pointed {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.seats {
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+
+/* Acima do gráfico, em largura total: os assentos lado a lado em vez de empilhados. */
+.wide {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  align-items: start;
+}
+
+/* O assento em versão estreita: bonequinho menor e sem o nome de baixo (o balão já diz quem fala). */
+.seats > div[data-state] {
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 4px 8px;
+}
+
+.seats > div[data-state] > div:first-child > span {
+  display: none;
+}
+
+.seats svg {
+  width: 44px;
+  height: 60px;
+}
+
+.disclaimer {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.motive {
+  font-size: var(--text-xs);
+  line-height: 1.35;
+  color: var(--ink-2);
+}

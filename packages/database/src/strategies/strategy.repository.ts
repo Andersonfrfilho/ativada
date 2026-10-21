@@ -7,6 +7,7 @@ import { toJsonb } from '../jsonb.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
 import { strategies, strategyVersions } from '../schema/strategies.schema.js';
 import { assertVersionRoom } from './strategy-quota.js';
+import { ensureSystemStrategyVersion } from './system-strategy.js';
 import { seedExampleStrategy } from './example-strategy-seed.js';
 import {
   createStrategyWithFirstVersion,
@@ -25,12 +26,17 @@ import type {
 
 type Database = ReturnType<typeof readOpenDatabase>['database'];
 
-function activeStrategy(scope: OwnerScope, strategyId: string): ReturnType<typeof and> {
+// A `model-team-1` do usuário (marca `is_system`) não aparece nem se acha por aqui: fica fora da lista e do teto de estratégias.
+function visibleStrategies(scope: OwnerScope): ReturnType<typeof and> {
   return and(
     ownerCondition(scope, strategies.userId),
-    eq(strategies.id, strategyId),
     isNull(strategies.deletedAt),
+    eq(strategies.isSystem, false),
   );
+}
+
+function activeStrategy(scope: OwnerScope, strategyId: string): ReturnType<typeof and> {
+  return and(visibleStrategies(scope), eq(strategies.id, strategyId));
 }
 
 async function createStrategy(
@@ -72,7 +78,7 @@ async function listStrategies(
   return database
     .select(STRATEGY_COLUMNS)
     .from(strategies)
-    .where(and(ownerCondition(scope, strategies.userId), isNull(strategies.deletedAt)))
+    .where(visibleStrategies(scope))
     .orderBy(asc(strategies.createdAt), asc(strategies.id));
 }
 
@@ -196,6 +202,8 @@ export function createStrategyRepository(handle: DatabaseHandle): StrategyReposi
     createStrategyWithFirstVersion: (scope, params) =>
       createStrategyWithFirstVersion(database, scope, params),
     seedExampleStrategy: (scope, params) => seedExampleStrategy(database, scope, params),
+    ensureSystemStrategyVersion: (scope, params) =>
+      ensureSystemStrategyVersion(database, scope, params),
     listStrategiesPage: (scope, params) => listStrategiesPage(database, scope, params),
     listVersionsPage: (scope, params) => listVersionsPage(database, scope, params),
     findStrategy: (scope, strategyId) => findStrategy(database, scope, strategyId),

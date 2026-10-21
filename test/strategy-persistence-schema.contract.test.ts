@@ -7,7 +7,15 @@ import {
   type AnyPgColumn,
 } from '../packages/database/node_modules/drizzle-orm/pg-core/index.js';
 import { getTableName, is } from '../packages/database/node_modules/drizzle-orm/index.js';
+import {
+  COMMAND_KIND as DATABASE_COMMAND_KIND,
+  COMMAND_REASON as DATABASE_COMMAND_REASON,
+} from '../packages/database/src/run-results/run-result.constant.js';
 import * as schema from '../packages/database/src/schema/index.js';
+import {
+  COMMAND_KIND as ENGINE_COMMAND_KIND,
+  COMMAND_REASON as ENGINE_COMMAND_REASON,
+} from '../packages/strategy-engine/src/engine-vocabulary.constant.js';
 
 const USER_ID_COLUMN = 'user_id';
 const RESTRICT = 'restrict';
@@ -178,6 +186,24 @@ describe('persistência de estratégias e execuções — esquema (T3.1)', () =>
     expect(columnNames(config.columns)).not.toContain(USER_ID_COLUMN);
     for (const column of ['date', 'fear_greed', 'observed_at', 'source', 'created_at']) {
       expect(columnNames(config.columns)).toContain(column);
+    }
+  });
+
+  test('run_commands copia o vocabulário de comandos do motor e cabe em varchar(16) (0025, spec 007)', () => {
+    expect(Object.values(DATABASE_COMMAND_REASON)).toStrictEqual(
+      Object.values(ENGINE_COMMAND_REASON),
+    );
+    expect(Object.values(DATABASE_COMMAND_KIND)).toStrictEqual(Object.values(ENGINE_COMMAND_KIND));
+    expect(Object.values(DATABASE_COMMAND_REASON)).toContain('analyst_timeout');
+    const columns = getTableConfig(findTable('run_commands')).columns;
+    for (const name of ['kind', 'reason']) {
+      expect(columns.find((column) => column.name === name)?.getSQLType()).toBe('varchar(16)');
+    }
+    for (const value of [
+      ...Object.values(DATABASE_COMMAND_REASON),
+      ...Object.values(DATABASE_COMMAND_KIND),
+    ]) {
+      expect(value.length).toBeLessThanOrEqual(16);
     }
   });
 

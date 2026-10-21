@@ -1700,3 +1700,872 @@ além da janela confirmado por idade).
 | Saída sem teto de participação no volume; EMA/RSI do mesmo candle variam ~0,1% com a janela do backtest (ε = 1e-3) | Riscos aceitos na T2.6 (seção "Revisão da Fase 2") |
 | Semântica de `executionReports` sem implementação | Tipos fixados; a spec 002 implementa e acrescenta cenários ao harness |
 | Formato exato do texto de motivo | Fixado em §f; a T2.3 implementa e prende por tabela |
+
+## Filtros de preço e quantidade por par (T0.1 da spec 003)
+
+O tick 0,01 e o passo 0,00001 do motor são os do BTCUSDT; em PEPE/SHIB (~0,000004) o tick zera o preço e o backtest perde tudo sem aviso. A tabela `BINANCE_SYMBOL_FILTERS` mora em `packages/market-data-crypto` (dado de mercado compartilhado por API e worker), não na API nem no banco. BTCUSDT e ETHUSDT ficam FORA dela e usam o padrão do motor, para que os RunParameters e o runHash das execuções antigas não mudem (contrato dourado). Par em MARKET_SYMBOLS sem filtro conhecido reprova o boot; pedido com par sem filtro responde 400, nunca se cai no padrão em silêncio. Valor enviado no pedido vence a tabela. Os filtros entram no runHash como antes: mudar a tabela de um par é execução nova. Ler o exchangeInfo fica para a spec 002, que confere os filtros antes de operar; até lá, par novo exige uma linha na tabela, conferida contra a Binance no PR. Rejeitado: tabela na API (acopla goals a runs) e exchangeInfo no backfill (I/O e migration para dado quase estático, com hash dependente da data da leitura).
+
+ETHUSDT fica nos padrões do motor (`quantityStep` 0,00001) embora a Binance use 0,0001 para ele: é uma decisão consciente para não mudar o `runHash` das execuções antigas. Metas e prazos de ETH usam esse passo, e a conferência com a Binance é da spec 002. A tabela `BINANCE_SYMBOL_FILTERS` foi conferida de memória, não contra a corretora: o PR que acrescentar um par deve conferir a linha dele contra o `exchangeInfo` da Binance, e o mesmo vale para revisar as linhas que já existem.
+
+## Prazos (spec 003, Fase 1)
+
+`packages/strategy-engine/src/horizon/` compara prazos sobre as MESMAS janelas das metas: `goal-window-path.ts` (extraído de `goal-windows.ts` sem mudar o resultado, com dourado de caracterização byte a byte) dá o caminho da carteira de cada janela, e `computeHorizonWindows` lê o patrimônio no último candle do prazo (retorno exato = patrimônio ÷ saldo inicial − 1; janela sem compra vale exatamente 0 e não é positiva). `summarizeHorizon` arredonda mediana, pior 10% (posto `ceil(n ÷ 10)`) e fração positiva para BAIXO a 8 casas, uma vez, no fim. **Arredondamento e recomendação:** `recommendHorizon` compara mediana e pior 10% pelo TEXTO PUBLICADO (o que a pessoa vê na tela; uma mediana que aparece como 0 não é elegível), a fração de positivas pelas contagens exatas (`positiveCount × 100 ≥ 55 × windowCount`), e ordena por mediana ÷ N arredondada para baixo a 8 casas; empate vence o prazo mais longo. Os limiares do spec §5 ficam em `horizon.constant.ts`. **15 minutos:** o bruto é `finalEquity − initialBalance + feesPaid` (o `grossProfit` das métricas já vem DEPOIS das taxas) e o slippage, embutido no preço, não aparece em `feesPaid`.
+
+## Operações no gráfico (spec 005)
+
+Contrato da T0.1 da spec 005: três rotas de leitura sobre `candles`, `fills` e `positions`; o motor e o `run-recording` não mudam. Conferido no código em 2026-10-13:
+
+- `GET /v1/runs/:runId/trades` devolve o `PositionInput` inteiro (`engineKey`, `status`, `entryPrice`, `quantity`, `stopPrice`, `targetPrice`, `entryFee`, `exitPrice`, `exitFee`, `netProfit`, `exitReason`, `openedCandleTime`, `closedCandleTime`; opcional ausente é omitido), em ordem **crescente** de `(opened_candle_time, engine_key)`, com a query estrita `limit`/`cursor` (parâmetro desconhecido é `400`). O painel (`tradeSchema` em `run.validation.ts`) lê com `z.object`, que ignora campo novo, e só manda `limit` e `cursor`.
+- Índices: `fills` tem `UNIQUE (run_id, order_key, candle_time)` e `(user_id, run_id)`; `positions` tem `UNIQUE (run_id, engine_key)` e `(user_id, run_id)`; `candles` tem só a PK `(exchange, symbol, timeframe, open_time)`. `runs` não guarda a corretora: o backtest usa `BACKTEST_MARKET_EXCHANGE = 'binance'`.
+- Os motivos de saída reais são cinco: `stop`, `target`, `signal`, `command` e `gap` (`EXIT_REASON` do motor e do banco, com CHECK). `command` só nasce da saída da meta no ao vivo (`goal-step.ts`).
+- O `notional` do preenchimento é o produto **sem arredondar** (`quantidade × preço`). O caixa usa `computeBuyDebit` = `ceil8(notional) + taxa` e `computeSellCredit` = `floor8(notional) − taxa`, e `net_profit` = crédito − débito. A taxa do preenchimento é a mesma da posição (`entry_fee`, `exit_fee`).
+- No walk-forward, `positions` e `fills` só têm as janelas de TESTE (chaves `w<i>:`); o ajuste roda em memória.
+
+**Divergências do plan corrigidas aqui.** (a) `closedCandleTime`, `quantity`, `entryFee` e `exitFee` já existem no `/trades`: não são campos novos. (b) A ordem atual é crescente, não "aberta primeiro e decrescente"; ela fica, e a aberta chega ao topo por um filtro (O3). (c) Pago e recebido usam o notional **arredondado** como o caixa (O5): com o notional cru, o saldo do resumo não fecharia com `net_profit` em decimal exato. (d) `end` e `stopped` não existem como motivo; `command` existe. (e) As faixas são semiabertas `[from, to)`, como `GET /v1/markets/candles` e `period_end`.
+
+| # | Decisão | Motivo |
+|---|---|---|
+| O1 | **Faixa da execução.** Backtest: `[period_start, period_end)` quando `completed`, senão `[period_start, last_candle_time + duração do timeframe)`. Walk-forward: `[min(test_start), max(test_end))` das linhas de `walk_forward_windows` (só fora da amostra, spec D11). `live_paper`: `[period_start, last_candle_time + duração)`. Sem `last_candle_time` (ou sem janela gravada), a faixa é vazia | O aquecimento antes de `period_start` e o ajuste ficam fora. O ao vivo para na última vela que a própria execução processou, e `candles` só guarda vela fechada: a vela em andamento nunca aparece (RF15) |
+| O2 | **Tempos** em milissegundos UTC, `from` incluído e `to` excluído, texto só de dígitos (o `TIMESTAMP_PATTERN` de mercado). Ausente vale a borda da faixa da execução. No `/chart` a faixa pedida é **recortada** à da execução; interseção vazia com a faixa da execução não vazia é `400` (`from: outside_run`). `to <= from` é `400` (`to: must_be_after_from`) | Link antigo do ao vivo continua abrindo; faixa sem sentido é erro, não gráfico vazio |
+| O3 | **`GET /v1/runs/:runId/trades`** ganha a query opcional `from`, `to` (O2, sem recorte: só filtram) e `status` (`open` ou `closed`). Com faixa, entra a posição com compra **ou** venda em `[from, to)`: `opened_candle_time` ou `closed_candle_time` dentro dela; a que atravessa a faixa sem preenchimento nela fica fora (a mesma regra das setas). Ordem e cursor **iguais aos de hoje**, `limit` ≤ 100. O painel busca as abertas com `status=open` e as fixa no topo como "aberta" (no walk-forward, "aberta no fim da janela"); a lista virtual usa `status=closed` | Aditivo: nenhum campo some nem muda de tipo; o que antes era `400` passa a filtrar |
+| O4 | **Campos novos de cada operação**, em texto decimal, omitidos quando ausentes (como os atuais): `entryNotional` (notional do preenchimento de compra), `paid` e `fees` (`entryFee + exitFee`, ou `entryFee` na aberta); só na fechada, `exitNotional`, `received` e `netProfitRate`. Os preenchimentos da página vêm numa **única** consulta (`run_id` e `position_key IN (...)`, sem N+1). Posição fechada sem preenchimento de venda é estado impossível (os dois são gravados na mesma transação) e vira `500`, nunca campo inventado | Dica e tabela iguais aos `fills` (critério 3 da spec) |
+| O5 | **Pago, recebido e %.** `paid = ceil8(entryNotional) + entryFee`; `received = floor8(exitNotional) − exitFee`; `netProfitRate = floor8(netProfit ÷ paid)`, com piso para −∞ (o prejuízo nunca aparece menor). Contas em `EngineDecimal` e `roundMoney` na API. Identidade garantida, posição a posição: `received − paid = netProfit` | É a conta do caixa do motor; com o notional cru a soma divergiria de `net_profit` na 9ª casa |
+| O6 | **`GET /v1/runs/:runId/chart?from=&to=&columns=`**, só do dono, query estrita. `columns` inteiro de 100 a 2.000, padrão 800. Resposta `{ data: { symbol, timeframe, from, to, lastClosedCandleTime, columns, markers, clusters, totals } }`. `from` e `to` são a faixa **efetiva** (recortada). `lastClosedCandleTime` = `runs.last_candle_time`: a abertura da última vela processada, `null` sem nenhuma; o painel mostra o fechamento (abertura + duração). `columns: [{ startTime, endTime, first, last, low, high }]`, com a abertura da primeira e da última vela da coluna, `first` = abertura da primeira e `last` = fechamento da última. `totals: { buys, sells }` na faixa. Exatamente um entre `markers` (lista, talvez vazia) e `clusters` é não nulo; o outro é `null`. Faixa vazia (execução na fila) é `200` com listas vazias | Contrato do plan D2, com `null` explícito como `survival` e `queuePosition` |
+| O7 | **Redução no SQL**, parametrizada e sem `sql.raw`: `bucket = ((open_time − $from) * $columns) / ($to − $from)` em `bigint` (divisão inteira = piso, operandos não negativos; 5 anos × 2.000 cabe em 2^63), `WHERE exchange = 'binance' AND symbol = $s AND timeframe = $t AND open_time >= $from AND open_time < $to GROUP BY bucket ORDER BY bucket`, com `min(open_time)`, `max(open_time)`, `(array_agg(open ORDER BY open_time))[1]`, `(array_agg(close ORDER BY open_time DESC))[1]`, `min(low)` e `max(high)`. A corretora entra no `WHERE` (a constante do backtest) para a consulta ser uma varredura de faixa da PK. Os decimais saem na grafia canônica do motor, sem zeros à direita. Um oráculo TS puro em `test/` usa a mesma fórmula | Mínimo e máximo preservam o preço da compra; sem zeros à direita, 800 colunas ficam perto de 90 KB |
+| O8 | **Nenhum índice novo e nenhuma migration.** Velas: a PK atende a faixa. Preenchimentos: no máximo dois por posição (cerca de 2.000 linhas para 1.000 operações), lidos por `(user_id, run_id)` e filtrados por `candle_time`; a junção com a posição usa `UNIQUE (run_id, engine_key)`. Se a medição da T1.5 passar de 300 ms p95, o primeiro passo é um índice aditivo `fills (run_id, candle_time)` com `.rollback.sql`, levado ao responsável ANTES de criar | O volume por execução é pequeno; índice sem medição é custo de escrita no lote do backtest |
+| O9 | **Marcadores** (`CHART_MARKER_LIMIT = 500` em `runs.constant.ts`). Primeiro `count(*) FILTER (WHERE side = ...)` dos `fills` da faixa, que dá `totals`. Até 500, inclusive: `markers: [{ positionKey, side, candleTime, price, quantity, fee, amount, netProfit?, netProfitRate? }]` em ordem `(candle_time, order_key)`, com `amount` = `paid` na compra e `received` na venda (O5), e o resultado só na venda (lido da posição pela junção). Acima de 500: `clusters: [{ startTime, endTime, buys, sells }]`, só dos baldes com preenchimento, pelo MESMO balde de O7 sobre `candle_time`, com limites nominais `startTime = from + ⌈b·W/C⌉` e `endTime = from + ⌈(b+1)·W/C⌉` (`W = to − from`, `C = columns`; semiaberto, é exatamente o conjunto de tempos inteiros do balde) | Enter no agrupamento aproxima nessa faixa; 500 setas é o que ainda se distingue (spec D3) |
+| O10 | **`GET /v1/runs/:runId/trade-summary`**, sem query (parâmetro é `400`), para a execução inteira: `{ data: { closedTrades, totalPaid, totalReceived, totalFees, net, openTrades, openPaid, message } }`. Fechadas: `totalPaid = Σ paid`, `totalReceived = Σ received`, `totalFees = Σ (entryFee + exitFee)` e `net = totalReceived − totalPaid`, que É `Σ net_profit` (O5). Abertas: `openTrades` (contagem; o walk-forward pode deixar uma por janela) e `openPaid = Σ paid` delas, `null` sem aberta. UMA consulta agregada em `numeric` (`ceil(notional * 1e8) / 1e8` e `floor(...)`, exatos), normalizada na API para a grafia canônica | RF11 e RF12; o resumo não depende do zoom |
+| O11 | **Frase do resumo** (`trade-summary-message.ts`, no servidor): "Você pagou {totalPaid} USDT em {n} compras e recebeu {totalReceived} USDT nas vendas. Taxas: {totalFees} USDT. Saldo líquido: {net} USDT." ("1 compra" no singular). Com aberta: "+ uma operação ainda aberta, com {openPaid} USDT pagos." ou "+ {k} operações ainda abertas, com {openPaid} USDT pagos.". Sem fechada: "Nenhuma operação fechada ainda.", mais a parte da aberta se houver. Números em pt-BR com 2 casas e milhar (`98.410,22`), arredondados contra o usuário: pago e taxas para cima, recebido e saldo para baixo (−∞). Os campos numéricos continuam exatos | Mesmo padrão de `horizon-messages.ts`; o painel só exibe |
+| O12 | **Motivo da venda em português simples**, no painel: `EXIT_REASON_PLAIN_TEXT` em `run.constant.ts` (novo; o `EXIT_REASON_LABEL` curto fica até a T4.1 trocar o miolo do `TradesCard`). `target` → "atingiu o alvo de lucro"; `stop` → "vendeu para limitar a perda (stop)"; `signal` → "a estratégia mandou vender"; `command` → "a meta chegou ao fim e a simulação vendeu"; `gap` → "faltaram dados do mercado e a posição foi fechada"; código desconhecido → o próprio código | É a lista real do motor; um contrato na raiz garante que cada valor de `EXIT_REASON` tem frase |
+| O13 | **Erros e acesso** nas três rotas: `access: USER` e `documentation` (OpenAPI); execução alheia, inexistente, apagada (`deleted_at`) ou id malformado dão o MESMO `404 RUN_NOT_FOUND`; validação é `400` com todos os erros pelo `readValidatedQuery`, sem eco de valor. Sem cache no servidor: o ao vivo é invalidado pelo aviso do WebSocket sob a chave `runs` (plan D8) | ADR 0001 §e; a regra das rotas da T3.4 |
+
+**Contratos de teste esperados.**
+
+- `/trades`: o contrato antigo continua verde sem mudança (campos, tipos, ordem e cursor). `entryNotional` e `exitNotional` iguais aos `fills`; `entryFee` e `exitFee` iguais aos da posição e dos `fills`. `received − paid = netProfit` em decimal exato em TODA posição do conjunto real. `netProfitRate` com piso para −∞ (casos à mão, positivo e negativo, na 9ª casa). Aberta sem campos de saída, com `paid` e `fees`. Faixa: só a compra dentro, só a venda dentro, atravessando (fica fora), `from` incluído e `to` excluído. `status=open` e `status=closed`. Cursor com faixa: as páginas concatenadas são a lista filtrada inteira. `400` com todos os erros (`from` não numérico, `to <= from`, `status` inválido, parâmetro desconhecido), sem eco. `404` entre usuários, inexistente, malformado e apagada. Uma consulta de `fills` por página (contador no repositório em memória). Mutante do filtro de dono em `make api-runs-mutants`.
+- `/chart`: oráculo TS igual ao SQL em 3 séries sintéticas (dízima no balde, coluna com uma vela, faixa menor que `columns`) e no conjunto real. `columns` 99, 2.001, `abc` e `1.5` dão `400`; ausente vale 800. `to <= from` e faixa fora da execução dão `400`; faixa parcial é recortada. 500 preenchimentos dão `markers`, 501 dão `clusters` (a soma dos agrupamentos é `totals`; limites pela fórmula de O9). `amount`, `netProfit` e `netProfitRate` do marcador iguais aos do `/trades`. Backtest na `period`; walk-forward só nas janelas de teste (vela do ajuste fora das colunas); ao vivo parando em `last_candle_time` (vela gravada depois dela não aparece). Execução na fila dá listas vazias. `404` e mutante de dono. Medição p95 ≤ 300 ms e ≤ 150 KB do caso de aceite em `make api-runs-test`.
+- `/trade-summary`: `net = Σ net_profit` exato; `totalPaid` e `totalReceived` iguais à soma dos campos do `/trades` e do `log.csv` da mesma execução. Aberta com `openTrades`, `openPaid` e a frase dela; execução sem operação. Frase com milhar, 2 casas, direção de arredondamento e singular ou plural. Parâmetro desconhecido dá `400`. `404` e mutante de dono.
+- Raiz: cada valor de `EXIT_REASON` (`@ativada/database`) tem frase em `EXIT_REASON_PLAIN_TEXT` do painel.
+
+**Correções da revisão final (T6.3).**
+
+- **O6, resposta do `/chart`:** ganhou `runRange: { from, to }` (ms UTC, aditivo), a faixa efetiva da execução (a de O1) à qual `from`/`to` pedidos são recortados. O painel limita atalhos, campos de data, anterior/próximo e a faixa da URL por ela; o período da execução não serve (no walk-forward só valem as janelas de teste e no ao vivo ou backtest em andamento a faixa termina na última vela processada, e fora dela a API responde `400 outside_run`). Execução sem faixa ainda (fila) devolve `runRange` vazio (`from = to`).
+- **O13, limite de requisições:** `/chart` e `/trade-summary` têm política própria por usuário, `RUN_CHART` e `RUN_TRADE_SUMMARY` (30 por minuto cada, balde de fichas como as demais); o 429 já vem na documentação comum das rotas.
+- **Nota, caso impossível no banco real:** se faltar o preenchimento de compra de uma posição, `total_paid` ignora a posição mas `total_fees` conta a taxa dela, e então `net` ≠ Σ `net_profit`. O motor sempre grava a compra antes da venda e a FK composta impede venda sem posição, então o caso não existe; fica registrado para quem for mexer na gravação de resultados.
+
+## Simulação ao vivo robusta (spec 006)
+
+Contrato da T0.1 da spec 006, fechado sobre uma reprodução real (2026-10-13, `specs/006-simulacao-ao-vivo-robusta/evidence.md`):
+Postgres 18.3 descartável no WSL, `new Bun.SQL(url)` sem opções (como `openDatabase`), Drizzle 0.45.4 por cima e o escutador
+próprio de `LISTEN`, nos Bun **1.4.3** (o desta máquina, no Windows e no WSL) e **1.3.14** (o citado na spec). O motor e o
+`run-recording` não mudam.
+
+**O que a reprodução mostrou.**
+
+| Situação | O que o `Bun.SQL` faz | Volta sozinho? |
+|---|---|---|
+| Banco morto por `SIGKILL` (como `docker kill`) | consulta e transação em voo: `ERR_POSTGRES_CONNECTION_CLOSED`; enquanto fora: `ERR_POSTGRES_CONNECTION_REFUSED` no 1.4.3 e `ERR_POSTGRES_CONNECTION_CLOSED` no 1.3.14 | **Sim**, na primeira consulta depois de o banco aceitar conexão, sem reabrir |
+| Parada limpa `fast` (como `docker stop`/`restart`) | consulta em voo: `code = ERR_POSTGRES_SERVER_ERROR`, `errno = 57P01`, `severity = FATAL`; transação parada entre comandos: `ERR_POSTGRES_EXPECTED_REQUEST`; depois, como acima | **Sim** |
+| Servidor congelado (`SIGSTOP`, como `docker pause`) | consulta fica pendurada sem erro; `query.cancel()` não a solta; cliente novo com `connectionTimeout: 2` falha com `ERR_POSTGRES_CONNECTION_TIMEOUT` | **Sim**, quando o servidor descongela a consulta termina |
+| Porta aceita e fecha (encaminhador sem banco atrás) | consulta espera em silêncio, sem erro | **Sim**, quando o encaminhador volta |
+| **Meia conexão** (encaminhador de porta que perde as conexões antigas sem fechá-las, o caso do computador que dorme) | toda consulta fica pendurada **para sempre**, mesmo com o banco e o encaminhador de volta (69 s observados) | **Não.** Só `close()` solta: as pendentes rejeitam na hora com `ERR_POSTGRES_CONNECTION_CLOSED`, o `close({ timeout: 1 })` resolve em ~1 s e um cliente novo funciona na primeira consulta |
+
+Em nenhum caso o Bun expôs `ECONNREFUSED`/`ECONNRESET` nem `errno` numérico: o código vem em `code` (`ERR_POSTGRES_*`) e o
+SQLSTATE do servidor vem em `errno`. O Drizzle embrulha tudo em `DrizzleQueryError` (`name = "Error"`, mensagem com a consulta
+**e os parâmetros**) e o erro do driver fica em `cause`. O escutador de `LISTEN` já se recupera em todos os casos com o
+próprio backoff; na meia conexão ele só percebe pelo `keepAlive` (30 s de intervalo: a perda saiu em ~59 s como
+`unresponsive`) e a notificação enviada nesse meio tempo se perde, o que o `resync` da API já cobre.
+
+**Causa provável do incidente de 2026-10-13.** As milhares de falhas são as rondas batendo no banco fora (recusa e conexão
+fechada); o "nunca voltou sozinho" é a meia conexão que o encaminhador de porta do Docker Desktop deixa quando o computador
+dorme: o mesmo `Bun.SQL` não se recupera dela e não há teto de tempo em lugar nenhum. A reprodução não usou o Docker Desktop
+(regra: não tocar nos containers do projeto); o encaminhador foi um proxy TCP de rascunho. Por isso o teto de tempo por
+unidade (abaixo) é a peça central, e reabrir o cliente é o conserto, não a simples repetição.
+
+| # | Decisão | Motivo |
+|---|---|---|
+| R1 | **Erro de conexão** (`isDatabaseConnectionFailure`, percorre o erro e a `cause` até 4 níveis, lendo `code` e `errno`): códigos do Bun `ERR_POSTGRES_CONNECTION_CLOSED`, `ERR_POSTGRES_CONNECTION_REFUSED`, `ERR_POSTGRES_CONNECTION_TIMEOUT`, `ERR_POSTGRES_EXPECTED_REQUEST`; SQLSTATE da classe `08` e `57P01`, `57P02`, `57P03`; o nosso `DATABASE_QUERY_TIMEOUT` (R4, só para quem trata a falha em laço; o porteiro o confirma antes de dar o banco por fora); e, por defesa (não observados no 1.4.3), `ECONNREFUSED`, `ECONNRESET`, `ETIMEDOUT`, `EPIPE`, `EHOSTUNREACH`, `ENOTFOUND`, `EAI_AGAIN` — mas SÓ quando o próprio nível do erro é do driver (`name = "PostgresError"`): o mesmo código na `cause` de um erro do Keycloak, do Telegram ou da Binance não é banco fora e a rota responde 500, não 503. Todo o resto (inclusive `ERR_POSTGRES_SERVER_ERROR` com outro SQLSTATE, `53300`, `23505` e `57014`, consulta abortada pelo `statement_timeout`) é erro da consulta e segue o caminho de hoje | São os códigos medidos em cada fase; `ERR_POSTGRES_EXPECTED_REQUEST` só apareceu na transação cortada pela parada limpa, e reabrir por engano é inofensivo |
+| R2 | **Estado do porteiro** (`ResilientDatabase`, um por `DatabaseHandle`, compartilhado por todos os laços do processo): `up` → `down` na **primeira** falha de conexão. Enquanto `down`, unidade pedida antes de `nextAttemptAt` falha na hora com `DatabaseUnavailableError` (`code = DATABASE_UNAVAILABLE`, sem tocar a rede); a primeira depois do vencimento passa e é a sonda (uma por vez; as demais falham na hora). Sonda que dá certo → `up`, falhas zeradas | Um processo bate no banco uma vez por espera, não um laço por ronda; os laços não precisam de sonda própria |
+| R3 | **Backoff** `computeBackoff({ attempt, baseMs: 1000, maxMs: 30000, random })` = sorteio em `[c/2, c]`, `c = min(baseMs × 2^(attempt − 1), maxMs)`, a mesma conta do escutador (`notification-listener.ts`). **Nunca desiste** (spec D6) | A reprodução confirma o plano: com o banco de volta, a próxima sonda passa; o pior caso é 30 s de espera + a ronda seguinte (5 s no ao vivo), dentro dos 60 s do RNF01 |
+| R4 | **Teto de tempo por unidade** (consulta avulsa ou transação inteira): `DATABASE_QUERY_TIMEOUT_SECONDS` (5 a 300, padrão 30; vale para a API e o worker). O **perfil longo** do cron (purga LGPD numa transação só, backfill) e das threads de backtest e walk-forward usa `DATABASE_LONG_QUERY_TIMEOUT_SECONDS` (30 a 3600, padrão 600): unidade legítima de mais de 30 s não é abortada. O servidor aborta PRIMEIRO: o cliente abre com `statement_timeout` = teto − 5 s (piso de 1 s, `computeStatementTimeoutMilliseconds`), então a consulta lenta falha com SQLSTATE `57014` em `errno`, que é erro da CONSULTA (fora da lista de R1): a rota responde 500, sem reabrir nem `down`. O `statement_timeout` vale por comando, não por transação; só o teto do cliente cobre a transação inteira. Só uma conexão que não responde chega ao timer do cliente: a unidade rejeita com `DatabaseUnavailableError` (`code = DATABASE_QUERY_TIMEOUT`), o porteiro **reabre o cliente na hora** e **confirma com `SELECT 1` no cliente novo** (teto de 2 s, `QUERY_TIMEOUT_CONFIRM_SECONDS`). Respondeu: o banco está vivo, falha só a unidade e o porteiro segue `up`. Não respondeu: `down` (falha 1, backoff). O cliente também abre com `connectionTimeout: 10` (s) | A meia conexão nunca dá erro: sem teto, a ronda fica presa para sempre. `query.cancel()` não solta a consulta; só `close()` solta. Uma rota pesada acima de 30 s sob carga NÃO pode derrubar a API inteira em 503 |
+| R5 | **Reabrir** = abrir um `Bun.SQL` novo com as MESMAS opções (inclusive o `statement_timeout`) e trocar o cliente corrente dentro do porteiro (o `DatabaseHandle` não muda). Gatilhos: teto do cliente vencido (R4; reabre sempre, `down` só se o `SELECT 1` falhar) ou `RECONNECT_FAILURE_THRESHOLD` = 2 falhas de conexão seguidas por código (seguro barato: o 1.4.3 se recupera sozinho delas, uma versão futura pode não se recuperar). Depois do `close()` o porteiro não admite unidade nem reabre cliente (`isClosed`): o laço atrasado do desligamento só recebe `DATABASE_UNAVAILABLE` | Reabrir funciona em todos os casos medidos; esperar só funciona nos que não são meia conexão |
+| R6 | **Troca sem cortar transação viva.** Unidade nova vai sempre para o cliente novo; a que já está no velho termina nele (a transação é presa à conexão reservada). O velho é fechado com `close({ timeout: 1 })` quando não tem unidade em voo ou quando todas as que restam já venceram o teto (abandonadas: o chamador já recebeu a falha). Nenhuma transação ainda dentro do teto é fechada à força | Spec risco "transação em voo"; `close()` rejeita as pendentes com `ERR_POSTGRES_CONNECTION_CLOSED` e o servidor desfaz o que não foi confirmado |
+| R7 | **Desfecho desconhecido é seguro.** Unidade que venceu o teto (ou cujo `COMMIT` perdeu a resposta) pode ter sido confirmada no servidor. Quem chama trata como falha e a próxima ronda relê o checkpoint: passo repetido é pulado (`CANDLE_ALREADY_PROCESSED`), linhas e `alerts` têm `ON CONFLICT DO NOTHING` | É a mesma idempotência que já protege a queda do worker (T4.1, T4.5); nenhuma regra nova de deduplicação |
+| R8 | **Log sem PII** (`readSafeErrorFields`): `errorName`, `code` e `errno` lidos do erro mais interno que tem `code` (o `PostgresError`, não o `DrizzleQueryError`, cujo `name` é `"Error"`); nunca a mensagem, a consulta, os parâmetros, a URL nem o usuário. Quem loga é **cada laço**, não o porteiro (que não tem logger): cada laço do worker (avaliação, alertas, recuperação de lacunas) e o resumo da API e da varredura de parada têm a sua guarda (`createDatabaseOutageGuard`), e cada uma escreve `database unavailable` (`error`) na primeira falha com `{ code, errno?, failures: 1, sinceMs: 0 }`, depois no máximo uma a cada 60 s com `{ code, errno?, failures, sinceMs }` (o último código), e `database recovered` (`info`) com `{ downtimeMs, failures }`. Laço que recebe `DatabaseUnavailableError` encerra a ronda sem logar | A mensagem do `DrizzleQueryError` carrega os parâmetros da consulta; o resumo dá ≤ 1 linha por 60 s POR LAÇO (RNF01): um processo com vários laços escreve uma linha por laço por minuto |
+| R9 | **Rotas com banco fora.** `DatabaseUnavailableError` vira `503` com `{ error: { code: "DATABASE_UNAVAILABLE", message } }` genérico e `Retry-After: 5` no filtro global, em vez do `500` de erro desconhecido; não vai ao Sentry como defeito | É indisponibilidade esperada e passageira, não bug; o cliente sabe tentar de novo |
+
+**Escutador de `LISTEN` (spec risco "ritmos diferentes").** Fica como está: tem backoff próprio (1 s a 30 s, sorteio) e o
+porteiro não o toca. Na meia conexão ele leva até 2 × `keepAlive` (60 s) para perceber; a perda vira `resync` para os
+sockets e o REST continua sendo a fonte da verdade. O teste da queda confere um `resync` por episódio de perda do `LISTEN`.
+
+**Parada da simulação (plan D3).** Quem detecta é a **API** (`stall-sweeper`, a cada `LIVE_STALL_SWEEP_SECONDS` = 60), porque
+o worker é justamente quem pode estar parado.
+
+| # | Decisão | Motivo |
+|---|---|---|
+| P1 | **Vela devida.** `d` = duração do timeframe. Próxima abertura a processar: `last_candle_time + d` ou, sem passo, `floor(started_at ÷ d) × d` (a vela em curso na criação, T4.1). `dueAt` = essa abertura + `d` (o fechamento dela) | Usa a vela esperada, não o relógio de parede: em `1d` não há alarme às 15:00, só depois de 00:00 UTC + carência |
+| P2 | **Parada** quando `status = running`, `kind = live_paper`, `deleted_at IS NULL`, sem `waitingForData` (que tem texto próprio) e `now ≥ dueAt + LIVE_STALL_GRACE_MINUTES` (padrão **15**, de 5 a 240; não muda). O episódio começa em `stalled_since = dueAt + carência` (determinístico, não o instante da varredura) | Duas instâncias ou duas rondas calculam o mesmo início; cobre worker caído, banco fora e stream mudo |
+| P3 | **`stalled_since` fica enquanto o episódio dura.** Gravado uma vez, não é recalculado quando o worker processa velas mas segue atrasado; só é apagado quando a fórmula diz que a execução está em dia (`now < dueAt + carência`) | Sem isso, cada vela de recuperação abriria um episódio novo e um `STALL` novo |
+| P4 | **Varredura numa transação** com `pg_try_advisory_xact_lock` (uma instância por vez): `UPDATE runs SET stalled_since` para os que entram e para os que saem, e na MESMA transação a linha de `alerts` e o `pg_notify('run_events', { runId, kind: "warning", eventId: stalled_since })` | O passo do alerta nasce com a mudança de estado ou não nasce (como o passo ao vivo) |
+| P5 | **Chave do alerta = a chave única que `alerts` já tem**, `(run_id, candle_time, side, channel)`, com `candle_time = stalled_since` e `side` ∈ `STALL`, `RESUME` (o CHECK de `alerts.side` ganha os dois na migration aditiva). `ON CONFLICT DO NOTHING` | "Execução + início do episódio + lado" sem índice novo: ronda repetida ou duas instâncias nunca duplicam; episódio novo tem `stalled_since` novo |
+| P6 | **`RESUME` só fecha um `STALL`.** Sai quando um episódio aberto termina com a execução em dia e ainda `running`. Execução que sai de `running` parada (parada pelo dono, falha, apagada) só tem `stalled_since` apagado, sem `RESUME` | Não há "voltou" para o que não volta; o dono já vê o estado final na tela |
+| P7 | **Quem recebe e quando sai.** Mesmas regras do alerta de sinal: dono ativo com Telegram vinculado e alertas ligados; o despachante respeita `ALERT_TELEGRAM_DAILY_LIMIT_PER_USER`. Texto sem dado pessoal (nome da estratégia, par, vela, hora). **Se o worker estiver morto, o `STALL` só sai quando ele voltar** (é ele quem despacha); a faixa do painel, lida da API, é o aviso imediato. Com o banco fora, nada é gravado: o `STALL` nasce na primeira varredura com o banco de volta e a parada ainda valendo | Sem mensageria nova (abaixo); o aviso que não depende do worker é a faixa |
+| P8 | **Na API:** `GET /v1/runs/:id` e a lista trazem `stalledSince` (ms UTC) só quando gravado e a execução `running`; ausente nos outros casos (aditivo) | RF13 |
+
+**Saúde (plan D5).**
+
+| # | Decisão | Motivo |
+|---|---|---|
+| H1 | `GET /v1/health` (público): `SELECT 1` pelo porteiro com teto **próprio** de 1 s → `200 { status: "ok" }` ou `503 { status: "degraded" }`, `Cache-Control: no-store`, nenhum outro campo. O teto de 1 s responde `503` mas **não** conta como falha de conexão (só o teto de R4 conta); com o porteiro `down`, responde `503` sem tocar a rede | Banco lento não é banco fora; o detalhe fica no admin (spec D7) |
+| H2 | `GET /v1/admin/health` ganha, sem mudar o que já existe (`checks.database`, `listener`, `runs`): `database: { state: "up" \| "down", consecutiveFailures, downSince, lastFailureCode, lastFailureAt }` (tempos em ms UTC ou `null`; o código é o de R8, nunca a mensagem) e `worker: { lastHeartbeatAt, ageSeconds, state }` | RF10 |
+| H3 | `worker.state`: `alive` quando o batimento mais novo de `worker_heartbeats` tem idade ≤ 3 × `WORKER_HEARTBEAT_SECONDS` (padrão 15, logo 45 s); `stale` acima disso; `unknown` sem nenhuma linha ou sem conseguir ler o banco. Com mais de uma instância vale a mais nova. A linha guarda id da instância (sorteado no boot), `started_at`, `last_beat_at` (`now()` do banco), versão e contadores agregados das rondas, nada de usuário | Relógio do banco, não da máquina; spec D8 e RF11 |
+
+**Sem mensageria nova: o banco é a fila (plan D4, spec RF15).** A queda de 2026-10-13 foi do **banco**. Uma mensageria nova
+(Redis, RabbitMQ, BullMQ) seria mais uma peça que dorme e cai junto com o computador, e mais uma conexão para reconectar.
+Com o banco como fila durável, o passo, o sinal, o alerta e o aviso de parada nascem na MESMA transação: ou tudo, ou nada.
+Quando o banco volta, nada se perdeu (a transação desfeita não deixou rastro) e nada se duplica (checkpoint e chaves únicas).
+`pg_notify` é só o empurrão para o painel e o despachante, que também leem por varredura. O conserto certo é o cliente
+reconectar com teto de tempo, não trocar a fila.
+
+**Ajuste ao plan D7.** `docker restart` e `docker pause` NÃO reproduzem o caso que não volta sozinho (os dois se recuperam
+sem reabrir). O `make db-outage-test` precisa de um proxy TCP de teste entre os processos e o Postgres
+(`packages/database/test-support/`) com os modos encaminhar, aceitar-e-fechar e **emudecer** (as conexões abertas param de
+receber e enviar sem fechar), além do `docker restart`.
+
+**Contratos de teste esperados.**
+
+- Classificação (R1): cada código medido, solto e embrulhado em `DrizzleQueryError` (com `name = "Error"` e a mensagem com
+  parâmetros), é conexão; `57P01` em `errno` com `code = ERR_POSTGRES_SERVER_ERROR` é conexão; `23505`, `53300`,
+  `ERR_POSTGRES_SERVER_ERROR` com outro SQLSTATE e erro sem `code` não são; `cause` além de 4 níveis não é lida.
+- Backoff (R3): contas à mão (`attempt` 1 a 7, `random` 0 e 1); propriedade: nunca acima de 30 s nem abaixo de metade do
+  degrau; nunca para de devolver espera.
+- Dublê `flaky-sql` (T1.2) com os modos medidos: recusa (`ERR_POSTGRES_CONNECTION_REFUSED`), fechada
+  (`ERR_POSTGRES_CONNECTION_CLOSED`), parada limpa (`57P01` em `errno`, `ERR_POSTGRES_EXPECTED_REQUEST` na transação) e
+  **emudecido**, em que a consulta pendura até o `close()` e então rejeita com `ERR_POSTGRES_CONNECTION_CLOSED`, e que **não
+  volta** quando o banco "volta": só um cliente novo funciona.
+- Porteiro (R2, R4 a R6): cai → `down` → falha rápida antes do vencimento → uma sonda por vencimento → `up`; emudecido →
+  teto vencido → reabre na hora → a próxima unidade vai ao cliente novo; transação dentro do teto nunca é fechada; a
+  vencida é abandonada e o velho fecha; o `DatabaseHandle` antigo continua valendo.
+- Log (R8): 1.000 rondas com o banco fora dão a linha da primeira falha, uma a cada 60 s de relógio falso e a da volta; toda
+  linha tem `code`; varredura sem URL, senha, usuário do banco, texto de consulta nem parâmetro.
+- Rotas (R9, H1, H2): banco fora → `/v1/health` `503 { status: "degraded" }` sem outro campo e rota de usuário `503
+  DATABASE_UNAVAILABLE`; banco lento além de 1 s → `503` no health sem `down` no porteiro; admin com `database` e `worker`.
+- Parada (P1 a P6): `computeStalledSince` à mão em 15m, 1h, 4h e 1d, com e sem passo, no limite exato da carência, com
+  `waitingForData` e com execução não `running`; varredura: um `STALL` e um `RESUME` por episódio, ronda repetida e duas
+  instâncias não duplicam, recuperação parcial não abre episódio novo, parada pelo dono não manda `RESUME`.
+- Integração `make db-outage-test`: `docker restart` (30 s fora) e proxy emudecido, com API e worker vivos; os dois voltam em
+  ≤ 60 s depois que o banco aceita conexão, `fills`/`signals` iguais aos de uma execução contínua, `/v1/health` `503` → `200`,
+  `worker.state` `stale` → `alive`, um `resync` por perda do `LISTEN`, log da queda com `code` e sem PII.
+- Mutantes: limiar, teto do backoff, sorteio, classificação (um código a menos), teto por unidade, troca só sem transação
+  viva, resumo de 60 s, carência, `waitingForData` excluído, `stalled_since` fixo no episódio, alerta único, `RESUME` só
+  depois de `STALL`.
+
+## Acompanhamento ao vivo (spec 008)
+
+Contrato da T0.1 da spec 008: três leituras sobre o que a simulação ao vivo já grava (`signals`, `equity_points`,
+`positions`, `candles`, `runs`), sem migration, sem índice novo e sem reexecutar o motor por pedido. O motor e o
+`run-recording` não mudam. Conferido no código em 2026-10-14:
+
+- **`signals.indicators`** é o `collectIndicators` do placar: `rule:<id>` para saída única e `rule:<id>.<saída>` (ordem
+  alfabética, `flattenIndicatorValue`) para várias; `risk:atr` sempre (escalar); `regime:adx.<saída>` só com regime ADX; na
+  regra Fear & Greed, `rule:<id>` é o índice da observação USADA (`null` sem observação fresca da fonte da execução).
+  `sentiment_observation` é essa observação (`{ value, observedAt, source }`), gravada só quando a estratégia tem Fear &
+  Greed. Há uma linha por vela processada **depois do aquecimento** (`signal` não nulo), HOLD incluído; o aquecimento não
+  grava linha. No ao vivo o worker parte de `period_start − leadIn × d`, então a primeira linha é a vela
+  `period_start − d`, que fecha exatamente no início do período: é a primeira decisão da simulação.
+- **Índices usados** (todos já existem): `signals_run_id_candle_time_unique (run_id, candle_time)` (página decrescente e
+  cursor, com `user_id` no filtro); `equity_points_run_id_candle_time_pk` (último ponto); `positions_user_id_run_id_idx`
+  (as posições da execução, poucas no ao vivo); `candles_exchange_symbol_timeframe_open_time_pk` (fechamento de cada
+  decisão, por igualdade na PK). Não falta índice: nenhuma migration (spec RNF02).
+- **`equity_points.benchmark`** é `benchmarkValue`: o saldo inicial até o primeiro sinal e, depois, caixa + quantidade ×
+  fechamento da compra feita na abertura seguinte ao primeiro sinal. `positions.stop_price` e `target_price` são NOT NULL.
+- **`computeNextTriggers`** não lê `previous` (o gatilho do Donchian usa o canal ATUAL), mas chama `evaluateScoreboard`,
+  cujo voto do Donchian lê o canal da vela anterior (`previous`) e lança `IndicatorError` sem ele.
+- **Prazo da meta.** `decideGoalStep` vence quando `(open − period_start) ÷ d + 1 ≥ horizonDays × 86.400.000 ÷ d`: o último
+  candle da meta fecha em `period_start + horizonDays × 86.400.000`. A base é `period_start` (a abertura da vela em curso na
+  criação), **não** `started_at`, o que corrige o plan D5.
+- **`candles.close`** é `numeric(24,8)` e volta com zeros à direita; `close_time` é a abertura + d − 1 ms (Binance). O motor
+  recebeu esse `close_time` como `closeTime` (frescor de 48 h do sentimento): o gatilho tem de usar o mesmo, não
+  `candle_time + d`.
+
+**Paridade das leituras gravadas (plan D3), provada.** `test/live-stored-readings-parity.contract.test.ts` grava cada
+decisão como `mapSignal` grava (`JSON.stringify`) e a lê como o Postgres devolve um `jsonb` (cada número passa pelo texto
+`numeric`, sem expoente), remonta as `ScoreboardReadings` com `buildStoredReadings`
+(`apps/api-ativada/src/runs/live-status/stored-readings.ts`) a partir da última linha e da anterior, e compara
+`computeNextTriggers` com `computeLatestTriggers` sobre o prefixo inteiro da série (e o sinal do prefixo com o sinal
+gravado) por `toStrictEqual`, nos dois estados (`awaiting_entry` e `holding`), em **todas** as velas decididas de
+`btcusdt-1h-500` e `ethusdt-1d-400`, com cinco estratégias que cobrem as sete regras (Placar clássico; EMA 3×8 + RSI 7;
+Donchian + Bollinger sem regime; Fear & Greed + EMA + MACD com ADX; as sete com ADX) e um sentimento sorteado com
+observações ausentes, velhas (> 48 h) e de outra fonte. Resultado: **3.054 velas decididas, 6.100 comparações, 0
+divergências**; as 4 restantes são a primeira decisão das duas estratégias com Donchian em cada conjunto (L2). Três
+mutantes da remontagem (canal anterior trocado pelo atual, sentimento descartado, ADX descartado) são mortos.
+
+| # | Decisão | Motivo |
+|---|---|---|
+| L1 | **Leituras gravadas → `ScoreboardReadings`** (`buildStoredReadings`, puro). Para cada regra que não é Fear & Greed: `current` = a remontagem de `rule:<id>` (escalar) ou de `rule:<id>.<saída>` (registro) da ÚLTIMA linha; `previous` = o mesmo da linha ANTERIOR **só no Donchian** (`undefined` nas outras, como `advanceIndicators`); Fear & Greed fica fora de `rules` (o placar o lê do sentimento). `atr` = `risk:atr`; `adx` = remontagem de `regime:adx` só com regime ADX. Sentimento = `sentiment_observation` da última linha, com o `sentimentSource` da execução (o placar refaz o frescor com o mesmo `closeTime` e chega à mesma observação). Valor que não é número finito conta como ausente: estado impossível que o placar recusa com `IndicatorError` (500). `close` e `closeTime` = `candles.close` e `candles.close_time` da vela da última linha; `state` = `holding` com posição aberta, senão `awaiting_entry` | É exatamente o que o placar viu; a paridade acima prova a igualdade. A linha "anterior" é a de maior `candle_time` abaixo da última: é a vela processada antes (lacuna não grava linha e o motor guarda em `previous` o último valor DEFINIDO do canal) |
+| L2 | **Donchian sem linha anterior** (só a primeira decisão da simulação): `buildStoredReadings` devolve `needs_previous` e os gatilhos saem como indisponíveis, motivo `warming_up` ("O gatilho do rompimento precisa de duas velas decididas; aparece no próximo fechamento."). Nunca se inventa o canal | O canal da vela de aquecimento não fica gravado; reler velas seria recalcular o motor (RNF01) |
+| L3 | **Gatilhos indisponíveis**, nesta precedência: `not_running` (status ≠ `running`: na fila, concluída, parada, com falha; o texto diz qual), `no_candle` (nenhuma linha em `signals`: "Aguardando a primeira vela, que fecha às HH:MM", com a hora montada no painel), `warming_up` (L2). Execução com desfecho de meta conclui e cai em `not_running` | O bloco sempre diz por que não há gatilho (RF07) |
+| L4 | **`GET /v1/runs/:runId/live-status`** (sem query: qualquer parâmetro é `400`), `access: USER`, documentação OpenAPI, resposta `200 { data }` validada por Zod de saída. `data = { run, balance, buyAndHold, goal, openPosition, triggers, decisions }`, descritos em L5 a L10. Todo dinheiro, preço e taxa em **texto decimal** canônico (sem zeros à direita); todo instante em ms UTC; frases prontas em português | Uma ida ao servidor por vela (spec D1) |
+| L5 | **`run`** = `{ id, status, symbol, timeframe, periodStart, lastCandleTime, lastDecisionAt, nextDecisionAt, waitingForData, stalledSince? }`. `lastDecisionAt` = `lastCandleTime + d` (o FECHAMENTO, spec D11) ou `null`; `nextDecisionAt` = o `dueAt` da regra P1 da spec 006 só com `status = running`, senão `null`; `waitingForData` (objeto ou `null`) e `stalledSince` (opcional) exatamente como em `GET /v1/runs/:id` | Uma só regra para "próxima decisão" (spec 006) |
+| L6 | **`balance`** = `{ initial, current, result, resultRate, observedAt, message }`. `initial` = `runParameters.initialBalance`; `current` = `equity` do último ponto (`ORDER BY candle_time DESC LIMIT 1`) ou `initial` sem ponto; `result = current − initial` exato; `resultRate = result ÷ initial` a 12 casas para BAIXO (−∞); `observedAt` = `candle_time + d` do ponto ou `null`. Frase: "Seu saldo agora: {current} USDT (começou com {initial} USDT). Resultado: {result} USDT ({resultRate}%)." e, sem ponto, "Ainda sem vela fechada; o saldo é o inicial: {initial} USDT." | RF02; contra o usuário (RNF04) |
+| L7 | **`buyAndHold`** = `{ value, resultRate, differencePoints, comparison, message }` ou `null` sem ponto. `value` = `benchmark` do MESMO ponto; `resultRate = (value − initial) ÷ initial` a 12 casas para baixo; `differencePoints = (current − value) ÷ initial × 100` a 12 casas para baixo (a estratégia menos o comprar e segurar, em pontos percentuais, calculado dos valores exatos, nunca das taxas arredondadas); `comparison` = `above` com `differencePoints ≥ 0,01`, `below` com `≤ −0,01`, senão `even`. Frases: "A estratégia está {d} pontos percentuais acima de comprar e segurar no mesmo período." (`d` para BAIXO), "… {d} pontos percentuais abaixo …" (`d` = módulo para CIMA) e "A estratégia está empatada com comprar e segurar no mesmo período (diferença menor que 0,01 ponto percentual)." ("1,00 ponto percentual" no singular) | RF03, spec D12: o mesmo número do `BalanceCard`; o arredondamento nunca favorece a estratégia |
+| L8 | **`goal`** (só com `goalId`, senão `null`) = `{ targetRate, targetAmount, remainingAmount, remainingRate, deadlineAt, remainingMilliseconds, maxLossRate, floorAmount, lossRoomAmount, outcome, outcomeAt, message }`. Da fotografia `runs.request.goal` (`parseGoalSpec`) e de `computeGoalLevels` (o MESMO do worker): `targetAmount = ceil8(initial × (1 + targetRate))`, `floorAmount = ceil8(initial × (1 − maxLossRate))`; `remainingAmount = max(0, targetAmount − current)` para CIMA a 8; `remainingRate = remainingAmount ÷ initial` para CIMA a 12; `lossRoomAmount = max(0, current − floorAmount)` para BAIXO a 8; `deadlineAt = period_start + horizonDays × 86.400.000` (conferido acima); `remainingMilliseconds = max(0, deadlineAt − agora)` pelo relógio do servidor. `outcome` = `goal_outcome` (ou `null`) e `outcomeAt = goal_outcome_candle_time + d`; com desfecho a frase é a dele ("Meta alcançada.", "A simulação parou na perda máxima aceita.", "O prazo da meta acabou.") e os campos de "falta" continuam com os valores do último ponto | RF04, spec D8: um cálculo só, em decimal, no servidor |
+| L9 | **Frases sem hora.** O servidor não conhece o fuso do usuário: nenhuma frase traz data ou hora; o painel monta "até 20/10 às 15:00", "faltam 5 dias e 19 horas", "termina hoje às 15:00", "prazo encerrado" e a hora de cada decisão com `formatInZone` a partir dos campos em ms. Números nas frases em pt-BR com milhar e 2 casas (`1.030,00`), arredondados na direção do campo (saldo, resultado, ganho e "ainda cabe" para baixo; perda, "falta" e taxas para cima) | RNF05; mesmo padrão de `trade-summary-message.ts` |
+| L10 | **`openPosition`** = `{ entryPrice, quantity, targetPrice, stopPrice, openedCandleTime }` da posição `status = 'open'` (no máximo uma no ao vivo) ou `null`; a mesma leitura traz as posições que cruzam a página de decisões (L12) | RF08(b); uma consulta para as duas coisas |
+| L11 | **`triggers`** = `{ status: "available", state, score, scoreThreshold, scoreGap, message, rules: [{ ruleId, label, kind, vote, weight, isMet, metric, direction, basis, current, threshold, distance, distanceRate, message }] }` (os campos do `NextTriggers` mais `label = ruleLabel(regra)` e a frase) ou `{ status: "unavailable", reason: "not_running" \| "no_candle" \| "warming_up", message }` (L3). Frase do placar: "Faltam {scoreGap} ponto(s) de {scoreThreshold} para comprar." / "… para vender." e, com `scoreGap ≤ 0`, "A pontuação já alcança o limiar de compra." (só acontece entre o fechamento e a ordem). Texto fixo ao fim: "Isto não é previsão: o preço pode nunca chegar lá, e outras regras podem mudar de voto antes." | RF07 |
+| L12 | **Decisões** (`decisions` no `live-status` e a rota L13): `Decision = { candleTime, closedAt, close, action, outcome, score, scoreThreshold, regime, message, technicalReason, votes: [{ ruleId, label, kind, vote, weight, isMissing, reading }] }`. `closedAt = candle_time + d`; `close` = `candles.close` normalizado (junção pela PK com `exchange = 'binance'`, `symbol` e `timeframe` da execução; vela ausente é estado impossível e vira 500); `holding(t)` = existe posição com `opened_candle_time ≤ t` e (`closed_candle_time` nulo ou `> t`); `outcome` = `bought` (BUY e livre), `sold` (SELL e comprada), senão `waited`; `scoreThreshold` = `thresholds.buy` livre e `thresholds.sell` comprada; `technicalReason` = `signals.reason`; `reading` = as saídas gravadas da regra (`{ "<saída>": texto }`, `value` na saída única, número pela grafia do motor) ou `null` (Fear & Greed sem leitura). Não existe decisão "aquecendo": o aquecimento não grava linha | RF05; a regra de `holding` é a da carteira (a compra preenche na abertura seguinte e a saída no candle dela) |
+| L13 | **`GET /v1/runs/:runId/decisions?cursor=&limit=`**: `limit` inteiro de 1 a 100, padrão **24**; `cursor` opaco `encodeTimeCursor(candle_time)` da última linha da página (o mesmo de `/signals`); ordem `candle_time` DECRESCENTE; leitura `LIMIT limit + 1` para saber se há próxima. Resposta `{ data: Decision[], pagination: { nextCursor, perPage } }`. O `decisions` do `live-status` é a primeira página: `{ items, nextCursor }`. Cursor inválido ou parâmetro desconhecido: `400` | Spec D2; mesmo envelope das listas |
+| L14 | **Catálogo fechado de frases por decisão** (`decision-messages.ts`; `{regra}` = `ruleLabel`, `{n}` = pontos em pt-BR, "ponto" com 1 e "pontos" nos demais): **comprou** "Comprou: {k} de {m} regras a favor ({nomes})."; **vendeu** "Vendeu: {k} de {m} regras contra ({nomes})."; **esperou livre** "Faltou {n} ponto(s): {condição da regra contra ou neutra de maior peso}." (`n = thresholds.buy − score`; empate de peso fica com a primeira da configuração); **esperou comprada** "Esperou: já está comprada; a venda pede pontuação {sell} e está em {score}."; **BUY com posição** "Esperou: já está comprada; a compra não se repete."; **SELL livre** "Esperou: não há posição para vender."; **filtro de regime** (peso 0 por regime) acrescenta "O filtro de tendência (ADX) deixou {regra} de fora."; **sentimento ausente** (`isMissing`) acrescenta "Sem leitura do Fear & Greed nas últimas 48 h: a regra ficou neutra." (não é aquecimento: só o sentimento pode faltar depois do aquecimento) | RF06, spec D4 |
+| L15 | **Condição da regra** (pelo voto gravado, sem limiar novo): EMA "a média rápida (EMA {f}) está abaixo da lenta (EMA {s})" / "as médias estão empatadas"; MACD "o MACD ainda está abaixo da linha de sinal" / "o MACD está igual à linha de sinal"; Donchian "o preço não fechou acima da máxima das últimas {p} velas" / "o preço fechou abaixo da mínima das últimas {p} velas"; RSI "o RSI ({x}) está entre {oversold} e {overbought}" / "o RSI ({x}) está acima de {overbought}"; Bollinger "o preço está dentro das bandas" / "o preço fechou acima da banda superior"; OBV "o volume (OBV) está abaixo da média dele" / "igual à média"; Fear & Greed "o Fear & Greed ({x}) não está em medo (até {fear})" / "está em ganância (a partir de {greed})". Gatilho por `metric` (`trigger-messages.ts`): `close_price` "o preço precisa fechar acima/abaixo de {threshold} (hoje {current}, faltam {distanceRate}%)", `rsi` "o RSI precisa ficar abaixo de {threshold}" (venda: acima), `macd_gap` "o MACD precisa passar a linha de sinal", `obv_gap` "o OBV precisa passar a média dele", `fear_greed_index` "o Fear & Greed precisa chegar a {threshold} ou menos" (venda: ou mais); `basis = indicative` acrescenta "(aproximado: o indicador se move com a próxima vela)" | Catálogo FECHADO: cada `metric` e cada voto têm frase com teste literal (T1.2) |
+| L16 | **`/chart` ganha `decisions`**: `[{ candleTime, closedAt, action, outcome, score, scoreThreshold }]` em ordem crescente, da faixa efetiva `[from, to)`, só em `live_paper`; `null` em backtest e walk-forward e quando a faixa tem mais de **500** velas (`(to − from) ÷ d > 500`, conta sem consulta). Até 500: uma consulta de `signals` (`candle_time` na faixa, `LIMIT 501`) e a mesma leitura de posições de L10/L12 para `outcome` e `scoreThreshold`. Campos antigos intactos | RF15, spec D5: o painel desenha o pontinho onde `outcome = waited` e a dica "Esperou às HH:MM — pontuação {score} de {scoreThreshold}" |
+| L17 | **Erros e acesso** nas três rotas: execução alheia, inexistente, apagada ou id malformado = o MESMO `404 RUN_NOT_FOUND`; dono certo e `kind ≠ live_paper` em `live-status` e `decisions` = `409 RUN_NOT_LIVE` (código novo em `RUN_ERROR_CODE`; o `/chart` continua respondendo a todos os tipos); validação `400` com todos os erros, sem eco de valor (`readValidatedQuery`) | ADR 0001 §e; spec D9 |
+| L18 | **Limite** `RUN_LIVE_STATUS` (`run-live-status`): 60 por minuto por usuário, UM balde para `live-status` e `decisions`; o `/chart` mantém `RUN_CHART` (30/min) | Spec D10: um aviso do stream refaz a consulta; 60/min sobra |
+| L19 | **Custo do `live-status`: 5 consultas, todas por chave e com `LIMIT`**: (1) a execução do dono (`runs`, PK + `user_id`); (2) a versão da estratégia (`strategy_versions`, PK + `user_id`) para `config` e limiares; (3) o último ponto de `equity_points` (PK, `LIMIT 1`); (4) as posições da execução por `positions_user_id_run_id_idx`, só as abertas ou que cruzam a faixa da página; (5) a página de `signals` com a junção em `candles` (`LIMIT 25`), cujas DUAS primeiras linhas são as dos gatilhos. Sem N+1, nada lido em laço. `decisions` faz (1), (2), (4) e (5). As leituras com `userId` no tipo moram em `packages/database/src/run-results/run-live-status.ts`. Agregado com `Promise.all` só DEPOIS de (1): falha em qualquer leitura é 500 (não há parte opcional que justifique `allSettled`) | ≤ 6 consultas (RNF01) |
+| L20 | **Sem cache no servidor.** O aviso do WebSocket já invalida a raiz `runs` no painel; as chaves novas são `['runs', runId, 'live-status']` e `['runs', runId, 'decisions']` | RF12, spec 005 O13 |
+| L21 | **Revisão final (opus): desfechos de saída e compra sem preenchimento.** O `outcome` ganhou `exited` e `buy_pending` (`waited`, `bought` e `sold` ficam). Tudo sai das posições JÁ lidas em L10/L12 (`readCandleState`, `decision-candle-state.ts`, nenhuma consulta nova): **`exited`** = existe posição com `closed_candle_time = t` e `exit_reason` diferente de `signal` (alvo, stop, lacuna ou comando); vence qualquer ação da vela. Frases fechadas: "Vendeu no alvo ({alvo}).", "Vendeu no stop ({stop}).", "Saiu pela lacuna de dados.", "Saiu porque a meta terminou." (`command`, que também cobre a parada pelo usuário: o texto fala de meta, ver pendência). **BUY livre** só é `bought` se existe posição com `opened_candle_time = t + d`; na ÚLTIMA vela decidida (`runs.last_candle_time = t`) é `buy_pending` ("Pediu compra: executa na abertura da próxima vela."); nas demais é `waited` com "Sinal de compra sem execução." (ordem recusada pelo mínimo, caixa ou volume). A faixa lida de posições passou a incluir a vela seguinte à mais nova (`to = mais nova + d`) e vem da MAIS NOVA para a mais antiga (o corte do `LIMIT` nunca descarta a aberta). No `/chart`, `readChartDecisions` roda FORA do `Promise.all` do caminho crítico: falha ao lê-las devolve `decisions: null` (sem log, sem PII) e o preço e as operações seguem | Revisão final da spec 008: "Esperou… Faltou N pontos" numa vela que vendeu no alvo e "Comprou" numa compra que não preencheu eram falsos; §15 do `code-standart.md` (consulta secundária não derruba o caminho crítico) |
+
+**Contratos de teste esperados.**
+
+- Paridade (T0.1, feito): `test/live-stored-readings-parity.contract.test.ts` verde; em T1.1 entra o caso da linha
+  anterior com lacuna (a anterior é a de maior `candle_time` abaixo, não `t − d`) e valores não numéricos como ausência.
+- Contas (T1.1): saldo, resultado, comprar e segurar e meta à mão (ganho, perda, empate exato, `|dif|` 0,009 e 0,01),
+  propriedades com 2.000 sorteios (`remainingAmount ≥ 0`, `lossRoomAmount ≥ 0`, texto exibido nunca a favor do usuário,
+  `targetAmount`/`floorAmount` iguais a `computeGoalLevels`); `deadlineAt` em 15m, 1h, 4h e 1d igual ao instante em que
+  `decideGoalStep` devolve `expired`.
+- Frases (T1.2): texto literal para cada linha de L14 e L15 e cada `metric` × estado × `basis`, singular e plural, regime
+  filtrado e sentimento ausente.
+- Banco (T1.3): `make database-test` com isolamento entre usuários nas quatro leituras, ordem decrescente, cursor (as
+  páginas concatenadas são a lista inteira), junção com `candles` e `holding(t)` na borda (compra e venda na mesma vela).
+- Rotas (T1.4, `loadApiApp()`): feliz com e sem meta, com desfecho, sem vela, aquecendo (Donchian com uma linha), comprada,
+  parada e concluída; `404` entre usuários, inexistente, malformado e apagada nas três; `409 RUN_NOT_LIVE` em backtest e
+  walk-forward; `400` com todos os erros sem eco (`limit` 0, 101, `abc`, cursor inválido, parâmetro desconhecido no
+  `live-status`); limite padrão 24; contador de consultas ≤ 5 no repositório em memória; `api-openapi` verde.
+- `/chart` (T1.5): `decisions` com 500 velas na faixa, `null` com 501, `null` em backtest; contrato antigo intacto.
+- Mutantes (T1.6): filtro de dono nas quatro leituras (API e Postgres), `409`, teto de 500, cada direção de arredondamento,
+  limiar de `even`, frase do limiar e a precedência de L3.
+
+## Gráfico estilo Binance (spec 009)
+
+Contrato da T0.1 da spec 009: duas leituras novas sobre o que backtest, walk-forward e simulação ao vivo já gravam
+(`signals`, `candles`, `positions`, `walk_forward_windows`, `runs`), **sem migration, sem índice novo e sem reexecutar o
+motor por pedido** (decisões do usuário em `specs/009-grafico-estilo-binance/evidence.md`: D1-A, D2-A, D3-A, D4-A, D5-A,
+D6-A). O motor e o `run-recording` não mudam. Conferido no código e medido em 2026-10-15:
+
+- **`signals` do walk-forward** só existem nas janelas de TESTE (`test-collection.ts`; a vela-âncora fica de fora), e cada
+  janela usa a combinação escolhida no ajuste: limiares e períodos podem mudar de janela para janela (o catálogo inclui
+  `thresholds.buy`/`thresholds.sell`). `best_params` guarda `{ combinationIndex, assignment }` só da janela `ok`; a janela
+  parada (`status ≠ ok`) grava os sinais da combinação 0 da grade, que o banco não guarda.
+- **`signals.indicators`** (spec 008, acima): as saídas de preço são `rule:<id>.upper/.lower` (Donchian),
+  `rule:<id>.fast/.slow` (cruzamento de EMA) e `rule:<id>.upper/.middle/.lower/.width` (Bollinger); `risk:atr` é escalar.
+  Os valores são `number` do indicador (ponto flutuante, permitido só ali); o `jsonb` os devolve sem expoente.
+- **Índices usados**, todos existentes: `signals_user_id_run_id_idx` (resumo: todas as linhas da execução, com `user_id`),
+  `signals_run_id_candle_time_unique` (páginas de camadas e de previsões, cursor) e
+  `candles_exchange_symbol_timeframe_open_time_pk` (varredura de faixa do `LEAD` e igualdade da vela seguinte). **Não falta
+  índice.**
+- **Medição** (`packages/database/test-support/projection-summary-benchmark.ts`; Postgres 18.6 descartável com 543.120 sinais
+  de 31 execuções e 140.160 velas de 15 min; a execução medida tem 17.520 sinais, um backtest de 15 min em 6 meses; 200
+  rodadas depois de 10 de aquecimento, cliente no WSL): resumo pelo `LEAD` (P6) com 1 janela **p95 de 101 a 125 ms** e com
+  6 janelas **p95 de 135 a 146 ms** (três execuções do script); a variante por igualdade na PK deu p95 de 152 a 242 ms. A
+  página de camadas (1.000 linhas de `signals`) leva p95 3 ms, mas são 441 KB de linhas cruas em JSON: daí o teto de 1.000
+  velas e o formato em colunas (P1). Tudo abaixo de 300 ms: nenhuma parada.
+
+| # | Decisão | Motivo |
+|---|---|---|
+| P1 | **`GET /v1/runs/:runId/strategy-layers?from=&to=`**, query estrita, `access: USER`, documentação OpenAPI, Zod de entrada e saída, política `RUN_CHART`. Faixa `[from, to)` em ms UTC (O2); ausente, `to` = fim da faixa da execução (O1) e `from` = `max(início da faixa, to − 1.000 × d)`; recortada à faixa da execução como no `/chart`; interseção vazia é `400 from: outside_run`, `to ≤ from` é `400 to: must_be_after_from` e **mais de 1.000 velas** (`(to − from) ÷ d > 1000`, conta sem consulta) é `400 to: range_too_large`. Resposta `200 { data: { version: 'layers-1', timeframe, from, to, candleTimes, score, actions, atr, lines, thresholds } }` **em colunas**: `candleTimes` são as aberturas das velas DECIDIDAS na faixa (uma linha de `signals` por vela, crescente); `score` (texto decimal), `actions` (`BUY`/`SELL`/`HOLD`) e `atr` (texto ou `null`) vêm alinhados a ela; `lines: [{ key, ruleId, role, label, values }]` com `values` alinhado a `candleTimes` (texto decimal, ou `null` quando a chave falta ou não é número finito); `thresholds: [{ from, to, buy, sell }]` (P4). Execução na fila: listas vazias | Em objetos por ponto o payload passa de 1 MB com 5.000 velas; em colunas, 1.000 velas com as 7 linhas possíveis ficam perto de 140 KB (RNF02 ≤ 250 KB). 1.000 é a página de velas do painel (plan D1); o teto de 5.000 do plan D2 cai |
+| P2 | **Linhas por papel**, só das regras de PREÇO que a versão usa (D11), na ordem das regras da configuração: Donchian → `channel_upper` (`.upper`) e `channel_lower` (`.lower`); cruzamento de EMA → `ema_fast` (`.fast`) e `ema_slow` (`.slow`); Bollinger → `band_upper`, `band_middle` e `band_lower` (`.width` não é preço e fica fora). MACD, RSI, OBV e Fear & Greed não desenham linha sobre o preço. Estratégia sem regra de preço: `lines: []` (o painel diz "Esta estratégia não usa linhas sobre o preço"). Rótulos do servidor: "Canal Donchian ({p} velas): topo" / "…: fundo", "Média rápida (EMA {f})", "Média lenta (EMA {s})", "Bollinger ({p} velas, {k} desvios): banda de cima" / "…: média" / "…: banda de baixo" (`{k}` com vírgula decimal). No walk-forward, se o período da regra muda entre janelas, o rótulo perde os números ("Canal Donchian: topo") | Mapeamento fechado e testável para as 7 regras; a linha é exatamente o que o motor viu |
+| P3 | **Regra `projection-1`** (pura, `apps/api-ativada/src/runs/projections/projection-rule.ts`, `PROJECTION_RULE_VERSION = 'projection-1'`). Vela `t` decidida: `side` = `buy` (`score > 0`), `sell` (`< 0`) ou `none` (`= 0`). `strength` pela fração do limiar DO LADO, sem divisão: `2·|score| ≤ |limiar|` → `weak`; `|score| < |limiar|` → `strong`; senão `decided`. `stance`: livre + `buy` → `buy`; livre + `sell` → `stay_out`; comprada + `buy` → `hold`; comprada + `sell` → `sell` (comprada = `holding(t)` de L12). Faixa: `bandLow = floor8(close − atr)` e `bandHigh = ceil8(close + atr)` (8 casas, as do dinheiro: a faixa nunca encolhe). Vela seguinte = a de abertura **exatamente** `t + d` (sem pular lacuna) e dentro da faixa da execução (abertura antes do fim de O1): `hit` (`buy` e fechamento seguinte maior, ou `sell` e menor), `miss` (o contrário), `tie` (igual), `no_side` (`side = none`), `pending` (vela seguinte ainda fora da faixa) ou `gap` (dentro da faixa, mas ausente em `candles`). `isInside` = `bandLow ≤ fechamento seguinte ≤ bandHigh` (`null` sem ATR ou sem resultado). `moveRate = (seguinte − close) ÷ close` a 4 casas para BAIXO (−∞) | É o plan D3 com as bordas fechadas: comparação exata em `numeric`/`EngineDecimal`, nada de ponto flutuante na decisão |
+| P4 | **Limiar de cada vela.** Backtest e ao vivo: `config.thresholds` da versão, num segmento `[início de O1 − d, fim de O1)` (a primeira decisão do ao vivo é a vela `period_start − d`). Walk-forward: um segmento por janela `ok`, `[test_start, test_end)`, com os limiares de `deriveStrategyConfig(config, best_params.assignment)` (função do motor, só leitura de configuração). **A janela parada fica FORA** das previsões e sem segmento de limiar nas camadas (as barras do placar aparecem, as linhas de limiar não): o banco não guarda a combinação que ela usou, e reconstruí-la pela grade seria recalcular | Nenhum número inventado: limiar e período vêm da configuração que gerou a linha |
+| P5 | **Taxas e veredito.** `counted = hits + misses`; `hitRate = hits ÷ counted`; `upRate = upMoves ÷ counted` ("sempre sobe": as contadas cujo fechamento seguinte subiu); `insideRate = inside ÷ banded` (`banded` = resolvidas com lado e ATR, empates incluídos); cada uma a **4 casas para baixo** (2 em porcentagem; texto canônico; `null` com denominador 0); `byStrength` igual, por força. Veredito pelo **intervalo de Wilson de 95%**, `z = 1,96`: `too_few` com `counted < 30`; `above` se o limite inferior > 0,5; `below` se o superior < 0,5; senão `even`. A decisão é a desigualdade **inteira exata** (`z² = 2401/625`, `k = hits`, `n = counted`): inferior > ½ ⇔ `2k > n` e `625²·n·(2k − n)² > 2401·(625·4k(n − k) + 2401·n)`; superior < ½ ⇔ `2k < n` e a mesma desigualdade. Os limites exibidos saem em `EngineDecimal` a 12 casas, o inferior para baixo e o superior para cima, presos a `[0, 1]` | Nenhum arredondamento muda o veredito; o oráculo usa a mesma desigualdade em `bigint` |
+| P6 | **Resumo em UMA consulta** (`summarizeProjections({ userId, runId, … })` em `packages/database/src/run-results/run-projections.ts`, `userId` no tipo): `series` = `candles` da faixa `[menor início dos segmentos, fim de O1)` com `lead(open_time)` e `lead(close)` `OVER (ORDER BY open_time)` (varredura de faixa da PK, `exchange = 'binance'`); `signals` do dono e da execução por `signals_user_id_run_id_idx`; junção com os segmentos de P4 passados por `jsonb_to_recordset($::text::jsonb)` (parametrizado, sem `sql.raw`); `LEFT JOIN series ON open_time = candle_time AND next_open = candle_time + d` (vela seguinte contígua; lacuna ou fim da faixa = sem resultado); `count(*) FILTER (…)` para `noSide`, `pending` (com lado e sem resultado), `hits`, `misses`, `ties`, `upMoves`, `banded`, `inside` e acertos e erros por força (a força pela comparação de P3, em `numeric`). A faixa sai em SQL, com `floor((close − atr) × 10⁸) ÷ 10⁸` e `ceil(…)` sobre `(indicators->>'risk:atr')::numeric`. Taxas, Wilson e frases em TS a partir das contagens | É o `LEAD` do plan D2 com a contiguidade conferida; medido acima (p95 ≤ 146 ms). Nunca um laço por vela no Node (RNF01) |
+| P7 | **`GET /v1/runs/:runId/projections?cursor=&limit=`**, `access: USER`, documentação, Zod, política `RUN_LIVE_STATUS` (o balde de 60/min de L18, agora com três rotas). `limit` de 1 a 100, padrão **24**; `cursor` = `encodeTimeCursor(candle_time)` (L13), ordem decrescente, leitura `LIMIT limit + 1`. Resposta `200 { data: { version: 'projection-1', timeframe, current, summary, items, nextCursor } }`. **`items`**: `[{ candleTime, closedAt, side, strength, score, base, bandLow, bandHigh, nextClose, moveRate, result, isInside }]` (`strength`, faixa, `nextClose`, `moveRate` e `isInside` são `null` quando não se aplicam); a vela seguinte de cada item vem por igualdade na PK (no máximo 101 linhas). **`summary`**: `{ counted, hits, misses, ties, noSide, pending, upMoves, banded, inside, hitRate, upRate, insideRate, byStrength: [{ strength, counted, hits, hitRate }], wilson: { lower, upper } ou null, verdict, message, verdictMessage }`, da execução inteira (P6). **`current`**: `{ status: 'available', candleTime, closedAt, horizonEndsAt, side, stance, strength, score, threshold, base, bandLow, bandHigh, atr, label, message }` (`closedAt = t + d`; `horizonEndsAt = t + 2d`, o fechamento da vela prevista) ou `{ status: 'unavailable', reason, message }`, nesta precedência: `not_running` (não é `live_paper` ou `status ≠ running`), `no_candle` (nenhuma linha em `signals` e `last_candle_time` nulo), `warming_up` (nenhuma linha, mas já processou vela: aquecimento) e `neutral` (placar da última linha = 0). `other_timeframe` e "preço parado" são do painel. Consultas: execução, versão, janelas (só walk-forward), resumo, página e posições (só para o `stance` do ao vivo rodando): no máximo 6, sem N+1, `Promise.all` só depois da execução; falha de qualquer uma é 500 | Plan D2 com os campos fechados; backtest e walk-forward trazem `summary` e `items`, com `current` `not_running` |
+| P8 | **`live-status` não ganha `projection`.** O resumo (até ~150 ms) iria para toda resposta do `live-status` (5 consultas, L19) só para a tela que mostra o gráfico; a previsão tem chave própria, `['runs', runId, 'projections']`, refeita pelo mesmo aviso do stream | A T0.1 não achou ida a poupar: o cartão do gráfico já busca camadas e velas por conta própria |
+| P9 | **Frases** (catálogo fechado em `projection-messages.ts`, sem data nem hora, L9). `label` = postura + força: "Tende a COMPRAR", "Tende a SEGURAR", "Tende a VENDER" ou "Tende a FICAR DE FORA", mais " · fraco", " · forte" ou " · decidiu". `message` com lado `buy`: "Placar {score} de {threshold} para comprar."; com `sell`: "Placar {score} de {threshold} para vender." Números com sinal explícito (`+1`, `−1` com U+2212, `0` sem sinal), vírgula decimal e sem zeros à direita ("+1,5 de +2"). Indisponível: `neutral` "O placar está em 0: nenhuma regra puxa para um lado."; `warming_up` "A estratégia ainda está juntando velas para calcular as regras."; `no_candle` "Aguardando a primeira vela fechar."; `not_running` "A simulação não está rodando: não há próxima decisão." (ao vivo) ou "Este é um teste no histórico: não há próxima decisão. O histórico de acertos está abaixo." (backtest e walk-forward). Resumo, `message`: "Acertou o lado em {hitRate}% ({hits} de {counted}). Moeda ao ar: 50%. 'Sempre sobe': {upRate}%. Dentro da faixa: {insideRate}%." (porcentagens pt-BR com 2 casas, exatas porque a taxa já tem 4; sem faixa, a última frase sai) ou, sem contadas, "Nenhuma previsão com resultado ainda."; `verdictMessage`: `above` "Até aqui, a tendência acertou o lado mais vezes que uma moeda ao ar."; `even` "Até aqui, a tendência acertou o lado tanto quanto uma moeda ao ar. Ela serve para ler o placar, não para adivinhar o preço."; `below` "Até aqui, a tendência errou o lado mais vezes que uma moeda ao ar."; `too_few` "Ainda há poucas previsões para dizer se acerta mais que o acaso." O "o que falta" é o de `trigger-messages.ts` (spec 008), lido do `live-status`: nada duplicado. Do painel: `other_timeframe` "A estratégia decide em velas de {tf}; troque para {tf} para ver a previsão." e "O preço ao vivo parou de chegar; a previsão volta quando ele voltar." | Plan D4 com o acerto em porcentagem que o usuário pediu ("acertou 49%" ao lado dos 50%) |
+| P10 | **Wilson num lugar só: `packages/statistics/src/wilson-interval.ts`** (pacote novo `@ativada/statistics`, puro, sem relógio nem I/O; depende só de `@ativada/strategy-engine`, para importar `EngineDecimal` sem mudá-lo). Exporta `WILSON_Z_SQUARED` (`{ numerator: 2401n, denominator: 625n }`), `COIN_FLIP_MINIMUM_COUNTED = 30`, `COIN_FLIP_VERDICT` (`above`, `even`, `below`, `too_few`), `computeWilsonInterval({ successes, total })` → `{ lower, upper }` (P5) e `judgeAgainstCoinFlip({ hits, counted })` → `{ verdict, lower, upper }` (`lower` e `upper` `null` com `counted = 0`). Quem chegar primeiro cria (a T1.1 desta spec ou a T1.1 da spec 007); o outro importa. A spec 007 usa o mesmo veredito e o `lower` para o peso (`lower − 0,5` só em `above`) | O Wilson não pode morar na API (a 007 é um pacote) nem no motor (RNF08); um pacote neutro evita duas regras de acerto (risco listado na spec 007) |
+| P11 | **Erros e acesso** nas duas rotas: alheia, inexistente, apagada ou id malformado = o MESMO `404 RUN_NOT_FOUND`; `400` com todos os erros, sem eco (`readValidatedQuery`); qualquer tipo de execução responde (sem `409`). Sem cache no servidor; as chaves do painel são `['runs', runId, 'strategy-layers', from, to]` e `['runs', runId, 'projections']` (o aviso `runs` as refaz); velas públicas sob `['markets', …]` | ADR 0001 §e; L17 e O13 |
+
+**Oráculo e dourado (feitos na T0.1).** `test/fixtures/projections/projection-summary-oracle.fixture.ts` (só `bigint`, sem
+importar `src` nem `decimal.js`) conta como P3, P5 e P6; `test/projection-summary-oracle.contract.test.ts` roda o
+`signalStep` nos dois conjuntos reais e confere o dourado `projection-summary-golden.fixture.ts`:
+
+| Conjunto · estratégia | Decididas | Sem lado | Contadas | Acertos | Acerto | "Sempre sobe" | Dentro da faixa | Veredito |
+|---|---|---|---|---|---|---|---|---|
+| BTCUSDT 1h × 500 · Placar clássico | 307 | 21 | 285 | 134 | 47,01% | 53,68% | 86,31% (246 de 285) | `even` |
+| BTCUSDT 1h × 500 · Donchian 20 + MACD 12/26/9 (±2) | 372 | 1 | 370 | 180 | 48,64% | 51,35% | 86,75% (321 de 370) | `even` |
+| ETHUSDT 1d × 400 · Placar clássico | 207 | 14 | 192 | 84 | 43,75% | 51,04% | 87,50% (168 de 192) | `even` |
+| ETHUSDT 1d × 400 · Donchian 20 + MACD 12/26/9 (±2) | 272 | 0 | 271 | 123 | 45,38% | 51,66% | 87,45% (237 de 271) | `even` |
+
+Nenhum empate nos quatro e uma vela pendente em cada (a última). Como no preview (LINK 1h, 49,42%), a tendência do placar
+não supera a moeda ao ar em nenhum conjunto; a faixa de ±1 ATR contém o fechamento seguinte em cerca de 87% das velas.
+Bordas do Wilson à mão: 29 de 29 dá `too_few`; 30 de 30, `above`; com 30 contadas, 21 acertos é o primeiro `above`
+(inferior 0,5212) e 20 é `even` (0,4878); 9 é o primeiro `below`; 171 de 346 é `even` (44,2% a 54,7%).
+
+**Contratos de teste esperados.**
+
+- Puros (T1.1): `projection-rule` com contas à mão (cada força na borda, cada postura, faixa na 9ª casa, `moveRate` negativo
+  para baixo) e propriedades com 2.000 sorteios (faixa nunca encolhe, `counted = hits + misses`, taxas em `[0, 1]` e nunca
+  acima da fração exata); `wilson-interval` nas bordas de P5 e `lower ≤ p ≤ upper`; frases literais de P9 (sinal, vírgula,
+  cada motivo).
+- Banco (T1.2): `make database-test` com o resumo SQL igual ao oráculo nos quatro casos do dourado (velas e sinais gravados
+  como o backtest grava), lacuna de vela (`gap`), fim da faixa (`pending`), walk-forward com dois limiares e janela parada
+  fora; isolamento entre usuários nas três leituras; páginas concatenadas = lista inteira.
+- Rotas (T1.3, T1.4, `loadApiApp()`): os casos de P1, P7 e P11, mais `lines: []`, rótulo sem período no walk-forward,
+  `range_too_large` com 1.001 velas, cada motivo de `current` e a precedência; `api-openapi` verde.
+- Mutantes (T1.6): filtro de dono (API e Postgres), `LEAD` trocado por `LAG`, contiguidade removida, empate contado como
+  acerto, limiar do lado errado, `≤` → `<` na força, faixa arredondada para dentro, taxa para cima, `30` → `29`, janela parada
+  contada.
+
+**Biblioteca de gráfico (spike da T0.2).** `lightweight-charts@5.2.1` (Apache-2.0, dependência única `fancy-canvas@2.1.0`,
+MIT) instalada exata no painel, com o `bun.lock` mudando só as três linhas dela.
+
+| # | Decisão | Motivo |
+|---|---|---|
+| P12 | **`layout.attributionLogo: false`, sempre.** Com o logotipo ligado (o padrão da v5) a biblioteca cria um `<style>` em linha para posicioná-lo, e a CSP do painel (`style-src 'self'`) o bloqueia: 4 violações `style-src-elem` no spike e o logotipo sem posição. Sem ele, **zero** violação: o resto do estilo é por CSSOM (`element.style.x = …`, que a CSP não bloqueia); não há `eval`, `new Function` nem `setAttribute('style')`. **A CSP não muda.** | O `README` da biblioteca exige o aviso do `NOTICE` e um link para tradingview.com na página; o logotipo é só UMA das formas de cumprir o link |
+| P13 | **Crédito no rodapé do cartão do gráfico** (RF22, T3.1), texto do `NOTICE` da tag `v5.2.1` (o pacote npm não traz o arquivo): "TradingView Lightweight Charts™ — Copyright (c) 2025 TradingView, Inc." com link `https://www.tradingview.com/` (`rel="noreferrer"`, `target="_blank"`). Um contrato do painel prende o texto e o link | Cumpre a licença sem afrouxar a CSP |
+| P14 | **Um só arquivo importa a biblioteca**: `src/runs/candle-chart/lightweight-surface.ts`, atrás da porta `ChartSurface` (`chart-surface.types.ts`); os contratos usam `test/support/fake-chart-surface.ts`. `test/chart-surface.contract.tsx` prova o padrão (StrictMode monta duas vezes e só a última superfície fica viva) e reprova outro arquivo de `src` que importe `lightweight-charts`. A T3.1 carrega o adaptador por `import()` dinâmico (pedaço próprio do build): a biblioteca soma ~58 KB gzip a um painel de ~207 KB gzip e só a tela de detalhe precisa dela | happy-dom não tem canvas (`getContext('2d')` é `null`); o resto do painel não paga o peso do gráfico |
+
+### Correções da revisão final (spec 009)
+
+A revisão final (opus) da spec 009 mudou o contrato só de forma ADITIVA; o que ficou de fora está marcado como desvio.
+
+| # | Decisão | Motivo |
+|---|---|---|
+| R1 | **P7 ganha três motivos em `current.reason`**, todos aditivos: `stalled` (a varredura marcou `stalled_since`), `waiting_for_data` (`waiting_since`: buraco de velas à espera de recuperação) e `read_failed` (a leitura das posições, que só refina a postura, falhou). Nova precedência: `not_running`, `stalled`, `waiting_for_data`, `no_candle`, `warming_up`, `neutral`, e `read_failed` quando há tendência a refinar. Parada vence espera, e as duas vencem a tendência da última vela: uma simulação que não anda não mostra uma previsão que ficou velha. | O painel desenhava a tendência da última vela como se o worker estivesse em dia (M6). A falha de uma leitura secundária não pode derrubar o resumo e as previsões (§15, `Promise.all`; baixo 11). |
+| R2 | **`current` e `summary` só vão na PRIMEIRA página** (sem `cursor`); a página por cursor traz `version`, `timeframe`, `items` e `nextCursor`. No esquema os dois viram opcionais (resposta mais frouxa, nenhum campo renomeado ou removido da primeira página). A página por cursor faz 3 consultas (execução, versão, página), não refaz o `LEAD` do resumo nem lê a "linha mais nova". | O resumo era recalculado (p95 de 101 a 146 ms) a cada "Ver mais" e jogado fora (M7). O painel usa esquema e consulta próprios para as páginas por cursor e trata as chaves delas como as das decisões: `refetchType: 'none'` no aviso do stream. |
+| R3 | **`summary.pending` junta duas situações que `items[].result` distingue**: `pending` (a vela seguinte ainda está fora da faixa da execução) e `gap` (a vela seguinte está dentro da faixa e ausente em `candles`). O SQL do resumo conta as duas em `pending` (`next_close IS NULL` com lado) e nenhuma entra em `counted`, `hits` ou `misses`. Sem mudar o contrato; o painel não promete que "pendente" é "ainda vai chegar". | Registro do baixo 8: a diferença só existe por item. |
+| R4 | **A previsão do painel envelhece**: com o relógio do navegador `now > horizonEndsAt + 2 min` (`STALE_FORECAST_GRACE_MILLISECONDS`) e nenhuma previsão nova, o painel diz "A previsão ficou velha" e não desenha o cone. É regra de tela, sem campo novo; o servidor continua dono dos motivos de R1. | Defesa em profundidade: a API pode ainda não ter marcado a parada (carência de 15 min) e a tela já não deve parecer em dia. |
+| R5 | **Limites e bordas arredondados para FORA na tela**: os limites de Wilson mostrados (`formatIntervalLimitPercent`) descem o de baixo e sobem o de cima na segunda casa; a faixa da previsão (`formatPriceEdge`) desce a borda de baixo e sobe a de cima na escala do preço. O servidor já entrega os números; só a exibição era arredondada para o lado errado. | Mesma regra de dinheiro e taxas: o intervalo mostrado nunca é mais estreito do que o do servidor (M4, baixo 2). |
+| R6 | **A vela escolhida na barra do gráfico NÃO é lembrada**: só as camadas vão ao `localStorage`. A vela escolhida vale para a execução aberta (RF05: cada execução abre marcada na própria vela). O painel só oferece as velas do ambiente (`VITE_MARKET_TIMEFRAMES`, que o `dev-up` copia de `MARKET_TIMEFRAMES`; a da execução vem sempre), e uma vela que a API recusa (400) leva ao gráfico simples com "Tentar de novo" e "Voltar para a vela da execução". | Uma preferência guardada valia para todas as execuções e para ambientes com outras velas, e prendia a pessoa no gráfico simples (M1). |
+| R7 | **Desvio: RF02 (faixa visível na URL ao arrastar ou dar zoom) NÃO foi feito.** Gravar `?de=&ate=` a cada arrasto muda `view.range`, que hoje define a janela de velas, a consulta de `/chart` (balde `RUN_CHART`, 30/min por usuário) e o "acompanhar o fim" (a vela em formação some com faixa na URL). Separar a faixa "mostrada" da faixa "pedida" exige tocar essas três peças ao mesmo tempo. A URL continua guardando a faixa que a PESSOA escolhe nos controles de período, na tabela e nos botões de grupo; o arrasto livre não entra nela. | Risco de reenquadrar e recarregar a série a cada gesto, e de estourar o limite de `/chart`, maior que o ganho do link compartilhável. Fica como pendência da próxima spec do gráfico. |
+| R8 | **`useLiveCandle` lê por chave** (`CandleStore.candleAt` e `MarketStore.priceAt`, referência estável por par e vela), e sem kline o "preço parado" sai do último tick do par (`isPriceFresh`). `TICKER_KLINE_ENABLED` só vale com `TICKER_STREAM_ENABLED=true`: o `env.dev` agora liga os dois (o ticker lê só preços públicos da Binance) e o runbook diz isso. | M2 e M3: mensagem de outro par re-renderizava o gráfico; com o kline desligado o selo nunca avisava que o preço parou. |
+| R9 | **Paginação à esquerda pelo limite, não pelo tamanho da página**: `hasMore = page.from > earliestTime`; página vazia ou curta avança (`reachedFrom`) e falha de página não zera `hasMore`. O teclado guarda a vela apontada pelo `openTime` e deriva o índice a cada render. | M8 e o ALTO: a página anterior entrava à esquerda e o teclado passava a apontar outra vela. |
+
+**Pendências registradas, sem mudar o comportamento** (decisões abertas da revisão): (a) `candle-window` usa o relógio para escolher a primeira página; (b) a mensagem de `kline` de fechamento (`closed: true`) é descartada pelo painel e a vela fechada chega só pelo REST depois do aviso `runs`; (c) as camadas da estratégia dividem o balde `RUN_CHART` com o gráfico (30/min), e o arrasto longo as pede em blocos de 150 velas; (d) o contêiner do canvas tem `role="img"` com descrição longa, e um `role="application"` daria ao leitor de tela o modo de teclado direto, ao custo de a pessoa perder a navegação por texto; (e) na desmontagem o gráfico limpa a superfície antes de cancelar as assinaturas, e a ordem inversa é a mais segura; (f) as caixas de stop e alvo só existem para as operações carregadas na tabela, não para todas as da execução.
+
+## Analista de risco (spec 007)
+
+Contrato da T0.1 da spec 007: a regra `analyst-1` fechada, o auditor de acertos com o Wilson ÚNICO, o passo sombra/governar,
+o registro, as rotas e o catálogo de frases. Sem resposta do usuário às decisões do `spec.md` §9, valem os padrões A,
+**exceto o que exige autorização e ainda não foi dada**: a tabela `analyst_decisions` (D3-A, T2.1), o modo governar com a
+mudança no motor e a migration de `run_commands` (D1, D2-A, Fase 4), as colunas novas em `candles` (T5.2), as fotos do livro
+de ofertas (T5.3) e as fontes externas (T5.4). Esses pontos estão **só desenhados** abaixo (A19, A21, A22) e a execução para
+e pergunta antes de cada um. **A Fase 1 fecha sem mudar o motor nem o `run-recording`** (conferido item a item abaixo).
+Conferido no código e medido em 2026-10-15:
+
+- **Especialista cabe no esquema do motor.** `STRATEGY_CONFIG_SCHEMA` aceita uma regra só, `regime: { kind: 'none' }`,
+  limiar `buy: '1'` (> 0) e `sell: '-1'` (< 0) e o risco padrão; `createStrategySignalState` dá o aquecimento: **129** velas
+  na Tendência (MACD 26/9 e EMA 21 com a convergência de `computeEmaConvergenceCandles`) e **97** nas outras três (ATR 14
+  de Wilder). Todos ≤ 200 (plan D2).
+- **O ATR já sai do `signalStep`.** Toda configuração tem `risk.atrPeriod`, e o sinal grava `risk:atr` (escalar) em
+  `indicators`; o cruzamento para decimal é `decimalFromIndicator` (exportado pelo motor). O analista não reimplementa
+  indicador nenhum: ATR, votos e aquecimento são do motor; volume relativo, momentum, percentis e custo são aritmética
+  decimal sobre texto exato da vela.
+- **Sentimento**: o especialista lê o Fear & Greed como o passo lê (`sentiment-picker.ts` do `run-recording`:
+  `selectAvailableSentiment` com `insertionCutoff = closeTime` e a fonte da execução); sem leitura fresca (> 48 h) o motor
+  vota 0 com `isMissing`.
+- **Lacuna**: o motor só aceita vela não contígua com `confirmedGapCandles` exato; a série do analista é histórico e
+  declara a contagem exata de cada buraco.
+- **`halt` não tem dono no motor**: a carteira guarda só `isHalted` e qualquer `resume` o desfaz (`wallet/signal-policy.ts`).
+  Em sombra isso não importa; no governar o dono do `halt` é resolvido fora do motor (A15).
+- **`run_commands`** tem `reason varchar(16)`, `command_id varchar(64)` e único `(run_id, command_id)`. O plan D8 previa
+  `analyst_time_exit` (17 caracteres, não cabe) e `commandId = analyst:<runId>:<candleTime>:<kind>` (até 72): ficam
+  `analyst_timeout` (15) e `analyst:<candleTime>:<kind>` (até 35), único dentro da execução.
+- **Os "padrões do editor" da spec D9 não existem** (o editor só deriva campos da configuração): Donchian 20, Bollinger
+  20/2 e Fear & Greed 25/75 são fixados AQUI como o catálogo `analyst-1` (valores usuais, os mesmos dos fixtures da spec 009 e do contrato da avaliação de metas).
+- **Última migration: `0023_run_stall`**; a próxima livre hoje é `0024` (conferir na hora da T2.1).
+- **Custo medido** (WSL, `bun` 1.4.3): os 4 especialistas sobre 500 velas levam mediana 15,7 ms e p95 18,5 ms; sobre as
+  ~3.081 velas da janela, ~100 ms por PAR por ronda. Daí a âncora diária da série (A3), que deixa o passo de cada ronda em
+  4 `signalStep` por par.
+- **Oráculo nos conjuntos reais** (tabela abaixo): **nenhum especialista provou valor** em `btcusdt-1h-500` nem em
+  `ethusdt-1d-400` (todos `even`, `below` ou `too_few`; peso 0 em todos). Com os conjuntos reais, o analista viveria em "sem
+  previsão" (CAUTELA, ¼) ou PAUSA. É a resposta honesta prevista no risco da spec §8; a T0.2 mede os pares reais em 15 min e
+  para e pergunta se nenhum especialista provar valor em nenhum par.
+
+| # | Decisão | Motivo |
+|---|---|---|
+| A1 | **Pacote `packages/risk-analyst`** (`@ativada/risk-analyst`), puro (sem relógio, aleatoriedade, locale, I/O nem `console`; teste de fronteira que varre o `src` como no motor). Depende só de `@ativada/strategy-engine` (`signalStep`, `createStrategySignalState`, `createStrategyVersion`, `selectAvailableSentiment`, `EngineDecimal`, `decimalFromIndicator`) e de `@ativada/statistics` (Wilson); **nenhuma dependência nova** (o decimal é o `EngineDecimal` do motor). Arquivos do plan D1, menos `wilson-interval.ts` (importado de `@ativada/statistics`). `ANALYST_VERSION = 'analyst-1'` e todos os números em `ANALYST_RULES` (`analyst.constant.ts`, tabela A9) | O mesmo código no worker (ao vivo) e no contrafactual (RNF03); o Wilson tem um lugar só (P10) |
+| A2 | **Catálogo dos especialistas** (`SPECIALIST_CATALOG`, fechado; igual campo a campo a `test/fixtures/risk-analyst/specialist-catalog.fixture.ts`): **Tendência** (`trend`) = `ema-9-21` (EMA 9 × 21) + `macd-12-26-9` (MACD 12/26/9) + `donchian-20` (Donchian 20); **Reversão** (`reversion`) = `rsi-14` (RSI 14, 30/70) + `bollinger-20` (Bollinger 20, 2 desvios); **Volume** (`volume`) = `obv-ema-20` (OBV com EMA 20); **Sentimento** (`sentiment`) = `fear-greed-25-75` (Fear & Greed, medo ≤ 25, ganância ≥ 75). Cada um: `schemaVersion: 1`, `regime: none`, `thresholds: { buy: '1', sell: '-1' }`, `entry: market`, risco do Placar clássico (ATR 14, stop 2, alvo 3, `riskPerTrade` 0,01, exposição 1). **Voto** = sinal do placar do `signalStep` (`score > 0` → +1, `< 0` → −1, `0` → 0); `signal = null` (aquecimento) = **sem leitura**; o Sentimento com `isMissing` aparece como "sem leitura" na tela e conta como voto 0 | RF03 e D9: "todos os algoritmos da casa" pelas 7 regras, sem parâmetro otimizado; o limiar ±1 não muda o voto (o voto é o sinal do placar), só a ação, que o analista ignora |
+| A3 | **Série do par por ronda, com âncora diária.** Para decidir a vela `t` (abertura, 15 min, `d = 900.000`): a série são as velas de 15 min do par com abertura em `[âncora, t]`, `âncora = ⌊(t − 3.080·d) ÷ 86.400.000⌋ × 86.400.000` (00:00 UTC; de 3.081 a 3.176 velas, ≤ 2.880 da janela + 200 de aquecimento + 95 da âncora). Cada especialista roda do `createStrategySignalState` na âncora, vela a vela, com `confirmedGapCandles` exato em cada buraco. A decisão em `t` é função só das velas `≤ t` e do sentimento disponível até o fechamento de `t`: cortar a série no meio dá a mesma decisão. **Uma leitura por par por ronda**, compartilhada pelas simulações do par (os votos não dependem da simulação). O worker PODE guardar em memória `(par, âncora) → estado e votos` e só avançar as velas novas: o resultado é IGUAL ao recálculo desde a âncora (prova obrigatória na T2.3: memo × do zero em toda vela); reinício ou âncora nova = recálculo. Não é estado da simulação (que continua só no checkpoint) | ~100 ms por par por ronda do zero (medido acima) não cabe nos 50 ms p95 (RNF06) com uma simulação só; a âncora fixa por dia deixa o avanço incremental idêntico ao recálculo (o EMA começa sempre no mesmo lugar no mesmo dia) |
+| A4 | **Tendência da estratégia** (o quinto item do auditor, `key: 'strategy'`): o lado é o sinal de `signals.score` **da própria simulação** (a `projection-1` da spec 009) nas velas da janela; no contrafactual, o `signalStep` da execução em memória. Só existe desde o início da simulação (nas primeiras ~8 h é `too_few`). **Não vota nem pesa** na equipe: ela é quem pede a entrada; o analista só decide se deixa | Mesma regra de lado da 009; o oráculo com a janela inteira repete o dourado da `projection-1` nos dois conjuntos (provado) |
+| A5 | **Contagem do auditor** (`accuracy-auditor.ts`, oráculo `test/fixtures/risk-analyst/auditor-oracle.fixture.ts`). Previsões = velas `p` da série com `t − (W + 1)·d < p ≤ t − d`, `W = 2.880` (as W mais novas cujo resultado já fechou até `t`; a vela `t` nunca conta, RNF02). Cada `p`: **sem leitura** (`null`), **sem lado** (voto 0), **lacuna** (a vela `p + d` não existe: resultado nunca chega), **empate** (fechamento igual), **acerto** (andou para o lado do voto) ou **erro**. `counted = hits + misses`; só elas entram no Wilson. `hitRate = hits ÷ counted` e `upRate` ("sempre sobe") `= subidas ÷ counted`, a **4 casas para baixo** (`null` com 0), como a 009 (P5). Horizonte de 1 vela (D13) | RF04 com as bordas fechadas; o oráculo conta em `bigint` sem importar o `src` |
+| A6 | **Veredito e limites pelo Wilson único**: `judgeAgainstCoinFlip({ hits, counted })` de `@ativada/statistics` (`too_few` < `COIN_FLIP_MINIMUM_COUNTED` = 30, `above`, `below`, `even` pela desigualdade inteira; limites a 12 casas, o de baixo para baixo e o de cima para cima). `COIN_FLIP_MINIMUM_COUNTED` é importado, nunca redeclarado em `ANALYST_RULES` | Um só lugar do Wilson (P10). O oráculo (raiz inteira em `bigint`, escala 10⁴⁰) bate com `computeWilsonInterval` e `judgeAgainstCoinFlip` em TODA contagem `0 ≤ k ≤ n ≤ 120` no contrato e em `n ≤ 400` (80.600 pares) na medição |
+| A7 | **Peso** = `lower − 0,5` (texto, 12 casas, subtração exata) só em `above`; `'0'` em `even`, `below` e `too_few` (D4-A). Situação na tela: `above` "provou valor", `even` "rebaixado: igual à moeda", `below` "rebaixado: errou mais que a moeda", `too_few` "em observação: menos de 30". D4-B (meio peso em observação) NÃO é implementado; se escolhido, vira `analyst-2` | RF05; o limite inferior já desconta a incerteza da amostra |
+| A8 | **Leituras** (`market-readings.ts`, todas da vela `t` e de velas `< t`, decimal exato, divisão a 12 casas para BAIXO): `relativeVolume = volume(t) × 96 ÷ Σ volume(t − 96·d … t − d)` (a vela `t` NÃO entra na média); `atrRate = ATR(t) ÷ close(t)` com `ATR(t) = decimalFromIndicator(risk:atr)` do especialista Tendência; `atrPercentile90/95` = percentil **nearest-rank** (posição `⌈p·N ÷ 100⌉`, base 1, em ordem crescente) dos `atrRate` das velas com leitura em `(t − 2.880·d, t]`; `momentumShort/Long = (close(t) − close(t − k·d)) ÷ close(t − k·d)` com k = 4 e 16 (só leitura exibida: não entra na regra); `roundTripCost = 2 × (feeRate + slippageRate)` dos `RunParameters` (exato); `moveToCost = atrRate ÷ roundTripCost` (exibido; a trava compara sem dividir, A10) | RF02 sem lookahead; o mutante "vela atual na média" morre aqui |
+| A9 | **`ANALYST_RULES`** (`as const`, texto decimal onde for número não inteiro): `version: 'analyst-1'`, `baseTimeframe: '15m'`, `auditWindowCandles: 2880`, `seriesLeadInCandles: 200`, `seriesAnchorMilliseconds: 86400000`, `weightBase: '0.5'`, `volumeAverageCandles: 96`, `percentileWindowCandles: 2880`, `percentileMinimumSamples: 96`, `momentumShortCandles: 4`, `momentumLongCandles: 16`, `quietVolumeBelow: '0.4'`, `fourHourCadenceVolumeBelow: '0.7'`, `hourCadenceVolumeBelow: '1.5'`, `cadenceMinutes: { fast: 15, hour: 60, fourHours: 240 }`, `confidentMinimumVolume: '1'`, `confidentMaximumAtrPercentile: 90`, `tooVolatileAtrPercentile: 95`, `teamShare: { numerator: 2, denominator: 3 }` (lado vencedor e força firme), `dailyLossRate: '0.01'`, `lossWindowCandles: 96`, `lossStreakLimit: 3`, `lossStreakPauseCandles: 4`, `tradeCountLimit: 8`, `goalRoomTradeMultiple: '2'`, `minimumMoveToCost: '2'`, `maxTradeCandles: 4`, `riskScale: { pause: '0', caution: '0.25', normal: '0.5', confident: '1' }`, `decimalPlaces: 12`. O mínimo de 30 do auditor vem de `@ativada/statistics` (A6) | D10: cada número num lugar; o dourado e os mutantes (plan D11) prendem cada um |
+| A10 | **Etapa 1 — dado** (`no_data`, nesta ordem de detalhe): `waiting_for_data` (a execução tem `waitingForData`), `late_candle` (o worker passa `isCatchingUp`: a vela `t` não é a última fechada do par; o relógio fica no worker, nunca no pacote), `missing_candles` (falta alguma vela em `[t − 96·d, t]`: sem a média de volume completa) e `warming_up` (menos de 96 `atrRate` na janela, ou o especialista Tendência sem leitura em `t`). Qualquer um → `pause`. **Etapa 2 — travas** (todas calculadas e mostradas; a PRIMEIRA ativa nesta ordem dá o motivo): (1) `daily_loss`: `referência − patrimônio(t) ≥ 0,01 × saldo inicial`, com `referência` = patrimônio do ponto de `t − 96·d` (ou o saldo inicial se a simulação começou depois) — realizado + não realizado em 24 h; (2) `loss_streak`: as 3 últimas posições fechadas tiveram `net_profit < 0` e `t − closed_candle_time(última) < 4·d` (pausa das decisões `c … c + 3·d`: as entradas de `c + d` a `c + 4·d` ficam barradas, 1 h); (3) `trade_count`: posições com `opened_candle_time` em `(t − 96·d, t]` ≥ 8; (4) `goal_room` (só com meta; sem meta "não se aplica"): `patrimônio(t) − floorAmount < 2 × riskPerTrade × patrimônio(t)`, com `floorAmount = ceil8(inicial × (1 − maxLossRate))` de `computeGoalLevels` (o mesmo da spec 008 L8); (5) `move_cost`: `atrRate < 2 × roundTripCost` | RF07 e D7-A; nenhuma trava olha o futuro, e nenhuma bloqueia saída (o analista nunca emite comando que barre saída) |
+| A11 | **Etapa 3 — ritmo** pelo `relativeVolume`: `< 0,4` → `pause` (`quiet_market`; soma de volume zero também); `< 0,7` → 240 min; `< 1,5` → 60 min; senão 15 min. **Janela de entrada**: `(t + d) mod (ritmo × 60.000) = 0` (a vela FECHA na hora cheia ou no múltiplo de 4 h, UTC). **Desvio do RF08 e do plan D4**: a postura é recalculada em TODA vela (não só na janela) e a regra NÃO recebe `lastPosture`; fora da janela a porta de entrada fica fechada com a postura do momento. A decisão é função só do mercado `≤ t`, da carteira em `t` e da meta | Fora da janela nada entra, então recalcular nunca acrescenta risco; sem depender da decisão anterior o corte da série é trivial (RNF02) e a decisão continua recalculável sob D3-B (sem tabela) |
+| A12 | **Etapa 4 — equipe** (`team-forecast.ts`). `W` = soma dos pesos (A7) dos quatro especialistas; `a favor` = soma dos pesos com voto +1; `contra` = com −1. "Sem previsão", nesta precedência: `no_data` (etapa 1), `too_volatile` (`atrRate > percentil 95`), `no_proven_specialist` (`W = 0`), `proven_neutral` (`a favor = contra = 0`), `split_team` (os dois > 0 e `3 × max(a favor, contra) < 2 × (a favor + contra)`). Senão: lado `up` (a favor vence) ou `down` (contra vence) e força `firm` com `3 × vencedor ≥ 2 × W` (W inclui os neutros que provaram), senão `weak`. Comparações em decimal exato, sem dividir | RF06 com as bordas fechadas; "dividir" é entre quem votou e "força" é sobre todo o peso aprovado |
+| A13 | **Etapa 5 — postura e tamanho** (`posture-policy.ts`): `down` → `pause` (`team_against`); sem previsão → `caution` ¼ (`no_forecast`, com o motivo da A12); `up` + `weak` → `normal` ½ (`weak_forecast`); `up` + `firm` + `relativeVolume ≥ 1` + `atrRate ≤ percentil 90` → `confident` 1 (`firm_forecast`); `up` + `firm` sem as duas → `normal` ½ (`firm_forecast_capped`, com o que faltou). Etapas 1 a 3 → `pause`. `riskScale` = `ANALYST_RULES.riskScale[postura]`, **nunca acima de 1** | RF08 e RNF01 |
+| A14 | **Etapa 6 — saída por tempo**: posição aberta com `opened_candle_time ≤ t − 3·d` (4 velas de 15 min, 60 min) → `timeExitDue`; a saída executa na abertura de `t + d` (a 5ª vela). Avaliada em toda vela, inclusive em pausa; stop e alvo da estratégia continuam valendo dentro da vela. `maxTradeMinutes = 60` | RF08; a saída nunca é barrada |
+| A15 | **Etapa 7 — porta e comandos.** A regra devolve `entryGate: 'open' \| 'closed'` (`closed` com `pause` ou fora da janela de ritmo), `timeExitDue` e `riskScale`; **nunca** um comando de entrada. A tradução para `EngineCommand` é uma função pura à parte, `toAnalystCommands({ decision, wallet: { isHalted, lastHaltReason, hasPosition }, closeTime })`: porta fechada e `!isHalted` → `halt`; porta aberta, `isHalted` e `lastHaltReason` do analista → `resume` (um `halt` de meta, usuário ou kill switch NUNCA é desfeito pelo analista); `timeExitDue` com posição → `exit_position`. (No governar, a A21 troca `halt`/`resume` pela escala de entrada do passo: só `exit_position` vai ao motor como comando; a tradução com `halt`/`resume` segue valendo para o `wouldCommands` da sombra.) `commandId = analyst:<candleTime>:<kind>`, `issuedAt = closeTime` de `t`. **Sombra**: `wouldCommands` = a mesma tradução contra a carteira REAL (que o analista nunca parou), então "daria `halt`" aparece em cada vela de porta fechada e "daria `resume`" nunca | RNF01; a tradução existe desde a Fase 1 para a sombra mostrar o que faria, mas só vai ao `advanceCandle` no governar (Fase 4) |
+| A16 | **`AnalystDecision`** (saída da regra, o que se grava e se mostra): `{ version, candleTime, posture, reason, reasonDetail, cadenceMinutes, isOnCadence, entryGate, riskScale, maxTradeMinutes, timeExitDue, forecast: { side: 'up' \| 'down' \| null, strength: 'weak' \| 'firm' \| null, noForecastReason \| null, forWeight, againstWeight, provenWeight }, readings: { relativeVolume, atrRate, atrPercentile90, atrPercentile95, momentumShort, momentumLong, roundTripCost, moveToCost }, specialists: [{ key, vote, isUnread, predictions, counted, hits, misses, ties, upMoves, hitRate, upRate, verdict, lower, upper, weight }]` (os quatro e `strategy`, nesta ordem), `locks: [{ key, current, limit, isActive, isApplicable }]` (as cinco, na ordem da A10), `wouldCommands` / `commands: [{ commandId, kind, reason }]` }. Decimais em texto canônico, instantes em ms UTC, nada de dado pessoal (só números da simulação e ids) | RF11; uma forma só para a tabela, a rota e o contrafactual |
+| A17 | **Catálogo fechado de frases** (`analyst-messages.ts`, pt-BR, sem data nem hora (spec 008 L9), números com vírgula e 2 casas, arredondados na direção do campo: perda e custo para CIMA, folga, acerto e volume para BAIXO). Texto literal na tabela "Frases do analista" abaixo. Nenhuma frase diz "vai subir", "garantido", "recomendamos", "compre" ou "venda"; toda postura termina com o aviso fixo | RNF11; contrato de texto literal por chave (T1.3) e um contrato que varre o catálogo atrás das palavras proibidas |
+| A18 | **Passo ao vivo** (plan D5). No `live-step`, ANTES do `advanceCandle` da vela `t` de uma simulação com `runs.request.analyst`: a série do par (A3, uma por ronda), os pontos de patrimônio de `t − 96·d` e `t`, as posições fechadas das últimas 24 h mais as 3 últimas e a aberta, a meta (`runs.request.goal`) e `waitingForData`; calcula `AnalystDecision` e grava a linha (A19) **na mesma transação** do passo, com `pg_notify('run_events', { runId, kind: 'analyst', eventId })` (kind novo em `RUN_EVENT_KIND`; a API o entrega como o aviso `runs` que já existe). Retomada: `(run_id, candle_time)` único, a vela já decidida é lida e não recalculada. **Sombra**: nada vai ao `advanceCandle`; falha do analista grava `status: failed` com `failure_code` (`ANALYST_SERIES_UNAVAILABLE`, `ANALYST_INPUT_INVALID`, `ANALYST_ENGINE_REFUSED` + o `EngineInputError.code`) e o passo SEGUE; a falha nunca derruba a simulação nem o passo de outra simulação (`allSettled` por simulação, §15). **Governar** (Fase 4, reescrito pela A21): `advanceCandle({ commands, entryRiskScale })` com a escala da postura (`'0'` com a porta fechada) e só `exit_position`/`analyst_timeout` como comando; falha → escala `'0'` naquela vela (falha segura) e o passo segue. Sem D3-A autorizada a sombra NÃO grava: a T2.1 para e pergunta e, com D3-B, a T2.3 só calcula para o aviso e a rota recalcula pelo pacote puro (A3 permite: tudo vem de velas, sentimento, `equity_points` e `positions`) | RF10, RNF01, RNF02 |
+| A19 | **`analyst_decisions` — migration `0024` autorizada (D3-A) e pronta (T2.1, 2026-10-15); o repositório ficou em `analyst-decision.repository.ts`.** `0024_analyst_decisions.sql` (+ `.rollback.sql` com `DROP TABLE`; conferir o número na hora): `id uuid PK`, `user_id uuid NOT NULL`, `run_id uuid NOT NULL` com FK composta `(run_id, user_id) → runs (id, user_id) ON DELETE RESTRICT`, `candle_time bigint NOT NULL`, `version varchar(16) NOT NULL CHECK (version in ('analyst-1'))`, `mode varchar(8) NOT NULL CHECK (in ('shadow','govern'))`, `status varchar(8) NOT NULL CHECK (in ('decided','failed'))`, `posture varchar(16) NULL CHECK (in ('pause','caution','normal','confident'))`, `reason varchar(32) NULL`, `cadence_minutes smallint NULL CHECK (in (15, 60, 240))`, `entry_gate varchar(8) NULL CHECK (in ('open','closed'))`, `risk_scale numeric NULL CHECK (risk_scale in (0, 0.25, 0.5, 1))`, `time_exit_due boolean NULL`, `forecast jsonb`, `readings jsonb`, `specialists jsonb`, `locks jsonb`, `commands jsonb` (os dados no governar ou os que daria na sombra; A16), `message text NULL`, `failure_code varchar(64) NULL`, `created_at timestamptz NOT NULL DEFAULT now()`; `CHECK` de coerência (`decided` ⇒ postura, ritmo, porta e tamanho NOT NULL; `failed` ⇒ `failure_code` NOT NULL); sem ENUM nativo. Único `(run_id, candle_time)`; índice `(user_id, run_id, candle_time DESC)`. Repositório `packages/database/src/analyst/analyst-decisions.ts` com `OwnerScope` no tipo; entra no `ownership-registry`, na exportação NDJSON (sem nada além das colunas) e na purga LGPD **antes** de `runs`. `jsonb` só objeto/lista (`sql.param(valor)::jsonb`) | RF11, RNF05, RNF08; mesmo padrão das tabelas da 0008 |
+| A20 | **Rotas** (plan D7, `apps/api-ativada/src/runs/analyst/`). **`GET /v1/runs/:runId/analyst`** (sem query; parâmetro = `400`) → `200 { data: { version, mode, current, goalProgress, locks } }`: `current` = `AnalystDecisionView` da linha mais nova ou `{ status: 'unavailable', reason, message }` nesta precedência: `not_running` (status ≠ `running`), `stalled`, `waiting_for_data`, `no_candle` (nenhuma decisão e `last_candle_time` nulo), `warming_up` (nenhuma decisão ainda), `failed` (a última linha falhou: a frase de falha da A17, sem o texto do erro); `goalProgress` = `{ targetRate, summedRate, remainingRate, trades, message }` com `summedRate` = o `resultRate` do saldo e `remainingRate` = o `remainingRate` da meta da spec 008 (L6, L8: nenhum cálculo novo), `trades` = posições fechadas, `null` sem meta; `locks` = as cinco da A10 da última decisão. **`GET /v1/runs/:runId/analyst/decisions?cursor=&limit=`** → `{ data: AnalystDecisionView[], pagination: { nextCursor, perPage } }`, `limit` 1 a 100 (padrão 24), cursor `encodeTimeCursor(candle_time)`, ordem decrescente, `LIMIT limit + 1`. `AnalystDecisionView = { candleTime, closedAt, status, posture, postureLabel, cadenceMinutes, isOnCadence, entryGate, riskScale, maxTradeMinutes, timeExitDue, forecast, specialists, readings, commands, isShadow, message, reasonMessage, lockMessages, disclaimer }` (`closedAt = candleTime + d`). Erros: `404 RUN_NOT_FOUND` (alheia, inexistente, apagada, malformada, o MESMO); `409 RUN_NOT_LIVE` (outro tipo); `409 ANALYST_NOT_ENABLED` (`live_paper` sem `runs.request.analyst`, código novo em `RUN_ERROR_CODE`); `400` com todos os erros, sem eco. Política `RUN_LIVE_STATUS` (o balde de 60/min de L18, agora com cinco rotas). `access: USER`, `documentation`, Zod de entrada e saída. Consultas: execução (PK + `user_id`), a página de `analyst_decisions` e, no `/analyst`, o último ponto e a meta (as leituras da spec 008): ≤ 4, `Promise.all` só depois da execução. Sem cache; chaves do painel `['runs', runId, 'analyst']` e `['runs', runId, 'analyst-decisions']` | RF13, RNF08; mesmo padrão de L13, L17 e P7 |
+| A21 | **Governar: a mudança no motor — autorizada (D1, D2-A; evidence da 007, 2026-10-15) e reescrita na T4.0 pela revisão do arquiteto (variante "1c: teto de entrada por passo, sem estado").** O desenho anterior (`scale_risk` como comando, `riskScale` no `WalletState`, `analyst_pause`/`analyst_resume` em `run_commands`, versão nova do motor) foi SUBSTITUÍDO. **(1) Sem versão nova:** `ENGINE_VERSION` e `ENGINE_STATE_VERSION` NÃO mudam; o estado canônico não ganha campo; simulações em andamento retomam do checkpoint sem replicar; a prova é o dourado `engine-2` IDÊNTICO byte a byte. **(2) Teto de entrada por passo:** `StepInput` e `WalletStepInput` ganham o campo opcional `entryRiskScale?: '0' \| '0.25' \| '0.5' \| '1'` (texto, conjunto FECHADO por igualdade de texto: `'1.0'`, `'2'`, `'0.75'` são recusados com `EngineInputError` `ENTRY_RISK_SCALE_INVALID` pela guarda do passo e da carteira avulsa). O caminho é `create-engine.ts` → `wallet/wallet-step.ts` → `ClosingInputs` (`wallet/signal-policy.ts`) → `placeEntry` (`wallet/entry-order.ts`): `'0'` não coloca a entrada nesse passo (em silêncio, como o `halt`; nada de ordem recusada); `'0.25'`, `'0.5'` e `'1'` guardam `riskAmount = moneyDown(caixa × riskPerTrade × escala)`, com UM arredondamento; ausente = `'1'` = o comportamento antigo, exato. A escala vale só para a ENTRADA NOVA daquele passo: não mexe em ordem pendente, posição, stop, alvo, saída por sinal, `exit_position` nem `halt`, e NÃO passa ao passo seguinte (quem quiser a mesma escala a manda de novo). `advanceCandle` (`packages/run-recording`) ganha o mesmo parâmetro opcional e o repassa. A escala NÃO entra em `configHash` nem `runHash` (é entrada do passo, como `commands`). **(3) Pausa sem `halt`:** a pausa do analista é a escala `'0'` naquela vela, então o analista não emite `halt` nem `resume` no governar e o dono do `halt` deixa de ser problema (um `halt` de meta, usuário ou kill switch nunca é tocado). O ÚNICO motivo novo de comando é `analyst_timeout` (para `exit_position`, A14): `COMMAND_REASON` do motor e a cópia em `packages/database/src/run-results/run-result.constant.ts` ganham o valor, e o `CHECK` `run_commands_reason_check` é recriado pela migration aditiva `0025_run_commands_analyst` (`NOT VALID` + `VALIDATE`; `.rollback.sql` ABORTA se existir linha com `reason LIKE 'analyst_%'`: nunca apaga trilha). A SAÍDA nunca é bloqueada (a escala só existe para a entrada). **(4) `analyst_decisions` como entrada do passo no governar:** a linha da vela `t` é gravada na MESMA transação do passo (única por `(run_id, candle_time)`); retomada lê a linha gravada e repete a MESMA escala e os MESMOS comandos (nunca recalcula). Falha do analista ou versão de analista desconhecida com `mode = govern` = falha segura: escala `'0'` naquela vela (nenhuma entrada; saídas da estratégia seguem). Meta já decidida ou desfecho gravado = o analista não manda comandos (a meta encerra). **(5) Ordem de deploy:** banco (0025) → worker (dormente: só age com `mode = govern`) → API libera `govern` no `POST /v1/runs` → painel. **Reversão:** API (recusa `govern` de novo) → encerrar as simulações `govern` → worker → banco (opcional; o rollback aborta enquanto houver trilha `analyst_*`). **(6) `isCatchingUp` depende do relógio do worker:** velas decididas em atraso viram pausa (`'0'`, A10 `late_candle`); reprocessar a mesma história mais tarde pode dar outra decisão nessas velas — divergência ACEITA e registrada na própria linha (`reason`), nunca escondida. **(7) Chave de reprodução** de uma simulação governada = `(configHash, runHash, request.analyst.{version, mode})` + as linhas de `analyst_decisions` | RNF04; sem estado novo a escala não pode vazar entre passos nem invalidar checkpoint; a pausa por escala `'0'` elimina o dono do `halt`; a 0025 só acrescenta um valor ao `CHECK` |
+| A22 | **Fase 2 — SÓ DESENHO onde exige autorização** (spec D6): "Horário" e "Andando com o BTC" sem fonte nova (`analyst-2`, peso 0 até o auditor aprovar); `candles.trade_count integer NULL` e `candles.taker_buy_base_volume numeric(32,8) NULL` (migration aditiva + parser de `V` + gravação de `n` + backfill só do que falta; vela antiga `NULL` = voto neutro "sem leitura"); fotos do livro `order_book_snapshots` (migration + retenção a decidir); funding/OI, dominância e notícias só com fonte autorizada, por fonte, como placar numérico e nunca texto livre | Cada passo traz dado sem abrir dependência antes da hora |
+
+**Frases do analista** (`analyst-messages.ts`, catálogo FECHADO; `{x}` = número pt-BR com 2 casas):
+
+| Chave | Texto |
+|---|---|
+| Postura (rótulo) | `pause` "PAUSA" · `caution` "CAUTELA" · `normal` "MODERADA" · `confident` "LIBERADA" (o analista não corta o tamanho; nunca "confiante", que soa como promessa) |
+| Postura (linha) | "Postura agora: {rótulo} · olha o mercado a cada {15 min \| 1 hora \| 4 horas} · teto de risco da entrada nesta vela: {¼ \| ½ \| o mesmo} do que a estratégia arriscaria ({x}% do saldo por operação) · cada operação dura no máximo 60 min." · pausa: "Postura agora: PAUSA · nenhuma entrada nova; as saídas da estratégia continuam valendo." |
+| Fora da janela | "Fora da janela de entrada: com o ritmo de 1 hora, só a vela que fecha na hora cheia pode abrir operação." · "… com o ritmo de 4 horas, só a vela que fecha num múltiplo de 4 horas (UTC) pode abrir operação." |
+| `no_data` | `waiting_for_data` "Faltam velas recentes: o analista espera os dados chegarem." · `late_candle` "A simulação está atrasada em relação ao mercado: o analista não libera entrada até ela alcançar." · `missing_candles` "Falta vela nas últimas 24 horas: sem a média de volume completa, o analista não libera entrada." · `warming_up` "O analista ainda está juntando histórico do par (pelo menos 24 horas de velas de 15 min)." |
+| Travas | `daily_loss` "A perda das últimas 24 horas chegou a {x}% do saldo inicial (o limite é 1%): pausa até a janela de 24 horas liberar." · `loss_streak` "{n} operações seguidas terminaram em perda: pausa de 1 hora depois da última." · `trade_count` "Já foram {n} operações nas últimas 24 horas (o teto é 8): pausa até a janela liberar." · `goal_room` "Falta pouco para a perda máxima da meta: cabem {x}% do saldo, menos que o risco de 2 operações." · `move_cost` "O movimento típico de 15 min ({x}%) não paga com folga a ida e volta das taxas ({x}%): precisa ser pelo menos o dobro." |
+| Linhas das travas | "Perda das últimas 24 h: {x}% de 1% permitido" · "Perdas seguidas: {n} de 3" · "Operações nas últimas 24 h: {n} de 8" · "Folga até a perda máxima da meta: {x}% (mínimo: {x}%)" / "Folga até a perda máxima: sem meta, não se aplica" · "Movimento ÷ custo: {x} (mínimo: 2)" |
+| Ritmo | `quiet_market` "Mercado parado: o volume está em {x}× o normal das últimas 24 horas (abaixo de 0,4×)." · linha "Volume {x}× o normal das últimas 24 horas: olha o mercado a cada {ritmo}." |
+| Equipe | `team_against` "Os especialistas que provaram acertar apontam para baixo: o analista não deixa abrir operação contra eles." · `too_volatile` "Mercado agitado demais para ler: a oscilação ({x}%) está acima de 95% das velas dos últimos 30 dias. Sem previsão." · `no_proven_specialist` "Nenhum especialista acertou o lado mais vezes que uma moeda ao ar nos últimos 30 dias. Sem previsão." · `proven_neutral` "Os especialistas que provaram valor estão neutros nesta vela. Sem previsão." · `split_team` "Os especialistas que provaram valor se dividem: nenhum lado tem 2/3 do peso. Sem previsão." · `weak_forecast` "Tendência para cima, fraca: menos de 2/3 do peso aprovado a favor." · `firm_forecast` "Tendência para cima, firme, com volume normal ou acima e oscilação dentro do comum." · `firm_forecast_capped` "Tendência para cima, firme, mas {com volume abaixo do normal \| com oscilação acima de 90% das velas dos últimos 30 dias}: tamanho pela metade." |
+| Especialista | voto "a favor" / "contra" / "neutro" / "sem leitura"; acerto "{x}% ({hits} de {counted})" ou "— ({counted} contadas)" abaixo de 30; situação da A7; peso "{x}" ou "0"; a linha da estratégia: "Tendência da estratégia" com peso "não vota" |
+| Saída por tempo | "A operação aberta completou 60 min sem alvo nem stop: o analista manda sair na abertura da próxima vela." (sombra: "… o analista mandaria sair …") |
+| Meta somada | "Meta: +{x}% no prazo. Somado até aqui: {±x}% em {n} operação(ões). Falta {x}%." · desfecho: as frases da spec 008 L8 · sem meta: "Sem meta: o resultado das operações soma no saldo." |
+| Modo | sombra "Modo sombra: o analista só observa e mostra o que faria; a simulação segue a estratégia sem mudança." · governar "O analista está decidindo o ritmo e o tamanho desta simulação." |
+| Falha | "O analista não conseguiu decidir nesta vela; a simulação seguiu sem ele." (código só no campo `failureCode`) |
+| Indisponível | `not_running` "A simulação não está rodando: o analista não decide." · `stalled` "A simulação parou de avançar; o analista volta quando ela voltar." · `waiting_for_data` "A simulação espera velas que faltam; o analista volta quando elas chegarem." · `no_candle` "Aguardando a primeira vela de 15 min fechar." · `warming_up` "O analista ainda está juntando histórico do par." |
+| Aviso fixo | "O analista é uma regra automática sobre dados passados; não é recomendação. Tendência, não promessa. Tudo simulado, com dinheiro fictício." |
+
+**Oráculo e dourado (feitos na T0.1).** `test/fixtures/risk-analyst/auditor-oracle.fixture.ts` (só `bigint`, sem importar
+`src` nem `decimal.js`) conta como A5 e decide como A6/A7; `specialist-catalog.fixture.ts` é o catálogo A2 escrito à mão;
+`specialist-dataset.fixture.ts` roda o `signalStep` de produção de cada especialista e do Placar clássico nos dois conjuntos
+reais (a vela deles como base, plan D11; Fear & Greed sintético e determinístico, um por dia UTC, `(37·dia + 11) mod 101`,
+porque os conjuntos não trazem sentimento); `test/risk-analyst-auditor-oracle.contract.test.ts` confere o dourado
+`auditor-golden.fixture.ts`, a igualdade com a `projection-1` e o oráculo × `@ativada/statistics`. Decisão na última vela,
+janela de 2.880 (o conjunto inteiro):
+
+| Conjunto · item | Previsões | Sem leitura | Sem lado | Contadas | Acertos | Acerto | "Sempre sobe" | Wilson 95% | Veredito |
+|---|---|---|---|---|---|---|---|---|---|
+| BTCUSDT 1h × 500 · Tendência | 499 | 128 | 130 | 241 | 112 | 46,47% | 52,28% | 40,28% a 52,78% | `even` |
+| BTCUSDT 1h × 500 · Reversão | 499 | 96 | 327 | 76 | 36 | 47,36% | 44,73% | 36,54% a 58,45% | `even` |
+| BTCUSDT 1h × 500 · Volume | 499 | 96 | 0 | 403 | 202 | 50,12% | 52,10% | 45,26% a 54,99% | `even` |
+| BTCUSDT 1h × 500 · Sentimento | 499 | 96 | 192 | 211 | 97 | 45,97% | 54,02% | 39,37% a 52,71% | `even` |
+| BTCUSDT 1h × 500 · Placar clássico | 499 | 193 | 21 | 285 | 134 | 47,01% | 53,68% | 41,30% a 52,82% | `even` |
+| ETHUSDT 1d × 400 · Tendência | 399 | 128 | 77 | 194 | 86 | 44,32% | 54,63% | 37,51% a 51,37% | `even` |
+| ETHUSDT 1d × 400 · Reversão | 399 | 96 | 262 | 41 | 24 | 58,53% | 56,09% | 43,36% a 72,25% | `even` |
+| ETHUSDT 1d × 400 · Volume | 399 | 96 | 0 | 303 | 134 | 44,22% | 51,15% | 38,73% a 49,86% | `below` |
+| ETHUSDT 1d × 400 · Sentimento | 399 | 96 | 147 | 156 | 72 | 46,15% | 50,00% | 38,51% a 53,98% | `even` |
+| ETHUSDT 1d × 400 · Placar clássico | 399 | 193 | 14 | 192 | 84 | 43,75% | 51,04% | 36,92% a 50,83% | `even` |
+
+Nenhuma lacuna e nenhum empate nos dois conjuntos; peso 0 em todos (nenhum `above`). Com a janela de 96 o dourado também
+traz `too_few` (Reversão: 11 e 16 contadas) e `below` (Volume e Placar clássico em ETH). A linha do Placar clássico com a
+janela inteira repete a `projection-1` (285/134 e 192/84, `even`). Limites exibidos com 2 casas para fora (R5). O Sentimento
+sintético não mede o Fear & Greed real: a T0.2 mede com as observações do banco.
+
+**Contratos de teste esperados.**
+
+- Puros (T1.1 a T1.3, `packages/risk-analyst`): `SPECIALIST_CATALOG` igual ao fixture; auditor = oráculo nos dois conjuntos
+  (o dourado acima) e no recorte de 15 min da T0.2; leituras, travas, ritmo, equipe e postura com contas à mão por etapa
+  (cada borda: volume 0,4/0,7/1,5 e 1, percentil 90/95 na posição exata, 2/3 do peso exato, perda de 1% exata, 3ª perda
+  na 4ª vela, 8ª entrada, folga igual a 2 operações, movimento = 2 × custo); frases literais de toda chave e a varredura de
+  palavras proibidas; propriedades com 2.000 sorteios (`riskScale ≤ 1`; trava ativa ⇒ `pause`; `down` ⇒ `pause`; nenhum
+  comando de entrada; `exit_position` nunca suprimido; `resume` só sobre `halt` do analista; corte da série no meio = mesma
+  decisão; mesma entrada = mesma saída, byte a byte); âncora: memo incremental = recálculo desde a âncora em toda vela.
+- Mutantes (T1.4, ≥ 20, `test/risk-analyst-mutants.contract.test.ts`): os do plan D11 mais `analyst_timeout` na 4ª vela,
+  `resume` sem conferir o dono do `halt`, porta aberta fora da janela de ritmo, `W` sem os neutros na força, âncora que
+  desliza com `t`, `percentil 95` trocado por 90 na volatilidade.
+- Banco, worker, rotas e painel: como no plan D11, com os casos de A18 a A20 (único por vela, `failed` não para o passo,
+  `409 ANALYST_NOT_ENABLED`, `failed` como motivo de `current`, ≤ 4 consultas).
+
+**Pendências que pedem resposta do usuário** (nada disso é feito sem ela): (a) D3 — migration `analyst_decisions` (A19) ou
+recalcular sob demanda (D3-B); (b) D1/D2 — governar e o comando de tamanho no motor (A21), só depois do contrafactual; (c)
+colunas em `candles`, livro de ofertas e fontes externas (A22); (d) o desvio da A11 (postura recalculada em toda vela, sem
+`lastPosture`) — se preferir a postura presa entre as janelas de ritmo, é `analyst-2`; (e) os rótulos "MODERADA" e
+"LIBERADA" no lugar de "NORMAL" e "CONFIANTE".
+
+**T2.3 — como a sombra entrou no worker (registro de desvios da A18; o contrato da regra não mudou).**
+
+- **Ordem no passo.** A decisão da vela `t` sai DEPOIS do passo puro do motor de `t` (o patrimônio e as posições "em `t`" só existem
+  nele) e ANTES da gravação, como o passo da meta: `settleCandle` → `decideShadowStep` → `commitStep`. Em sombra nada volta ao
+  motor; no governar (Fase 4) os comandos refazem o MESMO candle com `commands`, como a saída por meta.
+- **Uma leitura por par por ronda.** `createAnalystSeriesCache` (um por avaliador) guarda por `(par, fonte do sentimento, âncora)`
+  o estado dos quatro `signalStep` e os votos, e só avança as velas novas (`advanceVote`, o mesmo passo da série inteira): o
+  resultado é IGUAL ao recálculo desde a âncora em toda vela (prova em `test/live-analyst-series.contract.test.ts`). Ele
+  estende até a última vela da ronda numa leitura só; âncora nova (todo dia) ou reinício recomeça do zero. Um buraco que o
+  banco preencher depois de a cópia já tê-lo atravessado só é visto no recálculo (reinício); a linha já gravada não muda.
+- **`isCatchingUp`** = a vela decidida é mais velha que a última vela da ronda (o relógio fica no worker e a regra não o lê); a
+  ronda que ainda alcança o mercado decide `no_data` ("atrasada") e não libera entrada, como a A10 manda.
+- **Dono do `halt`.** Em sombra o analista nunca fecha a porta da carteira: `lastHaltReason` é nulo, então `wouldCommands` mostra
+  "daria `halt`" em toda vela de porta fechada e nunca "daria `resume`" (A15). O contrafactual governa uma carteira em memória e
+  informa o dono do `halt` pelo mesmo gancho (`haltReason`).
+- **Falha.** Qualquer erro do analista vira a linha `failed` com SÓ o código (`ANALYST_SERIES_UNAVAILABLE`, `ANALYST_INPUT_INVALID`
+  ou `ANALYST_ENGINE_REFUSED:<código do motor>`): nem a linha nem o log levam o texto do erro. O pedido só vale para `analyst-1`,
+  `shadow` e vela de 15 min; qualquer outro deixa a simulação sem analista.
+- **Desempenho (RNF06).** Para o passo caber em 50 ms o pacote puro ganhou três atalhos que não mudam nenhum número da regra:
+  comparação de preço por dígitos (`compareDecimalTexts`), ordenação dos percentis por inteiro exato (`sortDecimalTexts`) e o
+  `atrRate` de cada leitura memorizado pelo próprio objeto (`WeakMap`). Cada um tem paridade com o decimal em sorteios
+  (`test/risk-analyst-decimal-texts.contract.test.ts`) e o dourado e os 52 mutantes seguem iguais.
+
+**T3.1 — as rotas do analista como ficaram (registro de desvios da A20; o contrato da regra não mudou).**
+
+- **Rotas** (`apps/api-ativada/src/runs/analyst/`): `GET /v1/runs/:runId/analyst` e `GET /v1/runs/:runId/analyst/decisions?cursor=&limit=`,
+  `access: USER`, `documentation`, política `RUN_LIVE_STATUS` (agora cinco rotas no balde de 60/min: live-status, decisões,
+  projeções e as duas do analista). Alheia, inexistente, apagada e malformada dão o MESMO `404 RUN_NOT_FOUND`; backtest
+  e walk-forward `409 RUN_NOT_LIVE`; `live_paper` sem `runs.request.analyst` `409 ANALYST_NOT_ENABLED` (código novo em
+  `RUN_ERROR_CODE`); parâmetro no `/analyst` e `limit`/`cursor` inválidos `400` com todos os erros e sem eco do valor.
+- **Consultas** (≤ 4, todas por chave, sem cache): `/analyst` = execução (PK + dono) e, em paralelo, a versão da estratégia (para o
+  `riskPerTrade` da frase da postura), a última linha de `analyst_decisions` e, SÓ com meta, `readAnalystGoalSnapshot` (UMA
+  consulta com duas leituras por chave: o último `equity_points` e a contagem de `positions` fechadas); 3 consultas sem meta, 4 com.
+  `/analyst/decisions` = execução, versão e a página (`LIMIT limit + 1`): 3. O repositório de dono ganhou
+  `readAnalystGoalSnapshot` (sem migration); `make api-runs-mutants` ganhou +2 filtros de dono (decisões e meta somada).
+- **Forma da resposta** (Zod de saída = o documento OpenAPI): `{ version, mode, modeMessage, current, goalProgress, locks }`.
+  `current` é a decisão (`status: 'decided'`) ou `{ status: 'unavailable', reason, message }` com `reason` em
+  `not_running | stalled | waiting_for_data | no_candle | warming_up | failed` (nesta precedência; `failed` usa a frase de falha da
+  A17, sem o código nem o texto do erro). A decisão traz o que a A20 lista e, de forma ADITIVA, as frases prontas
+  (`cadenceLine`, `offCadenceMessage`, `timeExitMessage`), as cinco travas com a linha de cada uma e a frase nas ativas
+  (`locks[].line`, `locks[].message`) e, em cada especialista, os rótulos do catálogo (`label`, `voteLabel`, `accuracyText`,
+  `verdictLabel`, `weightText`) e o `motive`. No histórico, a vela em que o analista falhou vem como `status: 'failed'` com
+  `failureCode`. `goalProgress` = `{ targetRate, summedRate, remainingRate, trades, message }` (o resultado do saldo, o que falta da
+  meta da spec 008 e as operações fechadas; `null` sem meta). Nada é recalculado por pedido: as frases saem do catálogo da A17 sobre
+  a linha gravada pelo worker (`isOnCadence` é derivado de `candleTime` e do ritmo; a frase do motivo é a gravada em `message`,
+  porque a tabela não guarda o detalhe do motivo).
+- **A API passou a depender de `@ativada/risk-analyst`** (workspace; só `package.json` e `bun.lock`, nenhuma dependência de fora): as
+  frases do catálogo vivem num lugar só e a rota não as copia. A T2.2 evitava isso por causa do `bun.lock`; aqui a rota PRECISA do
+  catálogo para não duplicar texto.
+
+**D4-A da spec 011 (motivo curto por regra), autorizada na T3.1 e feita como mudança aditiva do contrato.**
+
+- **Votos por regra.** `VoteReading` e `SpecialistView` ganham `ruleVotes?: [{ ruleId, vote, reading }]` (os votos que o
+  `signalStep` já calcula; `reading` = o RSI da própria regra ou o Fear & Greed usado pelo passo, `null` nas demais). Nada muda
+  na decisão (postura, tamanho, comandos, travas, equipe): o campo só acompanha o voto. A linha da estratégia (`key: 'strategy'`)
+  não tem `ruleVotes`. O `jsonb` `specialists` os recebe sem migration; decisão gravada antes deles → `motive: null`.
+- **Catálogo do motivo** (`specialist-motive.constant.ts`, `describeSpecialistMotive`): 7 regras × a favor (novo) / contra e neutro
+  (as da spec 008, letra por letra, provadas por contrato contra `describeRuleCondition`), "As regras dele se anulam nesta vela.",
+  "ainda juntando histórico do par" e "sem leitura do Fear & Greed há mais de 48 horas". Voto ±1 → a primeira regra do catálogo que
+  votou no mesmo sinal; voto 0 → anulação (houve +1 e −1) ou a frase neutra da primeira regra. O painel põe a maiúscula e o ponto.
+- **Dourado `analyst-1` regravado SEM mudar nenhum número:** `scripts/record-risk-analyst-golden.ts` com o código novo, comparado
+  com o dourado anterior após tirar o campo `ruleVotes` de cada decisão: 12 casos, 0 diferentes, 48 campos `ruleVotes` novos (12
+  casos × 4 especialistas). Mudar o motivo ou o catálogo exige regravar de novo; mudar a regra segue exigindo `analyst-2`.
+- **Provas:** `test/risk-analyst-specialist-motive.contract.test.ts` (tabela da §5 literal, igualdade com a spec 008, escolha da regra,
+  anulação, sem leitura, os 3.300 candles reais de 15 min com votos por regra em toda vela lida, corte da série no meio dando os
+  mesmos votos) e 6 mutantes novos em `test/risk-analyst-mutants.contract.test.ts`.
+
+**T4.2 — como o governar entrou no worker (registro de desvios da A21; o contrato do motor e da regra não mudou).**
+
+- **Ordem no passo.** `settleCandle` (primeira passada, com a meta) → decisão do analista sobre ESSE resultado → `toGovernInputs`
+  (a mesma função pura do contrafactual) → o MESMO candle é refeito com `entryRiskScale` e a saída por tempo → o resultado
+  FINAL é o que vai para `appendDecisions`, os alertas, o desfecho da meta e o checkpoint, junto com a linha de
+  `analyst_decisions`, na mesma transação. Escala `'1'` e nenhum comando = o passo não é refeito (é o antigo, exato). Meta já
+  decidida ou desfecho já gravado: o passo da meta é o final e o analista não manda comando (a carteira para por `halt`).
+- **Falha segura em três lugares, sempre com a escala 0 e nunca sem o analista.** (a) A regra falha (série, histórico, entrada):
+  linha `failed` com o código e nenhuma entrada naquela vela. (b) Pedido `govern` com versão desconhecida ou vela que não é a de
+  15 min: o analista NÃO roda e toda vela grava `failed`/`ANALYST_REQUEST_UNSUPPORTED` com a escala 0 (a API recusa esses
+  pedidos; o worker não presume isso). (c) O motor recusa a entrada do analista (`EngineInputError`): o candle é refeito SÓ com a
+  escala 0 e a linha vira `failed` com `ANALYST_ENGINE_REFUSED:<código>`; qualquer outro erro continua subindo como no passo puro.
+- **A linha é o que o passo recebeu.** `mode = govern`; `risk_scale` é a escala EFETIVA (porta fechada = 0, mesmo com postura
+  `normal` fora do ritmo) e `commands` são os comandos enviados ao motor (só `exit_position`/`analyst_timeout`), não o
+  `wouldCommands` da sombra. Prova de invariância: refazer a simulação do zero com a escala e os comandos GRAVADOS nas linhas
+  dá linhas e estado do motor idênticos aos da simulação (`test/live-analyst-govern.contract.test.ts`).
+- **A retomada não lê a linha gravada.** Passo e decisão nascem na mesma transação: não existe linha sem passo confirmado, então
+  a retomada recalcula só velas ainda não gravadas, com o histórico relido do banco, e chega às MESMAS decisões (teste de queda
+  no meio da transação e retomada por outra instância; `live-test` com queda de conexão). Uma decisão gravada nunca é recalculada
+  porque o passo dela também nunca é refeito.
+- **O histórico em memória guarda o resultado final**, mas isso não muda nada observável: o histórico só tem placar, patrimônio e
+  posições, e a escala só afeta ORDENS (a entrada nova só preenche na vela seguinte); por isso gravar o primeiro ou o final é
+  equivalente e não há mutante para essa linha.
+- **Decisão do dono do produto (aceita e registrada): a escala `'0'` só impede a entrada NOVA daquela vela e NÃO cancela uma
+  ordem de entrada pendente criada numa vela anterior.** Uma ordem criada com a porta aberta em `t − d` ainda preenche na
+  abertura de `t` mesmo que a decisão de `t` seja pausa. O custo é no máximo uma entrada a mais por pausa, com o tamanho que a
+  regra liberou na vela em que ela nasceu; cancelar exigiria um comando novo no motor, fora do escopo da A21.
+- **`isCatchingUp` e a divergência aceita.** Depende do relógio do worker (a vela decidida é mais velha que a última vela da
+  ronda): uma ronda que ainda alcança o mercado decide `no_data` ("atrasada") e a escala é 0. Reprocessar a mesma história mais
+  tarde em rondas de uma vela pode dar outra decisão nessas velas; a linha de cada vela diz o motivo e nada é escondido. Por isso
+  o `live-test` do governar entrega as velas UMA POR VEZ.
+- **Sem `halt` próprio.** O analista no governar nunca fecha nem reabre a porta (`haltReason` é sempre nulo): a pausa é a escala 0.
+
+**T4.2d e T4.3 — liberar o `govern` e o que a medição disse.** (1) `POST /v1/runs` aceita `analyst.mode = govern` com os mesmos
+requisitos da sombra (`live_paper`, 15 min); o painel oferece "Só observar (sombra)" (padrão) × "Decidir de verdade (governar)" e o selo
+da tela vira "o analista está decidindo". (2) A linha de postura passou a dizer "teto de risco da entrada nesta vela: ¼ …" (o tamanho
+vale para a entrada aberta naquela vela, não para a operação já aberta nem para a saída); o dourado `analyst-1` foi regravado só nesse
+texto, sem mudar decisão nem versão. (3) Contrafactual com o teto de entrada nos 8 casos (183 dias, 15 min): governar não piorou nenhum
+caso contra a sombra, mas o líquido segue negativo nos 8; o corte de tamanho vale +1,06 a +9,54 p.p. do saldo sobre "só pausa e saída por
+tempo" (relatório literal em `specs/007-analista-de-risco-senior/evidence.md`, T4.3). (4) Deploy em dev na ordem da A21: banco
+(`0025`), worker (dormente), API, painel.
+
+## Lucro mínimo por operação (spec 013)
+
+Contrato da T0.1 da spec 013: a regra `minimum-profit-1` fechada. **Autorização:** em 2026-10-16 o usuário pediu "certo, add
+isso nas regras para evitarmos transações nesses valores" (registrado em `specs/013-lucro-minimo-por-operacao/evidence.md`),
+o que vale como resposta às decisões do `spec.md` §9 com as opções A: D1-A (campo da execução + checagem no motor), D2-A
+(0,6% pré-preenchido e desligável no painel, só depois da T0.2), D3-A (recusa com motivo próprio, migration aditiva do
+`CHECK`), D4-A (`move_cost` do analista como está), D5-A ("ganho possível" = o alvo) e D6-A (prazos, metas e "O que falta"
+fora). A T0.1 só escreve o contrato e o oráculo: **nada no motor, no `run-recording`, no banco ou nos apps mudou nela**, e a
+migration só é escrita e aplicada na Fase 2 (T2.1). Conferido no código em 2026-10-16:
+
+- **MP1 — O campo.** `RUN_PARAMETERS_SCHEMA.minimumNetTargetRate = decimalTextSchema({ minimum: '0', maximum: '0.1',
+  maximumDecimalPlaces: 8 }).exactOptional()`: fração de 0 a 0,1 (0% a 10%) inclusive, no máximo 8 casas, grafia canônica
+  (`'0.0060'` vira `'0.006'`), **sem `.default`**. É `exactOptional`, não `optional`: conferido no `zod@4.6.5` que
+  `.optional()` devolve a chave com `undefined` quando o chamador passa `{ minimumNetTargetRate: undefined }`, e o
+  `canonicalJson` LANÇA com valor `undefined`; com `exactOptional` a chave explícita sem valor é recusada pelo esquema
+  (`RunParametersError` com o caminho `minimumNetTargetRate`) e nunca chega ao hash. `'0'` NÃO é ausente: liga a regra (o
+  alvo tem de pagar o custo) e muda o `runHash`. O campo do corpo de `POST /v1/runs` (`runParametersBodySchema`,
+  `create-run-setup.ts`) também é `.exactOptional()`, para a API e o motor recusarem a mesma coisa. O campo não entra no
+  catálogo ajustável do walk-forward.
+  `RUN_PARAMETERS_SCHEMA_VERSION` continua `1` (o literal entra no hash: trocá-lo mudaria o `runHash` de toda execução).
+- **MP2 — A fórmula.** Tudo da vela `t` (sem lookahead; a compra liberada sai na abertura de `t+1`, como hoje): `A` =
+  `decimalFromIndicator(signal.indicators[RISK_ATR_INDICATOR_ID])` (a MESMA porta da `targetDistance`, 15 algarismos), `m` =
+  `config.risk.targetAtrMultiple`, `C` = `candle.close` de `t`, `f` e `s` = `feeRate` e `slippageRate`, `n` = o mínimo.
+  Custo de ida e volta `c = 2 × (f + s)`, exato (no máximo 8 casas e 0,12). Bruto no alvo `g = m × A ÷ C`, líquido `g − c`.
+  **Decisão: compra se e só se `m × A ≥ (n + c) × C`** — sem divisão e sem arredondamento; igual passa. A ordem limitada usa o
+  mesmo `C` (ela compra mais barato, então a regra fica do lado conservador). Para a ordem a mercado `C` é aproximação: ela
+  preenche na abertura de `t+1`, que pode diferir de `C`; o slippage de entrada já está no custo `2 × (f + s)`.
+- **MP3 — Precisão.** Os dois produtos são feitos num clone próprio, `EngineDecimal.clone({ precision: 64 })`
+  (`ENTRY_EDGE_DECIMAL_PRECISION = 64`), não no `EngineDecimal` de 40 algarismos: `m × A` tem no máximo 14 + 15 = 29
+  algarismos, mas `(n + c) × C` chega a 8 + 40 = 48 (a vela aceita 20 + 20 algarismos). Medido no `decimal.js@10.6.0`: com
+  `C = 40000000000000100000.00000000000000000001`, `A = 400000000000.001`, `m = 3`, `f = n = 0,00000001` e `s = 0`, a 40
+  algarismos (HALF_UP) os lados ficam IGUAIS e a compra passaria; a 64 o exigido é `1200000000000.0030000000000000000000000003`
+  e ela é barrada. Com 64, todo valor que os esquemas aceitam dá produtos exatos e a comparação é exata.
+- **MP4 — Funções puras do motor** (`packages/strategy-engine/src/risk/entry-profit-edge.ts`, exportadas pelo `index.ts`,
+  cada uma ≤ 40 linhas): `computeRoundTripCostRate({ feeRate, slippageRate })` → texto de `c`, o **lugar único do custo de
+  ida e volta** (a T4.2, depois que a spec 007 fechar, troca o `2 × (taxa + slippage)` de `packages/risk-analyst/src/market-readings.ts`
+  por ela com o dourado `analyst-1` idêntico; nada no analista muda antes disso); `computeEntryProfitEdge({ atr, close,
+  targetAtrMultiple, feeRate, slippageRate })` → `{ grossTargetRate, roundTripCostRate, netTargetRate }` em texto, com `g`
+  dividido no clone de 64 com `ROUND_FLOOR` e cortado a 12 casas para BAIXO (= o piso exato a 12 casas) e o líquido exato
+  sobre ele; `isEntryProfitable({ atr, close, targetAtrMultiple, feeRate, slippageRate, minimumNetTargetRate })` → a decisão
+  da MP2. A assinatura `isEntryProfitable({ edge, minimum })` do plan D2 foi trocada: a decisão não lê texto arredondado.
+  Equivalência provada no oráculo: como `n + c` tem no máximo 8 casas, `piso12(g) − c ≥ n` ⇔ `g − c ≥ n` (3.000 sorteios).
+- **MP5 — Onde entra em `placeEntry`** (`wallet/entry-order.ts`), nesta ordem: carteira livre (sem posição, sem pendente, sem
+  `halt`) → escala `'0'` sai em silêncio (A21) → ATR ausente ou ≤ 0 = `zero_atr` → **lucro mínimo, só se
+  `context.parameters.minimumNetTargetRate !== undefined`: barrada = `rejectEntry(..., BELOW_MINIMUM_PROFIT)`** → risco ≤ 0 =
+  `below_min_notional` → cria a ordem. A pausa do analista continua sem registro (nada de recusa em dobro); a escala `'0.25'`
+  ou `'0.5'` não muda a conta (a escala mexe no tamanho, não no alvo). A recusa usa o `rejectEntry` existente: consome uma
+  chave de ordem, então as chaves seguintes mudam SÓ nas execuções com o campo. Como `placeEntry` só existe para a entrada
+  nova, a regra não toca ordem pendente, posição, stop, alvo, venda por sinal, `exit_position`, `halt`, meta, parada do
+  usuário nem lacuna. Estado do motor: nenhum campo novo.
+- **MP6 — Vocabulário.** `ORDER_EVENT_REASON.BELOW_MINIMUM_PROFIT = 'below_minimum_profit'` (20 caracteres, cabe no
+  `varchar(32)`) e a cópia em `ORDER_REASON` de `packages/database/src/run-results/run-result.constant.ts`. A migration da
+  T2.1 (número livre NA HORA; hoje a última é `0025_run_commands_analyst` e a spec 007 pode criar outra antes) recria
+  `orders_reason_check` com o valor novo (`NOT VALID` + `VALIDATE`, como a 0025) e cria o índice PARCIAL
+  `orders_minimum_profit_idx ON orders (run_id, created_candle_time) WHERE reason = 'below_minimum_profit'` (só as linhas da
+  regra: custo zero para execução sem o campo; serve a MP8 e a contagem da MP9). O `.rollback.sql` derruba o índice e ABORTA
+  se existir linha com o motivo (nunca apaga trilha). O índice é declarado em `orders.schema.ts` com `.where(...)` e o
+  snapshot do Drizzle é regravado (senão o próximo `db:generate` o remove), e o `EXISTS` e o `count` usam o predicado
+  LITERAL (`` sql`${orders.reason} = 'below_minimum_profit'` ``), nunca `eq(orders.reason, …)`: com o valor como parâmetro,
+  o plano genérico do Postgres não usa índice parcial.
+- **MP7 — Hashes e versões.** `configHash` não muda (o campo não é da estratégia). `runHash`: campo ausente = bytes idênticos
+  (o esquema não acrescenta a chave e o JSON canônico não a vê); presente = entra no hash (é outra execução, como trocar a
+  taxa). **`ENGINE_VERSION` (`engine-2`), `ENGINE_STATE_VERSION`, `SIGNAL_ENGINE_VERSION`, `METRICS_VERSION` e
+  `RUN_PARAMETERS_SCHEMA_VERSION` NÃO mudam**, pelo precedente da A21, conferido no código: `assertStepInput` recusa estado de
+  outra versão (`ENGINE_MISMATCH`); `load-live-context.ts`, `load-backtest-context.ts` e `load-walk-forward-context.ts` falham
+  a execução com `ENGINE_VERSION_MISMATCH` quando `runs.engine_version !== ENGINE_VERSION`; `restore-live-state.ts` e
+  `restore-checkpoint.ts` só aproveitam checkpoint da mesma versão. Versão nova FALHARIA toda simulação ao vivo em andamento
+  e todo backtest/walk-forward na fila ou com checkpoint, exatamente o que a RF03 proíbe. Sem versão nova: o estado não ganha
+  campo (o mínimo mora no `RunParameters`, que a execução já carrega), o comportamento sem o campo é o antigo, exato, e a
+  prova é o dourado `engine-2` IDÊNTICO byte a byte, o `runHash` literal de `classic-scoreboard.run.json` e o dourado
+  `analyst-1` idênticos. Execução com o campo só nasce de código novo; código velho a recusa (`strictObject`), daí a MP12.
+- **MP8 — A recusa fica em `orders`, nunca em `signals`.** Ordem `rejected` com o motivo, `purpose = entry`,
+  `created_candle_time = t` e distâncias nulas, como `zero_atr`; aparece no `/log.csv`, no histórico de ordens e na
+  exportação LGPD sem código novo. `signals` é a decisão do placar e não muda (mexer nela mexeria no sinal e numa migration).
+  **`live-status` continua em 5 consultas** (hoje: execução, versão, último ponto, página de decisões com as velas, posições;
+  o teto já está cheio): `listDecisionRows` ganha a coluna `isMinimumProfitRefused` =
+  `EXISTS (SELECT 1 FROM orders WHERE <dono> AND orders.run_id = signals.run_id AND orders.created_candle_time =
+  signals.candle_time AND orders.reason = 'below_minimum_profit')`, na MESMA consulta (com o filtro de dono também em
+  `orders`, que entra no `make api-runs-mutants`). No máximo uma recusa por vela (`placeEntry` roda uma vez por passo). Assim
+  `/decisions` herda sem consulta nova, e `listDecisionMarkers` (`/chart`) ganha a mesma coluna para o pontinho do gráfico
+  concordar com a tabela. **O `outcome` NÃO ganha valor novo** (revisão do arquiteto, troca da RF07 do spec): o painel
+  publicado valida `outcome` com `z.enum([...])` fechado (`live-status.validation.ts`, `trade-chart.validation.ts`), então um
+  valor novo derrubaria o `live-status` e o `/chart` do painel velho no deploy (API antes do painel) e na reversão (painel
+  antes da API). `CandleState` ganha `isMinimumProfitRefused`; `resolveDecisionOutcome` fica: saída → venda → (não é BUY ou
+  está comprada) `waited` → **recusada = `waited`** → preencheu = `bought` → última vela = `buy_pending` → `waited`; e a
+  decisão (no `live-status`, no `/decisions` e no `/chart`) ganha o campo ADITIVO `waitReason: 'minimum_profit' | null`
+  (`'minimum_profit'` só quando a recusa existe e o `outcome` é `waited`), que o painel velho ignora (`z.object` não
+  estrito). A recusa vem ANTES da última vela (uma compra barrada nunca é "pendente"); a saída na mesma vela continua
+  ganhando.
+- **MP9 — A frase fechada** (catálogo `decision-messages.ts`, sem data nem hora), com `n > 0`:
+  `Esperou: o ganho possível até o alvo (X%) não paga o custo de ida e volta (Y%) mais o lucro mínimo que você pediu (Z%).`;
+  com `n = 0` (exatamente zero): `Esperou: o ganho possível até o alvo (X%) não paga o custo de ida e volta (Y%).`; sem os
+  números: `Esperou: o ganho possível até o alvo não pagava o custo mais o lucro mínimo.` X = `grossTargetRate` de
+  `computeEntryProfitEdge` com o ATR de `signals.indicators` de `t` (o `jsonb` devolve o mesmo `double`), o fechamento de `t`
+  (já em `DecisionRow.close`), o `targetAtrMultiple` da versão e as taxas do `RunParameters`, por `formatRatePercent(…, DOWN)`;
+  Y = `formatRatePercent(c, UP)`; Z = `formatRatePercent(n, UP)`: pt-BR, 2 casas, vírgula e milhar. X é o piso EXATO
+  (piso a 12 casas e depois a 2 de porcentagem). **Sem contradição na tela:** barrada ⇒ `g < c + n` ⇒ `piso(g) < teto(c) +
+  teto(n)`, então X nunca chega a Y + Z (propriedade no oráculo). Sem leitura de ATR, ou se a conta refeita por
+  `isEntryProfitable` disser que passaria (impossível com banco e motor de acordo), sai a frase sem números — nunca 500. "Não
+  garante lucro" fica ao lado do campo e no glossário, não em cada linha. `GET /v1/runs/:id` traz
+  `minimumProfit: { skippedEntries }` (`count(*)` no índice parcial, só do dono; `null` sem o campo); no walk-forward conta
+  só o que foi gravado, as janelas de TESTE.
+- **MP10 — Avisos.** `warnRunParameters` ganha `minimum_profit_below_cost` (`n < c`) e `no_minimum_profit_short_candle`
+  (timeframe `15m` sem o campo). Aviso não entra em hash.
+- **MP11 — Com o analista (spec 007).** O analista decide a ESCALA (A21); com escala ≠ `'0'` o motor confere o lucro mínimo.
+  `analyst-1` intacto. A porta do analista abre com `atrRate ≥ 2c`, o que implica líquido `≥ (2m − 1) × c` (0,6% com `m ≥
+  1,5` e o custo padrão; o Placar clássico tem `m = 3`), então no padrão a regra não barra a mais. A implicação vale até o
+  último algarismo: o `atrRate` do analista sai da leitura gravada e é cortado a 12 casas, então numa vela no limite exato as
+  duas travas podem discordar — vale a do motor, com a recusa gravada. Na sombra o analista não muda a simulação; a regra,
+  sim (é da execução).
+- **MP12 — O que não muda e o que muda em cada lugar.** Backtest, walk-forward (a carteira por janela recebe o MESMO
+  `run.parameters`) e ao vivo passam por `advanceCandle`/`walletStep`: a regra vale igual nos três sem mudar o
+  `run-recording`. No walk-forward a busca também roda com o mínimo, então a combinação escolhida é a melhor COM a regra.
+  Prazos (spec 003), metas, plano, "O que falta para comprar" e previsões montam o próprio `RunParameters` sem o campo:
+  intactos (D6-A). Simulação em andamento fica como está e NÃO pode ganhar o campo (mudaria o `runHash` e o checkpoint daria
+  `RUN_HASH_MISMATCH`): quem quiser a regra cria outra simulação. O alerta do Telegram de uma compra barrada já sai como
+  "Ação simulada: nenhuma (carteira já posicionada ou entrada bloqueada)" (`build-step-alert.ts` só conta ordem `created`).
+  **Decisão explícita: nesta spec o alerta fica como está** (enfileirado, com "nenhuma"); a spec não pede mudar o worker de
+  alertas. Risco aceito e levado ao usuário: quem segue o alerta pode comprar à mão justamente a operação barrada. As
+  alternativas (não enfileirar o BUY barrado, ou levar o motivo `below_minimum_profit` no texto) só entram com resposta dele.
+- **MP13 — Deploy e reversão.** Banco (CHECK + índice) → worker (dormente: só age com o campo) → API (aceita o campo, conta,
+  frase e `waitReason` aditivo; o painel velho segue abrindo) → painel (pré-preenche 0,6). Reversão: painel → API (recusa o campo) → encerrar as execuções com o campo (ao vivo,
+  na fila e com checkpoint: o código velho recusa o `RunParameters` delas) → worker → banco (o rollback aborta enquanto houver
+  recusa gravada).
+- **MP14 — Provas e oráculo.** O oráculo independente está em `test/fixtures/minimum-profit/minimum-profit-oracle.ts` (TS puro,
+  `bigint`, sem `src` nem `decimal.js`; o plan D7 citava `test/fixtures/strategy-engine/minimum-profit/`, a T0.1 o pôs onde
+  a tarefa pediu) com `test/minimum-profit-oracle.contract.test.ts`: 8 casos à mão (igual passa; 1e-12 abaixo barra; mínimo
+  zero barra alvo abaixo do custo e passa alvo igual ao custo; o exemplo 0,66%; custo e mínimo para cima; bruto para baixo; a
+  armadilha de precisão da MP3), as velas de compra dos três conjuntos reais (gravadas por
+  `scripts/record-minimum-profit-oracle-inputs.ts` em `real-buy-candles.json`) e 3.000 sorteios. **Resultado nos conjuntos
+  reais, exato:** BTCUSDT 15 min (879 compras pedidas) barra 131 / 372 / 693 / 843 com 0 / 0,3% / 0,6% / 1,0%; BTCUSDT 1 h
+  (113) barra 0 / 0 / 0 / 10; ETHUSDT 1 d (60) não barra nenhuma. Os números de 0,3%, 0,6% e 1,0% são IGUAIS aos da
+  estimativa do `spec.md` §7 (que usava divisão e corte a 6 casas). Novo: com mínimo 0, 131 compras de 15 min (15%) tinham o
+  alvo abaixo do custo. Os mutantes da Fase 1 (plan D7) ganham dois: precisão 40 no lugar de 64 (morto pela armadilha) e
+  `.optional()` no lugar de `.exactOptional()` (morto pelo `undefined` explícito).
+- **Validação (T0.1).** Revisão do `architect` (opus) em 2026-10-16: APROVADO COM AJUSTES, sem bloqueio (nada exige mudar o
+  sinal, o estado do motor nem o analista). Os ajustes entraram acima: `waitReason` aditivo no lugar de um `outcome` novo
+  (MP8), corpo da API com `exactOptional` (MP1), predicado literal e índice no esquema do Drizzle (MP6), a aproximação da
+  ordem a mercado (MP2), o alerta do Telegram como decisão explícita (MP12) e a monotonicidade do mínimo sorteada no oráculo.
+
+## Gráfico em velas menores (spec 017)
+
+Contrato da T0.1 da spec 017 (decisões A do usuário em `specs/017-grafico-em-velas-menores/evidence.md`). O gráfico passa a
+poder mostrar velas de **3 min** sobre execuções de 15 min; as decisões, o placar, a previsão, as metas, o analista e os
+prazos continuam em velas de execução. **O motor, o `run-recording` e o `risk-analyst` não mudam.** Conferido no código em
+2026-10-16.
+
+**As duas questões abertas do plan, fechadas.**
+
+- **Instante dentro da vela.** `fills` grava só `candle_time` (`fill.candleOpenTime`, `map-decisions.ts:58`): a ABERTURA da
+  vela de execução em que a ordem executou, com chave única `(run_id, order_key, candle_time)`. A compra executa na abertura
+  de `t + d` (decisão no fechamento de `t`, sem lookahead). **A saída por alvo, proteção ou lacuna também só carrega a
+  abertura da vela de 15 min em que aconteceu: o motor não sabe o minuto.** Logo o painel não pode apontar "a vela de 3 min
+  que tocou o nível" sem inventar um dado; vale D4-A: marca no início da vela de 15 min com colchete sobre as 5 de 3 min.
+- **Nome do campo do corte.** `retentionStart`: abertura (ms UTC, na grade da vela) da primeira vela que a retenção ainda
+  guarda, `ceil((agora − retenção) ÷ d) × d`. Vai em `meta` (campo ADITIVO do envelope: `{ data, meta: { retentionStart } }`),
+  só na resposta de velas de exibição; a resposta das velas de execução continua `{ data }`, byte a byte igual.
+
+| # | Decisão | Motivo |
+|---|---|---|
+| V1 | **`DISPLAY_TIMEFRAME` (`3m`) FORA de `TIMEFRAME`/`ENGINE_TIMEFRAME`/`RUN_TIMEFRAMES`.** Nascem `MARKET_CANDLE_TIMEFRAME = TIMEFRAME ∪ DISPLAY_TIMEFRAME` (mercado) e `CANDLE_TIMEFRAMES = RUN_CANDLE_TIMEFRAMES ∪ DISPLAY_CANDLE_TIMEFRAMES` (banco). `Candle<TTimeframe = Timeframe>` e `CandleRecord<TTimeframe = CandleTimeframe>` ganham o parâmetro: o padrão continua sendo a vela de execução (compatível com o motor, `toEngineCandle` intacto); o fluxo de mercado usa `MarketCandle`/`CandleRecord<StoredCandleTimeframe>`. `findCandles`, `findMissingOpenTimes` e `findLatestOpenTime` são genéricos na vela da chave, então quem lê por `run.timeframe` continua recebendo vela de execução no tipo | O teste de fronteira do motor (`ENGINE_TIMEFRAME ≡ TIMEFRAME`) e `timeframe-tables` seguem como estavam; `1m` e `5m` NÃO foram autorizados e ficam fora do CHECK |
+| V2 | **Fronteira (RNF01) com teste próprio** (`test/display-timeframe-boundary.contract.test.ts`): interseção vazia de todas as listas do motor e das execuções; `MARKET_TIMEFRAMES` recusa `3m`; `POST /v1/runs` com `3m` = `400` em `backtest` e `live_paper` e o esquema do corpo recusa mesmo com `3m` habilitado por engano; sonda que reprova qualquer menção a vela de exibição em `strategy-engine`, `run-recording`, `risk-analyst`, `worker/src/live` e `api/src/{backtest,walk-forward,goals,horizons}`; a série de cada execução nasce de `isCandleTimeframe(run.timeframe)` e `timeframe: run.timeframe` | Mutante: tirar o filtro, o guarda ou listar `3m` em `RUN_TIMEFRAMES` reprova |
+| V3 | **Ambiente.** `MARKET_DISPLAY_TIMEFRAMES` (padrão VAZIO = nenhuma vela de exibição; o plan dizia `3m`, mas padrão ligado faria todo ambiente, inclusive os de teste, baixar e assinar 3m sem pedir; `envs/env.dev` liga `3m`) e `CANDLE_DISPLAY_RETENTION_DAYS` (7 a 365, padrão 90), ambos no `marketEnvironmentShape` compartilhado. A API habilita `3m` SÓ na consulta de velas (`createMarketDependencies`); criar execução usa `MARKET_TIMEFRAMES` | Desvio registrado do padrão do plan; reversível por env |
+| V4 | **Migration aditiva `0026_candles_display_timeframes`**: recria `candles_timeframe_check` com `3m` (`NOT VALID` + `VALIDATE`, sem reescrever a tabela). `.rollback.sql` ABORTA com `restrict_violation` se existir linha `3m` | Mesma forma da 0025; autorizada |
+| V5 | **Cron.** `backfill-display-candles` (mesma tarefa do backfill, janela em DIAS: `ceil((agora − retenção) ÷ d) × d` até a vela em formação, por par, em sequência, peso e 418 como o backfill existente: 418 aborta) e `purge-display-candles` (`purgeDisplayCandles` do repositório: `DELETE ... WHERE ctid IN (SELECT ctid ... WHERE timeframe IN (<exibição>) AND open_time < $corte LIMIT $lote)` em lotes de 5.000, corte EXCLUSIVO, parametrizado; **o filtro de vela mora no repositório**, então nenhuma tarefa consegue apagar 15m, 1h, 4h ou 1d). Ambas em `TASK_NAME`/`CRON_TASKS` | Autorizado (apagar só exibição vencida) |
+| V6 | **Worker.** Assina `<par>@kline_3m` junto das demais (9 pares × 5 velas = 45 streams, limite da conexão 1.024) e grava só `x === true` com `upsertCandles` (idempotente, vela fechada imutável). A recuperação de lacuna por janela (`STREAM_GAP_LOOKBACK_HOURS`) cobre 3m; par sem nenhuma vela fica para o backfill do cron. **Vela de exibição gravada NÃO aciona `onCandleStored`** (acordaria a simulação à toa; o motor só lê vela de execução) | |
+| V7 | **API (ticker).** `kline_3m` entra na MESMA conexão do `miniTicker` quando `TICKER_KLINE_ENABLED`; a mensagem `candle` já leva `timeframe`; o agregador é 1/s por (par, vela). `GET /v1/markets/candles` aceita `3m` quando habilitada, mesmo teto de 5.000 e mesmo balde `CANDLE_QUERY` | |
+| V8 | **Opiniões em `[t + d, t + 2d)`** (D6 do plan) e o mapeamento 15 min → 3 min ficam para o painel (Fase 3, outro executor): o contrato acima (a saída só tem a abertura da vela de 15 min) é o que ele lê | |
+| V9 | **Oráculo `bigint`:** 5 velas de 3 min = a vela de 15 min gravada (abertura, máxima, mínima, fechamento, soma de volume e de `trade_count`), conferido por `SELECT` nos dados reais do dev (`scripts/display-candles-measure.ts`) e por teste no Postgres embutido. **Regra de composição (`composeCandles` do painel deve segui-la):** vela de 3 min SEM negócio (`trade_count = 0`, volume 0) carrega o fechamento anterior e NÃO define abertura, máxima nem mínima (achada nos dados reais: SHIBUSDT, 2026-07-23 02:15 e 2026-07-24 09:00); o fechamento é o da 5ª vela; volume e `trade_count` somam todas | Medido no dev em 2026-10-16: 77.751 janelas de 15 min conferidas nos 9 pares, 0 divergências com a regra e 2 com a regra ingênua |
+
+**Validação.** Esta seção foi escrita por quem implementou as Fases 0 a 2; a validação por `architect` (opus) pedida na T0.1
+não rodou nesta sessão e fica registrada como pendência em `evidence.md`. Nada aqui exige mudar o motor, o
+`run-recording` ou o analista.
+
+## Equipes de modelo (spec 015)
+
+Adendo da T0.2b da spec 015 (`specs/015-agentes-de-modelo/`, revisão 2), copiado do `plan.md` (D2 a D9) e do `spec.md`
+(DT1 a DT12, RF05 a RF17); nenhuma decisão nova. **O motor, o `advanceCandle` das execuções de regra e a regra `analyst-1`
+não mudam.** Fatos externos conferidos em 2026-10-17 estão em `specs/015-agentes-de-modelo/evidence.md` (T0.1 e T0.1b).
+
+**Regra central: a decisão do modelo é ENTRADA GRAVADA**, como a decisão do analista (A21 §4). Um LLM não é determinístico e
+custa por chamada; o motor é determinístico e o replay dá o mesmo resultado byte a byte. Logo a decisão é uma linha de
+`model_team_reports`; o passo da execução de equipe a LÊ e **nunca chama o modelo**.
+
+| # | Decisão | Fonte |
+|---|---|---|
+| M1 | **Três equipes, uma por provedor:** Nina = Gemini Pro (Google), Lucas = Claude Sonnet (Anthropic), Olívia = GPT (OpenAI). Id do modelo e preço por milhão de tokens vêm do env, sem padrão no código | DT1, RF03 |
+| M2 | **Três papéis internos fixos** (tendência, risco, gestor) numa ÚNICA chamada estruturada por vela, o mesmo prompt `team-prompt-1` nas três | DT2, RF07 |
+| M3 | **Uma chamada por (equipe, par, vela de 15 min), compartilhada** entre usuários e execuções. A entrada é só dado público de mercado (`TeamPromptInput`, `strictObject`); sem posição, saldo, usuário nem votos de outros agentes. A recomendação é uma leitura de mercado: `buy` = boa entrada, `sell` = sair ou ficar fora, `hold` = esperar | DT3, RF05, RF09 |
+| M4 | **Fila durável fora do passo:** o enfileiramento só insere a linha `pending` (`ON CONFLICT DO NOTHING`) numa transação curta PRÓPRIA no início da ronda, fora da transação do passo; um despachante do worker reivindica por arrendamento, chama o provedor e grava. Falha de provedor nunca chega a outra simulação | RF06, D2 |
+| M5 | **Relatório validado e coerente:** esquema estrito, `buy` com `stop < entrada < alvo` (texto decimal), `sell`/`hold` com preços nulos, entrada perto do fechamento e proteção a uma distância mínima; textos higienizados (controle, 160 caracteres, palavra proibida trocada por frase fixa) | RF07, RF08 |
+| M6 | **Prompt versionado:** `team-prompt-1` com hash gravado; mudar o template exige `team-prompt-2`; a chave única inclui a versão e o placar conta por versão | D3 |
+| M7 | **Custo e teto:** custo e reserva em decimal, para cima a 8 casas; reserva do máximo da chamada (inclui o teto do raciocínio) antes de chamar, sob trava consultiva; acima do teto do dia (UTC) ou do mês a linha vira `skipped`/`BUDGET_EXHAUSTED` | RF17, D4 |
+| M8 | **Circuito por provedor** (máquina de estados, relógio por parâmetro, estado em memória do worker): 3 falhas seguidas de `timeout`/`unavailable` abrem por 10 min; `rate_limited` até `Retry-After` (teto 15 min); `key_rejected` e `model_not_found` abrem por 60 min; resposta do provedor fecha. Linha com mais de 2 velas vira `skipped`/`STALE` | RF12, D5 |
+| M9 | **Placar igual ao dos outros agentes:** `scheduled` `decided` dos últimos 30 dias, ação `buy` ou `sell`, vela seguinte fechada; veredito só por `judgeAgainstCoinFlip` (`@ativada/statistics`, único lugar do Wilson); `hold`, `on_demand`, `failed` e `skipped` não contam; a confiança declarada não entra no veredito | RF16 |
+| M10 | **A equipe participa por uma execução própria** (`live_paper` com `runs.request.signalSource = { kind: 'model_team', team }`, saldo fictício próprio). O passo de equipe roda o `signalStep` da estratégia fixa `model-team-1` (regra de período ≤ ATR, avaliada e descartada) e troca `action`, `score` (`'100'`, `'-100'` ou `'0'`), `votes: []` e `reason`, mantendo `indicators` (o ATR), `regime`, `configHash`, `confirmedGapCandles` e `candleOpenTime`; sinal `null` no aquecimento segue `null`. Mapeamento 1:1: `buy` → BUY, `sell` → SELL, `hold` ou sem leitura → HOLD (a política do motor ignora o que não cabe: compra com posição e venda sem posição). O sinal vai ao `walletStep` avulso, que executa na abertura de `t + 1`. A espera da decisão **nunca dorme**: com a linha `pending` e o prazo aberto o passo devolve sem commit (`AWAITING_TEAM`); o prazo é conferido com `clock_timestamp()` do banco; passado o prazo, "equipe sem leitura" (esperar) é gravado e a decisão tardia nunca é usada. O que foi decidido por vela fica em `team_run_inputs` (mesma transação do passo) e o **replay lê essa tabela, nunca o relógio**. Sem export novo no `run-recording` e sem mudança no motor. `POST /v1/runs` com `signalSource` cria ou acha a versão `model-team-1` do usuário pelo hash, o worker recusa `configHash` diferente, `goalId` e analista com `signalSource` dão `400`, e `live-status`/`projections`/`strategy-layers` devolvem `unavailable`/`team_run` | DT4, DT12, RF14, D9 |
+| M11 | **Níveis (opção A × B):** na opção A a posição usa o stop e o alvo da configuração de risco da execução (o motor não recebe nível de fora) e os níveis da equipe são exibidos e medidos; a opção B (o modelo comanda entrada, alvo e proteção) exige comando de entrada novo, `ENGINE_VERSION`, dourado regravado e ADR, e fica fora desta entrega | DT5, D9 |
+| M12 | **Segredos e privacidade:** chaves só no worker (`secretVariables`), `redirect: 'error'`, códigos de erro sem texto, estado do provedor publicado no batimento só com booleanos e códigos; `model_team_reports` é pública (sem PII) e `user_model_teams` entra no registro LGPD | RF04, RF23, RNF02, RNF09 |
+
+**Validação.** O `architect` (opus) aprovou a opção A com os ajustes acima (entrada gravada por vela em `team_run_inputs`, enfileirar fora do passo, `AWAITING_TEAM`, replay sem relógio) em 2026-10-17.
+
+### API e banco das equipes (spec 015, T3.4)
+
+Autorizados em 2026-10-17 (migration, API e worker); o motor e `ENGINE_VERSION` não mudam.
+
+- **`model-team-1` é do sistema (migration 0028, aditiva, com rollback).** `strategies.is_system` e um índice único parcial por dono. A API a
+  acha ou cria PELO HASH (`ensureSystemStrategyVersion`, usuário travado numa transação), então duas criações juntas dão a mesma versão. Ela fica fora
+  de `GET /v1/strategies`, das rotas de estratégia (404) e do teto `STRATEGY_MAX_PER_USER`. Rollback da 0028: a coluna e o índice saem e a estratégia
+  volta a aparecer como comum.
+- **`POST /v1/runs` com `signalSource`**: só `live_paper` em 15 min; `strategyVersionId`, `goalId` e `analyst` são 400 `not_allowed_with_signal_source`;
+  equipe desligada é 409 `MODEL_TEAM_DISABLED`; `duelGroupId` não existe no corpo público (só `POST /v1/model-duels` o grava).
+- **Rotas novas** (todas com `access: USER` e `documentation`): `GET /v1/me/model-teams`, `PATCH /v1/me/model-teams/:teamKey`,
+  `GET /v1/runs/:runId/model-teams` (+ `/comparison`), `POST /v1/runs/:runId/model-teams/:teamKey/opinions`, `POST /v1/model-duels`,
+  `GET /v1/model-duels/:duelId`. Execução ou duelo alheio, inexistente ou id malformado é o mesmo 404.
+- **"Pedir opinião agora"**: a ordem das recusas é 404, `RUN_NOT_LIVE`, `ANALYST_NOT_ENABLED`, `RUN_NOT_RUNNING`, `MODEL_TEAM_DISABLED`,
+  `MODEL_TEAM_UNAVAILABLE` (batimento do worker) e, por último, 429 `MODEL_OPINION_LIMIT_REACHED`: o contador diário do USUÁRIO (soma das equipes,
+  UTC, `UPDATE` atômico sob trava) só gasta pedido depois de tudo o mais passar. O teto vem de `MODEL_TEAM_ON_DEMAND_PER_USER_PER_DAY` (padrão 20; 0 desliga).
+  A API só enfileira a linha `pending` avulsa; quem chama o provedor é o worker.
+- **Duelo**: uma `live_paper` por equipe (e, se pedido, uma da estratégia de regras do usuário) no mesmo par, vela e saldo, ligadas por
+  `runs.request.duel.groupId`; equipe desligada ou falta de vaga para TODAS é 409 e nada é criado; se uma criação falhar mesmo assim, as já criadas são canceladas.
+- **Execução de equipe nas leituras de regra**: `live-status` (`triggers.reason = team_run`), `projections` (`current.reason = team_run`, sem consulta
+  de previsões) e `strategy-layers` (`unavailable = team_run`, listas vazias) não inventam régua de placar.
+
+## Plano de operação ao vivo (`trade-plan-1`, sala da equipe)
+
+Decidido em 2026-10-20 para a "sala da equipe" da simulação ao vivo (prévia `docs/preview/equipe-ao-vivo/escritorio.html`). A auditoria da tela ao vivo
+(`docs/preview/tela-ao-vivo/auditoria.md` #3) mostrou que o painel recalculando o líquido com 8 casas erra até ~0,1% por perna na PEPE e pode trocar
+ganho por perda perto do zero: os números da sala saem prontos do servidor. O motor, `packages/run-recording` e `ENGINE_VERSION` não mudam.
+
+- **Rota irmã, não campo novo do `live-status`.** `GET /v1/runs/:runId/trade-plan` (`access: USER`, `documentation`, política `RUN_LIVE_STATUS`: agora
+  são cinco rotas no MESMO balde de 60/min). O `live-status` tem contrato fechado de no máximo 5 consultas por pedido (spec 008, L19) e o plano precisa de
+  mais duas (o interruptor e as recomendações das equipes); a rota à parte mantém o contrato e o teto do `live-status` intactos e o aviso do stream refaz as
+  duas pela mesma raiz `runs`. Só `live_paper` (outro tipo 409 `RUN_NOT_LIVE`); alheia, inexistente ou id malformado é o mesmo 404; consulta com parâmetro é 400.
+- **Consultas:** no máximo 7, todas por chave e com LIMIT (execução, versão, a última decisão com a vela — `DecisionRow` ganhou o `volume` da vela, aditivo —,
+  a posição aberta, o último ponto de patrimônio, o interruptor das equipes e `readOverview` das recomendações do par só se alguma equipe está ligada).
+  Execução fora de `running` responde com UMA consulta.
+- **`plan`** é `awaiting_entry`, `holding` ou `unavailable` (`not_running`, `stalled`, `waiting_for_data`, `no_candle`, `no_atr`, `invalid_stop`, nessa
+  ordem, sem número nenhum). Aguardando: a abertura estimada é o último fechamento gravado no tick (para cima); a compra simulada é a do motor
+  (`abertura × (1 + slippage)` no tick para cima; ordem limitada = o preço limite inteiro, o pior caso); stop e alvo saem de `computeProtectivePrices` com o
+  ATR GRAVADO da vela decidida (pela mesma porta `decimalFromIndicator`), a quantidade de `computePositionSize` com o valor em risco que a ordem guardaria
+  (`caixa × riskPerTrade`, para baixo; o caixa é o patrimônio do último ponto) e o volume da vela de decisão. **Não** usa `computePlanLevels`/`computeHoldingLevels`:
+  essas partem da meta (taxa de alvo e perda máxima) e dariam números diferentes do preenchimento real; o plano precisa bater com o `net_profit` que o motor
+  gravaria. A escala do analista (`entryRiskScale`) não entra: é a entrada cheia. Comprada: a posição gravada, "vender agora" a mercado sobre o último fechamento
+  (`fechamento × (1 − slippage)`, tick para baixo) e o líquido no alvo (sai AO PREÇO do alvo) e no stop sem gap (`stop × (1 − slippage)`, tick para baixo).
+- **Arredondamento contra o usuário:** débito e taxa para cima, crédito para baixo (as contas de `money.ts`, replicadas em `trade-plan-math.ts` como a API
+  já fazia em `money-rounding.ts`); o líquido (`net`) é exato nessa grade e a taxa sobre o débito sai para BAIXO a 12 casas; a taxa até o que se quer
+  alcançar (entrada, alvo) sobe e até o que se pode perder (stop, venda agora) desce. Preço e distância em valor são exatos (dois preços no tick).
+  `currentPrice` é o último fechamento gravado (sem o ticker ao vivo: a rota não depende do stream).
+- **Equipes:** uma linha por equipe LIGADA pelo dono (desligada não aparece). A recomendação é a AGENDADA decidida mais nova do par (avulsa não entra);
+  `buy` com os três preços vira as mesmas contas (entrada sugerida no tick para cima como abertura, alvo para cima, proteção para baixo); `hold`/`sell` é
+  `no_entry`, nenhuma é `no_report`, preços que não cabem (alvo ≤ compra, proteção acima da venda possível) é `invalid_levels`. Na execução da própria
+  equipe (`signalSource`), `wallet` traz o saldo, o resultado e a taxa dela (`computeLiveBalance`).
+- **Frases** de catálogo fechado (`trade-plan-messages.ts`), pt-BR, sem data nem hora; o aviso fixo "não é recomendação" vai em `notice`.
+- **Prova:** `test/api-run-trade-plan.contract.test.ts` (cada estado, 404/409/400, direção dos arredondamentos, oráculo `bigint` independente,
+  PEPE com tick 0,00000001 e passo 1, e paridade com `simulatedFillModel`: a ordem que o motor guardaria preenche na abertura estimada e o `net_profit`
+  no alvo, no stop e na venda a mercado é o do plano) e 7 mutantes em `test/api-run-live-status-mutants.contract.test.ts`.
+- **Fica para depois:** preço ao vivo do ticker como `currentPrice`; a escala do analista no dimensionamento previsto.
+
+## Perguntas à equipe (`questions-1`, sala de operações)
+
+**Contexto.** O dono quer perguntar aos agentes da sala sobre moedas específicas e ver a resposta no balão. Modo 1, sem modelo de linguagem e sem custo:
+perguntas rápidas de catálogo fechado, respondidas pelo servidor com as leituras que já existem. O motor, `packages/run-recording` e `ENGINE_VERSION` não mudam.
+
+- **Rota sob a execução, não `/v1/market-questions`.** `GET /v1/runs/:runId/questions?symbol=&question=` (`access: USER`, `documentation`, política
+  própria `RUN_QUESTION`, 20/min por usuário). Os agentes de regra SÃO as regras da estratégia da execução (Tiago lê a regra de tendência dela, Renata a de
+  reversão…): sem a execução não há períodos de EMA, limiares de RSI nem pesos para ler, e uma rota de mercado teria de escolher uma estratégia por conta
+  própria. Sob a execução, o dono vem do token, alheia/inexistente/id malformado é o mesmo 404, outro tipo que não `live_paper` é 409 `RUN_NOT_LIVE` (a
+  sala só existe ali) e o timeframe é o da execução. Balde próprio porque, ao errar o cache, a pergunta lê até 500 velas e refaz as leituras na thread.
+- **Perguntas:** `trend` (Tiago: a regra da família tendência, EMA de preferência), `stretch` (Renata: reversão, RSI de preferência), `volume` (Vitor: OBV),
+  `sentiment` (Sofia: Fear & Greed), `entry_gap` (Alice: o placar e o que falta para comprar), `plan` (Alice: o plano de operação) e `track_record` (Otávio:
+  o acerto da previsão contra a moeda ao ar). `symbol` é qualquer par habilitado; fora disso, pergunta fora do catálogo, campo faltando ou a mais é 400 sem eco.
+- **Nenhuma conta nova.** As leituras saem de `computeLatestTriggers` (estado aguardando entrada) sobre as últimas 500 velas FECHADAS e contíguas do par
+  pedido, com a versão da estratégia da execução e `setupFor(par, timeframe)` — o mesmo caminho dos ativos e das metas. As frases reaproveitam o
+  catálogo do próximo gatilho (`buildTriggerRuleMessage`, `buildTriggersMessage`). `plan` é a `plan.message` da rota irmã `trade-plan` e `track_record` é o
+  `summary` da rota irmã `projections` (mensagem + veredito de Wilson), chamadas como casos de uso. As duas só existem para o par da execução: outro par recebe a
+  frase do catálogo que diz isso (o plano e as previsões são da simulação, não do par).
+- **Cache** em memória da instância por (versão da estratégia, par, timeframe, última vela), 256 entradas, a mais velha sai primeiro: a mesma pergunta na
+  mesma vela não refaz a série nem relê o sentimento. A leitura das velas é uma consulta por pedido (é ela que diz qual é a última vela).
+- **Resposta:** `{ version, runId, symbol, question, agent, answer, basis, asOf, notice }`. `answer` vem do catálogo fechado `question-messages.ts` (pt-BR,
+  números pelo `live-number-format`, sem data nem hora, nada manda comprar ou vender); `basis` é `indicative` quando o indicador se move com a próxima vela ou
+  o número é estimativa (plano), `exact` nos demais; `asOf` é a vela lida (`candleTime` e `closedAt` = abertura + duração), nula quando o par não tem vela —
+  aí a resposta é "Sem dados de <par> ainda." Aquecimento incompleto tem frase própria. O Fear & Greed vale para o mercado inteiro e a resposta diz isso, e
+  diz quando a estratégia não o usa no placar.
+- **Painel:** a caixa "Pergunte à equipe" na sala (moeda + botões); quem responde vai à frente do telão pela atividade `answer` de `office-life` (pura, com o
+  trânsito e o caminho de sempre; o dono do telão cede a vez) e o balão grande mostra a resposta; o histórico "Perguntas" guarda as 5 últimas em texto, e a
+  resposta nova é anunciada pela MESMA região `aria-live` da sala (a da decisão), que agora diz o que mudou por último.
+- **Prova:** `test/api-run-questions.contract.test.ts` (cada pergunta com votos esperados de uma série que só sobe, plano e acertos iguais às rotas irmãs,
+  par sem velas, aquecimento, 404/401/400/409, o balde de 20 por minuto) e o `api-openapi` (429, 404 e 409 documentados).
+- **Fica para depois:** modo 2 (pergunta livre a uma equipe de modelo, com custo) e o acerto da previsão de outro par.

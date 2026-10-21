@@ -13,3 +13,4 @@ tmp/
 packages/dbmutant-*/
 apps/frontend-ativada/test-results/
 apps/frontend-ativada/playwright-report/
+.dev/

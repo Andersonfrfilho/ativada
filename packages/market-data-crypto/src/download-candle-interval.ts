@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { Candle } from './candle.types.js';
+import type { MarketCandle } from './candle.types.js';
 import type { OpenTimeInterval } from './group-consecutive-open-times.js';
 import type { PairKey } from './format-pair-label.js';
 import type { MarketDataClient } from './market-data.types.js';
 
-export type StoredCandle = Candle & { readonly exchange: string };
+export type StoredCandle = MarketCandle & { readonly exchange: string };
 
 export type DownloadCandleIntervalParams = {
   readonly client: Pick<MarketDataClient, 'fetchKlinesRange'>;

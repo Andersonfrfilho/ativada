@@ -113,6 +113,18 @@ export async function checkResultPagination(
       hasNoDuplicate(positions.map((position) => position.engineKey)),
     'posições',
   );
+  const newestFirst = await readAll<PositionInput, PositionCursor>(
+    (limit, after) => results.listPositions(owner.scope, runId, { limit, after, order: 'desc' }),
+    7,
+  );
+  assertCondition(
+    newestFirst.map((position) => position.engineKey).join() ===
+      positions
+        .map((position) => position.engineKey)
+        .reverse()
+        .join(),
+    'posições em ordem decrescente: o inverso exato da crescente, em páginas',
+  );
   reportCheck(
     `leitura paginada: ${SYNTHETIC_EQUITY_POINTS} pontos (páginas de 5000, 1000 e 777), ${SYNTHETIC_SIGNALS} sinais e ${SYNTHETIC_TRADES} ordens/preenchimentos/posições sem repetir nem pular`,
   );

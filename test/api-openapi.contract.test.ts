@@ -83,7 +83,10 @@ function collectErrorCodes(
       for (const [status, response] of Object.entries(asRecord(asRecord(operation)['responses']))) {
         if (Number(status) < 400) continue;
         const content = asRecord(asRecord(asRecord(response)['content'])['application/json']);
-        const error = asRecord(asRecord(asRecord(content['schema'])['properties'])['error']);
+        const properties = asRecord(asRecord(content['schema'])['properties']);
+        // O 503 de `/v1/health` é uma resposta `{ data: { status } }`, não o envelope de erro.
+        if (!('error' in properties)) continue;
+        const error = asRecord(properties['error']);
         const code = asRecord(asRecord(error['properties'])['code']);
         found.push({ operation: `${method} ${path}`, status, codes: code['enum'] as string[] });
       }
@@ -118,6 +121,25 @@ describe('OpenAPI gerado da tabela de rotas', () => {
       const fromRoutes = routes.map(routeKey).sort();
       expect(documentedKeys(document).sort()).toStrictEqual(fromRoutes);
       expect(new Set(fromRoutes).size).toBe(routes.length);
+    }
+  });
+
+  test('as rotas com limite por minuto documentam o 429 (prazos e metas)', () => {
+    const paths = asRecord(app.openApi.buildOpenApiDocument(DEVELOPMENT_ROUTES)['paths']);
+    for (const path of [
+      '/v1/horizons',
+      '/v1/goals/{goalId}/evaluation',
+      '/v1/runs/{runId}/chart',
+      '/v1/runs/{runId}/trade-summary',
+      '/v1/runs/{runId}/live-status',
+      '/v1/runs/{runId}/decisions',
+      '/v1/runs/{runId}/strategy-layers',
+      '/v1/runs/{runId}/projections',
+      '/v1/runs/{runId}/trade-plan',
+      '/v1/runs/{runId}/questions',
+    ]) {
+      const operation = asRecord(asRecord(paths[path])['get']);
+      expect(Object.keys(asRecord(operation['responses']))).toContain('429');
     }
   });
 
@@ -210,6 +232,23 @@ describe('OpenAPI gerado da tabela de rotas', () => {
     }
   });
 
+  test('todo caminho documenta o 503 DATABASE_UNAVAILABLE, menos o /v1/health, que responde 503 { status: degraded }', () => {
+    const document = app.openApi.buildOpenApiDocument(DEVELOPMENT_ROUTES);
+    for (const { operation, status, codes } of collectErrorCodes(document)) {
+      if (status !== '503') continue;
+      expect(operation).not.toBe('get /v1/health');
+      expect(codes).toContain('DATABASE_UNAVAILABLE');
+    }
+    const operations = asRecord(asRecord(document['paths'])['/v1/health']);
+    const responses = asRecord(asRecord(operations['get'])['responses']);
+    const schema = asRecord(
+      asRecord(asRecord(asRecord(responses['503'])['content'])['application/json'])['schema'],
+    );
+    const data = asRecord(asRecord(schema['properties'])['data']);
+    expect(asRecord(asRecord(data['properties'])['status'])['const']).toBe('degraded');
+    expect(asRecord(data['properties'])).toStrictEqual({ status: expect.anything() });
+  });
+
   test('as rotas novas declaram os erros próprios (404 do recurso, 400, 409, 501)', () => {
     const document = app.openApi.buildOpenApiDocument(DEVELOPMENT_ROUTES);
     const byOperation = new Map<string, Map<string, string[]>>();
@@ -225,6 +264,23 @@ describe('OpenAPI gerado da tabela de rotas', () => {
     expect(byOperation.get('post /v1/runs/{runId}/stop')?.get('409')).toStrictEqual([
       'RUN_ALREADY_FINISHED',
     ]);
+    for (const operation of [
+      'get /v1/runs/{runId}/live-status',
+      'get /v1/runs/{runId}/decisions',
+      'get /v1/runs/{runId}/trade-plan',
+      'get /v1/runs/{runId}/questions',
+    ]) {
+      expect(byOperation.get(operation)?.get('404')).toStrictEqual(['RUN_NOT_FOUND']);
+      expect(byOperation.get(operation)?.get('409')).toStrictEqual(['RUN_NOT_LIVE']);
+    }
+    for (const operation of [
+      'get /v1/runs/{runId}/strategy-layers',
+      'get /v1/runs/{runId}/projections',
+    ]) {
+      expect(byOperation.get(operation)?.get('404')).toStrictEqual(['RUN_NOT_FOUND']);
+      expect(byOperation.get(operation)?.get('400')).toStrictEqual(['REQUEST_VALIDATION_FAILED']);
+      expect(byOperation.get(operation)?.has('409')).toBe(false);
+    }
     for (const code of [
       'REQUEST_VALIDATION_FAILED',
       'GRID_TOO_LARGE',

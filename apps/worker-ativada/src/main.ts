@@ -9,11 +9,14 @@ import {
 import { MILLISECONDS_PER_SECOND, runWithEnvironment } from '@ativada/environment';
 import { createMarketDataClient, createServerClock } from '@ativada/market-data-crypto';
 
+import { createLoopOutageGuard } from './outage/loop-outage-guard.js';
 import { createAlertWiring } from './alerts/create-alert-wiring.js';
 import { loadEnvironment, type Environment } from './environment.js';
 import { createLiveRunDatabase } from './live/create-live-run-database.js';
 import { createGapConfirmation } from './live/gap-confirmation.js';
 import { createGapPolicy } from './live/create-gap-policy.js';
+import { createHeartbeatWiring } from './heartbeat/create-heartbeat-wiring.js';
+import { createModelTeamsWiring } from './model-teams/create-model-teams-wiring.js';
 import { createLiveEvaluator } from './live/live-evaluator.js';
 import type { LiveAlertingSettings } from './live/live-run.types.js';
 import { createLiveScheduler, type LiveScheduler } from './live/live-scheduler.js';
@@ -44,7 +47,7 @@ function createConfiguredWorker(params: WorkerWiringParams): Worker {
   return createWorker({
     exchange: environment.MARKET_EXCHANGE,
     symbols: environment.MARKET_SYMBOLS,
-    timeframes: environment.MARKET_TIMEFRAMES,
+    timeframes: [...environment.MARKET_TIMEFRAMES, ...environment.MARKET_DISPLAY_TIMEFRAMES],
     repository: createCandleRepository(database),
     client: createMarketDataClient({
       baseUrl: environment.BINANCE_BASE_URL,
@@ -54,6 +57,7 @@ function createConfiguredWorker(params: WorkerWiringParams): Worker {
     abortController,
     serverClock,
     logger,
+    outage: createLoopOutageGuard({ database, logger }),
     streamBaseUrl: environment.BINANCE_STREAM_URL,
     staleAfterMilliseconds: environment.STREAM_STALE_SECONDS * MILLISECONDS_PER_SECOND,
     gapLookbackHours: environment.STREAM_GAP_LOOKBACK_HOURS,
@@ -76,6 +80,7 @@ function createConfiguredLiveScheduler(params: {
   const { environment, database, logger } = params;
   return createLiveScheduler({
     logger,
+    outage: createLoopOutageGuard({ database, logger }),
     pollMilliseconds: environment.LIVE_POLL_SECONDS * MILLISECONDS_PER_SECOND,
     evaluator: createLiveEvaluator({
       claims: createLiveRunRepository(database),
@@ -84,6 +89,11 @@ function createConfiguredLiveScheduler(params: {
       heartbeatTimeoutSeconds: environment.LIVE_HEARTBEAT_TIMEOUT_SECONDS,
       isGapConfirmed: createGapConfirmation(params.unfillable),
       gapPolicy: createGapPolicy({ environment, recoveryClock: params.recoveryClock }),
+      team: {
+        deadlineMilliseconds:
+          environment.MODEL_TEAM_DECISION_DEADLINE_SECONDS * MILLISECONDS_PER_SECOND,
+        cadenceMinutes: Number(environment.MODEL_TEAM_CADENCE_MINUTES),
+      },
       logger,
       ...(params.alerting === undefined ? {} : { alerting: params.alerting }),
     }),
@@ -100,7 +110,7 @@ function reportStarted(params: {
     env: environment.ENV,
     exchange: environment.MARKET_EXCHANGE,
     symbols: environment.MARKET_SYMBOLS.length,
-    timeframes: environment.MARKET_TIMEFRAMES.length,
+    timeframes: environment.MARKET_TIMEFRAMES.length + environment.MARKET_DISPLAY_TIMEFRAMES.length,
     isAlertingEnabled: params.isAlertingEnabled,
   });
 }
@@ -126,17 +136,27 @@ function registerWorkerShutdown(params: {
   );
 }
 
-function startWorker(environment: Environment): void {
+function openWorkerResources(environment: Environment): {
+  readonly logger: WorkerLogger;
+  readonly database: ReturnType<typeof openDatabase>;
+} {
   const logger = createWorkerLogger({
     appName: WORKSPACE_NAME,
     write: (line) => process.stdout.write(line),
   });
   const database = openDatabase(environment.DATABASE_URL, {
     sslRootCertificate: environment.DATABASE_SSL_ROOT_CERT,
+    queryTimeoutSeconds: environment.DATABASE_QUERY_TIMEOUT_SECONDS,
   });
+  return { logger, database };
+}
+
+function startWorker(environment: Environment): void {
+  const { logger, database } = openWorkerResources(environment);
   const unfillable = new Set<string>();
   const recoveryClock = createRecoveryClock(() => Date.now());
   const alerts = createAlertWiring({ environment, database, logger });
+  const modelTeams = createModelTeamsWiring({ environment, database, logger });
   const live = createConfiguredLiveScheduler({
     environment,
     database,
@@ -151,13 +171,25 @@ function startWorker(environment: Environment): void {
     logger,
     abortController: new AbortController(),
     unfillable,
-    onCandleStored: live.trigger,
+    onCandleStored: () => {
+      live.trigger();
+      modelTeams.loop?.trigger();
+    },
     recoveryClock,
   });
-  live.start();
-  alerts.scheduler?.start();
+  const heartbeat = createHeartbeatWiring({
+    environment,
+    database,
+    logger,
+    readModelTeams: modelTeams.readStatus,
+  });
+  for (const starter of [live, modelTeams.loop, alerts.scheduler, heartbeat]) starter?.start();
   reportStarted({ logger, environment, isAlertingEnabled: alerts.scheduler !== undefined });
-  registerWorkerShutdown({ logger, database, stoppables: [live, alerts.scheduler, worker] });
+  registerWorkerShutdown({
+    logger,
+    database,
+    stoppables: [live, alerts.scheduler, modelTeams, worker, heartbeat],
+  });
 }
 
 runWithEnvironment({ appName: WORKSPACE_NAME, load: loadEnvironment, run: startWorker });

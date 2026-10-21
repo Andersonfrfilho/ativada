@@ -4,6 +4,7 @@ import type { BunSQLDatabase } from 'drizzle-orm/bun-sql';
 import { readOpenDatabase, type DatabaseHandle } from '../database-handle.js';
 import { ownerCondition, type OwnerScope } from '../ownership/owner-scope.js';
 import { userIdFromDatabase } from '../ownership/user-id.js';
+import { readUserRunLimits } from '../run-queue/run-limits.js';
 import { users } from '../schema/users.schema.js';
 import { DISPLAY_CURRENCY, type DisplayCurrency } from './display-currency.constant.js';
 import type { ProfilePatch, ProfileRecord } from './profile.types.js';
@@ -23,6 +24,7 @@ type ProfileRow = {
   readonly timezone: string;
   readonly alertTelegramEnabled: boolean;
   readonly telegramChatId: string | null;
+  readonly limits: unknown;
   readonly createdAt: Date;
 };
 
@@ -33,6 +35,7 @@ const PROFILE_COLUMNS = {
   timezone: users.timezone,
   alertTelegramEnabled: users.alertTelegramEnabled,
   telegramChatId: users.telegramChatId,
+  limits: users.limits,
   createdAt: users.createdAt,
 } as const;
 
@@ -48,6 +51,7 @@ function toProfileRecord(row: ProfileRow): ProfileRecord {
     timezone: row.timezone,
     alertTelegramEnabled: row.alertTelegramEnabled,
     isTelegramLinked: row.telegramChatId !== null,
+    maxActiveLivePaperRuns: readUserRunLimits(row.limits).maxActiveLivePaperRuns,
     createdAt: row.createdAt,
   };
 }

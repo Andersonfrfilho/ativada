@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import { HTTP_STATUS } from '@ativada/environment';
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 
 import {
   dataResponse,
@@ -11,6 +11,11 @@ import {
   type FakeResponder,
   type FakeRoute,
 } from './support/fake-fetch.js';
+import {
+  buildDecisionResponse,
+  buildLiveStatusResponse,
+  FIXTURE_CANDLE_TIME,
+} from './support/live-status-fixtures.js';
 import { renderApp } from './support/render-app.js';
 
 const RUN_ID = 'run-1';
@@ -113,6 +118,21 @@ function candleResponder(): FakeResponder {
   };
 }
 
+const SUMMARY = {
+  runId: RUN_ID,
+  strategyName: 'Placar clássico',
+  analystMode: null,
+  initialBalance: '10000',
+  balance: '10420.00',
+  result: '420',
+  resultRate: '0.042',
+  buyAndHold: { resultRate: '0.01', differencePoints: '3.2', comparison: 'above' },
+  buyCount: 1,
+  sellCount: 0,
+  lastDecisionAt: NOW - HOUR,
+  isWaitingForData: false,
+};
+
 function overviewRoutes(overrides: {
   readonly waitingForData?: unknown;
   readonly runs?: FakeResponder;
@@ -158,19 +178,55 @@ function overviewRoutes(overrides: {
           : pageResponse([]);
       },
     },
+    {
+      method: 'GET',
+      path: `/v1/runs/${RUN_ID}/live-status`,
+      respond: (): Response =>
+        dataResponse(
+          buildLiveStatusResponse({
+            decisions: {
+              items: [
+                buildDecisionResponse({ message: 'Faltou força: 2 regras contra.' }),
+                buildDecisionResponse({
+                  candleTime: FIXTURE_CANDLE_TIME - HOUR,
+                  outcome: 'bought',
+                  action: 'BUY',
+                  message: 'Comprou: 3 regras a favor.',
+                }),
+              ],
+              nextCursor: null,
+            },
+          }),
+        ),
+    },
+    {
+      method: 'GET',
+      path: '/v1/runs/live-summary',
+      respond: (): Response => dataResponse({ items: [SUMMARY] }),
+    },
     { method: 'GET', path: '/v1/markets/candles', respond: candleResponder() },
   ];
 }
 
 describe('overview page', () => {
+  test('links the balance card to the chart of the active live run', async () => {
+    const app = renderApp({ path: '/', isAuthenticated: true, routes: overviewRoutes({}) });
+    const balance = await screen.findByRole('region', { name: 'Sua simulação ao vivo' });
+    const link = within(balance).getByRole('link', { name: 'Ver compras e vendas no gráfico' });
+    expect(link.getAttribute('href')).toBe('/backtests/run-1');
+    fireEvent.click(link);
+    await waitFor(() => expect(app.router.state.location.pathname).toBe('/backtests/run-1'));
+    expect(await screen.findByRole('region', { name: 'Sala de operações' })).toBeDefined();
+  });
+
   test('shows the balance, the comparison with buy and hold, and the running state', async () => {
     renderApp({ path: '/', isAuthenticated: true, routes: overviewRoutes({}) });
     expect(await screen.findByRole('heading', { name: 'Visão geral' })).toBeDefined();
-    const balance = await screen.findByRole('region', { name: 'Saldo da simulação' });
+    const balance = await screen.findByRole('region', { name: 'Sua simulação ao vivo' });
     expect(balance.textContent).toContain('10.420,00');
     expect(balance.textContent).toContain('+4,20%');
     expect(balance.textContent).toContain('10.000,00');
-    expect((await screen.findByText('Rodando')).tagName).toBeDefined();
+    expect((await screen.findAllByText('Rodando')).length).toBeGreaterThan(0);
   });
 
   test('marks the buys and sells on the balance curve, by shape and not only by colour', async () => {
@@ -218,15 +274,26 @@ describe('overview page', () => {
     expect(await screen.findByText('Aguardando dados do mercado')).toBeDefined();
   });
 
-  test('lists the latest signals with their reason, newest first, in words and not only colour', async () => {
+  test('lists the latest decisions, including the ones that waited, in words and not only colour', async () => {
     renderApp({ path: '/', isAuthenticated: true, routes: overviewRoutes({}) });
-    const list = await screen.findByRole('list', { name: 'Últimos sinais' });
+    const list = await screen.findByRole('list', { name: 'Últimas decisões' });
     const items = within(list).getAllByRole('listitem');
-    // Neutro não é aviso: só compra e venda entram, do mais novo para o mais antigo.
     expect(items).toHaveLength(2);
-    expect(items[0]?.textContent).toContain('Venda');
-    expect(items[0]?.textContent).toContain('reversão e RSI esticado');
-    expect(items[1]?.textContent).toContain('Compra');
+    expect(items[0]?.textContent).toContain('Esperou');
+    expect(items[0]?.textContent).toContain('Faltou força: 2 regras contra.');
+    expect(items[1]?.textContent).toContain('Comprou');
+  });
+
+  test('the overview and the active goal card share ONE request for the live runs', async () => {
+    const withGoal = { ...RUN, goalId: 'goal-1' };
+    const { fake } = renderApp({
+      path: '/',
+      isAuthenticated: true,
+      routes: overviewRoutes({ runs: (): Response => pageResponse([withGoal]) }),
+    });
+    await screen.findByRole('list', { name: 'Últimas decisões' });
+    await screen.findByRole('article', { name: 'BTC/USDT' });
+    expect(fake.callsTo('GET', '/v1/runs')).toHaveLength(1);
   });
 
   test('shows a card per configured coin with the latest price and the 24 h change', async () => {

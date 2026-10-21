@@ -8,7 +8,10 @@
     "@ativada/environment": "workspace:*",
     "@ativada/identity-admin": "workspace:*",
     "@ativada/market-data-crypto": "workspace:*",
+    "@ativada/model-agents": "workspace:*",
+    "@ativada/risk-analyst": "workspace:*",
     "@ativada/run-recording": "workspace:*",
+    "@ativada/statistics": "workspace:*",
     "@ativada/strategy-engine": "workspace:*",
     "jose": "6.2.12"
   }

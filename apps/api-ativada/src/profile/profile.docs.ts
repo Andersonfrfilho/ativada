@@ -20,6 +20,7 @@ export const PROFILE_VIEW_SCHEMA = z.strictObject({
   timezone: z.string(),
   alertTelegramEnabled: z.boolean(),
   telegramLinked: z.boolean(),
+  limits: z.strictObject({ maxActiveLivePaperRuns: z.number().int().min(1) }),
   createdAt: isoDateTimeSchema,
 });
 

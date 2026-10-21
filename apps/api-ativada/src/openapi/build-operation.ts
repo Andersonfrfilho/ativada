@@ -78,6 +78,9 @@ function buildSuccess(success: DocumentedSuccess, scope: SchemaScope): JsonObjec
   }
   const properties: JsonObject = { data };
   const required = ['data'];
+  if (success.meta !== undefined) {
+    properties['meta'] = convertInto(success.meta, 'output', scope);
+  }
   if (success.isList === true) {
     properties['pagination'] = { $ref: `#/components/schemas/${PAGINATION_SCHEMA_KEY}` };
     required.push('pagination');
@@ -151,6 +154,8 @@ function buildResponses(
     responses[String(success.status)] = buildSuccess(success, scope);
   }
   for (const [status, codes] of collectErrors(route, documentation)) {
+    // Um sucesso declarado para o mesmo status vale mais que o erro comum (o 503 do `/v1/health` é resposta, não erro).
+    if (String(status) in responses) continue;
     responses[String(status)] = buildErrorResponse(codes);
   }
   return responses;

@@ -28,7 +28,7 @@ setDefaultTimeout(120_000);
 
 const GOALS = '/v1/goals';
 const DAY = 24 * HOUR;
-const WITHOUT_CANDLES = 'ADAUSDT';
+const WITHOUT_CANDLES = 'LINKUSDT';
 const BASE_GOAL = { symbol: 'BTCUSDT', targetRate: '0.02', horizonDays: 30, maxLossRate: '0.05' };
 
 type Combination = {

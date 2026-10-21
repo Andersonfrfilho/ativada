@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 
 import { InReais } from '../exchange/InReais.component.js';
 import { formatChangePercent, formatPrice, formatSymbol } from '../format/format.js';
+import { PriceVariation } from '../live/PriceVariation.component.js';
 import { useShownPrice, type ShownPrice } from '../live/useShownPrice.hook.js';
 import controls from '../styles/Controls.module.css';
 import styles from './Overview.module.css';
@@ -35,6 +36,7 @@ export function CoinCard({ symbol }: CoinCardProps): ReactElement {
           >
             {shown.change === undefined ? '—' : `${formatChangePercent(shown.change)} em 24 h`}
           </p>
+          <PriceVariation symbol={symbol} />
           <p className={controls.muted}>{describeFreshness(shown)}</p>
         </>
       )}

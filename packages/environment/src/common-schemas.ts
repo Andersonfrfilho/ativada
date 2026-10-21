@@ -13,6 +13,24 @@ const MAX_PEM_LENGTH = 65_536;
 const PEM_CERTIFICATE_PATTERN =
   /^\s*-----BEGIN CERTIFICATE-----[\s\S]+-----END CERTIFICATE-----\s*$/;
 
+export const DATABASE_QUERY_TIMEOUT_MINIMUM_SECONDS = 5;
+export const DATABASE_QUERY_TIMEOUT_MAXIMUM_SECONDS = 300;
+export const DATABASE_QUERY_TIMEOUT_DEFAULT_SECONDS = 30;
+const DATABASE_QUERY_TIMEOUT_EXPECTATION = `inteiro de ${DATABASE_QUERY_TIMEOUT_MINIMUM_SECONDS} a ${DATABASE_QUERY_TIMEOUT_MAXIMUM_SECONDS}`;
+
+// Perfil longo (cron e threads de backtest e walk-forward): a transação da purga LGPD e a busca do walk-forward passam de 30 s legitimamente.
+export const DATABASE_LONG_QUERY_TIMEOUT_MINIMUM_SECONDS = 30;
+export const DATABASE_LONG_QUERY_TIMEOUT_MAXIMUM_SECONDS = 3600;
+export const DATABASE_LONG_QUERY_TIMEOUT_DEFAULT_SECONDS = 600;
+const DATABASE_LONG_QUERY_TIMEOUT_EXPECTATION = `inteiro de ${DATABASE_LONG_QUERY_TIMEOUT_MINIMUM_SECONDS} a ${DATABASE_LONG_QUERY_TIMEOUT_MAXIMUM_SECONDS}`;
+
+export const WORKER_HEARTBEAT_MINIMUM_SECONDS = 5;
+export const WORKER_HEARTBEAT_MAXIMUM_SECONDS = 120;
+export const WORKER_HEARTBEAT_DEFAULT_SECONDS = 15;
+// Sem batida por tantos intervalos, o worker é dado como parado (ADR 0002, H3).
+export const WORKER_HEARTBEAT_STALE_INTERVALS = 3;
+const WORKER_HEARTBEAT_EXPECTATION = `inteiro de ${WORKER_HEARTBEAT_MINIMUM_SECONDS} a ${WORKER_HEARTBEAT_MAXIMUM_SECONDS}`;
+
 export const httpUrlSchema = z.url({ protocol: /^https?$/, error: URL_EXPECTATION });
 
 export const webSocketUrlSchema = z.url({
@@ -33,6 +51,34 @@ const LIST_SEPARATOR = ',';
 export const commaSeparatedTextSchema = z
   .string()
   .transform((text) => text.split(LIST_SEPARATOR).map((entry) => entry.trim()));
+
+// Teto de tempo por consulta ou transação: sem ele, uma conexão muda prende a ronda para sempre (ADR 0002, spec 006 R4).
+export const databaseQueryTimeoutSecondsSchema = z.coerce
+  .number({ error: DATABASE_QUERY_TIMEOUT_EXPECTATION })
+  .int({ error: DATABASE_QUERY_TIMEOUT_EXPECTATION })
+  .min(DATABASE_QUERY_TIMEOUT_MINIMUM_SECONDS, { error: DATABASE_QUERY_TIMEOUT_EXPECTATION })
+  .max(DATABASE_QUERY_TIMEOUT_MAXIMUM_SECONDS, { error: DATABASE_QUERY_TIMEOUT_EXPECTATION })
+  .default(DATABASE_QUERY_TIMEOUT_DEFAULT_SECONDS);
+
+// Teto por unidade do perfil longo (cron, thread de backtest e de walk-forward); a API e o worker usam o curto acima.
+export const databaseLongQueryTimeoutSecondsSchema = z.coerce
+  .number({ error: DATABASE_LONG_QUERY_TIMEOUT_EXPECTATION })
+  .int({ error: DATABASE_LONG_QUERY_TIMEOUT_EXPECTATION })
+  .min(DATABASE_LONG_QUERY_TIMEOUT_MINIMUM_SECONDS, {
+    error: DATABASE_LONG_QUERY_TIMEOUT_EXPECTATION,
+  })
+  .max(DATABASE_LONG_QUERY_TIMEOUT_MAXIMUM_SECONDS, {
+    error: DATABASE_LONG_QUERY_TIMEOUT_EXPECTATION,
+  })
+  .default(DATABASE_LONG_QUERY_TIMEOUT_DEFAULT_SECONDS);
+
+// Intervalo do batimento do worker; a API usa o mesmo valor para decidir quando a última batida já está velha.
+export const workerHeartbeatSecondsSchema = z.coerce
+  .number({ error: WORKER_HEARTBEAT_EXPECTATION })
+  .int({ error: WORKER_HEARTBEAT_EXPECTATION })
+  .min(WORKER_HEARTBEAT_MINIMUM_SECONDS, { error: WORKER_HEARTBEAT_EXPECTATION })
+  .max(WORKER_HEARTBEAT_MAXIMUM_SECONDS, { error: WORKER_HEARTBEAT_EXPECTATION })
+  .default(WORKER_HEARTBEAT_DEFAULT_SECONDS);
 
 // A CA (ou a cadeia) em PEM, para um serviço que o sistema operacional não conhece (o Postgres do Railway): o valor
 // pode vir de uma variável de uma linha só, com `\n` literal no lugar das quebras.

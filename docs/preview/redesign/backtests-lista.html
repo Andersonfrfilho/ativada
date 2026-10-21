@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backtests · AtivAdA (preview)</title>
+<style>
+/* Tokens: copiados de apps/frontend-ativada/src/styles/global.css + escalas novas propostas (marcadas "novo") */
+:root {
+  --bg: #f2f4f8; --surface: #ffffff; --surface-2: #ebeef4; --line: #d8dee9;
+  --ink: #10162a; --ink-2: #47516c; --ink-3: #5f6b86;
+  --accent: #2541b2; --accent-soft: #e1e7fb; --on-accent: #ffffff;
+  --buy: #087a52; --buy-soft: #dbf2e8; --sell: #c0353d; --sell-soft: #fbe3e4;
+  --warn: #7a4f00; --warn-soft: #fbf0d9; --bench: #66708c;
+  --font-body: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-data: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --gutter: 16px;
+  /* novo: escalas */
+  --text-xs: 12px; --text-sm: 13px; --text-md: 15px; --text-lg: 18px; --text-xl: 22px; --text-2xl: 30px; --text-3xl: 40px;
+  --radius-card: 14px; --radius-control: 10px; --radius-pill: 999px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+  --shadow-card: 0 1px 2px rgb(16 22 42 / 0.04), 0 4px 16px rgb(16 22 42 / 0.04);
+  --motion-fast: 160ms; --motion-base: 240ms; --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0b0f1c; --surface: #131a2c; --surface-2: #1a2238; --line: #262f4b;
+    --ink: #e8ecf6; --ink-2: #a8b1c8; --ink-3: #8a94ad;
+    --accent: #8ea3ff; --accent-soft: #1e2954; --on-accent: #0b0f1c;
+    --buy: #41cc94; --buy-soft: #0e2d23; --sell: #ff7d83; --sell-soft: #3a191e;
+    --warn: #f2c26b; --warn-soft: #33270f; --bench: #8b94ad;
+    --shadow-card: none; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0b0f1c; --surface: #131a2c; --surface-2: #1a2238; --line: #262f4b;
+  --ink: #e8ecf6; --ink-2: #a8b1c8; --ink-3: #8a94ad;
+  --accent: #8ea3ff; --accent-soft: #1e2954; --on-accent: #0b0f1c;
+  --buy: #41cc94; --buy-soft: #0e2d23; --sell: #ff7d83; --sell-soft: #3a191e;
+  --warn: #f2c26b; --warn-soft: #33270f; --bench: #8b94ad;
+  --shadow-card: none; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--font-body); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4, p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 3px; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.muted { color: var(--ink-3); }
+.small { font-size: var(--text-sm); }
+.xs { font-size: var(--text-xs); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+svg.icon { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -3px; }
+svg.icon.sm { width: 14px; height: 14px; vertical-align: -2px; }
+
+/* Faixa de aviso */
+.notice-strip { background: var(--warn-soft); color: var(--warn); font-size: var(--text-xs); text-align: center; padding: 6px var(--gutter); }
+.notice-strip strong { font-weight: 600; }
+
+/* Cabeçalho */
+.topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.topbar-inner { max-width: 1180px; margin: 0 auto; padding: 0 var(--gutter); height: 60px; display: flex; align-items: center; gap: var(--space-4); }
+.brand { font: 700 19px/1 var(--font-display); color: var(--ink); text-decoration: none; letter-spacing: -0.02em; }
+.brand span { color: var(--accent); }
+.nav { display: flex; gap: 2px; flex: 1; min-width: 0; }
+.nav a { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 12px; border-radius: var(--radius-control); color: var(--ink-2); text-decoration: none; font-size: 14.5px; white-space: nowrap; }
+.nav a:hover { background: var(--surface-2); color: var(--ink); }
+.nav a[aria-current='page'] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.top-actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
+.icon-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; height: 44px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); color: var(--ink-2); cursor: pointer; font-size: var(--text-sm); }
+.icon-button:hover { color: var(--ink); border-color: var(--ink-3); }
+.menu-toggle { display: none; }
+.mobile-nav { display: none; }
+@media (max-width: 1023px) {
+  .nav { display: none; }
+  .menu-toggle { display: inline-flex; }
+  .mobile-nav[data-open='true'] { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px var(--gutter) 12px; border-top: 1px solid var(--line); }
+  .mobile-nav a { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: var(--radius-control); color: var(--ink-2); text-decoration: none; }
+  .mobile-nav a[aria-current='page'] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .hide-mobile { display: none; }
+}
+
+/* Página */
+.page { max-width: 1180px; margin: 0 auto; padding: var(--space-6) var(--gutter) 64px; }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-5); }
+.page-head h1 { font: 600 var(--text-2xl)/1.15 var(--font-display); letter-spacing: -0.02em; }
+.page-head .sub { color: var(--ink-3); font-size: var(--text-sm); margin-top: 4px; }
+.crumbs { font-size: var(--text-sm); color: var(--ink-3); margin-bottom: 6px; }
+.crumbs a { color: var(--ink-2); }
+.grid { display: grid; gap: var(--space-4); }
+.grid-2 { grid-template-columns: 1fr; }
+.grid-main { grid-template-columns: 1fr; }
+@media (min-width: 900px) { .grid-2 { grid-template-columns: 1fr 1fr; } .grid-main { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); } }
+.stack { display: grid; gap: var(--space-4); align-content: start; }
+
+/* Cartão */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: var(--space-5); box-shadow: var(--shadow-card); min-width: 0; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap; }
+.card-title { display: flex; align-items: center; gap: 8px; font: 600 var(--text-lg)/1.25 var(--font-display); letter-spacing: -0.01em; }
+.card-title .icon { color: var(--ink-3); }
+.card-kicker { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 600; }
+.card-foot { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; justify-content: space-between; font-size: var(--text-sm); }
+.link-arrow { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; font-weight: 600; text-decoration: none; }
+.link-arrow:hover { text-decoration: underline; }
+
+/* Selos (sempre ícone + palavra + cor) */
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: var(--radius-pill); font-size: var(--text-sm); font-weight: 600; white-space: nowrap; background: var(--surface-2); color: var(--ink-2); }
+.chip.buy { background: var(--buy-soft); color: var(--buy); }
+.chip.sell { background: var(--sell-soft); color: var(--sell); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.info { background: var(--accent-soft); color: var(--accent); }
+.chip.outline { background: transparent; border: 1px solid var(--line); font-weight: 500; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+
+/* Linha de pulso ao vivo */
+.pulse { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 12px 16px; border-radius: var(--radius-card); background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--buy); font-size: var(--text-sm); color: var(--ink-2); margin-bottom: var(--space-4); }
+.pulse-item { display: inline; white-space: nowrap; }
+.pulse-item strong { color: var(--ink); font-weight: 600; }
+.pulse-state { display: inline-flex; align-items: center; gap: 8px; color: var(--buy); font-weight: 700; }
+.live-dot { position: relative; width: 10px; height: 10px; border-radius: 50%; background: var(--buy); }
+.live-dot::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--buy); opacity: 0; }
+.live-dot.blink::after { animation: ping 900ms var(--ease-out) 1; }
+@keyframes ping { from { opacity: 0.8; transform: scale(0.5); } to { opacity: 0; transform: scale(1.5); } }
+.flash { animation: flash 700ms ease-out 1; }
+@keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
+.countdown { font-family: var(--font-data); color: var(--ink); font-weight: 600; }
+.pulse-sep { color: var(--line); }
+@media (max-width: 640px) { .pulse { display: grid; grid-template-columns: 1fr; gap: 4px; } .pulse-sep { display: none; } .pulse-item { white-space: normal; } }
+
+/* Números grandes */
+.kpis { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.kpi { padding: var(--space-4); border-radius: 12px; background: var(--surface-2); min-width: 0; }
+.kpi-label { display: flex; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--ink-2); font-weight: 600; }
+.kpi-value { font: 600 var(--text-xl)/1.2 var(--font-data); margin-top: 6px; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.kpi-value .unit { font: 500 var(--text-sm) var(--font-body); color: var(--ink-3); margin-left: 4px; }
+.kpi-note { font-size: var(--text-sm); color: var(--ink-3); margin-top: 4px; }
+.hero-value { font: 600 var(--text-3xl)/1.05 var(--font-data); letter-spacing: -0.03em; }
+.hero-value .unit { font: 500 var(--text-md) var(--font-body); color: var(--ink-3); margin-left: 6px; letter-spacing: 0; }
+.delta { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; font-family: var(--font-data); }
+.delta.up { color: var(--buy); } .delta.down { color: var(--sell); } .delta.flat { color: var(--ink-2); }
+
+/* Frase-veredito */
+.verdict { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); color: var(--ink); font-size: var(--text-md); }
+.verdict .icon { color: var(--accent); margin-top: 3px; }
+.verdict.warn { background: var(--warn-soft); } .verdict.warn .icon { color: var(--warn); }
+
+/* Barras de progresso com rótulo */
+.meter { display: grid; gap: 6px; }
+.meter-row { display: flex; justify-content: space-between; gap: 8px; font-size: var(--text-sm); color: var(--ink-2); flex-wrap: wrap; }
+.meter-row strong { color: var(--ink); }
+.track { position: relative; height: 10px; border-radius: var(--radius-pill); background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+.track > i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--accent); }
+.track.time > i { background: var(--bench); }
+.track.loss > i { background: var(--warn); }
+
+/* Botões */
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: var(--radius-control); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-weight: 600; cursor: pointer; text-decoration: none; font-size: 15px; }
+.button:hover { border-color: var(--ink-3); }
+.button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.button.danger { color: var(--sell); border-color: color-mix(in srgb, var(--sell) 45%, var(--line)); }
+.button.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+
+/* Tabela que vira lista em 375 px */
+.table-wrap { width: 100%; }
+table.data { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+table.data th { text-align: left; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.data td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+table.data tbody tr:nth-child(even of :not(.detail-row)) td { background: color-mix(in srgb, var(--surface-2) 45%, transparent); }
+table.data .right { text-align: right; }
+@media (max-width: 700px) {
+  table.data.stack-mobile thead { display: none; }
+  table.data.stack-mobile, table.data.stack-mobile tbody, table.data.stack-mobile tr, table.data.stack-mobile td { display: block; width: 100%; }
+  table.data.stack-mobile tr { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  table.data.stack-mobile td { border: 0; padding: 2px 0; background: none !important; }
+  table.data.stack-mobile td[data-label]::before { content: attr(data-label) ' '; color: var(--ink-3); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-right: 6px; }
+  table.data.stack-mobile .right { text-align: left; }
+}
+
+/* Gráfico */
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart .grid-line { stroke: var(--line); stroke-width: 1; }
+.chart .axis-text { fill: var(--ink-3); font: 11px var(--font-data); }
+.chart .series { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .series.bench { stroke: var(--bench); stroke-dasharray: 5 4; }
+.chart .wait-dot { fill: var(--surface); stroke: var(--ink-2); stroke-width: 2; }
+.chart .crosshair { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart .hit { fill: transparent; cursor: crosshair; }
+.chart .direct-label { font: 600 12px var(--font-body); }
+.tooltip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: var(--text-sm); padding: 8px 10px; border-radius: 8px; min-width: 150px; transform: translate(-50%, calc(-100% - 12px)); opacity: 0; transition: opacity var(--motion-fast); z-index: 5; }
+.tooltip[data-show='true'] { opacity: 1; }
+.tooltip strong { display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--text-sm); color: var(--ink-2); margin-top: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch-line { width: 18px; height: 0; border-top: 2px solid var(--accent); }
+.swatch-line.bench { border-top: 2px dashed var(--bench); }
+.swatch-dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--ink-3); background: var(--surface); }
+
+/* "Por que está assim" */
+.why { margin-top: var(--space-8); border: 1px dashed var(--ink-3); border-radius: var(--radius-card); background: var(--surface); }
+.why > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 var(--space-5); font-weight: 600; }
+.why > summary::-webkit-details-marker { display: none; }
+.why > summary .chev { margin-left: auto; transition: transform var(--motion-fast); }
+.why[open] > summary .chev { transform: rotate(180deg); }
+.why-body { padding: 0 var(--space-5) var(--space-5); display: grid; gap: var(--space-3); }
+.why-item { display: grid; gap: 2px; padding: 12px 14px; border-radius: 10px; background: var(--surface-2); font-size: 14.5px; }
+.why-item b { font-size: var(--text-sm); color: var(--accent); }
+.why-item .h { font-size: var(--text-xs); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.anchor-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--accent); color: var(--on-accent); font: 700 11px var(--font-body); vertical-align: 2px; margin-left: 6px; }
+
+/* Seletor de estado do preview (não é do produto) */
+.preview-switch { display: inline-flex; padding: 4px; gap: 4px; border-radius: var(--radius-pill); background: var(--surface-2); border: 1px solid var(--line); }
+.preview-switch button { min-height: 36px; padding: 0 14px; border-radius: var(--radius-pill); border: 0; background: transparent; cursor: pointer; font-size: var(--text-sm); font-weight: 600; color: var(--ink-2); }
+.preview-switch button[aria-pressed='true'] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-card); outline: 1px solid var(--line); }
+.preview-note { font-size: var(--text-xs); color: var(--ink-3); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+@media (max-width: 640px) { .card { padding: var(--space-4); } .hero-value { font-size: 32px; } .page-head h1 { font-size: 24px; } }
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></symbol><symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol><symbol id="i-wallet" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M16 15h2"/></symbol><symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></symbol><symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol><symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></symbol><symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></symbol><symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol><symbol id="i-equal" viewBox="0 0 24 24"><path d="M5 9h14M5 15h14"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 21h20z"/><path d="M12 10v4"/><path d="M12 17.5v.5"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.5v.5"/></symbol><symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol><symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol><symbol id="i-chevright" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol><symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></symbol><symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol><symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-sort" viewBox="0 0 24 24"><path d="M8 4v16"/><path d="m4 16 4 4 4-4"/><path d="M16 20V4"/><path d="m12 8 4-4 4 4"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="m10 8-4 4 4 4"/><path d="M6 12h10"/></symbol><symbol id="i-columns" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></symbol><symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="m12 18 4-6"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol><symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol><symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><path d="M12 17.5v.5"/></symbol><symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></symbol></svg>
+<div class="notice-strip"><strong>Simulação com dinheiro fictício.</strong> Nada aqui é recomendação de investimento.</div>
+<header class="topbar"><div class="topbar-inner">
+  <a class="brand" href="index.html">Ativ<span>AdA</span></a>
+  <nav class="nav" aria-label="Principal"><a href="visao-geral.html"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>Visão geral</a><a href="meta-e-ranking.html"><svg class="icon" aria-hidden="true"><use href="#i-target"/></svg>Metas</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Prazos</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-wallet"/></svg>Ativos</a><a href="backtests-lista.html" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>Backtests</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg>Estratégias</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>Alertas</a></nav>
+  <div class="top-actions">
+    <span class="chip buy" title="Os preços chegam da Binance a cada segundo"><span class="live-dot" aria-hidden="true"></span><span>Preços ao vivo</span></span>
+    <button class="icon-button" type="button" data-theme-toggle><svg class="icon" aria-hidden="true"><use href="#i-sun"/></svg><span class="hide-mobile" data-theme-text>automático</span></button>
+    <a class="icon-button hide-mobile" href="#" aria-label="Conta"><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg></a>
+    <button class="icon-button menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="mobile-nav" aria-label="Abrir menu"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+  </div>
+</div>
+<nav class="mobile-nav" id="mobile-nav" data-open="false" aria-label="Principal (celular)"><a href="visao-geral.html"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>Visão geral</a><a href="meta-e-ranking.html"><svg class="icon" aria-hidden="true"><use href="#i-target"/></svg>Metas</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Prazos</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-wallet"/></svg>Ativos</a><a href="backtests-lista.html" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>Backtests</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg>Estratégias</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>Alertas</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>Conta</a><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg>Sair</a></nav>
+</header>
+<style>
+.form-grid { display: grid; gap: 12px; align-items: start; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.form-grid .wide { grid-column: span 2; }
+@media (max-width: 420px) { .form-grid .wide { grid-column: auto; } }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label { font-size: var(--text-sm); font-weight: 600; color: var(--ink-2); }
+.field .control { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); font-size: 15px; min-width: 0; }
+.field .control span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.field .hint { font-size: 12px; color: var(--ink-3); }
+.new-bt > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.new-bt > summary::-webkit-details-marker { display: none; }
+.new-bt[open] > summary { margin-bottom: var(--space-4); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filter-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: var(--radius-pill); border: 1px solid var(--line); background: var(--surface); font-size: 13.5px; cursor: pointer; color: var(--ink-2); }
+.filter-chip[aria-pressed='true'] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.group { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin-top: 10px; overflow: hidden; }
+.group > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 12px 16px; min-height: 56px; background: var(--surface-2); }
+.group > summary::-webkit-details-marker { display: none; }
+.group-title { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.group .chev { transition: transform var(--motion-fast); }
+.group[open] .chev { transform: rotate(90deg); }
+.group-stats { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; color: var(--ink-2); }
+.bt-table td, .bt-table th { padding-left: 12px; padding-right: 12px; }
+.check-cell { width: 56px; }
+.check { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; cursor: pointer; }
+.check input { width: 20px; height: 20px; margin: 0; }
+.pair-link { font-weight: 600; text-decoration: none; display: inline-flex; min-height: 44px; align-items: center; }
+.pair-link:hover { text-decoration: underline; }
+.result-col { width: 44%; }
+.res { display: grid; grid-template-columns: 1fr 96px; gap: 12px; align-items: center; }
+.res .delta { justify-content: flex-end; }
+.res-track { position: relative; height: 10px; }
+.res-track::before { content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--ink-3); }
+.res-bar { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+.res-bar.neg { right: 50%; width: var(--w); background: var(--sell); }
+.res-bar.pos { left: 50%; width: var(--w); background: var(--buy); }
+.sort-button { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; padding: 0; font: inherit; color: var(--accent); text-transform: inherit; letter-spacing: inherit; cursor: pointer; min-height: 32px; }
+.group-more { padding: 12px 16px; border-top: 1px solid var(--line); }
+.compare-bar { position: sticky; top: 72px; z-index: 10; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); padding: 8px 8px 8px 16px; border-radius: 12px; background: var(--ink); color: var(--bg); font-size: 14px; }
+.compare-bar .button { background: var(--bg); color: var(--ink); border-color: transparent; }
+.compare-bar .button[aria-disabled='true'] { opacity: 0.6; cursor: not-allowed; }
+.live-row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+@media (max-width: 700px) {
+  table.data.bt-table tbody tr { display: grid !important; grid-template-columns: 48px 1fr; column-gap: 4px; padding: 4px 12px 8px 0; }
+  .bt-table td.check-cell { grid-row: 1 / span 3; width: auto; }
+  .bt-table td[data-label]::before { content: none !important; }
+  .bt-table td[data-label='Par'] .pair-link { min-height: 36px; }
+  .bt-table td[data-label='Período'] { font-size: 12.5px; color: var(--ink-3); }
+  .result-col { width: auto; } .res { grid-template-columns: 1fr auto; }
+  .hide-small { display: none; }
+}
+</style>
+<main class="page">
+  <div class="page-head">
+    <div><h1>Backtests</h1><p class="sub">Testes de estratégias no histórico e a simulação que está rodando agora.</p></div>
+  </div>
+
+  <section class="card" aria-labelledby="live-title">
+    <div class="live-row">
+      <div><p class="card-kicker">Simulação ao vivo</p><h2 class="card-title" id="live-title">LINK/USDT · Rompimento Donchian<span class="anchor-badge">1</span></h2>
+      <p class="small muted">vela de 1 h · desde 13/10 às 18:37 · última decisão 10:00: esperou · próxima em <span class="countdown" data-countdown>23:12</span></p></div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span class="chip buy"><span class="live-dot" aria-hidden="true"></span>Rodando</span><span class="delta flat"><svg class="icon sm" aria-hidden="true"><use href="#i-equal"/></svg>0,00%</span><a class="button" href="simulacao-ao-vivo.html">Acompanhar<svg class="icon sm" aria-hidden="true"><use href="#i-chevright"/></svg></a></div>
+    </div>
+  </section>
+
+  <details class="card new-bt" style="margin-top:var(--space-4)" open>
+    <summary><h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Novo backtest<span class="anchor-badge">2</span></h2><span class="small muted">Testa uma estratégia num período passado. Leva de segundos a poucos minutos.</span></summary>
+    <div class="form-grid">
+      <div class="field wide"><label>Estratégia</label><div class="control"><span>Sentimento contrário</span><svg class="icon sm" aria-hidden="true"><use href="#i-chev"/></svg></div></div>
+      <div class="field"><label>Versão</label><div class="control"><span>versão 1</span><svg class="icon sm" aria-hidden="true"><use href="#i-chev"/></svg></div></div>
+      <div class="field"><label>Par</label><div class="control"><span>BTC/USDT</span><svg class="icon sm" aria-hidden="true"><use href="#i-chev"/></svg></div></div>
+      <div class="field"><label>Vela</label><div class="control"><span>1 hora</span><svg class="icon sm" aria-hidden="true"><use href="#i-chev"/></svg></div></div>
+      <div class="field"><label>De</label><div class="control"><span>16/04/2026</span><svg class="icon sm" aria-hidden="true"><use href="#i-calendar"/></svg></div></div>
+      <div class="field"><label>Até</label><div class="control"><span>13/10/2026</span><svg class="icon sm" aria-hidden="true"><use href="#i-calendar"/></svg></div></div>
+      <div class="field"><label>Saldo inicial</label><div class="control"><span>10.000</span><span class="muted small">USDT</span></div></div>
+      <div class="field"><label>Taxa por ordem</label><div class="control"><span>0,10</span><span class="muted small">%</span></div><span class="hint">a da Binance é 0,10%</span></div>
+      <div class="field"><label>Escorregão de preço</label><div class="control"><span>0,05</span><span class="muted small">%</span></div><span class="hint">diferença entre o preço visto e o pago</span></div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-top:var(--space-4)">
+      <p class="small muted">Risco por operação: 5% do saldo (vem da estratégia; mude em Estratégias).</p>
+      <button class="button primary" type="button"><svg class="icon sm" aria-hidden="true"><use href="#i-play"/></svg>Rodar backtest</button>
+    </div>
+  </details>
+
+  <section class="card" style="margin-top:var(--space-4)" aria-labelledby="list-title">
+    <div class="card-head"><h2 class="card-title" id="list-title"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>Resultados<span class="anchor-badge">3</span></h2><span class="small muted">27 backtests · 20 carregados · todos concluídos</span></div>
+    <div class="toolbar">
+      <div class="filters" role="group" aria-label="Filtrar por estratégia (várias)">
+        <button class="filter-chip" type="button" aria-pressed="true"><svg class="icon sm" aria-hidden="true"><use href="#i-check"/></svg>Sentimento contrário</button>
+        <button class="filter-chip" type="button" aria-pressed="true"><svg class="icon sm" aria-hidden="true"><use href="#i-check"/></svg>Momentum rápido</button>
+        <button class="filter-chip" type="button" aria-pressed="true"><svg class="icon sm" aria-hidden="true"><use href="#i-check"/></svg>Reversão Bollinger RSI</button>
+      </div>
+      <span class="small muted">Agrupado por <strong>estratégia</strong> · ordenado por <strong>resultado</strong>, maior primeiro</span>
+    </div>
+    <div class="compare-bar" role="region" aria-label="Comparar"><span><svg class="icon sm" aria-hidden="true"><use href="#i-columns"/></svg> Marque 2 backtests concluídos para comparar lado a lado · <strong>0 de 2</strong></span><button class="button" type="button" aria-disabled="true">Comparar</button></div>
+    <details class="group" open>
+    <summary>
+      <span class="group-title"><svg class="icon chev" aria-hidden="true"><use href="#i-chevright"/></svg><strong>Sentimento contrário</strong> <span class="muted small">versão 1 · 9 backtests</span></span>
+      <span class="group-stats small">
+        <span class="chip buy"><svg class="icon sm" aria-hidden="true"><use href="#i-up"/></svg>4 de 9 positivos</span>
+        <span>mediana <strong class="num">−1,36%</strong></span>
+        <span class="hide-small">melhor PEPE <strong class="num" style="color:var(--buy)">+15,98%</strong> · pior ETH <strong class="num" style="color:var(--sell)">−11,30%</strong></span>
+      </span>
+    </summary>
+    <table class="data stack-mobile bt-table">
+      <thead><tr><th class="check-cell"><span class="visually-hidden">Selecionar</span></th><th>Par</th><th>Período</th><th class="result-col" aria-sort="descending"><button class="sort-button" type="button">Resultado <svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg></button> <span class="xs muted" style="text-transform:none;letter-spacing:0;font-weight:400">barra de −20% a +20%</span></th></tr></thead>
+      <tbody><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar PEPE/USDT Sentimento contrário para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">PEPE/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar pos" style="--w:39.95%"></i></div>
+    <span class="delta up"><svg class="icon sm" aria-hidden="true"><use href="#i-up"/></svg>+15,98%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar DOGE/USDT Sentimento contrário para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">DOGE/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar pos" style="--w:8.149999999999999%"></i></div>
+    <span class="delta up"><svg class="icon sm" aria-hidden="true"><use href="#i-up"/></svg>+3,26%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar SOL/USDT Sentimento contrário para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">SOL/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar pos" style="--w:4.3%"></i></div>
+    <span class="delta up"><svg class="icon sm" aria-hidden="true"><use href="#i-up"/></svg>+1,72%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar SHIB/USDT Sentimento contrário para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">SHIB/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar pos" style="--w:1.55%"></i></div>
+    <span class="delta up"><svg class="icon sm" aria-hidden="true"><use href="#i-up"/></svg>+0,62%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar BTC/USDT Sentimento contrário para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">BTC/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:3.4000000000000004%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−1,36%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar LINK/USDT Sentimento contrário para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">LINK/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:5.575%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−2,23%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar BNB/USDT Sentimento contrário para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">BNB/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:7.199999999999999%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−2,88%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar XRP/USDT Sentimento contrário para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">XRP/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:10.825%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−4,33%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar ETH/USDT Sentimento contrário para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">ETH/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:28.250000000000004%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−11,30%</span></div></td>
+  </tr></tbody>
+    </table>
+    
+  </details><details class="group" open>
+    <summary>
+      <span class="group-title"><svg class="icon chev" aria-hidden="true"><use href="#i-chevright"/></svg><strong>Momentum rápido</strong> <span class="muted small">versão 1 · 9 backtests</span></span>
+      <span class="group-stats small">
+        <span class="chip sell"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>0 de 9 positivos</span>
+        <span>mediana <strong class="num">−97,48%</strong></span>
+        <span class="hide-small">melhor SHIB <strong class="num" style="color:var(--sell)">−42,60%</strong> · pior PEPE <strong class="num" style="color:var(--sell)">−99,95%</strong></span>
+      </span>
+    </summary>
+    <table class="data stack-mobile bt-table">
+      <thead><tr><th class="check-cell"><span class="visually-hidden">Selecionar</span></th><th>Par</th><th>Período</th><th class="result-col" aria-sort="descending"><button class="sort-button" type="button">Resultado <svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg></button> <span class="xs muted" style="text-transform:none;letter-spacing:0;font-weight:400">barra de −100% a +100%</span></th></tr></thead>
+      <tbody><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar SHIB/USDT Momentum rápido para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">SHIB/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:21.3%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−42,60%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar LINK/USDT Momentum rápido para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">LINK/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:43.95%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−87,90%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar BNB/USDT Momentum rápido para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">BNB/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:47.52%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−95,04%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar BTC/USDT Momentum rápido para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">BTC/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:48.66%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−97,32%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar ETH/USDT Momentum rápido para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">ETH/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:48.74%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−97,48%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar XRP/USDT Momentum rápido para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">XRP/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:48.91%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−97,82%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar SOL/USDT Momentum rápido para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">SOL/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:48.92%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−97,84%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar DOGE/USDT Momentum rápido para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">DOGE/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:48.97%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−97,94%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar PEPE/USDT Momentum rápido para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">PEPE/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:49.975%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−99,95%</span></div></td>
+  </tr></tbody>
+    </table>
+    
+  </details><details class="group">
+    <summary>
+      <span class="group-title"><svg class="icon chev" aria-hidden="true"><use href="#i-chevright"/></svg><strong>Reversão Bollinger RSI</strong> <span class="muted small">versão 1 · 9 backtests</span></span>
+      <span class="group-stats small">
+        <span class="chip sell"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>0 de 2 positivos</span>
+        <span>mediana <strong class="num">−10,54%</strong></span>
+        <span class="hide-small">melhor SHIB <strong class="num" style="color:var(--sell)">−10,54%</strong> · pior LINK <strong class="num" style="color:var(--sell)">−15,23%</strong></span>
+      </span>
+    </summary>
+    <table class="data stack-mobile bt-table">
+      <thead><tr><th class="check-cell"><span class="visually-hidden">Selecionar</span></th><th>Par</th><th>Período</th><th class="result-col" aria-sort="descending"><button class="sort-button" type="button">Resultado <svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg></button> <span class="xs muted" style="text-transform:none;letter-spacing:0;font-weight:400">barra de −20% a +20%</span></th></tr></thead>
+      <tbody><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar SHIB/USDT Reversão Bollinger RSI para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">SHIB/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:26.349999999999994%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−10,54%</span></div></td>
+  </tr><tr>
+    <td class="check-cell"><label class="check"><input type="checkbox" aria-label="Selecionar LINK/USDT Reversão Bollinger RSI para comparar"></label></td>
+    <td data-label="Par"><a class="pair-link" href="#">LINK/USDT</a></td>
+    <td data-label="Período" class="small">01/04 a 01/10/2026 <span class="muted">· 6 meses · vela 15 min</span></td>
+    <td data-label="Resultado" class="result-col"><div class="res"><div class="res-track" aria-hidden="true"><i class="res-bar neg" style="--w:38.075%"></i></div>
+    <span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−15,23%</span></div></td>
+  </tr></tbody>
+    </table>
+    <div class="group-more"><button class="button" type="button">Carregar mais 7 deste grupo</button></div>
+  </details>
+  </section>
+
+  <section class="card" style="margin-top:var(--space-4)" aria-labelledby="wf-title">
+    <div class="card-head"><h2 class="card-title" id="wf-title"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg>Walk-forward<span class="anchor-badge">4</span></h2><span class="small muted">testa se a estratégia aguenta períodos que não viu</span></div>
+    <table class="data stack-mobile">
+      <thead><tr><th>Par</th><th>Estratégia</th><th>Período</th><th>Situação</th><th class="right">Resultado</th></tr></thead>
+      <tbody>
+        <tr><td data-label="Par"><a class="pair-link" href="#">LINK/USDT</a></td><td data-label="Estratégia">Placar clássico · v1</td><td data-label="Período" class="small">01/12/2024 a 01/10/2026 · vela 4 h</td><td data-label="Situação"><span class="chip"><svg class="icon sm" aria-hidden="true"><use href="#i-check"/></svg>Concluída</span></td><td data-label="Resultado" class="right"><span class="delta down"><svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>−14,26%</span></td></tr>
+        <tr><td data-label="Par"><a class="pair-link" href="#">LINK/USDT</a></td><td data-label="Estratégia">Placar clássico · v1</td><td data-label="Período" class="small">11/10/2024 a 11/10/2026 · vela 4 h</td><td data-label="Situação"><span class="chip sell"><svg class="icon sm" aria-hidden="true"><use href="#i-alert"/></svg>Falhou</span></td><td data-label="Resultado" class="right small"><a href="#">ver o motivo</a></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <details class="why" id="por-que">
+  <summary><svg class="icon" aria-hidden="true"><use href="#i-help"/></svg>Por que está assim — as decisões de design desta tela<svg class="icon chev" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+  <div class="why-body"><div class="why-item"><span class="h">Nielsen 1 (visibilidade) · 6 (reconhecer)</span><b><span class="anchor-badge">1</span> A simulação ao vivo ganha um lugar próprio no topo</b><span>Hoje ela some no meio da lista de backtests. Agora é o primeiro cartão, com selo "Rodando", última decisão, contagem regressiva e o resultado neutro (=).</span></div><div class="why-item"><span class="h">Nielsen 2 (linguagem) · 5 (prevenção de erro)</span><b><span class="anchor-badge">2</span> Formulário sem campo cortado e com unidades</b><span>"5 Sentimento cont" cortado vira "Sentimento contrário" num campo de largura dupla. Taxa e slippage passam de 0.001 e 0.0005 para 0,10% e 0,05% com dica, e "Slippage" vira "Escorregão de preço". O formulário pode ser recolhido para a lista subir.</span></div><div class="why-item"><span class="h">Nielsen 8 (minimalismo) · dataviz: barra divergente a partir do zero, sinal + seta + cor</span><b><span class="anchor-badge">3</span> Lista agrupada por estratégia, com o resultado em destaque (escala do grupo escrita no cabeçalho da coluna)</b><span>A parede de 45 linhas iguais virou grupos recolhíveis por estratégia, cada um com resumo (quantos positivos, mediana, melhor e pior). Dentro, colunas fixas (par, período, resultado) e o resultado com barra a partir do zero, seta e sinal: nunca só cor. A ordenação ativa está escrita e marcada na coluna.</span></div><div class="why-item"><span class="h">Acessibilidade: alvo de toque · Nielsen 4</span><b><span class="anchor-badge">3</span> Caixa de seleção com área própria de 44 px</b><span>A caixinha não fica mais por cima do nome da moeda: tem coluna própria. A barra "Comparar" fica fixa no rodapé da lista e diz quantas faltam (0 de 2).</span></div><div class="why-item"><span class="h">Nielsen 9 (ajudar a reconhecer erros)</span><b><span class="anchor-badge">4</span> Walk-forward com situação legível</b><span>"Falhou" ganha selo com ícone e um link "ver o motivo" no lugar do resultado vazio.</span></div></div>
+</details>
+</main>
+<script>
+// Comportamento do preview: tema, menu, pulso ao vivo simulado e gráfico com dica.
+(function () {
+  var root = document.documentElement;
+  var THEME_LABEL = { auto: 'Tema automático', light: 'Tema claro', dark: 'Tema escuro' };
+  var order = ['auto', 'light', 'dark'];
+  var stored = 'auto';
+  try { stored = localStorage.getItem('ativada-preview-theme') || 'auto'; } catch (error) { stored = 'auto'; }
+  function applyTheme(theme) {
+    if (theme === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', theme);
+    document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
+      button.setAttribute('aria-label', THEME_LABEL[theme] + ' (trocar)');
+      button.querySelector('[data-theme-text]').textContent = THEME_LABEL[theme].replace('Tema ', '');
+    });
+    try { localStorage.setItem('ativada-preview-theme', theme); } catch (error) { /* sem armazenamento */ }
+    document.dispatchEvent(new Event('themechange'));
+  }
+  var params = new URLSearchParams(location.search);
+  if (params.get('tema')) stored = params.get('tema') === 'escuro' ? 'dark' : 'light';
+  applyTheme(stored);
+  document.addEventListener('click', function (event) {
+    var toggle = event.target.closest('[data-theme-toggle]');
+    if (toggle) { stored = order[(order.indexOf(stored) + 1) % 3]; applyTheme(stored); }
+    var menu = event.target.closest('[data-menu-toggle]');
+    if (menu) {
+      var nav = document.getElementById('mobile-nav');
+      var open = nav.getAttribute('data-open') !== 'true';
+      nav.setAttribute('data-open', String(open));
+      menu.setAttribute('aria-expanded', String(open));
+    }
+    var expand = event.target.closest('[data-expand]');
+    if (expand) {
+      var key = expand.getAttribute('data-expand');
+      var targets = document.querySelectorAll('#' + key + ', [data-expand-member="' + key + '"]');
+      var isOpen = targets[0].hidden;
+      targets.forEach(function (target) { target.hidden = !isOpen; });
+      if (expand.hasAttribute('data-label-open')) expand.textContent = isOpen ? expand.getAttribute('data-label-open') : expand.getAttribute('data-label-closed');
+      expand.setAttribute('aria-expanded', String(isOpen));
+    }
+  });
+
+  // Relógio simulado: começa em 14/10/2026 10:36:48 (GMT-3) e anda em tempo real.
+  var startedAt = Date.now();
+  var BASE = Date.UTC(2026, 9, 14, 13, 36, 48);
+  var NEXT_DECISION = Date.UTC(2026, 9, 14, 14, 0, 0);
+  var price = 12.707;
+  var lastTick = Date.now();
+  var number3 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  function pad(value) { return String(value).padStart(2, '0'); }
+  function nowSimulated() { return BASE + (Date.now() - startedAt); }
+  function updateClock() {
+    var now = nowSimulated();
+    var local = new Date(now - 3 * 3600000);
+    var clock = pad(local.getUTCHours()) + ':' + pad(local.getUTCMinutes()) + ':' + pad(local.getUTCSeconds());
+    document.querySelectorAll('[data-clock]').forEach(function (element) { element.textContent = clock; });
+    var left = Math.max(0, Math.floor((NEXT_DECISION - now) / 1000));
+    var text = left === 0 ? 'decidindo agora…' : pad(Math.floor(left / 60)) + ':' + pad(left % 60);
+    document.querySelectorAll('[data-countdown]').forEach(function (element) { element.textContent = text; });
+    var minutes = Math.ceil(left / 60);
+    document.querySelectorAll('[data-countdown-min]').forEach(function (element) { element.textContent = minutes + ' min'; });
+    var beat = Math.floor((Date.now() - startedAt) / 1000 + 3) % 15;
+    document.querySelectorAll('[data-heartbeat]').forEach(function (element) { element.textContent = beat + ' s'; });
+    var age = Math.floor((Date.now() - lastTick) / 1000);
+    document.querySelectorAll('[data-price-age]').forEach(function (element) { element.textContent = age <= 0 ? 'agora' : 'há ' + age + ' s'; });
+  }
+  function tickPrice() {
+    var step = (Math.round((Math.random() - 0.5) * 6)) / 1000;
+    price = Math.min(12.74, Math.max(12.69, price + step));
+    lastTick = Date.now();
+    document.querySelectorAll('[data-price]').forEach(function (element) {
+      element.textContent = number3.format(price);
+      element.classList.remove('flash'); void element.offsetWidth; element.classList.add('flash');
+    });
+    document.querySelectorAll('.live-dot').forEach(function (dot) {
+      dot.classList.remove('blink'); void dot.offsetWidth; dot.classList.add('blink');
+    });
+    updateClock();
+  }
+  if (!params.get('congelar')) {
+    setInterval(updateClock, 1000);
+    setInterval(tickPrice, 2400);
+  }
+  updateClock();
+
+  // Gráfico de linha à mão, com dica por vela e marcadores.
+  window.drawLineChart = function (host, options) {
+    function render() {
+      var width = Math.max(300, host.clientWidth);
+      var height = options.height || 220;
+      var pad = { top: 18, right: options.rightPad || 64, bottom: 26, left: 52 };
+      if (width < 480) { pad.left = 44; pad.right = options.rightPadMobile || 12; }
+      var all = [];
+      options.series.forEach(function (serie) { all = all.concat(serie.values); });
+      var min = options.min !== undefined ? options.min : Math.min.apply(null, all);
+      var max = options.max !== undefined ? options.max : Math.max.apply(null, all);
+      var count = options.series[0].values.length;
+      var x = function (index) { return pad.left + (index / (count - 1)) * (width - pad.left - pad.right); };
+      var y = function (value) { return pad.top + (1 - (value - min) / (max - min)) * (height - pad.top - pad.bottom); };
+      var parts = ['<svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="' + options.label + '">'];
+      (options.ticks || [min, max]).forEach(function (tick) {
+        parts.push('<line class="grid-line" x1="' + pad.left + '" x2="' + (width - pad.right) + '" y1="' + y(tick) + '" y2="' + y(tick) + '"/>');
+        parts.push('<text class="axis-text" x="' + (pad.left - 8) + '" y="' + (y(tick) + 4) + '" text-anchor="end">' + options.format(tick) + '</text>');
+      });
+      (options.xLabels || []).filter(function (label, position, list) { return width >= 480 || position === 0 || position === list.length - 1; }).forEach(function (label) {
+        parts.push('<text class="axis-text" x="' + x(label.index) + '" y="' + (height - 6) + '" text-anchor="' + (label.anchor || 'middle') + '">' + label.text + '</text>');
+      });
+      options.series.forEach(function (serie) {
+        var path = serie.values.map(function (value, index) { return (index ? 'L' : 'M') + x(index).toFixed(1) + ' ' + y(value).toFixed(1); }).join(' ');
+        parts.push('<path class="series ' + (serie.className || '') + '" d="' + path + '"/>');
+        if (serie.endLabel && width >= 480) {
+          var last = serie.values[serie.values.length - 1];
+          parts.push('<text class="direct-label" fill="' + serie.labelColor + '" x="' + (x(count - 1) + 8) + '" y="' + (y(last) + 4 + (serie.labelOffset || 0)) + '">' + serie.endLabel + '</text>');
+        }
+      });
+      (options.dots || []).forEach(function (index) {
+        parts.push('<circle class="wait-dot" cx="' + x(index) + '" cy="' + y(options.series[0].values[index]) + '" r="4"/>');
+      });
+      (options.markers || []).forEach(function (marker) {
+        var cx = x(marker.index); var cy = y(options.series[0].values[marker.index]);
+        var color = marker.kind === 'buy' ? 'var(--buy)' : 'var(--sell)';
+        var tip = marker.kind === 'buy' ? (cy + 8) : (cy - 8);
+        var base = marker.kind === 'buy' ? (cy + 22) : (cy - 22);
+        parts.push('<path d="M' + (cx - 7) + ' ' + base + ' L' + cx + ' ' + tip + ' L' + (cx + 7) + ' ' + base + ' Z" fill="' + color + '" stroke="var(--surface)" stroke-width="2"/>');
+        parts.push('<text class="direct-label" fill="' + color + '" x="' + cx + '" y="' + (marker.kind === 'buy' ? base + 14 : base - 6) + '" text-anchor="middle">' + marker.text + '</text>');
+      });
+      parts.push('<line class="crosshair" data-cross x1="0" x2="0" y1="' + pad.top + '" y2="' + (height - pad.bottom) + '" visibility="hidden"/>');
+      parts.push('<rect class="hit" x="' + pad.left + '" y="0" width="' + (width - pad.left - pad.right) + '" height="' + height + '"/>');
+      parts.push('</svg><div class="tooltip" role="status"></div>');
+      host.innerHTML = parts.join('');
+      var svg = host.querySelector('svg'); var tooltip = host.querySelector('.tooltip'); var cross = host.querySelector('[data-cross]');
+      function show(clientX) {
+        var box = svg.getBoundingClientRect();
+        var localX = (clientX - box.left) * (width / box.width);
+        var index = Math.round(((localX - pad.left) / (width - pad.left - pad.right)) * (count - 1));
+        index = Math.max(0, Math.min(count - 1, index));
+        var px = x(index);
+        cross.setAttribute('x1', px); cross.setAttribute('x2', px); cross.setAttribute('visibility', 'visible');
+        tooltip.innerHTML = options.tooltip(index);
+        tooltip.style.left = (px / width * 100) + '%';
+        tooltip.style.top = (y(options.series[0].values[index]) / height * box.height) + 'px';
+        tooltip.setAttribute('data-show', 'true');
+      }
+      svg.addEventListener('pointermove', function (event) { show(event.clientX); });
+      svg.addEventListener('pointerleave', function () { tooltip.setAttribute('data-show', 'false'); cross.setAttribute('visibility', 'hidden'); });
+    }
+    render();
+    var lastWidth = host.clientWidth;
+    window.addEventListener('resize', function () { if (host.clientWidth !== lastWidth) { lastWidth = host.clientWidth; render(); } });
+  };
+})();
+
+</script>
+</body>
+</html>

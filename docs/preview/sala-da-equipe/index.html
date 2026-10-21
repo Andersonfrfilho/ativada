@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sala da equipe · AtivAdA (preview)</title>
+<style>
+/* Tokens: os mesmos de apps/frontend-ativada/src/styles/global.css e do preview da spec 009 (docs/preview/grafico-binance). */
+:root {
+  --bg: #f2f4f8; --surface: #ffffff; --surface-2: #ebeef4; --line: #d8dee9;
+  --ink: #10162a; --ink-2: #47516c; --ink-3: #5f6b86;
+  --accent: #2541b2; --accent-soft: #e1e7fb; --on-accent: #ffffff;
+  --buy: #087a52; --buy-soft: #dbf2e8; --sell: #c0353d; --sell-soft: #fbe3e4;
+  --warn: #7a4f00; --warn-soft: #fbf0d9; --bench: #66708c;
+  --font-body: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-data: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --gutter: 16px;
+  --text-xs: 12px; --text-sm: 13px; --text-md: 15px; --text-lg: 18px; --text-xl: 22px; --text-2xl: 30px;
+  --radius-card: 14px; --radius-control: 10px; --radius-pill: 999px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px;
+  --shadow-card: 0 1px 2px rgb(16 22 42 / 0.04), 0 4px 16px rgb(16 22 42 / 0.04);
+  --motion-fast: 160ms; --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* novos (spec 011): duração média da entrada do balão e a sala, derivados dos tokens */
+  --motion-medium: 240ms;
+  --room-wall: color-mix(in srgb, var(--surface-2) 70%, var(--surface));
+  --room-floor: color-mix(in srgb, var(--accent-soft) 35%, var(--surface));
+  --room-grid: color-mix(in srgb, var(--line) 80%, transparent);
+  --bubble-shadow: 0 1px 2px rgb(16 22 42 / 0.06), 0 6px 18px rgb(16 22 42 / 0.08);
+  /* roupas dos bonequinhos: só decoração, nunca carregam significado (estado é ícone + palavra + cor de token) */
+  --shirt-trend: #1f7a8c; --shirt-reversion: #5b4bb0; --shirt-volume: #9a6b12; --shirt-sentiment: #a8436a;
+  --shirt-analyst: #2541b2; --shirt-auditor: #4b5568; --pants: #2c3550; --shoe: #1a1f2e;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0b0f1c; --surface: #131a2c; --surface-2: #1a2238; --line: #262f4b;
+    --ink: #e8ecf6; --ink-2: #a8b1c8; --ink-3: #8a94ad;
+    --accent: #8ea3ff; --accent-soft: #1e2954; --on-accent: #0b0f1c;
+    --buy: #41cc94; --buy-soft: #0e2d23; --sell: #ff7d83; --sell-soft: #3a191e;
+    --warn: #f2c26b; --warn-soft: #33270f; --bench: #8b94ad;
+    --shadow-card: none; --bubble-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
+    --room-wall: color-mix(in srgb, var(--surface-2) 60%, var(--bg));
+    --room-floor: color-mix(in srgb, var(--accent-soft) 55%, var(--surface));
+    --shirt-trend: #3fa3b6; --shirt-reversion: #8b7be0; --shirt-volume: #c9932f; --shirt-sentiment: #d06d94;
+    --shirt-analyst: #6f86f2; --shirt-auditor: #7d879e; --pants: #39446a; --shoe: #0b0f1c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0b0f1c; --surface: #131a2c; --surface-2: #1a2238; --line: #262f4b;
+  --ink: #e8ecf6; --ink-2: #a8b1c8; --ink-3: #8a94ad;
+  --accent: #8ea3ff; --accent-soft: #1e2954; --on-accent: #0b0f1c;
+  --buy: #41cc94; --buy-soft: #0e2d23; --sell: #ff7d83; --sell-soft: #3a191e;
+  --warn: #f2c26b; --warn-soft: #33270f; --bench: #8b94ad;
+  --shadow-card: none; --bubble-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
+  --room-wall: color-mix(in srgb, var(--surface-2) 60%, var(--bg));
+  --room-floor: color-mix(in srgb, var(--accent-soft) 55%, var(--surface));
+  --shirt-trend: #3fa3b6; --shirt-reversion: #8b7be0; --shirt-volume: #c9932f; --shirt-sentiment: #d06d94;
+  --shirt-analyst: #6f86f2; --shirt-auditor: #7d879e; --pants: #39446a; --shoe: #0b0f1c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--font-body); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 3px; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.muted { color: var(--ink-3); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+svg.icon { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -3px; }
+svg.icon.sm { width: 14px; height: 14px; vertical-align: -2px; }
+
+.notice-strip { background: var(--warn-soft); color: var(--warn); font-size: var(--text-xs); text-align: center; padding: 6px var(--gutter); }
+.topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.topbar-inner { max-width: 1240px; margin: 0 auto; padding: 0 var(--gutter); height: 60px; display: flex; align-items: center; gap: var(--space-4); }
+.brand { font: 700 19px/1 var(--font-display); color: var(--ink); text-decoration: none; letter-spacing: -0.02em; }
+.brand span { color: var(--accent); }
+.nav { display: flex; gap: 2px; flex: 1; min-width: 0; }
+.nav a { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 12px; border-radius: var(--radius-control); color: var(--ink-2); text-decoration: none; font-size: 14.5px; white-space: nowrap; }
+.nav a[aria-current='page'] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.top-actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
+.icon-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; height: 44px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); color: var(--ink-2); cursor: pointer; font-size: var(--text-sm); }
+@media (max-width: 1023px) { .nav { display: none; } .hide-mobile { display: none; } }
+
+.page { max-width: 1240px; margin: 0 auto; padding: var(--space-6) var(--gutter) 64px; }
+.crumbs { font-size: var(--text-sm); color: var(--ink-3); margin-bottom: 6px; }
+.crumbs a { color: var(--ink-2); }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-5); }
+.page-head h1 { font: 600 var(--text-2xl)/1.15 var(--font-display); letter-spacing: -0.02em; }
+@media (max-width: 520px) { .page-head h1 { font-size: 24px; } }
+.meta-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.preview-box { flex: 1 1 520px; max-width: 640px; }
+.preview-label { font-size: var(--text-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+.preview-switch { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 12px; background: var(--surface-2); }
+.preview-switch button { flex: 1 1 auto; min-height: 44px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--ink-2); cursor: pointer; font-size: 14px; font-weight: 600; }
+.preview-switch button[aria-pressed='true'] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+.preview-note { font-size: var(--text-xs); color: var(--ink-3); margin-top: 6px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: var(--space-5); box-shadow: var(--shadow-card); min-width: 0; }
+@media (max-width: 520px) { .card { padding: 14px; } }
+.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); flex-wrap: wrap; }
+.card-title { display: flex; align-items: center; gap: 8px; font: 600 var(--text-lg)/1.25 var(--font-display); letter-spacing: -0.01em; }
+.card-title .icon { color: var(--ink-3); }
+.card-sub { font-size: var(--text-sm); color: var(--ink-2); margin-top: 4px; max-width: 62ch; }
+.head-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.head-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.tool { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); color: var(--ink-2); cursor: pointer; font-size: 14px; font-weight: 600; }
+.tool[aria-pressed='false'] { color: var(--ink-3); }
+.tool[aria-pressed='false'] .on-text { display: none; }
+.tool[aria-pressed='true'] .off-text { display: none; }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 2px 10px; border-radius: var(--radius-pill); font-size: var(--text-sm); font-weight: 600; white-space: nowrap; background: var(--surface-2); color: var(--ink-2); }
+.chip.outline { background: transparent; border: 1px solid var(--line); font-weight: 500; }
+.chip.info { background: var(--accent-soft); color: var(--accent); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.sm { min-height: 24px; font-size: var(--text-xs); padding: 1px 8px; gap: 4px; }
+/* voto: ícone + palavra + cor */
+.vote-favor { background: var(--buy-soft); color: var(--buy); }
+.vote-contra { background: var(--sell-soft); color: var(--sell); }
+.vote-neutro { background: var(--surface-2); color: var(--ink-2); }
+.vote-unread { background: transparent; color: var(--ink-3); border: 1px dashed var(--ink-3); }
+/* situação do auditor */
+.verdict-above { background: var(--accent-soft); color: var(--accent); }
+.verdict-below { background: var(--warn-soft); color: var(--warn); }
+.verdict-even { background: var(--surface-2); color: var(--ink-2); }
+.verdict-few { background: transparent; color: var(--ink-2); border: 1px solid var(--line); }
+/* postura */
+.posture { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 3px 12px; border-radius: var(--radius-pill); font: 700 14px/1.2 var(--font-body); letter-spacing: 0.04em; white-space: nowrap; }
+.posture-pause { background: var(--warn-soft); color: var(--warn); }
+.posture-caution { background: var(--surface-2); color: var(--ink); border: 1px solid var(--line); }
+.posture-normal { background: var(--accent-soft); color: var(--accent); }
+.posture-confident { background: var(--accent); color: var(--on-accent); }
+
+/* ---------- Sala ---------- */
+.room-layout { display: grid; gap: var(--space-4); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1024px) { .room-layout { grid-template-columns: minmax(0, 1fr) 340px; } }
+.room-wrap { container: room / inline-size; min-width: 0; }
+.room { position: relative; display: grid; gap: 6px 10px; grid-template-columns: 64px minmax(0, 1fr); padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--room-wall); overflow: hidden; }
+.room-floor { display: none; }
+.agent-avatar { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; cursor: default; }
+.agent-avatar svg { display: block; width: 64px; height: 88px; overflow: visible; }
+.agent-name { font-size: var(--text-xs); font-weight: 700; color: var(--ink-2); text-align: center; line-height: 1.2; margin-top: 2px; }
+.bubble-cell { position: relative; z-index: 2; min-width: 0; align-self: center; }
+.placard-cell { position: relative; z-index: 1; min-width: 0; }
+
+/* lista (celular): uma linha por personagem */
+[data-agent='trend'][data-part='avatar'] { grid-area: 1 / 1 / span 2 / 2; }
+[data-agent='trend'][data-part='bubble'] { grid-area: 1 / 2; }
+[data-agent='trend'][data-part='placard'] { grid-area: 2 / 2; }
+[data-agent='reversion'][data-part='avatar'] { grid-area: 3 / 1 / span 2 / 2; }
+[data-agent='reversion'][data-part='bubble'] { grid-area: 3 / 2; }
+[data-agent='reversion'][data-part='placard'] { grid-area: 4 / 2; }
+[data-agent='volume'][data-part='avatar'] { grid-area: 5 / 1 / span 2 / 2; }
+[data-agent='volume'][data-part='bubble'] { grid-area: 5 / 2; }
+[data-agent='volume'][data-part='placard'] { grid-area: 6 / 2; }
+[data-agent='sentiment'][data-part='avatar'] { grid-area: 7 / 1 / span 2 / 2; }
+[data-agent='sentiment'][data-part='bubble'] { grid-area: 7 / 2; }
+[data-agent='sentiment'][data-part='placard'] { grid-area: 8 / 2; }
+[data-agent='analyst'][data-part='avatar'] { grid-area: 9 / 1; }
+[data-agent='analyst'][data-part='bubble'] { grid-area: 9 / 2; }
+[data-agent='auditor'][data-part='avatar'] { grid-area: 10 / 1; }
+[data-agent='auditor'][data-part='bubble'] { grid-area: 10 / 2; }
+.room [data-part='bubble']:not([data-agent='trend']) { margin-top: 12px; }
+.room [data-part='avatar']:not([data-agent='trend']) { margin-top: 12px; }
+[data-agent='analyst'][data-part='avatar'], [data-agent='auditor'][data-part='avatar'] { align-self: start; }
+
+/* sala (≥ 640 px de largura útil): quatro especialistas ao fundo, analista e auditor na frente */
+@container room (min-width: 640px) {
+  .room { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 14px; padding: 18px 18px 22px; }
+  .room-floor { display: block; grid-area: 2 / 1 / 6 / -1; margin: 44px -18px -22px; z-index: 0;
+    background-color: var(--room-floor);
+    background-image: repeating-linear-gradient(26.57deg, transparent 0 27px, var(--room-grid) 27px 28px), repeating-linear-gradient(-26.57deg, transparent 0 27px, var(--room-grid) 27px 28px);
+    border-top: 2px solid var(--line); }
+  .room [data-part]:not([data-agent='trend']) { margin-top: 0; }
+  [data-agent='trend'][data-part='bubble'] { grid-area: 1 / 1; }
+  [data-agent='reversion'][data-part='bubble'] { grid-area: 1 / 2; }
+  [data-agent='volume'][data-part='bubble'] { grid-area: 1 / 3; }
+  [data-agent='sentiment'][data-part='bubble'] { grid-area: 1 / 4; }
+  [data-agent='trend'][data-part='avatar'] { grid-area: 2 / 1; }
+  [data-agent='reversion'][data-part='avatar'] { grid-area: 2 / 2; }
+  [data-agent='volume'][data-part='avatar'] { grid-area: 2 / 3; }
+  [data-agent='sentiment'][data-part='avatar'] { grid-area: 2 / 4; }
+  [data-agent='trend'][data-part='placard'] { grid-area: 3 / 1; }
+  [data-agent='reversion'][data-part='placard'] { grid-area: 3 / 2; }
+  [data-agent='volume'][data-part='placard'] { grid-area: 3 / 3; }
+  [data-agent='sentiment'][data-part='placard'] { grid-area: 3 / 4; }
+  [data-agent='analyst'][data-part='avatar'] { grid-area: 4 / 1 / 6 / 2; align-self: center; margin-top: 18px; }
+  [data-agent='analyst'][data-part='bubble'] { grid-area: 4 / 2 / 6 / 4; align-self: center; margin-top: 18px; }
+  .room .auditor-stack { display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; grid-area: 4 / 4 / 6 / 5; margin-top: 18px; position: relative; z-index: 2; }
+  .auditor-stack [data-part] { margin-top: 0; }
+  .bubble-cell[data-agent='trend'], .bubble-cell[data-agent='reversion'], .bubble-cell[data-agent='volume'], .bubble-cell[data-agent='sentiment'] { align-self: end; padding-bottom: 10px; }
+  .agent-avatar svg { width: 76px; height: 104px; }
+  [data-agent='analyst'] svg, [data-agent='auditor'] svg { width: 86px; height: 118px; }
+  .placard-cell { display: flex; justify-content: center; padding-top: 6px; }
+}
+
+/* balão */
+.bubble { position: relative; padding: 9px 12px 10px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--bubble-shadow); font-size: 13.5px; line-height: 1.45; color: var(--ink); }
+.bubble::after { content: ''; position: absolute; width: 12px; height: 12px; background: inherit; border: inherit; border-top: 0; border-right: 0; left: -7px; top: 18px; transform: rotate(45deg); }
+.bubble.is-voter { border: 2px solid var(--accent); }
+.bubble.is-quiet { background: var(--surface-2); border-style: dashed; border-color: var(--ink-3); box-shadow: none; color: var(--ink-2); }
+.bubble-top { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-bottom: 4px; }
+.bubble-who { font-weight: 700; font-size: 13px; color: var(--ink); }
+.bubble-motive { font-size: 13px; color: var(--ink-2); }
+.bubble.is-voter .bubble-motive { color: var(--ink); }
+.bubble-line + .bubble-line { margin-top: 6px; }
+.bubble-reason { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 13px; }
+.bubble.analyst { font-size: 14px; }
+.bubble.analyst .bubble-top { margin-bottom: 6px; }
+.bubble.auditor-list ul { list-style: none; padding: 0; margin: 4px 0 0; display: grid; gap: 4px; }
+.bubble.auditor-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 12.5px; }
+.bubble.auditor-list li > span:first-child { font-weight: 600; }
+.bubble.auditor-list .chip { white-space: normal; text-align: left; }
+.bubble-cell, .auditor-stack { min-width: 0; }
+@container room (min-width: 640px) {
+  .bubble-cell[data-agent='trend'] .bubble::after, .bubble-cell[data-agent='reversion'] .bubble::after, .bubble-cell[data-agent='volume'] .bubble::after, .bubble-cell[data-agent='sentiment'] .bubble::after, .bubble-cell[data-agent='auditor'] .bubble::after { left: calc(50% - 6px); top: auto; bottom: -7px; transform: rotate(-45deg); }
+  .bubble { font-size: 13px; }
+}
+
+/* pensando: nuvenzinha com três pontos */
+.thought { position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: none; align-items: center; gap: 4px; height: 30px; padding: 0 12px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--bubble-shadow); }
+.thought i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); }
+@container room (min-width: 640px) {
+  .bubble-cell .thought { left: calc(50% - 28px); top: auto; bottom: 10px; transform: none; }
+  .bubble-cell[data-agent='analyst'] .thought { left: 0; top: 50%; bottom: auto; transform: translateY(-50%); }
+}
+[data-state='thinking'] .thought { display: inline-flex; }
+[data-state='thinking'] .bubble, [data-state='idle'] .bubble { visibility: hidden; }
+.bubble-cell[data-empty='true'] { display: none; }
+.auditor-stack { display: contents; }
+.placard .chip { white-space: normal; text-align: left; }
+
+/* plaquinha do auditor */
+.placard { display: inline-flex; flex-direction: column; gap: 3px; max-width: 100%; padding: 6px 9px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); font-size: 12px; line-height: 1.35; color: var(--ink-2); }
+.placard-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.placard .acc { font-family: var(--font-data); font-size: 12px; color: var(--ink); }
+.placard .weight { font-size: 12px; color: var(--ink-2); }
+
+/* bonequinho */
+.figure .shirt { fill: var(--shirt); }
+.figure .sleeve { fill: color-mix(in srgb, var(--shirt) 82%, #000); }
+.figure .pants { fill: var(--pants); }
+.figure .shoe { fill: var(--shoe); }
+.figure .tile { fill: color-mix(in srgb, var(--surface) 70%, transparent); stroke: var(--line); stroke-width: 1.5; }
+.agent-avatar.is-voter .tile { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2.5; }
+.figure .shadow { fill: rgb(0 0 0 / 0.16); }
+.figure .halo { fill: none; stroke: var(--accent); stroke-width: 3; opacity: 0; }
+.agent-avatar.is-quiet .figure { filter: saturate(0.55); }
+.voter-tag { display: none; }
+.agent-avatar.is-voter .voter-tag { display: inline-flex; margin-top: 2px; }
+
+/* lado de cada cena */
+.side { display: grid; gap: var(--space-3); align-content: start; min-width: 0; }
+.panel { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--surface); min-width: 0; }
+.panel h3 { font: 600 15px/1.3 var(--font-display); display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+.panel h3 .icon { color: var(--ink-3); }
+.facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; margin: 10px 0 0; font-size: 13.5px; }
+.facts dt { color: var(--ink-3); }
+.facts dd { margin: 0; color: var(--ink); }
+.goal-line { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.locks { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: 13px; }
+.locks li { display: flex; align-items: flex-start; gap: 8px; color: var(--ink-2); }
+.locks li .icon { margin-top: 2px; color: var(--ink-3); }
+.locks li.is-active { color: var(--ink); font-weight: 600; }
+.locks li.is-active .icon { color: var(--warn); }
+.lock-state { margin-left: auto; flex: none; }
+.lines { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 13.5px; color: var(--ink); }
+.lines li::marker { color: var(--ink-3); font-weight: 600; }
+.lines strong { font-weight: 700; }
+details.panel > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; margin: -12px -14px; padding: 0 14px; cursor: pointer; font: 600 15px/1.3 var(--font-display); list-style: none; }
+details.panel > summary::-webkit-details-marker { display: none; }
+details.panel > summary .chev { margin-left: auto; transition: transform var(--motion-fast) var(--ease-out); }
+details.panel[open] > summary { margin-bottom: 8px; }
+details.panel[open] > summary .chev { transform: rotate(180deg); }
+
+/* prancheta do auditor: intervalo de Wilson contra a moeda ao ar */
+.clip { display: grid; gap: 10px; }
+.clip-row { display: grid; gap: 3px; }
+.clip-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 13px; }
+.clip-head strong { font-weight: 600; }
+.clip-bar { position: relative; height: 18px; border-radius: 4px; background: var(--surface-2); }
+.clip-bar .coin { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink-2); }
+.clip-bar .range { position: absolute; top: 4px; height: 10px; border-radius: 5px; }
+.clip-bar .range.above { background: var(--accent); }
+.clip-bar .range.below { background: var(--warn); }
+.clip-bar .range.even { background: var(--bench); }
+.clip-bar .point { position: absolute; top: 1px; width: 4px; height: 16px; border-radius: 2px; background: var(--ink); }
+.clip-axis { display: flex; justify-content: space-between; font: 11px var(--font-data); color: var(--ink-3); }
+.clip-note { font-size: 12.5px; color: var(--ink-2); }
+
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 12px; font-size: 13px; color: var(--ink-2); }
+.legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.honest-note { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft); color: var(--ink); font-size: 13.5px; }
+.honest-note .icon { color: var(--accent); margin-top: 2px; }
+.disclaimer { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); display: flex; gap: 8px; align-items: flex-start; }
+.disclaimer .icon { margin-top: 2px; color: var(--ink-3); }
+.site-foot { max-width: 1240px; margin: 0 auto; padding: 0 var(--gutter) 32px; font-size: 13px; color: var(--ink-3); }
+
+/* ---------- Movimento: só com propósito, curto, em tokens; prefers-reduced-motion troca por mudança instantânea ---------- */
+@keyframes bubble-in { from { opacity: 0; transform: translateY(6px) scale(0.94); } to { opacity: 1; transform: none; } }
+@keyframes think-dot { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+@keyframes think-bob { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+@keyframes halo-once { 0% { opacity: 0.7; transform: scale(0.7); } 100% { opacity: 0; transform: scale(1.35); } }
+@keyframes placard-flip { from { opacity: 0; transform: rotateX(90deg); } to { opacity: 1; transform: none; } }
+@keyframes chip-pop { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: none; } }
+html:not([data-motion='off']) [data-state='spoken'] .bubble.enter { animation: bubble-in var(--motion-medium) var(--ease-out) both; transform-origin: 50% 100%; }
+html:not([data-motion='off']) [data-agent='analyst'][data-state='spoken'] .bubble.enter { transform-origin: 0 50%; }
+html:not([data-motion='off']) [data-state='thinking'] .thought i { animation: think-dot calc(var(--motion-medium) * 3) ease-in-out infinite; }
+html:not([data-motion='off']) [data-state='thinking'] .thought i:nth-child(2) { animation-delay: var(--motion-fast); }
+html:not([data-motion='off']) [data-state='thinking'] .thought i:nth-child(3) { animation-delay: calc(var(--motion-fast) * 2); }
+html:not([data-motion='off']) .agent-avatar[data-state='thinking'] .body { animation: think-bob var(--motion-medium) ease-in-out infinite alternate; }
+html:not([data-motion='off']) .agent-avatar.halo-now .halo { animation: halo-once calc(var(--motion-medium) * 2) var(--ease-out) both; transform-box: fill-box; transform-origin: center; }
+html:not([data-motion='off']) .placard.flip { animation: placard-flip var(--motion-fast) var(--ease-out) both; transform-origin: 50% 0; }
+html:not([data-motion='off']) .pop { animation: chip-pop var(--motion-fast) var(--ease-out) both; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true">
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M7 7l10 10"/><path d="M17 8v9H8"/></symbol>
+<symbol id="i-flat" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+<symbol id="i-dash" viewBox="0 0 24 24"><path d="M5 12h3M11 12h2M16 12h3"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.5v.5"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2a5 5 0 0 1 5.5 5.8"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-replay" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></symbol>
+<symbol id="i-motion" viewBox="0 0 24 24"><path d="M4 12h3l2-5 4 10 2-5h5"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></symbol>
+<symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></symbol>
+<symbol id="i-quarter" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v9h9"/></symbol>
+<symbol id="i-half" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></symbol>
+<symbol id="i-full" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="i-candle" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4"/><rect x="8" y="7" width="8" height="10" rx="1.5"/></symbol>
+</svg>
+
+<div class="notice-strip"><strong>Simulação com dinheiro fictício.</strong> Nada aqui é recomendação de investimento.</div>
+<header class="topbar"><div class="topbar-inner">
+  <a class="brand" href="#">Ativ<span>AdA</span></a>
+  <nav class="nav" aria-label="Principal"><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>Visão geral</a><a href="#" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>Backtests</a></nav>
+  <div class="top-actions">
+    <button class="icon-button" type="button" data-theme-toggle aria-label="Tema da tela"><svg class="icon" aria-hidden="true"><use href="#i-sun"/></svg><span class="hide-mobile" data-theme-text>automático</span></button>
+  </div>
+</div></header>
+
+<main class="page">
+  <p class="crumbs"><a href="#">Backtests</a> › Simulação ao vivo</p>
+  <div class="page-head">
+    <div>
+      <h1>LINK/USDT · simulação ao vivo</h1>
+      <div class="meta-chips"><span class="chip outline">Placar clássico</span><span class="chip outline">vela de 15 min</span><span class="chip outline">horários em GMT−3</span></div>
+    </div>
+    <div class="preview-box">
+      <p class="preview-label" id="scene-label">Cena do preview</p>
+      <div class="preview-switch" role="group" aria-labelledby="scene-label">
+        <button type="button" data-scene="nova" aria-pressed="true">Vela nova</button>
+        <button type="button" data-scene="dividida" aria-pressed="false">Equipe dividida</button>
+        <button type="button" data-scene="confuso" aria-pressed="false">Mercado confuso</button>
+        <button type="button" data-scene="trava" aria-pressed="false">Pausa por trava</button>
+        <button type="button" data-scene="auditor" aria-pressed="false">Auditor</button>
+      </div>
+      <p class="preview-note">Preview: os acertos são REAIS (medição T0.2 da spec 007, LINK/USDT 15 min, últimos 183 dias). Os votos, as leituras e a postura de cada cena são exemplos que seguem a regra <span class="num">analyst-1</span>.</p>
+    </div>
+  </div>
+
+  <section class="card" aria-labelledby="room-title">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title" id="room-title"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg>Sala da equipe</h2>
+        <p class="card-sub">Cada especialista diz o que acha da próxima vela; o analista de risco decide quanto arriscar; o auditor confere quem acerta mais que a moeda ao ar.</p>
+        <div class="head-chips">
+          <span class="chip info" data-candle-chip><svg class="icon sm" aria-hidden="true"><use href="#i-candle"/></svg><span data-candle-text>Vela das 13:45 às 14:00 · fechou</span></span>
+          <span class="chip outline"><svg class="icon sm" aria-hidden="true"><use href="#i-eye"/></svg>Modo sombra: só observa</span>
+        </div>
+      </div>
+      <div class="head-actions">
+        <button class="tool" type="button" data-replay><svg class="icon" aria-hidden="true"><use href="#i-replay"/></svg>Repetir</button>
+        <button class="tool" type="button" data-motion-toggle aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-motion"/></svg><span>Animação<span aria-hidden="true" class="on-text">: ligada</span><span aria-hidden="true" class="off-text">: desligada</span></span></button>
+      </div>
+    </div>
+
+    <div class="room-layout">
+      <div class="room-wrap">
+        <div class="room" data-room aria-hidden="true"></div>
+        <div class="legend" aria-hidden="true">
+          <span><span class="chip sm vote-favor"><svg class="icon sm"><use href="#i-up"/></svg>a favor</span> acha que a próxima vela fecha acima</span>
+          <span><span class="chip sm vote-contra"><svg class="icon sm"><use href="#i-down"/></svg>contra</span> acha que fecha abaixo</span>
+          <span><span class="chip sm vote-neutro"><svg class="icon sm"><use href="#i-flat"/></svg>neutro</span> sem opinião</span>
+          <span>Balão tracejado = não vota (não provou valor)</span>
+        </div>
+        <p class="honest-note" data-scene-note hidden><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span data-scene-note-text></span></p>
+      </div>
+      <aside class="side" aria-label="Decisão e falas desta vela" data-side></aside>
+    </div>
+
+    <p class="visually-hidden" aria-live="polite" data-live></p>
+    <p class="disclaimer"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span>O analista é uma regra automática sobre dados passados; não é recomendação. Tendência, não promessa. Tudo simulado, com dinheiro fictício.</span></p>
+  </section>
+</main>
+<footer class="site-foot">© <span data-year>2026</span> Ada Technology — AtivAdA · preview da spec 011</footer>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (selector, root = document) => root.querySelector(selector);
+
+  // Acertos REAIS: specs/007-analista-de-risco-senior/evidence.md, T0.2, LINKUSDT 15m, últimos 183 dias.
+  const AUDIT = {
+    trend: { rate: '47,44%', hits: '5.181', counted: '10.921', low: 46.50, high: 48.38, point: 47.44, verdict: 'below', weight: '0' },
+    reversion: { rate: '55,64%', hits: '1.420', counted: '2.552', low: 53.70, high: 57.57, point: 55.64, verdict: 'above', weight: '0,03' },
+    volume: { rate: '48,27%', hits: '8.025', counted: '16.625', low: 47.51, high: 49.04, point: 48.27, verdict: 'below', weight: '0' },
+    sentiment: { rate: '49,95%', hits: '2.569', counted: '5.143', low: 48.58, high: 51.32, point: 49.95, verdict: 'even', weight: '0' },
+    strategy: { rate: '47,89%', hits: '7.225', counted: '15.085', low: 47.09, high: 48.70, point: 47.89, verdict: 'below', weight: null },
+  };
+  // Situação da A7 (ADR 0002, spec 007): catálogo fechado.
+  const VERDICT = {
+    above: { label: 'provou valor', css: 'verdict-above', icon: 'i-check' },
+    even: { label: 'rebaixado: igual à moeda', css: 'verdict-even', icon: 'i-flat' },
+    below: { label: 'rebaixado: errou mais que a moeda', css: 'verdict-below', icon: 'i-down' },
+    too_few: { label: 'em observação: menos de 30', css: 'verdict-few', icon: 'i-clock' },
+  };
+  const VOTE = {
+    favor: { label: 'a favor', css: 'vote-favor', icon: 'i-up' },
+    contra: { label: 'contra', css: 'vote-contra', icon: 'i-down' },
+    neutro: { label: 'neutro', css: 'vote-neutro', icon: 'i-flat' },
+    unread: { label: 'sem leitura', css: 'vote-unread', icon: 'i-dash' },
+  };
+  const POSTURE = {
+    pause: { label: 'PAUSA', css: 'posture-pause', icon: 'i-pause' },
+    caution: { label: 'CAUTELA', css: 'posture-caution', icon: 'i-quarter' },
+    normal: { label: 'MODERADA', css: 'posture-normal', icon: 'i-half' },
+    confident: { label: 'LIBERADA', css: 'posture-confident', icon: 'i-full' },
+  };
+  const SPECIALISTS = [
+    { key: 'trend', name: 'Tendência', rules: 'EMA 9×21 · MACD 12/26/9 · Donchian 20', look: { shirt: '--shirt-trend', skin: '#e8b48f', hair: '#2b2118', extra: 'cap' } },
+    { key: 'reversion', name: 'Reversão', rules: 'RSI 14 · Bollinger 20', look: { shirt: '--shirt-reversion', skin: '#8d5a3b', hair: '#111111', extra: 'loop' } },
+    { key: 'volume', name: 'Volume', rules: 'OBV com EMA 20', look: { shirt: '--shirt-volume', skin: '#f1c7a5', hair: '#8a5a2b', extra: 'phones' } },
+    { key: 'sentiment', name: 'Sentimento', rules: 'Fear & Greed 25/75', look: { shirt: '--shirt-sentiment', skin: '#c68a5e', hair: '#3b2a20', extra: 'heart' } },
+  ];
+  const ANALYST_LOOK = { shirt: '--shirt-analyst', skin: '#a86b45', hair: '#1d1712', extra: 'tie' };
+  const AUDITOR_LOOK = { shirt: '--shirt-auditor', skin: '#f3d2b8', hair: '#b9bcc4', extra: 'lens' };
+
+  const LOCK_LABELS = {
+    daily_loss: (v) => `Perda das últimas 24 h: ${v}% de 1% permitido`,
+    loss_streak: (v) => `Perdas seguidas: ${v} de 3`,
+    trade_count: (v) => `Operações nas últimas 24 h: ${v} de 8`,
+    goal_room: (v) => `Folga até a perda máxima da meta: ${v}% (mínimo: 2,00%)`,
+    move_cost: (v) => `Movimento ÷ custo: ${v} (mínimo: 2)`,
+  };
+  const ON_CADENCE = { 60: 'aberta: a vela fecha na hora cheia', 15: 'aberta: ritmo de 15 min', 240: 'aberta: a vela fecha num múltiplo de 4 horas' };
+  const CADENCE_TEXT = { 15: '15 min', 60: '1 hora', 240: '4 horas' };
+  const SCALE_TEXT = { pause: 'nenhuma entrada nova', caution: '¼ do risco da estratégia (0,25% do saldo por operação)', normal: '½ do risco da estratégia (0,50% do saldo por operação)', confident: 'o mesmo risco da estratégia (1,00% do saldo por operação)' };
+  const GOAL_LINE = 'Meta: +3,00% no prazo. Somado até aqui: +0,64% em 5 operações. Falta 2,36%.';
+  function postureLine(posture, cadence) {
+    if (posture === 'pause') return 'Postura agora: PAUSA · nenhuma entrada nova; as saídas da estratégia continuam valendo.';
+    const share = { caution: '¼', normal: '½', confident: 'o mesmo' }[posture];
+    const rate = { caution: '0,25', normal: '0,50', confident: '1,00' }[posture];
+    return `Postura agora: ${POSTURE[posture].label} · olha o mercado a cada ${CADENCE_TEXT[cadence]} · arrisca ${share} do que a estratégia arriscaria (${rate}% do saldo por operação) · cada operação dura no máximo 60 min.`;
+  }
+
+  // Cenas: votos, motivos (frases propostas na spec 011 §5, D4-A) e decisão (frases da A17).
+  const SCENES = {
+    nova: {
+      candle: 'Vela das 13:45 às 14:00 · fechou',
+      votes: {
+        trend: ['favor', 'a média rápida (EMA 9) está acima da lenta (EMA 21)'],
+        reversion: ['favor', 'o RSI (28,6) está abaixo de 30'],
+        volume: ['contra', 'o volume (OBV) está abaixo da média dele'],
+        sentiment: ['neutro', 'o Fear & Greed (41) não está em medo (até 25)'],
+      },
+      posture: 'normal', cadence: 60, volume: '0,92', gate: 'open',
+      reason: 'Tendência para cima, firme, mas com volume abaixo do normal: tamanho pela metade.',
+      locks: { daily_loss: '0,12', loss_streak: '1', trade_count: '3', goal_room: '4,10', move_cost: '2,13' }, activeLock: null,
+      note: 'Só a Reversão provou acertar mais que a moeda ao ar; os outros três falam, mas não votam. O analista decide pelo voto dela.',
+    },
+    dividida: {
+      candle: 'Vela das 14:45 às 15:00 · fechou',
+      votes: {
+        trend: ['favor', 'o MACD está acima da linha de sinal'],
+        reversion: ['neutro', 'o RSI (52,3) está entre 30 e 70'],
+        volume: ['contra', 'o volume (OBV) está abaixo da média dele'],
+        sentiment: ['contra', 'o Fear & Greed (78) está em ganância (a partir de 75)'],
+      },
+      posture: 'caution', cadence: 60, volume: '1,04', gate: 'open',
+      reason: 'Os especialistas que provaram valor estão neutros nesta vela. Sem previsão.',
+      locks: { daily_loss: '0,12', loss_streak: '1', trade_count: '3', goal_room: '4,10', move_cost: '2,36' }, activeLock: null,
+      note: 'A equipe parece dividida, mas quem discorda não provou valor e não vota. "Equipe dividida" (split_team) só acontece quando dois ou mais aprovados discordam — hoje só a Reversão está aprovada.',
+    },
+    confuso: {
+      candle: 'Vela das 16:15 às 16:30 · fechou',
+      votes: {
+        trend: ['favor', 'o preço fechou acima da máxima das últimas 20 velas'],
+        reversion: ['neutro', 'o RSI (61,8) está entre 30 e 70'],
+        volume: ['favor', 'o volume (OBV) está acima da média dele'],
+        sentiment: ['unread', 'sem leitura do Fear & Greed há mais de 48 horas'],
+      },
+      posture: 'caution', cadence: 15, volume: '2,10', gate: 'open',
+      reason: 'Mercado agitado demais para ler: a oscilação (1,32%) está acima de 95% das velas dos últimos 30 dias. Sem previsão.',
+      locks: { daily_loss: '0,12', loss_streak: '1', trade_count: '4', goal_room: '4,10', move_cost: '4,40' }, activeLock: null,
+      note: 'Com o mercado agitado demais, o analista diz "sem previsão" mesmo que alguém vote: ninguém lê bem um mercado assim.',
+    },
+    trava: {
+      candle: 'Vela das 10:45 às 11:00 · fechou',
+      votes: {
+        trend: ['contra', 'a média rápida (EMA 9) está abaixo da lenta (EMA 21)'],
+        reversion: ['favor', 'o RSI (26,9) está abaixo de 30'],
+        volume: ['neutro', 'o volume (OBV) está igual à média dele'],
+        sentiment: ['neutro', 'o Fear & Greed (44) não está em medo (até 25)'],
+      },
+      posture: 'pause', cadence: 60, volume: '0,95', gate: 'closed',
+      reason: 'O movimento típico de 15 min (0,42%) não paga com folga a ida e volta das taxas (0,30%): precisa ser pelo menos o dobro.',
+      locks: { daily_loss: '0,12', loss_streak: '1', trade_count: '3', goal_room: '4,10', move_cost: '1,40' }, activeLock: 'move_cost',
+      note: 'A trava vem antes da equipe: mesmo com a Reversão a favor, o analista pausa porque o movimento não paga as taxas.',
+    },
+  };
+  SCENES.auditor = { ...SCENES.nova, isAudit: true, note: 'O auditor compara cada especialista com uma moeda ao ar (50%). Só ganha voto quem fica acima de 50% mesmo no pior caso do intervalo de 95% (Wilson).' };
+
+  // ---------- bonequinho em SVG (sem imagem externa) ----------
+  function figureSvg(look) {
+    const extras = {
+      cap: '<rect x="23" y="7" width="34" height="11" rx="5" fill="var(--shirt)"/><rect x="40" y="14" width="20" height="4" rx="2" class="sleeve"/>',
+      loop: '<path d="M45 57a5 5 0 1 1-5-5h3" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="m41 49 3 3-3 3" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
+      phones: '<path d="M22 28a18 18 0 0 1 36 0" fill="none" stroke="var(--shoe)" stroke-width="3.5"/><rect x="18" y="24" width="7" height="12" rx="3" fill="var(--shoe)"/><rect x="55" y="24" width="7" height="12" rx="3" fill="var(--shoe)"/>',
+      heart: '<path d="M40 63s-7-4.4-7-9a3.8 3.8 0 0 1 7-2 3.8 3.8 0 0 1 7 2c0 4.6-7 9-7 9z" fill="#fff"/>',
+      tie: '<circle cx="34" cy="27" r="4.4" fill="none" stroke="var(--shoe)" stroke-width="1.8"/><circle cx="46" cy="27" r="4.4" fill="none" stroke="var(--shoe)" stroke-width="1.8"/><path d="M38.4 27h3.2" stroke="var(--shoe)" stroke-width="1.8"/><path d="M40 46l-3.5 4 3.5 14 3.5-14z" fill="var(--shoe)"/>',
+      lens: '<rect x="11" y="56" width="13" height="17" rx="2" fill="#f4f1e8" stroke="var(--shoe)" stroke-width="1.4"/><path d="M14 61h7M14 65h7M14 69h5" stroke="var(--shoe)" stroke-width="1.2"/><circle cx="63" cy="62" r="6" fill="rgb(255 255 255 / 0.45)" stroke="var(--shoe)" stroke-width="2.4"/><path d="m67 66.5 5 5" stroke="var(--shoe)" stroke-width="3" stroke-linecap="round"/>',
+    };
+    const eyes = look.extra === 'tie'
+      ? '<rect x="32.5" y="25.5" width="3" height="3.5" rx="1" fill="#1b1b1b"/><rect x="44.5" y="25.5" width="3" height="3.5" rx="1" fill="#1b1b1b"/>'
+      : '<rect x="33" y="25" width="3" height="4.5" rx="1" fill="#1b1b1b"/><rect x="44" y="25" width="3" height="4.5" rx="1" fill="#1b1b1b"/>';
+    return `<svg class="figure" viewBox="0 0 80 110" style="--shirt: var(${look.shirt})" aria-hidden="true">
+      <polygon class="tile" points="40,88 74,99 40,110 6,99"/>
+      <ellipse class="shadow" cx="40" cy="99" rx="17" ry="4.5"/>
+      <circle class="halo" cx="40" cy="58" r="34"/>
+      <g class="body">
+        <rect class="pants" x="31" y="72" width="8" height="22" rx="2"/><rect class="pants" x="41" y="72" width="8" height="22" rx="2"/>
+        <rect class="shoe" x="28" y="91" width="12" height="6" rx="2.5"/><rect class="shoe" x="40" y="91" width="12" height="6" rx="2.5"/>
+        <rect class="sleeve" x="18" y="48" width="9" height="22" rx="4"/><rect class="sleeve" x="53" y="48" width="9" height="22" rx="4"/>
+        <circle cx="22.5" cy="71" r="4" fill="${look.skin}"/><circle cx="57.5" cy="71" r="4" fill="${look.skin}"/>
+        <rect class="shirt" x="26" y="45" width="28" height="31" rx="7"/>
+        <rect x="36" y="39" width="8" height="8" fill="${look.skin}"/>
+        <rect x="25" y="12" width="30" height="31" rx="10" fill="${look.skin}"/>
+        <rect x="24" y="9" width="32" height="12" rx="7" fill="${look.hair}"/><rect x="24" y="13" width="5" height="12" rx="2.5" fill="${look.hair}"/>
+        ${eyes}
+        <path d="M36 35q4 3 8 0" fill="none" stroke="#1b1b1b" stroke-width="1.8" stroke-linecap="round"/>
+        ${extras[look.extra] ?? ''}
+      </g>
+    </svg>`;
+  }
+
+  const icon = (id, extra = '') => `<svg class="icon sm${extra}" aria-hidden="true"><use href="#${id}"/></svg>`;
+  const chip = (def, extra = '') => `<span class="chip sm ${def.css}${extra}">${icon(def.icon)}${def.label}</span>`;
+  const accuracyText = (a) => `${a.rate} (${a.hits} de ${a.counted})`;
+
+  // ---------- montagem da sala ----------
+  function specialistParts(spec, scene) {
+    const [voteKey, motive] = scene.votes[spec.key];
+    const audit = AUDIT[spec.key];
+    const proven = audit.verdict === 'above';
+    const isVoter = proven && (voteKey === 'favor' || voteKey === 'contra');
+    const cls = proven ? (isVoter ? ' is-voter' : '') : ' is-quiet';
+    const weightText = proven ? `peso ${audit.weight}` : 'não vota';
+    return `
+      <div class="bubble-cell" data-part="bubble" data-agent="${spec.key}" data-state="idle">
+        <span class="thought"><i></i><i></i><i></i></span>
+        <div class="bubble enter${cls}">
+          <div class="bubble-top"><span class="bubble-who">${spec.name}</span>${chip(VOTE[voteKey])}</div>
+          <p class="bubble-motive">${motive[0].toUpperCase()}${motive.slice(1)}.</p>
+        </div>
+      </div>
+      <div class="agent-avatar${proven ? (isVoter ? ' is-voter' : '') : ' is-quiet'}" data-part="avatar" data-agent="${spec.key}" data-state="idle">
+        ${figureSvg(spec.look)}
+        <span class="agent-name">${spec.name}</span>
+      </div>
+      <div class="placard-cell" data-part="placard" data-agent="${spec.key}">
+        <span class="placard">
+          <span class="placard-row">${chip(VERDICT[audit.verdict])}</span>
+          <span class="placard-row"><span class="acc">${accuracyText(audit)}</span><span class="weight">· ${weightText}</span></span>
+        </span>
+      </div>`;
+  }
+
+  function analystParts(scene) {
+    const posture = POSTURE[scene.posture];
+    return `
+      <div class="agent-avatar" data-part="avatar" data-agent="analyst" data-state="idle">${figureSvg(ANALYST_LOOK)}<span class="agent-name">Analista</span></div>
+      <div class="bubble-cell" data-part="bubble" data-agent="analyst" data-state="idle">
+        <span class="thought"><i></i><i></i><i></i></span>
+        <div class="bubble enter analyst">
+          <div class="bubble-top"><span class="bubble-who">Analista de risco</span><span class="posture ${posture.css}">${icon(posture.icon)}${posture.label}</span></div>
+          <p class="bubble-line">${postureLine(scene.posture, scene.cadence)}</p>
+          <p class="bubble-reason">${scene.reason}</p>
+        </div>
+      </div>`;
+  }
+
+  function auditorParts(scene) {
+    const items = [...SPECIALISTS.map((s) => [s.name, AUDIT[s.key].verdict]), ['Tendência da estratégia', 'strategy']];
+    const list = items.map(([name, verdict]) => verdict === 'strategy'
+      ? `<li><span>${name}</span><span class="chip sm verdict-few">${icon('i-flat')}não vota</span></li>`
+      : `<li><span>${name}</span>${chip(VERDICT[verdict])}</li>`).join('');
+    return `
+      <div class="auditor-stack">
+      <div class="bubble-cell" data-part="bubble" data-agent="auditor" data-state="idle" data-empty="${scene.isAudit ? 'false' : 'true'}">
+        <span class="thought"><i></i><i></i><i></i></span>
+        <div class="bubble enter auditor-list"><span class="bubble-who">Auditor</span><ul>${list}</ul></div>
+      </div>
+      <div class="agent-avatar" data-part="avatar" data-agent="auditor" data-state="idle">${figureSvg(AUDITOR_LOOK)}<span class="agent-name">Auditor</span></div>
+      </div>`;
+  }
+
+  // ---------- lado: decisão, travas, prancheta e as falas em texto ----------
+  function decisionPanel(scene) {
+    const posture = POSTURE[scene.posture];
+    const gate = scene.gate === 'open' ? ON_CADENCE[scene.cadence] : 'fechada: nenhuma entrada nova';
+    return `<section class="panel"><h3>${icon('i-eye')}O que o analista faria</h3>
+      <span class="posture ${posture.css}">${icon(posture.icon)}${posture.label}</span>
+      <dl class="facts">
+        <dt>Ritmo</dt><dd>a cada ${CADENCE_TEXT[scene.cadence]} <span class="muted">(volume <span class="num">${scene.volume}×</span> o normal)</span></dd>
+        <dt>Tamanho</dt><dd>${SCALE_TEXT[scene.posture]}</dd>
+        <dt>Duração</dt><dd>no máximo 60 min por operação</dd>
+        <dt>Entrada</dt><dd>${gate}</dd>
+      </dl>
+      <p class="goal-line">${GOAL_LINE}</p></section>`;
+  }
+  function locksPanel(scene) {
+    const rows = Object.entries(scene.locks).map(([key, value]) => {
+      const active = scene.activeLock === key;
+      const state = active ? `<span class="chip sm warn lock-state">${icon('i-lock')}ativa</span>` : '';
+      return `<li class="${active ? 'is-active' : ''}">${icon(active ? 'i-lock' : 'i-unlock')}<span>${LOCK_LABELS[key](value)}</span>${state}</li>`;
+    }).join('');
+    return `<section class="panel"><h3>${icon('i-lock')}Travas</h3><ul class="locks">${rows}</ul></section>`;
+  }
+  function clipboardPanel() {
+    const min = 44; const max = 60; const pos = (v) => `${((v - min) / (max - min)) * 100}%`;
+    const rows = [...SPECIALISTS.map((s) => [s.name, AUDIT[s.key]]), ['Tendência da estratégia', AUDIT.strategy]].map(([name, a]) => `
+      <div class="clip-row"><div class="clip-head"><strong>${name}</strong><span class="num">${accuracyText(a)}</span>${a.weight === null ? `<span class="chip sm verdict-few">${icon('i-flat')}não vota</span>` : chip(VERDICT[a.verdict])}</div>
+      <div class="clip-bar"><span class="range ${a.verdict}" style="left:${pos(a.low)};width:calc(${pos(a.high)} - ${pos(a.low)})"></span><span class="point" style="left:calc(${pos(a.point)} - 2px)"></span><span class="coin" style="left:calc(${pos(50)} - 1px)"></span></div></div>`).join('');
+    return `<section class="panel"><h3>${icon('i-search')}Prancheta do auditor</h3>
+      <div class="clip">${rows}<div class="clip-axis"><span>44%</span><span>50% · moeda ao ar</span><span>60%</span></div>
+      <p class="clip-note">Barra = intervalo de 95% (Wilson) do acerto do lado; traço = moeda ao ar. LINK/USDT 15 min, últimos 183 dias.</p></div></section>`;
+  }
+  function linesPanel(scene) {
+    const items = SPECIALISTS.map((s) => {
+      const [voteKey, motive] = scene.votes[s.key];
+      const a = AUDIT[s.key];
+      const tail = a.verdict === 'above' ? `peso ${a.weight}` : 'não vota';
+      return `<li><strong>${s.name}</strong>: ${VOTE[voteKey].label}. ${motive[0].toUpperCase()}${motive.slice(1)}. Acerto ${accuracyText(a)} · ${VERDICT[a.verdict].label} · ${tail}.</li>`;
+    });
+    items.push(`<li><strong>Analista de risco</strong>: ${postureLine(scene.posture, scene.cadence)} ${scene.reason}</li>`);
+    if (scene.isAudit) {
+      const audit = SPECIALISTS.map((s) => `${s.name}: ${VERDICT[AUDIT[s.key].verdict].label}`).join('; ');
+      items.push(`<li><strong>Auditor</strong>: ${audit}; Tendência da estratégia: não vota.</li>`);
+    }
+    return `<details class="panel" data-lines><summary>${icon('i-users')}Falas desta vela em texto<svg class="icon sm chev" aria-hidden="true"><use href="#i-chev"/></svg></summary><ol class="lines">${items.join('')}</ol></details>`;
+  }
+
+  // ---------- sequência: pensa → falam em ordem → analista decide ----------
+  const STEP = { think: 450, between: 150, analystThink: 250, analystSpeak: 300, flip: 220 };
+  let timers = [];
+  const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+  const later = (delay, action) => timers.push(setTimeout(action, delay));
+  const motionAllowed = () => document.documentElement.dataset.motion !== 'off' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const setState = (agent, state) => document.querySelectorAll(`[data-agent="${agent}"][data-state]`).forEach((el) => { el.dataset.state = state; });
+
+  function summaryFor(scene) {
+    const voter = SPECIALISTS.find((s) => AUDIT[s.key].verdict === 'above');
+    const vote = VOTE[scene.votes[voter.key][0]].label;
+    return `${scene.candle}. ${voter.name} (a única que vota): ${vote}. Analista: ${POSTURE[scene.posture].label}. As falas estão na lista "Falas desta vela em texto".`;
+  }
+
+  function play(sceneKey, freeze) {
+    clearTimers();
+    const scene = SCENES[sceneKey];
+    const room = $('[data-room]');
+    room.innerHTML = `<div class="room-floor"></div>${SPECIALISTS.map((s) => specialistParts(s, scene)).join('')}${analystParts(scene)}${auditorParts(scene)}`;
+    const side = $('[data-side]');
+    side.innerHTML = (scene.isAudit ? clipboardPanel() : decisionPanel(scene)) + locksPanel(scene) + linesPanel(scene);
+    $('[data-lines]').open = window.matchMedia('(min-width: 1024px)').matches;
+    $('[data-candle-text]').textContent = scene.candle;
+    $('[data-scene-note-text]').textContent = scene.note;
+    $('[data-scene-note]').hidden = false;
+    const live = $('[data-live]');
+    const agents = SPECIALISTS.map((s) => s.key);
+    const voterKey = SPECIALISTS.find((s) => AUDIT[s.key].verdict === 'above' && ['favor', 'contra'].includes(scene.votes[s.key][0]))?.key;
+
+    if (freeze === 'thinking') { [...agents, 'analyst'].forEach((a) => setState(a, 'thinking')); return; }
+    if (!motionAllowed()) {
+      [...agents, 'analyst', 'auditor'].forEach((a) => setState(a, 'spoken'));
+      live.textContent = summaryFor(scene);
+      return;
+    }
+    const candleChip = $('[data-candle-chip]');
+    candleChip.classList.remove('pop'); void candleChip.offsetWidth; candleChip.classList.add('pop');
+    agents.forEach((a) => setState(a, 'thinking'));
+    let t = STEP.think;
+    if (scene.isAudit) {
+      agents.forEach((a) => setState(a, 'spoken'));
+      setState('auditor', 'thinking');
+      document.querySelectorAll('.placard').forEach((p, i) => { p.style.visibility = 'hidden'; later(t + i * STEP.flip, () => { p.style.visibility = ''; p.classList.add('flip'); if (i === 1) haloOn('reversion'); }); });
+      t += agents.length * STEP.flip;
+      later(t, () => setState('auditor', 'spoken'));
+      setState('analyst', 'spoken');
+    } else {
+      agents.forEach((a, i) => later(t + i * STEP.between, () => { setState(a, 'spoken'); if (a === voterKey) haloOn(a); }));
+      t += agents.length * STEP.between + STEP.analystThink;
+      later(t, () => setState('analyst', 'thinking'));
+      t += STEP.analystSpeak;
+      later(t, () => setState('analyst', 'spoken'));
+      setState('auditor', 'spoken');
+    }
+    later(t + 200, () => { live.textContent = summaryFor(scene); });
+  }
+  function haloOn(agent) {
+    const avatar = $(`.agent-avatar[data-agent="${agent}"]`);
+    if (avatar === null) return;
+    avatar.classList.remove('halo-now'); void avatar.getBoundingClientRect(); avatar.classList.add('halo-now');
+  }
+
+  // ---------- controles ----------
+  let current = 'nova';
+  document.querySelectorAll('[data-scene]').forEach((button) => button.addEventListener('click', () => {
+    current = button.dataset.scene;
+    document.querySelectorAll('[data-scene]').forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+    play(current);
+  }));
+  $('[data-replay]').addEventListener('click', () => play(current));
+  $('[data-motion-toggle]').addEventListener('click', (event) => {
+    const isOn = event.currentTarget.getAttribute('aria-pressed') === 'true';
+    event.currentTarget.setAttribute('aria-pressed', String(!isOn));
+    if (isOn) document.documentElement.dataset.motion = 'off'; else delete document.documentElement.dataset.motion;
+    play(current);
+  });
+  const themes = ['auto', 'light', 'dark'];
+  const themeNames = { auto: 'automático', light: 'claro', dark: 'escuro' };
+  $('[data-theme-toggle]').addEventListener('click', () => {
+    const now = document.documentElement.dataset.theme ?? 'auto';
+    const next = themes[(themes.indexOf(now) + 1) % themes.length];
+    if (next === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = next;
+    $('[data-theme-text]').textContent = themeNames[next];
+  });
+  $('[data-year]').textContent = String(new Date().getFullYear());
+
+  const params = new URLSearchParams(location.search);
+  if (params.get('theme')) { document.documentElement.dataset.theme = params.get('theme'); $('[data-theme-text]').textContent = themeNames[params.get('theme')] ?? 'automático'; }
+  if (params.get('motion') === 'off') { document.documentElement.dataset.motion = 'off'; $('[data-motion-toggle]').setAttribute('aria-pressed', 'false'); }
+  if (params.get('scene') && SCENES[params.get('scene')]) {
+    current = params.get('scene');
+    document.querySelectorAll('[data-scene]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scene === current)));
+  }
+  play(current, params.get('freeze'));
+})();
+</script>
+</body>
+</html>

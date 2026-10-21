@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { Candle } from './candle.types.js';
+import type { MarketCandle } from './candle.types.js';
 import { parseKlinesResponse } from './kline.schema.js';
 import { assertValidKlinesParams, buildKlinesUrl } from './klines-request.js';
 import { MAX_KLINES_PER_REQUEST } from './market-data.constant.js';
@@ -13,11 +13,11 @@ import type {
 } from './market-data.types.js';
 import { createRequestExecutor, type RequestExecutor } from './request-executor.js';
 import { resolveSettings } from './resolve-settings.js';
-import { TIMEFRAME_DURATION_MILLISECONDS } from './timeframe.constant.js';
+import { MARKET_CANDLE_DURATION_MILLISECONDS } from './timeframe.constant.js';
 import { createWeightGate } from './weight-gate.js';
 
 type KlinesPage = {
-  readonly closedCandles: readonly Candle[];
+  readonly closedCandles: readonly MarketCandle[];
   readonly lastOpenTime: number | undefined;
   readonly rowCount: number;
 };
@@ -50,7 +50,7 @@ function nextRangeCursor(
   cursor: number,
 ): number | undefined {
   if (page.lastOpenTime === undefined || page.rowCount < MAX_KLINES_PER_REQUEST) return undefined;
-  const nextCursor = page.lastOpenTime + TIMEFRAME_DURATION_MILLISECONDS[params.timeframe];
+  const nextCursor = page.lastOpenTime + MARKET_CANDLE_DURATION_MILLISECONDS[params.timeframe];
   if (nextCursor <= cursor) throw new MarketDataResponseError('Paginação de klines não avançou.');
   return nextCursor;
 }
@@ -58,8 +58,8 @@ function nextRangeCursor(
 async function fetchKlinesRange(
   context: ClientContext,
   params: FetchKlinesRangeParams,
-): Promise<readonly Candle[]> {
-  const collected: Candle[] = [];
+): Promise<readonly MarketCandle[]> {
+  const collected: MarketCandle[] = [];
   let cursor: number | undefined = params.from;
   // O cursor da página seguinte nasce da página anterior: paginação sequencial por natureza.
   while (cursor !== undefined && cursor <= params.to) {

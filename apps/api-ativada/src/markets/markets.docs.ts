@@ -17,17 +17,21 @@ export const CANDLE_VIEW_SCHEMA = z.strictObject({
   tradeCount: z.number().int().nonnegative(),
 });
 
+export const CANDLE_META_SCHEMA = z.strictObject({ retentionStart: epochMillisecondsSchema });
+
 export function createMarketDocumentation(query: z.ZodType): RouteDocumentation {
   return {
     summary:
-      'Candles fechados de um par e timeframe habilitados, de `from` (incluído) a `to` (excluído), no máximo 5.000 por resposta.',
+      'Candles fechados de um par e timeframe habilitados, de `from` (incluído) a `to` (excluído), no máximo 5.000 por resposta. Velas de exibição (3m) só existem dentro da retenção: a resposta traz `meta.retentionStart`.',
     tag: 'Mercado',
     query,
     successes: [
       {
         status: HTTP_STATUS.OK,
-        description: 'Candles em ordem crescente de abertura, preços e volume como texto decimal.',
+        description:
+          'Candles em ordem crescente de abertura, preços e volume como texto decimal. `meta.retentionStart` só nas velas de exibição.',
         schema: z.array(CANDLE_VIEW_SCHEMA),
+        meta: CANDLE_META_SCHEMA,
       },
     ],
     errors: [

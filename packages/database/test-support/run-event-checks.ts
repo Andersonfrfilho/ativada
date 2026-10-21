@@ -12,6 +12,7 @@ import { createRunRepository } from '../src/runs/run.repository.js';
 import { createRunBatchRepository } from '../src/run-results/run-batch.repository.js';
 import type { RunResultRows } from '../src/run-results/run-batch.types.js';
 import type { LifecycleCheckContext } from './account-lifecycle-checks.js';
+import { buildAnalystDecisionInput } from './analyst-decision-checks.js';
 import {
   buildEquityPoints,
   buildFills,
@@ -218,6 +219,66 @@ async function checkRollbackAndScope(
   );
 }
 
+async function countAnalystRows(client: Bun.SQL, runId: string): Promise<number> {
+  const rows: unknown = await client.unsafe(
+    'SELECT count(*)::int AS total FROM analyst_decisions WHERE run_id = $1',
+    [runId],
+  );
+  return (rows as readonly CountRow[])[0]?.total ?? 0;
+}
+
+// A decisão do analista (spec 007, A18) nasce NA transação do passo: o aviso chega no COMMIT e só se a linha é nova; a
+// repetida da mesma vela não grava nem avisa; o lote desfeito não deixa linha nem aviso.
+async function checkAnalystEvent(
+  context: LifecycleCheckContext,
+  collected: Collected,
+): Promise<void> {
+  const { handle, client, assertCondition, reportCheck } = context;
+  const { owner, runId } = await startRun(context, 'subject-run-events-analyst');
+  const batches = createRunBatchRepository(handle);
+  const input = buildAnalystDecisionInput(runId, candleTimeAt(0));
+  const before = collected.raw.length;
+  const isNew = await batches.runInBatch(owner.scope, runId, async (writer) => {
+    const created = await writer.appendAnalystDecision(input);
+    await Bun.sleep(QUIET_MILLISECONDS);
+    assertCondition(collected.raw.length === before, 'NOTIFY do analista chegou antes do COMMIT');
+    return created;
+  });
+  assertCondition(isNew === true, 'a primeira gravação da vela não criou a linha');
+  await waitUntil(() => collected.raw.length > before, 'aviso do analista depois do COMMIT');
+  const [event] = parseAll(collected.raw.slice(before));
+  assertCondition(
+    event?.kind === RUN_EVENT_KIND.ANALYST &&
+      event.runId === runId &&
+      event.eventId === String(candleTimeAt(0)),
+    'o aviso do analista não é { runId, kind: analyst, eventId: vela }',
+  );
+  const keys = Object.keys(JSON.parse(collected.raw[before] ?? '{}') as object).sort();
+  assertCondition(keys.join(',') === 'eventId,kind,runId', 'o aviso do analista tem mais campos');
+  const repeated = await batches.runInBatch(owner.scope, runId, (writer) =>
+    writer.appendAnalystDecision({ ...input, posture: 'pause', message: 'repetida' }),
+  );
+  await Bun.sleep(QUIET_MILLISECONDS);
+  assertCondition(repeated === false, 'a vela repetida criou outra linha');
+  assertCondition(collected.raw.length === before + 1, 'a vela repetida avisou de novo');
+  let failure: unknown;
+  try {
+    await batches.runInBatch(owner.scope, runId, async (writer) => {
+      await writer.appendAnalystDecision(buildAnalystDecisionInput(runId, candleTimeAt(1)));
+      throw new Error('falha injetada depois da decisão');
+    });
+  } catch (error: unknown) {
+    failure = error;
+  }
+  await Bun.sleep(QUIET_MILLISECONDS);
+  assertCondition(failure instanceof Error, 'o erro do lote não propagou');
+  assertCondition(collected.raw.length === before + 1, 'lote desfeito avisou da decisão');
+  assertCondition((await countAnalystRows(client, runId)) === 1, 'o lote desfeito deixou linha');
+  reportCheck(
+    'NOTIFY do analista na transação do passo: nada antes do COMMIT, um aviso { runId, kind, eventId } por vela nova; repetida não grava nem avisa; lote desfeito não deixa linha',
+  );
+}
+
 async function checkListenerRecovery(
   context: LifecycleCheckContext,
   collected: Collected,
@@ -308,6 +369,7 @@ export async function checkRunEvents(
     await checkAuthentication(context, collected);
     await checkCommitDelivery(context, collected);
     await checkRollbackAndScope(context, collected);
+    await checkAnalystEvent(context, collected);
     await checkListenerRecovery(context, collected);
     await checkRunEventListener(context, databaseUrl);
   } finally {

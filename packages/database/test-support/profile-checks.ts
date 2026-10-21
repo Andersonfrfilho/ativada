@@ -30,6 +30,7 @@ export async function checkProfileRepository(context: ProfileCheckContext): Prom
   const initial = await repository.findProfile(scopeOfA);
   assertCondition(initial?.alertTelegramEnabled === true, 'padrão de alertTelegramEnabled');
   assertCondition(initial?.isTelegramLinked === false, 'chat não deveria estar vinculado');
+  assertCondition(initial?.maxActiveLivePaperRuns === 5, 'teto padrão de simulações ao vivo');
 
   await repository.updateProfile(scopeOfA, {
     displayName: 'Ana',

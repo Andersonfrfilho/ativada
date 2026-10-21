@@ -12,7 +12,7 @@ const CLOCK_INTERVAL_MILLISECONDS = 1_000;
 // Um socket e um armazém de preços para o painel autenticado inteiro; as telas só leem o que precisam.
 export function LiveMarketProvider({ children }: { readonly children: ReactNode }): ReactElement {
   const [store] = useState(() => new MarketStore(() => Date.now()));
-  const streamStatus = useLiveStream(store.applyTick);
+  const streamStatus = useLiveStream(store.applyTick, store.candles.apply);
   const now = useClock(CLOCK_INTERVAL_MILLISECONDS);
   const { silenceMilliseconds = MARKET_SILENCE_MILLISECONDS } = useAppConfig();
   return (

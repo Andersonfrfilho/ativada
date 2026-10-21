@@ -39,7 +39,18 @@ function decide(availableTokens: number, policy: RateLimitPolicy): RateLimitDeci
   };
 }
 
-export function createRateLimiter(options: { readonly now: () => number }): RateLimiter {
+export type RateLimiterOptions = {
+  readonly now: () => number;
+  // Só o desenvolvimento passa de 1 (o ambiente recusa fora de ENV=dev): multiplica o teto de cada política.
+  readonly limitMultiplier?: number;
+};
+
+export function createRateLimiter(options: RateLimiterOptions): RateLimiter {
+  const multiplier = options.limitMultiplier ?? 1;
+  const scaled = (policy: RateLimitPolicy): RateLimitPolicy => ({
+    ...policy,
+    limit: policy.limit * multiplier,
+  });
   // Um mapa por política, cada um com o próprio teto: uma enxurrada de chaves novas numa política não despeja a outra.
   const bucketsByPolicy = new Map<string, RecencyMap<Bucket>>();
 
@@ -55,7 +66,7 @@ export function createRateLimiter(options: { readonly now: () => number }): Rate
   }
 
   function consume(params: ConsumeParams): RateLimitDecision {
-    const { policy } = params;
+    const policy = scaled(params.policy);
     const nowMilliseconds = options.now();
     const buckets = bucketsOf(policy);
     const bucket = buckets.get(params.key) ?? {
@@ -71,9 +82,10 @@ export function createRateLimiter(options: { readonly now: () => number }): Rate
   }
 
   function peek(params: ConsumeParams): RateLimitDecision {
-    const bucket = bucketsOf(params.policy).get(params.key);
+    const policy = scaled(params.policy);
+    const bucket = bucketsOf(policy).get(params.key);
     if (bucket === undefined) return { isAllowed: true };
-    return decide(refill(bucket, params.policy, options.now()), params.policy);
+    return decide(refill(bucket, policy, options.now()), policy);
   }
 
   return { consume, peek, trackedKeyCount: (policy) => bucketsOf(policy).size() };

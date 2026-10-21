@@ -35,6 +35,7 @@ function GoalFields({ values, symbols, onChange }: GoalFieldsProps): ReactElemen
       <SelectField
         id="goal-symbol"
         label="Par"
+        hint="A moeda, comprada com dólar digital (USDT)."
         value={values.symbol}
         options={symbols.map((symbol) => ({ value: symbol, label: formatSymbol(symbol) }))}
         onChange={(symbol) => onChange({ symbol })}
@@ -42,12 +43,14 @@ function GoalFields({ values, symbols, onChange }: GoalFieldsProps): ReactElemen
       <TextField
         id="goal-target"
         label="Retorno alvo (%)"
+        hint="Quanto você quer ganhar. Ex.: 3 é ganhar 3%."
         value={values.targetPercent}
         onChange={(targetPercent) => onChange({ targetPercent })}
       />
       <SelectField
         id="goal-horizon"
         label="Prazo (dias)"
+        hint="Em quantos dias quer chegar lá."
         value={values.horizonDays}
         options={HORIZON_OPTIONS}
         onChange={(horizonDays) => onChange({ horizonDays })}
@@ -55,6 +58,7 @@ function GoalFields({ values, symbols, onChange }: GoalFieldsProps): ReactElemen
       <TextField
         id="goal-max-loss"
         label="Perda máxima (%)"
+        hint="Se cair isso, a meta é dada como perdida."
         value={values.maxLossPercent}
         onChange={(maxLossPercent) => onChange({ maxLossPercent })}
       />

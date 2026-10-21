@@ -26,6 +26,8 @@ import {
 const PAGE_SIZE = 100;
 const LIST_PAGE_SIZE = 20;
 const STALE_MILLISECONDS = 15_000;
+// O índice de versões custa 1 + N pedidos e quase nunca muda (criar ou editar estratégia o invalida): 5 minutos de cache poupam o limite de consultas.
+const VERSION_INDEX_STALE_MILLISECONDS = 300_000;
 const FIRST_PAGE: string | null = null;
 
 export const STRATEGY_QUERY_ROOT = 'strategies';
@@ -135,7 +137,7 @@ export function useVersionIndexQuery(): UseQueryResult<VersionIndex> {
   const client = useApiClient();
   return useQuery({
     queryKey: [STRATEGY_QUERY_ROOT, 'version-index'],
-    staleTime: STALE_MILLISECONDS,
+    staleTime: VERSION_INDEX_STALE_MILLISECONDS,
     queryFn: async () => {
       const strategies = await readAllPages(client, {
         base: API_PATH.STRATEGIES,

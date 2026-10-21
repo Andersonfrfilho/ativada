@@ -7,6 +7,8 @@ import {
   alertPayloadSchema,
   goalAlertPayloadSchema,
   priceAlertPayloadSchema,
+  resumeAlertPayloadSchema,
+  stallAlertPayloadSchema,
 } from '../live/alert-payload.schema.js';
 import type { WorkerLogger } from '../logging/worker-logger.js';
 import {
@@ -22,6 +24,7 @@ import {
 import { formatAlertMessage } from './format-alert-message.js';
 import { formatGoalAlertMessage } from './format-goal-alert-message.js';
 import { formatPriceAlertMessage } from './format-price-alert-message.js';
+import { formatResumeAlertMessage, formatStallAlertMessage } from './format-stall-alert-message.js';
 import type { TelegramClient, TelegramSendResult } from './telegram-client.js';
 
 const BACKOFF_FACTOR = 2;
@@ -81,7 +84,7 @@ async function settleFailure(
   return 'retried';
 }
 
-// O texto do alerta, pelo conteúdo gravado (sinal, desfecho de meta ou disparo de preço); conteúdo que não bate com o esquema não é enviado.
+// O texto do alerta, pelo conteúdo gravado (sinal, desfecho de meta, disparo de preço, parada ou volta); conteúdo que não bate com o esquema não é enviado.
 function renderAlertText(alert: ClaimedAlert): string | undefined {
   if (alert.side === ALERT_SIDE.GOAL) {
     const goal = goalAlertPayloadSchema.safeParse(alert.payload);
@@ -90,6 +93,14 @@ function renderAlertText(alert: ClaimedAlert): string | undefined {
   if (alert.side === ALERT_SIDE.PRICE) {
     const price = priceAlertPayloadSchema.safeParse(alert.payload);
     return price.success ? formatPriceAlertMessage(price.data) : undefined;
+  }
+  if (alert.side === ALERT_SIDE.STALL) {
+    const stall = stallAlertPayloadSchema.safeParse(alert.payload);
+    return stall.success ? formatStallAlertMessage(stall.data) : undefined;
+  }
+  if (alert.side === ALERT_SIDE.RESUME) {
+    const resume = resumeAlertPayloadSchema.safeParse(alert.payload);
+    return resume.success ? formatResumeAlertMessage(resume.data) : undefined;
   }
   const signal = alertPayloadSchema.safeParse(alert.payload);
   return signal.success

@@ -6,34 +6,57 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 20px;
-  padding: 12px var(--gutter);
+  gap: 8px 20px;
+  padding: 8px max(var(--gutter), calc((100% - var(--page-width)) / 2 + var(--gutter)));
   background: var(--surface);
   border-bottom: 1px solid var(--line);
 }
 
 .brand {
-  font: 400 24px/1 var(--font-display);
+  font: 700 22px/1 var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+.bellSlot {
+  margin-left: auto;
+}
+
+.menuButton {
+  margin-left: 0;
+}
+
+.panel {
+  display: none;
+  flex-basis: 100%;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panelOpen {
+  display: flex;
 }
 
 .nav {
   display: flex;
+  flex-direction: column;
   gap: 4px;
-  order: 3;
-  flex-basis: 100%;
-  overflow-x: auto;
 }
 
 .link {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   min-height: 44px;
-  padding: 0 12px;
-  border-radius: 8px;
+  padding: 0 14px;
+  border-radius: 10px;
   color: var(--ink-2);
   text-decoration: none;
-  font-size: 14px;
+  font-size: 15px;
   white-space: nowrap;
+}
+
+.link:hover {
+  background: var(--surface-2);
 }
 
 .active {
@@ -42,23 +65,84 @@
   font-weight: 600;
 }
 
+.actions button,
+.actions span {
+  white-space: nowrap;
+}
+
 .actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  margin-left: auto;
 }
 
 .main {
-  max-width: 1040px;
+  max-width: var(--page-width);
   margin: 0 auto;
   padding: 20px var(--gutter) 56px;
   display: grid;
   gap: 16px;
 }
 
-@media (min-width: 720px) {
-  .nav {
-    order: 0;
-    flex-basis: auto;
+@media (min-width: 1100px) {
+  .header {
+    flex-wrap: nowrap;
   }
+
+  .bellSlot {
+    order: 3;
+    margin-left: 0;
+  }
+
+  .menuButton {
+    display: none;
+  }
+
+  .panel {
+    display: flex;
+    flex: 1;
+    flex-basis: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .link {
+    padding: 0 10px;
+  }
+
+  .actions {
+    margin-left: auto;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+@media (min-width: 1100px) and (max-width: 1499px) {
+  .link {
+    gap: 4px;
+    padding: 0 6px;
+    font-size: 14px;
+  }
+}
+
+:global([data-viewport='short']) .header {
+  padding-block: 0;
+}
+
+:global([data-viewport='short']) .brand {
+  font-size: 18px;
+}
+
+:global([data-viewport='short']) .main {
+  padding-top: 8px;
+  gap: 8px;
 }

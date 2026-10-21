@@ -3,6 +3,7 @@ import type {
   CreateEngine,
   EngineCandle,
   EngineCommand,
+  EntryRiskScale,
   RunSetup,
   SentimentObservation,
   StepResult,
@@ -42,6 +43,8 @@ export const ENGINE_EVENT_KIND = {
   GAP_CANCELS_PENDING_ORDER: 'gap-cancels-pending-order',
   EXIT_COMMAND_BLOCKS_ENTRY: 'exit-command-blocks-entry',
   DUPLICATE_COMMAND_IGNORED: 'duplicate-command-ignored',
+  SCALED_ENTRY: 'scaled-entry',
+  ZERO_SCALE_BLOCKS_ENTRY: 'zero-scale-blocks-entry',
 } as const;
 
 export type EngineEventKind = (typeof ENGINE_EVENT_KIND)[keyof typeof ENGINE_EVENT_KIND];
@@ -77,6 +80,9 @@ export type EngineContractCheck =
 // Comandos por `openTime` do candle em cujo fechamento agem (sobrevive ao fatiamento da série).
 export type ScenarioCommands = Readonly<Record<number, readonly EngineCommand[]>>;
 
+// Teto da entrada por `openTime` do candle (ADR 0002 A21); candle fora do mapa vai sem escala.
+export type ScenarioEntryRiskScales = Readonly<Record<number, EntryRiskScale>>;
+
 export type EngineScenario = {
   readonly name: string;
   readonly strategy: StrategyVersion;
@@ -84,6 +90,7 @@ export type EngineScenario = {
   readonly candles: readonly EngineCandle[];
   readonly sentiment: readonly SentimentObservation[];
   readonly commands: ScenarioCommands;
+  readonly entryRiskScales?: ScenarioEntryRiskScales;
   readonly requiredEvents: readonly EngineEventKind[];
 };
 
@@ -91,6 +98,7 @@ export type RecordedStep = {
   readonly candle: EngineCandle;
   readonly sentiment: SentimentObservation | undefined;
   readonly commands: readonly EngineCommand[];
+  readonly entryRiskScale?: EntryRiskScale | undefined;
   // Lacuna confirmada que o chamador declarou antes deste candle (0 quando contíguo).
   readonly confirmedGapCandles: number;
   readonly result: StepResult;

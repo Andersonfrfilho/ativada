@@ -8,9 +8,12 @@ import type {
   LiveRunDatabase,
   LiveRunSession,
   RecordDataWaitInput,
+  TeamInputPort,
 } from '../../../apps/worker-ativada/src/live/live-run.types.js';
 import type {
   AlertInput,
+  AnalystDecisionInput,
+  AnalystHistory,
   ClaimedLiveRun,
   DataWaitState,
   EngineCheckpoint,
@@ -19,6 +22,7 @@ import type {
   RunRecord,
   RunStatus,
   StrategyVersionRecord,
+  TeamRunInputWrite,
 } from '../../../packages/database/src/index.js';
 import {
   ENGINE_VERSION,
@@ -55,6 +59,8 @@ export type LiveHooks = {
   findCandlesError?: () => Error | undefined;
   // Leitura atrasada: devolve também os candles que o avaliador já processou (a fonte repete candle).
   isStaleRead?: boolean;
+  // Erro que a leitura do histórico do analista lança (só o analista a faz).
+  analystHistoryError?: () => Error | undefined;
 };
 
 export type LiveControls = {
@@ -74,6 +80,13 @@ export type LiveScenario = {
   readonly kind?: RunRecord['kind'];
   // O acerto histórico que a leitura do último walk-forward devolve; `'error'` é a leitura que falha.
   readonly hitRate?: HistoricalHitRate | 'error';
+  // O analista de risco em sombra pedido na criação da simulação (`runs.request.analyst`).
+  readonly analyst?: { readonly version: string; readonly mode: string };
+  // A execução de equipe (spec 015): `signalSource` no pedido gravado e a leitura dos relatórios gravados.
+  readonly signalSource?: { readonly kind: string; readonly team: string };
+  readonly team?: Pick<TeamInputPort, 'lookupScheduledReport' | 'readReportById'>;
+  // Entradas já gravadas (o replay de outra execução com as mesmas decisões).
+  readonly initialTeamInputs?: readonly TeamRunInputWrite[];
   // A execução nasce atrelada a uma meta: a fotografia dela mora no pedido, como a API a grava.
   readonly goal?: {
     readonly goalId: string;
@@ -105,6 +118,10 @@ export type InMemoryLiveState = {
   waitWarnings: number;
   // Quantos passos pediram para apagar a espera: só o primeiro depois do buraco precisa.
   waitClears: number;
+  // As decisões do analista dos passos CONFIRMADOS, por vela (único por vela, como o banco).
+  analystDecisions: Map<number, AnalystDecisionInput>;
+  // As entradas gravadas da equipe dos passos CONFIRMADOS, por vela (única por vela, como o banco).
+  teamInputs: Map<number, TeamRunInputWrite>;
 };
 
 export type StoredWait = {
@@ -126,9 +143,51 @@ export type InMemoryLive = {
     listSentiment: number;
     commitStep: number;
     findHitRate: number;
+    readAnalystHistory: number;
   };
   readonly controls: LiveControls;
 };
+
+// O pedido gravado na execução: a meta e o analista, como a API os grava.
+function buildRequest(scenario: LiveScenario): RunRecord['request'] {
+  const { goal, analyst, signalSource } = scenario;
+  if (goal === undefined && analyst === undefined && signalSource === undefined) return undefined;
+  return {
+    ...(signalSource === undefined ? {} : { signalSource: { ...signalSource } }),
+    ...(scenario.goal === undefined ? {} : { goal: structuredClone(scenario.goal.spec) }),
+    ...(scenario.analyst === undefined ? {} : { analyst: { ...scenario.analyst } }),
+  };
+}
+
+// O mesmo recorte do banco: placar e patrimônio desde a vela; posições abertas, fechadas desde ela e as 3 últimas fechadas.
+function readAnalystHistory(state: InMemoryLiveState, fromCandleTime: number): AnalystHistory {
+  const { signals, equityPoints, positions } = state.results;
+  const all = [...positions.values()];
+  const lastClosed = all
+    .filter((position) => position.closedCandleTime !== undefined)
+    .sort((left, right) => (right.closedCandleTime ?? 0) - (left.closedCandleTime ?? 0))
+    .slice(0, 3);
+  const recent = all.filter(
+    (position) =>
+      position.closedCandleTime === undefined || position.closedCandleTime >= fromCandleTime,
+  );
+  return {
+    scores: [...signals.values()]
+      .filter((signal) => signal.candleTime >= fromCandleTime)
+      .map((signal) => ({ candleTime: signal.candleTime, score: signal.score })),
+    equities: [...equityPoints.values()]
+      .filter((point) => point.candleTime >= fromCandleTime)
+      .map((point) => ({ candleTime: point.candleTime, equity: point.equity })),
+    positions: [
+      ...new Map([...recent, ...lastClosed].map((row) => [row.engineKey, row])).values(),
+    ].map((position) => ({
+      engineKey: position.engineKey,
+      openedCandleTime: position.openedCandleTime,
+      closedCandleTime: position.closedCandleTime ?? null,
+      netProfit: position.netProfit ?? null,
+    })),
+  };
+}
 
 function buildBlueprint(scenario: LiveScenario, runId: string): LiveBlueprint {
   const first = scenario.candles[0];
@@ -151,8 +210,7 @@ function buildBlueprint(scenario: LiveScenario, runId: string): LiveBlueprint {
     progress: 0,
     errorCode: undefined,
     migratedFromRunId: undefined,
-    request:
-      scenario.goal === undefined ? undefined : { goal: structuredClone(scenario.goal.spec) },
+    request: buildRequest(scenario),
     createdAt: new Date(0),
     startedAt: undefined,
     goalId: scenario.goal?.goalId,
@@ -194,6 +252,14 @@ function commitStep(
   const stage = cloneResults(state.results);
   appendRows(stage, commit.rows);
   const stagedAlerts = new Map(state.alerts);
+  const stagedAnalyst = new Map(state.analystDecisions);
+  const stagedTeamInputs = new Map(state.teamInputs);
+  if (commit.teamInput !== undefined && !stagedTeamInputs.has(commit.teamInput.candleTime)) {
+    stagedTeamInputs.set(commit.teamInput.candleTime, structuredClone(commit.teamInput));
+  }
+  if (commit.analyst !== undefined && !stagedAnalyst.has(commit.analyst.candleTime)) {
+    stagedAnalyst.set(commit.analyst.candleTime, structuredClone(commit.analyst));
+  }
   for (const alert of commit.alerts) {
     const key = `${alert.candleTime}|${alert.side}`;
     if (!stagedAlerts.has(key)) stagedAlerts.set(key, alert);
@@ -203,6 +269,8 @@ function commitStep(
   if (last !== undefined && last >= commit.checkpoint.lastCandleTime) return 'already_recorded';
   state.results = stage;
   state.alerts = stagedAlerts;
+  state.analystDecisions = stagedAnalyst;
+  state.teamInputs = stagedTeamInputs;
   state.checkpoint = {
     engineState: structuredClone(commit.checkpoint.engineState),
     lastCandleTime: commit.checkpoint.lastCandleTime,
@@ -320,6 +388,31 @@ function createSession(context: Context): LiveRunSession {
       }
     },
     recordDataWait: (params) => Promise.resolve(recordDataWait(state, params)),
+    readAnalystHistory: ({ fromCandleTime }): Promise<AnalystHistory> => {
+      live.calls.readAnalystHistory += 1;
+      const failure = scenario.hooks?.analystHistoryError?.();
+      if (failure !== undefined) return Promise.reject(failure);
+      return Promise.resolve(readAnalystHistory(state, fromCandleTime));
+    },
+    ...(scenario.team === undefined
+      ? {}
+      : {
+          team: {
+            ...scenario.team,
+            readStoredInput: (candleTime): ReturnType<TeamInputPort['readStoredInput']> => {
+              const stored = state.teamInputs.get(candleTime);
+              return Promise.resolve(
+                stored === undefined
+                  ? undefined
+                  : {
+                      reportId: stored.reportId,
+                      failureCode: stored.failureCode,
+                      appliedAction: stored.appliedAction,
+                    },
+              );
+            },
+          },
+        }),
     failRun: (errorCode): Promise<boolean> => {
       if (state.status !== 'running' && state.status !== 'queued') return Promise.resolve(false);
       state.status = 'failed';
@@ -385,6 +478,10 @@ export function createInMemoryLive(scenario: LiveScenario): InMemoryLive {
     wait: undefined,
     waitWarnings: 0,
     waitClears: 0,
+    analystDecisions: new Map(),
+    teamInputs: new Map(
+      (scenario.initialTeamInputs ?? []).map((input) => [input.candleTime, structuredClone(input)]),
+    ),
   };
   const controls: LiveControls = {
     cancel: () => {
@@ -400,7 +497,13 @@ export function createInMemoryLive(scenario: LiveScenario): InMemoryLive {
     runId,
     state,
     controls,
-    calls: { findCandles: 0, listSentiment: 0, commitStep: 0, findHitRate: 0 },
+    calls: {
+      findCandles: 0,
+      listSentiment: 0,
+      commitStep: 0,
+      findHitRate: 0,
+      readAnalystHistory: 0,
+    },
     addCandles: (candles) => state.candles.push(...candles),
     snapshot: () => snapshotResults(state.results),
     database: { attach: () => Promise.resolve(undefined) },

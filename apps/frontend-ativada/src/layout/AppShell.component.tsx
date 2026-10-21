@@ -1,44 +1,33 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { useQueryClient } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { Outlet } from 'react-router';
 
 import { APP_NAME } from '../app/app.constant.js';
-import { useSessionService } from '../app/useAppContext.hook.js';
-import controls from '../styles/Controls.module.css';
+import { NoticeAnnouncer } from '../notices/NoticeAnnouncer.component.js';
+import { NoticeCenterProvider } from '../notices/NoticeCenterProvider.component.js';
+import { NoticeDrawer } from '../notices/NoticeDrawer.component.js';
+import { NoticeToastStack } from '../notices/NoticeToastStack.component.js';
+import { useNoticeCenter } from '../notices/useNoticeCenter.hook.js';
 import { LiveMarketProvider } from '../live/LiveMarketProvider.component.js';
-import { LiveStatusBadge } from '../live/LiveStatusBadge.component.js';
-import { useLiveMarket } from '../live/useLiveMarket.hook.js';
-import { ThemeToggle } from '../theme/ThemeToggle.component.js';
 import styles from './AppShell.module.css';
-import { MainNav } from './MainNav.component.js';
+import { HeaderMenu } from './HeaderMenu.component.js';
+import { useViewportDensity } from './useViewportDensity.hook.js';
 
 function ShellFrame(): ReactElement {
-  const session = useSessionService();
-  const queryClient = useQueryClient();
-  const liveStatus = useLiveMarket().streamStatus;
-
-  async function handleSignOut(): Promise<void> {
-    await session.end();
-    queryClient.clear();
-  }
-
+  const { isDrawerOpen } = useNoticeCenter();
+  useViewportDensity();
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
         <span className={styles.brand}>{APP_NAME}</span>
-        <MainNav />
-        <div className={styles.actions}>
-          <LiveStatusBadge status={liveStatus} />
-          <ThemeToggle />
-          <button type="button" className={controls.button} onClick={() => void handleSignOut()}>
-            Sair
-          </button>
-        </div>
+        <HeaderMenu />
       </header>
       <main className={styles.main}>
         <Outlet />
       </main>
+      <NoticeAnnouncer />
+      <NoticeToastStack />
+      {isDrawerOpen ? <NoticeDrawer /> : null}
     </div>
   );
 }
@@ -46,7 +35,9 @@ function ShellFrame(): ReactElement {
 export function AppShell(): ReactElement {
   return (
     <LiveMarketProvider>
-      <ShellFrame />
+      <NoticeCenterProvider>
+        <ShellFrame />
+      </NoticeCenterProvider>
     </LiveMarketProvider>
   );
 }

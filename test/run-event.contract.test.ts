@@ -35,6 +35,17 @@ describe('run event payload', () => {
     expect(parseRunEventPayload(payload({ kind }))?.kind).toBe(kind);
   });
 
+  test('the analyst notice carries the decided candle as its eventId and the kind is analyst', () => {
+    expect(RUN_EVENT_KIND.ANALYST).toBe('analyst');
+    expect(
+      parseRunEventPayload(payload({ kind: 'analyst', eventId: '1789861500000' })),
+    ).toStrictEqual({
+      runId: RUN_ID,
+      kind: 'analyst',
+      eventId: '1789861500000',
+    });
+  });
+
   test('a user id or any extra field makes the payload invalid (the owner never rides on NOTIFY)', () => {
     expect(parseRunEventPayload(payload({ userId: RUN_ID }))).toBeUndefined();
     expect(parseRunEventPayload(payload({ price: '1' }))).toBeUndefined();

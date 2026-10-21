@@ -1,0 +1,226 @@
+/* Cartões "De onde vem a previsão" e "Histórico de acertos" (spec 009): fiéis ao preview em docs/preview/grafico-binance. */
+.lead {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--ink);
+}
+
+.number {
+  font-family: var(--font-data);
+  color: var(--ink);
+}
+
+.muted {
+  color: var(--ink-3);
+  font-size: var(--text-sm);
+}
+
+.right {
+  text-align: right;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.kpi {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+}
+
+.kpiLabel {
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.kpiValue {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.kpiSub {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.verdict {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+
+.verdict.buy {
+  background: var(--buy-soft);
+  border-color: var(--buy);
+}
+
+.verdict.sell {
+  background: var(--sell-soft);
+  border-color: var(--sell);
+}
+
+.verdictWord {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.buy .verdictWord {
+  color: var(--buy);
+}
+
+.sell .verdictWord {
+  color: var(--sell);
+}
+
+.strength {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.strengthRow {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--text-sm);
+}
+
+.bar {
+  display: block;
+  width: 100%;
+  height: 10px;
+}
+
+.barTrack {
+  fill: var(--surface-2);
+}
+
+.barFill {
+  fill: var(--accent);
+}
+
+.barMark {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.caption {
+  padding-bottom: 6px;
+  text-align: left;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.table th,
+.table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.table td.right,
+.table th.right {
+  text-align: right;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hit {
+  color: var(--buy);
+}
+
+.miss {
+  color: var(--sell);
+}
+
+.votes {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.voteRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+}
+
+.gap {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+
+.promise {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+}
+
+.pair {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}

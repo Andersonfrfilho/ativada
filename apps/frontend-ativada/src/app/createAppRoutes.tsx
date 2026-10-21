@@ -12,10 +12,13 @@ import { AssetsPage } from '../assets/AssetsPage.page.js';
 import { GoalDetailPage } from '../goals/GoalDetailPage.page.js';
 import { PlanPage } from '../goals/PlanPage.page.js';
 import { GoalsPage } from '../goals/GoalsPage.page.js';
+import { HorizonsPage } from '../horizons/HorizonsPage.page.js';
 import { AppShell } from '../layout/AppShell.component.js';
 import { NotFoundPage } from '../layout/NotFoundPage.page.js';
 import { RootLayout } from '../layout/RootLayout.component.js';
 import { OverviewPage } from '../overview/OverviewPage.page.js';
+import { DuelPage } from '../runs/duel/DuelPage.page.js';
+import { LiveRunsPage } from '../wayfinding/LiveRunsPage.page.js';
 import { AuthCallbackPage } from '../session/AuthCallbackPage.page.js';
 import { LoginPage } from '../session/LoginPage.page.js';
 import { RequireSession } from '../session/RequireSession.component.js';
@@ -36,15 +39,18 @@ export function createAppRoutes(): RouteObject[] {
               element: <AppShell />,
               children: [
                 { index: true, element: <OverviewPage /> },
+                { path: ROUTE_PATH.LIVE, element: <LiveRunsPage /> },
                 { path: ROUTE_PATH.BACKTESTS, element: <BacktestsPage /> },
                 { path: ROUTE_PATH.BACKTEST_COMPARE, element: <ComparePage /> },
                 { path: ROUTE_PATH.BACKTEST, element: <BacktestDetailPage /> },
+                { path: ROUTE_PATH.DUEL, element: <DuelPage /> },
                 { path: ROUTE_PATH.STRATEGIES, element: <StrategiesPage /> },
                 { path: ROUTE_PATH.STRATEGY, element: <StrategyDetailPage /> },
                 { path: ROUTE_PATH.ALERTS, element: <AlertsPage /> },
                 { path: ROUTE_PATH.GOALS, element: <GoalsPage /> },
                 { path: ROUTE_PATH.GOAL, element: <GoalDetailPage /> },
                 { path: ROUTE_PATH.GOAL_PLAN, element: <PlanPage /> },
+                { path: ROUTE_PATH.HORIZONS, element: <HorizonsPage /> },
                 { path: ROUTE_PATH.ASSETS, element: <AssetsPage /> },
                 { path: ROUTE_PATH.ACCOUNT, element: <AccountPage /> },
               ],

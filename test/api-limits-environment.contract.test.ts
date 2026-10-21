@@ -21,6 +21,8 @@ const LIMITS: readonly LimitCase[] = [
   { variable: 'GOAL_EVALUATION_THREADS', fallback: 2, minimum: 1, maximum: 4 },
   { variable: 'GOAL_EVALUATION_TIMEOUT_SECONDS', fallback: 30, minimum: 5, maximum: 300 },
   { variable: 'GOAL_EVALUATION_MAX_CONCURRENT', fallback: 4, minimum: 1, maximum: 32 },
+  { variable: 'LIVE_STALL_GRACE_MINUTES', fallback: 15, minimum: 5, maximum: 240 },
+  { variable: 'LIVE_STALL_SWEEP_SECONDS', fallback: 60, minimum: 5, maximum: 3_600 },
 ];
 
 type Source = Record<string, string>;

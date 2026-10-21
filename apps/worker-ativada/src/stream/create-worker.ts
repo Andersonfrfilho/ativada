@@ -4,14 +4,16 @@ import type { CandleRepository } from '@ativada/database';
 import {
   createCancellableSleep,
   createKlineStream,
+  isDisplayTimeframe,
   type CancellableSleep,
   type KlineStream,
   type MarketDataClient,
   type ServerClock,
-  type Timeframe,
+  type MarketCandleTimeframe,
 } from '@ativada/market-data-crypto';
 
 import type { WorkerLogger } from '../logging/worker-logger.js';
+import type { LoopOutageGuard } from '../outage/loop-outage-guard.js';
 import {
   DEFAULT_STREAM_GAP_CHECK_MINUTES,
   DEFAULT_STREAM_GAP_LOOKBACK_HOURS,
@@ -42,13 +44,15 @@ export type WorkerTiming = {
 export type WorkerDependencies = {
   readonly exchange: string;
   readonly symbols: readonly string[];
-  readonly timeframes: readonly Timeframe[];
+  readonly timeframes: readonly MarketCandleTimeframe[];
   readonly repository: Pick<
     CandleRepository,
     'findLatestOpenTime' | 'findMissingOpenTimes' | 'upsertCandles'
   >;
   readonly client: Pick<MarketDataClient, 'fetchKlinesRange'>;
   readonly logger: WorkerLogger;
+  // Banco fora: a recuperação de lacunas espera o backoff do porteiro e a queda sai resumida, sem erro cru.
+  readonly outage?: LoopOutageGuard | undefined;
   readonly streamBaseUrl: string;
   readonly staleAfterMilliseconds: number;
   readonly gapLookbackHours?: number | undefined;
@@ -122,6 +126,7 @@ function createRecovery(dependencies: WorkerDependencies, timing: ResolvedTiming
       return outcome;
     },
     logger: dependencies.logger,
+    outage: dependencies.outage,
     sleep: timing.sleep,
     random: timing.random,
     backoffBaseMilliseconds: timing.backoffBase,
@@ -152,7 +157,8 @@ function createWorkerStream(params: WorkerStreamParams): KlineStream {
     random: timing.random,
     onCandle: async (candle) => {
       await writer.write(candle);
-      dependencies.onCandleStored?.();
+      // Vela de exibição nunca acorda a simulação: o motor só lê as velas de execução.
+      if (!isDisplayTimeframe(candle.timeframe)) dependencies.onCandleStored?.();
     },
     // O fluxo não é confiável antes da lacuna fechada: cada (re)conexão dispara a recuperação.
     onConnected: ({ attempt }) => {

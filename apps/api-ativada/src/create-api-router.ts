@@ -3,12 +3,13 @@ import {
   createProfileRepository,
   createRunQueueRepository,
   createStrategyRepository,
-  pingDatabase,
   resolveUserBySubject,
   type DatabaseHandle,
 } from '@ativada/database';
 
 import { createAccountRouteDependencies } from './account/create-account-route-dependencies.js';
+import { createApiOutageReporter } from './health/create-api-outage-reporter.js';
+import { createDatabaseHealthDependencies } from './health/create-health-dependencies.js';
 import { createAdminRouteDependencies } from './admin/create-admin-route-dependencies.js';
 import type { AccessTokenVerifier } from './authentication/access-token-verifier.js';
 import type { UserResolver } from './authentication/resolve-authenticated-user.js';
@@ -23,7 +24,7 @@ import {
 import { createGetProfileUseCase, createUpdateProfileUseCase } from './profile/profile.use-case.js';
 import { createTelegramRouteDependencies } from './telegram/create-telegram-route-dependencies.js';
 import { createRateLimiter } from './rate-limit/rate-limiter.js';
-import type { ComputeGoalCombination } from './goals/goal-evaluation-pool.js';
+import type { ComputeGoalCombination, ComputeHorizonLine } from './goals/goal-evaluation-pool.js';
 import type { RunDispatcher } from './runs/run-dispatcher.js';
 import { createSessionRouteDependencies } from './session/create-session-routes-dependencies.js';
 import { createExampleSeedingUserResolver } from './strategies/example-seeding-user-resolver.js';
@@ -47,6 +48,7 @@ export type ApiRouterParams = {
   readonly closeUserSockets: (userId: string) => void;
   readonly readListenerHealth: () => ListenerHealth;
   readonly computeGoal: ComputeGoalCombination;
+  readonly computeHorizon: ComputeHorizonLine;
 };
 
 function createSeedingUserResolver(params: {
@@ -102,9 +104,9 @@ function assembleRouteDependencies(assembly: RouteAssemblyParams): ApiRouteDepen
   const { params, domain } = assembly;
   const { environment, logger, database, identity, verifyAccessToken } = params;
   return {
-    checkDatabase: () => pingDatabase(database),
     readRunQueueSummary: () => createRunQueueRepository(database).readQueueSummary(),
     readListenerHealth: params.readListenerHealth,
+    ...createDatabaseHealthDependencies(database, environment.WORKER_HEARTBEAT_SECONDS),
     session: createSessionRouteDependencies({ environment, verifyAccessToken }),
     ...createScopedDependencies({ database, identity, closeUserSockets: params.closeUserSockets }),
     profile: createProfileDependencies(database),
@@ -122,7 +124,11 @@ function assembleRouteDependencies(assembly: RouteAssemblyParams): ApiRouteDepen
 
 export function createApiRouter(params: ApiRouterParams): Router {
   const { environment, logger, database, verifyAccessToken } = params;
-  const rateLimiter = createRateLimiter({ now: () => Date.now() });
+  const rateLimiter = createRateLimiter({
+    now: () => Date.now(),
+    limitMultiplier: environment.RATE_LIMIT_MULTIPLIER,
+  });
+  const outage = createApiOutageReporter({ database, logger });
   const domain = createDomainRouteDependencies({
     environment,
     database,
@@ -131,6 +137,7 @@ export function createApiRouter(params: ApiRouterParams): Router {
     reportUnexpectedError: (error) => logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { error }),
     rateLimiter,
     computeGoal: params.computeGoal,
+    computeHorizon: params.computeHorizon,
   });
   return createRouter({
     routes: createApiRoutes(assembleRouteDependencies({ params, domain })),
@@ -140,5 +147,7 @@ export function createApiRouter(params: ApiRouterParams): Router {
     trustedProxyHops: environment.TRUSTED_PROXY_HOPS,
     reportUnexpectedError: (error, traceId) =>
       logger.error(UNEXPECTED_ERROR_LOG_MESSAGE, { traceId, error }),
+    reportDatabaseOutage: outage.reportOutage,
+    reportDatabaseRecovery: outage.reportRecovery,
   });
 }

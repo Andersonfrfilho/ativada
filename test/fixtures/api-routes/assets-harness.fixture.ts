@@ -49,7 +49,7 @@ export async function createAssetsHarness(
           assets: userAssets.repository,
           strategies: parts.strategies.repository,
           candles: {
-            findCandles: (params): ReturnType<typeof parts.candles.repository.findCandles> => {
+            findCandles: (params) => {
               summaryReads.count += 1;
               return parts.candles.repository.findCandles(params);
             },

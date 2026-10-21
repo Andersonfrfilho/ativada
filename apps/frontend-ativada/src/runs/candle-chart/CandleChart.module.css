@@ -1,0 +1,548 @@
+.wrapper {
+  position: relative;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.toolbar {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pressed {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.hint {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+/* O painel da próxima vela fica ao lado do gráfico e desce para baixo dele no celular. */
+.chartLayout {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.chartAlone {
+  display: grid;
+  min-width: 0;
+}
+
+.side {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+
+.canvas {
+  width: 100%;
+  min-width: 0;
+  height: clamp(280px, calc(100dvh - 440px), 640px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.canvas:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.legend {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.legendTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.forming {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px dashed var(--ink-3);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.legendValues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  font: 13px var(--font-data);
+}
+
+.legendItem {
+  display: flex;
+  gap: 6px;
+}
+
+.legendItem dt {
+  color: var(--ink-3);
+}
+
+.legendItem dd {
+  margin: 0;
+  color: var(--ink);
+}
+
+.up dd,
+.up dt {
+  color: var(--buy);
+}
+
+.down dd,
+.down dt {
+  color: var(--sell);
+}
+
+.clusters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.caption {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.credit {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.credit a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
+
+.layerBar {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.layerList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* A alternância das camadas só existe no celular; no desktop a lista fica sempre à mostra. */
+.layerBar .layersToggle {
+  display: none;
+}
+
+.notices {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lineLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+@media (min-width: 1024px) {
+  .toolbar {
+    grid-template-columns: auto auto;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+@media (min-width: 1100px) {
+  .chartLayout {
+    grid-template-columns: minmax(0, 1fr) clamp(340px, 32%, 420px);
+    align-items: start;
+  }
+
+  .canvas {
+    height: clamp(320px, calc(100dvh - 440px), 640px);
+  }
+}
+
+@media (max-width: 639px) {
+  .canvas {
+    height: 360px;
+  }
+
+  .layerBar .layersToggle {
+    display: inline-flex;
+  }
+
+  .layersClosed {
+    display: none;
+  }
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.legendOpinion {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.legendTrade {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Janela baixa: a varanda compacta devolve altura ao gráfico, que mantém o mínimo útil de 320 px. */
+@media (min-width: 1100px) and (max-height: 799px) {
+  .canvas {
+    height: clamp(320px, calc(100dvh - 415px), 640px);
+  }
+}
+
+/* Janela baixa: barras do gráfico (vela, zoom, camadas) numa faixa fina. */
+:global([data-viewport='short']) .toolbar,
+:global([data-viewport='short']) .layerBar {
+  gap: 4px;
+}
+
+:global([data-viewport='short']) .wrapper {
+  gap: 4px;
+}
+
+:global([data-viewport='short']) .row button,
+:global([data-viewport='short']) .layerList button {
+  min-height: 36px;
+  padding-block: 0;
+}
+
+@media (min-width: 1100px) and (max-height: 739px) {
+  .canvas {
+    height: clamp(320px, calc(100dvh - 325px), 640px);
+  }
+}
+
+/* Janela baixa: vela, zoom, camadas e legenda dividem UMA faixa fina acima do gráfico. */
+:global([data-viewport='short']) .wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+:global([data-viewport='short']) .wrapper > * {
+  flex: 1 1 100%;
+}
+
+:global([data-viewport='short']) .wrapper > .toolbar,
+:global([data-viewport='short']) .wrapper > .layerBar,
+:global([data-viewport='short']) .wrapper > .legend {
+  flex: 0 1 auto;
+}
+
+:global([data-viewport='short']) .toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+/* Janela baixa: as camadas ficam atrás de "Camadas do gráfico", como no celular. */
+:global([data-viewport='short']) .layerBar .layersToggle {
+  display: inline-flex;
+}
+
+:global([data-viewport='short']) .layersClosed {
+  display: none;
+}
+
+:global([data-viewport='short']) .legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 12px;
+}
+
+/* Janela muito baixa (zoom alto): o gráfico cede até 240 px, o mínimo que ainda se lê. */
+@media (min-width: 1px) and (max-height: 649px) {
+  .canvas {
+    height: clamp(240px, calc(100dvh - 345px), 640px);
+  }
+}
+
+.canvasFrame {
+  position: relative;
+  min-width: 0;
+}
+
+.tooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  display: grid;
+  gap: 4px;
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 12rem;
+  max-width: min(280px, calc(100% - 8px));
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  box-shadow: var(--toast-shadow);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  pointer-events: none;
+  transform: translate(var(--tip-x, 4px), var(--tip-y, 4px));
+}
+
+.tooltip[hidden] {
+  display: none;
+}
+
+.tipTitle {
+  margin: 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.tipNote {
+  margin: 0;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.tipValues {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 2px 10px;
+  margin: 0;
+}
+
+.tipOhlc {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr) max-content);
+  gap: 2px 8px;
+  margin: 0;
+}
+
+.tipOhlc dt,
+.tipValues dt {
+  min-width: 0;
+  color: var(--ink-2);
+}
+
+.tipOhlc dd,
+.tipValues dd {
+  margin: 0;
+  text-align: right;
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.runStart {
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.runStartLine {
+  stroke: var(--ink-2);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.runStartLabel {
+  font-size: 11px;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 3px;
+  fill: var(--ink);
+}
+
+/* O gráfico no telão da sala (spec 011, Fase 3): uma faixa fina acima do canvas — vela, zoom em ícones, balão de valores e o
+   menu "Camadas" (lista flutuante). Os rótulos dos ícones seguem para o leitor de tela. */
+.toolLabel {
+  display: inline;
+}
+
+.terminalFigure {
+  gap: 6px;
+}
+
+.terminalBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  min-width: 0;
+}
+
+.terminalBar .toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.terminalBar .row {
+  gap: 4px;
+}
+
+.terminalBar .row button,
+.terminalBar .toolbar > button,
+.terminalBar .layersToggle {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.terminalBar .hint,
+.terminalBar .toolLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.terminalBar .layerBar {
+  position: relative;
+}
+
+.terminalBar .layerBar .layersToggle {
+  display: inline-flex;
+}
+
+.terminalBar .layersClosed {
+  display: none;
+}
+
+.terminalBar .layersOpen {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  right: 0;
+  width: max-content;
+  max-width: min(90vw, 28rem);
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg) 60%, transparent);
+}
+
+.terminalNotices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.terminalNotices > *,
+.terminalNotices p {
+  margin: 0;
+  font-size: 11px;
+}
+
+.terminalNotices:empty {
+  display: none;
+}
+
+@media (max-width: 759px) {
+  .terminalBar .row button,
+  .terminalBar .toolbar > button,
+  .terminalBar .layersToggle {
+    min-height: 44px;
+  }
+}
+
+/* O painel lateral tem a altura do gráfico, nunca maior: rola por dentro, sem barra aparente, com esmaecido na borda. */
+@media (min-width: 1100px) {
+  .terminalFigure .chartLayout {
+    align-items: stretch;
+  }
+
+  .terminalFigure .side {
+    position: relative;
+    min-height: 0;
+  }
+
+  .terminalFigure .side > * {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 20px), transparent);
+  }
+
+  .terminalFigure .side > *::-webkit-scrollbar {
+    display: none;
+  }
+
+  .terminalFigure .canvas {
+    height: clamp(320px, calc(100dvh - 480px), 520px);
+  }
+}
+
+/* No telão a descrição textual do gráfico segue só para o leitor de tela. */
+.terminalFigure .caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

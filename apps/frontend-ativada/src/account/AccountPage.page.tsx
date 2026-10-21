@@ -6,6 +6,7 @@ import controls from '../styles/Controls.module.css';
 import styles from './Account.module.css';
 import { DeleteAccountCard } from './DeleteAccountCard.component.js';
 import { ExportCard } from './ExportCard.component.js';
+import { ModelTeamsCard } from './model-teams/ModelTeamsCard.component.js';
 import { PreferencesCard } from './PreferencesCard.component.js';
 import { TelegramCard } from './TelegramCard.component.js';
 import { useProfileQuery } from './account.query.js';
@@ -34,6 +35,7 @@ export function AccountPage(): ReactElement {
           <TelegramCard profile={profile.data} />
         </>
       )}
+      <ModelTeamsCard />
       <ExportCard />
       <DeleteAccountCard />
     </div>

@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import type { Timeframe } from '../src/index.js';
+import type { MarketCandleTimeframe } from '../src/index.js';
 import {
   buildKlineEvent,
   buildMiniTickerEvent,
@@ -32,7 +32,7 @@ const WEBSOCKET_GOING_AWAY = 1001;
 
 export type SetHistoryParams = {
   readonly symbol: string;
-  readonly timeframe: Timeframe;
+  readonly timeframe: MarketCandleTimeframe;
   readonly openTimes: readonly number[];
 };
 
@@ -94,7 +94,7 @@ export function startFakeBinanceStreamServer(): FakeBinanceStreamServer {
       return new Response('{}', { status: HTTP_SERVER_ERROR });
     }
     const openTimes = history.get(`${request.symbol}|${request.interval}`) ?? [];
-    const timeframe = request.interval as Timeframe;
+    const timeframe = request.interval as MarketCandleTimeframe;
     const rows = openTimes
       .filter((openTime) => openTime >= request.startTime && openTime <= request.endTime)
       .sort((left, right) => left - right)

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulação ao vivo, tela redesenhada · AtivAdA (preview)</title>
+<link rel="stylesheet" href="css/tela.css">
+</head>
+<body>
+<div class="preview-bar" role="group" aria-label="Controles do preview (não fazem parte do produto)">
+  <span class="preview-label">Preview</span>
+  <div class="seg" id="state-seg" role="group" aria-label="Estado simulado">
+    <button type="button" data-state="bought" aria-pressed="true">Comprado</button>
+    <button type="button" data-state="waiting" aria-pressed="false">Aguardando compra</button>
+    <button type="button" data-state="nodata" aria-pressed="false">Esperando dado</button>
+    <button type="button" data-state="ended" aria-pressed="false">Encerrada por meta</button>
+  </div>
+  <button type="button" class="theme-btn" id="theme-btn" aria-pressed="false">Tema escuro</button>
+</div>
+
+<header class="sim-banner" role="note">
+  <strong>SIMULAÇÃO</strong> com dinheiro fictício. Tendência, não promessa: nada aqui é recomendação de compra ou venda.
+</header>
+
+<main class="page" id="main">
+  <div class="title-row">
+    <div>
+      <p class="crumbs"><a href="#main">Simulações</a> › PEPE/USDT</p>
+      <h1>PEPE/USDT <span class="h1-sub">simulação ao vivo</span></h1>
+      <p class="meta">Placar clássico · versão 3 · vela de 1 hora · desde 17/10 às 09:00 · horários em GMT−3</p>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </div>
+
+  <section class="now" aria-labelledby="now-h" id="now">
+    <div class="now-action">
+      <p class="kicker" id="now-kicker">O que a simulação faria agora</p>
+      <h2 id="now-h" class="verb"></h2>
+      <p class="why" id="now-why"></p>
+      <ul class="levels" id="levels" aria-label="Valores da simulação"></ul>
+    </div>
+    <div class="now-kpis" aria-label="Como a simulação está indo" id="kpis"></div>
+  </section>
+
+  <div class="workspace">
+    <section class="chart-card" aria-labelledby="chart-h">
+      <div class="chart-head">
+        <h2 id="chart-h">Preço e decisões</h2>
+        <div class="legend" id="legend"></div>
+        <div class="readout num" id="readout" aria-live="off">passe o mouse ou use as setas no gráfico</div>
+      </div>
+      <div class="chart-box" id="chart-box">
+        <svg id="chart" role="img" tabindex="0" aria-labelledby="chart-desc"></svg>
+      </div>
+      <p class="chart-desc" id="chart-desc"></p>
+    </section>
+
+    <aside class="team" aria-labelledby="team-h">
+      <div class="team-head">
+        <h2 id="team-h">Equipe agora</h2>
+        <span class="tally" id="tally"></span>
+      </div>
+      <div class="mini" id="team-mini"></div>
+      <div id="team-body"></div>
+      <p class="team-foot">Cada voto é leitura de uma regra, não uma ordem. Opiniões de modelos são apenas comentário.</p>
+    </aside>
+  </div>
+
+  <section class="more" aria-label="Detalhes">
+    <div class="tabs" role="tablist" aria-label="Detalhes da simulação" id="tabs"></div>
+    <div id="tab-panels"></div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="js/tela.js"></script>
+</body>
+</html>

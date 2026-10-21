@@ -1,7 +1,4 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { RUN_KIND } from '@ativada/database';
-import { z } from '@ativada/environment';
-
 import type { EnabledMarkets } from '../markets/candles-query.schema.js';
 import { RATE_LIMIT_POLICY } from '../rate-limit/rate-limit-policy.constant.js';
 import { ROUTE_ACCESS } from '../router/route-access.constant.js';
@@ -10,10 +7,11 @@ import { HTTP_METHOD, HTTP_STATUS } from '../shared/http/http.constant.js';
 import { readValidatedBody } from '../shared/http/read-validated-body.js';
 import { readValidatedQuery } from '../shared/http/read-validated-query.js';
 import type { RouteResult } from '../shared/http/response-envelope.js';
-import { invalidCursorError, PAGE_QUERY_SHAPE } from '../shared/pagination/page-query.schema.js';
+import { invalidCursorError } from '../shared/pagination/page-query.schema.js';
 import { DEFAULT_PAGE_SIZE } from '../shared/pagination/pagination.constant.js';
 import { createRunRequestSchema } from './create-run-request.schema.js';
 import type { CreateRunUseCase } from './create-run.use-case.js';
+import { createListRunsQuerySchema } from './list-runs-query.schema.js';
 import { decodeRunCursor } from './run-cursor.js';
 import { readRunId } from './run-id.js';
 import type {
@@ -34,11 +32,6 @@ export type RunRouteDependencies = {
   readonly deleteRun: DeleteRunUseCase;
 };
 
-const listQuerySchema = z.strictObject({
-  ...PAGE_QUERY_SHAPE,
-  kind: z.enum(RUN_KIND).optional(),
-});
-
 function createCreateRoute(dependencies: RunRouteDependencies): Route {
   const bodySchema = createRunRequestSchema(dependencies.enabled);
   return {
@@ -55,17 +48,24 @@ function createCreateRoute(dependencies: RunRouteDependencies): Route {
 }
 
 function createListRoute(dependencies: RunRouteDependencies): Route {
+  const querySchema = createListRunsQuerySchema(dependencies.enabled);
   return {
     method: HTTP_METHOD.GET,
     path: RUNS_PATH,
     access: ROUTE_ACCESS.USER,
-    documentation: RUN_DOCUMENTATION.list,
+    documentation: { ...RUN_DOCUMENTATION.list, query: querySchema },
     handler: async ({ scope, request }): Promise<RouteResult> => {
-      const query = readValidatedQuery(request, listQuerySchema);
+      const query = readValidatedQuery(request, querySchema);
       const after = query.cursor === undefined ? undefined : decodeRunCursor(query.cursor);
       if (query.cursor !== undefined && after === undefined) throw invalidCursorError();
       const limit = query.limit ?? DEFAULT_PAGE_SIZE;
-      const page = await dependencies.listRuns(scope, { limit, after, kind: query.kind });
+      const page = await dependencies.listRuns(scope, {
+        limit,
+        after,
+        kind: query.kind,
+        symbol: query.symbol,
+        strategyVersionId: query.strategyVersionId,
+      });
       return {
         status: HTTP_STATUS.OK,
         data: page.items,

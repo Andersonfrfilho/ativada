@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
+import type { ReactElement } from 'react';
 import { QueryClient } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import { createMemoryRouter } from 'react-router';
@@ -10,6 +11,7 @@ import { AppProviders } from '../../src/app/AppProviders.component.js';
 import { createAppRoutes } from '../../src/app/createAppRoutes.js';
 import type { StreamConnector, StreamHandlers } from '../../src/live/stream-connector.js';
 import type { MarketTick, StreamMessage, StreamStatus } from '../../src/live/stream-client.js';
+import type { StreamCandle } from '../../src/live/stream.validation.js';
 import { createApiClient } from '../../src/http/api-client.js';
 import { createSessionService, type SessionService } from '../../src/session/session-service.js';
 import {
@@ -31,11 +33,22 @@ export type RenderAppOptions = {
   readonly ownsSessionRoute?: boolean;
   // Só para provar o silêncio por par sem dormir 10 s.
   readonly silenceMilliseconds?: number;
+  // Só para provar a vida do aviso na tela sem esperar 8 s.
+  readonly noticeToastMilliseconds?: number;
+  // Só para provar a faixa de conexão caída sem esperar 5 s.
+  readonly noticeConnectionMilliseconds?: number;
+  // As velas que o ambiente da API tem (a configuração pública do painel); o padrão é não limitar.
+  readonly marketTimeframes?: readonly string[];
+  // As velas só de exibição que o ambiente grava (3m).
+  readonly marketDisplayTimeframes?: readonly string[];
+  // Para testar um hook ou componente sozinho: renderiza isto dentro dos provedores, no lugar das rotas.
+  readonly probe?: ReactElement;
 };
 
 export type FakeStream = {
   readonly emit: (message: StreamMessage) => void;
   readonly tick: (tick: MarketTick) => void;
+  readonly candle: (candle: StreamCandle) => void;
   readonly setStatus: (status: StreamStatus) => void;
   readonly resync: (reason?: string) => void;
   readonly connections: () => number;
@@ -76,6 +89,7 @@ function createFakeStream(): { readonly stream: FakeStream; readonly connect: St
     stream: {
       emit: (message) => current?.onMessage(message),
       tick: (tick) => current?.onTick(tick),
+      candle: (candle) => current?.onCandle?.(candle),
       setStatus: (status) => current?.onStatus(status),
       resync: (reason = 'listener_lost') => current?.onResync(reason),
       connections: () => connections,
@@ -100,6 +114,18 @@ export function renderApp(options: RenderAppOptions): RenderedApp {
     ...(options.silenceMilliseconds === undefined
       ? {}
       : { silenceMilliseconds: options.silenceMilliseconds }),
+    ...(options.noticeToastMilliseconds === undefined
+      ? {}
+      : { noticeToastMilliseconds: options.noticeToastMilliseconds }),
+    ...(options.noticeConnectionMilliseconds === undefined
+      ? {}
+      : { noticeConnectionMilliseconds: options.noticeConnectionMilliseconds }),
+    ...(options.marketTimeframes === undefined
+      ? {}
+      : { marketTimeframes: options.marketTimeframes }),
+    ...(options.marketDisplayTimeframes === undefined
+      ? {}
+      : { marketDisplayTimeframes: options.marketDisplayTimeframes }),
   };
   const { stream, connect } = createFakeStream();
   const router = createMemoryRouter(createAppRoutes(), { initialEntries: [options.path] });
@@ -111,7 +137,7 @@ export function renderApp(options: RenderAppOptions): RenderedApp {
       queryClient={queryClient}
       connectStream={connect}
     >
-      <RouterProvider router={router} />
+      {options.probe ?? <RouterProvider router={router} />}
     </AppProviders>,
   );
   return { fake, session, router, stream };

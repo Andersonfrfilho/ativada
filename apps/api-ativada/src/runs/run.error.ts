@@ -34,6 +34,28 @@ export class RunNotFinishedError extends DomainError {
   }
 }
 
+// O acompanhamento (live-status e decisions) só existe para a simulação ao vivo; backtest e walk-forward têm o resumo da spec 005.
+export class RunNotLiveError extends DomainError {
+  constructor() {
+    super({
+      code: RUN_ERROR_CODE.RUN_NOT_LIVE,
+      message: 'O acompanhamento só existe para simulações ao vivo.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}
+
+// A execução existe e é ao vivo, mas não está rodando (parada, concluída, na fila): o pedido que depende dela não se aplica.
+export class RunNotRunningError extends DomainError {
+  constructor() {
+    super({
+      code: RUN_ERROR_CODE.RUN_NOT_RUNNING,
+      message: 'A simulação não está rodando agora.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}
+
 export class RunStorageQuotaReachedError extends DomainError {
   constructor() {
     super({
@@ -74,6 +96,17 @@ export class LiveRunLimitReachedError extends DomainError {
       code: RUN_ERROR_CODE.LIVE_RUN_LIMIT_REACHED,
       message:
         'O limite de simulações ao vivo ativas foi atingido; encerre alguma antes de criar outra.',
+      status: HTTP_STATUS.CONFLICT,
+    });
+  }
+}
+
+// A simulação ao vivo existe, mas foi criada sem o analista de risco (spec 007, A20): nada a mostrar nas rotas dele.
+export class AnalystNotEnabledError extends DomainError {
+  constructor() {
+    super({
+      code: RUN_ERROR_CODE.ANALYST_NOT_ENABLED,
+      message: 'Esta simulação foi criada sem o analista de risco.',
       status: HTTP_STATUS.CONFLICT,
     });
   }

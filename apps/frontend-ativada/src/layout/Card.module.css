@@ -8,10 +8,33 @@
   gap: 12px;
 }
 
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
 .title {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.icon {
+  display: inline-flex;
   color: var(--ink-3);
+}
+
+:global([data-viewport='short']) .card {
+  padding: 8px 12px;
+  gap: 4px;
+}
+
+:global([data-viewport='short']) .card {
+  padding-block: 4px;
 }

@@ -92,6 +92,7 @@ export async function createStreamApiContext(databaseUrl: string): Promise<Strea
   });
   const binance = startFakeBinanceStreamServer();
   Bun.env['TICKER_STREAM_ENABLED'] = 'true';
+  Bun.env['TICKER_KLINE_ENABLED'] = 'true';
   Bun.env['BINANCE_BASE_URL'] = binance.restUrl;
   Bun.env['BINANCE_STREAM_URL'] = binance.streamUrl;
   Bun.env['TICKER_STALE_SECONDS'] = TICKER_STALE_SECONDS;

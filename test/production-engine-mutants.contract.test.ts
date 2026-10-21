@@ -481,6 +481,100 @@ const COMPOSITION_MUTANTS: readonly Mutant[] = [
   },
 ];
 
+const VOCABULARY = 'engine-vocabulary.constant.ts';
+const ENTRY_RISK_LINES =
+  '  const budget = toEngineDecimal(draft.state.cash)\n    .times(context.config.risk.riskPerTrade)\n    .times(scale);\n  return formatEngineDecimal(moneyDown(budget));';
+
+// Teto da entrada por passo (ADR 0002 A21). O arredondamento duplo literal, moneyDown(moneyDown(caixa × risco) ×
+// escala), é EQUIVALENTE (⌊⌊y⌋ ÷ n⌋ = ⌊y ÷ n⌋ com ¼ e ½): o mutante de arredondamento arredonda ANTES da escala.
+const SCALE_MUTANTS: readonly Mutant[] = [
+  {
+    name: 'ENTRY_SCALE_IGNORED',
+    edits: edit(
+      ENTRY_ORDER,
+      '    .times(context.config.risk.riskPerTrade)\n    .times(scale);',
+      '    .times(context.config.risk.riskPerTrade);',
+    ),
+    stage: JUDGE_STAGE.SCALE,
+  },
+  {
+    name: 'RISK_ROUNDED_BEFORE_THE_SCALE',
+    edits: edit(
+      ENTRY_ORDER,
+      ENTRY_RISK_LINES,
+      '  const budget = moneyDown(toEngineDecimal(draft.state.cash).times(context.config.risk.riskPerTrade));\n  return formatEngineDecimal(budget.times(scale));',
+    ),
+    stage: JUDGE_STAGE.SCALE,
+  },
+  {
+    name: 'ENTRY_SCALE_ABOVE_ONE_ACCEPTED',
+    edits: edit(
+      VOCABULARY,
+      "  FULL: '1',\n} as const;",
+      "  FULL: '1',\n  DOUBLE: '2',\n} as const;",
+    ),
+    stage: JUDGE_STAGE.GUARDS,
+  },
+  {
+    name: 'ZERO_SCALE_DOES_NOT_BLOCK_THE_ENTRY',
+    edits: edit(ENTRY_ORDER, '  if (scale === ENTRY_RISK_SCALE.NONE) return;\n', ''),
+    stage: JUDGE_STAGE.SCALE,
+  },
+  {
+    name: 'ENTRY_SCALE_APPLIED_TO_THE_EXIT',
+    edits: edit(
+      POLICY,
+      '  if (signal.action !== SIGNAL_ACTION.SELL) return;',
+      "  if (signal.action !== SIGNAL_ACTION.SELL || closing.entryRiskScale === '0') return;",
+    ),
+    stage: JUDGE_STAGE.SCALE,
+  },
+  {
+    name: 'ENTRY_SCALE_LEAKS_TO_THE_NEXT_STEP',
+    edits: [
+      ...edit(
+        ENTRY_ORDER,
+        "const NO_FILL = '0';",
+        "const NO_FILL = '0';\nconst lastScale: { value: EntryRiskScale } = { value: ENTRY_RISK_SCALE.FULL };",
+      ),
+      ...edit(
+        ENTRY_ORDER,
+        '  const scale = request.entryRiskScale ?? ENTRY_RISK_SCALE.FULL;',
+        '  const scale = request.entryRiskScale ?? lastScale.value;\n  lastScale.value = scale;',
+      ),
+    ],
+    stage: JUDGE_STAGE.SCALE,
+  },
+  {
+    name: 'WALLET_STEP_DROPS_THE_ENTRY_SCALE',
+    edits: edit(WALLET_STEP, '    entryRiskScale: input.entryRiskScale,\n', ''),
+    stage: JUDGE_STAGE.SCALE,
+  },
+  {
+    name: 'STEP_DROPS_THE_ENTRY_SCALE',
+    edits: edit(CREATE_ENGINE, '    entryRiskScale: input.entryRiskScale,\n', ''),
+    stage: JUDGE_STAGE.HARNESS,
+  },
+  {
+    name: 'WALLET_GUARD_ACCEPTS_ANY_SCALE',
+    edits: edit(
+      ASSERT_STEP,
+      '  assertEntryRiskScale(input.entryRiskScale);\n}\n\n// Guarda do passo inteiro',
+      '}\n\n// Guarda do passo inteiro',
+    ),
+    stage: JUDGE_STAGE.GUARDS,
+  },
+  {
+    name: 'STEP_GUARD_ACCEPTS_ANY_SCALE',
+    edits: edit(
+      ASSERT_STEP,
+      'state: input.state.signal });\n  assertCommands(input.commands ?? [], input.candle);\n  assertEntryRiskScale(input.entryRiskScale);',
+      'state: input.state.signal });\n  assertCommands(input.commands ?? [], input.candle);',
+    ),
+    stage: JUDGE_STAGE.HARNESS,
+  },
+];
+
 const SOURCE_MUTANTS: readonly Mutant[] = [
   ...FILL_MUTANTS,
   ...POLICY_MUTANTS,
@@ -489,6 +583,7 @@ const SOURCE_MUTANTS: readonly Mutant[] = [
   ...GUARD_MUTANTS,
   ...COMPOSITION_MUTANTS,
   ...HASH_MUTANTS,
+  ...SCALE_MUTANTS,
 ];
 
 describe('production engine: the guards, the differential and the harness reject every mutant', () => {
@@ -497,6 +592,21 @@ describe('production engine: the guards, the differential and the harness reject
   test('there are at least twenty mutants and every name is unique', () => {
     expect(SOURCE_MUTANTS.length).toBeGreaterThanOrEqual(20);
     expect(new Set(SOURCE_MUTANTS.map((mutant) => mutant.name)).size).toBe(SOURCE_MUTANTS.length);
+  });
+
+  test('the entry-scale mutants the T4.1b review asked for are all there (spec 007, A21)', () => {
+    const names = SCALE_MUTANTS.map((mutant) => mutant.name);
+    expect(names.length).toBeGreaterThanOrEqual(6);
+    for (const mandatory of [
+      'ENTRY_SCALE_IGNORED',
+      'RISK_ROUNDED_BEFORE_THE_SCALE',
+      'ENTRY_SCALE_ABOVE_ONE_ACCEPTED',
+      'ZERO_SCALE_DOES_NOT_BLOCK_THE_ENTRY',
+      'ENTRY_SCALE_APPLIED_TO_THE_EXIT',
+      'ENTRY_SCALE_LEAKS_TO_THE_NEXT_STEP',
+    ]) {
+      expect(names).toContain(mandatory);
+    }
   });
 
   test(

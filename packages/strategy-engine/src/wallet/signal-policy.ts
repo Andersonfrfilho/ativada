@@ -14,6 +14,7 @@ import {
   SIGNAL_ACTION,
   type CommandKind,
   type CommandOutcome,
+  type EntryRiskScale,
   type ExitReason,
   type OrderEventReason,
 } from '../engine-vocabulary.constant.js';
@@ -27,6 +28,8 @@ export type ClosingInputs = {
   readonly commands: readonly EngineCommand[];
   // O candle veio depois de uma lacuna confirmada: nenhuma entrada nova nele (ADR 0002 §e).
   readonly isAfterGap: boolean;
+  // Teto da entrada nova DESTE passo (A21); nunca vale para a saída nem passa ao passo seguinte.
+  readonly entryRiskScale?: EntryRiskScale | undefined;
 };
 
 function cancelPendingEntry(
@@ -137,7 +140,8 @@ export function applyClose(
   if (signal === null) return;
   if (signal.action === SIGNAL_ACTION.BUY) {
     const isEntryBlocked = closing.isAfterGap || hasBlockingCommand;
-    return isEntryBlocked ? undefined : placeEntry(draft, context, signal);
+    if (isEntryBlocked) return;
+    return placeEntry(draft, context, { signal, entryRiskScale: closing.entryRiskScale });
   }
   if (signal.action !== SIGNAL_ACTION.SELL) return;
   cancelPendingEntry(draft, context, ORDER_EVENT_REASON.OPPOSITE_SIGNAL);

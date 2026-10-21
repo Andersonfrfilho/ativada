@@ -32,6 +32,8 @@ export type RunRecord = {
   // A simulação ao vivo está parada à espera de um buraco de candles: desde quando (ms) e a primeira abertura que falta.
   readonly waitingSince: number | undefined;
   readonly waitingOpenTime: number | undefined;
+  // Início (ms UTC) do episódio em que a simulação ao vivo ficou parada além da carência; ausente em dia.
+  readonly stalledSince?: number | undefined;
   readonly createdAt: Date;
   readonly startedAt: Date | undefined;
   readonly finishedAt: Date | undefined;
@@ -90,6 +92,8 @@ export type ListRunsParams = {
   readonly limit: number;
   readonly after: RunCursor | undefined;
   readonly kind: RunKind | undefined;
+  readonly symbol?: string | undefined;
+  readonly strategyVersionId?: string | undefined;
 };
 
 export type RunsPage = {

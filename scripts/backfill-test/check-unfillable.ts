@@ -11,7 +11,7 @@ import {
 } from './backfill-test-context.js';
 import { computeGridWindow, waitForSafeClock } from './grid-oracle.js';
 
-const SYMBOL = 'MAINTUSDT';
+const SYMBOL = 'LINKUSDT';
 const TIMEFRAME = '4h';
 const YEARS = 1;
 const HOLE_START_INDEX = 700;

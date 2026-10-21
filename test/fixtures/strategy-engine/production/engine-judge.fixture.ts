@@ -10,6 +10,7 @@ import {
   REFERENCE_WALLET,
 } from '../wallet/wallet-differential.fixture.js';
 import { findFirstViolation } from '../wallet/wallet-properties.fixture.js';
+import { compareScaledWallets, findScaleViolation } from '../wallet/wallet-scale-flow.fixture.js';
 import type { EngineApi } from './engine-api.fixture.js';
 import { countEnumerationsAfterEachCall } from './hash-probe.fixture.js';
 import { findRoundingDeviation } from './rounding-hand-values.fixture.js';
@@ -24,6 +25,8 @@ export const JUDGE_STAGE = {
   HAND_VALUES: 'hand-values',
   DIFFERENTIAL: 'differential',
   PROPERTIES: 'properties',
+  // O teto da entrada por passo (A21): diferencial com escala contra a referência e as propriedades dele.
+  SCALE: 'scale',
   HARNESS: 'harness',
 } as const;
 
@@ -135,8 +138,25 @@ function judgeEngineApi(api: EngineApi): JudgeVerdict {
   return undefined;
 }
 
-// Dois cenários baratos: o de mercado com gaps (0) e o de comandos e sentimento (5).
-const HARNESS_SCENARIO_INDEXES: readonly number[] = [0, 5];
+// Três cenários baratos: o de mercado com gaps (0), o de comandos e sentimento (5) e o do teto de entrada (6).
+const HARNESS_SCENARIO_INDEXES: readonly number[] = [0, 5, 6];
+const SCALE_JUDGE_FLOWS = 300;
+
+function judgeEntryScale(api: EngineApi): JudgeVerdict {
+  const report = compareScaledWallets({
+    production: api.walletStep,
+    reference: REFERENCE_WALLET,
+    count: SCALE_JUDGE_FLOWS,
+    shouldStopAtFirst: true,
+  });
+  const divergence = report.divergences[0];
+  if (divergence !== undefined) {
+    const where = `fluxo com escala ${divergence.flowIndex}, passo ${divergence.stepIndex}`;
+    return { stage: JUDGE_STAGE.SCALE, detail: where };
+  }
+  const violation = findScaleViolation(api.walletStep, SCALE_JUDGE_FLOWS);
+  return violation === undefined ? undefined : { stage: JUDGE_STAGE.SCALE, detail: violation };
+}
 
 function judgeHarness(api: EngineApi): JudgeVerdict {
   const all = buildProductionScenarios();
@@ -171,5 +191,5 @@ export function judgeEngineApiAgainstReference(params: JudgeParams): JudgeVerdic
   if (violation !== undefined) return { stage: JUDGE_STAGE.PROPERTIES, detail: violation };
   const deviation = findRoundingDeviation(api.walletStep);
   if (deviation !== undefined) return { stage: JUDGE_STAGE.HAND_VALUES, detail: deviation };
-  return judgeHarness(api);
+  return judgeEntryScale(api) ?? judgeHarness(api);
 }

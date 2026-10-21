@@ -1,0 +1,1152 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gráfico estilo Binance · AtivAdA (preview)</title>
+<style>
+/* Tokens: os mesmos de apps/frontend-ativada/src/styles/global.css e das escalas do redesign (docs/preview/redesign). */
+:root {
+  --bg: #f2f4f8; --surface: #ffffff; --surface-2: #ebeef4; --line: #d8dee9;
+  --ink: #10162a; --ink-2: #47516c; --ink-3: #5f6b86;
+  --accent: #2541b2; --accent-soft: #e1e7fb; --on-accent: #ffffff;
+  --buy: #087a52; --buy-soft: #dbf2e8; --sell: #c0353d; --sell-soft: #fbe3e4;
+  --warn: #7a4f00; --warn-soft: #fbf0d9; --bench: #66708c;
+  --font-body: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-data: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --gutter: 16px;
+  --text-xs: 12px; --text-sm: 13px; --text-md: 15px; --text-lg: 18px; --text-xl: 22px; --text-2xl: 30px;
+  --radius-card: 14px; --radius-control: 10px; --radius-pill: 999px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px;
+  --shadow-card: 0 1px 2px rgb(16 22 42 / 0.04), 0 4px 16px rgb(16 22 42 / 0.04);
+  --motion-fast: 160ms; --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* novo (spec 009): grade e eixos do gráfico, derivados dos tokens */
+  --grid: color-mix(in srgb, var(--line) 70%, transparent);
+  --cone-up: color-mix(in srgb, var(--buy) 16%, transparent);
+  --cone-down: color-mix(in srgb, var(--sell) 16%, transparent);
+  --cone-neutral: color-mix(in srgb, var(--bench) 12%, transparent);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0b0f1c; --surface: #131a2c; --surface-2: #1a2238; --line: #262f4b;
+    --ink: #e8ecf6; --ink-2: #a8b1c8; --ink-3: #8a94ad;
+    --accent: #8ea3ff; --accent-soft: #1e2954; --on-accent: #0b0f1c;
+    --buy: #41cc94; --buy-soft: #0e2d23; --sell: #ff7d83; --sell-soft: #3a191e;
+    --warn: #f2c26b; --warn-soft: #33270f; --bench: #8b94ad;
+    --shadow-card: none; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0b0f1c; --surface: #131a2c; --surface-2: #1a2238; --line: #262f4b;
+  --ink: #e8ecf6; --ink-2: #a8b1c8; --ink-3: #8a94ad;
+  --accent: #8ea3ff; --accent-soft: #1e2954; --on-accent: #0b0f1c;
+  --buy: #41cc94; --buy-soft: #0e2d23; --sell: #ff7d83; --sell-soft: #3a191e;
+  --warn: #f2c26b; --warn-soft: #33270f; --bench: #8b94ad;
+  --shadow-card: none; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--font-body); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 3px; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.muted { color: var(--ink-3); }
+.small { font-size: var(--text-sm); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+svg.icon { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -3px; }
+svg.icon.sm { width: 14px; height: 14px; vertical-align: -2px; }
+
+.notice-strip { background: var(--warn-soft); color: var(--warn); font-size: var(--text-xs); text-align: center; padding: 6px var(--gutter); }
+.topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.topbar-inner { max-width: 1240px; margin: 0 auto; padding: 0 var(--gutter); height: 60px; display: flex; align-items: center; gap: var(--space-4); }
+.brand { font: 700 19px/1 var(--font-display); color: var(--ink); text-decoration: none; letter-spacing: -0.02em; }
+.brand span { color: var(--accent); }
+.nav { display: flex; gap: 2px; flex: 1; min-width: 0; }
+.nav a { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 12px; border-radius: var(--radius-control); color: var(--ink-2); text-decoration: none; font-size: 14.5px; white-space: nowrap; }
+.nav a[aria-current='page'] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.top-actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
+.icon-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; height: 44px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); color: var(--ink-2); cursor: pointer; font-size: var(--text-sm); }
+@media (max-width: 1023px) { .nav { display: none; } .hide-mobile { display: none; } }
+
+.page { max-width: 1240px; margin: 0 auto; padding: var(--space-6) var(--gutter) 64px; }
+.crumbs { font-size: var(--text-sm); color: var(--ink-3); margin-bottom: 6px; }
+.crumbs a { color: var(--ink-2); }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-5); }
+.page-head h1 { font: 600 var(--text-2xl)/1.15 var(--font-display); letter-spacing: -0.02em; }
+.meta-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.preview-switch { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 12px; background: var(--surface-2); }
+.preview-switch button { min-height: 44px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; color: var(--ink-2); cursor: pointer; font-size: 14px; font-weight: 600; }
+.preview-switch button[aria-pressed='true'] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+.preview-note { font-size: var(--text-xs); color: var(--ink-3); margin-top: 4px; text-align: right; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: var(--space-5); box-shadow: var(--shadow-card); min-width: 0; }
+.card + .card, .grid { margin-top: var(--space-4); }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); flex-wrap: wrap; }
+.card-title { display: flex; align-items: center; gap: 8px; font: 600 var(--text-lg)/1.25 var(--font-display); letter-spacing: -0.01em; }
+.card-title .icon { color: var(--ink-3); }
+.grid { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
+@media (min-width: 960px) { .grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); } }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: var(--radius-pill); font-size: var(--text-sm); font-weight: 600; white-space: nowrap; background: var(--surface-2); color: var(--ink-2); }
+.chip.buy { background: var(--buy-soft); color: var(--buy); }
+.chip.sell { background: var(--sell-soft); color: var(--sell); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.info { background: var(--accent-soft); color: var(--accent); }
+.chip.outline { background: transparent; border: 1px solid var(--line); font-weight: 500; }
+.chip.big { height: 36px; font-size: 15px; padding: 0 14px; }
+
+/* Barra de ferramentas do gráfico */
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 10px; }
+.seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--surface-2); }
+.seg button { min-width: 44px; min-height: 38px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink-2); cursor: pointer; font: 600 14px var(--font-data); }
+.seg button[aria-pressed='true'] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / 0.14); }
+.tool-label { font-size: var(--text-xs); color: var(--ink-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 4px; }
+.tool-group { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.layer { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--surface); color: var(--ink-2); cursor: pointer; font-size: 14px; }
+.layer .box { width: 16px; height: 16px; border-radius: 4px; border: 2px solid var(--ink-3); display: grid; place-items: center; }
+.layer[aria-pressed='true'] { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); }
+.layer[aria-pressed='true'] .box { background: var(--accent); border-color: var(--accent); }
+.layer[aria-pressed='true'] .box::after { content: ''; width: 8px; height: 4px; border: 2px solid var(--on-accent); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
+.zoom { display: inline-flex; gap: 4px; margin-left: auto; }
+.zoom button { min-width: 44px; min-height: 44px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); color: var(--ink-2); cursor: pointer; font-size: 14px; font-weight: 600; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; }
+.layers-details { display: contents; }
+.layers-details > summary { display: none; }
+@media (max-width: 700px) {
+  .layers-details { display: block; width: 100%; }
+  .layers-details > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius-control); cursor: pointer; font-size: 14px; color: var(--ink-2); list-style: none; }
+  .layers-details[open] > .tool-group { margin-top: 8px; }
+  .zoom { margin-left: 0; }
+}
+
+/* Área do gráfico */
+.chart-layout { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 1024px) { .chart-layout { grid-template-columns: minmax(0, 1fr) 300px; } }
+.chart-frame { position: relative; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; min-width: 0; }
+.ohlc { position: absolute; left: 10px; top: 8px; right: 80px; z-index: 2; display: flex; flex-wrap: wrap; gap: 2px 10px; font: 12.5px/1.4 var(--font-data); color: var(--ink-2); pointer-events: none; }
+.ohlc strong { color: var(--ink); font-family: var(--font-body); font-weight: 700; }
+.ohlc .up { color: var(--buy); } .ohlc .down { color: var(--sell); }
+.ohlc .k { color: var(--ink-3); }
+.chart { position: relative; touch-action: pan-y; cursor: crosshair; user-select: none; }
+.chart:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.chart svg { display: block; width: 100%; }
+.tip { position: absolute; z-index: 3; max-width: 260px; padding: 8px 10px; border-radius: 10px; background: var(--ink); color: var(--surface); font-size: 13px; line-height: 1.4; pointer-events: none; box-shadow: 0 6px 20px rgb(0 0 0 / 0.2); }
+.tf-note { display: flex; gap: 8px; align-items: center; padding: 8px 12px; margin-bottom: 10px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); font-size: 14px; }
+.keys { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: 13px; color: var(--ink-2); }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.key svg { width: 22px; height: 14px; }
+.hint { font-size: 12.5px; color: var(--ink-3); margin-top: 6px; }
+
+/* Painel "Próxima vela de perto" */
+.next-panel { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--surface); display: grid; gap: 8px; align-content: start; }
+.next-panel h3 { font: 600 15px var(--font-display); display: flex; gap: 6px; align-items: center; }
+.next-panel .clock { font-size: 13px; color: var(--ink-2); }
+.next-panel svg[data-zoom-svg] { width: 100%; display: block; }
+.next-panel h3 .icon { color: var(--ink-3); }
+.tendency .what .chip { height: 24px; font-size: 12.5px; }
+.tendency { display: grid; gap: 4px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); }
+.tendency.up { background: var(--buy-soft); border-color: color-mix(in srgb, var(--buy) 35%, transparent); }
+.tendency.down { background: var(--sell-soft); border-color: color-mix(in srgb, var(--sell) 35%, transparent); }
+.tendency.none { background: var(--surface-2); }
+.tendency .when { font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+.tendency .what { display: flex; align-items: center; gap: 8px; font: 700 17px/1.25 var(--font-display); }
+.tendency.up .what { color: var(--buy); } .tendency.down .what { color: var(--sell); } .tendency.none .what { color: var(--ink-2); }
+.tendency .why { font-size: 13px; color: var(--ink-2); }
+.promise { font-size: 12.5px; color: var(--ink-3); display: flex; gap: 6px; align-items: flex-start; }
+.result { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; font-weight: 700; font-size: 14px; }
+.result.miss { background: var(--sell-soft); color: var(--sell); }
+.result.hit { background: var(--buy-soft); color: var(--buy); }
+
+/* Cartões abaixo */
+.meter { position: relative; height: 12px; border-radius: 6px; border: 1px solid var(--line); background: linear-gradient(90deg, var(--sell-soft), var(--surface-2) 40%, var(--surface-2) 60%, var(--buy-soft)); margin: 30px 6px 30px; }
+.meter .mark { position: absolute; top: -8px; width: 4px; height: 26px; border-radius: 2px; background: var(--ink); transform: translateX(-50%); }
+.meter .th { position: absolute; top: -4px; width: 2px; height: 18px; transform: translateX(-50%); }
+.meter .th.buy { background: var(--buy); } .meter .th.sell { background: var(--sell); }
+.meter .lab { position: absolute; transform: translateX(-50%); white-space: nowrap; font-size: 12px; font-weight: 600; }
+.meter .lab.top { top: -28px; color: var(--ink); } .meter .lab.bottom { top: 18px; }
+.meter .lab.bottom.buy { color: var(--buy); } .meter .lab.bottom.sell { color: var(--sell); }
+.facts { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.facts li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; font-size: 14.5px; }
+.facts li .icon { color: var(--ink-3); margin-top: 3px; }
+.note { display: grid; grid-template-columns: 22px 1fr; gap: 8px; padding: 12px; border-radius: 10px; background: var(--warn-soft); color: var(--warn); font-size: 14px; margin-top: 12px; }
+.note strong { font-weight: 700; }
+details.how { margin-top: 10px; font-size: 14px; color: var(--ink-2); }
+details.how summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--accent); }
+details.how ol { margin: 4px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+.kpis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.kpi { padding: 12px 14px; border-radius: 12px; background: var(--surface-2); min-width: 0; }
+.kpi-label { font-size: 13px; color: var(--ink-2); font-weight: 600; }
+.kpi-value { font: 600 var(--text-xl)/1.2 var(--font-data); margin-top: 4px; }
+.kpi-value .unit { font: 500 13px var(--font-body); color: var(--ink-3); margin-left: 4px; }
+.kpi-sub { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
+.verdict { display: grid; grid-template-columns: 22px 1fr; gap: 8px; padding: 12px; border-radius: 10px; background: var(--surface-2); border-left: 4px solid var(--bench); font-size: 14.5px; margin: 12px 0; }
+.strength { display: grid; gap: 6px; margin: 4px 0 12px; }
+.strength-row { display: grid; grid-template-columns: 112px 1fr 92px; gap: 10px; align-items: center; font-size: 13.5px; }
+.bar { height: 10px; border-radius: 5px; background: var(--surface-2); position: relative; overflow: hidden; }
+.bar > i { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 5px; }
+.bar > b { position: absolute; top: -3px; bottom: -3px; left: 50%; width: 2px; background: var(--ink); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+caption { text-align: left; padding: 10px 12px; font-size: 13px; color: var(--ink-3); caption-side: top; }
+th, td { padding: 8px 12px; text-align: left; border-top: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 12.5px; color: var(--ink-3); font-weight: 600; background: var(--surface-2); }
+tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--surface-2) 45%, transparent); }
+td.num, th.num { text-align: right; }
+.tag { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; font-size: 13px; }
+.tag.up, .tag.hit { color: var(--buy); } .tag.down, .tag.miss { color: var(--sell); } .tag.flat { color: var(--ink-2); }
+.state-list { margin: 8px 0 0; padding-left: 18px; font-size: 14px; color: var(--ink-2); display: grid; gap: 4px; }
+.desc { margin-top: 10px; font-size: 14px; color: var(--ink-2); }
+.desc summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--accent); font-weight: 600; }
+.credit { font-size: 12px; color: var(--ink-3); margin-top: 8px; }
+@media (max-width: 520px) {
+  .page-head h1 { font-size: 24px; }
+  .strength-row { grid-template-columns: 88px 1fr 78px; font-size: 13px; }
+  .ohlc { right: 10px; font-size: 11.5px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true">
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></symbol>
+<symbol id="i-candles" viewBox="0 0 24 24"><path d="M7 3v4M7 15v6M17 3v2M17 13v8"/><rect x="5" y="7" width="4" height="8" rx="1"/><rect x="15" y="5" width="4" height="8" rx="1"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M7 7l10 10"/><path d="M17 8v9H8"/></symbol>
+<symbol id="i-flat" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.5v.5"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+<symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="m12 18 4-6"/></symbol>
+<symbol id="i-ruler" viewBox="0 0 24 24"><path d="M3 17 17 3l4 4L7 21z"/><path d="m7 13 2 2M10 10l2 2M13 7l2 2"/></symbol>
+<symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+<symbol id="i-end" viewBox="0 0 24 24"><path d="m6 6 6 6-6 6"/><path d="M18 5v14"/></symbol>
+<symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></symbol>
+</svg>
+<div class="notice-strip"><strong>Simulação com dinheiro fictício.</strong> Nada aqui é recomendação de investimento.</div>
+<header class="topbar"><div class="topbar-inner">
+  <a class="brand" href="#">Ativ<span>AdA</span></a>
+  <nav class="nav" aria-label="Principal"><a href="#"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>Visão geral</a><a href="#" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>Backtests</a></nav>
+  <div class="top-actions">
+    <span class="chip buy"><svg class="icon sm" aria-hidden="true"><use href="#i-clock"/></svg>Preços ao vivo</span>
+    <button class="icon-button" type="button" data-theme-toggle><svg class="icon" aria-hidden="true"><use href="#i-sun"/></svg><span class="hide-mobile" data-theme-text>automático</span></button>
+  </div>
+</div></header>
+
+<main class="page">
+  <p class="crumbs"><a href="#">Backtests</a> › Simulação ao vivo</p>
+  <div class="page-head">
+    <div><h1>LINK/USDT · simulação ao vivo</h1>
+      <div class="meta-chips"><span class="chip outline">Rompimento Donchian + MACD</span><span class="chip outline">vela de 1 hora</span><span class="chip outline">horários em GMT−3</span></div></div>
+    <div><div class="preview-switch" role="group" aria-label="Estado do preview">
+      <button type="button" data-mode="now" aria-pressed="true">Agora (faltam 15 min)</button>
+      <button type="button" data-mode="closed" aria-pressed="false">Vela fechou</button>
+      <button type="button" data-mode="none" aria-pressed="false">Sem previsão</button></div>
+      <p class="preview-note">Só no preview: alterna os estados da mesma tela.</p></div>
+  </div>
+
+  <section class="card" aria-labelledby="chart-title">
+    <div class="card-head">
+      <h2 class="card-title" id="chart-title"><svg class="icon" aria-hidden="true"><use href="#i-candles"/></svg>Gráfico</h2>
+      <span class="muted small" data-last-closed></span>
+    </div>
+    <div class="toolbar">
+      <div class="tool-group"><span class="tool-label" id="tf-label">Vela</span>
+        <div class="seg" role="group" aria-labelledby="tf-label">
+          <button type="button" data-tf="15m" aria-pressed="false">15m</button><button type="button" data-tf="1h" aria-pressed="true">1h</button><button type="button" data-tf="4h" aria-pressed="false">4h</button><button type="button" data-tf="1d" aria-pressed="false">1d</button>
+        </div></div>
+      <details class="layers-details" data-layers-details>
+        <summary><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg>Camadas do gráfico</summary>
+        <div class="tool-group" role="group" aria-label="Camadas do gráfico">
+          <button type="button" class="layer" data-layer="projection" aria-pressed="true"><span class="box" aria-hidden="true"></span>Previsão</button>
+          <button type="button" class="layer" data-layer="trades" aria-pressed="true"><span class="box" aria-hidden="true"></span>Compras e vendas</button>
+          <button type="button" class="layer" data-layer="channel" aria-pressed="true"><span class="box" aria-hidden="true"></span>Canal Donchian</button>
+          <button type="button" class="layer" data-layer="levels" aria-pressed="false"><span class="box" aria-hidden="true"></span>Stop e alvo</button>
+          <button type="button" class="layer" data-layer="waits" aria-pressed="false"><span class="box" aria-hidden="true"></span>Esperou</button>
+        </div>
+      </details>
+      <div class="zoom" role="group" aria-label="Zoom">
+        <button type="button" data-zoom="out" aria-label="Afastar"><svg class="icon" aria-hidden="true"><use href="#i-minus"/></svg></button>
+        <button type="button" data-zoom="in" aria-label="Aproximar"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
+        <button type="button" data-zoom="fit"><svg class="icon" aria-hidden="true"><use href="#i-fit"/></svg>Tudo</button>
+        <button type="button" data-zoom="end"><svg class="icon" aria-hidden="true"><use href="#i-end"/></svg>Agora</button>
+      </div>
+    </div>
+    <p class="tf-note" data-tf-note hidden><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span>Previsão, placar, canal e "esperou" só aparecem na vela de <strong>1 h</strong>, que é a que a estratégia usa. Compras e vendas aparecem em qualquer vela.</span></p>
+    <div class="chart-layout">
+      <div class="chart-frame">
+        <div class="ohlc" data-ohlc aria-hidden="true"></div>
+        <div class="chart" data-chart tabindex="0" role="img" aria-roledescription="gráfico de velas" aria-describedby="chart-help chart-desc">
+          <svg data-svg aria-hidden="true"></svg>
+          <div class="tip" data-tip hidden></div>
+        </div>
+        <p class="visually-hidden" id="chart-help">Setas esquerda e direita andam uma vela; Shift com seta pula para a próxima compra ou venda; mais e menos aproximam.</p>
+        <p class="visually-hidden" role="status" aria-live="polite" data-announce></p>
+      </div>
+      <aside class="next-panel" aria-labelledby="next-title">
+        <h3 id="next-title"><svg class="icon" aria-hidden="true"><use href="#i-target"/></svg>Próxima vela de perto</h3>
+        <p class="clock" data-clock></p>
+        <svg data-zoom-svg aria-hidden="true"></svg>
+        <div class="tendency" data-tendency></div>
+        <div data-result></div>
+        <p class="promise"><svg class="icon sm" aria-hidden="true"><use href="#i-info"/></svg><span><strong>Tendência, não promessa.</strong> Mostra para que lado o placar da estratégia está inclinado. O preço pode ir para o outro lado.</span></p>
+      </aside>
+    </div>
+    <div class="keys" aria-label="Legenda">
+      <span class="key"><svg viewBox="0 0 22 14" aria-hidden="true"><path d="M11 2 17 12H5z" fill="var(--buy)"/></svg>Compra</span>
+      <span class="key"><svg viewBox="0 0 22 14" aria-hidden="true"><path d="M11 12 5 2h12z" fill="var(--sell)"/></svg>Venda</span>
+      <span class="key"><svg viewBox="0 0 22 14" aria-hidden="true"><path d="M2 3H20M2 11H20" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="3 2"/></svg>Canal Donchian (20 velas)</span>
+      <span class="key"><svg viewBox="0 0 22 14" aria-hidden="true"><path d="M1 7 21 1V13z" fill="var(--cone-up)" stroke="var(--buy)" stroke-dasharray="2 2"/></svg>Faixa da previsão (±1 ATR)</span>
+      <span class="key"><svg viewBox="0 0 22 14" aria-hidden="true"><path d="M1 10 6 6 11 8 16 3 21 5" fill="none" stroke="var(--ink)" stroke-width="2"/></svg>Preço real chegando</span>
+      <span class="key"><svg viewBox="0 0 22 14" aria-hidden="true"><circle cx="11" cy="7" r="2.5" fill="var(--bench)"/></svg>Esperou</span>
+    </div>
+    <p class="hint">Arraste para os lados, use a roda do mouse (ou + e −) para aproximar. No teclado: clique no gráfico e use as setas.</p>
+    <details class="desc"><summary>Descrição do gráfico em texto</summary><p id="chart-desc" data-desc></p></details>
+    <p class="credit">Na implementação o desenho usa TradingView Lightweight Charts™ (licença Apache 2.0), com o crédito e o link exigidos pela licença neste rodapé.</p>
+  </section>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="why-title">
+      <div class="card-head"><h2 class="card-title" id="why-title"><svg class="icon" aria-hidden="true"><use href="#i-gauge"/></svg>De onde vem a previsão</h2></div>
+      <div data-why></div>
+    </section>
+    <section class="card" aria-labelledby="hist-title">
+      <div class="card-head"><h2 class="card-title" id="hist-title"><svg class="icon" aria-hidden="true"><use href="#i-history"/></svg>Histórico de acertos</h2><span class="muted small" data-hist-range></span></div>
+      <div data-history></div>
+    </section>
+  </div>
+</main>
+
+<script type="application/json" id="data">{"fetchedAt":1792028585554,"hours":[[1790589600000,13.576,13.941,13.574,13.917,231080],[1790593200000,13.918,14.113,13.909,14.081,215469],[1790596800000,14.081,15.015,14.044,14.762,1392364],[1790600400000,14.761,14.885,14.444,14.724,462087],[1790604000000,14.727,14.738,14.099,14.196,598940],[1790607600000,14.197,14.469,14.064,14.432,347406],[1790611200000,14.431,15.277,14.389,15.267,1150668],[1790614800000,15.268,15.489,15.072,15.142,588958],[1790618400000,15.141,15.343,15.075,15.251,216540],[1790622000000,15.251,15.263,14.928,15.1,416671],[1790625600000,15.1,15.376,15.044,15.339,310545],[1790629200000,15.339,15.428,15.105,15.149,191703],[1790632800000,15.15,15.283,14.983,15.283,224729],[1790636400000,15.283,15.534,15.251,15.452,425691],[1790640000000,15.451,15.777,15.406,15.411,496074],[1790643600000,15.411,15.556,15.193,15.23,386626],[1790647200000,15.229,15.286,14.95,15.013,366803],[1790650800000,15.013,15.108,14.808,14.865,622615],[1790654400000,14.864,14.875,14.631,14.753,201829],[1790658000000,14.752,14.871,14.651,14.868,205338],[1790661600000,14.87,15.067,14.858,14.991,208201],[1790665200000,14.991,15.29,14.921,15.205,244595],[1790668800000,15.206,15.338,15.084,15.307,219759],[1790672400000,15.308,15.49,15.244,15.464,197180],[1790676000000,15.463,15.614,15.289,15.313,261095],[1790679600000,15.314,15.46,15.287,15.349,158089],[1790683200000,15.348,15.43,15.24,15.263,233395],[1790686800000,15.263,15.36,15.114,15.129,175366],[1790690400000,15.13,15.179,14.992,15.101,155753],[1790694000000,15.102,15.112,14.714,14.798,313951],[1790697600000,14.798,14.889,14.583,14.712,252734],[1790701200000,14.713,14.756,14.484,14.556,181696],[1790704800000,14.555,14.684,14.555,14.584,164196],[1790708400000,14.583,14.684,14.576,14.638,110647],[1790712000000,14.638,14.739,14.594,14.703,120104],[1790715600000,14.702,14.754,14.62,14.704,76173],[1790719200000,14.704,14.746,14.666,14.682,72517],[1790722800000,14.683,14.77,14.588,14.607,70474],[1790726400000,14.607,14.615,14.409,14.492,193327],[1790730000000,14.492,14.542,14.429,14.431,99657],[1790733600000,14.432,14.519,14.378,14.497,120360],[1790737200000,14.498,14.505,14.321,14.374,138772],[1790740800000,14.373,14.45,14.35,14.353,82749],[1790744400000,14.353,14.454,14.336,14.428,96509],[1790748000000,14.428,14.452,14.281,14.297,111642],[1790751600000,14.296,14.348,14.26,14.303,84807],[1790755200000,14.303,14.315,14.192,14.297,135958],[1790758800000,14.296,14.461,14.279,14.369,152451],[1790762400000,14.37,14.461,14.348,14.408,165319],[1790766000000,14.408,14.439,14.31,14.439,159495],[1790769600000,14.439,14.814,14.367,14.733,573524],[1790773200000,14.732,14.776,14.368,14.558,527396],[1790776800000,14.558,14.61,14.051,14.206,441194],[1790780400000,14.208,14.305,14.109,14.248,174570],[1790784000000,14.249,14.492,14.218,14.443,215781],[1790787600000,14.444,14.459,14.32,14.378,104562],[1790791200000,14.377,14.404,14.3,14.351,126799],[1790794800000,14.352,14.376,14.209,14.239,129833],[1790798400000,14.24,14.361,14.212,14.31,90724],[1790802000000,14.311,14.361,14.306,14.359,39871],[1790805600000,14.359,14.423,14.259,14.378,41646],[1790809200000,14.377,14.437,14.356,14.366,43421],[1790812800000,14.366,14.432,14.313,14.371,86910],[1790816400000,14.37,14.461,14.354,14.37,65307],[1790820000000,14.37,14.502,14.246,14.422,122341],[1790823600000,14.421,14.56,14.406,14.509,77328],[1790827200000,14.511,14.552,14.441,14.495,37342],[1790830800000,14.496,14.534,14.464,14.493,62657],[1790834400000,14.494,14.507,14.424,14.457,54553],[1790838000000,14.456,14.494,14.183,14.224,109020],[1790841600000,14.223,14.274,14.142,14.252,101741],[1790845200000,14.25,14.357,14.225,14.28,70141],[1790848800000,14.279,14.355,14.158,14.342,61770],[1790852400000,14.342,14.405,14.272,14.386,77285],[1790856000000,14.387,14.467,14.32,14.333,109890],[1790859600000,14.334,14.415,14.229,14.363,163954],[1790863200000,14.362,14.427,14.226,14.312,161486],[1790866800000,14.312,14.466,14.215,14.307,333149],[1790870400000,14.308,14.402,14.148,14.197,204370],[1790874000000,14.197,14.422,14.197,14.336,135966],[1790877600000,14.337,14.485,14.282,14.382,71478],[1790881200000,14.383,14.5,14.336,14.448,115648],[1790884800000,14.449,14.52,14.374,14.389,76201],[1790888400000,14.389,14.409,14.204,14.245,92254],[1790892000000,14.243,14.33,14.243,14.321,54285],[1790895600000,14.321,14.394,14.282,14.386,35904],[1790899200000,14.385,14.389,14.245,14.266,114408],[1790902800000,14.267,14.312,14.164,14.281,137351],[1790906400000,14.282,14.477,14.267,14.467,94783],[1790910000000,14.466,14.509,14.36,14.451,76677],[1790913600000,14.451,14.652,14.384,14.64,176359],[1790917200000,14.64,14.642,14.416,14.452,162487],[1790920800000,14.452,14.501,14.392,14.409,159874],[1790924400000,14.408,14.438,14.259,14.37,168002],[1790928000000,14.371,14.507,14.346,14.389,117147],[1790931600000,14.389,14.457,14.346,14.372,85214],[1790935200000,14.371,14.456,14.3,14.405,121970],[1790938800000,14.406,14.468,14.391,14.399,74935],[1790942400000,14.4,14.514,14.329,14.437,272274],[1790946000000,14.439,14.472,14.329,14.348,273208],[1790949600000,14.347,14.406,14.162,14.248,195251],[1790953200000,14.249,14.271,14.157,14.233,170885],[1790956800000,14.235,14.274,14.131,14.18,118172],[1790960400000,14.179,14.233,14.082,14.134,133903],[1790964000000,14.133,14.169,13.152,13.664,781288],[1790967600000,13.664,13.723,13.528,13.589,209032],[1790971200000,13.588,13.675,13.554,13.555,187851],[1790974800000,13.554,13.686,13.548,13.676,96263],[1790978400000,13.676,13.75,13.644,13.737,99985],[1790982000000,13.737,13.813,13.719,13.794,90931],[1790985600000,13.794,13.903,13.782,13.893,131526],[1790989200000,13.892,13.964,13.858,13.937,129385],[1790992800000,13.939,13.963,13.894,13.922,54108],[1790996400000,13.922,13.972,13.912,13.943,51492],[1791000000000,13.943,13.952,13.872,13.94,47342],[1791003600000,13.939,14.046,13.925,14.024,47719],[1791007200000,14.025,14.135,14.013,14.073,109692],[1791010800000,14.073,14.073,13.947,13.969,109862],[1791014400000,13.97,14.038,13.95,13.95,55894],[1791018000000,13.95,14,13.92,13.932,43494],[1791021600000,13.932,13.964,13.913,13.929,29177],[1791025200000,13.929,13.957,13.904,13.92,38283],[1791028800000,13.919,13.938,13.833,13.857,59745],[1791032400000,13.858,13.891,13.853,13.88,49902],[1791036000000,13.879,13.937,13.839,13.917,45493],[1791039600000,13.916,13.916,13.812,13.83,55013],[1791043200000,13.83,13.894,13.787,13.879,59495],[1791046800000,13.88,13.929,13.877,13.91,51306],[1791050400000,13.91,13.927,13.877,13.911,42213],[1791054000000,13.911,13.985,13.887,13.979,42798],[1791057600000,13.979,14.096,13.979,14.062,72432],[1791061200000,14.061,14.069,14.002,14.062,41251],[1791064800000,14.062,14.197,14.057,14.114,69898],[1791068400000,14.115,14.133,14.043,14.116,58620],[1791072000000,14.116,14.235,14.11,14.128,58566],[1791075600000,14.129,14.165,14.072,14.08,31434],[1791079200000,14.081,14.103,14.006,14.049,35015],[1791082800000,14.049,14.085,13.999,14.024,41500],[1791086400000,14.024,14.048,13.991,14.015,19267],[1791090000000,14.015,14.085,13.991,14.035,37513],[1791093600000,14.034,14.05,14.002,14.033,21130],[1791097200000,14.034,14.101,13.98,14.099,33093],[1791100800000,14.098,14.102,14.038,14.054,24069],[1791104400000,14.053,14.14,14.033,14.114,44734],[1791108000000,14.115,14.157,14.077,14.124,24897],[1791111600000,14.125,14.14,14.084,14.086,17749],[1791115200000,14.085,14.117,14.026,14.106,37181],[1791118800000,14.105,14.147,14.066,14.087,33457],[1791122400000,14.087,14.2,14.06,14.161,96587],[1791126000000,14.162,14.229,14.122,14.148,53246],[1791129600000,14.148,14.183,14.109,14.157,26860],[1791133200000,14.157,14.206,14.1,14.157,27068],[1791136800000,14.157,14.21,14.137,14.187,30020],[1791140400000,14.188,14.219,14.123,14.136,56404],[1791144000000,14.135,14.178,14.113,14.161,36641],[1791147600000,14.162,14.23,14.146,14.169,45580],[1791151200000,14.17,14.326,14.17,14.256,90208],[1791154800000,14.258,14.326,14.242,14.278,47858],[1791158400000,14.277,14.277,14.17,14.243,48201],[1791162000000,14.243,14.265,14.152,14.174,55565],[1791165600000,14.174,14.247,14.158,14.16,48894],[1791169200000,14.159,14.195,14.09,14.147,57851],[1791172800000,14.147,14.16,14.036,14.081,46932],[1791176400000,14.08,14.137,14.04,14.137,25731],[1791180000000,14.137,14.23,14.122,14.185,40796],[1791183600000,14.185,14.281,14.177,14.249,49413],[1791187200000,14.248,14.25,14.099,14.15,56788],[1791190800000,14.151,14.183,14.126,14.136,27863],[1791194400000,14.135,14.204,14.125,14.18,35806],[1791198000000,14.18,14.232,14.148,14.216,39323],[1791201600000,14.215,14.221,14.051,14.058,64292],[1791205200000,14.06,14.122,14.04,14.086,73023],[1791208800000,14.086,14.124,13.66,13.803,352290],[1791212400000,13.802,13.848,13.755,13.798,91363],[1791216000000,13.795,13.841,13.74,13.824,94001],[1791219600000,13.825,13.893,13.802,13.871,62025],[1791223200000,13.871,13.922,13.866,13.9,51985],[1791226800000,13.899,13.958,13.885,13.925,55011],[1791230400000,13.925,13.969,13.911,13.946,70428],[1791234000000,13.945,13.952,13.914,13.918,59440],[1791237600000,13.918,13.975,13.902,13.913,70960],[1791241200000,13.913,13.925,13.844,13.854,82953],[1791244800000,13.854,13.898,13.831,13.874,62709],[1791248400000,13.875,13.928,13.789,13.814,79804],[1791252000000,13.813,13.83,13.766,13.771,57696],[1791255600000,13.771,13.789,13.72,13.77,55165],[1791259200000,13.77,13.836,13.77,13.825,40440],[1791262800000,13.826,13.86,13.819,13.823,25108],[1791266400000,13.823,13.84,13.757,13.836,62263],[1791270000000,13.835,13.96,13.808,13.941,45739],[1791273600000,13.941,14.004,13.934,13.979,55786],[1791277200000,13.98,14.015,13.885,13.962,40969],[1791280800000,13.961,14.073,13.957,14.022,34699],[1791284400000,14.023,14.095,14.022,14.064,47764],[1791288000000,14.064,14.075,13.972,14.016,66198],[1791291600000,14.015,14.06,13.966,14.004,48137],[1791295200000,14.004,14.092,13.937,14.086,56582],[1791298800000,14.086,14.124,13.94,13.945,69540],[1791302400000,13.945,13.979,13.866,13.866,73943],[1791306000000,13.866,13.985,13.84,13.963,34531],[1791309600000,13.964,14.003,13.926,13.96,13769],[1791313200000,13.962,13.993,13.901,13.973,19572],[1791316800000,13.972,14.014,13.929,13.988,88812],[1791320400000,13.988,13.994,13.887,13.943,39834],[1791324000000,13.944,13.971,13.884,13.929,24342],[1791327600000,13.929,13.98,13.925,13.959,19559],[1791331200000,13.959,14.037,13.914,14.02,42041],[1791334800000,14.019,14.019,13.688,13.703,65592],[1791338400000,13.703,13.705,13.256,13.566,356502],[1791342000000,13.565,13.67,13.56,13.622,52556],[1791345600000,13.622,13.646,13.536,13.608,52128],[1791349200000,13.609,13.706,13.605,13.694,41791],[1791352800000,13.694,13.8,13.663,13.778,42536],[1791356400000,13.777,13.815,13.718,13.735,39739],[1791360000000,13.735,13.756,13.665,13.673,55973],[1791363600000,13.674,13.714,13.581,13.607,82865],[1791367200000,13.608,13.616,13.418,13.482,98961],[1791370800000,13.482,13.513,13.363,13.383,85527],[1791374400000,13.382,13.406,13.3,13.356,133973],[1791378000000,13.356,13.508,13.285,13.426,158409],[1791381600000,13.425,13.455,13.3,13.391,127854],[1791385200000,13.391,13.444,13.316,13.431,77789],[1791388800000,13.431,13.522,13.397,13.45,52514],[1791392400000,13.45,13.477,13.302,13.361,52782],[1791396000000,13.361,13.441,13.347,13.383,31803],[1791399600000,13.384,13.436,13.342,13.365,32280],[1791403200000,13.366,13.427,13.333,13.365,37669],[1791406800000,13.365,13.373,13.266,13.302,41663],[1791410400000,13.303,13.349,13.285,13.316,38477],[1791414000000,13.317,13.376,13.317,13.326,42569],[1791417600000,13.326,13.345,13.291,13.303,44003],[1791421200000,13.302,13.374,13.262,13.28,54911],[1791424800000,13.28,13.329,13.236,13.265,59233],[1791428400000,13.265,13.294,13.129,13.174,140936],[1791432000000,13.175,13.185,12.965,13.084,215721],[1791435600000,13.084,13.226,13.077,13.098,47700],[1791439200000,13.099,13.195,13.066,13.136,50070],[1791442800000,13.135,13.201,13.079,13.085,51500],[1791446400000,13.085,13.128,13.052,13.075,59394],[1791450000000,13.076,13.192,13.062,13.171,35705],[1791453600000,13.171,13.177,13.033,13.059,61895],[1791457200000,13.06,13.074,12.975,13.011,87962],[1791460800000,13.011,13.016,12.876,12.928,110650],[1791464400000,12.928,12.994,12.816,12.94,162731],[1791468000000,12.939,13.039,12.926,12.972,79502],[1791471600000,12.971,12.975,12.313,12.362,542499],[1791475200000,12.363,12.527,12.306,12.349,216905],[1791478800000,12.351,12.383,12.091,12.185,271960],[1791482400000,12.186,12.434,12.14,12.388,251707],[1791486000000,12.388,12.556,12.385,12.517,128586],[1791489600000,12.516,12.683,12.516,12.675,187954],[1791493200000,12.674,12.746,12.634,12.739,67380],[1791496800000,12.738,12.802,12.713,12.774,64226],[1791500400000,12.775,12.802,12.684,12.707,70106],[1791504000000,12.707,12.765,12.665,12.71,50825],[1791507600000,12.71,12.825,12.702,12.805,33355],[1791511200000,12.805,12.846,12.723,12.782,53998],[1791514800000,12.781,12.854,12.772,12.852,39685],[1791518400000,12.852,12.88,12.815,12.822,47953],[1791522000000,12.821,12.926,12.817,12.861,115773],[1791525600000,12.862,12.919,12.861,12.903,55894],[1791529200000,12.903,12.971,12.863,12.951,87897],[1791532800000,12.95,12.959,12.845,12.897,53149],[1791536400000,12.896,12.914,12.872,12.907,31827],[1791540000000,12.908,12.91,12.746,12.79,52168],[1791543600000,12.788,12.956,12.748,12.92,65968],[1791547200000,12.92,12.939,12.771,12.82,70915],[1791550800000,12.822,12.852,12.735,12.755,67653],[1791554400000,12.754,12.889,12.692,12.812,69615],[1791558000000,12.811,12.832,12.738,12.818,37154],[1791561600000,12.817,12.884,12.792,12.842,97985],[1791565200000,12.843,12.864,12.771,12.845,61908],[1791568800000,12.845,12.863,12.771,12.805,25263],[1791572400000,12.805,12.851,12.715,12.756,45236],[1791576000000,12.756,12.818,12.756,12.8,24689],[1791579600000,12.801,12.84,12.791,12.825,27945],[1791583200000,12.825,12.842,12.757,12.826,14121],[1791586800000,12.826,12.835,12.804,12.811,13007],[1791590400000,12.811,12.845,12.788,12.804,22710],[1791594000000,12.805,12.875,12.789,12.865,30309],[1791597600000,12.865,12.873,12.832,12.844,35010],[1791601200000,12.843,12.855,12.778,12.815,29953],[1791604800000,12.815,12.858,12.794,12.82,30594],[1791608400000,12.82,12.952,12.807,12.932,68743],[1791612000000,12.933,12.944,12.89,12.893,39029],[1791615600000,12.893,12.908,12.863,12.895,26020],[1791619200000,12.895,12.986,12.894,12.983,51732],[1791622800000,12.984,13.03,12.961,12.971,63467],[1791626400000,12.971,12.978,12.875,12.912,55447],[1791630000000,12.912,12.958,12.872,12.948,68739],[1791633600000,12.947,13.023,12.932,12.975,95478],[1791637200000,12.975,13.115,12.959,13.081,63285],[1791640800000,13.08,13.254,13.032,13.161,117597],[1791644400000,13.162,13.169,13.111,13.138,65134],[1791648000000,13.137,13.151,13.08,13.13,67878],[1791651600000,13.131,13.141,13.087,13.093,47462],[1791655200000,13.094,13.127,13.065,13.074,24771],[1791658800000,13.074,13.101,13.065,13.076,18134],[1791662400000,13.076,13.127,13.047,13.115,23342],[1791666000000,13.114,13.124,13.072,13.076,16486],[1791669600000,13.077,13.091,13.004,13.025,36577],[1791673200000,13.025,13.047,13.012,13.012,24795],[1791676800000,13.012,13.03,12.972,12.988,15212],[1791680400000,12.988,13.084,12.972,13.043,26477],[1791684000000,13.042,13.043,12.992,13.006,18181],[1791687600000,13.006,13.018,12.86,12.872,38097],[1791691200000,12.872,12.962,12.861,12.943,33454],[1791694800000,12.943,12.967,12.896,12.903,18074],[1791698400000,12.903,12.937,12.89,12.918,10580],[1791702000000,12.919,12.922,12.837,12.859,53402],[1791705600000,12.859,12.888,12.844,12.877,30912],[1791709200000,12.876,12.91,12.861,12.879,35049],[1791712800000,12.88,12.889,12.845,12.856,26051],[1791716400000,12.857,12.921,12.839,12.893,48664],[1791720000000,12.893,12.958,12.893,12.926,61215],[1791723600000,12.926,13.01,12.91,12.966,54957],[1791727200000,12.966,13.129,12.954,13.128,62854],[1791730800000,13.128,13.385,13.094,13.361,179290],[1791734400000,13.361,13.402,13.291,13.385,216708],[1791738000000,13.386,13.487,13.333,13.411,108749],[1791741600000,13.41,13.433,13.251,13.295,65978],[1791745200000,13.295,13.322,13.285,13.299,21209],[1791748800000,13.299,13.347,13.26,13.346,41753],[1791752400000,13.347,13.349,13.14,13.283,47799],[1791756000000,13.282,13.342,13.252,13.32,23422],[1791759600000,13.319,13.361,13.317,13.348,23538],[1791763200000,13.347,13.401,13.327,13.375,45622],[1791766800000,13.374,13.458,13.288,13.371,53074],[1791770400000,13.372,13.444,13.329,13.37,56910],[1791774000000,13.37,13.382,13.327,13.351,50665],[1791777600000,13.352,13.482,13.314,13.466,62803],[1791781200000,13.467,13.498,13.355,13.428,48791],[1791784800000,13.426,13.467,13.377,13.424,35334],[1791788400000,13.423,13.506,13.408,13.481,65192],[1791792000000,13.48,13.485,13.338,13.359,86275],[1791795600000,13.36,13.384,13.3,13.384,68468],[1791799200000,13.385,13.452,13.331,13.437,59138],[1791802800000,13.437,13.44,13.259,13.313,90910],[1791806400000,13.313,13.343,13.151,13.199,113609],[1791810000000,13.199,13.222,13.094,13.183,164761],[1791813600000,13.182,13.209,12.921,12.975,141683],[1791817200000,12.975,13.056,12.969,13.025,77429],[1791820800000,13.024,13.11,12.867,12.885,121939],[1791824400000,12.885,12.952,12.874,12.9,46981],[1791828000000,12.9,12.921,12.854,12.897,49247],[1791831600000,12.898,12.994,12.891,12.983,123790],[1791835200000,12.984,13.107,12.984,13.034,72073],[1791838800000,13.034,13.046,12.76,12.841,106871],[1791842400000,12.842,12.905,12.779,12.796,64053],[1791846000000,12.796,12.822,12.605,12.625,173306],[1791849600000,12.625,12.632,12.259,12.373,255449],[1791853200000,12.374,12.714,12.369,12.69,165450],[1791856800000,12.689,12.84,12.66,12.82,127274],[1791860400000,12.82,12.978,12.79,12.943,101734],[1791864000000,12.943,13.029,12.912,13.018,123692],[1791867600000,13.017,13.188,12.99,13.178,97092],[1791871200000,13.178,13.193,13.075,13.086,50964],[1791874800000,13.086,13.108,12.975,13.068,60891],[1791878400000,13.068,13.111,12.995,13.008,139690],[1791882000000,13.007,13.007,12.897,12.991,145198],[1791885600000,12.992,13.001,12.824,12.882,78705],[1791889200000,12.882,12.958,12.724,12.84,122302],[1791892800000,12.839,12.974,12.769,12.953,136282],[1791896400000,12.954,13.049,12.864,12.883,115645],[1791900000000,12.882,13.098,12.866,13.004,133847],[1791903600000,13.005,13.034,12.825,12.899,97276],[1791907200000,12.9,12.981,12.893,12.924,59060],[1791910800000,12.923,12.946,12.86,12.885,45291],[1791914400000,12.886,12.966,12.88,12.953,37587],[1791918000000,12.953,12.996,12.881,12.932,49643],[1791921600000,12.933,12.973,12.9,12.928,29643],[1791925200000,12.927,12.947,12.891,12.931,17904],[1791928800000,12.931,12.951,12.896,12.94,20160],[1791932400000,12.94,12.94,12.86,12.884,28307],[1791936000000,12.884,13.039,12.884,12.951,64697],[1791939600000,12.952,12.99,12.9,12.932,52824],[1791943200000,12.932,13.007,12.902,13.002,22484],[1791946800000,13.004,13.077,12.963,13.011,32697],[1791950400000,13.011,13.048,12.954,13.035,25382],[1791954000000,13.034,13.034,12.855,12.869,57625],[1791957600000,12.87,12.922,12.848,12.887,42683],[1791961200000,12.886,12.943,12.867,12.927,52874],[1791964800000,12.926,13.1,12.911,12.931,59938]],"quarters":[[1791608400000,12.82,12.883,12.807,12.86,25548],[1791609300000,12.86,12.882,12.86,12.873,15368],[1791610200000,12.874,12.952,12.874,12.945,20389],[1791611100000,12.944,12.952,12.924,12.932,7438],[1791612000000,12.933,12.943,12.892,12.905,12114],[1791612900000,12.906,12.93,12.902,12.904,8958],[1791613800000,12.903,12.942,12.9,12.942,9580],[1791614700000,12.943,12.944,12.89,12.893,8377],[1791615600000,12.893,12.908,12.866,12.889,10331],[1791616500000,12.89,12.901,12.883,12.886,4008],[1791617400000,12.886,12.897,12.863,12.868,6920],[1791618300000,12.867,12.897,12.867,12.895,4761],[1791619200000,12.895,12.931,12.894,12.915,11263],[1791620100000,12.915,12.926,12.894,12.915,12258],[1791621000000,12.915,12.945,12.915,12.938,11899],[1791621900000,12.938,12.986,12.919,12.983,16312],[1791622800000,12.984,13.007,12.965,12.975,17216],[1791623700000,12.975,12.984,12.961,12.983,14550],[1791624600000,12.983,13.03,12.983,13.009,11813],[1791625500000,13.009,13.019,12.966,12.971,19889],[1791626400000,12.971,12.978,12.915,12.946,25164],[1791627300000,12.947,12.952,12.89,12.89,8940],[1791628200000,12.891,12.931,12.875,12.928,10281],[1791629100000,12.927,12.938,12.912,12.912,11062],[1791630000000,12.912,12.918,12.872,12.874,20255],[1791630900000,12.873,12.891,12.873,12.883,9563],[1791631800000,12.884,12.954,12.884,12.95,16394],[1791632700000,12.95,12.958,12.934,12.948,22527],[1791633600000,12.947,12.965,12.936,12.948,12187],[1791634500000,12.948,12.962,12.932,12.947,11083],[1791635400000,12.947,13.023,12.946,13.014,60471],[1791636300000,13.013,13.014,12.965,12.975,11738],[1791637200000,12.975,12.992,12.959,12.982,9706],[1791638100000,12.983,13.049,12.983,13.018,21631],[1791639000000,13.018,13.072,13.007,13.068,11730],[1791639900000,13.069,13.115,13.049,13.081,20217],[1791640800000,13.08,13.098,13.032,13.082,15537],[1791641700000,13.082,13.18,13.077,13.18,27977],[1791642600000,13.179,13.254,13.173,13.227,61165],[1791643500000,13.228,13.243,13.16,13.161,12918],[1791644400000,13.162,13.169,13.115,13.115,17579],[1791645300000,13.115,13.154,13.111,13.137,23355],[1791646200000,13.136,13.16,13.117,13.124,8314],[1791647100000,13.125,13.144,13.113,13.138,15886],[1791648000000,13.137,13.149,13.1,13.123,10761],[1791648900000,13.122,13.144,13.082,13.082,7103],[1791649800000,13.083,13.109,13.08,13.104,16852],[1791650700000,13.103,13.151,13.103,13.13,33162],[1791651600000,13.131,13.138,13.107,13.127,16141],[1791652500000,13.126,13.141,13.117,13.131,10763],[1791653400000,13.131,13.132,13.096,13.096,4840],[1791654300000,13.095,13.113,13.087,13.093,15718],[1791655200000,13.094,13.127,13.09,13.095,11453],[1791656100000,13.094,13.111,13.065,13.068,6582],[1791657000000,13.067,13.083,13.065,13.065,5187],[1791657900000,13.066,13.081,13.066,13.074,1549],[1791658800000,13.074,13.088,13.065,13.071,2593],[1791659700000,13.072,13.082,13.07,13.073,2356],[1791660600000,13.072,13.101,13.07,13.088,6013],[1791661500000,13.087,13.098,13.073,13.076,7172],[1791662400000,13.076,13.088,13.062,13.063,6347],[1791663300000,13.064,13.068,13.047,13.056,5308],[1791664200000,13.055,13.115,13.054,13.115,4656],[1791665100000,13.115,13.127,13.112,13.115,7031],[1791666000000,13.114,13.124,13.085,13.085,3017],[1791666900000,13.084,13.1,13.079,13.089,2904],[1791667800000,13.087,13.102,13.072,13.077,7509],[1791668700000,13.078,13.102,13.074,13.076,3057],[1791669600000,13.077,13.091,13.066,13.071,13938],[1791670500000,13.07,13.074,13.049,13.054,4230],[1791671400000,13.053,13.055,13.026,13.029,12318],[1791672300000,13.03,13.03,13.004,13.025,6091],[1791673200000,13.025,13.047,13.025,13.03,6733],[1791674100000,13.03,13.034,13.014,13.019,7693],[1791675000000,13.021,13.034,13.017,13.034,5744],[1791675900000,13.034,13.038,13.012,13.012,4625],[1791676800000,13.012,13.03,13.011,13.027,3895],[1791677700000,13.028,13.029,12.992,12.998,2912],[1791678600000,12.997,12.998,12.982,12.982,3019],[1791679500000,12.981,12.995,12.972,12.988,5386],[1791680400000,12.988,13.025,12.972,13.024,7457],[1791681300000,13.024,13.052,13.023,13.051,3724],[1791682200000,13.052,13.078,13.048,13.061,9450],[1791683100000,13.06,13.084,13.042,13.043,5847],[1791684000000,13.042,13.043,13.008,13.012,3242],[1791684900000,13.011,13.024,13.002,13.003,2237],[1791685800000,13.003,13.03,13.003,13.006,4500],[1791686700000,13.006,13.015,12.992,13.006,8202],[1791687600000,13.006,13.018,12.938,12.96,13073],[1791688500000,12.96,12.961,12.915,12.915,6640],[1791689400000,12.916,12.945,12.912,12.929,3809],[1791690300000,12.928,12.932,12.86,12.872,14574],[1791691200000,12.872,12.904,12.861,12.895,10865],[1791692100000,12.895,12.924,12.895,12.924,2272],[1791693000000,12.923,12.941,12.918,12.935,5291],[1791693900000,12.935,12.962,12.935,12.943,15026],[1791694800000,12.943,12.967,12.933,12.939,6824],[1791695700000,12.939,12.949,12.914,12.921,4232],[1791696600000,12.92,12.935,12.909,12.912,2321],[1791697500000,12.911,12.922,12.896,12.903,4698],[1791698400000,12.903,12.912,12.89,12.894,2026],[1791699300000,12.893,12.915,12.893,12.909,3024],[1791700200000,12.908,12.912,12.899,12.912,2256],[1791701100000,12.912,12.937,12.912,12.918,3274],[1791702000000,12.919,12.922,12.889,12.891,6512],[1791702900000,12.891,12.892,12.847,12.853,9780],[1791703800000,12.853,12.867,12.837,12.864,30215],[1791704700000,12.864,12.87,12.857,12.859,6894],[1791705600000,12.859,12.869,12.854,12.858,5660],[1791706500000,12.859,12.872,12.849,12.854,4989],[1791707400000,12.855,12.881,12.844,12.881,14086],[1791708300000,12.881,12.888,12.87,12.877,6177],[1791709200000,12.876,12.91,12.863,12.888,10425],[1791710100000,12.888,12.889,12.873,12.878,4413],[1791711000000,12.877,12.888,12.863,12.872,9411],[1791711900000,12.871,12.894,12.861,12.879,10801],[1791712800000,12.88,12.889,12.867,12.87,4786],[1791713700000,12.87,12.885,12.867,12.873,5202],[1791714600000,12.873,12.875,12.845,12.859,4232],[1791715500000,12.859,12.88,12.852,12.856,11830],[1791716400000,12.857,12.868,12.839,12.857,10638],[1791717300000,12.857,12.881,12.857,12.874,8358],[1791718200000,12.874,12.893,12.863,12.891,10459],[1791719100000,12.891,12.921,12.891,12.893,19208],[1791720000000,12.893,12.943,12.893,12.937,17028],[1791720900000,12.936,12.938,12.924,12.932,8406],[1791721800000,12.933,12.957,12.923,12.954,15689],[1791722700000,12.954,12.958,12.923,12.926,20092],[1791723600000,12.926,12.956,12.91,12.949,10094],[1791724500000,12.95,12.983,12.947,12.975,13538],[1791725400000,12.976,13.005,12.976,12.99,13348],[1791726300000,12.99,13.01,12.966,12.966,17976],[1791727200000,12.966,12.992,12.954,12.961,10020],[1791728100000,12.96,13.046,12.959,13.034,17902],[1791729000000,13.033,13.095,13.029,13.076,16409],[1791729900000,13.076,13.129,13.068,13.128,18523],[1791730800000,13.128,13.131,13.094,13.122,22923],[1791731700000,13.122,13.157,13.118,13.146,12208],[1791732600000,13.146,13.249,13.146,13.242,41534],[1791733500000,13.241,13.385,13.241,13.361,102625],[1791734400000,13.361,13.37,13.303,13.344,64865],[1791735300000,13.344,13.38,13.291,13.361,36357],[1791736200000,13.361,13.4,13.333,13.366,66097],[1791737100000,13.365,13.402,13.33,13.385,49388],[1791738000000,13.386,13.415,13.333,13.384,45476],[1791738900000,13.384,13.487,13.38,13.471,35806],[1791739800000,13.469,13.476,13.442,13.442,17135],[1791740700000,13.442,13.476,13.411,13.411,10333],[1791741600000,13.41,13.433,13.361,13.367,28982],[1791742500000,13.365,13.392,13.35,13.362,6506],[1791743400000,13.362,13.367,13.323,13.328,8155],[1791744300000,13.327,13.334,13.251,13.295,22335],[1791745200000,13.295,13.319,13.285,13.312,5935],[1791746100000,13.311,13.322,13.291,13.291,3517],[1791747000000,13.291,13.301,13.285,13.292,6371],[1791747900000,13.292,13.311,13.287,13.299,5387],[1791748800000,13.299,13.31,13.26,13.303,7925],[1791749700000,13.302,13.315,13.273,13.295,23942],[1791750600000,13.294,13.331,13.28,13.331,5836],[1791751500000,13.331,13.347,13.311,13.346,4050],[1791752400000,13.347,13.349,13.27,13.274,8679],[1791753300000,13.273,13.273,13.14,13.231,28801],[1791754200000,13.229,13.291,13.222,13.288,6268],[1791755100000,13.287,13.294,13.26,13.283,4051],[1791756000000,13.282,13.325,13.252,13.3,10579],[1791756900000,13.299,13.323,13.298,13.312,5401],[1791757800000,13.312,13.338,13.3,13.337,3596],[1791758700000,13.338,13.342,13.319,13.32,3847],[1791759600000,13.319,13.361,13.318,13.345,11017],[1791760500000,13.345,13.353,13.317,13.352,3169],[1791761400000,13.352,13.359,13.335,13.342,4352],[1791762300000,13.342,13.36,13.325,13.348,5000],[1791763200000,13.347,13.401,13.344,13.379,10771],[1791764100000,13.378,13.382,13.337,13.34,5687],[1791765000000,13.339,13.387,13.327,13.353,17340],[1791765900000,13.353,13.383,13.332,13.375,11824],[1791766800000,13.374,13.458,13.356,13.401,25215],[1791767700000,13.402,13.428,13.366,13.375,8729],[1791768600000,13.375,13.386,13.323,13.33,6843],[1791769500000,13.331,13.377,13.288,13.371,12287],[1791770400000,13.372,13.406,13.329,13.372,23941],[1791771300000,13.373,13.444,13.358,13.379,18578],[1791772200000,13.379,13.414,13.371,13.394,2866],[1791773100000,13.395,13.419,13.369,13.37,11525],[1791774000000,13.37,13.374,13.334,13.374,7837],[1791774900000,13.374,13.382,13.328,13.343,23702],[1791775800000,13.342,13.377,13.331,13.349,6865],[1791776700000,13.35,13.368,13.327,13.351,12262],[1791777600000,13.352,13.365,13.316,13.326,14822],[1791778500000,13.327,13.39,13.314,13.39,17501],[1791779400000,13.389,13.482,13.389,13.46,17076],[1791780300000,13.46,13.48,13.426,13.466,13404],[1791781200000,13.467,13.498,13.45,13.453,17995],[1791782100000,13.453,13.465,13.403,13.403,6946],[1791783000000,13.404,13.418,13.355,13.395,13688],[1791783900000,13.396,13.463,13.396,13.428,10163],[1791784800000,13.426,13.432,13.383,13.42,7672],[1791785700000,13.42,13.42,13.381,13.381,7750],[1791786600000,13.381,13.452,13.377,13.418,10153],[1791787500000,13.417,13.467,13.397,13.424,9759],[1791788400000,13.423,13.46,13.408,13.453,11131],[1791789300000,13.453,13.506,13.42,13.503,29518],[1791790200000,13.504,13.505,13.466,13.466,15766],[1791791100000,13.466,13.5,13.466,13.481,8777],[1791792000000,13.48,13.485,13.379,13.38,32303],[1791792900000,13.38,13.385,13.338,13.377,28970],[1791793800000,13.377,13.399,13.349,13.354,9381],[1791794700000,13.354,13.374,13.344,13.359,15621],[1791795600000,13.36,13.372,13.332,13.348,28558],[1791796500000,13.348,13.355,13.317,13.321,17594],[1791797400000,13.321,13.345,13.312,13.321,10006],[1791798300000,13.321,13.384,13.3,13.384,12310],[1791799200000,13.385,13.385,13.334,13.359,8670],[1791800100000,13.358,13.358,13.331,13.357,7522],[1791801000000,13.358,13.422,13.348,13.422,17141],[1791801900000,13.422,13.452,13.412,13.437,25805],[1791802800000,13.437,13.44,13.353,13.358,23122],[1791803700000,13.359,13.389,13.35,13.372,10758],[1791804600000,13.372,13.38,13.303,13.322,26550],[1791805500000,13.321,13.339,13.259,13.313,30480],[1791806400000,13.313,13.343,13.294,13.342,13919],[1791807300000,13.341,13.341,13.25,13.256,18063],[1791808200000,13.257,13.272,13.151,13.22,68048],[1791809100000,13.221,13.245,13.19,13.199,13580],[1791810000000,13.199,13.222,13.154,13.158,42089],[1791810900000,13.158,13.176,13.124,13.131,68071],[1791811800000,13.131,13.184,13.094,13.163,32374],[1791812700000,13.163,13.201,13.143,13.183,22227],[1791813600000,13.182,13.209,13.164,13.165,28406],[1791814500000,13.166,13.173,13.057,13.109,34449],[1791815400000,13.109,13.145,12.971,13.032,47543],[1791816300000,13.033,13.048,12.921,12.975,31285],[1791817200000,12.975,13.052,12.969,13.043,37971],[1791818100000,13.043,13.05,13.011,13.012,13864],[1791819000000,13.012,13.056,12.999,13.03,18474],[1791819900000,13.029,13.04,13.01,13.025,7119],[1791820800000,13.024,13.11,13.024,13.054,31796],[1791821700000,13.053,13.086,13.029,13.029,8472],[1791822600000,13.028,13.051,13.004,13.012,7065],[1791823500000,13.013,13.013,12.867,12.885,74607],[1791824400000,12.885,12.95,12.874,12.947,16375],[1791825300000,12.947,12.952,12.899,12.902,14075],[1791826200000,12.902,12.916,12.879,12.9,6033],[1791827100000,12.899,12.928,12.886,12.9,10499],[1791828000000,12.9,12.921,12.889,12.889,24281],[1791828900000,12.888,12.889,12.854,12.871,14276],[1791829800000,12.872,12.902,12.865,12.891,5033],[1791830700000,12.89,12.899,12.86,12.897,5658],[1791831600000,12.898,12.943,12.891,12.895,50850],[1791832500000,12.894,12.977,12.892,12.967,37205],[1791833400000,12.968,12.99,12.951,12.978,20576],[1791834300000,12.978,12.994,12.966,12.983,15158],[1791835200000,12.984,13.076,12.984,13.048,33316],[1791836100000,13.048,13.098,13.043,13.095,16109],[1791837000000,13.094,13.107,13.08,13.086,14446],[1791837900000,13.086,13.095,13.034,13.034,8203],[1791838800000,13.034,13.035,12.981,12.995,18262],[1791839700000,12.996,13.038,12.996,13.02,5413],[1791840600000,13.02,13.046,12.791,12.914,41327],[1791841500000,12.916,12.916,12.76,12.841,41869],[1791842400000,12.842,12.905,12.836,12.869,17821],[1791843300000,12.87,12.871,12.813,12.869,13334],[1791844200000,12.869,12.902,12.833,12.875,11737],[1791845100000,12.875,12.883,12.779,12.796,21161],[1791846000000,12.796,12.822,12.643,12.725,81392],[1791846900000,12.725,12.795,12.676,12.707,24977],[1791847800000,12.707,12.717,12.626,12.67,29847],[1791848700000,12.669,12.685,12.605,12.625,37091],[1791849600000,12.625,12.632,12.365,12.515,110250],[1791850500000,12.515,12.552,12.446,12.48,32674],[1791851400000,12.479,12.521,12.404,12.407,33503],[1791852300000,12.407,12.407,12.259,12.373,79021],[1791853200000,12.374,12.533,12.369,12.533,60483],[1791854100000,12.532,12.631,12.523,12.616,56322],[1791855000000,12.615,12.683,12.608,12.672,27873],[1791855900000,12.672,12.714,12.656,12.69,20771],[1791856800000,12.689,12.75,12.66,12.741,40426],[1791857700000,12.741,12.81,12.729,12.775,34668],[1791858600000,12.776,12.807,12.736,12.794,33219],[1791859500000,12.795,12.84,12.777,12.82,18961],[1791860400000,12.82,12.841,12.79,12.826,19073],[1791861300000,12.827,12.885,12.809,12.872,24857],[1791862200000,12.872,12.978,12.866,12.93,42501],[1791863100000,12.931,12.968,12.915,12.943,15303],[1791864000000,12.943,12.987,12.935,12.956,21207],[1791864900000,12.956,12.959,12.912,12.914,68615],[1791865800000,12.914,12.972,12.913,12.955,14069],[1791866700000,12.956,13.029,12.95,13.018,19801],[1791867600000,13.017,13.096,12.99,13.093,20797],[1791868500000,13.092,13.178,13.088,13.123,36624],[1791869400000,13.123,13.147,13.095,13.121,13523],[1791870300000,13.122,13.188,13.09,13.178,26148],[1791871200000,13.178,13.193,13.092,13.099,20926],[1791872100000,13.099,13.127,13.075,13.106,12993],[1791873000000,13.106,13.114,13.087,13.098,11608],[1791873900000,13.098,13.105,13.085,13.086,5437],[1791874800000,13.086,13.086,13.019,13.052,15905],[1791875700000,13.052,13.068,12.975,12.984,19313],[1791876600000,12.984,13.097,12.984,13.061,15170],[1791877500000,13.062,13.108,13.062,13.068,10504],[1791878400000,13.068,13.111,13.056,13.109,15943],[1791879300000,13.109,13.109,13.015,13.028,27136],[1791880200000,13.027,13.031,12.995,13.024,41177],[1791881100000,13.023,13.032,13.008,13.008,55434],[1791882000000,13.007,13.007,12.917,12.941,48702],[1791882900000,12.942,12.954,12.915,12.92,36849],[1791883800000,12.92,12.983,12.897,12.95,43563],[1791884700000,12.951,12.995,12.905,12.991,16083],[1791885600000,12.992,13.001,12.944,12.95,17216],[1791886500000,12.95,12.961,12.898,12.898,11453],[1791887400000,12.899,12.904,12.824,12.83,34843],[1791888300000,12.83,12.882,12.825,12.882,15192],[1791889200000,12.882,12.882,12.773,12.779,25063],[1791890100000,12.78,12.958,12.724,12.844,45354],[1791891000000,12.843,12.922,12.838,12.873,21476],[1791891900000,12.872,12.874,12.816,12.84,30408],[1791892800000,12.839,12.848,12.816,12.819,12883],[1791893700000,12.818,12.896,12.769,12.886,57582],[1791894600000,12.887,12.95,12.873,12.911,34487],[1791895500000,12.911,12.974,12.9,12.953,31329],[1791896400000,12.954,12.958,12.878,12.913,20179],[1791897300000,12.913,13.001,12.9,12.992,22626],[1791898200000,12.993,13.049,12.941,12.96,50149],[1791899100000,12.959,13.003,12.864,12.883,22691],[1791900000000,12.882,13.075,12.866,13.037,54988],[1791900900000,13.038,13.093,12.996,13.009,42192],[1791901800000,13.01,13.065,12.986,13.057,23031],[1791902700000,13.056,13.098,13.001,13.004,13636],[1791903600000,13.005,13.034,12.934,12.973,19923],[1791904500000,12.972,13.019,12.903,12.948,31120],[1791905400000,12.947,12.959,12.873,12.881,21005],[1791906300000,12.882,12.901,12.825,12.899,25227],[1791907200000,12.9,12.956,12.893,12.899,18612],[1791908100000,12.899,12.978,12.899,12.914,10720],[1791909000000,12.913,12.958,12.897,12.945,12358],[1791909900000,12.946,12.981,12.924,12.924,17370],[1791910800000,12.923,12.923,12.887,12.908,9731],[1791911700000,12.908,12.946,12.902,12.905,10355],[1791912600000,12.905,12.928,12.883,12.913,14788],[1791913500000,12.913,12.925,12.86,12.885,10417],[1791914400000,12.886,12.966,12.88,12.927,17107],[1791915300000,12.926,12.944,12.909,12.911,5348],[1791916200000,12.912,12.937,12.881,12.924,11253],[1791917100000,12.924,12.966,12.92,12.953,3880],[1791918000000,12.953,12.996,12.942,12.942,6245],[1791918900000,12.942,12.945,12.913,12.913,15180],[1791919800000,12.912,12.924,12.888,12.892,19691],[1791920700000,12.892,12.936,12.881,12.932,8528],[1791921600000,12.933,12.952,12.92,12.92,11411],[1791922500000,12.92,12.923,12.9,12.911,3964],[1791923400000,12.911,12.973,12.905,12.947,8713],[1791924300000,12.946,12.95,12.916,12.928,5556],[1791925200000,12.927,12.936,12.906,12.906,3760],[1791926100000,12.905,12.917,12.891,12.904,3104],[1791927000000,12.905,12.944,12.898,12.928,6566],[1791927900000,12.927,12.947,12.924,12.931,4475],[1791928800000,12.931,12.936,12.897,12.905,8647],[1791929700000,12.906,12.924,12.896,12.924,3501],[1791930600000,12.925,12.945,12.923,12.93,3101],[1791931500000,12.93,12.951,12.92,12.94,4910],[1791932400000,12.94,12.94,12.886,12.896,4093],[1791933300000,12.896,12.902,12.86,12.877,15475],[1791934200000,12.876,12.901,12.876,12.899,5074],[1791935100000,12.898,12.906,12.877,12.884,3664],[1791936000000,12.884,12.951,12.884,12.936,9277],[1791936900000,12.937,12.995,12.936,12.995,3160],[1791937800000,12.996,13.035,12.983,13.019,40805],[1791938700000,13.02,13.039,12.951,12.951,11454],[1791939600000,12.952,12.986,12.936,12.971,7889],[1791940500000,12.97,12.979,12.936,12.961,6695],[1791941400000,12.962,12.967,12.9,12.95,30514],[1791942300000,12.949,12.99,12.928,12.932,7727],[1791943200000,12.932,12.973,12.927,12.948,6494],[1791944100000,12.947,12.967,12.93,12.93,5425],[1791945000000,12.93,12.946,12.902,12.942,5169],[1791945900000,12.942,13.007,12.942,13.002,5396],[1791946800000,13.004,13.008,12.963,12.978,3902],[1791947700000,12.979,13.009,12.964,13.003,4702],[1791948600000,13.003,13.077,13,13.04,15048],[1791949500000,13.039,13.05,13.007,13.011,9046],[1791950400000,13.011,13.014,12.973,12.982,7291],[1791951300000,12.983,13.006,12.954,13.003,3951],[1791952200000,13.003,13.048,13.003,13.035,10677],[1791953100000,13.035,13.047,13.031,13.035,3463],[1791954000000,13.034,13.034,12.939,12.957,9291],[1791954900000,12.957,12.962,12.928,12.952,12264],[1791955800000,12.952,12.959,12.899,12.911,12970],[1791956700000,12.912,12.915,12.855,12.869,23100],[1791957600000,12.87,12.907,12.848,12.899,7478],[1791958500000,12.9,12.922,12.87,12.873,9791],[1791959400000,12.873,12.902,12.857,12.898,19471],[1791960300000,12.898,12.903,12.879,12.887,5943],[1791961200000,12.886,12.943,12.869,12.894,25263],[1791962100000,12.895,12.915,12.867,12.914,6309],[1791963000000,12.913,12.921,12.893,12.899,12275],[1791963900000,12.899,12.942,12.897,12.927,9027],[1791964800000,12.926,13.1,12.918,13.044,27985],[1791965700000,13.044,13.055,12.999,13.011,8272],[1791966600000,13.01,13.014,12.915,12.935,12441],[1791967500000,12.935,12.977,12.911,12.931,11240]],"minutes":[[1791968400000,12.93,12.948,12.929,12.946,783],[1791968460000,12.945,12.948,12.941,12.944,660],[1791968520000,12.944,12.948,12.941,12.945,546],[1791968580000,12.946,12.949,12.941,12.943,311],[1791968640000,12.944,12.957,12.944,12.949,285],[1791968700000,12.948,12.957,12.947,12.957,175],[1791968760000,12.956,12.956,12.938,12.938,425],[1791968820000,12.936,12.952,12.934,12.949,247],[1791968880000,12.95,12.962,12.95,12.962,294],[1791968940000,12.962,12.967,12.959,12.967,367],[1791969000000,12.968,12.981,12.968,12.981,70],[1791969060000,12.982,12.985,12.964,12.964,590],[1791969120000,12.965,12.967,12.955,12.963,281],[1791969180000,12.962,12.964,12.956,12.962,740],[1791969240000,12.961,12.961,12.956,12.956,72],[1791969300000,12.957,12.962,12.95,12.952,994],[1791969360000,12.953,12.953,12.945,12.947,574],[1791969420000,12.948,12.956,12.948,12.956,231],[1791969480000,12.957,12.968,12.956,12.968,325],[1791969540000,12.969,12.969,12.957,12.958,444],[1791969600000,12.958,12.96,12.95,12.95,643],[1791969660000,12.949,12.949,12.937,12.938,457],[1791969720000,12.939,12.954,12.939,12.947,555],[1791969780000,12.947,12.947,12.943,12.943,207],[1791969840000,12.942,12.942,12.904,12.909,1827],[1791969900000,12.91,12.922,12.904,12.909,983],[1791969960000,12.909,12.912,12.899,12.911,716],[1791970020000,12.91,12.91,12.897,12.903,313],[1791970080000,12.904,12.911,12.904,12.907,563],[1791970140000,12.906,12.906,12.889,12.889,680],[1791970200000,12.888,12.888,12.88,12.885,523],[1791970260000,12.885,12.886,12.872,12.874,1027],[1791970320000,12.874,12.895,12.874,12.895,485],[1791970380000,12.895,12.895,12.883,12.89,673],[1791970440000,12.889,12.902,12.886,12.902,230],[1791970500000,12.902,12.904,12.886,12.904,722],[1791970560000,12.903,12.903,12.899,12.9,127],[1791970620000,12.901,12.906,12.896,12.904,412],[1791970680000,12.905,12.921,12.905,12.921,197],[1791970740000,12.921,12.921,12.903,12.905,400],[1791970800000,12.905,12.911,12.9,12.905,1187],[1791970860000,12.904,12.904,12.891,12.891,51],[1791970920000,12.891,12.897,12.889,12.889,310],[1791970980000,12.888,12.899,12.888,12.889,2196],[1791971040000,12.889,12.905,12.889,12.905,49],[1791971100000,12.905,12.905,12.879,12.891,993],[1791971160000,12.892,12.896,12.89,12.89,335],[1791971220000,12.889,12.892,12.882,12.892,296],[1791971280000,12.892,12.893,12.88,12.883,224],[1791971340000,12.884,12.887,12.881,12.882,127],[1791971400000,12.883,12.891,12.882,12.89,120],[1791971460000,12.89,12.893,12.889,12.892,280],[1791971520000,12.891,12.9,12.889,12.9,2753],[1791971580000,12.9,12.907,12.897,12.907,336],[1791971640000,12.905,12.905,12.894,12.898,162],[1791971700000,12.899,12.908,12.899,12.907,115],[1791971760000,12.907,12.907,12.903,12.903,114],[1791971820000,12.902,12.902,12.894,12.898,361],[1791971880000,12.899,12.9,12.898,12.9,171],[1791971940000,12.9,12.9,12.895,12.896,176]],"actualNext":[1791968400000,12.93,12.985,12.872,12.896]}</script>
+<script>// Lógica do preview (pura): indicadores, placar aproximado (Donchian 20 + MACD 12/26/9, limiar ±2),
+// simulação simples de posição (stop 2·ATR, alvo 3·ATR) e a "projeção-1" com o acerto medido.
+(function (root) {
+  function ema(values, period) {
+    const k = 2 / (period + 1);
+    const out = [];
+    let prev = null;
+    values.forEach((v, i) => {
+      if (i < period - 1) { out.push(null); return; }
+      if (prev === null) {
+        const seed = values.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0) / period;
+        prev = seed; out.push(seed); return;
+      }
+      prev = v * k + prev * (1 - k); out.push(prev);
+    });
+    return out;
+  }
+
+  function emaOfNullable(values, period) {
+    const firstIndex = values.findIndex((v) => v !== null);
+    const tail = ema(values.slice(firstIndex), period);
+    return values.slice(0, firstIndex).map(() => null).concat(tail);
+  }
+
+  function atr(candles, period) {
+    const out = [];
+    let prev = null;
+    candles.forEach((c, i) => {
+      const tr = i === 0 ? c.h - c.l : Math.max(c.h - c.l, Math.abs(c.h - candles[i - 1].c), Math.abs(c.l - candles[i - 1].c));
+      if (i < period) { out.push(null); if (i === period - 1) prev = null; return; }
+      if (prev === null) {
+        let sum = 0;
+        for (let j = i - period + 1; j <= i; j += 1) {
+          const cj = candles[j]; const pj = candles[j - 1];
+          sum += Math.max(cj.h - cj.l, Math.abs(cj.h - pj.c), Math.abs(cj.l - pj.c));
+        }
+        prev = sum / period; out.push(prev); return;
+      }
+      prev = (prev * (period - 1) + tr) / period; out.push(prev);
+    });
+    return out;
+  }
+
+  function donchian(candles, period) {
+    return candles.map((_, i) => {
+      if (i < period - 1) return null;
+      const slice = candles.slice(i - period + 1, i + 1);
+      return { upper: Math.max(...slice.map((c) => c.h)), lower: Math.min(...slice.map((c) => c.l)) };
+    });
+  }
+
+  function computeSeries(candles) {
+    const closes = candles.map((c) => c.c);
+    const fast = ema(closes, 12);
+    const slow = ema(closes, 26);
+    const macd = fast.map((f, i) => (f === null || slow[i] === null ? null : f - slow[i]));
+    const signal = emaOfNullable(macd, 9);
+    const channel = donchian(candles, 20);
+    const range = atr(candles, 14);
+    const rows = candles.map((c, i) => {
+      const previousChannel = i > 0 ? channel[i - 1] : null;
+      const isWarm = previousChannel !== null && signal[i] !== null && range[i] !== null;
+      if (!isWarm) return { ...c, isWarm: false, channel: channel[i] };
+      const donchianVote = c.c > previousChannel.upper ? 1 : c.c < previousChannel.lower ? -1 : 0;
+      const macdVote = macd[i] > signal[i] ? 1 : macd[i] < signal[i] ? -1 : 0;
+      return {
+        ...c, isWarm: true, channel: channel[i], previousChannel, atr: range[i],
+        macd: macd[i], macdSignal: signal[i], donchianVote, macdVote, score: donchianVote + macdVote,
+      };
+    });
+    return simulatePositions(rows);
+  }
+
+  // Compra quando o placar chega a +2 (preenche na abertura seguinte); sai no stop, no alvo ou no placar −2.
+  function simulatePositions(rows) {
+    let position = null;
+    const trades = [];
+    rows.forEach((row, i) => {
+      row.isHolding = position !== null;
+      row.openPosition = position;
+      if (position !== null && i > position.fillIndex) {
+        if (row.l <= position.stop) { trades.push({ side: 'sell', index: i, price: position.stop, reason: 'stop', entry: position }); position = null; }
+        else if (row.h >= position.target) { trades.push({ side: 'sell', index: i, price: position.target, reason: 'alvo', entry: position }); position = null; }
+      }
+      if (!row.isWarm || i + 1 >= rows.length) return;
+      const next = rows[i + 1];
+      if (position === null && row.score >= 2) {
+        position = { fillIndex: i + 1, price: next.o, stop: next.o - 2 * row.atr, target: next.o + 3 * row.atr };
+        trades.push({ side: 'buy', index: i + 1, price: next.o, reason: 'placar', entry: position });
+      } else if (position !== null && row.score <= -2 && i + 1 > position.fillIndex) {
+        trades.push({ side: 'sell', index: i + 1, price: next.o, reason: 'placar', entry: position });
+        position = null;
+      }
+    });
+    return { rows, trades };
+  }
+
+  // Projeção-1: a tendência é o lado para o qual o placar da vela fechada aponta; a faixa é ±1 ATR.
+  function projectionAt(row) {
+    if (!row.isWarm) return { kind: 'none', reason: 'warming_up' };
+    const ratio = Math.abs(row.score) / 2;
+    const strength = ratio >= 1 ? 'decidiu' : ratio > 0.5 ? 'forte' : 'fraco';
+    const direction = row.score > 0 ? 'up' : row.score < 0 ? 'down' : 'flat';
+    if (direction === 'flat') return { kind: 'none', reason: 'neutral', base: row.c, atr: row.atr };
+    return { kind: 'tendency', direction, strength, score: row.score, base: row.c, low: row.c - row.atr, high: row.c + row.atr, atr: row.atr };
+  }
+
+  function scoreProjection(projection, nextClose) {
+    if (projection.kind !== 'tendency') return { result: 'sem-aposta', isInside: null };
+    const moved = nextClose - projection.base;
+    const isInside = nextClose >= projection.low && nextClose <= projection.high;
+    if (moved === 0) return { result: 'empate', isInside };
+    const isHit = (moved > 0 && projection.direction === 'up') || (moved < 0 && projection.direction === 'down');
+    return { result: isHit ? 'acertou' : 'errou', isInside };
+  }
+
+  function history(rows, untilIndex) {
+    const items = [];
+    for (let i = 0; i < untilIndex; i += 1) {
+      const projection = projectionAt(rows[i]);
+      if (projection.reason === 'warming_up') continue;
+      items.push({ index: i, projection, outcome: scoreProjection(projection, rows[i + 1].c), nextClose: rows[i + 1].c });
+    }
+    const scored = items.filter((x) => x.outcome.result === 'acertou' || x.outcome.result === 'errou');
+    const hits = scored.filter((x) => x.outcome.result === 'acertou').length;
+    const banded = items.filter((x) => x.outcome.isInside !== null);
+    const inside = banded.filter((x) => x.outcome.isInside).length;
+    const ups = scored.filter((x) => x.nextClose > x.projection.base).length;
+    return { items, scored: scored.length, hits, banded: banded.length, inside, ups, neutral: items.length - banded.length };
+  }
+
+  root.ChartLogic = { computeSeries, projectionAt, scoreProjection, history };
+})(typeof window === 'undefined' ? globalThis : window);
+</script>
+<script>(function () {
+  const DATA = JSON.parse(document.getElementById('data').textContent);
+  const TZ = 'America/Sao_Paulo';
+  const HOUR = 3600000;
+  const TF_MS = { '15m': 900000, '1h': HOUR, '4h': 4 * HOUR, '1d': 24 * HOUR };
+  const NOW_MINUTES = 45;
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const $ = (selector) => document.querySelector(selector);
+  const toCandle = ([t, o, h, l, c, v]) => ({ t, o, h, l, c, v });
+
+  const hours = DATA.hours.map(toCandle);
+  const { rows, trades } = ChartLogic.computeSeries(hours);
+  const N = rows.length;
+  const last = rows[N - 1];
+  const minutes = DATA.minutes.map(toCandle);
+  const projection = ChartLogic.projectionAt(last);
+  const history = ChartLogic.history(rows, N - 1);
+
+  const state = { mode: 'now', tf: '1h', view: null, hover: null, drag: null, layers: { projection: true, trades: true, channel: true, levels: false, waits: false } };
+
+  // ---------- formatação ----------
+  const priceFmt = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  const pctFmt = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const intFmt = new Intl.NumberFormat('pt-BR');
+  const volFmt = new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 });
+  const timeFmt = new Intl.DateTimeFormat('pt-BR', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
+  const dayFmt = new Intl.DateTimeFormat('pt-BR', { timeZone: TZ, day: '2-digit', month: '2-digit' });
+  const fullFmt = new Intl.DateTimeFormat('pt-BR', { timeZone: TZ, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const price = (v) => priceFmt.format(v);
+  const pct = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${pctFmt.format(Math.abs(v))}%`;
+  const hm = (t) => timeFmt.format(t);
+  const full = (t) => fullFmt.format(t).replace(',', ' às');
+
+  // ---------- séries por timeframe ----------
+  function aggregate(candles, size) {
+    const groups = new Map();
+    candles.forEach((c) => {
+      const key = Math.floor((c.t + 3 * HOUR * 0) / size) * size;
+      const g = groups.get(key);
+      if (g === undefined) groups.set(key, { t: key, o: c.o, h: c.h, l: c.l, c: c.c, v: c.v });
+      else { g.h = Math.max(g.h, c.h); g.l = Math.min(g.l, c.l); g.c = c.c; g.v += c.v; }
+    });
+    return [...groups.values()];
+  }
+
+  function formingCandle(count) {
+    const seen = minutes.slice(0, count);
+    return { t: last.t + HOUR, o: seen[0].o, h: Math.max(...seen.map((m) => m.h)), l: Math.min(...seen.map((m) => m.l)), c: seen.at(-1).c, v: seen.reduce((a, m) => a + m.v, 0), isForming: count < 60 };
+  }
+
+  function seenMinutes() { return state.mode === 'closed' ? 60 : NOW_MINUTES; }
+
+  function seriesFor(tf) {
+    const forming = formingCandle(seenMinutes());
+    if (tf === '1h') return { candles: rows.concat([forming]), tf };
+    if (tf === '15m') {
+      const quarters = DATA.quarters.map(toCandle);
+      const live = aggregate(minutes.slice(0, seenMinutes()), TF_MS['15m']);
+      live.at(-1).isForming = seenMinutes() % 15 !== 0 || state.mode !== 'closed' ? true : false;
+      return { candles: quarters.concat(live), tf };
+    }
+    const all = aggregate(hours.concat([forming]), TF_MS[tf]);
+    all.at(-1).isForming = true;
+    return { candles: all, tf };
+  }
+
+  function indexOfTime(candles, time) {
+    let lo = 0; let hi = candles.length - 1;
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (candles[mid].t <= time) lo = mid; else hi = mid - 1; }
+    return lo;
+  }
+
+  // ---------- SVG helpers ----------
+  function el(name, attrs, parent) {
+    const node = document.createElementNS(SVG_NS, name);
+    Object.entries(attrs).forEach(([k, v]) => node.setAttribute(k, String(v)));
+    if (parent) parent.appendChild(node);
+    return node;
+  }
+  function text(parent, x, y, content, attrs) {
+    const node = el('text', Object.assign({ x, y, 'font-size': 11, fill: 'var(--ink-3)', 'font-family': 'var(--font-data)' }, attrs || {}), parent);
+    node.textContent = content;
+    return node;
+  }
+
+  // ---------- layout ----------
+  function dims(width) {
+    const isSmall = width < 640;
+    const axis = isSmall ? 52 : 64;
+    const price = isSmall ? 250 : 360;
+    const volume = isSmall ? 46 : 64;
+    const score = state.tf === '1h' ? (isSmall ? 58 : 76) : 0;
+    const top = isSmall ? 44 : 34;
+    const gap = 10;
+    const timeAxis = 24;
+    const height = top + price + gap + volume + (score ? gap + score : 0) + timeAxis;
+    return { width, isSmall, axis, plot: width - axis, top, price, volume, score, gap, timeAxis, height };
+  }
+
+  function defaultView(count, isSmall) {
+    const span = isSmall ? 34 : 100;
+    return { start: count - span + 2.5, end: count + 3.5 };
+  }
+
+  function clampView(view, count) {
+    const span = Math.min(Math.max(view.end - view.start, 10), count + 6);
+    let start = view.start;
+    start = Math.max(-2, Math.min(start, count + 4 - span));
+    return { start, end: start + span };
+  }
+
+  // ---------- desenho principal ----------
+  function render() {
+    const chart = $('[data-chart]');
+    const svg = $('[data-svg]');
+    const width = chart.clientWidth;
+    const d = dims(width);
+    const { candles } = seriesFor(state.tf);
+    const count = candles.length;
+    if (state.view === null) state.view = defaultView(count, d.isSmall);
+    state.view = clampView(state.view, count);
+    const view = state.view;
+    svg.setAttribute('viewBox', `0 0 ${d.width} ${d.height}`);
+    svg.setAttribute('height', d.height);
+    svg.replaceChildren();
+    const slot = d.plot / (view.end - view.start);
+    const x = (i) => (i - view.start) * slot;
+    const first = Math.max(0, Math.floor(view.start));
+    const lastIndex = Math.min(count - 1, Math.ceil(view.end));
+    const visible = candles.slice(first, lastIndex + 1);
+    const showStrategy = state.tf === '1h';
+    const showProjection = showStrategy && state.layers.projection && state.mode !== 'none';
+
+    // escala de preço
+    let lo = Math.min(...visible.map((c) => c.l));
+    let hi = Math.max(...visible.map((c) => c.h));
+    if (showStrategy && state.layers.channel) {
+      visible.forEach((c) => { if (c.channel) { lo = Math.min(lo, c.channel.lower); hi = Math.max(hi, c.channel.upper); } });
+    }
+    if (showProjection && projection.kind === 'tendency' && view.end > N) { lo = Math.min(lo, projection.low); hi = Math.max(hi, projection.high); }
+    const pad = (hi - lo) * 0.08;
+    lo -= pad; hi += pad;
+    const y = (p) => d.top + (hi - p) / (hi - lo) * d.price;
+    const volTop = d.top + d.price + d.gap;
+    const scoreTop = volTop + d.volume + d.gap;
+    const bottom = d.height - d.timeAxis;
+
+    const clip = el('clipPath', { id: 'plot-clip' }, el('defs', {}, svg));
+    el('rect', { x: 0, y: 0, width: d.plot, height: d.height }, clip);
+    const hatch = el('pattern', { id: 'hatch', width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, svg.querySelector('defs'));
+    el('rect', { width: 6, height: 6, fill: 'var(--surface)' }, hatch);
+    el('line', { x1: 0, y1: 0, x2: 0, y2: 6, stroke: 'var(--line)', 'stroke-width': 3 }, hatch);
+
+    drawGrid(svg, { d, y, lo, hi, volTop, scoreTop, bottom });
+    const plot = el('g', { 'clip-path': 'url(#plot-clip)' }, svg);
+    drawTimeAxis(svg, plot, { d, candles, first, lastIndex, x, slot, bottom });
+    if (showStrategy && state.layers.channel) drawChannel(plot, { x, y, slot, first, lastIndex });
+    if (showStrategy && state.layers.levels) drawLevels(plot, { x, y, slot });
+    drawCandles(plot, { candles, first, lastIndex, x, y, slot });
+    drawVolume(plot, { candles, first, lastIndex, x, slot, d, volTop });
+    if (showStrategy) drawScore(plot, svg, { first, lastIndex, x, slot, d, scoreTop });
+    if (showStrategy && state.layers.waits) drawWaits(plot, { first, lastIndex, x, y, slot });
+    if (state.layers.trades) drawTrades(plot, { candles, x, y, slot });
+    if (showProjection) drawProjection(plot, { x, y, slot, d });
+    if (state.tf === '1h' || true) drawRealLine(plot, { candles, x, y, slot });
+    drawLastPrice(svg, { candles, y, d });
+    drawCrosshair(svg, { candles, x, y, slot, d, lo, hi, bottom });
+    updateLegend(candles);
+    chart.dataset.slot = String(slot);
+  }
+
+  function drawGrid(svg, { d, y, lo, hi, volTop, scoreTop, bottom }) {
+    const step = niceStep((hi - lo) / (d.isSmall ? 4 : 6));
+    for (let p = Math.ceil(lo / step) * step; p <= hi; p += step) {
+      el('line', { x1: 0, x2: d.plot, y1: y(p), y2: y(p), stroke: 'var(--grid)', 'stroke-width': 1 }, svg);
+      text(svg, d.plot + 6, y(p) + 4, price(p));
+    }
+    el('line', { x1: d.plot, x2: d.plot, y1: 0, y2: bottom, stroke: 'var(--line)' }, svg);
+    el('line', { x1: 0, x2: d.width, y1: volTop - d.gap / 2, y2: volTop - d.gap / 2, stroke: 'var(--line)' }, svg);
+    text(svg, 8, volTop + 12, 'Volume', { 'font-family': 'var(--font-body)', 'font-weight': 600 });
+    if (d.score) {
+      el('line', { x1: 0, x2: d.width, y1: scoreTop - d.gap / 2, y2: scoreTop - d.gap / 2, stroke: 'var(--line)' }, svg);
+      text(svg, 8, scoreTop + 12, d.isSmall ? 'Placar (compra +2 · venda −2)' : 'Placar da estratégia — compra em +2, venda em −2', { 'font-family': 'var(--font-body)', 'font-weight': 600 });
+    }
+    el('line', { x1: 0, x2: d.width, y1: bottom, y2: bottom, stroke: 'var(--line)' }, svg);
+  }
+
+  function niceStep(raw) {
+    const power = Math.pow(10, Math.floor(Math.log10(raw)));
+    const n = raw / power;
+    return (n < 1.5 ? 1 : n < 3.5 ? 2 : n < 7.5 ? 5 : 10) * power;
+  }
+
+  function drawTimeAxis(svg, plot, { d, candles, first, lastIndex, x, slot, bottom }) {
+    const tfMs = TF_MS[state.tf];
+    const minGap = (d.isSmall ? 64 : 84) / slot * tfMs;
+    const options = [HOUR / 4, HOUR / 2, HOUR, 2 * HOUR, 3 * HOUR, 6 * HOUR, 12 * HOUR, 24 * HOUR, 48 * HOUR, 7 * 24 * HOUR];
+    const tick = options.find((o) => o >= minGap && o >= tfMs && o % tfMs === 0) ?? 7 * 24 * HOUR;
+    const offset = tfMs >= 4 * HOUR ? 0 : -3 * HOUR;
+    for (let i = first; i <= lastIndex; i += 1) {
+      const c = candles[i];
+      if ((c.t + offset) % tick !== 0) continue;
+      const isDayStart = (c.t + offset) % (24 * HOUR) === 0;
+      const cx = x(i + 0.5);
+      el('line', { x1: cx, x2: cx, y1: 0, y2: bottom, stroke: 'var(--grid)' }, plot);
+      const label = state.tf === '1d' || isDayStart ? dayFmt.format(c.t) : hm(c.t);
+      if (cx > 16 && cx < d.plot - 16) text(svg, cx, bottom + 16, label, { 'text-anchor': 'middle', 'font-weight': isDayStart ? 700 : 400, fill: isDayStart ? 'var(--ink-2)' : 'var(--ink-3)' });
+    }
+  }
+
+  function drawCandles(plot, { candles, first, lastIndex, x, y, slot }) {
+    const body = Math.max(1, Math.min(slot * 0.7, 18));
+    for (let i = first; i <= lastIndex; i += 1) {
+      const c = candles[i];
+      const isUp = c.c >= c.o;
+      const color = isUp ? 'var(--buy)' : 'var(--sell)';
+      const cx = x(i + 0.5);
+      el('line', { x1: cx, x2: cx, y1: y(c.h), y2: y(c.l), stroke: color, 'stroke-width': 1 }, plot);
+      const top = y(Math.max(c.o, c.c));
+      const height = Math.max(1, Math.abs(y(c.o) - y(c.c)));
+      el('rect', { x: cx - body / 2, y: top, width: body, height, fill: c.isForming ? 'url(#hatch)' : color, stroke: color, 'stroke-width': c.isForming ? 1.5 : 0, 'stroke-dasharray': c.isForming ? '3 2' : '' }, plot);
+    }
+  }
+
+  function drawVolume(plot, { candles, first, lastIndex, x, slot, d, volTop }) {
+    const visible = candles.slice(first, lastIndex + 1);
+    const max = Math.max(...visible.map((c) => c.v));
+    const body = Math.max(1, Math.min(slot * 0.7, 18));
+    for (let i = first; i <= lastIndex; i += 1) {
+      const c = candles[i];
+      const h = (c.v / max) * (d.volume - 16);
+      el('rect', { x: x(i + 0.5) - body / 2, y: volTop + d.volume - h, width: body, height: Math.max(1, h), fill: c.c >= c.o ? 'var(--buy)' : 'var(--sell)', opacity: c.isForming ? 0.25 : 0.42 }, plot);
+    }
+  }
+
+  function drawScore(plot, svg, { first, lastIndex, x, slot, d, scoreTop }) {
+    const mid = scoreTop + d.score / 2 + 6;
+    const unit = (d.score - 22) / 4;
+    const yScore = (s) => mid - s * unit;
+    [2, -2].forEach((s) => {
+      el('line', { x1: 0, x2: d.plot, y1: yScore(s), y2: yScore(s), stroke: s > 0 ? 'var(--buy)' : 'var(--sell)', 'stroke-dasharray': '4 3', 'stroke-width': 1 }, plot);
+      text(svg, d.plot + 6, yScore(s) + 4, s > 0 ? '+2' : '−2', { fill: s > 0 ? 'var(--buy)' : 'var(--sell)', 'font-weight': 700 });
+    });
+    el('line', { x1: 0, x2: d.plot, y1: mid, y2: mid, stroke: 'var(--line)' }, plot);
+    const body = Math.max(1, Math.min(slot * 0.6, 14));
+    for (let i = first; i <= Math.min(lastIndex, N - 1); i += 1) {
+      const r = state.mode === 'none' && i === N - 1 ? { ...rows[i], score: 0 } : rows[i];
+      if (!r.isWarm) continue;
+      const cx = x(i + 0.5);
+      if (r.score === 0) { el('rect', { x: cx - body / 2, y: mid - 1, width: body, height: 2, fill: 'var(--bench)' }, plot); continue; }
+      const top = Math.min(mid, yScore(r.score));
+      el('rect', { x: cx - body / 2, y: top, width: body, height: Math.abs(yScore(r.score) - mid), fill: r.score > 0 ? 'var(--buy)' : 'var(--sell)', opacity: Math.abs(r.score) >= 2 ? 1 : 0.55 }, plot);
+    }
+    text(svg, d.plot + 6, mid + 4, '0');
+  }
+
+  function drawChannel(plot, { x, y, first, lastIndex }) {
+    ['upper', 'lower'].forEach((side) => {
+      const points = [];
+      for (let i = first; i <= Math.min(lastIndex, N - 1); i += 1) if (rows[i].channel) points.push(`${x(i + 0.5)},${y(rows[i].channel[side])}`);
+      if (points.length > 1) el('polyline', { points: points.join(' '), fill: 'none', stroke: 'var(--accent)', 'stroke-width': 1.5, 'stroke-dasharray': '5 3', opacity: 0.85 }, plot);
+    });
+  }
+
+  function tradeIndex(candles, trade) { return indexOfTime(candles, rows[trade.index].t); }
+
+  function drawTrades(plot, { candles, x, y, slot }) {
+    trades.forEach((t) => {
+      const i = tradeIndex(candles, t);
+      const c = candles[i];
+      const cx = x(i + 0.5);
+      const isBuy = t.side === 'buy';
+      const s = Math.max(6, Math.min(9, slot * 0.5));
+      const yy = isBuy ? y(c.l) + 8 : y(c.h) - 8;
+      const path = isBuy ? `M${cx} ${yy} l${s} ${s * 1.4} h${-2 * s} z` : `M${cx} ${yy} l${s} ${-s * 1.4} h${-2 * s} z`;
+      el('path', { d: path, fill: isBuy ? 'var(--buy)' : 'var(--sell)', stroke: 'var(--surface)', 'stroke-width': 1.5 }, plot);
+      if (slot >= 9) text(plot, cx, isBuy ? yy + s * 1.4 + 13 : yy - s * 1.4 - 5, isBuy ? 'Compra' : 'Venda', { 'text-anchor': 'middle', fill: isBuy ? 'var(--buy)' : 'var(--sell)', 'font-family': 'var(--font-body)', 'font-weight': 700, 'font-size': 11 });
+    });
+  }
+
+  function drawLevels(plot, { x, y }) {
+    for (let k = 0; k < trades.length; k += 2) {
+      const buy = trades[k]; const sell = trades[k + 1];
+      if (!sell) continue;
+      const x1 = x(buy.index); const x2 = x(sell.index + 1);
+      const p = buy.entry;
+      el('rect', { x: x1, y: y(p.target), width: x2 - x1, height: y(p.price) - y(p.target), fill: 'var(--buy)', opacity: 0.12 }, plot);
+      el('rect', { x: x1, y: y(p.price), width: x2 - x1, height: y(p.stop) - y(p.price), fill: 'var(--sell)', opacity: 0.12 }, plot);
+      el('line', { x1, x2, y1: y(p.target), y2: y(p.target), stroke: 'var(--buy)', 'stroke-dasharray': '4 3' }, plot);
+      el('line', { x1, x2, y1: y(p.stop), y2: y(p.stop), stroke: 'var(--sell)', 'stroke-dasharray': '4 3' }, plot);
+      text(plot, x2 + 3, y(p.target) + 4, 'alvo', { fill: 'var(--buy)', 'font-family': 'var(--font-body)', 'font-weight': 700 });
+      text(plot, x2 + 3, y(p.stop) + 4, 'stop', { fill: 'var(--sell)', 'font-family': 'var(--font-body)', 'font-weight': 700 });
+    }
+  }
+
+  function drawWaits(plot, { first, lastIndex, x, y }) {
+    for (let i = first; i <= Math.min(lastIndex, N - 1); i += 1) {
+      const r = rows[i];
+      if (!r.isWarm || Math.abs(r.score) >= 2) continue;
+      el('circle', { cx: x(i + 0.5), cy: y(r.l) + 6, r: 2.5, fill: 'var(--bench)' }, plot);
+    }
+  }
+
+  function conePoints(x0, x1, ylow, yhigh, ybase) {
+    const steps = 8; const upper = []; const lower = [];
+    for (let k = 0; k <= steps; k += 1) {
+      const f = k / steps; const g = Math.sqrt(f);
+      upper.push(`${x0 + (x1 - x0) * f},${ybase + (yhigh - ybase) * g}`);
+      lower.unshift(`${x0 + (x1 - x0) * f},${ybase + (ylow - ybase) * g}`);
+    }
+    return { upper, lower };
+  }
+
+  function drawProjection(plot, { x, y }) {
+    if (projection.kind !== 'tendency') return;
+    const x0 = x(N); const x1 = x(N + 1);
+    const { upper, lower } = conePoints(x0, x1, y(projection.low), y(projection.high), y(projection.base));
+    const isUp = projection.direction === 'up';
+    el('polygon', { points: upper.concat(lower).join(' '), fill: 'var(--cone-neutral)', stroke: isUp ? 'var(--buy)' : 'var(--sell)', 'stroke-dasharray': '3 2', 'stroke-width': 1 }, plot);
+    const half = isUp ? upper.concat([`${x1},${y(projection.base)}`, `${x0},${y(projection.base)}`]) : lower.concat([`${x0},${y(projection.base)}`]);
+    el('polygon', { points: half.join(' '), fill: isUp ? 'var(--cone-up)' : 'var(--cone-down)' }, plot);
+    el('line', { x1: x0, x2: x1, y1: y(projection.base), y2: y(projection.base), stroke: 'var(--ink-2)', 'stroke-dasharray': '4 3', 'stroke-width': 1.2 }, plot);
+  }
+
+  function drawRealLine(plot, { candles, x, y }) {
+    if (state.tf !== '1h') return;
+    const count = seenMinutes();
+    const points = [`${x(N)},${y(last.c)}`];
+    for (let m = 0; m < count; m += 1) points.push(`${x(N + (m + 1) / 60)},${y(minutes[m].c)}`);
+    el('polyline', { points: points.join(' '), fill: 'none', stroke: 'var(--ink)', 'stroke-width': 1.8, 'stroke-linejoin': 'round' }, plot);
+  }
+
+  function drawLastPrice(svg, { candles, y, d }) {
+    const c = candles.at(-1);
+    const yy = y(c.c);
+    const color = c.c >= c.o ? 'var(--buy)' : 'var(--sell)';
+    el('line', { x1: 0, x2: d.plot, y1: yy, y2: yy, stroke: color, 'stroke-dasharray': '2 3', opacity: 0.8 }, svg);
+    el('rect', { x: d.plot + 1, y: yy - 9, width: d.axis - 2, height: 18, rx: 3, fill: color }, svg);
+    text(svg, d.plot + 6, yy + 4, price(c.c), { fill: 'var(--surface)', 'font-weight': 700 });
+  }
+
+  function drawCrosshair(svg, { candles, x, y, slot, d, lo, hi, bottom }) {
+    if (state.hover === null) return;
+    const i = Math.max(0, Math.min(candles.length - 1, state.hover.index));
+    const cx = x(i + 0.5);
+    el('line', { x1: cx, x2: cx, y1: 0, y2: bottom, stroke: 'var(--ink-3)', 'stroke-dasharray': '3 3' }, svg);
+    if (state.hover.y !== undefined && state.hover.y > d.top && state.hover.y < d.top + d.price) {
+      const p = hi - (state.hover.y - d.top) / d.price * (hi - lo);
+      el('line', { x1: 0, x2: d.plot, y1: state.hover.y, y2: state.hover.y, stroke: 'var(--ink-3)', 'stroke-dasharray': '3 3' }, svg);
+      el('rect', { x: d.plot + 1, y: state.hover.y - 9, width: d.axis - 2, height: 18, rx: 3, fill: 'var(--ink)' }, svg);
+      text(svg, d.plot + 6, state.hover.y + 4, price(p), { fill: 'var(--surface)' });
+    }
+    const label = state.tf === '1d' ? dayFmt.format(candles[i].t) : full(candles[i].t);
+    const w = label.length * 7 + 12;
+    el('rect', { x: cx - w / 2, y: bottom + 2, width: w, height: 20, rx: 3, fill: 'var(--ink)' }, svg);
+    text(svg, cx, bottom + 16, label, { 'text-anchor': 'middle', fill: 'var(--surface)' });
+  }
+
+  // ---------- legenda OHLC, dica e anúncio ----------
+  function candleAt(candles) {
+    if (state.hover === null) return { c: candles.at(-1), i: candles.length - 1 };
+    const i = Math.max(0, Math.min(candles.length - 1, state.hover.index));
+    return { c: candles[i], i };
+  }
+
+  function updateLegend(candles) {
+    const { c, i } = candleAt(candles);
+    const prev = candles[i - 1];
+    const change = prev ? (c.c - prev.c) / prev.c * 100 : 0;
+    const cls = c.c >= c.o ? 'up' : 'down';
+    const when = state.tf === '1d' ? dayFmt.format(c.t) : full(c.t);
+    const forming = c.isForming ? ' · em formação' : '';
+    $('[data-ohlc]').innerHTML = `<strong>LINK/USDT · ${state.tf}</strong><span class="k">${when}${forming}</span>` +
+      `<span><span class="k">A</span> <span class="${cls}">${price(c.o)}</span></span><span><span class="k">M</span> <span class="${cls}">${price(c.h)}</span></span>` +
+      `<span><span class="k">m</span> <span class="${cls}">${price(c.l)}</span></span><span><span class="k">F</span> <span class="${cls}">${price(c.c)}</span></span>` +
+      `<span class="${change >= 0 ? 'up' : 'down'}">${pct(change)}</span><span><span class="k">Vol</span> ${volFmt.format(c.v)}</span>`;
+    updateTip(candles, i);
+  }
+
+  function eventsAt(candles, i) {
+    return trades.filter((t) => tradeIndex(candles, t) === i);
+  }
+
+  function updateTip(candles, i) {
+    const tip = $('[data-tip]');
+    if (state.hover === null) { tip.hidden = true; return; }
+    const events = eventsAt(candles, i);
+    const r = state.tf === '1h' && i < N ? rows[i] : null;
+    const lines = events.map((t) => t.side === 'buy'
+      ? `<strong>▲ Compra</strong> a ${price(t.price)} USDT (abertura da vela)`
+      : `<strong>▼ Venda</strong> a ${price(t.price)} USDT — ${t.reason === 'stop' ? 'bateu no stop' : t.reason === 'alvo' ? 'chegou ao alvo' : 'o placar pediu venda'}`);
+    if (r && r.isWarm) lines.push(`Placar ${r.score > 0 ? '+' : r.score < 0 ? '−' : ''}${Math.abs(r.score)} de ±2 · ${Math.abs(r.score) >= 2 ? (r.score > 0 ? 'comprou' : 'vendeu') : 'esperou'}`);
+    if (lines.length === 0) { tip.hidden = true; return; }
+    tip.innerHTML = lines.join('<br>');
+    tip.hidden = false;
+    const slot = Number($('[data-chart]').dataset.slot);
+    const cx = (i + 0.5 - state.view.start) * slot;
+    const width = $('[data-chart]').clientWidth;
+    tip.style.left = `${Math.min(Math.max(8, cx + 14), width - 270)}px`;
+    tip.style.top = '52px';
+  }
+
+  function announce(candles) {
+    const { c, i } = candleAt(candles);
+    const events = eventsAt(candles, i).map((t) => (t.side === 'buy' ? 'compra' : 'venda')).join(' e ');
+    $('[data-announce]').textContent = `${full(c.t)}: abertura ${price(c.o)}, máxima ${price(c.h)}, mínima ${price(c.l)}, fechamento ${price(c.c)}${events ? `; ${events}` : ''}.`;
+  }
+
+  // ---------- painel "Próxima vela de perto" ----------
+  function renderZoom() {
+    const svg = $('[data-zoom-svg]');
+    const width = svg.parentElement.clientWidth - 24;
+    const height = 200;
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    svg.setAttribute('height', height);
+    svg.replaceChildren();
+    const past = rows.slice(N - 5);
+    const count = seenMinutes();
+    const seen = minutes.slice(0, count);
+    const hasCone = state.mode !== 'none' && projection.kind === 'tendency';
+    const values = past.flatMap((c) => [c.h, c.l]).concat(seen.flatMap((m) => [m.h, m.l]));
+    if (hasCone) values.push(projection.low, projection.high);
+    let lo = Math.min(...values); let hi = Math.max(...values);
+    const pad = (hi - lo) * 0.1; lo -= pad; hi += pad;
+    const axis = 48; const top = 10; const plotH = height - 34;
+    const y = (p) => top + (hi - p) / (hi - lo) * plotH;
+    const split = (width - axis) * 0.42;
+    const xPast = (i) => (i + 0.5) * (split / 5);
+    const xMin = (m) => split + (m / 60) * (width - axis - split);
+    el('rect', { x: split, y: top, width: width - axis - split, height: plotH, fill: 'var(--surface-2)', opacity: 0.6 }, svg);
+    past.forEach((c, i) => {
+      const color = c.c >= c.o ? 'var(--buy)' : 'var(--sell)';
+      el('line', { x1: xPast(i), x2: xPast(i), y1: y(c.h), y2: y(c.l), stroke: color }, svg);
+      el('rect', { x: xPast(i) - 5, y: y(Math.max(c.o, c.c)), width: 10, height: Math.max(1, Math.abs(y(c.o) - y(c.c))), fill: color }, svg);
+    });
+    el('line', { x1: split, x2: split, y1: top, y2: top + plotH, stroke: 'var(--ink-2)', 'stroke-width': 1.5 }, svg);
+    text(svg, split - 4, top + plotH + 14, hm(last.t + HOUR), { 'text-anchor': 'end', fill: 'var(--ink-2)', 'font-weight': 700 });
+    text(svg, width - axis, top + plotH + 14, hm(last.t + 2 * HOUR), { 'text-anchor': 'end', fill: 'var(--ink-2)', 'font-weight': 700 });
+    if (hasCone) {
+      const { upper, lower } = conePoints(split, width - axis, y(projection.low), y(projection.high), y(projection.base));
+      const isUp = projection.direction === 'up';
+      el('polygon', { points: upper.concat(lower).join(' '), fill: 'var(--cone-neutral)', stroke: isUp ? 'var(--buy)' : 'var(--sell)', 'stroke-dasharray': '3 2' }, svg);
+      const half = isUp ? upper.concat([`${width - axis},${y(projection.base)}`]) : lower.concat([`${split},${y(projection.base)}`]);
+      el('polygon', { points: half.join(' '), fill: isUp ? 'var(--cone-up)' : 'var(--cone-down)' }, svg);
+      text(svg, width - axis + 4, y(projection.high) + 4, price(projection.high), { fill: 'var(--ink-2)' });
+      text(svg, width - axis + 4, y(projection.low) + 4, price(projection.low), { fill: 'var(--ink-2)' });
+      const arrowY = isUp ? y(projection.base + projection.atr * 0.55) : y(projection.base - projection.atr * 0.55);
+      text(svg, split + (width - axis - split) * 0.78, arrowY + 4, isUp ? '↗ compra' : '↘ venda', { 'text-anchor': 'middle', fill: isUp ? 'var(--buy)' : 'var(--sell)', 'font-family': 'var(--font-body)', 'font-weight': 700, 'font-size': 12 });
+    }
+    el('line', { x1: split, x2: width - axis, y1: y(last.c), y2: y(last.c), stroke: 'var(--ink-2)', 'stroke-dasharray': '4 3' }, svg);
+    text(svg, width - axis + 4, y(last.c) + 4, price(last.c), { fill: 'var(--ink)', 'font-weight': 700 });
+    const points = [`${split},${y(last.c)}`].concat(seen.map((m, k) => `${xMin(k + 1)},${y(m.c)}`));
+    el('polyline', { points: points.join(' '), fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2.2, 'stroke-linejoin': 'round' }, svg);
+    const end = seen.at(-1);
+    el('circle', { cx: xMin(count), cy: y(end.c), r: 4.5, fill: 'var(--ink)', stroke: 'var(--surface)', 'stroke-width': 2 }, svg);
+    if (count < 60) {
+      el('line', { x1: xMin(count), x2: xMin(count), y1: top, y2: top + plotH, stroke: 'var(--ink-3)', 'stroke-dasharray': '2 3' }, svg);
+      text(svg, xMin(count) - 4, top + 12, 'agora', { 'text-anchor': 'end', fill: 'var(--ink)', 'font-family': 'var(--font-body)', 'font-weight': 700 });
+      el('rect', { x: xMin(count) + 1, y: top, width: width - axis - xMin(count) - 1, height: plotH, fill: 'url(#zhatch)', opacity: 0.6 }, svg);
+    }
+    const defs = el('defs', {}, svg);
+    const pattern = el('pattern', { id: 'zhatch', width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, defs);
+    el('line', { x1: 0, y1: 0, x2: 0, y2: 6, stroke: 'var(--line)', 'stroke-width': 2 }, pattern);
+  }
+
+  function tendencyWords(p) {
+    if (p.kind !== 'tendency') return null;
+    const side = p.direction === 'up' ? 'COMPRAR' : 'VENDER';
+    return { side, strength: p.strength, icon: p.direction === 'up' ? 'i-up' : 'i-down', cls: p.direction };
+  }
+
+  function renderPanel() {
+    const decisionAt = last.t + 2 * HOUR;
+    const count = seenMinutes();
+    const end = minutes[count - 1].c;
+    $('[data-clock]').innerHTML = state.mode === 'closed'
+      ? `<svg class="icon sm" aria-hidden="true"><use href="#i-check"/></svg> A vela das ${hm(last.t + HOUR)} fechou às ${hm(decisionAt)} em <strong class="num">${price(end)}</strong>.`
+      : `<svg class="icon sm" aria-hidden="true"><use href="#i-clock"/></svg> Agora ${hm(last.t + HOUR + count * 60000)} · preço <strong class="num">${price(end)}</strong> · a vela fecha às <strong>${hm(decisionAt)}</strong> (faltam ${60 - count} min).`;
+    const t = tendencyWords(projection);
+    const box = $('[data-tendency]');
+    if (state.mode === 'none' || t === null) {
+      box.className = 'tendency none';
+      box.innerHTML = `<span class="when">Próximos ${60 - count} min</span><span class="what"><svg class="icon" aria-hidden="true"><use href="#i-flat"/></svg>Sem previsão agora</span><span class="why">O placar está em 0: nenhuma regra puxa para um lado. Quando houver lado, a faixa aparece aqui.</span>`;
+      $('[data-result]').innerHTML = '';
+      return;
+    }
+    box.className = `tendency ${t.cls}`;
+    const when = state.mode === 'closed' ? `Previsão feita às ${hm(last.t + HOUR)} para a vela que fechou às ${hm(decisionAt)}` : `Próximos ${60 - count} min (até a decisão das ${hm(decisionAt)})`;
+    box.innerHTML = `<span class="when">${when}</span><span class="what"><svg class="icon" aria-hidden="true"><use href="#${t.icon}"/></svg>Tende a ${t.side} <span class="chip outline">${t.strength}</span></span>` +
+      `<span class="why">${projection.score > 0 ? `Placar <strong>+${projection.score}</strong> de +2 para comprar.` : `Placar <strong>−${Math.abs(projection.score)}</strong> de −2 para vender.`} Faixa típica: <span class="num">${price(projection.low)}</span> a <span class="num">${price(projection.high)}</span>.</span>`;
+    if (state.mode !== 'closed') { $('[data-result]').innerHTML = ''; return; }
+    const outcome = ChartLogic.scoreProjection(projection, end);
+    const moved = (end - projection.base) / projection.base * 100;
+    const isHit = outcome.result === 'acertou';
+    $('[data-result]').innerHTML = `<div class="result ${isHit ? 'hit' : 'miss'}"><svg class="icon" aria-hidden="true"><use href="#${isHit ? 'i-check' : 'i-x'}"/></svg>${isHit ? 'Acertou' : 'Errou'}: o preço ${moved >= 0 ? 'subiu' : 'caiu'} ${pct(moved).replace('+', '').replace('−', '')} — ${outcome.isInside ? 'ficou dentro da faixa' : 'saiu da faixa'}.</div>`;
+  }
+
+  // ---------- cartões abaixo ----------
+  function renderWhy() {
+    const target = $('[data-why]');
+    const channelTop = last.channel.upper;
+    const distance = (channelTop - last.c) / last.c * 100;
+    const position = (s) => `${(s + 2) / 4 * 100}%`;
+    const shownScore = state.mode === 'none' ? 0 : last.score;
+    const macdText = last.macdVote > 0 ? 'a favor (MACD acima da linha de sinal)' : 'contra (MACD abaixo da linha de sinal)';
+    target.innerHTML = `
+      <p class="small muted">A previsão não é outra conta: é o <strong>placar da própria estratégia</strong> na vela que fechou às ${hm(last.t + HOUR)}.</p>
+      <div class="meter" role="img" aria-label="Placar ${shownScore} numa escala de menos 2 a mais 2; compra em mais 2, venda em menos 2">
+        <span class="th sell" style="left:0%"></span><span class="th buy" style="left:100%"></span>
+        <span class="mark" style="left:${position(shownScore)}"></span>
+        <span class="lab top" style="left:${position(shownScore)}">placar ${shownScore > 0 ? '+' : ''}${shownScore}</span>
+        <span class="lab bottom sell" style="left:4%">venda −2</span><span class="lab bottom buy" style="left:94%">compra +2</span>
+      </div>
+      <ul class="facts">
+        <li><svg class="icon" aria-hidden="true"><use href="#i-gauge"/></svg><span><strong>MACD:</strong> ${state.mode === 'none' ? 'neutro (exemplo do estado sem previsão)' : macdText}. <strong>Donchian:</strong> neutro.</span></li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-target"/></svg><span><strong>O que falta para comprar:</strong> o preço precisa <strong>fechar acima de <span class="num">${price(channelTop)}</span></strong> (topo do canal das últimas 20 velas). Fechou em <span class="num">${price(last.c)}</span>: faltam <strong>${pctFmt.format(distance)}%</strong>. Pode nunca acontecer.</span></li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-ruler"/></svg><span><strong>Faixa:</strong> numa vela de 1 h o LINK costuma andar até <span class="num">${price(last.atr)}</span> USDT (ATR de 14 velas). Por isso a faixa vai de <span class="num">${price(last.c - last.atr)}</span> a <span class="num">${price(last.c + last.atr)}</span>.</span></li>
+      </ul>
+      <div class="note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span><strong>Tendência, não promessa.</strong> "Fraco" quer dizer que só metade do caminho até a compra foi andado. A estratégia só compra quando o placar chega a +2, e o preço não tem obrigação de seguir o placar.</span></div>
+      <details class="how"><summary>Como medimos o acerto</summary><ol>
+        <li>A cada vela fechada guardamos o lado do placar (compra, venda ou nenhum) e o preço de fechamento.</li>
+        <li>Na vela seguinte comparamos: se o lado era compra e o preço subiu, acertou; se caiu, errou. Placar em 0 não conta (sem aposta).</li>
+        <li>Também contamos se o preço terminou dentro da faixa (±1 ATR).</li>
+        <li>Comparamos com uma moeda ao ar (50%) e com "sempre dizer que sobe".</li>
+      </ol></details>`;
+  }
+
+  function renderHistory() {
+    const h = history;
+    const rate = (a, b) => (b === 0 ? 0 : a / b * 100);
+    const hitRate = rate(h.hits, h.scored);
+    const upRate = rate(h.ups, h.scored);
+    const insideRate = rate(h.inside, h.banded);
+    const groups = ['fraco', 'forte', 'decidiu'].map((s) => {
+      const items = h.items.filter((x) => x.projection.strength === s && (x.outcome.result === 'acertou' || x.outcome.result === 'errou'));
+      return { s, n: items.length, hits: items.filter((x) => x.outcome.result === 'acertou').length };
+    }).filter((g) => g.n > 0);
+    const firstTime = rows[h.items[0].index].t;
+    $('[data-hist-range]').textContent = `${h.items.length} velas, desde ${dayFmt.format(firstTime)}`;
+    const recent = h.items.slice(-8).reverse();
+    const strengthLabel = { fraco: 'Fraco (placar ±1)', forte: 'Forte', decidiu: 'Decidiu (±2)' };
+    $('[data-history]').innerHTML = `
+      <div class="kpis">
+        <div class="kpi"><div class="kpi-label">Acertou o lado</div><div class="kpi-value">${pctFmt.format(hitRate)}<span class="unit">%</span></div><div class="kpi-sub">${h.hits} de ${h.scored} previsões</div></div>
+        <div class="kpi"><div class="kpi-label">Moeda ao ar</div><div class="kpi-value">50,00<span class="unit">%</span></div><div class="kpi-sub">"sempre sobe": ${pctFmt.format(upRate)}%</div></div>
+        <div class="kpi"><div class="kpi-label">Dentro da faixa</div><div class="kpi-value">${pctFmt.format(insideRate)}<span class="unit">%</span></div><div class="kpi-sub">${h.inside} de ${h.banded} velas</div></div>
+      </div>
+      <div class="verdict"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span><strong>Até aqui, a tendência acertou o lado tanto quanto uma moeda ao ar.</strong> Ela serve para ler o placar, não para adivinhar o preço. A faixa, por outro lado, costuma conter o fechamento.</span></div>
+      <div class="strength" role="list" aria-label="Acerto por força">
+        ${groups.map((g) => `<div class="strength-row" role="listitem"><span>${strengthLabel[g.s]}</span><span class="bar" aria-hidden="true"><i style="width:${rate(g.hits, g.n)}%"></i><b></b></span><span class="num">${pctFmt.format(rate(g.hits, g.n))}% · ${g.n}</span></div>`).join('')}
+      </div>
+      <div class="table-wrap"><table>
+        <caption>Últimas previsões · horário de Brasília (GMT−3)</caption>
+        <thead><tr><th scope="col">Vela fechou</th><th scope="col">Tendência</th><th scope="col" class="num">Partida</th><th scope="col" class="num">1 h depois</th><th scope="col">Resultado</th></tr></thead>
+        <tbody>${recent.map((x) => historyRow(x)).join('')}</tbody>
+      </table></div>`;
+  }
+
+  function historyRow(x) {
+    const p = x.projection;
+    const tendency = p.kind === 'tendency'
+      ? `<span class="tag ${p.direction}"><svg class="icon sm" aria-hidden="true"><use href="#${p.direction === 'up' ? 'i-up' : 'i-down'}"/></svg>${p.direction === 'up' ? 'Comprar' : 'Vender'} · ${p.strength}</span>`
+      : '<span class="tag flat"><svg class="icon sm" aria-hidden="true"><use href="#i-flat"/></svg>Sem lado</span>';
+    const r = x.outcome.result;
+    const result = r === 'acertou' ? '<span class="tag hit"><svg class="icon sm" aria-hidden="true"><use href="#i-check"/></svg>Acertou</span>'
+      : r === 'errou' ? '<span class="tag miss"><svg class="icon sm" aria-hidden="true"><use href="#i-x"/></svg>Errou</span>'
+      : '<span class="tag flat">— Sem aposta</span>';
+    const inside = x.outcome.isInside === null ? '' : x.outcome.isInside ? ' · na faixa' : ' · fora da faixa';
+    return `<tr><td class="num">${full(rows[x.index].t + HOUR)}</td><td>${tendency}</td><td class="num">${price(p.base)}</td><td class="num">${price(x.nextClose)}</td><td>${result}<span class="muted small">${inside}</span></td></tr>`;
+  }
+
+  function renderDescription() {
+    const { candles } = seriesFor(state.tf);
+    const shown = candles.slice(Math.max(0, Math.floor(state.view ? state.view.start : 0)));
+    const lo = Math.min(...shown.map((c) => c.l)); const hi = Math.max(...shown.map((c) => c.h));
+    const buys = trades.filter((t) => t.side === 'buy').length; const sells = trades.length - buys;
+    const t = tendencyWords(projection);
+    const forecast = state.mode === 'none' || t === null ? 'Sem previsão agora: placar em 0.' : `Previsão: tende a ${t.side.toLowerCase()} (${t.strength}) até ${hm(last.t + 2 * HOUR)}, faixa de ${price(projection.low)} a ${price(projection.high)}.`;
+    $('[data-desc]').textContent = `LINK/USDT em velas de ${state.tf}, de ${full(shown[0].t)} a ${full(candles.at(-1).t)}. Mínima ${price(lo)}, máxima ${price(hi)}, último preço ${price(candles.at(-1).c)}. ${buys} compras e ${sells} vendas no período carregado. ${forecast}`;
+    $('[data-last-closed]').textContent = `última vela fechada às ${hm(last.t + HOUR)} · próxima decisão às ${hm(last.t + 2 * HOUR)}`;
+    $('[data-tf-note]').hidden = state.tf === '1h';
+  }
+
+  function renderAll() { render(); renderZoom(); renderPanel(); renderWhy(); renderHistory(); renderDescription(); }
+
+  // ---------- interação ----------
+  const chart = $('[data-chart]');
+  function hoverFromEvent(event) {
+    const box = chart.getBoundingClientRect();
+    const slot = Number(chart.dataset.slot);
+    return { index: Math.floor(state.view.start + (event.clientX - box.left) / slot), y: event.clientY - box.top };
+  }
+  chart.addEventListener('pointermove', (event) => {
+    if (state.drag) {
+      const slot = Number(chart.dataset.slot);
+      const delta = (event.clientX - state.drag.x) / slot;
+      state.view = { start: state.drag.view.start - delta, end: state.drag.view.end - delta };
+    }
+    state.hover = hoverFromEvent(event);
+    render();
+  });
+  chart.addEventListener('pointerdown', (event) => { state.drag = { x: event.clientX, view: { ...state.view } }; chart.setPointerCapture(event.pointerId); });
+  chart.addEventListener('pointerup', () => { state.drag = null; });
+  chart.addEventListener('pointerleave', () => { state.hover = null; state.drag = null; render(); });
+  chart.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    const anchor = hoverFromEvent(event).index;
+    zoomBy(event.deltaY > 0 ? 1.15 : 1 / 1.15, anchor);
+  }, { passive: false });
+
+  function zoomBy(factor, anchor) {
+    const v = state.view;
+    const a = anchor ?? (v.start + v.end) / 2;
+    state.view = { start: a - (a - v.start) * factor, end: a + (v.end - a) * factor };
+    render();
+  }
+
+  chart.addEventListener('keydown', (event) => {
+    const { candles } = seriesFor(state.tf);
+    const current = state.hover ? state.hover.index : candles.length - 1;
+    let next = current;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      const step = event.key === 'ArrowLeft' ? -1 : 1;
+      if (event.shiftKey) {
+        const indices = trades.map((t) => tradeIndex(candles, t));
+        const found = step < 0 ? indices.filter((i) => i < current).at(-1) : indices.find((i) => i > current);
+        next = found ?? current;
+      } else next = current + step;
+    } else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = candles.length - 1;
+    else if (event.key === '+' || event.key === '=') { zoomBy(1 / 1.25); return; }
+    else if (event.key === '-') { zoomBy(1.25); return; }
+    else if (event.key === 'Escape') { state.hover = null; render(); return; }
+    else return;
+    event.preventDefault();
+    next = Math.max(0, Math.min(candles.length - 1, next));
+    const span = state.view.end - state.view.start;
+    if (next < state.view.start) state.view = { start: next - 1, end: next - 1 + span };
+    if (next + 1 > state.view.end) state.view = { start: next + 2 - span, end: next + 2 };
+    state.hover = { index: next };
+    render();
+    announce(candles);
+  });
+
+  document.querySelectorAll('[data-zoom]').forEach((button) => button.addEventListener('click', () => {
+    const kind = button.dataset.zoom;
+    const { candles } = seriesFor(state.tf);
+    if (kind === 'in') zoomBy(1 / 1.3);
+    else if (kind === 'out') zoomBy(1.3);
+    else if (kind === 'fit') { state.view = { start: -1, end: candles.length + 1 }; render(); }
+    else { state.view = defaultView(candles.length, chart.clientWidth < 640); render(); }
+  }));
+  document.querySelectorAll('[data-tf]').forEach((button) => button.addEventListener('click', () => {
+    state.tf = button.dataset.tf; state.view = null; state.hover = null;
+    document.querySelectorAll('[data-tf]').forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+    renderAll();
+  }));
+  document.querySelectorAll('[data-layer]').forEach((button) => button.addEventListener('click', () => {
+    const key = button.dataset.layer;
+    state.layers[key] = !state.layers[key];
+    button.setAttribute('aria-pressed', String(state.layers[key]));
+    render();
+  }));
+  document.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => {
+    state.mode = button.dataset.mode;
+    document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+    renderAll();
+  }));
+  const themes = ['auto', 'light', 'dark'];
+  const themeNames = { auto: 'automático', light: 'claro', dark: 'escuro' };
+  $('[data-theme-toggle]').addEventListener('click', () => {
+    const current = document.documentElement.dataset.theme ?? 'auto';
+    const next = themes[(themes.indexOf(current) + 1) % themes.length];
+    if (next === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = next;
+    $('[data-theme-text]').textContent = themeNames[next];
+  });
+  const params = new URLSearchParams(location.search);
+  if (params.get('theme')) document.documentElement.dataset.theme = params.get('theme');
+  if (params.get('mode')) { state.mode = params.get('mode'); document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === state.mode))); }
+  if (params.get('layers') === 'all') Object.keys(state.layers).forEach((k) => { state.layers[k] = true; document.querySelector(`[data-layer="${k}"]`).setAttribute('aria-pressed', 'true'); });
+  if (window.matchMedia('(min-width: 701px)').matches) $('[data-layers-details]').open = true;
+  window.addEventListener('resize', () => { state.view = null; renderAll(); });
+  renderAll();
+  if (params.get('hover')) { const { candles } = seriesFor(state.tf); state.hover = { index: candles.length - 1 - Number(params.get('hover')), y: 160 }; render(); }
+})();
+</script>
+</body>
+</html>

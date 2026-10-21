@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import {
   createKlineStream,
-  type Candle,
+  type MarketCandle,
   type KlineStream,
   type KlineStreamSettings,
 } from '../../packages/market-data-crypto/src/index.js';
@@ -25,7 +25,7 @@ export type StreamHarness = {
 };
 
 export type OpenedStream = {
-  readonly candles: Candle[];
+  readonly candles: MarketCandle[];
   readonly attempts: number[];
   readonly disconnections: string[];
   readonly malformedReasons: string[];
@@ -38,7 +38,7 @@ export function createStreamHarness(): StreamHarness {
   return {
     server,
     open: (overrides = {}): OpenedStream => {
-      const candles: Candle[] = [];
+      const candles: MarketCandle[] = [];
       const attempts: number[] = [];
       const disconnections: string[] = [];
       const malformedReasons: string[] = [];

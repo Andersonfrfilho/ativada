@@ -20,6 +20,8 @@ export const DEFAULT_BAN_SECONDS = 120;
 export const MAXIMUM_BAN_SECONDS = 86_400;
 export const BAN_SLEEP_SLICE_MILLISECONDS = 30_000;
 export const SHUTDOWN_TIMEOUT_MILLISECONDS = 10_000;
+// Piso da espera da recuperação de lacunas com o banco fora: nunca gira sem esperar (o porteiro falha rápido).
+export const OUTAGE_MINIMUM_WAIT_MILLISECONDS = 1_000;
 // As primeiras descartadas sempre saem no log; depois, uma a cada 100, para um feed quebrado não inundar.
 export const MALFORMED_LOG_ALWAYS_UNTIL = 10;
 export const MALFORMED_LOG_EVERY = 100;
@@ -40,6 +42,7 @@ export const WORKER_LOG = {
   GAP_RECOVERY_BANNED: 'gap recovery paused: IP banned by the exchange',
   GAP_RECOVERY_RETRY: 'gap recovery retry scheduled',
   SERVER_CLOCK_UNAVAILABLE: 'server clock unavailable, using the local clock',
+  HEARTBEAT_FAILED: 'worker heartbeat failed',
   SHUTDOWN_STARTED: 'shutdown started',
   SHUTDOWN_TIMED_OUT: 'shutdown timed out',
   SHUTDOWN_COMPLETE: 'shutdown complete',

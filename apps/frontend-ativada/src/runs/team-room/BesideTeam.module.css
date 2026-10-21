@@ -1,0 +1,10 @@
+/* O que ocupa o lugar do gráfico (carregando, vazio, reserva) ganha a mesma varanda que o gráfico ganharia, acima dele. */
+.layout {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.main {
+  min-width: 0;
+}

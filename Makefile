@@ -7,7 +7,7 @@ COMPOSE := docker compose --env-file envs/env.$(ENV) -f compose.yaml
 REQUIRED_BUN_VERSION := 1.3.14
 LIVE72 := env -i PATH="$$PATH" HOME="$$HOME" bun --env-file=envs/env.live72 run scripts/live72/cli.ts
 
-.PHONY: help bootstrap config up down ps check panel-e2e contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants price-alert-mutants user-asset-mutants alert-mutants runlog-mutants telegram-test goals-test price-alerts-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants identity-logs live72-up live72-start live72-status live72-report live72-stop live72-down
+.PHONY: help bootstrap config up down ps check panel-e2e contract-full migration-test database-test identity-test session-test admin-test lgpd-test backfill-test stream-test model-teams-test backtest-test walkforward-test api-runs-test api-runs-mutants example-mutants stall-mutants price-alert-mutants user-asset-mutants alert-mutants runlog-mutants telegram-test goals-test price-alerts-test telegram-mutants queue-test queue-mutants live-test live-mutants stream-api-test stream-mutants db-outage-test identity-logs live72-up live72-start live72-status live72-report live72-stop live72-down
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -97,6 +97,13 @@ stream-test: ## Prova o worker real contra uma Binance falsa (REST + WebSocket) 
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/stream-test.ts
 
+model-teams-test: ## Prova o despachante das equipes de modelo com o worker real em subprocesso, três provedores falsos locais (latência, 5xx em série, 429, 401, teto de custo) e um Postgres de teste descartável: relatórios, circuito, batimento, teto e SIGTERM
+	set -a; . envs/env.test; set +a; \
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/model-teams-test.ts
+
 backtest-test: ## Prova o backtest de 2 anos em worker_thread contra um Postgres de teste descartável: tempo, determinismo, paridade, golden, isolamento, cancelamento, falha, thread que morre, timeout e retomada
 	set -a; . envs/env.test; set +a; \
 	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
@@ -118,7 +125,7 @@ api-runs-test: ## Prova as rotas REST de mercado, estratégias e execuções con
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/api-runs-test.ts
 
-api-runs-mutants: ## Prova que o isolamento entre usuários dos repositórios das rotas REST reprova 11 mutantes (filtro de dono removido, um por repositório) contra um Postgres de teste descartável
+api-runs-mutants: ## Prova que o isolamento entre usuários dos repositórios das rotas REST reprova 43 mutantes (filtro de dono removido, um por ponto dos repositórios, incluídas as leituras do acompanhamento ao vivo, das previsões, do analista de risco, da estratégia do sistema e do duelo das equipes) contra um Postgres de teste descartável
 	set -a; . envs/env.test; set +a; \
 	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
 	trap 'exit 130' INT; \
@@ -139,14 +146,21 @@ queue-mutants: ## Prova que a fila e a reivindicação ao vivo reprovam 24 mutan
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/queue-mutants.ts
 
-live-test: ## Prova a simulação ao vivo contra Postgres de teste descartável: paridade com o backtest nos dois conjuntos reais, morte do processo (SIGKILL) entre passos e no meio de um, candle repetido, conta apagada ou bloqueada, dois workers, teto por usuário, lacuna de candles e a API real ponta a ponta
+live-test: ## Prova a simulação ao vivo contra Postgres de teste descartável: paridade com o backtest nos dois conjuntos reais, morte do processo (SIGKILL) entre passos e no meio de um, candle repetido, conta apagada ou bloqueada, dois workers, teto por usuário, lacuna de candles, a sombra do analista de risco (uma decisão e um aviso por passo, SIGKILL sem duplicar nem perder), o analista GOVERNANDO (velas entregues uma por vez, linhas idênticas ao laço em memória, queda de conexão no meio) e a API real ponta a ponta
 	set -a; . envs/env.test; set +a; \
 	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/live-test.ts
 
-live-mutants: ## Prova que o adaptador do banco da simulação ao vivo reprova 8 mutantes (passo em duas transações, checkpoint recusado que deixa linhas, bolsa errada, sentimento sem corte, espera por buraco que não grava ou não apaga, entre outros) contra o live-test inteiro, num Postgres de teste descartável
+db-outage-test: ## Prova a recuperação do worker e da API quando o banco cai e volta (SIGKILL do banco visto pelos clientes e meia conexão que não fecha), por um proxy TCP, contra um Postgres de teste descartável: volta em até 60 s, fills e signals iguais aos da execução contínua, /v1/health 503 e 200, batimento do worker e log sem PII
+	set -a; . envs/env.test; set +a; \
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && OUTAGE_DOCKER_CONTAINER=$(PROJECT_NAME)-$(ENV)-postgres bun --env-file=envs/env.test run scripts/db-outage-test.ts
+
+live-mutants: ## Prova que o adaptador do banco da simulação ao vivo reprova 10 mutantes (passo em duas transações, checkpoint recusado que deixa linhas, bolsa errada, sentimento sem corte, espera por buraco que não grava ou não apaga, decisão do analista fora do passo, entre outros) contra o live-test inteiro, num Postgres de teste descartável
 	set -a; . envs/env.test; set +a; \
 	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
 	trap 'exit 130' INT; \
@@ -159,6 +173,13 @@ example-mutants: ## Prova que a semeadura da estratégia de exemplo reprova 6 mu
 	trap 'exit 130' INT; \
 	trap 'exit 143' TERM; \
 	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/example-mutants.ts
+
+stall-mutants: ## Prova que a varredura de parada no banco reprova 11 mutantes (sem trava consultiva, STALL duplicado no mesmo episódio, RESUME sem STALL, alerta para dono sem Telegram, leitura velha que abre episódio, episódio sobrescrito ou fechado por outro, aviso ao painel que não sai, marca que sobra em execução parada, varredura fora de uma transação) contra um Postgres de teste descartável
+	set -a; . envs/env.test; set +a; \
+	trap '$(MAKE) down ENV=test DOWN_FLAGS=--volumes' EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(MAKE) up ENV=test SERVICES=postgres && bun --env-file=envs/env.test run scripts/stall-mutants.ts
 
 user-asset-mutants: ## Prova que os ativos do usuário reprovam 14 mutantes do banco (sem filtro de dono em leitura, lista e escrita, sem a trava do dono, teto ignorado ou com folga, recusa que ainda grava, cursor inclusivo, página sem ordem e cada CHECK ou unicidade removidos) num Postgres de teste descartável
 	set -a; . envs/env.test; set +a; \

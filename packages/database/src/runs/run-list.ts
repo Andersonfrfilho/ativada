@@ -32,6 +32,10 @@ export async function listRuns(
         ownerCondition(scope, runs.userId),
         isNull(runs.deletedAt),
         params.kind === undefined ? undefined : eq(runs.kind, params.kind),
+        params.symbol === undefined ? undefined : eq(runs.symbol, params.symbol),
+        params.strategyVersionId === undefined
+          ? undefined
+          : eq(runs.strategyVersionId, params.strategyVersionId),
         isAfterCursor(params.after),
       ),
     )

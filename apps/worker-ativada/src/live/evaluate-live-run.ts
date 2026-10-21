@@ -2,6 +2,8 @@
 import { readErrorName } from '@ativada/environment';
 import type { Engine } from '@ativada/strategy-engine';
 
+import type { AnalystSeriesCache } from './analyst-series-cache.js';
+
 import { LIVE_LOG, LIVE_PASS_KIND } from './live.constant.js';
 import {
   describeLiveFailure,
@@ -20,6 +22,7 @@ export type EvaluateLiveRunParams = {
   readonly engine: Engine;
   readonly maxSteps: number;
   readonly runId: string;
+  readonly analystSeries?: AnalystSeriesCache;
 };
 
 async function recordFailure(
@@ -72,6 +75,8 @@ export async function evaluateLiveRun(params: EvaluateLiveRunParams): Promise<Li
       isGapConfirmed: dependencies.isGapConfirmed,
       alerting: dependencies.alerting,
       gapPolicy: dependencies.gapPolicy,
+      analystSeries: params.analystSeries,
+      teamSettings: dependencies.team,
     });
     if (outcome.kind === LIVE_PASS_KIND.WAITING) {
       dependencies.logger.info(LIVE_LOG.RUN_WAITING_FOR_GAP, { runId });

@@ -1,18 +1,22 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { useState, type ReactElement } from 'react';
-import { useNavigate } from 'react-router';
 
-import { ROUTE_PATH } from '../app/app.constant.js';
 import { formatSymbol } from '../format/format.js';
 import { Card } from '../layout/Card.component.js';
-import { RUN_KIND } from '../runs/run.constant.js';
-import { useCreateRunMutation } from '../runs/runs.query.js';
 import controls from '../styles/Controls.module.css';
-import { messageFromGoalError } from './goal-form.validation.js';
-import { GOAL_TIMEFRAME, UNAVAILABLE_REASON_TEXT } from './goal.constant.js';
+import { UNAVAILABLE_REASON_TEXT } from './goal.constant.js';
 import type { Combination, GoalEvaluation } from './goal.validation.js';
 import styles from './Goals.module.css';
+import { RankingExplainer } from './RankingExplainer.component.js';
 import { RankingItem } from './RankingItem.component.js';
+import { SimulationTimeframePicker } from './SimulationTimeframePicker.component.js';
+import type { SimulationTimeframe } from './simulation-timeframe.constant.js';
+import { useGoalSimulation, type GoalSimulation } from './useGoalSimulation.hook.js';
+import { useLiveRunSlots, type LiveRunSlots } from './useLiveRunSlots.hook.js';
+import { useSimulationChoice } from './useSimulationChoice.hook.js';
+
+const PODIUM_SIZE = 3;
+const COLLAPSED_COUNT = 10;
 
 export type RankingCardProps = { readonly goalId: string; readonly evaluation: GoalEvaluation };
 
@@ -37,59 +41,118 @@ function UnavailableList({
   );
 }
 
-type Simulation = {
-  readonly isPending: boolean;
-  readonly message: string | undefined;
-  readonly simulate: (combination: Combination) => void;
+type RankingListProps = {
+  readonly goalId: string;
+  readonly combinations: readonly Combination[];
+  readonly simulation: GoalSimulation;
+  readonly slots: LiveRunSlots;
+  readonly timeframe: SimulationTimeframe;
 };
 
-function useGoalSimulation(goalId: string): Simulation {
-  const navigate = useNavigate();
-  const create = useCreateRunMutation();
-  return {
-    isPending: create.isPending,
-    message: messageFromGoalError(create.error),
-    simulate: (combination) =>
-      create.mutate(
-        {
-          strategyVersionId: combination.strategy.versionId,
-          kind: RUN_KIND.LIVE_PAPER,
-          symbol: combination.symbol,
-          timeframe: GOAL_TIMEFRAME,
-          goalId,
-        },
-        { onSuccess: () => void navigate(ROUTE_PATH.OVERVIEW) },
-      ),
-  };
+function RankingList({
+  goalId,
+  combinations,
+  simulation,
+  slots,
+  timeframe,
+}: RankingListProps): ReactElement {
+  return (
+    <ol className={styles.ranking} aria-label="Ranking de estratégias por moeda">
+      {combinations.map((combination, index) => (
+        <RankingItem
+          variant={index < PODIUM_SIZE ? 'podium' : 'row'}
+          goalId={goalId}
+          key={`${combination.strategy.id}:${combination.symbol}`}
+          combination={combination}
+          availability={{
+            isPending: simulation.isPending,
+            isAtLimit: slots.isAtLimit,
+            limit: slots.limit,
+            duplicateRunId: slots.findDuplicateRunId(combination, timeframe),
+          }}
+          onSimulate={simulation.simulate}
+        />
+      ))}
+    </ol>
+  );
+}
+
+function GoalOnlyToggle({
+  isChecked,
+  onChange,
+}: {
+  readonly isChecked: boolean;
+  readonly onChange: (isChecked: boolean) => void;
+}): ReactElement {
+  return (
+    <label className={styles.checkbox}>
+      <input
+        type="checkbox"
+        checked={isChecked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      Só o par da meta
+    </label>
+  );
+}
+
+type ExpandFooterProps = {
+  readonly total: number;
+  readonly isExpanded: boolean;
+  readonly onToggle: () => void;
+};
+
+function ExpandFooter({ total, isExpanded, onToggle }: ExpandFooterProps): ReactElement | null {
+  if (total <= COLLAPSED_COUNT) return null;
+  return (
+    <div className={styles.rankingFoot}>
+      <span className={controls.muted}>
+        {isExpanded ? total : COLLAPSED_COUNT} de {total} combinações de estratégia e moeda.
+      </span>
+      <button type="button" className={controls.button} onClick={onToggle}>
+        {isExpanded ? `Mostrar só as ${COLLAPSED_COUNT}` : `Mostrar as ${total}`}
+      </button>
+    </div>
+  );
+}
+
+function orderByRank(combinations: readonly Combination[], isGoalOnly: boolean): Combination[] {
+  return combinations
+    .filter((item) => !isGoalOnly || item.isGoalSymbol)
+    .sort((first, second) => first.rank - second.rank);
 }
 
 export function RankingCard({ goalId, evaluation }: RankingCardProps): ReactElement {
-  const simulation = useGoalSimulation(goalId);
+  const choice = useSimulationChoice();
+  const simulation = useGoalSimulation(goalId, choice.timeframe, choice.analystMode);
+  const slots = useLiveRunSlots();
   const [isGoalOnly, setIsGoalOnly] = useState(false);
-  const shown = [...evaluation.combinations]
-    .filter((item) => !isGoalOnly || item.isGoalSymbol)
-    .sort((first, second) => first.rank - second.rank);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const ordered = orderByRank(evaluation.combinations, isGoalOnly);
+  const shown = isExpanded ? ordered : ordered.slice(0, COLLAPSED_COUNT);
   return (
     <Card title="Estratégia × moeda">
-      <label className={styles.checkbox}>
-        <input
-          type="checkbox"
-          checked={isGoalOnly}
-          onChange={(event) => setIsGoalOnly(event.target.checked)}
-        />
-        Só o par da meta
-      </label>
-      <ol className={styles.ranking} aria-label="Ranking de estratégias por moeda">
-        {shown.map((combination) => (
-          <RankingItem
-            goalId={goalId}
-            key={`${combination.strategy.id}:${combination.symbol}`}
-            combination={combination}
-            isSimulating={simulation.isPending}
-            onSimulate={simulation.simulate}
-          />
-        ))}
-      </ol>
+      <RankingExplainer />
+      <SimulationTimeframePicker
+        value={choice.timeframe}
+        onChange={choice.setTimeframe}
+        activeCount={slots.count}
+        limit={slots.limit}
+        analyst={choice.analyst}
+      />
+      <GoalOnlyToggle isChecked={isGoalOnly} onChange={setIsGoalOnly} />
+      <RankingList
+        goalId={goalId}
+        combinations={shown}
+        simulation={simulation}
+        slots={slots}
+        timeframe={choice.timeframe}
+      />
+      <ExpandFooter
+        total={ordered.length}
+        isExpanded={isExpanded}
+        onToggle={() => setIsExpanded((current) => !current)}
+      />
       <UnavailableList evaluation={evaluation} />
       {simulation.message === undefined ? null : (
         <p role="alert" className={controls.error}>

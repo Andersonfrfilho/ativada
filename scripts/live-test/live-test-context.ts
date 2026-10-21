@@ -9,6 +9,7 @@ import {
   RUN_STATUS,
   USER_RESOLUTION_STATUS,
   type DatabaseHandle,
+  type JsonContainer,
   type OwnerScope,
   type RunRecord,
 } from '../../packages/database/src/index.js';
@@ -32,6 +33,7 @@ import type {
   LiveRunDatabase,
   LiveRunSession,
   LiveTickSummary,
+  TeamStepSettings,
 } from '../../apps/worker-ativada/src/live/live-run.types.js';
 import type { WorkerLogger } from '../../apps/worker-ativada/src/logging/worker-logger.js';
 import {
@@ -160,9 +162,13 @@ export async function seedCandles(
 
 export type NewLiveRun = {
   readonly symbol: string;
-  readonly timeframe: '1h' | '1d';
+  readonly timeframe: '15m' | '1h' | '1d';
   readonly periodStart: number;
   readonly user?: LiveUser;
+  // O que a API grava em `runs.request` (por exemplo, o pedido do analista de risco em sombra).
+  readonly request?: JsonContainer;
+  // Custo da simulação diferente do exemplo (taxa e slippage por lado, texto decimal).
+  readonly costs?: { readonly feeRate: string; readonly slippageRate: string };
 };
 
 export async function createLiveRun(
@@ -174,6 +180,7 @@ export async function createLiveRun(
     ...loadClassicRunParameters(),
     symbol: params.symbol,
     timeframe: params.timeframe,
+    ...params.costs,
   });
   const run = await createRunRepository(context.handle).createRun(user.scope, {
     strategyVersionId: user.versionId,
@@ -188,6 +195,7 @@ export async function createLiveRun(
     periodStart: params.periodStart,
     periodEnd: undefined,
     migratedFromRunId: undefined,
+    ...(params.request === undefined ? {} : { request: params.request }),
   });
   if (run === undefined) throw new Error('execução não foi criada');
   return run;
@@ -266,6 +274,8 @@ export type EvaluatorOptions = {
   readonly heartbeatTimeoutSeconds?: number;
   readonly maxStepsPerPass?: number;
   readonly alerting?: LiveAlertingSettings;
+  // O prazo e o ritmo das equipes (execução de equipe); ausente = o worker as recusa.
+  readonly team?: TeamStepSettings;
   // Roda antes de cada passo ser gravado (por exemplo, apagar a conta no meio).
   readonly beforeCommit?: (runId: string) => Promise<void>;
 };
@@ -314,6 +324,7 @@ export function createProductionEvaluator(
     ...(options.maxStepsPerPass === undefined ? {} : { maxStepsPerPass: options.maxStepsPerPass }),
     ...(options.alerting === undefined ? {} : { alerting: options.alerting }),
     ...(options.gapPolicy === undefined ? {} : { gapPolicy: options.gapPolicy }),
+    ...(options.team === undefined ? {} : { team: options.team }),
   });
   return { evaluator, entries, committed };
 }

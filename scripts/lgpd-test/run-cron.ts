@@ -17,12 +17,14 @@ import {
 import type { LgpdContext } from './lgpd-test-context.js';
 
 const REPOSITORY_ROOT: string = new URL('../../', import.meta.url).pathname;
-const FINISHED_MESSAGE = 'purge-deleted-accounts finished';
+const PURGE_TASK_NAME = 'purge-deleted-accounts';
+const FINISHED_MESSAGE = `${PURGE_TASK_NAME} finished`;
 
 export type CronProcessRun = {
   readonly exitCode: number;
   readonly output: string;
   readonly summary: Readonly<Record<string, unknown>>;
+  readonly elapsedMilliseconds: number;
 };
 
 function findSummary(output: string): Readonly<Record<string, unknown>> {
@@ -33,11 +35,12 @@ function findSummary(output: string): Readonly<Record<string, unknown>> {
   return {};
 }
 
-// O mesmo ponto de entrada de produção: carência de 24 h, variáveis do envs/env.test.
+// O mesmo ponto de entrada de produção (carência de 24 h), só com a tarefa de purga: o backfill iria à Binance de verdade.
 export async function runCronProcess(context: LgpdContext): Promise<CronProcessRun> {
+  const startedAt = performance.now();
   const child = Bun.spawn([process.execPath, 'run', CRON_ENTRYPOINT], {
     cwd: REPOSITORY_ROOT,
-    env: { ...Bun.env, DATABASE_URL: context.databaseUrl },
+    env: { ...Bun.env, DATABASE_URL: context.databaseUrl, CRON_TASKS: PURGE_TASK_NAME },
     stdout: 'pipe',
     stderr: 'pipe',
   });
@@ -47,7 +50,12 @@ export async function runCronProcess(context: LgpdContext): Promise<CronProcessR
   ]);
   const exitCode = await child.exited;
   const output = `${stdout}${stderr}`;
-  return { exitCode, output, summary: findSummary(stdout) };
+  return {
+    exitCode,
+    output,
+    summary: findSummary(stdout),
+    elapsedMilliseconds: Math.round(performance.now() - startedAt),
+  };
 }
 
 // Só o teste zera a carência, pelo parâmetro da tarefa; o main.ts de produção usa 24 h.
