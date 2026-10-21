@@ -96,6 +96,7 @@ export function buildApiRouteDependencies(
       me: { listMyModelTeams: notUsed, setMyModelTeam: notUsed },
       runs: { runModelTeams: notUsed, comparison: notUsed, requestOpinion: notUsed },
       duels: { enabled: ENABLED_MARKETS, createDuel: notUsed, readDuel: notUsed },
+      questions: { enabled: ENABLED_MARKETS, askQuestion: notUsed, listQuestions: notUsed },
     },
     assets: {
       enabledSymbols: ENABLED_MARKETS.symbols,

@@ -118,6 +118,8 @@ import type * as RunModelTeamsRoutesModule from '../../../apps/api-ativada/src/m
 import type * as RunModelTeamsUseCaseModule from '../../../apps/api-ativada/src/model-teams/run-model-teams.use-case.js';
 import type * as RunModelTeamsComparisonModule from '../../../apps/api-ativada/src/model-teams/run-model-teams-comparison.use-case.js';
 import type * as ModelOpinionRequestModule from '../../../apps/api-ativada/src/model-teams/model-opinion-request.use-case.js';
+import type * as TeamQuestionRoutesModule from '../../../apps/api-ativada/src/model-teams/team-questions.routes.js';
+import type * as TeamQuestionUseCaseModule from '../../../apps/api-ativada/src/model-teams/team-question.use-case.js';
 import type * as ModelDuelRoutesModule from '../../../apps/api-ativada/src/model-teams/model-duels.routes.js';
 import type * as ModelDuelCreateModule from '../../../apps/api-ativada/src/model-teams/model-duel-create.use-case.js';
 import type * as ModelDuelReadModule from '../../../apps/api-ativada/src/model-teams/model-duel-read.use-case.js';
@@ -241,6 +243,8 @@ export type ApiApp = {
   readonly runModelTeamsUseCase: typeof RunModelTeamsUseCaseModule;
   readonly runModelTeamsComparison: typeof RunModelTeamsComparisonModule;
   readonly modelOpinionRequest: typeof ModelOpinionRequestModule;
+  readonly teamQuestionRoutes: typeof TeamQuestionRoutesModule;
+  readonly teamQuestionUseCase: typeof TeamQuestionUseCaseModule;
   readonly modelDuelRoutes: typeof ModelDuelRoutesModule;
   readonly modelDuelCreate: typeof ModelDuelCreateModule;
   readonly modelDuelRead: typeof ModelDuelReadModule;
@@ -377,6 +381,8 @@ export async function loadApiApp(): Promise<ApiApp> {
     runModelTeamsUseCase: await load('model-teams/run-model-teams.use-case'),
     runModelTeamsComparison: await load('model-teams/run-model-teams-comparison.use-case'),
     modelOpinionRequest: await load('model-teams/model-opinion-request.use-case'),
+    teamQuestionRoutes: await load('model-teams/team-questions.routes'),
+    teamQuestionUseCase: await load('model-teams/team-question.use-case'),
     modelDuelRoutes: await load('model-teams/model-duels.routes'),
     modelDuelCreate: await load('model-teams/model-duel-create.use-case'),
     modelDuelRead: await load('model-teams/model-duel-read.use-case'),

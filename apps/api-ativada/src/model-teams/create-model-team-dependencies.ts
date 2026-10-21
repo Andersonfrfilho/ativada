@@ -7,6 +7,7 @@ import {
   createRunQueueRepository,
   createRunRepository,
   createStrategyRepository,
+  createTeamQuestionRepository,
   createTeamReportRepository,
   createUserModelTeamRepository,
   createWorkerHeartbeatRepository,
@@ -28,11 +29,17 @@ import { createModelOpinionRequestUseCase } from './model-opinion-request.use-ca
 import { createRunModelTeamsComparisonUseCase } from './run-model-teams-comparison.use-case.js';
 import { createRunModelTeamsUseCase } from './run-model-teams.use-case.js';
 import type { RunModelTeamsRouteDependencies } from './run-model-teams.routes.js';
+import {
+  createAskTeamQuestionUseCase,
+  createListTeamQuestionsUseCase,
+} from './team-question.use-case.js';
+import type { TeamQuestionRouteDependencies } from './team-questions.routes.js';
 
 export type ModelTeamRouteDependencies = {
   readonly me: MyModelTeamsRouteDependencies;
   readonly runs: RunModelTeamsRouteDependencies;
   readonly duels: ModelDuelRouteDependencies;
+  readonly questions: TeamQuestionRouteDependencies;
 };
 
 export type ModelTeamWiringParams = {
@@ -115,6 +122,28 @@ function createDuelDependencies(params: ModelTeamWiringParams): ModelDuelRouteDe
   };
 }
 
+// A pergunta livre (adendo da spec 015): a API grava a pergunta do dono; o worker a manda ao provedor e grava a resposta.
+function createQuestionDependencies(params: ModelTeamWiringParams): TeamQuestionRouteDependencies {
+  const { environment, database } = params;
+  const base = {
+    runs: createRunRepository(database),
+    strategies: createStrategyRepository(database),
+    exchange: environment.MARKET_EXCHANGE,
+    questions: createTeamQuestionRepository(database),
+  };
+  return {
+    enabled: params.enabled,
+    askQuestion: createAskTeamQuestionUseCase({
+      ...base,
+      teams: createUserModelTeamRepository(database),
+      heartbeat: createWorkerHeartbeatRepository(database),
+      heartbeatSeconds: environment.WORKER_HEARTBEAT_SECONDS,
+      questionsPerUserPerDay: environment.MODEL_TEAM_QUESTION_PER_USER_PER_DAY,
+    }),
+    listQuestions: createListTeamQuestionsUseCase(base),
+  };
+}
+
 // As rotas das equipes de modelo (spec 015): o interruptor do usuário, o estado e a comparação na sala, o pedido avulso e o duelo.
 // O worker é quem tem a chave; aqui só se lê o banco (o batimento do worker, os relatórios gravados) e se enfileira o pedido avulso.
 export function createModelTeamDependencies(
@@ -124,5 +153,6 @@ export function createModelTeamDependencies(
     me: createMeDependencies(params),
     runs: createRunDependencies(params),
     duels: createDuelDependencies(params),
+    questions: createQuestionDependencies(params),
   };
 }

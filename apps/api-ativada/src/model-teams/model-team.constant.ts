@@ -3,6 +3,10 @@ export const ME_MODEL_TEAMS_PATH = '/v1/me/model-teams';
 export const ME_MODEL_TEAM_PATH = '/v1/me/model-teams/:teamKey';
 export const RUN_MODEL_TEAMS_PATH = '/v1/runs/:runId/model-teams';
 export const RUN_MODEL_TEAM_OPINIONS_PATH = '/v1/runs/:runId/model-teams/:teamKey/opinions';
+export const RUN_MODEL_TEAM_QUESTIONS_PATH = '/v1/runs/:runId/model-teams/:teamKey/questions';
+export const RUN_MODEL_TEAMS_QUESTIONS_PATH = '/v1/runs/:runId/model-teams/questions';
+// A lista das perguntas livres da simulação: as 10 mais novas por padrão, no máximo 20.
+export const MODEL_TEAM_QUESTION_PAGE = { DEFAULT: 10, MAXIMUM: 20 } as const;
 export const MODEL_DUELS_PATH = '/v1/model-duels';
 export const MODEL_DUEL_PATH = '/v1/model-duels/:duelId';
 export const TEAM_KEY_PARAM = 'teamKey';

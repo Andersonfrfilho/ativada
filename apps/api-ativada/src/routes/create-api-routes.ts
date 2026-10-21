@@ -18,6 +18,7 @@ import { createMyModelTeamsRoutes } from '../model-teams/me-model-teams.routes.j
 import { createModelDuelRoutes } from '../model-teams/model-duels.routes.js';
 import type { ModelTeamRouteDependencies } from '../model-teams/create-model-team-dependencies.js';
 import { createRunModelTeamsRoutes } from '../model-teams/run-model-teams.routes.js';
+import { createTeamQuestionRoutes } from '../model-teams/team-questions.routes.js';
 import { createNoticesRoute } from '../notices/notices.route.js';
 import type { ListNoticesUseCase } from '../notices/list-notices.use-case.js';
 import { createProfileRoutes, type ProfileRouteDependencies } from '../profile/profile.routes.js';
@@ -159,6 +160,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     createNoticesRoute(dependencies.listNotices),
     ...createMyModelTeamsRoutes(dependencies.modelTeams.me),
     ...createRunModelTeamsRoutes(dependencies.modelTeams.runs),
+    ...createTeamQuestionRoutes(dependencies.modelTeams.questions),
     ...createModelDuelRoutes(dependencies.modelTeams.duels),
     ...createRunRouteTable(dependencies.runs),
     createTranscriptionsRoute(dependencies.transcriptions),

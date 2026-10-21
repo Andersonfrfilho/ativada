@@ -6,6 +6,7 @@ import { ENABLED_SYMBOLS, ENABLED_TIMEFRAMES, EXCHANGE } from './runs-harness.fi
 
 export const HEARTBEAT_SECONDS = 30;
 export const ON_DEMAND_PER_DAY = 2;
+export const QUESTIONS_PER_DAY = 3;
 
 export type ModelTeamRouteOptions = {
   // A abertura da última vela de 15 min fechada do par (o que o repositório de velas devolveria).
@@ -49,6 +50,19 @@ export function buildModelTeamRoutes(
         reports: modelTeams.queue,
         candles: { findLatestOpenTime: () => Promise.resolve(options.latest.openTime) },
         onDemandPerUserPerDay: options.onDemandPerDay ?? ON_DEMAND_PER_DAY,
+      }),
+    }),
+    ...app.teamQuestionRoutes.createTeamQuestionRoutes({
+      enabled: { symbols: ENABLED_SYMBOLS },
+      askQuestion: app.teamQuestionUseCase.createAskTeamQuestionUseCase({
+        ...runDeps,
+        ...base,
+        questions: modelTeams.questions,
+        questionsPerUserPerDay: QUESTIONS_PER_DAY,
+      }),
+      listQuestions: app.teamQuestionUseCase.createListTeamQuestionsUseCase({
+        ...runDeps,
+        questions: modelTeams.questions,
       }),
     }),
     ...app.modelDuelRoutes.createModelDuelRoutes({
