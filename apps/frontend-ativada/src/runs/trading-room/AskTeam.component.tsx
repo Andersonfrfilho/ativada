@@ -5,11 +5,30 @@ import { formatSymbol } from '../../format/format.js';
 import { SelectField } from '../../forms/Fields.component.js';
 import controls from '../../styles/Controls.module.css';
 import { ROOM_QUESTIONS, ROOM_QUESTIONS_TEXT } from './room-questions.constant.js';
+import { TeamQuestionFields } from './team-question/TeamQuestionField.component.js';
 import type { RoomQuestions } from './useRoomQuestions.hook.js';
 import { VoiceAsk } from './voice/VoiceAsk.component.js';
 import styles from './AskTeam.module.css';
 
 export type AskTeamProps = { readonly questions: RoomQuestions };
+
+function QuickQuestionButtons({ questions }: AskTeamProps): ReactElement {
+  return (
+    <div className={styles.buttons}>
+      {ROOM_QUESTIONS.map((option) => (
+        <button
+          key={option.key}
+          type="button"
+          className={controls.button}
+          disabled={questions.isAsking}
+          onClick={() => questions.ask(option)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 // A caixa "Pergunte à equipe": a moeda e as perguntas rápidas. Quem responde vai ao telão; a resposta também fica em texto.
 export function AskTeam({ questions }: AskTeamProps): ReactElement {
@@ -34,21 +53,10 @@ export function AskTeam({ questions }: AskTeamProps): ReactElement {
         />
       </div>
       <VoiceAsk questions={questions} />
-      <div className={styles.buttons}>
-        {ROOM_QUESTIONS.map((option) => (
-          <button
-            key={option.key}
-            type="button"
-            className={controls.button}
-            disabled={questions.isAsking}
-            onClick={() => questions.ask(option)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      <QuickQuestionButtons questions={questions} />
       {questions.isAsking ? <p className={styles.note}>{ROOM_QUESTIONS_TEXT.ASKING}</p> : null}
       {questions.hasFailed ? <p className={styles.failed}>{ROOM_QUESTIONS_TEXT.FAILED}</p> : null}
+      <TeamQuestionFields model={questions.team} symbol={questions.symbol} />
     </section>
   );
 }

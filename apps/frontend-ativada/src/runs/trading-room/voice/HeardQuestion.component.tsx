@@ -6,6 +6,7 @@ import controls from '../../../styles/Controls.module.css';
 import { ROOM_QUESTIONS } from '../room-questions.constant.js';
 import type { RoomQuestions } from '../useRoomQuestions.hook.js';
 import { matchSpokenQuestion } from './match-spoken-question.js';
+import { TeamVoiceOffers } from './TeamVoiceOffers.component.js';
 import {
   heardText,
   unavailableCoinText,
@@ -46,7 +47,9 @@ export function HeardQuestion({ text, questions, onDone }: HeardQuestionProps): 
         <p className={styles.understood}>{understoodText(option.label, formatSymbol(symbol))}</p>
       )}
       <div className={styles.actions}>
-        {option === undefined ? null : (
+        {option === undefined ? (
+          <TeamVoiceOffers text={text} model={questions.team} onDone={onDone} />
+        ) : (
           <button type="button" className={controls.button} onClick={handleAsk}>
             {VOICE_TEXT.ASK}
           </button>
