@@ -57,6 +57,10 @@ import {
   createTelegramRoutes,
   type TelegramRouteDependencies,
 } from '../telegram/telegram.routes.js';
+import {
+  createTranscriptionsRoute,
+  type TranscriptionRouteDependencies,
+} from '../transcriptions/transcriptions.route.js';
 import type { StreamTicketStore } from '../stream/stream-ticket-store.js';
 import { createStreamTicketRoutes } from '../stream/stream-ticket.routes.js';
 import { createHealthRoutes, type HealthRouteDependencies } from './health.routes.js';
@@ -108,6 +112,7 @@ export type ApiRouteDependencies = HealthRouteDependencies & {
   readonly listNotices: ListNoticesUseCase;
   readonly modelTeams: ModelTeamRouteDependencies;
   readonly runs: RunRoutesBundle;
+  readonly transcriptions: TranscriptionRouteDependencies;
   // `/v1/openapi.json` e `/v1/docs` existem só fora de produção: em produção nem entram na tabela.
   readonly isDocumentationEnabled: boolean;
 };
@@ -156,6 +161,7 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     ...createRunModelTeamsRoutes(dependencies.modelTeams.runs),
     ...createModelDuelRoutes(dependencies.modelTeams.duels),
     ...createRunRouteTable(dependencies.runs),
+    createTranscriptionsRoute(dependencies.transcriptions),
   ];
   // A tabela final inclui as próprias rotas de documentação: o documento é gerado depois, dela inteira.
   if (dependencies.isDocumentationEnabled) routes.push(...createDocsRoutes(() => routes));

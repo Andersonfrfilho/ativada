@@ -27,6 +27,8 @@ export type RouteDocumentation = {
   readonly params?: z.ZodType;
   readonly query?: z.ZodType;
   readonly body?: z.ZodType;
+  // Corpo cru (não JSON), como o áudio da transcrição: cada tipo aceito vira um conteúdo binário no documento.
+  readonly bodyContentTypes?: readonly string[];
   readonly successes: readonly DocumentedSuccess[];
   readonly errors: readonly DocumentedError[];
 };

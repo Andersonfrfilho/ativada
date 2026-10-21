@@ -6,6 +6,7 @@ export const HTTP_HEADER = {
   AUTHORIZATION: 'Authorization',
   CACHE_CONTROL: 'Cache-Control',
   CONTENT_DISPOSITION: 'Content-Disposition',
+  CONTENT_LENGTH: 'Content-Length',
   CONTENT_TYPE: 'Content-Type',
   COOKIE: 'Cookie',
   FORWARDED_FOR: 'X-Forwarded-For',

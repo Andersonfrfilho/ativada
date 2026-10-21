@@ -146,6 +146,7 @@ export function buildApiRouteDependencies(
       analyst: notUsed,
       analystDecisions: notUsed,
     },
+    transcriptions: { transcribe: notUsed },
     isDocumentationEnabled,
   };
 }

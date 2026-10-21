@@ -14,9 +14,9 @@ export type RateLimitPolicy = {
   readonly maxTrackedKeys: number;
 };
 
-const ONE_MINUTE_MILLISECONDS = 60_000;
+export const ONE_MINUTE_MILLISECONDS = 60_000;
 const ONE_HOUR_MILLISECONDS = 3_600_000;
-const DEFAULT_MAX_TRACKED_KEYS = 10_000;
+export const DEFAULT_MAX_TRACKED_KEYS = 10_000;
 
 export const RATE_LIMIT_POLICY = {
   ACCOUNT_EXPORT: {
