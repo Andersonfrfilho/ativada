@@ -25,6 +25,8 @@ export type RequestOptions<TData> = {
   readonly schema: z.ZodType<TData>;
   readonly method?: string;
   readonly body?: unknown;
+  // Corpo cru (o áudio da pergunta por voz): vai como está, com o `Content-Type` do próprio blob.
+  readonly rawBody?: Blob;
 };
 
 export type EmptyRequestOptions = {
@@ -58,7 +60,17 @@ export type ApiClientOptions = {
   readonly session: SessionService;
 };
 
-type Attempt = { readonly path: string; readonly method: string; readonly body?: unknown };
+type Attempt = {
+  readonly path: string;
+  readonly method: string;
+  readonly body?: unknown;
+  readonly rawBody?: Blob;
+};
+
+function bodyOf(attempt: Attempt): { body?: BodyInit } {
+  if (attempt.rawBody !== undefined) return { body: attempt.rawBody };
+  return attempt.body === undefined ? {} : { body: JSON.stringify(attempt.body) };
+}
 
 function buildInit(attempt: Attempt, accessToken: string): RequestInit {
   const headers: Record<string, string> = {
@@ -67,12 +79,8 @@ function buildInit(attempt: Attempt, accessToken: string): RequestInit {
     [HTTP_HEADER.REQUESTED_WITH]: REQUESTED_WITH_VALUE,
   };
   if (attempt.body !== undefined) headers[HTTP_HEADER.CONTENT_TYPE] = JSON_CONTENT_TYPE;
-  return {
-    method: attempt.method,
-    headers,
-    credentials: 'same-origin',
-    ...(attempt.body === undefined ? {} : { body: JSON.stringify(attempt.body) }),
-  };
+  if (attempt.rawBody !== undefined) headers[HTTP_HEADER.CONTENT_TYPE] = attempt.rawBody.type;
+  return { method: attempt.method, headers, credentials: 'same-origin', ...bodyOf(attempt) };
 }
 
 function readRetryAfterSeconds(response: Response): number | undefined {
@@ -106,6 +114,7 @@ class AuthenticatedApiClient implements ApiClient {
       path: options.path,
       method: options.method ?? HTTP_METHOD.GET,
       ...(options.body === undefined ? {} : { body: options.body }),
+      ...(options.rawBody === undefined ? {} : { rawBody: options.rawBody }),
     });
     const parsed = dataEnvelopeSchema(options.schema).safeParse(
       await response.json().catch(() => undefined),

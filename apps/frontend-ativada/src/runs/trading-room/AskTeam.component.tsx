@@ -6,6 +6,7 @@ import { SelectField } from '../../forms/Fields.component.js';
 import controls from '../../styles/Controls.module.css';
 import { ROOM_QUESTIONS, ROOM_QUESTIONS_TEXT } from './room-questions.constant.js';
 import type { RoomQuestions } from './useRoomQuestions.hook.js';
+import { VoiceAsk } from './voice/VoiceAsk.component.js';
 import styles from './AskTeam.module.css';
 
 export type AskTeamProps = { readonly questions: RoomQuestions };
@@ -32,6 +33,7 @@ export function AskTeam({ questions }: AskTeamProps): ReactElement {
           onChange={questions.setSymbol}
         />
       </div>
+      <VoiceAsk questions={questions} />
       <div className={styles.buttons}>
         {ROOM_QUESTIONS.map((option) => (
           <button

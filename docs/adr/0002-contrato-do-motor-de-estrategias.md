@@ -2569,3 +2569,14 @@ perguntas rápidas de catálogo fechado, respondidas pelo servidor com as leitur
 - **Prova:** `test/api-run-questions.contract.test.ts` (cada pergunta com votos esperados de uma série que só sobe, plano e acertos iguais às rotas irmãs,
   par sem velas, aquecimento, 404/401/400/409, o balde de 20 por minuto) e o `api-openapi` (429, 404 e 409 documentados).
 - **Fica para depois:** modo 2 (pergunta livre a uma equipe de modelo, com custo) e o acerto da previsão de outro par.
+- **Pergunta por voz.** O botão "Perguntar falando" da mesma caixa grava até 20 s (`MediaRecorder`, só aparece se o navegador grava) e manda o áudio
+  CRU a `POST /v1/transcriptions` (`access: USER`, `documentation`, política própria `transcription` de 6/min por usuário; `Content-Type` `audio/webm`,
+  `audio/ogg`, `audio/mp4` ou `audio/wav` com `;codecs=` opcional, até 2 MiB: tipo errado ou vazio é 400, acima é 413 `AUDIO_TOO_LARGE`). A transcrição é
+  LOCAL: `@adatechnology/audio-transcription-provider@0.1.0`, subpath `/whisper-local` (ffmpeg + `whisper-cli` + `ggml-large-v3-turbo`, dica `pt`, teto
+  de 60 s), atrás da porta `AudioTranscriberPort`; o áudio nunca sai da máquina e nem o áudio, nem o texto, nem a mensagem do SDK vão a log (só o nome do
+  erro e o código). Uma transcrição por vez por instância e até 3 esperando (acima: 503 `TRANSCRIPTION_BUSY`); `TRANSCRIPTION_ENGINE=off` (padrão) responde
+  503 `TRANSCRIPTION_UNAVAILABLE`; erro definitivo do SDK (`isRetriable: false`) é 422 `TRANSCRIPTION_FAILED`, o resto 503 `TRANSCRIPTION_ENGINE_FAILED`.
+  Resposta `{ text, engine }` (texto aparado, pode ser vazio). O servidor NÃO escolhe a pergunta: o painel casa o texto com o catálogo pela função pura
+  `matchSpokenQuestion` (sem acento nem caixa, palavras-chave por pergunta e apelidos das moedas; sem moeda falada fica a escolhida) e mostra "Você disse"
+  e "Entendi", e só pergunta no clique em "Perguntar" (o mesmo caminho do botão rápido). Prova: `test/api-transcriptions.contract.test.ts`,
+  `test/api-transcription-environment.contract.test.ts`, e no painel `spoken-question` e `trading-room-voice`.

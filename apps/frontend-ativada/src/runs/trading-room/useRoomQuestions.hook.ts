@@ -22,7 +22,8 @@ export type RoomQuestions = {
   readonly symbols: readonly string[];
   readonly symbol: string;
   readonly setSymbol: (symbol: string) => void;
-  readonly ask: (option: RoomQuestionOption) => void;
+  // `onSymbol` vale para esta pergunta (a pergunta por voz escolhe a moeda junto); sem ele, a moeda escolhida.
+  readonly ask: (option: RoomQuestionOption, onSymbol?: string) => void;
   readonly isAsking: boolean;
   readonly hasFailed: boolean;
   // As últimas respostas, a mais nova primeiro.
@@ -54,9 +55,9 @@ export function useRoomQuestions(runId: string, runSymbol: string): RoomQuestion
   const [history, setHistory] = useState<readonly QuestionEntry[]>([]);
   const counter = useRef(0);
   const mutation = useAskQuestionMutation(runId);
-  function ask(option: RoomQuestionOption): void {
+  function ask(option: RoomQuestionOption, onSymbol?: string): void {
     mutation.mutate(
-      { symbol, question: option.key },
+      { symbol: onSymbol ?? symbol, question: option.key },
       {
         onSuccess: (data) => {
           counter.current += 1;
