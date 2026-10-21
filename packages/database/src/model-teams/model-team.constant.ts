@@ -34,3 +34,18 @@ export const MODEL_TEAM_ATTEMPTS_EXHAUSTED_CODE = 'ATTEMPTS_EXHAUSTED';
 export const CANDLE_DURATION_15M_MILLISECONDS = 900_000;
 export const MILLISECONDS_PER_MINUTE = 60_000;
 export const MODEL_TEAM_RETENTION_DAYS = 365;
+
+// A pergunta livre a uma equipe (adendo da spec 015): o texto da pessoa vai ao provedor, sem nome, e-mail, saldo nem posição.
+export const MODEL_TEAM_QUESTION_STATUS = {
+  PENDING: 'pending',
+  ANSWERED: 'answered',
+  FAILED: 'failed',
+  HIDDEN: 'hidden',
+} as const;
+export type ModelTeamQuestionStatus =
+  (typeof MODEL_TEAM_QUESTION_STATUS)[keyof typeof MODEL_TEAM_QUESTION_STATUS];
+export const MODEL_TEAM_QUESTION_MIN_LENGTH = 3;
+export const MODEL_TEAM_QUESTION_MAX_LENGTH = 280;
+export const MODEL_TEAM_ANSWER_MAX_LENGTH = 600;
+export const MODEL_TEAM_QUESTION_RETENTION_DAYS = 90;
+export const MODEL_TEAM_QUESTION_LIST_MAXIMUM = 50;
