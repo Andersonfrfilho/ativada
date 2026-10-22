@@ -16,7 +16,10 @@ import { buildTeamRuntimes, type TeamRuntime } from './build-team-runtimes.js';
 import { createModelTeamLoop, type ModelTeamLoop } from './model-team-loop.js';
 import { MODEL_TEAM_LOG } from './model-teams.constant.js';
 import { buildProviderStatus } from './provider-status.js';
+import { createQuestionDispatcherFor } from './create-question-dispatcher.js';
+import type { QuestionDispatcher } from './question-dispatcher.js';
 import { createReportDispatcher, type ReportDispatcher } from './report-dispatcher.js';
+import type { ReportProcessorDependencies } from './report-processor.types.js';
 import { createReportEnqueuer, type ReportEnqueuer } from './report-scheduler.js';
 import { createTeamCircuits, type TeamCircuits } from './team-circuits.js';
 
@@ -43,34 +46,30 @@ type DispatcherParams = CreateModelTeamsWiringParams & {
   readonly signal: AbortSignal;
 };
 
-function createDispatcher(params: DispatcherParams): ReportDispatcher {
+function createProcessor(params: DispatcherParams): ReportProcessorDependencies {
   const { environment, database } = params;
   const reports = createTeamReportRepository(database);
-  return createReportDispatcher({
-    claims: reports,
-    concurrency: environment.MODEL_TEAM_CONCURRENCY,
-    processor: {
+  return {
+    reports,
+    sources: {
+      exchange: environment.MARKET_EXCHANGE,
+      candles: createCandleRepository(database),
+      sentiment: createSentimentObservationRepository(database),
       reports,
-      sources: {
-        exchange: environment.MARKET_EXCHANGE,
-        candles: createCandleRepository(database),
-        sentiment: createSentimentObservationRepository(database),
-        reports,
-      },
-      runtimes: new Map(params.runtimes.map((runtime) => [runtime.teamKey, runtime])),
-      circuits: params.circuits,
-      settings: {
-        timeoutMilliseconds: environment.MODEL_TEAM_TIMEOUT_SECONDS * MILLISECONDS_PER_SECOND,
-        maxOutputTokens: environment.MODEL_TEAM_MAX_OUTPUT_TOKENS,
-        budget: params.budget,
-        entryTolerancePercent: environment.MODEL_TEAM_ENTRY_TOLERANCE_PERCENT,
-        minStopPercent: environment.MODEL_TEAM_MIN_STOP_PERCENT,
-      },
-      logger: params.logger,
-      now: params.now,
-      signal: params.signal,
     },
-  });
+    runtimes: new Map(params.runtimes.map((runtime) => [runtime.teamKey, runtime])),
+    circuits: params.circuits,
+    settings: {
+      timeoutMilliseconds: environment.MODEL_TEAM_TIMEOUT_SECONDS * MILLISECONDS_PER_SECOND,
+      maxOutputTokens: environment.MODEL_TEAM_MAX_OUTPUT_TOKENS,
+      budget: params.budget,
+      entryTolerancePercent: environment.MODEL_TEAM_ENTRY_TOLERANCE_PERCENT,
+      minStopPercent: environment.MODEL_TEAM_MIN_STOP_PERCENT,
+    },
+    logger: params.logger,
+    now: params.now,
+    signal: params.signal,
+  };
 }
 
 function createEnqueuer(
@@ -95,6 +94,7 @@ function createEnqueuer(
 async function runCycle(parts: {
   readonly enqueuer: ReportEnqueuer;
   readonly dispatcher: ReportDispatcher;
+  readonly questions: QuestionDispatcher;
   readonly logger: WorkerLogger;
 }): Promise<void> {
   try {
@@ -103,6 +103,26 @@ async function runCycle(parts: {
     parts.logger.error(MODEL_TEAM_LOG.ENQUEUE_FAILED, { errorName: readErrorName(error) });
   }
   await parts.dispatcher.tick();
+  await parts.questions.tick();
+}
+
+// Uma ronda: enfileira o que a vela nova pede, despacha os relatórios e depois as perguntas livres (adendo da spec 015).
+function createCycle(params: DispatcherParams): () => Promise<void> {
+  const { environment, database } = params;
+  const processor = createProcessor(params);
+  const dispatcher = createReportDispatcher({
+    claims: createTeamReportRepository(database),
+    concurrency: environment.MODEL_TEAM_CONCURRENCY,
+    processor,
+  });
+  const enqueuer = createEnqueuer(params);
+  const questions = createQuestionDispatcherFor({
+    database,
+    exchange: environment.MARKET_EXCHANGE,
+    concurrency: environment.MODEL_TEAM_CONCURRENCY,
+    shared: processor,
+  });
+  return () => runCycle({ enqueuer, dispatcher, questions, logger: params.logger });
 }
 
 // MODO SOMBRA: as equipes só recomendam e gravam o relatório; nenhuma execução depende delas e nenhuma ordem sai.
@@ -118,7 +138,7 @@ export function createModelTeamsWiring(params: CreateModelTeamsWiringParams): Mo
     return { loop: undefined, readStatus, stop: () => Promise.resolve() };
   }
   const abortController = new AbortController();
-  const dispatcher = createDispatcher({
+  const cycle = createCycle({
     ...params,
     now,
     runtimes,
@@ -126,9 +146,8 @@ export function createModelTeamsWiring(params: CreateModelTeamsWiringParams): Mo
     budget: { dailyUsd, monthlyUsd },
     signal: abortController.signal,
   });
-  const enqueuer = createEnqueuer({ ...params, now, runtimes });
   const loop = createModelTeamLoop({
-    cycle: () => runCycle({ enqueuer, dispatcher, logger }),
+    cycle,
     logger,
     pollMilliseconds: environment.MODEL_TEAM_POLL_SECONDS * MILLISECONDS_PER_SECOND,
     outage: createLoopOutageGuard({ database, logger }),

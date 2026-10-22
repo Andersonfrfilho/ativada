@@ -58,7 +58,9 @@ export type CallParams = {
   readonly method?: string;
   readonly path: string;
   readonly body?: unknown;
-  readonly rawBody?: string;
+  readonly rawBody?: string | Uint8Array<ArrayBuffer>;
+  // Corpo que não é JSON (o áudio da transcrição); sem ele o pedido vai como `application/json`.
+  readonly contentType?: string;
   // O cliente que desiste: o sinal do pedido chega às rotas que sabem cancelar.
   readonly signal?: AbortSignal;
 };
@@ -394,7 +396,7 @@ export async function createRunsHarness(options: RunsHarnessOptions = {}): Promi
     reportedErrors,
     scopeOf,
     call: async (params): Promise<Response> => {
-      const headers = new Headers({ 'Content-Type': 'application/json' });
+      const headers = new Headers({ 'Content-Type': params.contentType ?? 'application/json' });
       if (params.subject !== undefined) {
         const token = await signTestToken({ key, claims: { sub: params.subject } });
         headers.set('Authorization', `Bearer ${token}`);

@@ -60,7 +60,7 @@ function roleOf(opinion: RoomOpinion | undefined): PointedRole {
 export function RoomLife({ runId, status, isWide, isMoving }: RoomLifeProps): ReactElement {
   const model = useTradingRoomModel(runId, status);
   const questions = useRoomQuestions(runId, status.run.symbol);
-  const latest = questions.history[0];
+  const latest = questions.latest;
   const life = useOfficeLife({
     crew: model.opinions.map((opinion) => opinion.slot),
     lines: model.lines,

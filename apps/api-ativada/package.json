@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@adatechnology/audio-transcription-provider": "0.1.0",
     "@ativada/database": "workspace:*",
     "@ativada/environment": "workspace:*",
     "@ativada/identity-admin": "workspace:*",

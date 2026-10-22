@@ -39,4 +39,5 @@ export const API_PATH = {
   ASSETS: '/v1/assets',
   ASSETS_SUMMARY: '/v1/assets/summary',
   STREAM_TICKETS: '/v1/stream/tickets',
+  TRANSCRIPTIONS: '/v1/transcriptions',
 } as const;

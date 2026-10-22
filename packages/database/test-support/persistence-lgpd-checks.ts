@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { ALERT_CHANNEL, ALERT_SIDE } from '../src/alerts/alert.constant.js';
 import { createUserModelTeamRepository } from '../src/model-teams/user-model-team.repository.js';
+import { createTeamQuestionRepository } from '../src/model-teams/team-question.repository.js';
 import { teamRunInputs } from '../src/schema/team-run-inputs.schema.js';
 import { createAnalystDecisionRepository } from '../src/analyst/analyst-decision.repository.js';
 import { readOpenDatabase, type DatabaseHandle } from '../src/database-handle.js';
@@ -56,6 +57,7 @@ export const PERSISTENCE_TABLES = [
   'user_assets',
   'user_model_teams',
   'team_run_inputs',
+  'model_team_questions',
 ] as const;
 const ENGINE_STATE_MARKER = 'engine-state-marker';
 const ALERT_REASON_MARKER = 'alert-reason-marker';
@@ -79,6 +81,7 @@ export const PERSISTENCE_EXPECTED_ROWS: Readonly<
   user_assets: 2,
   user_model_teams: 2,
   team_run_inputs: 2,
+  model_team_questions: 1,
 };
 
 export function strategyNameOf(owner: LifecycleOwner): string {
@@ -336,4 +339,12 @@ async function seedModelTeamRows(
       failureCode: 'NO_REPORT',
     })),
   );
+  await createTeamQuestionRepository(handle).createQuestion(owner.scope, {
+    runId,
+    teamKey: 'nina',
+    provider: 'google',
+    symbol: 'BTCUSDT',
+    question: 'Como está o BTC?',
+    dailyLimit: 5,
+  });
 }

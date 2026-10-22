@@ -151,3 +151,33 @@ export function buildTruncatedBody(kind: FakeProviderKind, usage: FakeUsage): un
     },
   };
 }
+
+// Resposta em TEXTO (pergunta livre, adendo da spec 015), na forma de cada provedor.
+export function buildTextBody(kind: FakeProviderKind, text: string, usage: FakeUsage): unknown {
+  if (kind === FAKE_PROVIDER.ANTHROPIC) {
+    return {
+      content: [{ type: 'text', text }],
+      stop_reason: 'end_turn',
+      usage: { input_tokens: usage.input, output_tokens: usage.output },
+    };
+  }
+  if (kind === FAKE_PROVIDER.GEMINI) {
+    return {
+      candidates: [{ content: { parts: [{ text }] }, finishReason: 'STOP' }],
+      usageMetadata: {
+        promptTokenCount: usage.input,
+        candidatesTokenCount: usage.output,
+        thoughtsTokenCount: usage.thinking,
+      },
+    };
+  }
+  return {
+    status: 'completed',
+    output: [{ type: 'message', content: [{ type: 'output_text', text }] }],
+    usage: {
+      input_tokens: usage.input,
+      output_tokens: usage.output + usage.thinking,
+      output_tokens_details: { reasoning_tokens: usage.thinking },
+    },
+  };
+}

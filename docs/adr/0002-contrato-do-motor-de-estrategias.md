@@ -2569,3 +2569,56 @@ perguntas rápidas de catálogo fechado, respondidas pelo servidor com as leitur
 - **Prova:** `test/api-run-questions.contract.test.ts` (cada pergunta com votos esperados de uma série que só sobe, plano e acertos iguais às rotas irmãs,
   par sem velas, aquecimento, 404/401/400/409, o balde de 20 por minuto) e o `api-openapi` (429, 404 e 409 documentados).
 - **Fica para depois:** modo 2 (pergunta livre a uma equipe de modelo, com custo) e o acerto da previsão de outro par.
+- **Pergunta por voz.** O botão "Perguntar falando" da mesma caixa grava até 20 s (`MediaRecorder`, só aparece se o navegador grava) e manda o áudio
+  CRU a `POST /v1/transcriptions` (`access: USER`, `documentation`, política própria `transcription` de 6/min por usuário; `Content-Type` `audio/webm`,
+  `audio/ogg`, `audio/mp4` ou `audio/wav` com `;codecs=` opcional, até 2 MiB: tipo errado ou vazio é 400, acima é 413 `AUDIO_TOO_LARGE`). A transcrição é
+  LOCAL: `@adatechnology/audio-transcription-provider@0.1.0`, subpath `/whisper-local` (ffmpeg + `whisper-cli` + `ggml-large-v3-turbo`, dica `pt`, teto
+  de 60 s), atrás da porta `AudioTranscriberPort`; o áudio nunca sai da máquina e nem o áudio, nem o texto, nem a mensagem do SDK vão a log (só o nome do
+  erro e o código). Uma transcrição por vez por instância e até 3 esperando (acima: 503 `TRANSCRIPTION_BUSY`); `TRANSCRIPTION_ENGINE=off` (padrão) responde
+  503 `TRANSCRIPTION_UNAVAILABLE`; erro definitivo do SDK (`isRetriable: false`) é 422 `TRANSCRIPTION_FAILED`, o resto 503 `TRANSCRIPTION_ENGINE_FAILED`.
+  Resposta `{ text, engine }` (texto aparado, pode ser vazio). O servidor NÃO escolhe a pergunta: o painel casa o texto com o catálogo pela função pura
+  `matchSpokenQuestion` (sem acento nem caixa, palavras-chave por pergunta e apelidos das moedas; sem moeda falada fica a escolhida) e mostra "Você disse"
+  e "Entendi", e só pergunta no clique em "Perguntar" (o mesmo caminho do botão rápido). Prova: `test/api-transcriptions.contract.test.ts`,
+  `test/api-transcription-environment.contract.test.ts`, e no painel `spoken-question` e `trading-room-voice`.
+
+## Pergunta livre a uma equipe de modelo (adendo da spec 015, `team-question-1`)
+
+**Contexto.** O "modo 2" das perguntas à equipe: o dono escreve uma pergunta livre a uma equipe ◆ ligada (Nina, Lucas ou Olívia) e a resposta do
+modelo aparece no balão e em "Perguntas". O motor, `packages/run-recording`, `ENGINE_VERSION` e o relatório agendado (`team-prompt-1`) não mudam.
+
+- **Exceção de privacidade autorizada pelo dono em 2026-10-21.** Até aqui nada escrito pelo usuário ia a um provedor (M3, M12). Na pergunta livre o
+  TEXTO que a pessoa digita vai ao provedor da equipe (OpenAI para a Olívia), com o aviso fixo na caixa ("Seu texto vai para a OpenAI (provedor da
+  Olívia). Não escreva nome, e-mail, saldo ou dados pessoais. Gasta do teto diário. Não é recomendação."). Junto vão SÓ os dados públicos de mercado
+  do par (o mesmo `TeamPromptInput` do relatório: 48 velas de 15 min, leituras públicas e Fear & Greed, com a mesma varredura `prompt-privacy`); nome,
+  e-mail, saldo, posição, ids e qualquer dado da simulação NUNCA vão. O painel avisa e trava o envio quando o texto parece ter e-mail, CPF, telefone,
+  cartão ou sequência longa de dígitos; o worker repete a varredura (`findQuestionPersonalData`) e recusa com `QUESTION_HAS_PERSONAL_DATA` sem chamar o
+  provedor nem reservar custo.
+- **Dado do dono.** `model_team_questions` (migration 0030, aditiva, rollback aborta com pergunta pendente): `user_id`, FK composta `(run_id, user_id)`
+  `ON DELETE RESTRICT`, pergunta de 3 a 280 caracteres, `status` `pending|answered|failed|hidden` (CHECK), resposta até 600, custo e reserva em
+  `numeric(14,8)`, arrendamento e tentativas como os relatórios. Entra em `OWNED_TABLES` (exportação sem tokens nem arrendamento, purga antes de
+  `runs`) e sai depois de 90 dias pela tarefa `expire-model-team-questions` do cron.
+- **Rotas.** `POST /v1/runs/:runId/model-teams/:teamKey/questions` `{ symbol, question }` → 202 `{ questionId }` e
+  `GET /v1/runs/:runId/model-teams/questions?limit=` (1 a 20, padrão 10) → `{ notice, items }`, ambas `access: USER` com `documentation`. Recusas na
+  ordem: alheia/inexistente/id malformado o mesmo 404, outro tipo 409 `RUN_NOT_LIVE`, equipe desligada 409 `MODEL_TEAM_DISABLED`, provedor fora
+  (batimento) 409 `MODEL_TEAM_UNAVAILABLE` e, por último, o teto diário do USUÁRIO (`MODEL_TEAM_QUESTION_PER_USER_PER_DAY`, padrão 20, 0 desliga;
+  contado sob trava consultiva por dono) 429 `MODEL_QUESTION_LIMIT_REACHED`. Balde próprio `MODEL_QUESTION_REQUEST`, 5 por 10 min. Validação devolve
+  todos os erros, sem eco.
+- **Worker.** Um despachante próprio na MESMA ronda do laço das equipes, depois dos relatórios: arrendamento + `SKIP LOCKED`, 2 tentativas, depois
+  `ATTEMPTS_EXHAUSTED`. Mesma ordem do relatório: chave, dado pessoal, dados públicos da última vela de 15 min FECHADA do par (`NO_INPUT` sem ela),
+  privacidade da parte de mercado, reserva do custo máximo sob a MESMA trava consultiva e no MESMO teto diário e mensal (a soma do dia e do mês passou a
+  incluir as perguntas, e o gasto por equipe na sala também), circuito da equipe e a chamada. A porta `ModelProviderPort` ganhou `requestFreeText`: os
+  três adaptadores chamam o mesmo endpoint SEM o formato do relatório (Responses API sem `text.format`, Messages sem ferramenta, `generateContent` sem
+  esquema) e leem o texto; a classificação de HTTP, recusa e truncado é a mesma. Saída de 400 tokens (mais o raciocínio do env).
+- **Prompt `team-question-1`.** Instrução fixa: pt-BR, texto simples, até 600 caracteres, só sobre a moeda e os dados de mercado, nunca mandar comprar
+  nem vender nem prometer, terminar com "Não é recomendação."; a pergunta vai entre `<pergunta>` e `</pergunta>`, sem `<` nem `>` e sem controles.
+  Mudar o template exige `team-question-2`.
+- **Resposta.** Limpa (controles, invisíveis) e cortada em 600. Ordem ou promessa (`compre`, `venda agora`, `recomendo`, `vai subir`, `garantido`…, por
+  palavra inteira, sem acento) troca a resposta inteira pela frase fixa e a linha vira `hidden`; vazia é `INVALID_OUTPUT`. Nem a pergunta, nem a resposta,
+  nem a chave vão a log (só id, equipe e código).
+- **Painel.** Na caixa "Pergunte à equipe", um campo "Pergunte à <nome> ◆" por equipe LIGADA (a desligada nunca aparece), com contador de 280, o aviso
+  fixo e o alerta de dado pessoal; "<nome> está pensando…" enquanto pendente (a lista é consultada a cada 2 s, sob a raiz `runs`); a resposta entra em
+  "Perguntas", a equipe ◆ vai ao telão pela atividade `answer` e a região viva única anuncia; falhas em palavras. Na voz, a fala que não casa com uma
+  pergunta rápida oferece "Perguntar à <nome>: “<texto>”", que só preenche o campo (a pessoa ainda confirma).
+- **Prova.** `test/model-team-questions.contract.test.ts` (domínio, processador e modo texto dos três adaptadores), `test/api-model-team-questions.contract.test.ts`
+  (404 indistinguível, recusas, validação sem eco, teto, lista no formato documentado), `make model-teams-test` (pergunta gravada pelo repositório da rota
+  e respondida pela Olívia falsa em texto, com custo e sem dado de usuário no pedido) e, no painel, `trading-room-team-question`.

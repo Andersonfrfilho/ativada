@@ -31,6 +31,8 @@ import { createExampleSeedingUserResolver } from './strategies/example-seeding-u
 import { createSeedExampleStrategyUseCase } from './strategies/seed-example-strategy.use-case.js';
 import type { ListenerHealth } from './stream/listener-health.js';
 import type { StreamTicketStore } from './stream/stream-ticket-store.js';
+import { createTranscriber } from './transcriptions/create-transcriber.js';
+import { createTranscriptionRouteDependencies } from './transcriptions/create-transcription-route-dependencies.js';
 import { createRouter, type Router } from './router/create-router.js';
 import { createApiRoutes, type ApiRouteDependencies } from './routes/create-api-routes.js';
 import { createDomainRouteDependencies } from './routes/create-domain-route-dependencies.js';
@@ -117,6 +119,11 @@ function assembleRouteDependencies(assembly: RouteAssemblyParams): ApiRouteDepen
       now: () => Date.now(),
     }),
     streamTicketStore: params.ticketStore,
+    // Sem motor (`TRANSCRIPTION_ENGINE=off`) a pergunta por voz responde 503.
+    transcriptions: createTranscriptionRouteDependencies({
+      transcriber: createTranscriber(environment),
+      logger,
+    }),
     ...domain,
     isDocumentationEnabled: isDocumentationEnvironment(environment.ENV),
   };

@@ -41,16 +41,41 @@ export {
   type ModelCallResult,
   type ModelCallStatus,
   type ModelTokenUsage,
+  type FreeTextCallResult,
   type RequestTeamReportParams,
 } from './model-call-result.types.js';
 export { PROVIDER_STATE, type ProviderState } from './provider-state.constant.js';
-export { hashPrompt, PROMPT_INSTRUCTION, PROMPT_VERSION, renderPrompt } from './prompt-template.js';
+export {
+  buildPromptDataBlock,
+  hashPrompt,
+  PROMPT_INSTRUCTION,
+  PROMPT_VERSION,
+  renderPrompt,
+} from './prompt-template.js';
+export {
+  cleanQuestion,
+  findQuestionPersonalData,
+  FORBIDDEN_ANSWER_PHRASES,
+  HIDDEN_ANSWER_PHRASE,
+  QUESTION_INSTRUCTION,
+  QUESTION_PERSONAL_DATA,
+  QUESTION_PROMPT_VERSION,
+  renderQuestionPrompt,
+  sanitizeTeamAnswer,
+  TEAM_ANSWER_MAX_LENGTH,
+  TEAM_QUESTION_MAX_LENGTH,
+  TEAM_QUESTION_MIN_LENGTH,
+  type QuestionPersonalData,
+  type SanitizedAnswer,
+} from './team-question.js';
 export {
   ALLOWED_PROMPT_KEYS,
   findPromptPrivacyViolations,
   PROMPT_VIOLATION,
 } from './prompt-privacy.js';
 export {
+  cleanModelText,
+  cutText,
   FORBIDDEN_REASON_WORDS,
   sanitizeReason,
   sanitizeReport,

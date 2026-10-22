@@ -3,6 +3,7 @@ import {
   buildInvalidBody,
   buildRefusalBody,
   buildSuccessBody,
+  buildTextBody,
   buildTruncatedBody,
   FAKE_BUY_REPORT,
   FAKE_DEFAULT_USAGE,
@@ -18,6 +19,7 @@ export type FakeBehavior =
       readonly usage?: FakeUsage;
       readonly delayMilliseconds?: number;
     }
+  | { readonly kind: 'text'; readonly text: string; readonly usage?: FakeUsage }
   | { readonly kind: 'invalid_output' }
   | { readonly kind: 'refusal' }
   | { readonly kind: 'truncated' }
@@ -72,6 +74,9 @@ function buildResponse(
     behavior.kind === 'report' ? (behavior.usage ?? FAKE_DEFAULT_USAGE) : FAKE_DEFAULT_USAGE;
   if (behavior.kind === 'report') {
     return Response.json(buildSuccessBody(kind, behavior.report ?? FAKE_BUY_REPORT, usage));
+  }
+  if (behavior.kind === 'text') {
+    return Response.json(buildTextBody(kind, behavior.text, behavior.usage ?? FAKE_DEFAULT_USAGE));
   }
   if (behavior.kind === 'invalid_output') return Response.json(buildInvalidBody(kind, usage));
   if (behavior.kind === 'refusal') return Response.json(buildRefusalBody(kind, usage));

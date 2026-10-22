@@ -9,7 +9,6 @@ import {
   parseEnvironment,
   pemCertificateSchema,
   postgresUrlSchema,
-  PRODUCTION_ENVIRONMENT,
   webSocketUrlSchema,
   workerHeartbeatSecondsSchema,
   z,
@@ -25,6 +24,15 @@ import {
 import { goalEvaluationEnvironmentShape } from './goals/goal-evaluation-environment.js';
 import { stallEnvironmentShape } from './runs/stall/stall-environment.js';
 import { checkRateLimit, rateLimitEnvironmentShape } from './rate-limit/rate-limit-environment.js';
+import {
+  checkTranscription,
+  transcriptionEnvironmentShape,
+} from './transcriptions/transcription-environment.js';
+import {
+  checkProxyHops,
+  DEFAULT_TRUSTED_PROXY_HOPS,
+  trustedProxyHopsSchema,
+} from './proxy-hops-environment.js';
 import { userLimitsEnvironmentShape } from './user-limits-environment.js';
 import {
   runExecutionEnvironmentShape,
@@ -41,7 +49,6 @@ const ORIGIN_LIST_EXPECTATION =
   'lista de origens exatas separadas por vírgula (https://host[:porta], sem caminho nem barra final)';
 const URL_LIST_EXPECTATION = 'lista de URLs http:// ou https:// separadas por vírgula';
 const TEXT_LIST_EXPECTATION = 'lista de textos separados por vírgula';
-const PROXY_HOPS_EXPECTATION = 'inteiro entre 0 e 10';
 const TELEGRAM_SECRET_EXPECTATION = 'texto de 16 a 256 caracteres A-Z, a-z, 0-9, _ ou -';
 const TELEGRAM_PAIR_EXPECTATION =
   'TELEGRAM_BOT_TOKEN e TELEGRAM_WEBHOOK_SECRET devem ser definidos juntos ou omitidos juntos';
@@ -49,10 +56,6 @@ const TELEGRAM_SECRET_PATTERN = /^[A-Za-z0-9_-]{16,256}$/;
 
 const DEFAULT_TELEGRAM_API_BASE_URL = 'https://api.telegram.org';
 const DEFAULT_API_HOST = '127.0.0.1';
-const MAX_TRUSTED_PROXY_HOPS = 10;
-const DEFAULT_TRUSTED_PROXY_HOPS = 0;
-const PRODUCTION_PROXY_HOPS_REASON =
-  'obrigatória em produção (use 1 ou mais atrás de proxy; 0 só com a API exposta direto)';
 
 const PRODUCTION_PROFILE: ProductionProfile = {
   urlVariables: [
@@ -135,12 +138,7 @@ export const environmentSchema = z
     API_AUDIENCE: nonEmptyTextSchema,
     AUTHORIZED_PARTIES: textListSchema,
     CORS_ALLOWED_ORIGINS: originListSchema,
-    TRUSTED_PROXY_HOPS: z.coerce
-      .number({ error: PROXY_HOPS_EXPECTATION })
-      .int({ error: PROXY_HOPS_EXPECTATION })
-      .min(0, { error: PROXY_HOPS_EXPECTATION })
-      .max(MAX_TRUSTED_PROXY_HOPS, { error: PROXY_HOPS_EXPECTATION })
-      .optional(),
+    TRUSTED_PROXY_HOPS: trustedProxyHopsSchema,
     TELEGRAM_BOT_TOKEN: nonEmptyTextSchema.max(256).optional(),
     TELEGRAM_WEBHOOK_SECRET: z
       .string({ error: TELEGRAM_SECRET_EXPECTATION })
@@ -154,6 +152,7 @@ export const environmentSchema = z
     ...rateLimitEnvironmentShape,
     ...stallEnvironmentShape,
     ...goalEvaluationEnvironmentShape,
+    ...transcriptionEnvironmentShape,
     // O ticker público da Binance (T4.7): a hora do servidor (REST) e o stream de `<par>@miniTicker` (WebSocket).
     BINANCE_BASE_URL: httpUrlSchema.default(BINANCE_MARKET_DATA_BASE_URL),
     BINANCE_STREAM_URL: webSocketUrlSchema.default(BINANCE_STREAM_BASE_URL),
@@ -174,14 +173,8 @@ export const environmentSchema = z
   .superRefine((values, context) => {
     checkProductionRules(values, PRODUCTION_PROFILE, context);
     checkRateLimit(values, context);
-    const isHopsMissing = values.TRUSTED_PROXY_HOPS === undefined;
-    if (values.ENV === PRODUCTION_ENVIRONMENT && isHopsMissing) {
-      context.addIssue({
-        code: 'custom',
-        message: PRODUCTION_PROXY_HOPS_REASON,
-        path: ['TRUSTED_PROXY_HOPS'],
-      });
-    }
+    checkTranscription(values, context);
+    checkProxyHops(values, context);
   })
   .transform((values) => ({
     ...values,
