@@ -12,7 +12,9 @@ describe('@ativada/environment roda no navegador', () => {
     const offenders = readdirSync(ENVIRONMENT_SOURCE, { recursive: true })
       .map(String)
       .filter((file) => file.endsWith('.ts'))
-      .filter((file) => /from ['"]node:/.test(readFileSync(join(ENVIRONMENT_SOURCE, file), 'utf8')));
+      .filter((file) =>
+        /from ['"]node:/.test(readFileSync(join(ENVIRONMENT_SOURCE, file), 'utf8')),
+      );
     expect(offenders).toEqual([]);
   });
 });
