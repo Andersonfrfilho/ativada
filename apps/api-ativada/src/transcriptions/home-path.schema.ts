@@ -2,7 +2,7 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-import { z } from 'zod';
+import { z } from '@ativada/environment';
 
 const HOME_PREFIX = '~/';
 const PATH_EXPECTATION = 'caminho absoluto ou começando por ~/';

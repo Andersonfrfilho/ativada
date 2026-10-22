@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
-import { homePathSchema, z } from '@ativada/environment';
+import { z } from '@ativada/environment';
 
+import { homePathSchema } from './home-path.schema.js';
 import { TRANSCRIPTION_ENGINE } from './transcription.constant.js';
 
 const THREADS_EXPECTATION = 'inteiro entre 1 e 32';
