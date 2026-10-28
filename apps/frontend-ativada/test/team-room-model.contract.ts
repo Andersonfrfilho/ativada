@@ -102,6 +102,7 @@ function summaryOf(overrides: Record<string, unknown>): ReturnType<typeof buildA
   const parsed = projectionsSchema.parse(
     buildProjectionsResponse({ summary: buildProjectionsSummary(overrides) }),
   );
+  if (parsed.summary === undefined) throw new Error('resumo ausente');
   return buildAuditorView(parsed.summary);
 }
 

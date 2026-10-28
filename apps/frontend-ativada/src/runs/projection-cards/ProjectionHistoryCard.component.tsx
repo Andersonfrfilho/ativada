@@ -79,6 +79,17 @@ function Verdict({ summary }: { readonly summary: ProjectionSummary }): ReactEle
   );
 }
 
+function SummaryBlock({ summary }: { readonly summary: ProjectionSummary }): ReactElement {
+  return (
+    <>
+      <p className={styles.lead}>{summary.message}</p>
+      <Kpis summary={summary} />
+      <Verdict summary={summary} />
+      <StrengthBars rows={summary.byStrength} />
+    </>
+  );
+}
+
 // "Histórico de acertos" da execução inteira (RF18 e RF19): números e frases do servidor, a moeda ao ar como referência e o
 // veredito de Wilson. Abaixo de 30 previsões contadas o servidor diz que são poucas, e a tela repete isso.
 export function ProjectionHistoryCard({ runId }: { readonly runId: string }): ReactElement {
@@ -92,10 +103,11 @@ export function ProjectionHistoryCard({ runId }: { readonly runId: string }): Re
         </p>
       ) : (
         <>
-          <p className={styles.lead}>{data.summary.message}</p>
-          <Kpis summary={data.summary} />
-          <Verdict summary={data.summary} />
-          <StrengthBars rows={data.summary.byStrength} />
+          {data.summary === undefined ? (
+            <p className={styles.lead}>{data.current.message}</p>
+          ) : (
+            <SummaryBlock summary={data.summary} />
+          )}
           {data.items.length === 0 ? (
             <p className={controls.muted}>{HISTORY_TEXT.EMPTY}</p>
           ) : (
