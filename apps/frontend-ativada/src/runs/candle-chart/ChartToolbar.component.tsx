@@ -6,7 +6,9 @@ import controls from '../../styles/Controls.module.css';
 import type { ChartSurface } from './chart-surface.types.js';
 import styles from './CandleChart.module.css';
 import { DISPLAY_TIMEFRAMES, describeRetention } from './candle-chart.constant.js';
+import { PeriodGroup } from './PeriodGroup.component.js';
 import type { TimeframeChoice } from './useCandleSource.hook.js';
+import type { ChartPeriodState } from './useChartPeriod.hook.js';
 
 export type ChartToolbarProps = {
   readonly timeframe: string;
@@ -24,6 +26,8 @@ export type ChartToolbarProps = {
   readonly isTooltipOn?: boolean | undefined;
   readonly onToggleTooltip?: (() => void) | undefined;
   readonly surface: ChartSurface | undefined;
+  // Os atalhos 1D, 1S, 1M, 1A e Tudo; sem eles a barra não os desenha.
+  readonly period?: ChartPeriodState | undefined;
 };
 
 type ZoomButton = {
@@ -122,6 +126,9 @@ export function ChartToolbar(props: ChartToolbarProps): ReactElement {
   const { surface, onGoToStart, isTooltipOn, onToggleTooltip } = props;
   return (
     <div className={styles.toolbar}>
+      {props.period === undefined ? null : (
+        <PeriodGroup active={props.period.active} onChoose={props.period.choose} />
+      )}
       <TimeframeGroup {...props} />
       <ZoomGroup surface={surface} onGoToStart={onGoToStart} />
       {onToggleTooltip === undefined ? null : (
