@@ -253,7 +253,7 @@ mão e não cacheia `/v1`). Detalhe e decisões em `specs/001-simulador-e-sinais
 - **Typecheck próprio.** `tsconfig.json` do painel tem `lib` com DOM e `jsx`; o da raiz o exclui. `bun run typecheck`
   roda os dois.
 - **Env público** (`envs/env.*`): `VITE_API_URL` (alvo do proxy), `VITE_KEYCLOAK_AUTHORIZE_URL`, opcionais
-  `VITE_KEYCLOAK_CLIENT_ID` e `VITE_MARKET_SYMBOLS`, e `PANEL_PORT` (porta de `vite`/`vite preview`, só do `vite.config.ts`).
+  `VITE_KEYCLOAK_CLIENT_ID`, `VITE_MARKET_SYMBOLS` e `VITE_KEYCLOAK_AUTHORIZE_URL_BY_ORIGIN` (`origem|url,...`: o painel aberto por outro endereço, como a ponte do Cloudflare, loga no Keycloak daquele endereço; `resolveAuthorizeUrl`). `scripts/dev-lib.sh` aplica `DEV_COMPOSE_OVERRIDE` (arquivo de compose local, se existir) além do `compose.yaml`; e `PANEL_PORT` (porta de `vite`/`vite preview`, só do `vite.config.ts`).
 - **Tempo real (`src/live/`).** `StreamClient` é puro (socket, temporizador, relógio e sorteio entram por parâmetro, então os
   testes não dormem): ticket de uso único, renovação dentro do socket, reconexão com espera crescente, `4401` reconecta na
   hora, `4403` para, `resync` rebusca por REST. Quem liga a tela ao socket é `useLiveStream` (no `AppShell`), e o aviso só
