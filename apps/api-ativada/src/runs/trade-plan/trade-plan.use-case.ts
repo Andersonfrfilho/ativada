@@ -38,7 +38,14 @@ export type TradePlanDependencies = LiveStatusRunDependencies & {
   readonly reports: Pick<ModelTeamReadRepository, 'readOverview'>;
 };
 
-export type TradePlanUseCase = (scope: OwnerScope, runId: string) => Promise<TradePlanView>;
+// `buyAt`: a pergunta "E se eu comprar a X?" troca a entrada estimada pelo preço pedido, com ou sem posição aberta.
+export type TradePlanOptions = { readonly buyAt?: string | undefined };
+
+export type TradePlanUseCase = (
+  scope: OwnerScope,
+  runId: string,
+  options?: TradePlanOptions,
+) => Promise<TradePlanView>;
 
 // Simulação que não anda não tem próxima compra nem venda a estimar: o motivo vem antes de qualquer número.
 function readHaltReason(run: RunRecord): TradePlanUnavailableReason | undefined {
@@ -103,7 +110,7 @@ async function readPlanInputs(
 // (execução, versão, última decisão com a vela, posição aberta, último ponto, interruptor das equipes e as recomendações do par),
 // sem reexecutar o motor: só as funções puras de preenchimento e dimensionamento sobre o que está gravado.
 export function createTradePlanUseCase(dependencies: TradePlanDependencies): TradePlanUseCase {
-  return async (scope, runId) => {
+  return async (scope, runId, options = {}) => {
     const run = await findLiveRun(dependencies, { scope, runId });
     const halt = readHaltReason(run);
     if (halt !== undefined) return toView(run, unavailablePlan(halt), []);
@@ -122,8 +129,8 @@ export function createTradePlanUseCase(dependencies: TradePlanDependencies): Tra
     };
     const candle = { basis, row, durationMilliseconds: context.durationMilliseconds };
     const plan =
-      position === undefined
-        ? buildAwaitingPlan(candle)
+      position === undefined || options.buyAt !== undefined
+        ? buildAwaitingPlan({ ...candle, buyAt: options.buyAt })
         : buildHoldingPlan({ ...candle, position });
     const teams = await buildPlanTeams({
       reports: dependencies.reports,

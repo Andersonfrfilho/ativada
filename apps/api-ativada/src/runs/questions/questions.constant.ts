@@ -19,6 +19,7 @@ export const QUESTION = {
   ENTRY_GAP: 'entry_gap',
   PLAN: 'plan',
   TRACK_RECORD: 'track_record',
+  BUY_AT: 'buy_at',
 } as const;
 export type Question = (typeof QUESTION)[keyof typeof QUESTION];
 
@@ -41,10 +42,15 @@ export const QUESTION_AGENT_OF: Readonly<Record<Question, QuestionAgent>> = {
   [QUESTION.ENTRY_GAP]: QUESTION_AGENT.ALICE,
   [QUESTION.PLAN]: QUESTION_AGENT.ALICE,
   [QUESTION.TRACK_RECORD]: QUESTION_AGENT.OTAVIO,
+  [QUESTION.BUY_AT]: QUESTION_AGENT.ALICE,
 };
 
 // `exact`: o número é a leitura gravada ou a conta fechada; `indicative`: o indicador se move com a próxima vela, ou é estimativa.
 export const ANSWER_BASIS = { EXACT: 'exact', INDICATIVE: 'indicative' } as const;
 export type AnswerBasis = (typeof ANSWER_BASIS)[keyof typeof ANSWER_BASIS];
 
-export const QUESTION_REASON = { NOT_ENABLED: 'not_enabled' } as const;
+export const QUESTION_REASON = {
+  NOT_ENABLED: 'not_enabled',
+  PRICE_REQUIRED: 'price_required',
+  PRICE_NOT_ALLOWED: 'price_not_allowed',
+} as const;

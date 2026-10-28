@@ -41,7 +41,9 @@ const RULE_QUESTION: Readonly<
 };
 
 export function isReadingQuestion(question: Question): question is ReadingQuestion {
-  return question !== QUESTION.PLAN && question !== QUESTION.TRACK_RECORD;
+  return (
+    question !== QUESTION.PLAN && question !== QUESTION.TRACK_RECORD && question !== QUESTION.BUY_AT
+  );
 }
 
 function basisOf(rules: readonly RuleTrigger[]): AnswerBasis {

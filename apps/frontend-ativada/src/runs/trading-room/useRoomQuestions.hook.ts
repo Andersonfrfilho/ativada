@@ -4,9 +4,10 @@ import { useRef, useState } from 'react';
 import { useAppConfig } from '../../app/useAppContext.hook.js';
 import { BALCONY_AGENTS, type BalconySlot } from '../team-room/balcony/balcony.constant.js';
 import type { QuestionEntry } from './question-entry.js';
-import { useAskQuestionMutation } from './room-question.mutation.js';
+import { useAskQuestionMutation, type AskInput } from './room-question.mutation.js';
 import type { RoomQuestionAnswer } from './room-question.validation.js';
 import {
+  BUY_AT_OPTION,
   QUESTION_HISTORY_SIZE,
   ROOM_QUESTIONS,
   type RoomQuestionOption,
@@ -24,6 +25,8 @@ export type RoomQuestions = {
   readonly setSymbol: (symbol: string) => void;
   // `onSymbol` vale para esta pergunta (a pergunta por voz escolhe a moeda junto); sem ele, a moeda escolhida.
   readonly ask: (option: RoomQuestionOption, onSymbol?: string) => void;
+  // "E se eu comprar a X?": `price` em texto com ponto decimal; `shown` é como a pessoa o escreveu.
+  readonly askBuyAt: (price: { readonly text: string; readonly shown: string }) => void;
   readonly isAsking: boolean;
   readonly hasFailed: boolean;
   // As últimas respostas (perguntas rápidas e livres), a mais nova primeiro.
@@ -50,8 +53,8 @@ function mergeHistory(
     .slice(0, QUESTION_HISTORY_SIZE);
 }
 
-function toEntry(data: RoomQuestionAnswer, key: number): LocalEntry {
-  const label = ROOM_QUESTIONS.find((option) => option.key === data.question)?.label ?? '';
+function toEntry(data: RoomQuestionAnswer, key: number, asked?: string): LocalEntry {
+  const label = asked ?? ROOM_QUESTIONS.find((option) => option.key === data.question)?.label ?? '';
   return {
     key,
     who: data.agent,
@@ -74,16 +77,22 @@ export function useRoomQuestions(runId: string, runSymbol: string): RoomQuestion
   const mutation = useAskQuestionMutation(runId);
   const team = useTeamQuestions(runId);
   const history = mergeHistory(local, team.entries);
-  function ask(option: RoomQuestionOption, onSymbol?: string): void {
-    mutation.mutate(
-      { symbol: onSymbol ?? symbol, question: option.key },
-      {
-        onSuccess: (data) => {
-          lastKey.current = Math.max(Date.now(), lastKey.current + 1);
-          const entry = toEntry(data, lastKey.current);
-          setLocal((before) => [entry, ...before].slice(0, QUESTION_HISTORY_SIZE));
-        },
+  function send(input: AskInput, asked?: string): void {
+    mutation.mutate(input, {
+      onSuccess: (data) => {
+        lastKey.current = Math.max(Date.now(), lastKey.current + 1);
+        const entry = toEntry(data, lastKey.current, asked);
+        setLocal((before) => [entry, ...before].slice(0, QUESTION_HISTORY_SIZE));
       },
+    });
+  }
+  function ask(option: RoomQuestionOption, onSymbol?: string): void {
+    send({ symbol: onSymbol ?? symbol, question: option.key });
+  }
+  function askBuyAt(price: { readonly text: string; readonly shown: string }): void {
+    send(
+      { symbol, question: BUY_AT_OPTION.key, price: price.text },
+      `E se eu comprar a ${price.shown} USDT?`,
     );
   }
   return {
@@ -91,6 +100,7 @@ export function useRoomQuestions(runId: string, runSymbol: string): RoomQuestion
     symbol,
     setSymbol,
     ask,
+    askBuyAt,
     isAsking: mutation.isPending,
     hasFailed: mutation.isError,
     history,

@@ -3,6 +3,7 @@ import { useId, type ReactElement } from 'react';
 
 import { formatSymbol } from '../../format/format.js';
 import { SelectField } from '../../forms/Fields.component.js';
+import { BuyAtField } from './BuyAtField.component.js';
 import controls from '../../styles/Controls.module.css';
 import { ROOM_QUESTIONS, ROOM_QUESTIONS_TEXT } from './room-questions.constant.js';
 import { TeamQuestionFields } from './team-question/TeamQuestionField.component.js';
@@ -54,6 +55,7 @@ export function AskTeam({ questions }: AskTeamProps): ReactElement {
       </div>
       <VoiceAsk questions={questions} />
       <QuickQuestionButtons questions={questions} />
+      <BuyAtField questions={questions} />
       {questions.isAsking ? <p className={styles.note}>{ROOM_QUESTIONS_TEXT.ASKING}</p> : null}
       {questions.hasFailed ? <p className={styles.failed}>{ROOM_QUESTIONS_TEXT.FAILED}</p> : null}
       <TeamQuestionFields model={questions.team} symbol={questions.symbol} />

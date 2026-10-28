@@ -58,6 +58,11 @@ const ANSWERS: Readonly<Record<string, { agent: string; answer: string }>> = {
     answer:
       'O Fear & Greed mais recente está em 62 de 100 (0 é medo extremo, 100 é ganância extrema).',
   },
+  buy_at: {
+    agent: 'alice',
+    answer:
+      'Comprando a 61.000,50 USDT (2,10% abaixo do último fechamento, 62.310,00), com a proteção e o alvo da estratégia.',
+  },
   stretch: {
     agent: 'renata',
     answer:
@@ -138,6 +143,24 @@ describe('a caixa "Pergunte à equipe"', () => {
     expect(history.textContent).toContain('Tiago · ETH/USDT · Como está a tendência?');
     expect(asked[0]?.query.get('symbol')).toBe('ETHUSDT');
     expect(asked[0]?.query.get('question')).toBe('trend');
+  });
+
+  test('"E se eu comprar a…" manda o preço com ponto decimal e recusa o que não é preço, sem perguntar', async () => {
+    const asked: RecordedCall[] = [];
+    openRoom(asked);
+    const box = await askBox();
+    const field = within(box).getByLabelText('E se eu comprar a (USDT)');
+    fireEvent.change(field, { target: { value: 'abc' } });
+    fireEvent.click(within(box).getByRole('button', { name: 'Perguntar sobre este preço' }));
+    expect(within(box).getByRole('alert').textContent).toContain('Digite um preço maior que zero');
+    expect(asked).toHaveLength(0);
+    fireEvent.change(field, { target: { value: '61.000,50' } });
+    fireEvent.click(within(box).getByRole('button', { name: 'Perguntar sobre este preço' }));
+    const history = await screen.findByRole('region', { name: 'Perguntas' });
+    await waitFor(() => expect(history.textContent).toContain(ANSWERS['buy_at']?.answer ?? '-'));
+    expect(history.textContent).toContain('E se eu comprar a 61.000,50 USDT?');
+    expect(asked[0]?.query.get('question')).toBe('buy_at');
+    expect(asked[0]?.query.get('price')).toBe('61000.50');
   });
 
   test('a resposta nova é anunciada pela única região viva da sala; o histórico guarda as 5 últimas', async () => {

@@ -205,6 +205,7 @@ describe('a fala que não casa com uma pergunta rápida', () => {
       symbol: 'BTCUSDT',
       setSymbol: () => undefined,
       ask: () => undefined,
+      askBuyAt: () => undefined,
       isAsking: false,
       hasFailed: false,
       history: [],
