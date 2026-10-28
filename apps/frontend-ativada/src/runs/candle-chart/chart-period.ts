@@ -68,6 +68,13 @@ export function pickPeriodTimeframe<TOption extends string>(
   return best;
 }
 
+// "Tudo" vai até o começo do histórico que o backfill guarda (no máximo 5 anos).
+const ALL_LOOKBACK_MILLISECONDS = 5 * 366 * DAY;
+
+export function lookbackForPeriod(period: ChartPeriod): number {
+  return PERIOD_PLANS[period].spanMilliseconds ?? ALL_LOOKBACK_MILLISECONDS;
+}
+
 // Quantas velas cobrem o período (`undefined` = mostrar tudo o que foi carregado).
 export function barsForPeriod(
   period: ChartPeriod,

@@ -2,7 +2,12 @@
 import { useEffect, useState } from 'react';
 
 import type { ChartSurface } from './chart-surface.types.js';
-import { barsForPeriod, pickPeriodTimeframe, type ChartPeriod } from './chart-period.js';
+import {
+  barsForPeriod,
+  lookbackForPeriod,
+  pickPeriodTimeframe,
+  type ChartPeriod,
+} from './chart-period.js';
 import type { CandleSource, TimeframeChoice } from './useCandleSource.hook.js';
 
 type Pending = { readonly period: ChartPeriod; readonly timeframe: string };
@@ -45,6 +50,7 @@ export function useChartPeriod({ source, surface, endTime }: ChartPeriodParams):
       const next = pickPeriodTimeframe<TimeframeChoice>(period, source.timeframeOptions);
       setActive(period);
       setPending({ period, timeframe: next ?? timeframe });
+      source.extendLookback(lookbackForPeriod(period));
       if (next !== undefined && next !== timeframe) source.changeTimeframe(next, endTime);
     },
     clear: (): void => setActive(undefined),

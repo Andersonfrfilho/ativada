@@ -44,6 +44,8 @@ export type CandleSource = {
   // O instante que a pessoa quer no centro depois de trocar a vela; some quando ela escolhe outra faixa.
   readonly focus: number | undefined;
   readonly changeTimeframe: (next: TimeframeChoice, centerTime: number) => void;
+  // Atalho de período: o histórico passa a ir até este tanto antes do fim (o padrão é o período da execução e um pouco antes).
+  readonly extendLookback: (milliseconds: number) => void;
   // Volta para a vela da execução (a saída de uma vela que o ambiente não tem).
   readonly backToRunTimeframe: () => void;
 };
@@ -116,11 +118,12 @@ type SourceHistoryParams = {
   readonly mapping: DisplayMapping | undefined;
   readonly timeframe: string;
   readonly focus: number | undefined;
+  readonly lookbackMilliseconds: number;
 };
 
 // A janela da primeira página e o histórico para a esquerda da vela mostrada; com vela de exibição, a ponta anda com o relógio.
 function useSourceHistory(params: SourceHistoryParams): CandleHistory {
-  const { chart, view, mapping, timeframe, focus } = params;
+  const { chart, view, mapping, timeframe, focus, lookbackMilliseconds } = params;
   const duration = timeframeMilliseconds(timeframe) ?? 0;
   const runRange = useDisplayTail({
     chart,
@@ -128,7 +131,11 @@ function useSourceHistory(params: SourceHistoryParams): CandleHistory {
     isFollowing: view.isLive && view.range === undefined,
   });
   const contextBars = mapping === undefined ? 0 : displayContextBars(duration);
-  const extent = withLeadingContext(runRange, duration, contextBars);
+  const context = withLeadingContext(runRange, duration, contextBars);
+  const extent = {
+    from: Math.min(context.from, context.to - lookbackMilliseconds),
+    to: context.to,
+  };
   const window = computeCandleWindow({
     extent,
     range: view.range,
@@ -145,22 +152,34 @@ function useSourceHistory(params: SourceHistoryParams): CandleHistory {
   });
 }
 
+// A mesma referência enquanto as velas não mudam: camadas e marcas dependem dela para não serem refeitas a cada quadro.
+function useDisplayMapping(
+  runTimeframe: string,
+  duration: number | undefined,
+): DisplayMapping | undefined {
+  const runDuration = timeframeMilliseconds(runTimeframe);
+  return useMemo(() => createDisplayMapping(runDuration, duration), [runDuration, duration]);
+}
+
 // De onde vêm as velas: a vela escolhida (ou a da execução), a janela da primeira página e o histórico para a esquerda.
 export function useCandleSource(chart: TradeChart, view: ChartView): CandleSource {
   const preferences = useChartPreferences();
   const { choice, timeframeOptions } = useRunTimeframe(chart, view.isLive);
   const [focusState, setFocusState] = useState<FocusState | undefined>(undefined);
+  const [lookbackMilliseconds, setLookback] = useState(0);
   const { timeframe } = choice;
   const duration = timeframeMilliseconds(timeframe);
   const rangeKey = keyOfRange(view.range);
   const focus = focusState?.rangeKey === rangeKey ? focusState.time : undefined;
-  const runDuration = timeframeMilliseconds(chart.timeframe);
-  // A mesma referência enquanto as velas não mudam: camadas e marcas dependem dela para não serem refeitas a cada quadro.
-  const displayMapping = useMemo(
-    () => createDisplayMapping(runDuration, duration),
-    [runDuration, duration],
-  );
-  const history = useSourceHistory({ chart, view, mapping: displayMapping, timeframe, focus });
+  const displayMapping = useDisplayMapping(chart.timeframe, duration);
+  const history = useSourceHistory({
+    chart,
+    view,
+    mapping: displayMapping,
+    timeframe,
+    focus,
+    lookbackMilliseconds,
+  });
   return {
     history,
     preferences,
@@ -177,5 +196,6 @@ export function useCandleSource(chart: TradeChart, view: ChartView): CandleSourc
       choice.choose(next);
     },
     backToRunTimeframe: choice.clear,
+    extendLookback: (milliseconds): void => setLookback(Math.max(0, milliseconds)),
   };
 }

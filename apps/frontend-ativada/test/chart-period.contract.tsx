@@ -8,7 +8,11 @@ import {
   CHART_PERIOD,
   pickPeriodTimeframe,
 } from '../src/runs/candle-chart/chart-period.js';
-import { showCandleCard, type CandleCardHarness } from './support/candle-card-harness.js';
+import {
+  FIXTURE_FROM,
+  showCandleCard,
+  type CandleCardHarness,
+} from './support/candle-card-harness.js';
 
 afterEach(() => {
   cleanup();
@@ -49,6 +53,12 @@ describe('atalhos de período no gráfico', () => {
       expect(harness.candleCalls().some((call) => call.query.get('timeframe') === '1d')).toBe(true),
     );
     await waitFor(() => expect(surfaceCalls(harness, 'showLast')).toContainEqual([365]));
+    // O histórico vai além do contexto padrão (150 velas antes do início): um ano antes do fim.
+    const dailyFroms = harness
+      .candleCalls()
+      .filter((call) => call.query.get('timeframe') === '1d')
+      .map((call) => Number(call.query.get('from')));
+    expect(Math.min(...dailyFroms)).toBeLessThan(FIXTURE_FROM - 150 * 24 * HOUR);
     expect(screen.getByRole('button', { name: 'Último ano' }).getAttribute('aria-pressed')).toBe(
       'true',
     );
