@@ -166,6 +166,7 @@ function createWriter(
     recordDataWait: (): Promise<undefined> => Promise.resolve(undefined),
     clearDataWait: (): Promise<boolean> => Promise.resolve(false),
     completeRun: (): Promise<boolean> => Promise.resolve(false),
+    renewGoalRun: (): Promise<string | undefined> => Promise.resolve(undefined),
     readStatus: (): Promise<RunStatus> => {
       memory.calls.log.push('status');
       return Promise.resolve(memory.state.status);
