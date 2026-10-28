@@ -10,6 +10,7 @@ import { LiveBalanceBlock } from './LiveBalanceBlock.component.js';
 import type { LiveStatus } from './live-status.validation.js';
 import styles from './LiveTracking.module.css';
 import { LiveTradesState } from './LiveTradesState.component.js';
+import { PriceRangeBlock } from './PriceRangeBlock.component.js';
 import { LiveTrackingNotices } from './LiveTrackingNotices.component.js';
 
 export const TRACKING_ANCHOR = 'acompanhamento';
@@ -32,6 +33,7 @@ export function LiveTrackingCard({ run, status }: LiveTrackingCardProps): ReactE
       }
     >
       <LiveBalanceBlock status={status} />
+      {status.priceRange == null ? null : <PriceRangeBlock range={status.priceRange} />}
       <LiveTradesState run={run} status={status} />
       <LiveTrackingNotices timeframe={status.run.timeframe} />
     </Card>

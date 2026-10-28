@@ -16,6 +16,7 @@ import {
   buildOpenPosition,
   buildRunSection,
 } from './live-status-sections.js';
+import { buildPriceRangeSection } from './live-price-range.js';
 import { buildTriggersSection } from './live-status-triggers.js';
 import type { LiveStatusView } from './live-status-view.js';
 
@@ -26,13 +27,13 @@ export type LiveStatusDependencies = LiveStatusRunDependencies & {
 
 export type LiveStatusUseCase = (scope: OwnerScope, runId: string) => Promise<LiveStatusView>;
 
-// O acompanhamento da simulação ao vivo numa ida só ao servidor (spec 008, RF13): cinco consultas, todas por chave e com
-// LIMIT (execução, versão da estratégia, último ponto, página de decisões com as velas, posições), sem reexecutar o motor.
-// As três do meio vão juntas DEPOIS da execução do dono; falha em qualquer uma é 500 (não há parte opcional).
+// O acompanhamento da simulação ao vivo numa ida só ao servidor (spec 008, RF13): seis consultas, todas por chave e com
+// LIMIT (execução, versão da estratégia, último ponto, página de decisões com as velas, faixa de preço, posições), sem
+// reexecutar o motor. As quatro do meio vão juntas DEPOIS da execução do dono; falha em qualquer uma é 500 (não há parte opcional).
 export function createLiveStatusUseCase(dependencies: LiveStatusDependencies): LiveStatusUseCase {
   return async (scope, runId) => {
     const run = await findLiveRun(dependencies, { scope, runId });
-    const [context, equityPoint, page] = await Promise.all([
+    const [context, equityPoint, page, priceRange] = await Promise.all([
       readLiveContext(dependencies, { scope, run }),
       dependencies.live.readLatestEquityPoint(scope, run.id),
       dependencies.live.listDecisionRows(scope, run.id, {
@@ -40,6 +41,7 @@ export function createLiveStatusUseCase(dependencies: LiveStatusDependencies): L
         before: undefined,
         limit: LIVE_DECISIONS_PAGE_SIZE.DEFAULT,
       }),
+      dependencies.live.readRunPriceRange(scope, run.id, toDecisionMarket(dependencies, run)),
     ]);
     const positions = await dependencies.live.listPositionsAround(
       scope,
@@ -54,6 +56,7 @@ export function createLiveStatusUseCase(dependencies: LiveStatusDependencies): L
       buyAndHold: buildBuyAndHoldSection(balance, equityPoint),
       goal: buildGoalSection(context, { balance, now: dependencies.now() }),
       openPosition,
+      priceRange: buildPriceRangeSection(priceRange),
       triggers: buildTriggersSection({
         context,
         rows: page.items.slice(0, 2),

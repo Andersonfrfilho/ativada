@@ -136,11 +136,37 @@ export function createInMemoryLiveStatus(
     });
   };
 
+  // Sem o início da execução em memória: a faixa vai das velas da série até a última decisão gravada, num período só.
+  const readRunPriceRange: Reader<'readRunPriceRange'> = async (scope, runId, market) => {
+    calls.push('readRunPriceRange');
+    if (!isOwned(scope, runId)) return undefined;
+    const until = Math.max(...storeOf(runId).signals.map((signal) => signal.candleTime));
+    const seen = candleSeed.filter(
+      (candle) =>
+        candle.symbol === market.symbol &&
+        candle.timeframe === market.timeframe &&
+        candle.openTime <= until,
+    );
+    const from = seen[0]?.openTime ?? 0;
+    const low = seen.reduce<string | null>(
+      (current, candle) =>
+        current === null || Number(candle.low) < Number(current) ? candle.low : current,
+      null,
+    );
+    const high = seen.reduce<string | null>(
+      (current, candle) =>
+        current === null || Number(candle.high) > Number(current) ? candle.high : current,
+      null,
+    );
+    return { period: { low, high, from }, total: { low, high, from }, periods: 1 };
+  };
+
   return {
     readLatestEquityPoint,
     listDecisionRows,
     listPositionsAround,
     listDecisionMarkers,
     listLiveSummaries,
+    readRunPriceRange,
   };
 }

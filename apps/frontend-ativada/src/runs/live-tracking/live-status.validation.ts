@@ -122,12 +122,23 @@ const openPositionSchema = z.object({
   openedCandleTime: instant,
 });
 
+const priceRangeRowSchema = z.object({ low: decimalText, high: decimalText, from: instant });
+
+const priceRangeSchema = z.object({
+  period: priceRangeRowSchema,
+  total: priceRangeRowSchema,
+  periods: z.number().int().positive(),
+  message: z.string(),
+});
+
 export const liveStatusSchema = z.object({
   run: runSectionSchema,
   balance: balanceSchema,
   buyAndHold: buyAndHoldSchema.nullable(),
   goal: goalSchema.nullable(),
   openPosition: openPositionSchema.nullable(),
+  // Aditivo: a API antiga não manda o campo; `null` enquanto o período não tem vela fechada.
+  priceRange: priceRangeSchema.nullable().optional(),
   triggers: triggersSchema,
   decisions: z.object({ items: z.array(decisionSchema), nextCursor: z.string().nullable() }),
 });
@@ -137,3 +148,4 @@ export type DecisionVote = z.infer<typeof decisionVoteSchema>;
 export type RuleTrigger = z.infer<typeof ruleTriggerSchema>;
 export type LiveGoal = z.infer<typeof goalSchema>;
 export type LiveStatus = z.infer<typeof liveStatusSchema>;
+export type LivePriceRange = z.infer<typeof priceRangeSchema>;

@@ -137,12 +137,26 @@ const OPEN_POSITION_SCHEMA = z.strictObject({
   openedCandleTime: epochMillisecondsSchema,
 });
 
+const PRICE_RANGE_ROW_SCHEMA = z.strictObject({
+  low: decimalTextSchema,
+  high: decimalTextSchema,
+  from: epochMillisecondsSchema,
+});
+
+const PRICE_RANGE_SCHEMA = z.strictObject({
+  period: PRICE_RANGE_ROW_SCHEMA,
+  total: PRICE_RANGE_ROW_SCHEMA,
+  periods: z.number().int().positive(),
+  message: z.string(),
+});
+
 export const LIVE_STATUS_SCHEMA = z.strictObject({
   run: RUN_SECTION_SCHEMA,
   balance: BALANCE_SCHEMA,
   buyAndHold: BUY_AND_HOLD_SCHEMA.nullable(),
   goal: GOAL_SCHEMA.nullable(),
   openPosition: OPEN_POSITION_SCHEMA.nullable(),
+  priceRange: PRICE_RANGE_SCHEMA.nullable(),
   triggers: TRIGGERS_SCHEMA,
   decisions: z.strictObject({
     items: z.array(DECISION_SCHEMA),

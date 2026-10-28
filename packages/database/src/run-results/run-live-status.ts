@@ -10,6 +10,7 @@ import { positions } from '../schema/positions.schema.js';
 import { signals } from '../schema/signals.schema.js';
 import { POSITION_STATUS, SIGNAL_ACTION, type SignalAction } from './run-result.constant.js';
 import { listLiveSummaries } from './run-live-summary.js';
+import { readRunPriceRange } from './run-price-range.js';
 import { toPositionInput, toSignalInput } from './run-result-record.mapper.js';
 import type {
   DecisionMarkerRow,
@@ -179,5 +180,7 @@ export function createRunLiveStatusRepository(handle: DatabaseHandle): RunLiveSt
     listDecisionMarkers: (scope, runId, params) =>
       listDecisionMarkers({ executor: database, scope, runId, params }),
     listLiveSummaries: (scope) => listLiveSummaries(database, scope),
+    readRunPriceRange: (scope, runId, market) =>
+      readRunPriceRange(database, scope, { runId, market }),
   };
 }

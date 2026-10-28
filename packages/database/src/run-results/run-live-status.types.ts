@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import type { OwnerScope } from '../ownership/owner-scope.js';
+import type { RunPriceRange } from './run-price-range.js';
 import type {
   EquityPointInput,
   PositionInput,
@@ -87,6 +88,12 @@ export type RunLiveStatusRepository = {
     runId: string,
     params: ListDecisionMarkersParams,
   ) => Promise<readonly DecisionMarkerRow[]>;
+  // Mínima e máxima do preço no período da meta e em toda a sequência renovada.
+  readonly readRunPriceRange: (
+    scope: OwnerScope,
+    runId: string,
+    market: DecisionMarket,
+  ) => Promise<RunPriceRange | undefined>;
   // Todas as simulações ao vivo ativas do dono numa consulta só (sem uma leitura por simulação).
   readonly listLiveSummaries: (scope: OwnerScope) => Promise<readonly LiveRunSummaryRow[]>;
 };
