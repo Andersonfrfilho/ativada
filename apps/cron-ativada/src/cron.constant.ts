@@ -36,4 +36,5 @@ export const TASK_NAME = {
   PURGE_DISPLAY_CANDLES: 'purge-display-candles',
   SYNC_FEAR_GREED: 'sync-fear-greed',
   EXPIRE_MODEL_TEAM_REPORTS: 'expire-model-team-reports',
+  EXPIRE_MODEL_TEAM_QUESTIONS: 'expire-model-team-questions',
 } as const;

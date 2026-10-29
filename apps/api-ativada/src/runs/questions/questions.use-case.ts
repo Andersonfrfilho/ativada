@@ -43,7 +43,11 @@ export type QuestionsDependencies = LiveStatusRunDependencies &
     readonly projections: ProjectionsUseCase;
   };
 
-export type QuestionInput = { readonly symbol: string; readonly question: Question };
+export type QuestionInput = {
+  readonly symbol: string;
+  readonly question: Question;
+  readonly price?: string | undefined;
+};
 
 export type QuestionAnswerView = {
   readonly version: typeof QUESTIONS_VERSION;
@@ -84,6 +88,20 @@ async function answerPlan(
   return { answer: view.plan.message, basis: ANSWER_BASIS.INDICATIVE };
 }
 
+// "E se eu comprar a X?": o plano da execução com a entrada no preço pedido (só no par da execução, onde há ATR e saldo).
+async function answerBuyAt(
+  dependencies: QuestionsDependencies,
+  params: AnswerContext,
+): Promise<ReadingAnswer> {
+  const { run } = params.context;
+  if (params.input.symbol !== run.symbol) {
+    const answer = describeOtherSymbolPlan({ symbol: params.input.symbol, runSymbol: run.symbol });
+    return { answer, basis: ANSWER_BASIS.EXACT };
+  }
+  const view = await dependencies.tradePlan(params.scope, run.id, { buyAt: params.input.price });
+  return { answer: view.plan.message, basis: ANSWER_BASIS.INDICATIVE };
+}
+
 async function answerTrackRecord(
   dependencies: QuestionsDependencies,
   params: AnswerContext,
@@ -110,6 +128,7 @@ async function answerQuestion(
 ): Promise<ReadingAnswer> {
   const { question, symbol } = params.input;
   if (question === QUESTION.PLAN) return answerPlan(dependencies, params);
+  if (question === QUESTION.BUY_AT) return answerBuyAt(dependencies, params);
   if (!isReadingQuestion(question)) return answerTrackRecord(dependencies, params);
   const { context } = params;
   const readings = await readSymbolReadings(dependencies, {

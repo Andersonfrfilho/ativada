@@ -17,6 +17,7 @@
       "name": "@ativada/api-ativada",
       "version": "0.0.0",
       "dependencies": {
+        "@adatechnology/audio-transcription-provider": "0.1.0",
         "@ativada/database": "workspace:*",
         "@ativada/environment": "workspace:*",
         "@ativada/identity-admin": "workspace:*",
@@ -152,6 +153,8 @@
     },
   },
   "packages": {
+    "@adatechnology/audio-transcription-provider": ["@adatechnology/audio-transcription-provider@0.1.0", "", {}, "sha512-QheTBjW+mazCZlx3RUtfWc/y6HhaMiLE7u3mowkX9vR4fRjfNFMpwrKRE9pzyJTV92ersVx+8CizP3kvqia1sw=="],
+
     "@ativada/api-ativada": ["@ativada/api-ativada@workspace:apps/api-ativada"],
 
     "@ativada/cron-ativada": ["@ativada/cron-ativada@workspace:apps/cron-ativada"],

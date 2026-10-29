@@ -147,6 +147,7 @@ function createWriter(context: Context, stage: StoredResults, batch: number): Ru
     recordDataWait: (): Promise<undefined> => Promise.resolve(undefined),
     clearDataWait: (): Promise<boolean> => Promise.resolve(false),
     completeRun: (): Promise<boolean> => Promise.resolve(false),
+    renewGoalRun: (): Promise<string | undefined> => Promise.resolve(undefined),
     readStatus: (): Promise<RunStatus> => {
       memory.log.push('status');
       return Promise.resolve(memory.state.status);

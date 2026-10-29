@@ -1,7 +1,8 @@
 // Copyright (c) 2026 Ada Technology. All rights reserved.
 import { z } from '@ativada/environment';
-import type { ModelCallResult } from '@ativada/model-agents';
+import type { FreeTextCallResult, ModelCallResult } from '@ativada/model-agents';
 
+import { completeFreeText, type ParsedText } from './free-text-call.js';
 import {
   completeCall,
   NO_USAGE,
@@ -58,7 +59,12 @@ const responseSchema = z.looseObject({
     .optional(),
 });
 
-function parseResponse(body: unknown): ParsedPayload {
+type ParsedCandidate =
+  | { readonly kind: 'refused' | 'invalid'; readonly usage: ParsedPayload['usage'] }
+  | { readonly kind: 'text'; readonly text: string; readonly usage: ParsedPayload['usage'] };
+
+// O texto visível (sem as partes de raciocínio) do primeiro candidato, ou recusa, ou truncado.
+function readCandidate(body: unknown): ParsedCandidate {
   const parsed = responseSchema.safeParse(body);
   if (!parsed.success) return { kind: 'invalid', usage: NO_USAGE };
   const { candidates, promptFeedback, usageMetadata } = parsed.data;
@@ -78,33 +84,65 @@ function parseResponse(body: unknown): ParsedPayload {
     .filter((part) => part.thought !== true)
     .map((part) => part.text ?? '')
     .join('');
-  return { kind: 'candidate', candidate: parseJsonText(text), usage };
+  return { kind: 'text', text, usage };
 }
 
-// `generateContent` com `responseMimeType: application/json` + `responseSchema`; o nível de raciocínio vem do env.
+function parseResponse(body: unknown): ParsedPayload {
+  const read = readCandidate(body);
+  if (read.kind !== 'text') return read;
+  return { kind: 'candidate', candidate: parseJsonText(read.text), usage: read.usage };
+}
+
+function parseTextResponse(body: unknown): ParsedText {
+  return readCandidate(body);
+}
+
+type CallParams = Parameters<ModelProviderPort['requestTeamReport']>[0];
+
+function post(
+  settings: GeminiProviderSettings,
+  params: CallParams,
+  format: Record<string, unknown>,
+): ReturnType<typeof postJson> {
+  return postJson({
+    url: joinUrl(settings.baseUrl, `/v1beta/models/${settings.modelId}:generateContent`),
+    headers: { 'x-goog-api-key': settings.apiKey },
+    body: {
+      contents: [{ role: 'user', parts: [{ text: params.prompt }] }],
+      generationConfig: {
+        ...format,
+        maxOutputTokens: params.limits.maxOutputTokens + settings.maxThinkingTokens,
+        thinkingConfig: { thinkingLevel: settings.thinkingLevel },
+      },
+    },
+    timeoutMilliseconds: params.limits.timeoutMilliseconds,
+    signal: params.signal,
+  });
+}
+
+// `generateContent` com `responseMimeType: application/json` + `responseSchema`; o nível de raciocínio vem do env. A pergunta
+// livre vai sem esquema e volta em texto.
 export function createGeminiProvider(settings: GeminiProviderSettings): ModelProviderPort {
   return {
     requestTeamReport: async (params): Promise<ModelCallResult> => {
       const startedAt = performance.now();
-      const outcome = await postJson({
-        url: joinUrl(settings.baseUrl, `/v1beta/models/${settings.modelId}:generateContent`),
-        headers: { 'x-goog-api-key': settings.apiKey },
-        body: {
-          contents: [{ role: 'user', parts: [{ text: params.prompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseSchema: buildTeamReportJsonSchema(SCHEMA_DIALECT.GEMINI),
-            maxOutputTokens: params.limits.maxOutputTokens + settings.maxThinkingTokens,
-            thinkingConfig: { thinkingLevel: settings.thinkingLevel },
-          },
-        },
-        timeoutMilliseconds: params.limits.timeoutMilliseconds,
-        signal: params.signal,
+      const outcome = await post(settings, params, {
+        responseMimeType: 'application/json',
+        responseSchema: buildTeamReportJsonSchema(SCHEMA_DIALECT.GEMINI),
       });
       return completeCall({
         outcome,
         latencyMilliseconds: Math.round(performance.now() - startedAt),
         parse: parseResponse,
+      });
+    },
+    requestFreeText: async (params): Promise<FreeTextCallResult> => {
+      const startedAt = performance.now();
+      const outcome = await post(settings, params, {});
+      return completeFreeText({
+        outcome,
+        latencyMilliseconds: Math.round(performance.now() - startedAt),
+        parse: parseTextResponse,
       });
     },
   };

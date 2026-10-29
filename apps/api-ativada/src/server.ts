@@ -4,7 +4,8 @@ import { buildInternalErrorResponse } from './shared/http/response-envelope.js';
 import type { StreamEndpoint } from './stream/create-stream-endpoint.js';
 import type { StreamSocketData } from './stream/stream-socket.types.js';
 
-const MAX_REQUEST_BODY_BYTES = 1_048_576;
+// O áudio da pergunta por voz vai até 2 MiB (a rota confere o teto exato); a folga cobre o cabeçalho do pedido.
+const MAX_REQUEST_BODY_BYTES = 2_162_688;
 
 export type StartServerParams = {
   readonly handler: RequestHandler;

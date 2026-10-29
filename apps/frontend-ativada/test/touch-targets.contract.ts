@@ -63,6 +63,7 @@ const TARGETS: readonly (readonly [string, string])[] = [
   ['runs/duel/Duel.module.css', '.pick'],
   ['wayfinding/Wayfinding.module.css', '.action'],
   ['backtests/live-ranking/LiveRanking.module.css', '.chip'],
+  ['runs/trading-room/voice/VoiceAsk.module.css', '.mic'],
 ];
 
 describe('alvos de toque', () => {

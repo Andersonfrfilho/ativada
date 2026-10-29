@@ -18,6 +18,7 @@ import { createMyModelTeamsRoutes } from '../model-teams/me-model-teams.routes.j
 import { createModelDuelRoutes } from '../model-teams/model-duels.routes.js';
 import type { ModelTeamRouteDependencies } from '../model-teams/create-model-team-dependencies.js';
 import { createRunModelTeamsRoutes } from '../model-teams/run-model-teams.routes.js';
+import { createTeamQuestionRoutes } from '../model-teams/team-questions.routes.js';
 import { createNoticesRoute } from '../notices/notices.route.js';
 import type { ListNoticesUseCase } from '../notices/list-notices.use-case.js';
 import { createProfileRoutes, type ProfileRouteDependencies } from '../profile/profile.routes.js';
@@ -57,6 +58,10 @@ import {
   createTelegramRoutes,
   type TelegramRouteDependencies,
 } from '../telegram/telegram.routes.js';
+import {
+  createTranscriptionsRoute,
+  type TranscriptionRouteDependencies,
+} from '../transcriptions/transcriptions.route.js';
 import type { StreamTicketStore } from '../stream/stream-ticket-store.js';
 import { createStreamTicketRoutes } from '../stream/stream-ticket.routes.js';
 import { createHealthRoutes, type HealthRouteDependencies } from './health.routes.js';
@@ -108,6 +113,7 @@ export type ApiRouteDependencies = HealthRouteDependencies & {
   readonly listNotices: ListNoticesUseCase;
   readonly modelTeams: ModelTeamRouteDependencies;
   readonly runs: RunRoutesBundle;
+  readonly transcriptions: TranscriptionRouteDependencies;
   // `/v1/openapi.json` e `/v1/docs` existem só fora de produção: em produção nem entram na tabela.
   readonly isDocumentationEnabled: boolean;
 };
@@ -154,8 +160,10 @@ export function createApiRoutes(dependencies: ApiRouteDependencies): readonly Ro
     createNoticesRoute(dependencies.listNotices),
     ...createMyModelTeamsRoutes(dependencies.modelTeams.me),
     ...createRunModelTeamsRoutes(dependencies.modelTeams.runs),
+    ...createTeamQuestionRoutes(dependencies.modelTeams.questions),
     ...createModelDuelRoutes(dependencies.modelTeams.duels),
     ...createRunRouteTable(dependencies.runs),
+    createTranscriptionsRoute(dependencies.transcriptions),
   ];
   // A tabela final inclui as próprias rotas de documentação: o documento é gerado depois, dela inteira.
   if (dependencies.isDocumentationEnabled) routes.push(...createDocsRoutes(() => routes));

@@ -13,7 +13,12 @@ import {
   type EngineDecimalValue,
 } from '@ativada/strategy-engine';
 
-import { describeAwaiting, describeHolding, describeUnavailable } from './trade-plan-messages.js';
+import {
+  describeAwaiting,
+  describeBuyAt,
+  describeHolding,
+  describeUnavailable,
+} from './trade-plan-messages.js';
 import {
   distanceFromCurrent,
   sizeEntry,
@@ -92,13 +97,21 @@ function entryFillOf(basis: PlanBasis): {
   return { price: marketBuyFill(nextOpen, basis.parameters), nextOpen };
 }
 
+// A entrada pedida ("E se eu comprar a X?") é um preço limite: no tick, para cima, sem abertura estimada.
+function entryFillFor(basis: PlanBasis, buyAt: string | undefined): ReturnType<typeof entryFillOf> {
+  if (buyAt === undefined) return entryFillOf(basis);
+  return { price: tickUp(toEngineDecimal(buyAt), basis.parameters), nextOpen: null };
+}
+
 // Aguardando a compra: o que aconteceria se a estratégia comprasse na próxima vela, com stop e alvo pelo ATR da vela decidida
 // (`computeProtectivePrices`, o mesmo do preenchimento) e a quantidade do motor.
-export function buildAwaitingPlan(params: DecidedCandleParams): RunTradePlanView {
+export function buildAwaitingPlan(
+  params: DecidedCandleParams & { readonly buyAt?: string | undefined },
+): RunTradePlanView {
   const { basis } = params;
   const atr = readDecisionAtr(params.row);
   if (atr === undefined) return unavailablePlan(TRADE_PLAN_UNAVAILABLE_REASON.NO_ATR);
-  const fill = entryFillOf(basis);
+  const fill = entryFillFor(basis, params.buyAt);
   const protective = computeProtectivePrices({
     entryPrice: formatEngineDecimal(fill.price),
     atr,
@@ -128,7 +141,8 @@ export function buildAwaitingPlan(params: DecidedCandleParams): RunTradePlanView
     stop: stopView(levels, stop),
     sizing,
   };
-  return { ...view, message: describeAwaiting(view) };
+  const message = params.buyAt === undefined ? describeAwaiting(view) : describeBuyAt(view);
+  return { ...view, message };
 }
 
 // Comprada: a posição gravada (entrada, quantidade, alvo e stop do motor), vender agora a mercado sobre o último fechamento

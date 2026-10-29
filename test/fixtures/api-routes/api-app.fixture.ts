@@ -43,6 +43,9 @@ import type * as ProjectionsUseCaseModule from '../../../apps/api-ativada/src/ru
 import type * as TradePlanRouteModule from '../../../apps/api-ativada/src/runs/trade-plan/trade-plan.route.js';
 import type * as TradePlanUseCaseModule from '../../../apps/api-ativada/src/runs/trade-plan/trade-plan.use-case.js';
 import type * as QuestionsRouteModule from '../../../apps/api-ativada/src/runs/questions/questions.route.js';
+import type * as TranscriptionsRouteModule from '../../../apps/api-ativada/src/transcriptions/transcriptions.route.js';
+import type * as TranscribeAudioUseCaseModule from '../../../apps/api-ativada/src/transcriptions/transcribe-audio.use-case.js';
+import type * as TranscriptionGateModule from '../../../apps/api-ativada/src/transcriptions/transcription-gate.js';
 import type * as QuestionsUseCaseModule from '../../../apps/api-ativada/src/runs/questions/questions.use-case.js';
 import type * as QuestionReadingsModule from '../../../apps/api-ativada/src/runs/questions/question-readings.js';
 import type * as ProjectionRuleModule from '../../../apps/api-ativada/src/runs/projections/projection-rule.js';
@@ -115,6 +118,8 @@ import type * as RunModelTeamsRoutesModule from '../../../apps/api-ativada/src/m
 import type * as RunModelTeamsUseCaseModule from '../../../apps/api-ativada/src/model-teams/run-model-teams.use-case.js';
 import type * as RunModelTeamsComparisonModule from '../../../apps/api-ativada/src/model-teams/run-model-teams-comparison.use-case.js';
 import type * as ModelOpinionRequestModule from '../../../apps/api-ativada/src/model-teams/model-opinion-request.use-case.js';
+import type * as TeamQuestionRoutesModule from '../../../apps/api-ativada/src/model-teams/team-questions.routes.js';
+import type * as TeamQuestionUseCaseModule from '../../../apps/api-ativada/src/model-teams/team-question.use-case.js';
 import type * as ModelDuelRoutesModule from '../../../apps/api-ativada/src/model-teams/model-duels.routes.js';
 import type * as ModelDuelCreateModule from '../../../apps/api-ativada/src/model-teams/model-duel-create.use-case.js';
 import type * as ModelDuelReadModule from '../../../apps/api-ativada/src/model-teams/model-duel-read.use-case.js';
@@ -171,6 +176,9 @@ export type ApiApp = {
   readonly tradePlanRoute: typeof TradePlanRouteModule;
   readonly tradePlanUseCase: typeof TradePlanUseCaseModule;
   readonly questionsRoute: typeof QuestionsRouteModule;
+  readonly transcriptionsRoute: typeof TranscriptionsRouteModule;
+  readonly transcribeAudioUseCase: typeof TranscribeAudioUseCaseModule;
+  readonly transcriptionGate: typeof TranscriptionGateModule;
   readonly questionsUseCase: typeof QuestionsUseCaseModule;
   readonly questionReadings: typeof QuestionReadingsModule;
   readonly projectionRule: typeof ProjectionRuleModule;
@@ -235,6 +243,8 @@ export type ApiApp = {
   readonly runModelTeamsUseCase: typeof RunModelTeamsUseCaseModule;
   readonly runModelTeamsComparison: typeof RunModelTeamsComparisonModule;
   readonly modelOpinionRequest: typeof ModelOpinionRequestModule;
+  readonly teamQuestionRoutes: typeof TeamQuestionRoutesModule;
+  readonly teamQuestionUseCase: typeof TeamQuestionUseCaseModule;
   readonly modelDuelRoutes: typeof ModelDuelRoutesModule;
   readonly modelDuelCreate: typeof ModelDuelCreateModule;
   readonly modelDuelRead: typeof ModelDuelReadModule;
@@ -306,6 +316,9 @@ export async function loadApiApp(): Promise<ApiApp> {
     questionsRoute: await load('runs/questions/questions.route'),
     questionsUseCase: await load('runs/questions/questions.use-case'),
     questionReadings: await load('runs/questions/question-readings'),
+    transcriptionsRoute: await load('transcriptions/transcriptions.route'),
+    transcribeAudioUseCase: await load('transcriptions/transcribe-audio.use-case'),
+    transcriptionGate: await load('transcriptions/transcription-gate'),
     projectionRule: await load('runs/projections/projection-rule'),
     projectionMessages: await load('runs/projections/projection-messages'),
     liveBalance: await load('runs/live-status/live-balance'),
@@ -368,6 +381,8 @@ export async function loadApiApp(): Promise<ApiApp> {
     runModelTeamsUseCase: await load('model-teams/run-model-teams.use-case'),
     runModelTeamsComparison: await load('model-teams/run-model-teams-comparison.use-case'),
     modelOpinionRequest: await load('model-teams/model-opinion-request.use-case'),
+    teamQuestionRoutes: await load('model-teams/team-questions.routes'),
+    teamQuestionUseCase: await load('model-teams/team-question.use-case'),
     modelDuelRoutes: await load('model-teams/model-duels.routes'),
     modelDuelCreate: await load('model-teams/model-duel-create.use-case'),
     modelDuelRead: await load('model-teams/model-duel-read.use-case'),

@@ -105,6 +105,7 @@ export type {
 } from './run-results/run-chart.types.js';
 export type { RunLogCursor, RunLogEntry } from './run-results/run-log.types.js';
 export { createRunLiveStatusRepository } from './run-results/run-live-status.js';
+export type { PriceRangeRow, RunPriceRange } from './run-results/run-price-range.js';
 export { createRunProjectionRepository } from './run-results/run-projections.js';
 export { createRunBatchRepository } from './run-results/run-batch.repository.js';
 export { resolveRunOwnerScope } from './runs/run-owner.js';
@@ -185,16 +186,4 @@ export {
   ORDER_STATUS,
   ORDER_TYPE,
 } from './notices/notice-feed.exports.js';
-export {
-  createModelDuelRepository,
-  createModelTeamReadRepository,
-  createTeamReportRepository,
-  createTeamRunInputRepository,
-  createUserModelTeamRepository,
-  MODEL_DUEL_CURVE_MAXIMUM_POINTS,
-  MODEL_TEAM_REPORT_ACTION,
-  MODEL_TEAM_REPORT_KIND,
-  MODEL_TEAM_REPORT_STATUS,
-  MODEL_TEAM_RETENTION_DAYS,
-} from './model-teams/model-teams.exports.js';
-export type * from './model-teams/model-teams.exports.js';
+export * from './model-teams/model-teams.exports.js';

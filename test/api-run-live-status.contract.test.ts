@@ -646,17 +646,18 @@ describe('contrato do esquema documentado e das consultas', () => {
     expect(listParsed?.success).toBe(true);
   });
 
-  test('o live-status faz no máximo 5 consultas e as decisões 4, todas por chave', async () => {
+  test('o live-status faz no máximo 6 consultas e as decisões 4, todas por chave', async () => {
     const runId = await createWaitingRun();
     harness.queries.length = 0;
     await liveStatusOf(runId);
-    expect(harness.queries).toHaveLength(5);
+    expect(harness.queries).toHaveLength(6);
     expect(new Set(harness.queries)).toStrictEqual(
       new Set([
         'findRun',
         'findVersion',
         'readLatestEquityPoint',
         'listDecisionRows',
+        'readRunPriceRange',
         'listPositionsAround',
       ]),
     );

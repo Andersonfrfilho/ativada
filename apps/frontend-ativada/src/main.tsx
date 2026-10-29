@@ -14,6 +14,7 @@ import {
   readMarketDisplayTimeframes,
   readMarketSymbols,
   readMarketTimeframes,
+  resolveAuthorizeUrl,
 } from './environment.js';
 import { USDT_BRL_PAIR } from './exchange/exchange.constant.js';
 import { createApiClient } from './http/api-client.js';
@@ -35,7 +36,7 @@ function registerServiceWorker(): void {
 
 function buildAppConfig(environment: ReturnType<typeof loadEnvironment>): AppConfig {
   return {
-    authorizeUrl: environment.VITE_KEYCLOAK_AUTHORIZE_URL,
+    authorizeUrl: resolveAuthorizeUrl(environment, window.location.origin),
     clientId: environment.VITE_KEYCLOAK_CLIENT_ID,
     marketSymbols: readMarketSymbols(environment),
     marketTimeframes: readMarketTimeframes(environment),

@@ -14,9 +14,17 @@ export type RateLimitPolicy = {
   readonly maxTrackedKeys: number;
 };
 
-const ONE_MINUTE_MILLISECONDS = 60_000;
+export const ONE_MINUTE_MILLISECONDS = 60_000;
 const ONE_HOUR_MILLISECONDS = 3_600_000;
-const DEFAULT_MAX_TRACKED_KEYS = 10_000;
+export const DEFAULT_MAX_TRACKED_KEYS = 10_000;
+
+// Pedido que custa uma chamada ao provedor de uma equipe de modelo: 5 por 10 minutos por usuário, cada rota no seu balde.
+const PROVIDER_CALL_BUDGET = {
+  limit: 5,
+  windowMilliseconds: 10 * ONE_MINUTE_MILLISECONDS,
+  keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
+  maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
+} as const;
 
 export const RATE_LIMIT_POLICY = {
   ACCOUNT_EXPORT: {
@@ -133,13 +141,9 @@ export const RATE_LIMIT_POLICY = {
     maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
   },
   // Cada pedido avulso custa uma chamada ao provedor: 5 por 10 minutos, além do teto diário por usuário.
-  MODEL_OPINION_REQUEST: {
-    name: 'model-opinion-request',
-    limit: 5,
-    windowMilliseconds: 10 * ONE_MINUTE_MILLISECONDS,
-    keyScope: RATE_LIMIT_KEY_SCOPE.SUBJECT,
-    maxTrackedKeys: DEFAULT_MAX_TRACKED_KEYS,
-  },
+  MODEL_OPINION_REQUEST: { name: 'model-opinion-request', ...PROVIDER_CALL_BUDGET },
+  // Cada pergunta livre a uma equipe custa uma chamada ao provedor: 5 por 10 minutos, além do teto diário por usuário.
+  MODEL_QUESTION_REQUEST: { name: 'model-question-request', ...PROVIDER_CALL_BUDGET },
   // O duelo cria várias simulações de uma vez.
   MODEL_DUEL_CREATE: {
     name: 'model-duel-create',

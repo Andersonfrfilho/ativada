@@ -17,7 +17,7 @@ import type {
 } from './team-report.types.js';
 
 // Chave da trava consultiva do teto de custo: uma só para a instalação inteira (as instâncias do worker disputam a mesma).
-const BUDGET_LOCK_KEY = 15_015_015;
+export const BUDGET_LOCK_KEY = 15_015_015;
 
 type UsageRow = { readonly day_usd: string; readonly month_usd: string };
 
@@ -31,14 +31,21 @@ export async function saveInput(
     WHERE id = ${params.reportId}`);
 }
 
-// Soma exata do que já foi gravado e do que está reservado em voo: dia e mês em UTC, pelo relógio do banco.
-async function readUsage(executor: DatabaseExecutor): Promise<SpendUsage> {
+// Soma exata do que já foi gravado e do que está reservado em voo, nos relatórios E nas perguntas livres (o mesmo teto): dia e
+// mês em UTC, pelo relógio do banco.
+export async function readUsage(executor: DatabaseExecutor): Promise<SpendUsage> {
   const rows: unknown = await executor.execute(sql`
+    WITH month_start AS (SELECT date_trunc('month', now() AT TIME ZONE 'UTC')::date AS day),
+    spent AS (
+      SELECT requested_day, cost_usd + reserved_usd AS usd FROM model_team_reports
+      WHERE requested_day >= (SELECT day FROM month_start)
+      UNION ALL
+      SELECT requested_day, cost_usd + reserved_usd FROM model_team_questions
+      WHERE requested_day >= (SELECT day FROM month_start))
     SELECT
-      COALESCE(SUM(cost_usd + reserved_usd) FILTER (WHERE requested_day = (now() AT TIME ZONE 'UTC')::date), 0)::text AS day_usd,
-      COALESCE(SUM(cost_usd + reserved_usd), 0)::text AS month_usd
-    FROM model_team_reports
-    WHERE requested_day >= date_trunc('month', now() AT TIME ZONE 'UTC')::date`);
+      COALESCE(SUM(usd) FILTER (WHERE requested_day = (now() AT TIME ZONE 'UTC')::date), 0)::text AS day_usd,
+      COALESCE(SUM(usd), 0)::text AS month_usd
+    FROM spent`);
   const row = Array.isArray(rows) ? (rows as readonly UsageRow[])[0] : undefined;
   return { dayUsd: row?.day_usd ?? '0', monthUsd: row?.month_usd ?? '0' };
 }

@@ -23,3 +23,4 @@ export { analystDecisions } from './analyst-decisions.schema.js';
 export { modelTeamReports } from './model-team-reports.schema.js';
 export { userModelTeams } from './user-model-teams.schema.js';
 export { teamRunInputs } from './team-run-inputs.schema.js';
+export { modelTeamQuestions } from './model-team-questions.schema.js';

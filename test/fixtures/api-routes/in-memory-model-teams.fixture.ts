@@ -5,6 +5,8 @@ import type {
   ModelDuelRepository,
   ModelTeamOverview,
   ModelTeamReadRepository,
+  TeamQuestionRepository,
+  TeamQuestionRow,
   TeamReportRepository,
   TeamReportRow,
   UserModelTeamRepository,
@@ -31,12 +33,21 @@ export type EnqueuedOpinion = Parameters<TeamReportRepository['enqueueOnDemandRe
   readonly id: string;
 };
 
+export type StoredQuestion = TeamQuestionRow & {
+  readonly userId: string;
+  readonly runId: string;
+  readonly day: string;
+};
+
 export type InMemoryModelTeams = {
   readonly teams: Pick<UserModelTeamRepository, 'listTeams' | 'setEnabled' | 'claimOnDemand'>;
   readonly heartbeat: Pick<WorkerHeartbeatRepository, 'findLatest'>;
   readonly reads: Pick<ModelTeamReadRepository, 'readOverview' | 'listReportsForCandles'>;
   readonly queue: Pick<TeamReportRepository, 'enqueueOnDemandReport'>;
   readonly duels: ModelDuelRepository;
+  readonly questions: TeamQuestionRepository;
+  // As perguntas livres gravadas, com o dono e a simulação (o teste também as muda, como o worker faria).
+  readonly storedQuestions: StoredQuestion[];
   // O que o teste configura.
   readonly state: {
     overview: ModelTeamOverview;
@@ -115,7 +126,43 @@ export function createInMemoryModelTeams(
       return Promise.resolve(true);
     },
   };
+  const storedQuestions: StoredQuestion[] = [];
+  const questions: TeamQuestionRepository = {
+    createQuestion: (scope, params) => {
+      const day = ON_DEMAND_DAY(now());
+      const used = storedQuestions.filter(
+        (row) => row.userId === scope.ownerUserId && row.day === day,
+      ).length;
+      if (params.dailyLimit <= 0 || used >= params.dailyLimit) return Promise.resolve(undefined);
+      const id = crypto.randomUUID();
+      storedQuestions.push({
+        id,
+        userId: scope.ownerUserId,
+        runId: params.runId,
+        day,
+        teamKey: params.teamKey,
+        symbol: params.symbol,
+        question: params.question,
+        status: 'pending',
+        answer: null,
+        failureCode: null,
+        costUsd: '0',
+        requestedAt: now() + storedQuestions.length,
+        decidedAt: null,
+      });
+      return Promise.resolve(id);
+    },
+    listQuestions: (scope, params) =>
+      Promise.resolve(
+        storedQuestions
+          .filter((row) => row.userId === scope.ownerUserId && row.runId === params.runId)
+          .sort((left, right) => right.requestedAt - left.requestedAt)
+          .slice(0, params.limit),
+      ),
+  };
   const model: InMemoryModelTeams = {
+    questions,
+    storedQuestions,
     teams,
     heartbeat: {
       findLatest: () => {

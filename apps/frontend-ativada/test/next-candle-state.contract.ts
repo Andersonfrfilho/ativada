@@ -293,3 +293,21 @@ describe('porcentagem do servidor', () => {
     expect(ratePercentAttribute(null)).toBe('0');
   });
 });
+
+describe('previsões de uma simulação de equipe', () => {
+  test('the first page of a team run comes without summary and still parses, keeping the server reason', () => {
+    const parsed = projectionsSchema.parse({
+      version: 'projection-1',
+      timeframe: '15m',
+      items: [],
+      nextCursor: null,
+      current: { status: 'unavailable', reason: 'team_run', message: 'Segue a equipe.' },
+    });
+    expect(parsed.summary).toBeUndefined();
+    expect(parsed.current).toEqual({
+      status: 'unavailable',
+      reason: 'team_run',
+      message: 'Segue a equipe.',
+    });
+  });
+});

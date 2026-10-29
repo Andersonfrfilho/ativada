@@ -65,13 +65,18 @@ export function scoreSection(params: ReadOverviewParams): SQL {
     GROUP BY r.team_key ORDER BY r.team_key`;
 }
 
+// O gasto do teto é um só: relatórios e perguntas livres (adendo da spec 015) somam juntos, por equipe.
 export function spendSection(): SQL {
   return sql`
     SELECT team_key,
-      COALESCE(SUM(cost_usd + reserved_usd) FILTER (WHERE requested_day = (now() AT TIME ZONE 'UTC')::date), 0)::text AS day_usd,
-      COALESCE(SUM(cost_usd + reserved_usd), 0)::text AS month_usd
-    FROM model_team_reports
-    WHERE requested_day >= date_trunc('month', now() AT TIME ZONE 'UTC')::date
+      COALESCE(SUM(usd) FILTER (WHERE requested_day = (now() AT TIME ZONE 'UTC')::date), 0)::text AS day_usd,
+      COALESCE(SUM(usd), 0)::text AS month_usd
+    FROM (
+      SELECT team_key, requested_day, cost_usd + reserved_usd AS usd FROM model_team_reports
+      WHERE requested_day >= date_trunc('month', now() AT TIME ZONE 'UTC')::date
+      UNION ALL
+      SELECT team_key, requested_day, cost_usd + reserved_usd FROM model_team_questions
+      WHERE requested_day >= date_trunc('month', now() AT TIME ZONE 'UTC')::date) spent
     GROUP BY team_key ORDER BY team_key`;
 }
 

@@ -52,7 +52,11 @@ export const MODEL_TEAM_FAILURE = {
   BAD_REQUEST: 'BAD_REQUEST',
   PROMPT_REJECTED: 'PROMPT_REJECTED',
   DISPATCH_ERROR: 'DISPATCH_ERROR',
+  QUESTION_HAS_PERSONAL_DATA: 'QUESTION_HAS_PERSONAL_DATA',
 } as const;
+
+// A resposta da pergunta livre cabe em 600 caracteres: 400 tokens de saída sobram (o raciocínio soma-se no adaptador).
+export const QUESTION_MAX_OUTPUT_TOKENS = 400;
 
 export const MODEL_TEAM_LOG = {
   DISPATCH_FAILED: 'model team dispatch failed',
@@ -62,4 +66,7 @@ export const MODEL_TEAM_LOG = {
   REPORT_ERRORED: 'model team report errored',
   ENQUEUE_FAILED: 'model team enqueue failed',
   STATUS_BEAT_FAILED: 'model team status failed',
+  QUESTION_ANSWERED: 'model team question answered',
+  QUESTION_FAILED: 'model team question failed',
+  QUESTION_ERRORED: 'model team question errored',
 } as const;

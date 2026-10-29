@@ -22,6 +22,7 @@ import { telegramLinkCodes } from '../schema/telegram-link-codes.schema.js';
 import { userAssets } from '../schema/user-assets.schema.js';
 import { users } from '../schema/users.schema.js';
 import { walkForwardWindows } from '../schema/walk-forward-windows.schema.js';
+import { modelTeamQuestions } from '../schema/model-team-questions.schema.js';
 import { modelTeamReports } from '../schema/model-team-reports.schema.js';
 import { teamRunInputs } from '../schema/team-run-inputs.schema.js';
 import { userModelTeams } from '../schema/user-model-teams.schema.js';
@@ -53,6 +54,7 @@ export const OWNED_TABLES: readonly PgTable[] = [
   alerts,
   analystDecisions,
   teamRunInputs,
+  modelTeamQuestions,
   goals,
   priceAlerts,
   userAssets,
@@ -65,6 +67,7 @@ export const OWNED_TABLE_DELETION_ORDER: readonly PgTable[] = [
   alerts,
   analystDecisions,
   teamRunInputs,
+  modelTeamQuestions,
   equityPoints,
   runCommands,
   walkForwardWindows,

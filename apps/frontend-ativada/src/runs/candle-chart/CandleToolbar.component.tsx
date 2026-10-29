@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 import type { TradeChart } from '../trade-chart.validation.js';
 import { toSurfaceTime } from './candle-series.js';
 import { ChartToolbar } from './ChartToolbar.component.js';
+import { useChartPeriod } from './useChartPeriod.hook.js';
 import { useRememberedRetention } from './useRememberedRetention.hook.js';
 import type { CandleCanvasModel } from './useCandleCanvasModel.hook.js';
 import type { CandleSource } from './useCandleSource.hook.js';
@@ -23,8 +24,10 @@ export function CandleToolbar({ chart, source, model }: CandleToolbarProps): Rea
     const start = retention[option];
     return start !== undefined && chart.runRange.to < start;
   });
+  const period = useChartPeriod({ source, surface, endTime: chart.runRange.to });
   return (
     <ChartToolbar
+      period={period}
       timeframe={source.timeframe}
       options={source.timeframeOptions}
       runTimeframe={chart.timeframe}
@@ -32,7 +35,10 @@ export function CandleToolbar({ chart, source, model }: CandleToolbarProps): Rea
       unavailableOptions={unavailableOptions}
       isTooltipOn={source.preferences.preferences.isTooltipOn}
       onToggleTooltip={source.preferences.toggleTooltip}
-      onTimeframeChange={model.handleTimeframeChange}
+      onTimeframeChange={(next) => {
+        period.clear();
+        model.handleTimeframeChange(next);
+      }}
       onGoToStart={
         source.displayMapping === undefined
           ? undefined

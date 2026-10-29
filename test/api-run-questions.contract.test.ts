@@ -21,6 +21,9 @@ import {
 import {
   CLASSIC_CANDLES,
   createLiveRun,
+  decisionRow,
+  equityRow,
+  seedDecisions,
 } from './fixtures/live-status/live-status-scenario.fixture.js';
 
 // "Pergunte à equipe" (ADR 0002 "Perguntas à equipe"): cada pergunta rápida da sala, dono, validação, limite e documentação.
@@ -187,6 +190,54 @@ describe('as perguntas rápidas', () => {
     );
   });
 
+  test('Alice: "E se eu comprar a X?" usa o plano com a entrada no preço pedido; outro par recebe a frase própria', async () => {
+    const answer = await ask('BTCUSDT', 'buy_at&price=61000.5');
+    expect(answer.agent).toBe('alice');
+    expect(answer.question).toBe('buy_at');
+    const sibling = await readJson(
+      await call({ subject: SUBJECT_A, path: `${RUNS}/${runId}/trade-plan` }),
+    );
+    const plan = (sibling.body as { data: { plan: { status: string; message: string } } }).data
+      .plan;
+    if (plan.status === 'unavailable') expect(answer.answer).toBe(plan.message);
+    else
+      expect(answer.answer).toMatch(
+        /^Comprando a 61\.000,5\d* USDT \(\d+(,\d+)?% (acima|abaixo) do último fechamento/,
+      );
+    const other = await ask(RISING, 'buy_at&price=3000');
+    expect(other.answer).toBe(
+      'O plano de operação só existe para BTCUSDT, o par desta simulação. Para ETHUSDT, pergunte o que falta para comprar.',
+    );
+  });
+
+  test('Alice: com vela decidida, "comprar a 29.000" sai no tick com a proteção e o alvo pelo ATR', async () => {
+    const decided = await createLiveRun(harness, { subject: SUBJECT_A });
+    seedDecisions(
+      harness,
+      decided,
+      Array.from({ length: 30 }, (_unused, index) => {
+        const row = decisionRow(index, [1, -1, 0, 1]);
+        return {
+          signal: { ...row, indicators: { ...(row.indicators as object), 'risk:atr': 300 } },
+          equity: equityRow(index, '1000', '1000'),
+        };
+      }),
+    );
+    harness.clock.now += ONE_MINUTE;
+    const response = await readJson(
+      await call({
+        subject: SUBJECT_A,
+        path: `${RUNS}/${decided}/questions?symbol=BTCUSDT&question=buy_at&price=29000`,
+      }),
+    );
+    expect(response.status).toBe(200);
+    const { answer } = (response.body as { data: Answer }).data;
+    // Último fechamento 30.050,50; stop 29.000 − 2 × 300 = 28.400 e alvo 29.000 + 3 × 300 = 29.900.
+    expect(answer).toMatch(
+      /^Comprando a 29\.000,00 USDT \(3,50% abaixo do último fechamento, 30\.050,50\), com a proteção e o alvo da estratégia: No alvo \(29\.900,00\) o resultado seria \+[\d.,]+ USDT \([\d,]+%\); no stop \(28\.400,00\), −[\d.,]+ USDT \(−[\d,]+%\)\.$/,
+    );
+  });
+
   test('Otávio: o acerto da previsão é o resumo da rota de previsões; outro par recebe a frase própria', async () => {
     const data = await ask('BTCUSDT', 'track_record');
     expect(data.agent).toBe('otavio');
@@ -237,6 +288,11 @@ describe('dono, validação e limite', () => {
       'symbol=BTCUSDT&question=buy',
       'symbol=BTCUSDT',
       'symbol=BTCUSDT&question=trend&x=1',
+      'symbol=BTCUSDT&question=buy_at',
+      'symbol=BTCUSDT&question=buy_at&price=0',
+      'symbol=BTCUSDT&question=buy_at&price=-1',
+      'symbol=BTCUSDT&question=buy_at&price=1.123456789',
+      'symbol=BTCUSDT&question=trend&price=10',
     ]) {
       const response = await call({
         subject: SUBJECT_A,

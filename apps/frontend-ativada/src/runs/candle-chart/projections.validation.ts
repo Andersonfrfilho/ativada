@@ -93,12 +93,13 @@ export const projectionsPageSchema = z.object({
 
 export const projectionsSchema = projectionsPageSchema.extend({
   current: currentSchema,
-  summary: summarySchema,
+  // A execução de equipe não tem placar nem acertos para contar: o servidor omite o resumo e `current` diz por quê.
+  summary: summarySchema.optional(),
 });
 
 export type ProjectionsPage = z.infer<typeof projectionsPageSchema>;
 export type Projections = z.infer<typeof projectionsSchema>;
 export type ProjectionCurrent = Projections['current'];
 export type AvailableProjection = Extract<ProjectionCurrent, { status: 'available' }>;
-export type ProjectionSummary = Projections['summary'];
+export type ProjectionSummary = NonNullable<Projections['summary']>;
 export type ProjectionItem = Projections['items'][number];

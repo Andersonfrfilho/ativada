@@ -161,6 +161,19 @@ function buildResponses(
   return responses;
 }
 
+function buildRequestBody(documentation: RouteDocumentation, scope: SchemaScope): JsonObject {
+  if (documentation.bodyContentTypes !== undefined) {
+    const binary = { schema: { type: 'string', format: 'binary' } };
+    const content = Object.fromEntries(
+      documentation.bodyContentTypes.map((type) => [type, binary]),
+    );
+    return { requestBody: { required: true, content } };
+  }
+  if (documentation.body === undefined) return {};
+  const schema = convertInto(documentation.body, 'input', scope);
+  return { requestBody: { required: true, content: { [JSON_CONTENT_TYPE]: { schema } } } };
+}
+
 export function buildOperation(
   route: Route,
   documentation: RouteDocumentation,
@@ -184,16 +197,7 @@ export function buildOperation(
       ? {}
       : { security: [{ [BEARER_SECURITY_SCHEME]: [] }] }),
     ...(parameters.length === 0 ? {} : { parameters }),
-    ...(documentation.body === undefined
-      ? {}
-      : {
-          requestBody: {
-            required: true,
-            content: {
-              [JSON_CONTENT_TYPE]: { schema: convertInto(documentation.body, 'input', scope) },
-            },
-          },
-        }),
+    ...buildRequestBody(documentation, scope),
     responses: buildResponses(route, documentation, scope),
   };
 }

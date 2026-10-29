@@ -70,6 +70,16 @@ export function describeAwaiting(view: Omit<AwaitingEntryPlanView, 'message'>): 
   return `${opening} ${describeExits(view.target, view.stop)}`;
 }
 
+// "E se eu comprar a X?": a compra a esse preço (no tick, para cima), quanto ele fica do último fechamento e as duas saídas.
+export function describeBuyAt(view: Omit<AwaitingEntryPlanView, 'message'>): string {
+  const rate = formatRatePercent(view.entry.distance.rate, DOWN);
+  const side = rate.startsWith('−') ? `${rate.slice(1)}% abaixo` : `${rate}% acima`;
+  return (
+    `Comprando a ${formatPrice(view.entry.price)} USDT (${side} do último fechamento, ` +
+    `${formatPrice(view.currentPrice)}), com a proteção e o alvo da estratégia: ${describeExits(view.target, view.stop)}`
+  );
+}
+
 export function describeHolding(view: Omit<HoldingPlanView, 'message'>): string {
   return (
     `Comprada a ${formatPrice(view.entryPrice)} USDT. Vendendo agora, a simulação sairia a ` +

@@ -75,6 +75,7 @@ import { checkGoals } from './goal-checks.js';
 import { checkPriceAlerts } from './price-alert-checks.js';
 import { checkUserAssets } from './user-asset-checks.js';
 import { checkGoalRuns } from './goal-run-checks.js';
+import { checkGoalRenewal } from './goal-renewal-checks.js';
 import { checkLiveRuns } from './live-run-checks.js';
 import { checkRunQueueClaims } from './run-queue-checks.js';
 import { checkRunQueueLifecycle } from './run-queue-lifecycle-checks.js';
@@ -189,6 +190,7 @@ async function checkPersistence(context: LifecycleCheckContext): Promise<void> {
   await checkStorageQuotas(context);
   await checkUserAssets(context);
   await checkGoalRuns(context);
+  await checkGoalRenewal(context);
   await checkRunLog(context);
 }
 

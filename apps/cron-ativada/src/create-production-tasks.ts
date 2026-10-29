@@ -4,7 +4,9 @@ import {
   createBlockedAccountRepository,
   createCandleRepository,
   createSentimentRepository,
+  createTeamQuestionQueueRepository,
   createTeamReportRepository,
+  MODEL_TEAM_QUESTION_RETENTION_DAYS,
   MODEL_TEAM_RETENTION_DAYS,
 } from '@ativada/database';
 import {
@@ -29,6 +31,7 @@ import {
 } from './market/backfill-candles.task.js';
 import { BACKFILL_LOG } from './market/market.constant.js';
 import { createPurgeDisplayCandlesTask } from './market/purge-display-candles.task.js';
+import { createExpireModelTeamQuestionsTask } from './model-teams/expire-model-team-questions.task.js';
 import { createExpireModelTeamReportsTask } from './model-teams/expire-model-team-reports.task.js';
 import { createSyncFearGreedTask } from './market/sync-fear-greed.task.js';
 import type { CronTask } from './run-cron-tasks.js';
@@ -120,6 +123,16 @@ function createExpireModelTeamReportsCronTask(params: CreatePurgeTaskParams): Cr
   };
 }
 
+function createExpireModelTeamQuestionsCronTask(params: CreatePurgeTaskParams): CronTask {
+  return {
+    name: TASK_NAME.EXPIRE_MODEL_TEAM_QUESTIONS,
+    run: createExpireModelTeamQuestionsTask({
+      repository: createTeamQuestionQueueRepository(params.database),
+      retentionDays: MODEL_TEAM_QUESTION_RETENTION_DAYS,
+    }),
+  };
+}
+
 function createFearGreedTask(params: CreatePurgeTaskParams): CronTask {
   const { environment, database, logger } = params;
   return {
@@ -169,6 +182,7 @@ export function createProductionTasks(params: CreatePurgeTaskParams): readonly C
     createPurgeDisplayTask(params),
     createFearGreedTask(params),
     createExpireModelTeamReportsCronTask(params),
+    createExpireModelTeamQuestionsCronTask(params),
   ];
   return selectCronTasks({ tasks, names: environment.CRON_TASKS });
 }

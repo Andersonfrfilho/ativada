@@ -70,7 +70,10 @@ dev_load_environment() {
 dev_compose() {
   local files=(--env-file "$DEV_ENV_FILE")
   [ -f "$DEV_ENV_FILE.local" ] && files+=(--env-file "$DEV_ENV_FILE.local")
-  docker compose "${files[@]}" -f compose.yaml "$@"
+  local overrides=(-f compose.yaml)
+  # Ajuste local do compose (a ponte do Cloudflare usa um para o Keycloak seguir o endereço de cada pedido).
+  [ -n "${DEV_COMPOSE_OVERRIDE:-}" ] && [ -f "$DEV_COMPOSE_OVERRIDE" ] && overrides+=(-f "$DEV_COMPOSE_OVERRIDE")
+  docker compose "${files[@]}" "${overrides[@]}" "$@"
 }
 
 dev_port_open() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }

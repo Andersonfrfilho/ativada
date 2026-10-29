@@ -55,3 +55,13 @@ export class ModelOpinionLimitReachedError extends DomainError {
     });
   }
 }
+
+export class ModelQuestionLimitReachedError extends DomainError {
+  constructor() {
+    super({
+      code: MODEL_TEAM_ERROR_CODE.MODEL_QUESTION_LIMIT_REACHED,
+      message: 'Você usou todas as perguntas livres de hoje. Tente amanhã.',
+      status: HTTP_STATUS.TOO_MANY_REQUESTS,
+    });
+  }
+}

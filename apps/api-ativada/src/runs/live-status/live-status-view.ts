@@ -5,6 +5,7 @@ import type { RuleKind, RuleTrigger, SignalAction, TriggerState } from '@ativada
 import type { WaitingForDataView } from '../run-view.js';
 import type { BuyAndHold, LiveBalance } from './live-balance.js';
 import type { LiveGoalProgress } from './live-goal-progress.js';
+import type { PriceRangeSectionView } from './live-price-range.js';
 import type { DecisionOutcome, TriggerUnavailableReason } from './live-status.constant.js';
 
 // O voto de uma regra naquela vela, com o nome simples e a leitura gravada do indicador (texto por saída).
@@ -101,6 +102,7 @@ export type LiveStatusView = {
   readonly buyAndHold: BuyAndHoldSectionView | null;
   readonly goal: GoalSectionView | null;
   readonly openPosition: OpenPositionView | null;
+  readonly priceRange: PriceRangeSectionView | null;
   readonly triggers: TriggersView;
   readonly decisions: DecisionsPageView;
 };

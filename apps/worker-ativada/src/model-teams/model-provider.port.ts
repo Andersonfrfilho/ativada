@@ -2,6 +2,7 @@
 import {
   MODEL_CALL_STATUS,
   teamReportSchema,
+  type FreeTextCallResult,
   type ModelCallMeasure,
   type ModelCallResult,
   type ModelTokenUsage,
@@ -10,9 +11,11 @@ import {
 
 import { classifyFailure, isSuccessStatus, type HttpOutcome } from './provider-http.js';
 
-// RF01: a porta única. Todo modelo é chamado por ela; o resultado leva só código e medida, nunca texto de erro.
+// RF01: a porta única. Todo modelo é chamado por ela; o resultado leva só código e medida, nunca texto de erro. A pergunta livre
+// (adendo da spec 015) usa o mesmo provedor em modo TEXTO.
 export type ModelProviderPort = {
   readonly requestTeamReport: (params: RequestTeamReportParams) => Promise<ModelCallResult>;
+  readonly requestFreeText: (params: RequestTeamReportParams) => Promise<FreeTextCallResult>;
 };
 
 // O que cada adaptador extrai de uma resposta 2xx: o candidato a relatório (ainda não validado), ou recusa, ou saída inválida.

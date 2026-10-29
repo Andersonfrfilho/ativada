@@ -16,6 +16,8 @@ export const environmentSchema = z.object({
   VITE_MARKET_TIMEFRAMES: nonEmptyTextSchema.default(DEFAULT_MARKET_TIMEFRAMES),
   // As velas só de exibição do ambiente (spec 017); vazio = nenhuma.
   VITE_MARKET_DISPLAY_TIMEFRAMES: z.string().default(''),
+  // Outro endereço do mesmo painel (a ponte do Cloudflare) com o seu Keycloak: `origem|url,origem|url`; vazio = só o padrão.
+  VITE_KEYCLOAK_AUTHORIZE_URL_BY_ORIGIN: z.string().default(''),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;
@@ -48,4 +50,14 @@ export function readMarketDisplayTimeframes(environment: Environment): readonly 
 
 export function isProductionBuild(): boolean {
   return import.meta.env['MODE'] === PRODUCTION_MODE;
+}
+
+const ORIGIN_SEPARATOR = '|';
+
+// O login segue o endereço por onde o painel foi aberto: a origem listada usa o Keycloak dela; qualquer outra, o padrão.
+export function resolveAuthorizeUrl(environment: Environment, origin: string): string {
+  const match = environment.VITE_KEYCLOAK_AUTHORIZE_URL_BY_ORIGIN.split(SYMBOL_SEPARATOR)
+    .map((entry) => entry.trim().split(ORIGIN_SEPARATOR))
+    .find(([entryOrigin, url]) => entryOrigin === origin && url !== undefined && url.length > 0);
+  return match?.[1] ?? environment.VITE_KEYCLOAK_AUTHORIZE_URL;
 }

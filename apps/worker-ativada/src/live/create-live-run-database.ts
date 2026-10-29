@@ -16,7 +16,11 @@ import {
   type DatabaseHandle,
   type OwnerScope,
 } from '@ativada/database';
-import type { EngineCandle, StoredSentimentObservation } from '@ativada/strategy-engine';
+import {
+  ENGINE_TIMEFRAME_DURATION_MILLISECONDS,
+  type EngineCandle,
+  type StoredSentimentObservation,
+} from '@ativada/strategy-engine';
 import { isCandleTimeframe, toEngineCandle, toStoredSentiment } from '@ativada/run-recording';
 
 import { LIVE_COMMIT_OUTCOME } from './live.constant.js';
@@ -61,7 +65,11 @@ async function commitStep(
         if (!(await writer.saveCheckpoint(commit.checkpoint))) throw new StepAlreadyRecordedError();
         // A meta fecha no MESMO passo: o desfecho (uma vez) e a conclusão, quando a saída já se completou.
         if (commit.goal?.outcome !== undefined) await writer.recordGoalOutcome(commit.goal.outcome);
-        if (commit.goal?.shouldComplete === true) await writer.completeRun();
+        if (commit.goal?.shouldComplete === true && (await writer.completeRun())) {
+          await writer.renewGoalRun(
+            ENGINE_TIMEFRAME_DURATION_MILLISECONDS[target.series.timeframe],
+          );
+        }
         if (commit.shouldClearWait === true) await writer.clearDataWait();
         // O aviso à API sai na MESMA transação: chega no COMMIT e some no ROLLBACK, então nunca precede nem sobrevive ao dado.
         await writer.publishStepEvents(commit.checkpoint.lastCandleTime);

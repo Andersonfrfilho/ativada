@@ -314,6 +314,16 @@ describe('OpenAPI gerado da tabela de rotas', () => {
       'grid',
     ])
       expect(bodyProperties).toContain(name);
+    const transcription = asRecord(asRecord(paths['/v1/transcriptions'])['post']);
+    const audio = asRecord(asRecord(transcription['requestBody'])['content']);
+    expect(Object.keys(audio)).toStrictEqual(['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/wav']);
+    expect(asRecord(audio['audio/webm'])['schema']).toStrictEqual({
+      type: 'string',
+      format: 'binary',
+    });
+    const transcriptionStatuses = Object.keys(asRecord(transcription['responses']));
+    for (const status of ['200', '400', '401', '413', '422', '429', '503'])
+      expect(transcriptionStatuses).toContain(status);
     const csv = asRecord(asRecord(paths['/v1/runs/{runId}/export.csv'])['get']);
     expect(
       Object.keys(asRecord(asRecord(csv['responses'])['200'])['content'] as Json),

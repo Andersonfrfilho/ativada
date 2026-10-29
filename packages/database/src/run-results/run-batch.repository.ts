@@ -10,6 +10,7 @@ import { runs } from '../schema/runs.schema.js';
 import type { RunStatus } from '../runs/run.constant.js';
 import { clearDataWait, recordDataWait } from '../runs/run-data-wait.js';
 import { recordGoalOutcome } from '../runs/run-goal.js';
+import { renewGoalRun } from '../runs/run-goal-renewal.js';
 import { saveCheckpoint } from '../runs/run.repository.js';
 import { transitionRun } from '../runs/run-transition.js';
 import { RUN_STATUS as RUN_STATUS_VALUES, RUN_TRANSITION_OUTCOME } from '../runs/run.constant.js';
@@ -52,7 +53,10 @@ async function appendResults(target: BatchTarget, rows: RunResultRows): Promise<
 
 function createRunControlWriter(
   target: BatchTarget,
-): Pick<RunBatchWriter, 'recordDataWait' | 'clearDataWait' | 'completeRun' | 'publishStepEvents'> {
+): Pick<
+  RunBatchWriter,
+  'recordDataWait' | 'clearDataWait' | 'completeRun' | 'renewGoalRun' | 'publishStepEvents'
+> {
   return {
     completeRun: async () =>
       (
@@ -61,6 +65,8 @@ function createRunControlWriter(
           to: RUN_STATUS_VALUES.COMPLETED,
         })
       ).outcome === RUN_TRANSITION_OUTCOME.TRANSITIONED,
+    renewGoalRun: (durationMilliseconds) =>
+      renewGoalRun(target.executor, target.scope, { runId: target.runId, durationMilliseconds }),
     publishStepEvents: (candleTime) =>
       publishStepEvents({
         executor: target.executor,

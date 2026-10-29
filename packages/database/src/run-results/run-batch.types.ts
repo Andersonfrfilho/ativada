@@ -49,6 +49,8 @@ export type RunBatchWriter = {
   readonly recordGoalOutcome: (params: Omit<RecordGoalOutcomeParams, 'runId'>) => Promise<boolean>;
   // Encerra a execução ao vivo como concluída (a meta acabou e a posição já saiu), na MESMA transação do passo.
   readonly completeRun: () => Promise<boolean>;
+  // Depois de concluir pela meta: cria a sucessora com a meta atual (`undefined` se a meta foi desativada ou já renovou).
+  readonly renewGoalRun: (durationMilliseconds: number) => Promise<string | undefined>;
   // A simulação espera um buraco de candles: grava desde quando e conta as recuperações que não o preencheram (`undefined` se
   // a execução não está `running`). O primeiro registro da espera avisa o dono por NOTIFY, na mesma transação.
   readonly recordDataWait: (

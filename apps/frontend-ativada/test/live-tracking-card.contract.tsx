@@ -87,6 +87,43 @@ describe('cartão "Acompanhamento" (T3.1)', () => {
     expect(within(card).getByRole('button', { name: 'O que é Comprar e segurar?' })).toBeDefined();
   });
 
+  test('the price range shows the period low and high, and the total once the goal renewed', async () => {
+    const range = (periods: number): Record<string, unknown> => ({
+      period: { low: '61700.5', high: '64010', from: LIVE_PERIOD_START },
+      total: { low: '59000', high: '66000.25', from: LIVE_PERIOD_START - 7 * DAY },
+      periods,
+      message: 'Neste período a moeda foi de 61.700,50 a 64.010,00.',
+    });
+    const single = createLiveHarness({
+      liveStatus: buildLiveStatusResponse({ priceRange: range(1) }),
+    });
+    openLiveDetail(single, '#acompanhamento');
+    const block = await screen.findByRole('region', { name: 'Faixa de preço da moeda' });
+    expect(within(block).getByText('Mínima no período')).toBeDefined();
+    expect(within(block).getByText('61.700,50')).toBeDefined();
+    expect(within(block).getByText('64.010,00')).toBeDefined();
+    expect(within(block).queryByText('Mínima no total')).toBeNull();
+  });
+
+  test('a renewed goal adds the low and high across every period', async () => {
+    const harness = createLiveHarness({
+      liveStatus: buildLiveStatusResponse({
+        priceRange: {
+          period: { low: '61700.5', high: '64010', from: LIVE_PERIOD_START },
+          total: { low: '59000', high: '66000.25', from: LIVE_PERIOD_START - 7 * DAY },
+          periods: 2,
+          message: 'x',
+        },
+      }),
+    });
+    openLiveDetail(harness, '#acompanhamento');
+    const block = await screen.findByRole('region', { name: 'Faixa de preço da moeda' });
+    expect(within(block).getByText('Mínima no total')).toBeDefined();
+    expect(within(block).getByText('59.000,00')).toBeDefined();
+    expect(within(block).getByText('66.000,25')).toBeDefined();
+    expect(within(block).getAllByText(/^2 períodos, desde /)).toHaveLength(2);
+  });
+
   test('zero is grey with "=" and, without trades, the empty state explains instead of zeros', async () => {
     const harness = createLiveHarness({
       liveStatus: buildLiveStatusResponse({ balance: flatBalance() }),
